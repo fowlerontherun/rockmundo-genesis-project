@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useToast } from "@/components/ui/use-toast";
 import { calculateInGameDate } from "@/utils/gameCalendar";
 
+export { useIssueCompanyShares } from "@/hooks/useCompanyShareOffers";
+
 export interface CompanyShareholder {
   id: string;
   company_id: string;
@@ -29,151 +31,19 @@ export const useCompanyShareholders = (companyId: string | undefined) => {
 
       if (shareholders.length === 0) return shareholders;
 
-      const userIds = shareholders.map((s) => s.user_id);
+      const userIds = shareholders.map((shareholder) => shareholder.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, user_id, stage_name, username")
         .in("user_id", userIds as string[]);
 
-      const profileByUserId = new Map((profiles || []).map((p: any) => [p.user_id, p]));
-      return shareholders.map((s) => ({ ...s, profile: profileByUserId.get(s.user_id) ?? null }));
+      const profileByUserId = new Map((profiles || []).map((profile: any) => [profile.user_id, profile]));
+      return shareholders.map((shareholder) => ({
+        ...shareholder,
+        profile: profileByUserId.get(shareholder.user_id) ?? null,
+      }));
     },
     enabled: !!companyId,
-  });
-};
-
-export const useIssueCompanyShares = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      companyId,
-      recipientProfileId,
-      shares,
-      pricePerShare,
-    }: {
-      companyId: string;
-      recipientProfileId: string;
-      shares: number;
-      pricePerShare: number;
-    }) => {
-      if (!user?.id) throw new Error("Not authenticated");
-      if (shares <= 0) throw new Error("Shares must be greater than 0");
-      if (pricePerShare < 0) throw new Error("Price per share cannot be negative");
-
-      const { data: recipient, error: recipientError } = await supabase
-        .from("profiles")
-        .select("id, user_id, cash")
-        .eq("id", recipientProfileId)
-        .single();
-
-      if (recipientError) throw recipientError;
-      const totalPrice = shares * pricePerShare;
-
-      if (totalPrice > 0) {
-        if ((recipient.cash || 0) < totalPrice) {
-          throw new Error("Recipient does not have enough cash to buy these shares");
-        }
-
-        const { error: buyerCashError } = await supabase
-          .from("profiles")
-          .update({ cash: Number(recipient.cash) - totalPrice })
-          .eq("id", recipient.id);
-        if (buyerCashError) throw buyerCashError;
-
-        const { data: company, error: companyError } = await supabase
-          .from("companies")
-          .select("balance")
-          .eq("id", companyId)
-          .single();
-        if (companyError) throw companyError;
-
-        const { error: companyUpdateError } = await supabase
-          .from("companies")
-          .update({ balance: Number(company.balance) + totalPrice })
-          .eq("id", companyId);
-        if (companyUpdateError) throw companyUpdateError;
-
-        await supabase.from("company_transactions").insert({
-          company_id: companyId,
-          transaction_type: "income",
-          amount: totalPrice,
-          description: `Share sale (${shares} shares)` ,
-          category: "owner_transfer",
-        });
-      }
-
-      const { data: existingShareholder } = await supabase
-        .from("company_shareholders" as any)
-        .select("id, shares")
-        .eq("company_id", companyId)
-        .eq("user_id", recipient.user_id)
-        .maybeSingle();
-
-      if (existingShareholder) {
-        const existing = existingShareholder as any;
-        const { error: updateSharesError } = await supabase
-          .from("company_shareholders" as any)
-          .update({ shares: Number(existing.shares) + shares })
-          .eq("id", existing.id);
-        if (updateSharesError) throw updateSharesError;
-      } else {
-        const { error: insertSharesError } = await supabase
-          .from("company_shareholders" as any)
-          .insert({ company_id: companyId, user_id: recipient.user_id, shares });
-        if (insertSharesError) throw insertSharesError;
-      }
-
-      // Look up the current user's profile for the transfer record
-      const { data: senderProfile } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .maybeSingle();
-
-      await supabase.from("company_share_transfers" as any).insert({
-        company_id: companyId,
-        from_user_id: senderProfile?.user_id ?? user.id,
-        to_user_id: recipient.user_id,
-        shares,
-        price_per_share: pricePerShare,
-        total_price: totalPrice,
-        transfer_type: totalPrice > 0 ? "sale" : "gift",
-      });
-
-      const { data: allShareholders } = await supabase
-        .from("company_shareholders" as any)
-        .select("user_id, shares")
-        .eq("company_id", companyId)
-        .order("shares", { ascending: false })
-        .limit(1);
-
-      if (allShareholders && allShareholders.length > 0) {
-        await supabase
-          .from("companies")
-          .update({ owner_id: (allShareholders[0] as any).user_id })
-          .eq("id", companyId);
-      }
-
-      return { totalPrice };
-    },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["company-shareholders", vars.companyId] });
-      queryClient.invalidateQueries({ queryKey: ["company", vars.companyId] });
-      queryClient.invalidateQueries({ queryKey: ["companies"] });
-      queryClient.invalidateQueries({ queryKey: ["company-balance", vars.companyId] });
-      toast({
-        title: "Shares created",
-        description: "Shares were successfully created and transferred.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Share transfer failed", description: error.message, variant: "destructive" });
-    },
   });
 };
 
@@ -203,7 +73,7 @@ export const useDistributeAnnualProfit = () => {
         .single();
       if (companyError) throw companyError;
 
-      const { data: latestDist } = await supabase
+      const { data: latestDistribution } = await supabase
         .from("company_profit_distributions" as any)
         .select("distributed_at")
         .eq("company_id", companyId)
@@ -211,45 +81,58 @@ export const useDistributeAnnualProfit = () => {
         .limit(1)
         .maybeSingle();
 
-      let txQuery = supabase
+      let transactionQuery = supabase
         .from("company_transactions")
         .select("amount")
         .eq("company_id", companyId);
 
-      if ((latestDist as any)?.distributed_at) {
-        txQuery = txQuery.gt("created_at", (latestDist as any).distributed_at);
+      if ((latestDistribution as any)?.distributed_at) {
+        transactionQuery = transactionQuery.gt(
+          "created_at",
+          (latestDistribution as any).distributed_at,
+        );
       }
 
-      const { data: txns, error: txError } = await txQuery;
-      if (txError) throw txError;
+      const { data: transactions, error: transactionError } = await transactionQuery;
+      if (transactionError) throw transactionError;
 
-      const profit = (txns || []).reduce((sum, t) => sum + Number(t.amount), 0);
+      const profit = (transactions || []).reduce(
+        (sum, transaction) => sum + Number(transaction.amount),
+        0,
+      );
       const distributableProfit = Math.max(0, Math.floor(profit));
       if (distributableProfit <= 0) throw new Error("No profit available to distribute");
-      if (Number(company.balance) < distributableProfit) throw new Error("Insufficient company balance");
+      if (Number(company.balance) < distributableProfit) {
+        throw new Error("Insufficient company balance");
+      }
 
-      const { data: shareholders, error: shError } = await supabase
+      const { data: shareholders, error: shareholderError } = await supabase
         .from("company_shareholders" as any)
         .select("user_id, shares")
         .eq("company_id", companyId);
-      if (shError) throw shError;
+      if (shareholderError) throw shareholderError;
       if (!shareholders || shareholders.length === 0) throw new Error("No shareholders found");
 
-      const totalShares = shareholders.reduce((sum: number, sh: any) => sum + Number(sh.shares), 0);
+      const totalShares = shareholders.reduce(
+        (sum: number, shareholder: any) => sum + Number(shareholder.shares),
+        0,
+      );
       if (totalShares <= 0) throw new Error("Invalid total shares");
 
-      const userIds = shareholders.map((s: any) => s.user_id);
+      const userIds = shareholders.map((shareholder: any) => shareholder.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, user_id, cash")
         .in("user_id", userIds);
 
-      const profileByUserId = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      const profileByUserId = new Map((profiles || []).map((profile: any) => [profile.user_id, profile]));
 
-      for (const sh of shareholders as any[]) {
-        const payout = Math.floor((distributableProfit * Number(sh.shares)) / totalShares);
+      for (const shareholder of shareholders as any[]) {
+        const payout = Math.floor(
+          (distributableProfit * Number(shareholder.shares)) / totalShares,
+        );
         if (payout <= 0) continue;
-        const profile = profileByUserId.get(sh.user_id);
+        const profile = profileByUserId.get(shareholder.user_id);
         if (!profile) continue;
 
         const { error: profileUpdateError } = await supabase
@@ -273,26 +156,29 @@ export const useDistributeAnnualProfit = () => {
         category: "owner_transfer",
       });
 
-      const { error: distError } = await supabase
+      const { error: distributionError } = await supabase
         .from("company_profit_distributions" as any)
         .insert({
           company_id: companyId,
           game_year: gameYear,
           distributed_profit: distributableProfit,
-          distributed_by: user.id, // account-level action, user_id is correct here
+          distributed_by: user.id,
         });
-      if (distError) throw distError;
+      if (distributionError) throw distributionError;
 
       return { distributableProfit, gameYear };
     },
-    onSuccess: ({ distributableProfit, gameYear }, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["company", vars.companyId] });
-      queryClient.invalidateQueries({ queryKey: ["company-balance", vars.companyId] });
-      queryClient.invalidateQueries({ queryKey: ["company-transactions", vars.companyId] });
-      queryClient.invalidateQueries({ queryKey: ["company-shareholders", vars.companyId] });
+    onSuccess: ({ distributableProfit, gameYear }, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["company", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-balance", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-transactions", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company-shareholders", variables.companyId] });
       toast({
         title: "Profit distributed",
-        description: `$${distributableProfit.toLocaleString()} distributed for game year ${gameYear}.`,
+        description: `${new Intl.NumberFormat("en-GB", {
+          style: "currency",
+          currency: "GBP",
+        }).format(distributableProfit)} distributed for game year ${gameYear}.`,
       });
     },
     onError: (error: Error) => {
