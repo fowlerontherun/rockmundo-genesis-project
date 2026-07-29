@@ -1,9 +1,4 @@
 {
-  "20250917090000": [
-    "20250917090000_add_promotion_campaigns_table.sql",
-    "20250917090000_create_label_system.sql",
-    "20250917090000_create_leaderboard_tables.sql"
-  ],
   "20260201020000": [
     "20260201020000_add_travel_time_and_rest_days_to_tour_venues.sql",
     "20260201020000_create_chat_participants_table.sql",
