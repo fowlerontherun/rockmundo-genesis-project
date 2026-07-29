@@ -114,8 +114,9 @@ export const CharityDonationsTab = ({ cash, currencyCode }: CharityDonationsTabP
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const amountMajor = Number.parseInt(donationAmount, 10);
-  const validAmount = Number.isInteger(amountMajor) && amountMajor > 0;
+  const amountText = donationAmount.trim();
+  const validAmount = /^\d+$/.test(amountText) && Number(amountText) > 0;
+  const amountMajor = validAmount ? Number(amountText) : 0;
 
   const handleDonate = () => {
     if (!selectedCharity || !validAmount) {
