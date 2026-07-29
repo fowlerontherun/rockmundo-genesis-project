@@ -1,258 +1,169 @@
--- Create territories lookup table
-CREATE TABLE IF NOT EXISTS territories (
-  code TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  region TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- Compatibility layer for the authoritative record-label schema created by the
+-- consolidated 20250917090000 migration. Do not recreate tables or add a second
+-- set of permissive RLS policies here.
+
+ALTER TABLE public.territories
+  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+
+ALTER TABLE public.label_territories
+  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+
+ALTER TABLE public.label_roster_slots
+  ADD COLUMN IF NOT EXISTS contract_id uuid REFERENCES public.artist_label_contracts(id) ON DELETE SET NULL;
+
+-- These aliases remain in active use by the label directory and admin editor.
+ALTER TABLE public.label_deal_types
+  ADD COLUMN IF NOT EXISTS royalty_artist_pct integer,
+  ADD COLUMN IF NOT EXISTS advance_min integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS advance_max integer NOT NULL DEFAULT 0;
+
+UPDATE public.label_deal_types
+SET royalty_artist_pct = COALESCE(
+  royalty_artist_pct,
+  round(default_artist_royalty)::integer,
+  20
+)
+WHERE royalty_artist_pct IS NULL;
+
+ALTER TABLE public.label_deal_types
+  ALTER COLUMN royalty_artist_pct SET DEFAULT 20,
+  ALTER COLUMN royalty_artist_pct SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'label_deal_types_royalty_artist_pct_check'
+      AND conrelid = 'public.label_deal_types'::regclass
+  ) THEN
+    ALTER TABLE public.label_deal_types
+      ADD CONSTRAINT label_deal_types_royalty_artist_pct_check
+      CHECK (royalty_artist_pct BETWEEN 0 AND 100)
+      NOT VALID;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'label_deal_types_advance_range_check'
+      AND conrelid = 'public.label_deal_types'::regclass
+  ) THEN
+    ALTER TABLE public.label_deal_types
+      ADD CONSTRAINT label_deal_types_advance_range_check
+      CHECK (advance_min >= 0 AND advance_max >= advance_min)
+      NOT VALID;
+  END IF;
+END
+$$;
+
+-- Preserve harmless aliases from the later label prototype without replacing
+-- the canonical columns or automation.
+ALTER TABLE public.artist_label_contracts
+  ADD COLUMN IF NOT EXISTS marketing_support integer NOT NULL DEFAULT 0;
+
+ALTER TABLE public.label_releases
+  ADD COLUMN IF NOT EXISTS release_id uuid REFERENCES public.releases(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS marketing_budget integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS units_sold integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS revenue_generated numeric(12,2) NOT NULL DEFAULT 0;
+
+UPDATE public.label_releases
+SET marketing_budget = COALESCE(marketing_budget, promotion_budget, 0),
+    units_sold = COALESCE(units_sold, sales_units, 0),
+    revenue_generated = COALESCE(revenue_generated, gross_revenue, 0)
+WHERE marketing_budget IS NULL
+   OR units_sold IS NULL
+   OR revenue_generated IS NULL;
+
+ALTER TABLE public.label_royalty_statements
+  ADD COLUMN IF NOT EXISTS gross_revenue numeric(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS advance_deduction numeric(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS net_payout numeric(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS paid boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS paid_at timestamptz,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+
+UPDATE public.label_royalty_statements
+SET gross_revenue = COALESCE(gross_revenue, artist_share + label_share, 0),
+    net_payout = COALESCE(net_payout, artist_share, 0),
+    created_at = COALESCE(created_at, generated_at, now())
+WHERE gross_revenue IS NULL
+   OR net_payout IS NULL
+   OR created_at IS NULL;
+
+-- Seed additional templates through both the canonical fields and the legacy
+-- aliases. Use existence checks because historical data may not have a unique
+-- constraint on name.
+INSERT INTO public.label_deal_types (
+  name,
+  description,
+  default_artist_royalty,
+  default_label_royalty,
+  includes_advance,
+  includes_360,
+  masters_owned_by_artist,
+  default_term_months,
+  default_release_quota,
+  royalty_artist_pct,
+  advance_min,
+  advance_max
+)
+SELECT
+  seed.name,
+  seed.description,
+  seed.artist_royalty,
+  100 - seed.artist_royalty,
+  seed.advance_max > 0,
+  seed.includes_360,
+  seed.artist_owns_masters,
+  seed.term_months,
+  seed.release_quota,
+  seed.artist_royalty,
+  seed.advance_min,
+  seed.advance_max
+FROM (VALUES
+  ('Standard Deal'::text, 'Traditional recording contract with standard royalty split.'::text, 15, false, false, 24, 3, 10000, 50000),
+  ('Distribution Deal'::text, 'Distribution-only agreement where the artist retains ownership.'::text, 30, false, true, 12, 1, 0, 10000),
+  ('360 Deal'::text, 'Comprehensive deal covering multiple artist revenue streams.'::text, 10, true, false, 36, 4, 50000, 200000),
+  ('Production Deal'::text, 'Label-funded production services and distribution.'::text, 20, false, false, 18, 2, 5000, 25000),
+  ('Licensing Deal'::text, 'Short-term licensing agreement with artist-owned masters.'::text, 40, false, true, 12, 1, 0, 5000)
+) AS seed(
+  name,
+  description,
+  artist_royalty,
+  includes_360,
+  artist_owns_masters,
+  term_months,
+  release_quota,
+  advance_min,
+  advance_max
+)
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.label_deal_types existing
+  WHERE lower(existing.name) = lower(seed.name)
 );
 
--- Create labels table
-CREATE TABLE IF NOT EXISTS labels (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR NOT NULL,
-  description TEXT,
-  headquarters_city TEXT,
-  logo_url TEXT,
-  created_by UUID REFERENCES auth.users(id),
-  roster_slot_capacity INTEGER DEFAULT 10,
-  marketing_budget INTEGER DEFAULT 100000,
-  genre_focus TEXT[],
-  reputation_score INTEGER DEFAULT 50,
-  market_share NUMERIC DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create label territories junction table
-CREATE TABLE IF NOT EXISTS label_territories (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  label_id UUID NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
-  territory_code TEXT NOT NULL REFERENCES territories(code),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(label_id, territory_code)
-);
-
--- Create label roster slots
-CREATE TABLE IF NOT EXISTS label_roster_slots (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  label_id UUID NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
-  slot_number INTEGER NOT NULL,
-  status TEXT DEFAULT 'available' CHECK (status IN ('available', 'occupied', 'reserved')),
-  contract_id UUID,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(label_id, slot_number)
-);
-
--- Create label deal types
-CREATE TABLE IF NOT EXISTS label_deal_types (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR NOT NULL UNIQUE,
-  description TEXT,
-  royalty_artist_pct INTEGER NOT NULL,
-  advance_min INTEGER DEFAULT 0,
-  advance_max INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create artist label contracts
-CREATE TABLE IF NOT EXISTS artist_label_contracts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  label_id UUID NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
-  deal_type_id UUID NOT NULL REFERENCES label_deal_types(id),
-  artist_profile_id UUID,
-  band_id UUID REFERENCES bands(id) ON DELETE CASCADE,
-  roster_slot_id UUID REFERENCES label_roster_slots(id),
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'fulfilled', 'breached', 'expired')),
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  advance_amount INTEGER DEFAULT 0,
-  recouped_amount INTEGER DEFAULT 0,
-  royalty_artist_pct INTEGER NOT NULL,
-  release_quota INTEGER NOT NULL,
-  releases_completed INTEGER DEFAULT 0,
-  marketing_support INTEGER DEFAULT 0,
-  masters_owned_by_artist BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create label releases
-CREATE TABLE IF NOT EXISTS label_releases (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  contract_id UUID NOT NULL REFERENCES artist_label_contracts(id) ON DELETE CASCADE,
-  release_id UUID REFERENCES releases(id),
-  title TEXT NOT NULL,
-  release_type TEXT,
-  release_date DATE,
-  marketing_budget INTEGER DEFAULT 0,
-  units_sold INTEGER DEFAULT 0,
-  revenue_generated INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'planned' CHECK (status IN ('planned', 'in_production', 'released', 'archived')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create label promotion campaigns
-CREATE TABLE IF NOT EXISTS label_promotion_campaigns (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  release_id UUID NOT NULL REFERENCES label_releases(id) ON DELETE CASCADE,
-  campaign_type TEXT NOT NULL,
-  budget INTEGER NOT NULL,
-  channels TEXT[] DEFAULT '{}',
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  effectiveness INTEGER DEFAULT 0,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create label royalty statements
-CREATE TABLE IF NOT EXISTS label_royalty_statements (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  contract_id UUID NOT NULL REFERENCES artist_label_contracts(id) ON DELETE CASCADE,
-  release_id UUID REFERENCES label_releases(id),
-  period_start DATE NOT NULL,
-  period_end DATE NOT NULL,
-  gross_revenue INTEGER NOT NULL,
-  label_share INTEGER NOT NULL,
-  artist_share INTEGER NOT NULL,
-  advance_deduction INTEGER DEFAULT 0,
-  net_payout INTEGER NOT NULL,
-  paid BOOLEAN DEFAULT false,
-  paid_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Enable RLS on all tables
-ALTER TABLE territories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE labels ENABLE ROW LEVEL SECURITY;
-ALTER TABLE label_territories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE label_roster_slots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE label_deal_types ENABLE ROW LEVEL SECURITY;
-ALTER TABLE artist_label_contracts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE label_releases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE label_promotion_campaigns ENABLE ROW LEVEL SECURITY;
-ALTER TABLE label_royalty_statements ENABLE ROW LEVEL SECURITY;
-
--- Territories policies
-CREATE POLICY "Territories are viewable by everyone" ON territories FOR SELECT USING (true);
-
--- Labels policies
-CREATE POLICY "Labels are viewable by everyone" ON labels FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can create labels" ON labels FOR INSERT WITH CHECK (auth.uid() = created_by);
-CREATE POLICY "Label owners can update their labels" ON labels FOR UPDATE USING (auth.uid() = created_by);
-
--- Label territories policies
-CREATE POLICY "Label territories are viewable by everyone" ON label_territories FOR SELECT USING (true);
-CREATE POLICY "Label owners can manage territories" ON label_territories FOR ALL USING (
-  EXISTS (SELECT 1 FROM labels WHERE labels.id = label_territories.label_id AND labels.created_by = auth.uid())
-);
-
--- Label roster slots policies
-CREATE POLICY "Roster slots are viewable by everyone" ON label_roster_slots FOR SELECT USING (true);
-CREATE POLICY "Label owners can manage roster slots" ON label_roster_slots FOR ALL USING (
-  EXISTS (SELECT 1 FROM labels WHERE labels.id = label_roster_slots.label_id AND labels.created_by = auth.uid())
-);
-
--- Deal types policies
-CREATE POLICY "Deal types are viewable by everyone" ON label_deal_types FOR SELECT USING (true);
-
--- Contracts policies
-CREATE POLICY "Contracts are viewable by involved parties" ON artist_label_contracts FOR SELECT USING (
-  EXISTS (SELECT 1 FROM labels WHERE labels.id = artist_label_contracts.label_id AND labels.created_by = auth.uid())
-  OR EXISTS (SELECT 1 FROM bands WHERE bands.id = artist_label_contracts.band_id AND bands.leader_id = auth.uid())
-  OR artist_profile_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
-);
-
-CREATE POLICY "Label owners can create contracts" ON artist_label_contracts FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM labels WHERE labels.id = label_id AND labels.created_by = auth.uid())
-);
-
-CREATE POLICY "Label owners can update their contracts" ON artist_label_contracts FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM labels WHERE labels.id = label_id AND labels.created_by = auth.uid())
-);
-
--- Releases policies
-CREATE POLICY "Releases are viewable by contract parties" ON label_releases FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM artist_label_contracts alc
-    JOIN labels l ON l.id = alc.label_id
-    WHERE alc.id = label_releases.contract_id
-    AND (l.created_by = auth.uid() OR alc.band_id IN (SELECT id FROM bands WHERE leader_id = auth.uid()))
-  )
-);
-
-CREATE POLICY "Label owners can manage releases" ON label_releases FOR ALL USING (
-  EXISTS (
-    SELECT 1 FROM artist_label_contracts alc
-    JOIN labels l ON l.id = alc.label_id
-    WHERE alc.id = label_releases.contract_id AND l.created_by = auth.uid()
-  )
-);
-
--- Promotion campaigns policies
-CREATE POLICY "Campaigns are viewable by contract parties" ON label_promotion_campaigns FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM label_releases lr
-    JOIN artist_label_contracts alc ON alc.id = lr.contract_id
-    JOIN labels l ON l.id = alc.label_id
-    WHERE lr.id = label_promotion_campaigns.release_id
-    AND (l.created_by = auth.uid() OR alc.band_id IN (SELECT id FROM bands WHERE leader_id = auth.uid()))
-  )
-);
-
-CREATE POLICY "Label owners can manage campaigns" ON label_promotion_campaigns FOR ALL USING (
-  EXISTS (
-    SELECT 1 FROM label_releases lr
-    JOIN artist_label_contracts alc ON alc.id = lr.contract_id
-    JOIN labels l ON l.id = alc.label_id
-    WHERE lr.id = label_promotion_campaigns.release_id AND l.created_by = auth.uid()
-  )
-);
-
--- Royalty statements policies
-CREATE POLICY "Royalty statements viewable by parties" ON label_royalty_statements FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM artist_label_contracts alc
-    JOIN labels l ON l.id = alc.label_id
-    WHERE alc.id = label_royalty_statements.contract_id
-    AND (l.created_by = auth.uid() OR alc.band_id IN (SELECT id FROM bands WHERE leader_id = auth.uid()))
-  )
-);
-
-CREATE POLICY "Label owners can manage statements" ON label_royalty_statements FOR ALL USING (
-  EXISTS (
-    SELECT 1 FROM artist_label_contracts alc
-    JOIN labels l ON l.id = alc.label_id
-    WHERE alc.id = label_royalty_statements.contract_id AND l.created_by = auth.uid()
-  )
-);
-
--- Insert some default deal types
-INSERT INTO label_deal_types (name, description, royalty_artist_pct, advance_min, advance_max) VALUES
-  ('Standard Deal', 'Traditional recording contract with standard royalty split', 15, 10000, 50000),
-  ('Distribution Deal', 'Distribution only, artist retains ownership', 30, 0, 10000),
-  ('360 Deal', 'Comprehensive deal covering all revenue streams', 10, 50000, 200000),
-  ('Production Deal', 'Label provides production services and distribution', 20, 5000, 25000),
-  ('Licensing Deal', 'Short-term licensing agreement', 40, 0, 5000)
-ON CONFLICT (name) DO NOTHING;
-
--- Insert some default territories
-INSERT INTO territories (code, name, region) VALUES
-  ('US', 'United States', 'North America'),
-  ('UK', 'United Kingdom', 'Europe'),
-  ('CA', 'Canada', 'North America'),
-  ('AU', 'Australia', 'Oceania'),
-  ('JP', 'Japan', 'Asia'),
-  ('DE', 'Germany', 'Europe'),
-  ('FR', 'France', 'Europe'),
-  ('BR', 'Brazil', 'South America'),
-  ('MX', 'Mexico', 'North America'),
-  ('IT', 'Italy', 'Europe'),
-  ('ES', 'Spain', 'Europe'),
-  ('KR', 'South Korea', 'Asia'),
-  ('CN', 'China', 'Asia'),
-  ('IN', 'India', 'Asia'),
-  ('WORLDWIDE', 'Worldwide', 'Global')
+INSERT INTO public.territories (code, name, region)
+SELECT *
+FROM (VALUES
+  ('US'::text, 'United States'::text, 'North America'::text),
+  ('UK'::text, 'United Kingdom'::text, 'Europe'::text),
+  ('CA'::text, 'Canada'::text, 'North America'::text),
+  ('AU'::text, 'Australia'::text, 'Oceania'::text),
+  ('JP'::text, 'Japan'::text, 'Asia'::text),
+  ('DE'::text, 'Germany'::text, 'Europe'::text),
+  ('FR'::text, 'France'::text, 'Europe'::text),
+  ('BR'::text, 'Brazil'::text, 'South America'::text),
+  ('MX'::text, 'Mexico'::text, 'North America'::text),
+  ('IT'::text, 'Italy'::text, 'Europe'::text),
+  ('ES'::text, 'Spain'::text, 'Europe'::text),
+  ('KR'::text, 'South Korea'::text, 'Asia'::text),
+  ('CN'::text, 'China'::text, 'Asia'::text),
+  ('IN'::text, 'India'::text, 'Asia'::text),
+  ('WORLDWIDE'::text, 'Worldwide'::text, 'Global'::text)
+) seed(code, name, region)
 ON CONFLICT (code) DO NOTHING;
+
+NOTIFY pgrst, 'reload schema';
