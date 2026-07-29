@@ -5,12 +5,7 @@ create table if not exists public.profile_activity_statuses (
   status text not null,
   started_at timestamptz not null default timezone('utc', now()),
   duration_minutes integer,
-  ends_at timestamptz generated always as (
-    case
-      when duration_minutes is null then null
-      else started_at + make_interval(mins => duration_minutes)
-    end
-  ) stored,
+  ends_at timestamptz,
   song_id uuid references public.songs(id) on delete set null,
   metadata jsonb,
   created_at timestamptz not null default timezone('utc', now()),
@@ -39,6 +34,25 @@ create trigger profile_activity_statuses_set_updated_at
   before update on public.profile_activity_statuses
   for each row
   execute function public.set_profile_activity_status_updated_at();
+
+create or replace function public.sync_profile_activity_status_ends_at()
+returns trigger as $$
+begin
+  new.ends_at = case
+    when new.duration_minutes is null then null
+    else new.started_at + make_interval(mins => new.duration_minutes)
+  end;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists profile_activity_statuses_sync_ends_at
+  on public.profile_activity_statuses;
+
+create trigger profile_activity_statuses_sync_ends_at
+  before insert or update on public.profile_activity_statuses
+  for each row
+  execute function public.sync_profile_activity_status_ends_at();
 
 alter table public.profile_activity_statuses enable row level security;
 
