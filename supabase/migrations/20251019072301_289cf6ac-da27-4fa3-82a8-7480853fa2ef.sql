@@ -1,21 +1,46 @@
--- Create songs for completed songwriting projects that don't have songs yet
--- Use 'draft' status since 'complete' is not allowed in the songs table
-INSERT INTO songs (user_id, title, genre, lyrics, quality_score, song_rating, status, completed_at, songwriting_project_id, catalog_status, streams, revenue)
-SELECT 
+-- Convert completed songwriting projects into draft songs using the established
+-- auth-user owner stored in songs.artist_id and the derived character profile.
+
+ALTER TABLE public.songs
+  ADD COLUMN IF NOT EXISTS completed_at timestamptz;
+
+INSERT INTO public.songs (
+  artist_id,
+  profile_id,
+  title,
+  genre,
+  lyrics,
+  quality_score,
+  song_rating,
+  status,
+  completed_at,
+  songwriting_project_id,
+  catalog_status,
+  streams,
+  revenue
+)
+SELECT
   sp.user_id,
+  p.id,
   sp.title,
-  COALESCE(sp.genres[1], 'Rock') as genre,
-  COALESCE(sp.initial_lyrics, '') as lyrics,
-  COALESCE(sp.quality_score, 50) as quality_score,
-  COALESCE(sp.song_rating, 1) as song_rating,
-  'draft' as status,
-  NOW() as completed_at,
-  sp.id as songwriting_project_id,
-  'private' as catalog_status,
-  0 as streams,
-  0 as revenue
-FROM songwriting_projects sp
+  COALESCE(sp.genres[1], 'Rock'),
+  COALESCE(sp.initial_lyrics, ''),
+  COALESCE(sp.quality_score, 50),
+  COALESCE(sp.song_rating, 1),
+  'draft',
+  now(),
+  sp.id,
+  'private',
+  0,
+  0
+FROM public.songwriting_projects sp
+LEFT JOIN public.profiles p
+  ON p.user_id = sp.user_id
 WHERE sp.status IN ('completed', 'complete')
   AND NOT EXISTS (
-    SELECT 1 FROM songs s WHERE s.songwriting_project_id = sp.id
+    SELECT 1
+    FROM public.songs s
+    WHERE s.songwriting_project_id = sp.id
   );
+
+NOTIFY pgrst, 'reload schema';
