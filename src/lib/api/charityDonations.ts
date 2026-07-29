@@ -14,12 +14,24 @@ export interface CharityDonationResult {
   idempotent: boolean;
 }
 
+interface CharityDonationRpcClient {
+  rpc: (
+    functionName: string,
+    parameters: Record<string, unknown>,
+  ) => Promise<{
+    data: unknown;
+    error: { message: string } | null;
+  }>;
+}
+
+const charityDonationRpcClient = supabase as unknown as CharityDonationRpcClient;
+
 export async function makeCharityDonation(
   charityId: string,
   amountMinor: number,
   idempotencyKey: string,
 ): Promise<CharityDonationResult> {
-  const { data, error } = await (supabase as any).rpc("make_my_charity_donation", {
+  const { data, error } = await charityDonationRpcClient.rpc("make_my_charity_donation", {
     p_charity_id: charityId,
     p_amount_minor: amountMinor,
     p_idempotency_key: idempotencyKey,
