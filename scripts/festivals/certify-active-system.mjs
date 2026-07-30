@@ -21,6 +21,16 @@ const sqlFiles = [...walk("supabase/migrations"), ...walk("supabase/tests")].fil
 const allFiles = [...tsFiles, ...sqlFiles, ...walk("supabase/functions"), ...walk("scripts/festivals")];
 const contents = new Map(allFiles.map(file => [file, read(file)]));
 const festivalFiles = tsFiles.filter(file => /festival/i.test(file) || /festival/i.test(contents.get(file)));
+const finalSettlementMigration = read("supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql");
+if (!/DROP\s+FUNCTION\s+IF\s+EXISTS\s+public\.post_festival_edition_settlement\(uuid,integer,uuid\)/i.test(finalSettlementMigration.replaceAll(/\s+/g, " ").replaceAll(/,\s+/g, ","))) {
+  throw new Error("The retired monolithic Festival posting RPC is not permanently dropped.");
+}
+if (tsFiles.some(file => /\bpost_festival_edition_settlement\b/.test(contents.get(file)))) {
+  throw new Error("Browser code calls the retired monolithic Festival posting RPC.");
+}
+for (const forbidden of ["festival_edition_settlement_lines", "festival_edition_settlement_outcomes", "festival_edition_history_snapshots"]) {
+  if (festivalFiles.some(file => contents.get(file).includes(`.from("${forbidden}")`) && /\.(insert|update|upsert|delete)\s*\(/.test(contents.get(file)))) throw new Error(`Browser code writes authoritative settlement table ${forbidden}.`);
+}
 
 const semantics = param => ({ festivalCompanyId: "festival_company_id", festivalCompanyIdentifier: "festival_company_slug_or_id", editionIdentifier: "annual_edition_id_or_year", companyId: "company_id", editionId: "annual_edition_id", festivalSlug: "festival_slug", participationId: "participation_id", sessionId: "performance_session_id", launchId: "launch_id", resultId: "legacy_festival_id", festivalId: "legacy_festival_id" })[param] || "unknown";
 const normalise = route => route.replace(/:[^/]+/g, ":parameter").replace(/\/$/, "");
@@ -57,7 +67,7 @@ const rpcs = [...rpcNames].sort().map(name => {
   const callers = allFiles.filter(file => new RegExp(`\\b${name}\\b`, "i").test(contents.get(file)));
   const runtime = callers.filter(file => !file.includes("migrations/") && !file.includes("docs/") && !file.includes("tests/") && file !== "scripts/festivals/certify-active-system.mjs");
   const legacy = /legacy|city_festival|game_event/.test(name);
-  return { name, typescriptCallers: callers.filter(f => /\.tsx?$/.test(f)), sqlCallers: callers.filter(f => f.includes("migrations/")), workerCallers: callers.filter(f => f.includes("functions/") || f.includes("scripts/")), testCallers: callers.filter(f => f.includes("tests/") || /\.test\./.test(f)), classification: runtime.length ? (legacy ? "active_legacy" : "active_canonical") : callers.some(f => f.includes("tests/")) ? "test_only" : "no_known_runtime_callers", dynamicCallerReviewRequired: true };
+  return { name, typescriptCallers: callers.filter(f => /\.tsx?$/.test(f)), sqlCallers: callers.filter(f => f.includes("migrations/")), workerCallers: callers.filter(f => f.includes("functions/") || f.includes("scripts/")), testCallers: callers.filter(f => f.includes("tests/") || /\.test\./.test(f)), classification: name === "post_festival_edition_settlement" ? "retired_unavailable" : runtime.length ? (legacy ? "active_legacy" : "active_canonical") : callers.some(f => f.includes("tests/")) ? "test_only" : "no_known_runtime_callers", dynamicCallerReviewRequired: name !== "post_festival_edition_settlement" };
 });
 
 const dbObjects = [];

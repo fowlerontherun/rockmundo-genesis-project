@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { parsePostingResult, parseReadiness, type PostingResult, type SettlementReadiness, type SettlementReport } from "./model";
+import { parseFinalisation, parsePostingResult, parsePublicHistory, parseReadiness, type FinalisationResult, type PostingResult, type SettlementReadiness, type SettlementReport } from "./model";
 
 type RpcClient={rpc(name:string,args:Record<string,unknown>):Promise<{data:unknown;error:{message:string}|null}>};
 const rpcClient:RpcClient=supabase;
@@ -12,10 +12,11 @@ export const settlementRepository={
  startPosting:async(id:string,version:number,key:string):Promise<PostingResult>=>parsePostingResult(await rpc("start_festival_edition_settlement_posting",{p_settlement_id:id,p_expected_version:version,p_idempotency_key:key})),
  postNext:async(id:string,key:string):Promise<PostingResult>=>parsePostingResult(await rpc("post_next_festival_edition_settlement_item",{p_settlement_id:id,p_idempotency_key:key})),
  finalisePosting:async(id:string,key:string):Promise<PostingResult>=>parsePostingResult(await rpc("finalise_festival_edition_settlement_posting",{p_settlement_id:id,p_idempotency_key:key})),
+ finalise:async(id:string,version:number,key:string):Promise<FinalisationResult>=>parseFinalisation(await rpc("finalise_festival_edition_settlement",{p_settlement_id:id,p_expected_version:version,p_idempotency_key:key})),
  receiveReceivable:(lineId:string,key:string)=>rpc("receive_festival_settlement_receivable",{p_line_id:lineId,p_idempotency_key:key}),
  payPayable:(lineId:string,key:string)=>rpc("pay_festival_settlement_payable",{p_line_id:lineId,p_idempotency_key:key}),
  writeOffReceivable:(lineId:string,key:string)=>rpc("write_off_festival_settlement_receivable",{p_line_id:lineId,p_idempotency_key:key}),
  cancelPayable:(lineId:string,key:string)=>rpc("cancel_festival_settlement_payable",{p_line_id:lineId,p_idempotency_key:key}),
  outcomes:(companyId:string,editionId:string)=>settlementRepository.read(companyId,editionId).then(x=>x?.outcomes??[]),
- history:(editionId:string)=>rpc("get_public_festival_edition_history",{p_edition_id:editionId}),
+ history:async(editionId:string)=>parsePublicHistory(await rpc("get_public_festival_edition_history",{p_edition_id:editionId})),
 };
