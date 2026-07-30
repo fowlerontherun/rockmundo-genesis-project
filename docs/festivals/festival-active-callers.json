@@ -5798,6 +5798,7 @@
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -9719,6 +9720,7 @@
         "src/features/festivals/booking/components.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -13872,6 +13874,17 @@
         "src/utils/worldEnvironment.ts",
         "src/utils/__tests__/atomicGigBookingMigration.test.ts",
         "src/utils/__tests__/gigBookingErrors.test.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
       ],
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
@@ -27044,6 +27057,7 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql",
         "supabase/tests/festival_settlement_harness.sql"
       ],
       "replacement": null,
@@ -36992,6 +37006,253 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_settlements",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql",
+        "supabase/tests/festival_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_settlement_lines",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_settlement_requests",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_posting_batches",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_posting_items",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_settlement_outcomes",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_licence_evidence",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_achievement_evidence",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_history_snapshots",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_edition_settlement_error",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_edition_settlement_authorised",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_settlement_request",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "prepare_festival_edition_settlement",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "approve_festival_edition_settlement",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "post_festival_edition_settlement",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_edition_settlement",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_public_festival_edition_history",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_history_immutable",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "trigger",
+      "name": "festival_history_immutable",
+      "migration": "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -37443,7 +37704,8 @@
       "name": "_festival_edition_runtime_actor",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218243700_authoritative_festival_edition_runtime.sql"
+        "supabase/migrations/20291218243700_authoritative_festival_edition_runtime.sql",
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -37454,7 +37716,30 @@
       "name": "_festival_edition_runtime_authorised",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218243700_authoritative_festival_edition_runtime.sql"
+        "supabase/migrations/20291218243700_authoritative_festival_edition_runtime.sql",
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_edition_settlement_authorised",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_edition_settlement_error",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -37489,6 +37774,17 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218080000_repair_festival_settlement_execution.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_history_immutable",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -38183,6 +38479,17 @@
         "supabase/tests/festival_settlement_v7_reconciliation_harness.sql"
       ],
       "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_settlement_request",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -39220,6 +39527,19 @@
       "sqlCallers": [
         "supabase/migrations/20291217160000_festival_staffing_and_suppliers.sql",
         "supabase/migrations/20291217161000_complete_festival_staffing_supplier_workflows.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "approve_festival_edition_settlement",
+      "typescriptCallers": [
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -41542,6 +41862,19 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "get_festival_edition_settlement",
+      "typescriptCallers": [
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "get_festival_hall_of_fame",
       "typescriptCallers": [
         "src/features/festivals/legacy/service.ts"
@@ -42120,6 +42453,19 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "get_public_festival_edition_history",
+      "typescriptCallers": [
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "get_public_festival_live_experience",
       "typescriptCallers": [
         "src/features/festival-company/data/festivalRuntimeRepository.ts"
@@ -42662,6 +43008,21 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "post_festival_edition_settlement",
+      "typescriptCallers": [
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_edition_settlement_harness.sql"
+      ],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "prepare_festival_edition_runtime",
       "typescriptCallers": [
         "src/features/festivals/runtime/service.ts"
@@ -42679,11 +43040,13 @@
     {
       "name": "prepare_festival_edition_settlement",
       "typescriptCallers": [
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/service.ts"
       ],
       "sqlCallers": [
         "supabase/migrations/20291213090000_festival_effects_and_settlement.sql",
-        "supabase/migrations/20291214080000_repair_and_expose_festival_features.sql"
+        "supabase/migrations/20291214080000_repair_and_expose_festival_features.sql",
+        "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -49774,6 +50137,7 @@
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -53684,6 +54048,7 @@
         "src/features/festivals/booking/components.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -57873,6 +58238,19 @@
         "src/utils/worldEnvironment.ts",
         "src/utils/__tests__/atomicGigBookingMigration.test.ts",
         "src/utils/__tests__/gigBookingErrors.test.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
+      "currentCallers": [
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
