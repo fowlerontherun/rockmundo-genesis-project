@@ -74,6 +74,9 @@ export function calculateCrowdDensity(attendance = 0, capacity = 0): number {
 }
 
 export function buildStageLayout(performers: LiveGigPerformerInput[], venue?: LiveGigVenueInput | null): StageLayoutKey {
+  const tier = mapVenueToTier(venue);
+  if (tier === 'festival_tent' || tier === 'festival_acoustic_field') return 'festival_tent_layout';
+  if (tier === 'amphitheatre' || tier === 'park_bandstand') return 'amphitheatre_arc';
   if (venue?.isFestival || /festival/i.test(venue?.venueType ?? '')) return 'festival_stage';
   if ((venue?.capacity ?? 999) <= 180) return 'small_club';
   if (performers.length <= 1) return 'solo';
