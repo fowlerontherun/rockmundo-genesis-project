@@ -195,6 +195,11 @@ verify_jwt = false
 [functions.festival-performance-worker]
 verify_jwt = false
 
+# Invoked by the platform scheduler. Authentication is an independent rotating
+# worker secret; the function itself owns the bounded queue-processing budget.
+[functions.process-festival-settlement-effects]
+verify_jwt = false
+
 [functions.create-slot-checkout]
 verify_jwt = false
 
