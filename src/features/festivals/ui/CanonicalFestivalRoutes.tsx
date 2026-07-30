@@ -7,6 +7,7 @@ import { festivalRoutes } from "../routes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getFestivalCompanySetup } from "@/features/festival-company/data/festivalCompanyRepository";
 import { FestivalUpgradeWorkspace } from "@/features/festival-company/upgrades/FestivalUpgradeWorkspace";
+import { FestivalLiveControlRoom } from "@/features/festivals/runtime/FestivalLiveControlRoom";
 
 export function FestivalFoundingPage() { return <main className="mx-auto max-w-3xl space-y-5 p-6"><h1 className="text-3xl font-bold">Found a Festival company</h1><p>Start an annual Festival brand. Eligibility, limits, authority, funds and price are verified by the server.</p><FestivalCompanyEligibilityCard /></main>; }
 
@@ -30,7 +31,7 @@ export function FestivalEditionShell() {
   if (!query.data || query.data.status !== "resolved") return <ResolutionState status={query.data?.status ?? "not_found"}/>;
   return <main className="mx-auto max-w-7xl space-y-5 p-4 md:p-6"><nav aria-label="Breadcrumb"><Link to={festivalRoutes.company(festivalCompanyId!)}>Festival company</Link> / <span>Annual edition {query.data.editionYear ?? ""}</span></nav><h1 className="text-3xl font-bold">Annual edition</h1><nav className="flex flex-wrap gap-3" aria-label="Edition navigation">{editionNavigation.map(item=><Link className="underline" key={item} to={item === "overview" ? festivalRoutes.edition(festivalCompanyId!, editionId!) : festivalRoutes[item](festivalCompanyId!, editionId!)}>{item}</Link>)}</nav><Outlet context={query.data}/></main>;
 }
-export function FestivalEditionWorkspace({section}:{section:string}) { const { editionId }=useParams(); if(section==="schedule") return <FestivalScheduleWorkspace editionId={editionId!}/>; return <Card><CardHeader><CardTitle className="capitalize">{section}</CardTitle></CardHeader><CardContent>This canonical annual-edition workspace is server-authoritative.</CardContent></Card>; }
+export function FestivalEditionWorkspace({section}:{section:string}) { const { festivalCompanyId, editionId }=useParams(); if(section==="schedule") return <FestivalScheduleWorkspace editionId={editionId!}/>; if(section==="live") return <FestivalLiveControlRoom companyId={festivalCompanyId!} editionId={editionId!}/>; return <Card><CardHeader><CardTitle className="capitalize">{section}</CardTitle></CardHeader><CardContent>This canonical annual-edition workspace is server-authoritative.</CardContent></Card>; }
 
 export function PublicFestivalEditionPage() {
   const { festivalCompanyIdentifier, editionIdentifier }=useParams();
