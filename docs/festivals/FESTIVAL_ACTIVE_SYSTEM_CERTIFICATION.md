@@ -3,6 +3,8 @@
 **Evidence date:** 2026-07-28. **Generator:** `scripts/festivals/certify-active-system.mjs`.
 The machine-readable evidence is [`festival-active-callers.json`](festival-active-callers.json). This report deliberately does not infer that a feature works from the existence of a component or SQL object.
 
+**Artist workflow review (2026-07-30):** the opportunity page now exposes persisted applications and invitations, lets the active profile choose any represented band, displays structured server eligibility failures, and sends apply, withdraw, accept, and decline commands exclusively through the repository RPC boundary. The active-writer inventory classifications are `canonical_rpc`, `legacy_rpc`, `direct_write_requires_replacement`, `compatibility_read`, `unused`, and `remove_after_migration`; application UI may not introduce a table mutation. See [`FESTIVAL_APPLICATION_SYSTEM.md`](FESTIVAL_APPLICATION_SYSTEM.md) for the aggregate and transition contract.
+
 ## Verdict
 
 The repository does **not** currently satisfy full-lifecycle certification. It contains a substantial canonical Festival-company domain and database harnesses, but the reachable application still exposes event-backed routes and direct browser writers. The executable gate therefore preserves these findings as an explicit baseline and refuses stale inventory or absent database fixture configuration; it does not silently skip fixtures.
