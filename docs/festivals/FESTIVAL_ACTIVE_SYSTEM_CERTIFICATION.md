@@ -117,3 +117,19 @@ Active runtime browser writes are `canonical_rpc`: preparation, transition, and 
 The owner live route now renders a real controlled-polling projection with runtime time/state, gates, conserved attendance/capacity, preserved weather warning, stage/artist status, readiness, incidents, unposted sales evidence, satisfaction, blockers and recent events. Direct authoritative table subscriptions and browser outcome calculation are absent.
 
 Database execution remains unclaimed: `run-edition-runtime-db-gate.sh`, `run-upgrade-db-gate.sh`, `run-artist-applications-db-gate.sh`, `run-scheduling-db-gate.sh`, and `run-full-lifecycle-db-gate.sh` were each refused/not executed because this environment did not explicitly confirm a disposable database. Static/domain/build results are recorded in the PR validation.
+
+## 2026-07-30 — canonical edition settlement certification delta
+
+| Surface | Classification | Certification |
+|---|---|---|
+| `prepare_festival_edition_settlement` | `canonical_rpc` | schema/static verified; disposable DB execution pending |
+| `approve_festival_edition_settlement` | `canonical_rpc` | schema/static verified; disposable DB execution pending |
+| `post_festival_edition_settlement` | `canonical_rpc` | shared finance ledger, unique line receipts and recovery batch; DB execution pending |
+| edition settlement owner workspace | `compatibility_read` + canonical RPC commands | route active; build pending |
+| public immutable edition projection | `compatibility_read` | anonymous redacted RPC only |
+| legacy settlement RPC family | `legacy_rpc` | must not receive canonical edition runtimes |
+| outcome/fame/reward application | `canonical_worker` | audience/eligibility/achievement evidence only; shared-service application uncertified |
+| platform-admin reopen/correction | `admin_only` | intentionally not exposed; uncertified |
+| direct browser financial/history writes | `direct_write_requires_replacement` | no active canonical writer; certification inventory guard required |
+
+The migration and static timestamp check ran in this workspace. Database harnesses were **not executed** because no explicitly confirmed disposable `SUPABASE_DB_URL` was provided; Festival database certification is therefore not claimed. Per-artist/sponsor satisfaction, shared fame/fan/reward application, admin replacement versions, downloadable statements, rankings/awards and full legacy import remain uncertified functionality.
