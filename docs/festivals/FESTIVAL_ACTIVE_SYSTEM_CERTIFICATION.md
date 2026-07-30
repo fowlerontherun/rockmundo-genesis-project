@@ -107,3 +107,13 @@ The active legacy stage console no longer writes `festival_stages` or `festival_
 The canonical stage/slot schemas were extended rather than duplicated. Full occupancy now spans setup through clearance and a database exclusion constraint serialises concurrent stage overlap. Direct authenticated writes to stages, slots, items and revisions are revoked. Publication continues through immutable revision snapshots. Runtime simulation and performance scoring remain explicitly out of scope.
 
 The new scheduling database gate was not reported as passing in this environment: no explicitly disposable `SUPABASE_DB_URL` was supplied. The gate refuses execution unless both repository safety checks and `FESTIVAL_TEST_DATABASE_DISPOSABLE=true` are present. Existing artist, upgrade and full-lifecycle gates must likewise be recorded independently and a refusal is not success.
+
+## 2026-07-30 authoritative annual-edition runtime
+
+Merged PR #1440 is commit `62829ed`; its final scheduling migration supplies edition-scoped stages/slots, setup-to-clearance exclusion intervals, server-authoritative contract assignment, overlap fencing, revoked direct writes and stable IDs. The new runtime references that revision and does not duplicate scheduling objects or use `game_events` as authority.
+
+Active runtime browser writes are `canonical_rpc`: preparation, transition, and the secured control-room read. Runtime tick execution is `canonical_worker`. Existing launch-runtime functions are `legacy_rpc` or `compatibility_read` for historical settlement and are `remove_after_migration`, not competing new-edition authority. Generic admin inspection is `admin_only`. Any table mutations listed by the generated inventory retain `direct_write_requires_replacement`; unreferenced historical simulations remain `unused`.
+
+The owner live route now renders a real controlled-polling projection with runtime time/state, gates, conserved attendance/capacity, preserved weather warning, stage/artist status, readiness, incidents, unposted sales evidence, satisfaction, blockers and recent events. Direct authoritative table subscriptions and browser outcome calculation are absent.
+
+Database execution remains unclaimed: `run-edition-runtime-db-gate.sh`, `run-upgrade-db-gate.sh`, `run-artist-applications-db-gate.sh`, `run-scheduling-db-gate.sh`, and `run-full-lifecycle-db-gate.sh` were each refused/not executed because this environment did not explicitly confirm a disposable database. Static/domain/build results are recorded in the PR validation.
