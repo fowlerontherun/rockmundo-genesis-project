@@ -44,7 +44,20 @@ export function mapCrowdEnergyToPresentation(energy: number, attendance = 0, cap
 }
 
 export function mapVenueToTier(venue?: LiveGigVenueInput | null): VenuePresentationTier {
-  if (venue?.isFestival || /festival/i.test(venue?.venueType ?? '')) return 'festival_stage';
+  const descriptor = `${venue?.venueType ?? ''} ${venue?.stageSize ?? ''} ${venue?.name ?? ''}`;
+  const isFestival = venue?.isFestival || /festival/i.test(descriptor);
+  if (isFestival) {
+    if (/tent|big top|marquee/i.test(descriptor)) return 'festival_tent';
+    if (/acoustic|folk|unplugged|garden/i.test(descriptor)) return 'festival_acoustic_field';
+    if (/second|other|third|bbc introducing|emerging|small/i.test(descriptor)) return 'festival_second_stage';
+    if (/main|headline|pyramid|primary/i.test(descriptor)) return 'festival_main_stage';
+    return 'festival_stage';
+  }
+  if (/beach|seafront|pier|coastal/i.test(descriptor)) return 'beach_stage';
+  if (/bandstand|park|common|square/i.test(descriptor)) return 'park_bandstand';
+  if (/amphitheat|bowl/i.test(descriptor)) return 'amphitheatre';
+  if (/warehouse|rave|industrial/i.test(descriptor)) return 'warehouse';
+  if (/basement|dive|cellar/i.test(descriptor)) return 'dive_basement';
   const capacity = venue?.capacity ?? 120;
   if (capacity <= 120) return 'small_bar';
   if (capacity <= 450) return 'local_club';
