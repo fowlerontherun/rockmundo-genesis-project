@@ -73,11 +73,13 @@ export const useCreateFestivalStage = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (stage: Omit<FestivalStage, "id" | "created_at">) => {
-      const { data, error } = await (supabase as any)
-        .from("festival_stages")
-        .insert(stage)
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc("legacy_festival_create_edition_stage", {
+        p_legacy_festival_id: stage.festival_id,
+        p_name: stage.stage_name,
+        p_capacity: stage.capacity,
+        p_genre_focus: stage.genre_focus,
+        p_idempotency_key: `legacy-stage:${stage.festival_id}:${stage.stage_name}`,
+      });
       if (error) throw error;
       return data;
     },
@@ -93,11 +95,13 @@ export const useCreateFestivalSlot = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (slot: Omit<FestivalStageSlot, "id" | "created_at" | "band">) => {
-      const { data, error } = await (supabase as any)
-        .from("festival_stage_slots")
-        .insert(slot)
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc("legacy_festival_create_performance_slot", {
+        p_stage_id: slot.stage_id,
+        p_day_number: slot.day_number,
+        p_slot_number: slot.slot_number,
+        p_slot_type: slot.slot_type,
+        p_idempotency_key: `legacy-slot:${slot.stage_id}:${slot.day_number}:${slot.slot_number}`,
+      });
       if (error) throw error;
       return data;
     },
@@ -118,17 +122,10 @@ export const useAssignBandToSlot = () => {
       payoutAmount: number;
       festivalId: string;
     }) => {
-      const { data, error } = await (supabase as any)
-        .from("festival_stage_slots")
-        .update({
-          band_id: bandId,
-          payout_amount: payoutAmount,
-          status: "booked",
-          is_npc_dj: false,
-        })
-        .eq("id", slotId)
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc("legacy_festival_assign_band_to_slot", {
+        p_slot_id: slotId, p_band_id: bandId, p_payout_amount: payoutAmount,
+        p_idempotency_key: `legacy-assignment:${slotId}:${bandId}`,
+      });
       if (error) throw error;
       return data;
     },
@@ -148,21 +145,10 @@ export const useFillNpcDjSlot = () => {
       genre: string;
       festivalId: string;
     }) => {
-      const quality = Math.floor(Math.random() * 21) + 40; // 40-60 range
-      const djName = `DJ ${genre} Beats`;
-      const { data, error } = await (supabase as any)
-        .from("festival_stage_slots")
-        .update({
-          is_npc_dj: true,
-          npc_dj_genre: genre,
-          npc_dj_quality: quality,
-          npc_dj_name: djName,
-          status: "booked",
-          band_id: null,
-        })
-        .eq("id", slotId)
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc("legacy_festival_assign_npc_to_slot", {
+        p_slot_id: slotId, p_genre: genre,
+        p_idempotency_key: `legacy-npc:${slotId}:${genre}`,
+      });
       if (error) throw error;
       return data;
     },

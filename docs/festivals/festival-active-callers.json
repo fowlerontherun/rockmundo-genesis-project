@@ -1764,12 +1764,12 @@
       "kind": "module",
       "importers": [],
       "status": "unused_or_dynamic",
-      "directDatabaseWriter": true,
+      "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": true,
       "writes": [
         {
-          "target": "festival_stage_slots",
-          "operation": "insert"
+          "target": "legacy_festival_generate_edition_slots",
+          "operation": "rpc"
         }
       ]
     },
@@ -2195,24 +2195,24 @@
         "src/components/festivals/admin/FestivalDetailManager.tsx"
       ],
       "status": "legacy_active_or_cross_domain",
-      "directDatabaseWriter": true,
-      "browserAuthoritativeCalculation": true,
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
       "writes": [
         {
-          "target": "festival_stages",
-          "operation": "insert"
+          "target": "legacy_festival_create_edition_stage",
+          "operation": "rpc"
         },
         {
-          "target": "festival_stage_slots",
-          "operation": "insert"
+          "target": "legacy_festival_create_performance_slot",
+          "operation": "rpc"
         },
         {
-          "target": "festival_stage_slots",
-          "operation": "update"
+          "target": "legacy_festival_assign_band_to_slot",
+          "operation": "rpc"
         },
         {
-          "target": "festival_stage_slots",
-          "operation": "update"
+          "target": "legacy_festival_assign_npc_to_slot",
+          "operation": "rpc"
         }
       ]
     },
@@ -18057,9 +18057,11 @@
         "src/components/wellness/CareerStageLongevityPanel.tsx",
         "src/components/wellness/TimeAwayLongevityPanel.tsx",
         "src/components/bands/__tests__/AddMoneyToBand.authority.test.ts",
+        "src/components/festivals/admin/FestivalDetailManager.tsx",
         "src/hooks/useCompanyFinance.ts",
         "src/hooks/useDikCokTips.ts",
         "src/hooks/useEquipmentStore.ts",
+        "src/hooks/useFestivalStages.ts",
         "src/hooks/useGameData.tsx",
         "src/hooks/useInbox.ts",
         "src/hooks/useParticipationDetails.ts",
@@ -18603,9 +18605,9 @@
     },
     {
       "file": "src/components/festivals/admin/FestivalDetailManager.tsx",
-      "target": "festival_stage_slots",
-      "operation": "insert",
-      "classification": "direct_write_requires_replacement"
+      "target": "legacy_festival_generate_edition_slots",
+      "operation": "rpc",
+      "classification": "legacy_rpc"
     },
     {
       "file": "src/components/festivals/admin/FestivalLifecycleControls.tsx",
@@ -18705,27 +18707,27 @@
     },
     {
       "file": "src/hooks/useFestivalStages.ts",
-      "target": "festival_stages",
-      "operation": "insert",
-      "classification": "direct_write_requires_replacement"
+      "target": "legacy_festival_create_edition_stage",
+      "operation": "rpc",
+      "classification": "legacy_rpc"
     },
     {
       "file": "src/hooks/useFestivalStages.ts",
-      "target": "festival_stage_slots",
-      "operation": "insert",
-      "classification": "direct_write_requires_replacement"
+      "target": "legacy_festival_create_performance_slot",
+      "operation": "rpc",
+      "classification": "legacy_rpc"
     },
     {
       "file": "src/hooks/useFestivalStages.ts",
-      "target": "festival_stage_slots",
-      "operation": "update",
-      "classification": "direct_write_requires_replacement"
+      "target": "legacy_festival_assign_band_to_slot",
+      "operation": "rpc",
+      "classification": "legacy_rpc"
     },
     {
       "file": "src/hooks/useFestivalStages.ts",
-      "target": "festival_stage_slots",
-      "operation": "update",
-      "classification": "direct_write_requires_replacement"
+      "target": "legacy_festival_assign_npc_to_slot",
+      "operation": "rpc",
+      "classification": "legacy_rpc"
     },
     {
       "file": "src/hooks/useFestivalTickets.ts",
@@ -19217,6 +19219,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_admin_management_harness.sql",
+        "supabase/tests/festival_authoritative_scheduling_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql"
@@ -19256,6 +19259,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_admin_management_harness.sql",
+        "supabase/tests/festival_authoritative_scheduling_harness.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_timetable_readiness_harness.sql"
       ],
@@ -22970,6 +22974,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_authoritative_scheduling_harness.sql",
         "supabase/tests/festival_phase2a_scheduling_harness.sql"
       ],
       "replacement": null,
@@ -27290,6 +27295,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_authoritative_scheduling_harness.sql",
         "supabase/tests/festival_phase2a_scheduling_harness.sql"
       ],
       "replacement": null,
@@ -27669,6 +27675,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_admin_management_harness.sql",
+        "supabase/tests/festival_authoritative_scheduling_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql"
@@ -29858,6 +29865,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_admin_management_harness.sql",
+        "supabase/tests/festival_authoritative_scheduling_harness.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_timetable_readiness_harness.sql"
       ],
@@ -32286,6 +32294,80 @@
       "harnessCovered": [
         "supabase/tests/festival_crowds_incidents_operations_harness.sql"
       ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "festival_edition_for_legacy_id",
+      "migration": "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "legacy_festival_create_edition_stage",
+      "migration": "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "legacy_festival_create_performance_slot",
+      "migration": "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "legacy_festival_generate_edition_slots",
+      "migration": "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_authoritative_scheduling_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "legacy_festival_assign_band_to_slot",
+      "migration": "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "legacy_festival_assign_npc_to_slot",
+      "migration": "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -39516,7 +39598,8 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20260722113844_afab3eaf-0b93-4fbc-9fb1-437007b03276.sql",
-        "supabase/migrations/20291212090000_complete_festival_edition_operations.sql"
+        "supabase/migrations/20291212090000_complete_festival_edition_operations.sql",
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -39726,7 +39809,8 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291212090000_complete_festival_edition_operations.sql",
-        "supabase/migrations/20291215090000_festival_phase2a_visual_scheduling.sql"
+        "supabase/migrations/20291215090000_festival_phase2a_visual_scheduling.sql",
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -39756,7 +39840,8 @@
         "supabase/migrations/20260717120000_admin_festival_creation_phase1.sql",
         "supabase/migrations/20260717153000_harden_festival_creation_phase1_forward.sql",
         "supabase/migrations/20260722112346_f2db86c9-56ff-405d-9695-fcc7eac902dd.sql",
-        "supabase/migrations/20291212090000_complete_festival_edition_operations.sql"
+        "supabase/migrations/20291212090000_complete_festival_edition_operations.sql",
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -39968,6 +40053,17 @@
         "supabase/tests/festival_london_test_fixture.sql"
       ],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "festival_edition_for_legacy_id",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -40383,6 +40479,7 @@
       ],
       "workerCallers": [],
       "testCallers": [
+        "supabase/tests/festival_authoritative_scheduling_harness.sql",
         "supabase/tests/festival_phase2a_scheduling_harness.sql"
       ],
       "classification": "active_canonical",
@@ -41731,6 +41828,73 @@
         "supabase/tests/festival_launch_ticket_sales_harness.sql"
       ],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "legacy_festival_assign_band_to_slot",
+      "typescriptCallers": [
+        "src/hooks/useFestivalStages.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_legacy",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "legacy_festival_assign_npc_to_slot",
+      "typescriptCallers": [
+        "src/hooks/useFestivalStages.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_legacy",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "legacy_festival_create_edition_stage",
+      "typescriptCallers": [
+        "src/hooks/useFestivalStages.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_legacy",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "legacy_festival_create_performance_slot",
+      "typescriptCallers": [
+        "src/hooks/useFestivalStages.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_legacy",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "legacy_festival_generate_edition_slots",
+      "typescriptCallers": [
+        "src/components/festivals/admin/FestivalDetailManager.tsx"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_authoritative_scheduling_harness.sql"
+      ],
+      "classification": "active_legacy",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -45115,7 +45279,7 @@
       "dataMigrationRequirement": "none for source file; preserve data tables",
       "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
       "recommendedRetirementPr": "festival-route-migration",
-      "risk": "high",
+      "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "investigate"
     },
@@ -45525,7 +45689,7 @@
       "dataMigrationRequirement": "none for source file; preserve data tables",
       "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
       "recommendedRetirementPr": "festival-route-migration",
-      "risk": "high",
+      "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "remove_after_route_migration"
     },
@@ -60014,9 +60178,11 @@
         "src/components/wellness/CareerStageLongevityPanel.tsx",
         "src/components/wellness/TimeAwayLongevityPanel.tsx",
         "src/components/bands/__tests__/AddMoneyToBand.authority.test.ts",
+        "src/components/festivals/admin/FestivalDetailManager.tsx",
         "src/hooks/useCompanyFinance.ts",
         "src/hooks/useDikCokTips.ts",
         "src/hooks/useEquipmentStore.ts",
+        "src/hooks/useFestivalStages.ts",
         "src/hooks/useGameData.tsx",
         "src/hooks/useInbox.ts",
         "src/hooks/useParticipationDetails.ts",
