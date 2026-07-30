@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.610",
+    date: "2026-07-30",
+    changes: [
+      { type: 'feature', description: "The live gig viewer now has many more stage settings: basement dive, back-room bar, local club, warehouse, theatre, music hall, large venue, indoor arena, open-air stadium, amphitheatre, park bandstand and beachfront stage." },
+      { type: 'feature', description: "Dedicated outdoor festival stages added — main stage, second stage, big-top tent and acoustic field — each drawn as an outdoor scene with sky, stars or sun, treeline, hills, flags, bunting, food stalls, a ferris wheel, PA towers, lighting trusses and LED walls." },
+      { type: 'improvement', description: "Each setting now has its own sky, ground, stage deck shape, time of day and atmosphere (hazy, smoky, dusty, humid, breezy), and the viewer header names the setting and whether it is indoor, covered or open-air." },
+    ],
+  },
+  {
     version: "1.1.609",
     date: "2026-07-29",
     changes: [
