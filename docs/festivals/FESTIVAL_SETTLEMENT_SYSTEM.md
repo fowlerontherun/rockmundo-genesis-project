@@ -33,3 +33,15 @@ Tables have RLS enabled and direct `anon`/`authenticated` writes revoked. Define
 ## Legacy migration
 
 Legacy results remain read-only. Migration may copy known totals, attendance and dates with provenance, but must mark inferred values and must not fabricate line detail or modern ledger movements. Ambiguous records remain compatibility reads.
+
+## Durable posting and deferred cash (v2 remediation)
+
+Posting is a three-stage, transaction-bound workflow. `start_festival_edition_settlement_posting` creates stable items only for cash that is due; each call to `post_next_festival_edition_settlement_item` locks and attempts one item and returns a structured recovery result; `finalise_festival_edition_settlement_posting` completes only when persisted posted-item count equals expected count. A failed finance call is recorded and returned rather than re-raised, so the RPC transaction commits failure evidence and all earlier RPC commits remain intact.
+
+Batch revenue, cost, net, receivable, payable, pending and failed totals are re-derived from posting items and settlement lines after every operation. Receivables, payables, non-cash and already-posted lines are excluded from initial cash posting. Stable per-line finance references provide replay safety. Accounting profit can therefore coexist with outstanding cash obligations.
+
+The owner client obtains the immutable runtime digest through the authenticated readiness projection and never accepts a player-entered digest. Supabase access and response validation live in the typed settlement repository. The recovery panel reports completed, failed and remaining items and retains a logical posting command key while work is in flight.
+
+### Remaining certification limitations
+
+Canonical category builders, recipient verification for every historical contract shape, category-aware tax integration, deferred receivable/payable finance RPCs, full outcome effects, achievement awards, licence projection updates, and expanded immutable snapshot builders still require database-backed integration work. They are not certified by the Node domain tests. Festival database certification remains incomplete unless all disposable-database gates execute successfully; a refused gate is not a pass.
