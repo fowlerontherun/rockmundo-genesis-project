@@ -3,8 +3,8 @@ import type { GigLiveSegment, LiveGigSessionState, LiveIncident, LiveSegmentType
 export type LivePresentationScene = 'intro' | 'song' | 'transition' | 'incident' | 'decision' | 'encore' | 'outro';
 export type CrowdPresentationState = 'sparse' | 'waiting' | 'bored' | 'passive' | 'swaying' | 'engaged' | 'clapping' | 'hands_raised' | 'jumping' | 'singing' | 'wild' | 'ecstatic' | 'disappointed' | 'leaving_early';
 export type LightingPresentationState = 'house_lights' | 'basic_wash' | 'warm_wash' | 'cool_wash' | 'spotlights' | 'pulsing' | 'dramatic_silhouette' | 'encore_lighting' | 'finale_lighting' | 'failure_state';
-export type VenuePresentationTier = 'small_bar' | 'local_club' | 'theatre' | 'music_hall' | 'large_venue' | 'arena' | 'stadium' | 'festival_stage';
-export type StageLayoutKey = 'solo' | 'duo' | 'three_piece' | 'four_piece' | 'five_piece' | 'six_plus' | 'festival_stage' | 'small_club';
+export type VenuePresentationTier = 'dive_basement' | 'small_bar' | 'local_club' | 'warehouse' | 'theatre' | 'music_hall' | 'large_venue' | 'arena' | 'stadium' | 'amphitheatre' | 'park_bandstand' | 'beach_stage' | 'festival_stage' | 'festival_main_stage' | 'festival_second_stage' | 'festival_tent' | 'festival_acoustic_field';
+export type StageLayoutKey = 'solo' | 'duo' | 'three_piece' | 'four_piece' | 'five_piece' | 'six_plus' | 'festival_stage' | 'festival_tent_layout' | 'amphitheatre_arc' | 'small_club';
 export type PerformerVisualState = 'waiting' | 'performing' | 'energetic' | 'focused' | 'struggling' | 'recovering' | 'celebrating' | 'incident_affected' | 'standout_performance' | 'absent';
 
 export interface LiveGigPerformerInput { id: string; name: string; role?: string | null; instrument?: string | null; isLead?: boolean | null; stamina?: number | null; available?: boolean | null; avatarUrl?: string | null; portraitUrl?: string | null; stagePosition?: { x: number; y: number } | null; }
