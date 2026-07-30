@@ -127,7 +127,6 @@ function StageManager({ festivalId, festival }: { festivalId: string; festival: 
   const [selectedBandId, setSelectedBandId] = useState("");
   const [payoutAmount, setPayoutAmount] = useState("");
 
-  const durationDays = festival?.duration_days || 2;
   const maxStages = festival?.max_stages || 5;
 
   const { data: bands = [] } = useQuery({
@@ -141,21 +140,10 @@ function StageManager({ festivalId, festival }: { festivalId: string; festival: 
 
   const createSlotsMutation = useMutation({
     mutationFn: async (stageId: string) => {
-      const slots = [];
-      for (let day = 1; day <= durationDays; day++) {
-        // 1 headliner, 2 support, 3 openers per day
-        const slotTypes = ["headliner", "support", "support", "opener", "opener", "opener"];
-        for (let slot = 1; slot <= 6; slot++) {
-          slots.push({
-            stage_id: stageId,
-            festival_id: festivalId,
-            day_number: day,
-            slot_number: slot,
-            slot_type: slotTypes[slot - 1],
-          });
-        }
-      }
-      const { error } = await (supabase as any).from("festival_stage_slots").insert(slots);
+      const { error } = await (supabase as any).rpc("legacy_festival_generate_edition_slots", {
+        p_stage_id: stageId,
+        p_idempotency_key: `legacy-generate:${stageId}`,
+      });
       if (error) throw error;
     },
     onSuccess: () => {

@@ -52,7 +52,8 @@
     "test:gig-booking:db": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/gig_booking_runtime_harness.sql'",
     "test:festivals:upgrades": "node --test scripts/festivals/festival-upgrade-catalogue.test.mjs",
     "diagnose:gig-booking:db": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -X -v ON_ERROR_STOP=1 -f supabase/diagnostics/gig_booking_runtime.sql'",
-    "verify:gig-booking:deployment": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -X -v ON_ERROR_STOP=1 -f supabase/diagnostics/verify_gig_booking_deployment.sql'"
+    "verify:gig-booking:deployment": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -X -v ON_ERROR_STOP=1 -f supabase/diagnostics/verify_gig_booking_deployment.sql'",
+    "test:festivals:scheduling:db": "bash scripts/festivals/run-scheduling-db-gate.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
