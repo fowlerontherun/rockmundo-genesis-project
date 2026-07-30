@@ -2365,6 +2365,7 @@
         "src/features/festivals/admin/mappers.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/admin/types.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
@@ -5800,6 +5801,8 @@
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.test.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -9732,6 +9735,8 @@
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.test.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -14883,6 +14888,26 @@
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/settlement/outcomeLifecycle.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": true,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/settlement/outcomeLifecycle.ts",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/settlement/outcomeLifecycle.test.ts"
+      ],
+      "status": "test_only",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": true,
       "writes": []
     },
     {
@@ -37657,6 +37682,54 @@
       ],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "index",
+      "name": "festival_settlement_effect_claim_idx",
+      "migration": "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "claim_next_festival_settlement_effect",
+      "migration": "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "acknowledge_festival_settlement_effect",
+      "migration": "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "finalise_festival_settlement_effects",
+      "migration": "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -38158,7 +38231,8 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
-        "supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql"
+        "supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql",
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -38172,7 +38246,8 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
-        "supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql"
+        "supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql",
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -39540,6 +39615,17 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "acknowledge_festival_settlement_effect",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "activate_completed_festival_upgrades",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -40587,6 +40673,17 @@
         "supabase/tests/festival_crowds_incidents_operations_harness.sql"
       ],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "claim_next_festival_settlement_effect",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -42104,6 +42201,17 @@
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql"
       ],
       "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "finalise_festival_settlement_effects",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -47324,6 +47432,7 @@
         "src/features/festivals/admin/mappers.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/admin/types.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
@@ -50767,6 +50876,8 @@
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.test.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -54688,6 +54799,8 @@
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.test.ts",
+        "src/features/festivals/settlement/outcomeLifecycle.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalManagement.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
@@ -59889,6 +60002,17 @@
       "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/settlement/outcomeLifecycle.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
     },
     {
       "candidate": "src/features/festivals/settlement/permissions.ts",
