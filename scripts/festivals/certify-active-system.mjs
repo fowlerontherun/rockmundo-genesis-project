@@ -22,6 +22,14 @@ const allFiles = [...tsFiles, ...sqlFiles, ...walk("supabase/functions"), ...wal
 const contents = new Map(allFiles.map(file => [file, read(file)]));
 const festivalFiles = tsFiles.filter(file => /festival/i.test(file) || /festival/i.test(contents.get(file)));
 const finalSettlementMigration = read("supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql");
+const effectLifecycleMigration = read("supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql");
+if (!/ALTER COLUMN applied_at DROP DEFAULT/i.test(effectLifecycleMigration) || !/status NOT IN\('applied','not_applicable'\)/i.test(effectLifecycleMigration)) {
+  throw new Error("Festival effects may be recorded as applied before canonical completion.");
+}
+if (/SET requested_payload=result,status='applied'/i.test(effectLifecycleMigration)) throw new Error("Requested Festival effects are treated as applied results.");
+if (!/FESTIVAL_EFFECT_RECOVERY_REQUIRED/.test(effectLifecycleMigration) || !/lease_expires_at/.test(effectLifecycleMigration)) throw new Error("Festival effect recovery lifecycle is incomplete.");
+const browserProgressionWrite = festivalFiles.filter(file => file.includes("/settlement/")).some(file => /\.from\(["'`](?:bands|profiles|player_achievements|band_chemistry_snapshots|companies)["'`]\)\s*\.\s*(?:update|insert|upsert)/i.test(contents.get(file)));
+if (browserProgressionWrite) throw new Error("Browser Festival code writes canonical progression directly.");
 if (!/DROP\s+FUNCTION\s+IF\s+EXISTS\s+public\.post_festival_edition_settlement\(uuid,integer,uuid\)/i.test(finalSettlementMigration.replaceAll(/\s+/g, " ").replaceAll(/,\s+/g, ","))) {
   throw new Error("The retired monolithic Festival posting RPC is not permanently dropped.");
 }
