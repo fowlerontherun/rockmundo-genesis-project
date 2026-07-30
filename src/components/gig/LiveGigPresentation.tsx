@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import type { GigLiveSegment, LiveGigSessionState, LiveIncident, LiveSongResult, TacticalDecision } from '@/utils/gigLive';
+import { StageSceneryLayers } from './StageSceneryLayers';
 import { buildLiveGigPresentationState, type LiveGigPerformerInput, type LiveGigProductionInput, type LiveGigSongPresentationInput, type LiveGigVenueInput } from '@/utils/gigLivePresentation';
 
 interface Props {
@@ -31,7 +32,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <CardTitle className="text-xl">Live stage presentation</CardTitle>
-            <p className="text-sm text-muted-foreground">Server-authoritative concert view · {presentation.stageLayout.split('_').join(' ')} · {presentation.venueTier.split('_').join(' ')}</p>
+            <p className="text-sm text-muted-foreground">Server-authoritative concert view · {presentation.stageLayout.split('_').join(' ')} · {presentation.scenery.label} · {presentation.scenery.environment.split('_').join(' ')} · {presentation.scenery.timeOfDay.split('_').join(' ')}</p>
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Presentation quality settings">
             {(['full', 'reduced', 'minimal', 'data'] as const).map((mode) => <Button key={mode} type="button" size="sm" variant={quality === mode ? 'default' : 'outline'} onClick={() => setQuality(mode)}>{mode === 'data' ? 'Data-only' : mode}</Button>)}
@@ -42,13 +43,13 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
       <CardContent className="space-y-4">
         {quality !== 'data' ? (
           <div className="relative min-h-[330px] overflow-hidden rounded-2xl border bg-slate-950 text-white shadow-inner" data-scene={presentation.scene}>
-            <div className="absolute inset-0 bg-gradient-to-b from-indigo-950 via-slate-900 to-black" />
+            <StageSceneryLayers scenery={presentation.scenery} animate={quality === 'full'} />
             <div className={`absolute inset-0 opacity-70 ${presentation.lightingState === 'warm_wash' ? 'bg-amber-500/20' : presentation.lightingState === 'cool_wash' ? 'bg-cyan-500/20' : presentation.lightingState === 'failure_state' ? 'bg-red-950/40' : presentation.lightingState.includes('spot') ? 'bg-yellow-200/10' : 'bg-purple-500/10'}`} aria-hidden="true" />
             <div className="absolute left-4 right-4 top-4 flex flex-wrap items-center justify-between gap-2">
               <Badge>{presentation.scene}</Badge>
               <Badge variant="secondary">{presentation.currentSongProfile.performanceLabel}</Badge>
             </div>
-            <div className="absolute left-[8%] right-[8%] top-[24%] h-[44%] rounded-t-[48%] border border-white/15 bg-black/40 shadow-2xl">
+            <div className={`absolute left-[8%] right-[8%] top-[24%] h-[44%] border shadow-2xl ${presentation.scenery.stageClass} ${presentation.scenery.stageShape === 'arch' ? 'rounded-t-[48%]' : presentation.scenery.stageShape === 'tent' ? 'rounded-t-[70%]' : presentation.scenery.stageShape === 'truss' ? 'rounded-t-lg' : 'rounded-t-sm'}`}>
               <div className="absolute inset-x-[12%] top-3 h-10 rounded-full bg-white/10 blur-lg" />
               {presentation.activeEffects.map((effect, index) => <span key={effect} className="absolute rounded-full border border-white/20 bg-white/10 px-2 py-1 text-xs" style={{ left: `${16 + index * 15}%`, top: `${18 + (index % 2) * 44}%` }}>{effect}</span>)}
               {presentation.performerStates.map((performer) => (
