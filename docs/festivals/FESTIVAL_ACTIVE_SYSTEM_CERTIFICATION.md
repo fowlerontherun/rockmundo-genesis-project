@@ -133,3 +133,11 @@ Database execution remains unclaimed: `run-edition-runtime-db-gate.sh`, `run-upg
 | direct browser financial/history writes | `direct_write_requires_replacement` | no active canonical writer; certification inventory guard required |
 
 The migration and static timestamp check ran in this workspace. Database harnesses were **not executed** because no explicitly confirmed disposable `SUPABASE_DB_URL` was provided; Festival database certification is therefore not claimed. Per-artist/sponsor satisfaction, shared fame/fan/reward application, admin replacement versions, downloadable statements, rankings/awards and full legacy import remain uncertified functionality.
+
+## PR #1442 remediation status
+
+The settlement posting protocol now commits one finance item per RPC and derives recovery totals from persisted evidence. The readiness and typed repository paths have deterministic Node coverage. Full Festival database certification is **incomplete until an explicitly disposable reset database is supplied and every listed database gate actually runs**; safety-guard refusal is retained as a non-pass result.
+
+### Validation run 2026-07-30
+
+`run-settlement-db-gate.sh` and `run-full-lifecycle-db-gate.sh` refused to run because `SUPABASE_DB_URL` was not set. Consequently no disposable reset database was identified and database certification is not claimed. The upgrade, artist-application, scheduling and runtime database gates share that missing prerequisite and were not represented as passes.
