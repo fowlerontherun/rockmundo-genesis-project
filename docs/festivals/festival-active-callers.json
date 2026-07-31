@@ -37730,6 +37730,114 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_outcome_application_guard",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "trigger",
+      "name": "festival_outcome_application_guard",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "claim_next_festival_settlement_effect",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "resume_festival_settlement_effects",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_effect_completion_guard",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "trigger",
+      "name": "festival_effect_completion_guard",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "finalise_ready_festival_settlement_effects",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_settlement_effect_progress",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "acknowledge_festival_settlement_effect",
+      "migration": "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -38232,7 +38340,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
         "supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql",
-        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -38247,13 +38356,25 @@
       "sqlCallers": [
         "supabase/migrations/20291218243800_authoritative_festival_edition_settlement.sql",
         "supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql",
-        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
       ],
       "workerCallers": [],
       "testCallers": [
         "supabase/tests/festival_edition_settlement_harness.sql"
       ],
       "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_effect_completion_guard",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -38546,6 +38667,17 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291217161000_complete_festival_staffing_supplier_workflows.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_outcome_application_guard",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -39616,13 +39748,18 @@
     },
     {
       "name": "acknowledge_festival_settlement_effect",
-      "typescriptCallers": [],
-      "sqlCallers": [
-        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
+      "typescriptCallers": [
+        "supabase/functions/process-festival-settlement-effects/index.ts"
       ],
-      "workerCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
+      ],
+      "workerCallers": [
+        "supabase/functions/process-festival-settlement-effects/index.ts"
+      ],
       "testCallers": [],
-      "classification": "no_known_runtime_callers",
+      "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -40677,13 +40814,18 @@
     },
     {
       "name": "claim_next_festival_settlement_effect",
-      "typescriptCallers": [],
-      "sqlCallers": [
-        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
+      "typescriptCallers": [
+        "supabase/functions/process-festival-settlement-effects/index.ts"
       ],
-      "workerCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
+      ],
+      "workerCallers": [
+        "supabase/functions/process-festival-settlement-effects/index.ts"
+      ],
       "testCallers": [],
-      "classification": "no_known_runtime_callers",
+      "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -42215,6 +42357,21 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "finalise_ready_festival_settlement_effects",
+      "typescriptCallers": [
+        "supabase/functions/process-festival-settlement-effects/index.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
+      ],
+      "workerCallers": [
+        "supabase/functions/process-festival-settlement-effects/index.ts"
+      ],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "found_festival_company",
       "typescriptCallers": [
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
@@ -42752,6 +42909,17 @@
       "workerCallers": [],
       "testCallers": [],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "get_festival_settlement_effect_progress",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -44620,6 +44788,17 @@
       "workerCallers": [],
       "testCallers": [],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "resume_festival_settlement_effects",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
