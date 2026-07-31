@@ -38164,6 +38164,54 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_effect_authority_context",
+      "migration": "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_apply_canonical_effect",
+      "migration": "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_assert_canonical_result",
+      "migration": "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "acknowledge_festival_settlement_effect",
+      "migration": "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -38374,7 +38422,8 @@
       "name": "_festival_apply_canonical_effect",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql"
+        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
+        "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -38472,6 +38521,17 @@
       "sqlCallers": [
         "supabase/migrations/20291217150000_festival_artist_applications_and_bookings.sql",
         "supabase/migrations/20291217151000_complete_festival_artist_workflows.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_assert_canonical_result",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -38699,7 +38759,8 @@
         "supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql",
         "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
-        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql"
+        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
+        "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -38712,7 +38773,8 @@
       "name": "_festival_effect_authority_context",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql"
+        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
+        "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -40120,7 +40182,8 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql",
-        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
+        "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
+        "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/index.ts"
