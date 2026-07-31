@@ -860,6 +860,7 @@
         "src/utils/fanConversionCalculator.ts",
         "src/utils/fanConversionWithDemographics.ts",
         "src/utils/gigAudience.ts",
+        "src/utils/gigStageScenery.ts",
         "src/utils/mayorLawEffects.ts",
         "src/utils/mentorDiscovery.ts",
         "src/utils/timezoneUtils.ts",
@@ -19674,7 +19675,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -19713,7 +19715,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -19893,7 +19896,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -23543,7 +23547,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -23565,7 +23570,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -23587,7 +23593,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -23609,7 +23616,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -24101,7 +24109,8 @@
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
-        "supabase/tests/festival_site_stage_planning_harness.sql"
+        "supabase/tests/festival_site_stage_planning_harness.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -35474,7 +35483,8 @@
       "harnessCovered": [
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v5_native_harness.sql",
-        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql"
+        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -35600,7 +35610,8 @@
       "harnessCovered": [
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v5_native_harness.sql",
-        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql"
+        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -35674,7 +35685,8 @@
       "harnessCovered": [
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v5_native_harness.sql",
-        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql"
+        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -36374,7 +36386,8 @@
       "harnessCovered": [
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v5_native_harness.sql",
-        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql"
+        "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
+        "supabase/tests/live_performance_progression_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -37711,7 +37724,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37723,7 +37738,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37735,7 +37752,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37771,7 +37790,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37843,7 +37864,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37855,9 +37878,7 @@
       "acceptsWrites": false,
       "publiclyExecutable": false,
       "rls": "inspect policies",
-      "harnessCovered": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37869,9 +37890,7 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37883,9 +37902,7 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37909,7 +37926,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37921,7 +37940,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37933,7 +37954,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37945,7 +37968,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37957,7 +37982,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37969,7 +37996,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -37981,7 +38010,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38179,9 +38210,7 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38217,7 +38246,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38241,7 +38272,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38253,7 +38286,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38265,7 +38300,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38277,7 +38314,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38289,7 +38328,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38301,7 +38342,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38313,7 +38356,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38325,9 +38370,7 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38339,9 +38382,7 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38365,9 +38406,7 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38379,7 +38418,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38391,7 +38432,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38403,7 +38446,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38415,7 +38460,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38427,7 +38474,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38439,7 +38488,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38447,6 +38498,44 @@
       "type": "function",
       "name": "apply_festival_song_popularity_effect",
       "migration": "supabase/migrations/20291218244700_certify_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_member_xp_to_wallet",
+      "migration": "supabase/migrations/20291218244800_certify_festival_core_progression_authorities.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "trigger",
+      "name": "apply_festival_member_xp_to_wallet",
+      "migration": "supabase/migrations/20291218244800_certify_festival_core_progression_authorities.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_canonical_record_exists",
+      "migration": "supabase/migrations/20291218244800_certify_festival_core_progression_authorities.sql",
       "ownerDomain": "legacy_or_compatibility",
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
@@ -38848,13 +38937,12 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218244600_repair_live_performance_progression.sql",
-        "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
+        "supabase/migrations/20291218244700_certify_live_performance_progression.sql",
+        "supabase/migrations/20291218244800_certify_festival_core_progression_authorities.sql"
       ],
       "workerCallers": [],
-      "testCallers": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
-      "classification": "test_only",
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -39052,10 +39140,8 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [],
-      "testCallers": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
-      "classification": "test_only",
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -39545,10 +39631,8 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [],
-      "testCallers": [
-        "supabase/tests/live_performance_progression_harness.sql"
-      ],
-      "classification": "test_only",
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -40468,9 +40552,12 @@
         "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/index.ts"
+        "supabase/functions/process-festival-settlement-effects/index.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -40921,9 +41008,12 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
+        "supabase/functions/process-festival-settlement-effects/dispatcher.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -40941,9 +41031,12 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
+        "supabase/functions/process-festival-settlement-effects/dispatcher.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -40963,9 +41056,11 @@
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
-        "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
+        "supabase/functions/process-festival-settlement-effects/dispatcher.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
       "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql",
         "supabase/functions/process-festival-settlement-effects/dispatcher.test.ts"
       ],
       "classification": "active_canonical",
@@ -41068,10 +41163,24 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
+        "supabase/functions/process-festival-settlement-effects/dispatcher.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "apply_festival_member_xp_to_wallet",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218244800_certify_festival_core_progression_authorities.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -41105,9 +41214,12 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
+        "supabase/functions/process-festival-settlement-effects/dispatcher.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -41140,9 +41252,12 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
+        "supabase/functions/process-festival-settlement-effects/dispatcher.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -41160,9 +41275,12 @@
         "supabase/migrations/20291218244700_certify_live_performance_progression.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
+        "supabase/functions/process-festival-settlement-effects/dispatcher.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -41836,9 +41954,12 @@
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql"
       ],
       "workerCallers": [
-        "supabase/functions/process-festival-settlement-effects/index.ts"
+        "supabase/functions/process-festival-settlement-effects/index.ts",
+        "scripts/festivals/certify-performance-effects-harness.mjs"
       ],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -43368,9 +43489,13 @@
       "sqlCallers": [
         "supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql"
       ],
-      "workerCallers": [],
-      "testCallers": [],
-      "classification": "no_known_runtime_callers",
+      "workerCallers": [
+        "scripts/festivals/certify-performance-effects-harness.mjs"
+      ],
+      "testCallers": [
+        "supabase/tests/live_performance_progression_harness.sql"
+      ],
+      "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -47091,6 +47216,7 @@
         "src/utils/fanConversionCalculator.ts",
         "src/utils/fanConversionWithDemographics.ts",
         "src/utils/gigAudience.ts",
+        "src/utils/gigStageScenery.ts",
         "src/utils/mayorLawEffects.ts",
         "src/utils/mentorDiscovery.ts",
         "src/utils/timezoneUtils.ts",
