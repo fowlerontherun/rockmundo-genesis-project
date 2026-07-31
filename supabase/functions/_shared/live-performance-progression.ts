@@ -33,6 +33,15 @@ export const calculateFame = (score: number, audience: number) =>
 export const calculateMemberXp = (score: number, attendance: string) =>
   attendance === "present" || attendance === "late" ? Math.max(1, Math.min(100, Math.round(score / 5))) : 0;
 export const calculateChemistryContribution = (score: number) => score >= 75 ? 1 : score < 40 ? -1 : 0;
+/** Rehearsal-equivalent minutes; this mirrors band_song_familiarity.familiarity_minutes. */
+export const calculateSongFamiliarityMinutes = (score: number, completed: boolean) =>
+  completed ? Math.min(10, Math.max(1, Math.round(score / 20))) : 0;
+export const calculateSongPopularity = (score: number, audience: number, completed: boolean) =>
+  completed ? Math.min(10, Math.max(0, Math.round((score - 50) / 10) + (audience >= 1000 ? 1 : 0))) : 0;
+export const calculateChemistryImpact = (score: number, attendance: string) =>
+  attendance === "present" || attendance === "late"
+    ? { familiarity: 2, trust: 2, performance_chemistry: score >= 75 ? 4 : 2, reliability_confidence: attendance === "late" ? 0 : 1 }
+    : {};
 export const isCompletedSong = (songIds: readonly string[], songId: string) => songIds.includes(songId);
 export const stableReference = (sourceType: "ordinary_gig" | "festival_performance", sourceId: string, effect: string, subjectId: string) =>
   `${sourceType === "festival_performance" ? "festival-performance" : "ordinary-gig"}:${sourceId}:${effect}:${subjectId}`;
