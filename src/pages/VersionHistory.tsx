@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.612",
+    date: "2026-07-31",
+    changes: [
+      { type: 'feature', description: "Eighteen new gig viewer venue settings: street corner busk, church hall, school hall, student union, jazz lounge, opera house, casino ballroom, cruise ship lounge, riverside barge, rooftop terrace, ice arena, city square, vineyard stage, mountain stage and desert stage, plus festival dance tent, forest stage and airfield stage." },
+      { type: 'feature', description: "New scenery artwork for those settings including mountains with snow caps, sand dunes, vine rows, forest canopy, rivers, aircraft hangars, city lights, street lamps, rooftop railings, stained glass, chandeliers, disco balls, slot machines, neon signs, wall posters, sports hall floor lines, ice surfaces and hanging lanterns." },
+      { type: 'improvement', description: "Venue detection now recognises many more venue names and types, and very small venues (40 capacity or less) are shown as a street performance instead of a bar." },
+    ],
+  },
+  {
     version: "1.1.611",
     date: "2026-07-31",
     changes: [
