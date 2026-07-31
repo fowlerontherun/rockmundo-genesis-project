@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { allocateFanTiers } from "../_shared/live-performance-progression.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -438,23 +439,8 @@ serve(async (req) => {
     const newFansTotal = Math.max(0, Math.min(1_000_000, Math.floor(baseFansFromAttendance * fanGainPenalty)));
     
     // Distribute into tiers based on performance
-    let casualFans = 0, dedicatedFans = 0, superfans = 0;
-    if (avgRating >= 22) {
-      // Amazing show: more dedicated and superfans
-      superfans = Math.floor(newFansTotal * 0.15);
-      dedicatedFans = Math.floor(newFansTotal * 0.35);
-      casualFans = newFansTotal - superfans - dedicatedFans;
-    } else if (avgRating >= 16) {
-      // Good show: mostly casual and some dedicated
-      superfans = Math.floor(newFansTotal * 0.05);
-      dedicatedFans = Math.floor(newFansTotal * 0.25);
-      casualFans = newFansTotal - superfans - dedicatedFans;
-    } else {
-      // Average/poor show: mostly casual
-      superfans = Math.floor(newFansTotal * 0.02);
-      dedicatedFans = Math.floor(newFansTotal * 0.10);
-      casualFans = newFansTotal - superfans - dedicatedFans;
-    }
+    const fanTiers = allocateFanTiers(newFansTotal, avgRating);
+    const { casual: casualFans, dedicated: dedicatedFans, superfans } = fanTiers;
 
     console.log(`Fan conversion: ${newFansTotal} new fans (${casualFans} casual, ${dedicatedFans} dedicated, ${superfans} super)${toutAttendanceReduction > 0 ? ` [tout reduction: ${toutAttendanceReduction}]` : ''}`);
 
