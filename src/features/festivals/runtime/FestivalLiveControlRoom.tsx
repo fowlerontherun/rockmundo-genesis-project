@@ -24,4 +24,4 @@ export function FestivalLiveControlRoom({ companyId, editionId }: { companyId: s
   </section>;
 }
 const Metric=({title,value,detail}:{title:string;value:string;detail:string})=><Card><CardHeader><CardTitle className="text-sm">{title}</CardTitle></CardHeader><CardContent><p className="text-xl font-semibold capitalize">{value}</p><p className="text-xs text-muted-foreground">{detail}</p></CardContent></Card>;
-const Readiness=({title,ready,total}:{title:string;ready:number;total:number})=><Metric title={title} value={`${ready}/${total}`} detail={ready===total ? "Ready" : "Attention required"}/>;
+const Readiness=({title,ready=0,total=0}:{title:string;ready?:number;total?:number})=><Metric title={title} value={`${ready}/${total}`} detail={ready===total ? "Ready" : "Attention required"}/>;
