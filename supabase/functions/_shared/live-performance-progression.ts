@@ -3,6 +3,13 @@
  */
 export const LIVE_PERFORMANCE_RULES_VERSION = "live-performance-v1";
 
+/** SQL is authoritative; this mirror exists for previews and fixture parity. */
+export function normalisePerformanceScore(score: number, min: number, max: number): number {
+  if (![score, min, max].every(Number.isFinite) || max <= min || score < min || score > max)
+    throw new RangeError("LIVE_PERFORMANCE_SCORE_OUT_OF_RANGE");
+  return Math.round((((score - min) / (max - min)) * 100) * 10_000) / 10_000;
+}
+
 export type FanTiers = { casual: number; dedicated: number; superfans: number; total: number };
 
 export function allocateFanTiers(total: number, rating: number): FanTiers {
