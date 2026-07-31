@@ -37,7 +37,7 @@ export const useCompanyShareholders = (companyId: string | undefined) => {
       if (shareholders.length === 0) return shareholders;
 
       const userIds = shareholders.map((shareholder) => shareholder.user_id);
-      const { data: profiles, error: profileError } = await supabase
+      const { data: profiles, error: profileError } = await (supabase as any)
         .from("public_profiles")
         .select("id, user_id, display_name, username")
         .in("user_id", userIds);
