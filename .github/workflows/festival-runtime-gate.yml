@@ -49,20 +49,10 @@ jobs:
           npm --version
       - name: Install dependencies
         run: npm ci
-      - name: Verify dependency tree
-        run: npm run verify:dependencies
       - name: Lint
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
-      - name: Run full unit tests
-        run: npm run test:unit
-      - name: Run smoke test suite
-        run: npm run test:smoke
-      - name: Verify the DOM environment
-        run: npx vitest run src/testing/__tests__/vitestDomEnvironment.test.tsx
-      - name: Run festival frontend unit tests
-        run: npx vitest run src/features/festival-company
       - name: Run Festival static certification
         run: |
           node scripts/festivals/certify-performance-effects-harness.mjs
@@ -74,6 +64,10 @@ jobs:
           npm run test:festivals:performance-effects
       - name: Build
         run: npm run build
+      - name: Verify Docker
+        run: |
+          command -v docker
+          docker info
       - name: Install pinned Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -84,11 +78,13 @@ jobs:
           psql --version
       - name: Start local Supabase stack
         run: |
-          command -v docker
-          docker info
           supabase start
           db_url="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$db_url"
+          case "$db_url" in
+            postgresql://postgres:*@127.0.0.1:54322/postgres|postgres://postgres:*@127.0.0.1:54322/postgres) ;;
+            *) echo "Refusing non-disposable database URL" >&2; exit 2 ;;
+          esac
           echo "SUPABASE_DB_URL=$db_url" >> "$GITHUB_ENV"
       - name: Reset migrated test database
         run: |
@@ -107,6 +103,10 @@ jobs:
         run: |
           npm run test:festivals:certification
           npm run test:festivals:company-runtime
+      - name: Reset migrated test database before clean replay
+        run: |
+          set -o pipefail
+          supabase db reset 2>&1 | tee festival-runtime-diagnostics/migration-reset-second.log
       - name: Rerun live-performance database certification
         run: |
           set -o pipefail

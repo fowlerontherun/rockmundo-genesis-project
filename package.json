@@ -59,7 +59,7 @@
     "test:festivals:settlement:db": "bash scripts/festivals/run-settlement-db-gate.sh",
     "test:festivals:settlement": "vitest run --config vitest.settlement.config.ts src/features/festivals/settlement/model.test.ts src/features/festivals/settlement/outcomeLifecycle.test.ts",
     "test:festivals:effects": "vitest run --config vitest.settlement.config.ts supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
-    "test:festivals:performance-effects": "vitest run --config vitest.settlement.config.ts supabase/functions/_shared/__tests__/live-performance-progression.test.ts supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
+    "test:festivals:performance-effects": "node --test scripts/festivals/certify-performance-effects-harness.test.mjs && vitest run --config vitest.settlement.config.ts supabase/functions/_shared/__tests__/live-performance-progression.test.ts supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
     "test:festivals:performance-effects:db": "bash scripts/festivals/run-performance-effects-db-gate.sh"
   },
   "dependencies": {
