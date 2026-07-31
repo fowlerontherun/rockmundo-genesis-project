@@ -57,11 +57,15 @@ export async function dispatchFestivalEffect(client: RpcClient, effect: Effect):
     p_subject_type: effect.subject_type, p_subject_id: effect.subject_id,
     p_stable_reference: effect.stable_reference, p_requested_payload: effect.requested_payload,
   });
-  if (error) throw new FestivalEffectError(error.code ?? "FESTIVAL_EFFECT_AUTHORITY_FAILED", error.message, true);
+  if (error) {
+    const code = error.code ?? "FESTIVAL_EFFECT_AUTHORITY_FAILED";
+    const permanent = /MISSING|MISMATCH|INVALID|NOT_FOUND|SUBJECT|NOT_PERFORMED|NOT_ATTENDING/.test(`${code}:${error.message}`.toUpperCase());
+    throw new FestivalEffectError(code, error.message, !permanent);
+  }
   const result = data as Partial<Applied & NotApplicable> | null;
   if (result?.status === "not_applicable" && typeof result.reason === "string") return { status: "not_applicable", reason: result.reason };
   if (result?.status !== "applied" || typeof result.canonicalId !== "string" || !result.canonicalId)
-    throw new FestivalEffectError("FESTIVAL_EFFECT_CANONICAL_ID_MISSING", `${authority} did not return a canonical ID`, true);
+    throw new FestivalEffectError("FESTIVAL_EFFECT_CANONICAL_ID_MISSING", `${authority} did not return a canonical ID`, false);
   return { status: "applied", canonicalId: result.canonicalId, result: (result.result ?? {}) as Record<string, unknown> };
 }
 

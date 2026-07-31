@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { parseFinalisation, parsePostingResult, parsePublicHistory, parseReadiness, type FinalisationResult, type PostingResult, type SettlementReadiness, type SettlementReport } from "./model";
+import { parseEffectProgress, parseFinalisation, parsePostingResult, parsePublicHistory, parseReadiness, type EffectProgress, type FinalisationResult, type PostingResult, type SettlementReadiness, type SettlementReport } from "./model";
 
 type RpcClient={rpc(name:string,args:Record<string,unknown>):Promise<{data:unknown;error:{message:string}|null}>};
 const rpcClient:RpcClient=supabase as unknown as RpcClient;
@@ -12,6 +12,9 @@ export const settlementRepository={
  startPosting:async(id:string,version:number,key:string):Promise<PostingResult>=>parsePostingResult(await rpc("start_festival_edition_settlement_posting",{p_settlement_id:id,p_expected_version:version,p_idempotency_key:key})),
  postNext:async(id:string,key:string):Promise<PostingResult>=>parsePostingResult(await rpc("post_next_festival_edition_settlement_item",{p_settlement_id:id,p_idempotency_key:key})),
  finalisePosting:async(id:string,key:string):Promise<PostingResult>=>parsePostingResult(await rpc("finalise_festival_edition_settlement_posting",{p_settlement_id:id,p_idempotency_key:key})),
+ applyOutcomes:(id:string,version:number,key:string)=>rpc("apply_festival_edition_outcomes",{p_settlement_id:id,p_expected_version:version,p_idempotency_key:key}),
+ effectProgress:async(id:string):Promise<EffectProgress>=>parseEffectProgress(await rpc("get_festival_settlement_effect_progress",{p_settlement_id:id})),
+ resumeEffects:(id:string,reason:string)=>rpc("resume_festival_settlement_effects",{p_settlement_id:id,p_effect_ids:null,p_reason:reason}),
  finalise:async(id:string,version:number,key:string):Promise<FinalisationResult>=>parseFinalisation(await rpc("finalise_festival_edition_settlement",{p_settlement_id:id,p_expected_version:version,p_idempotency_key:key})),
  receiveReceivable:(lineId:string,key:string)=>rpc("receive_festival_settlement_receivable",{p_line_id:lineId,p_idempotency_key:key}),
  payPayable:(lineId:string,key:string)=>rpc("pay_festival_settlement_payable",{p_line_id:lineId,p_idempotency_key:key}),
