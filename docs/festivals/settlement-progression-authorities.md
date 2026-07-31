@@ -1,23 +1,33 @@
 # Festival settlement progression authority audit
 
-Festival settlement is an orchestrator. It owns deterministic evidence, effect state, and stable references; it does **not** own progression balances.
+Festival settlement is an orchestrator: it freezes evidence, leases effects, and acknowledges database-verified canonical mutations. It is **not** a claim that the overall Festival system is complete.
 
-| Effect | Canonical authority / evidence | Festival policy |
-|---|---|---|
-| Performance score, fans, fame, member XP, fatigue, injury and song effects | `gig_outcomes` and the `auto-complete-gigs` / gig post-processing pipeline | Consume the immutable gig result. Never recompute or write its progression tables. Only attending members and performed setlist items may appear. |
-| Band chemistry | band contribution events followed by `recalculate_band_chemistry(uuid)` | Reuse the gig-completed contribution reference; do not add chemistry directly. |
-| Achievements | stable `achievements` definitions and canonical `player_achievements` award rows (whose trigger awards unlock XP) | Resolve an existing definition and recipient; store the returned award id. Evidence alone is not an award. |
-| Festival company reputation / fame | company reputation service (no safe Festival adapter currently exists) | Required effect fails with `FESTIVAL_EFFECT_CANONICAL_AUTHORITY_MISSING` until an adapter is deployed; never update a reputation column here. |
-| Artist and sponsor relationships | canonical relationship/sponsorship contract services | Verify `festival_contracts.band_id` or the accepted sponsor contract before applying a bounded delta. |
-| Licence | canonical Festival licence/application projection | Store the canonical projection id and result, rather than an isolated evidence document. |
-| World Pulse/news | `world_events` writer | Public, evidence-only payload and stable event reference; settlement financial details are excluded. |
-| Notifications | `create_notification` / typed `notifications` authority | Use a typed route and stable reference; recipients are resolved server-side. |
-| Finance and tax | finance RPCs and `financial_transactions` | Tax lines reconcile to `tax_minor`; payment transaction identifiers are canonical finance identifiers. |
+## Core authority matrix
 
-## Shared gig decision
+| Effect | Dispatcher / RPC | Canonical record | Projections | Replay and acknowledgement | Database status / known gap |
+|---|---|---|---|---|---|
+| `performance_result` | `apply_festival_performance_result_effect` | `live_performance_outcomes` | immutable performance identity, score, audience, setlist and attendance evidence | `(source_type, source_id)` plus stable reference; verifier checks source, performer, digest and reference | Seeded Festival, ordinary-gig, overlap, NPC and solo cases are required by the harness; CI result must be read from the PR checks |
+| `band_fans` | `apply_festival_band_fans_effect` | `band_fan_progression_events` | band tier totals, country, city and supported demographic fans | stable reference; verifier checks event, outcome, band and frozen delta without comparing a historic after-state to today's balance | Festival and ordinary-gig replay are required; demographic projection remains conditional on repository support |
+| `band_fame` | `apply_festival_band_fame_effect` | `band_fame_progression_events` | band/global and geographic fame plus `band_fame_history` | stable reference; verifier checks event and history linkage | Festival and ordinary-gig replay are required; all scope deltas must remain in event evidence |
+| `member_xp` | `apply_festival_member_xp_effect` | `member_xp_transactions` + `profile_action_xp_events` | `player_xp_wallet`, `xp_ledger`, legacy `profiles.experience` | stable reference shared with action event; verifier checks user/profile, wallet and amount | Present/late only; absent, post-performance and NPC are not applicable; solo uses the same wallet |
+| `band_chemistry` | `apply_festival_band_chemistry_effect` | `live_performance_chemistry_events` aggregate | contributions, relationship events, snapshot and band chemistry | stable aggregate reference and deterministic participant/pair references; verifier checks complete sets and snapshot | Band performers only; NPC and solo are not applicable |
+| `song_familiarity` | `apply_festival_song_familiarity_effect` | `song_performance_progression_events` (`familiarity`) | `band_song_familiarity.familiarity_minutes` | stable song reference; verifier checks song, outcome, type and delta | Unit is rehearsal-equivalent minutes; skipped songs are not applicable |
+| `song_popularity` | `apply_festival_song_popularity_effect` | `song_performance_progression_events` (`popularity`) | bounded `songs.popularity` | stable song reference; verifier checks song, outcome, type and delta | Performed songs only; skipped songs are not applicable |
 
-A Festival performance session must be adapted into the existing gig completion pipeline, or consume an already-completed immutable `gig_outcomes` projection. Settlement must use `festival-performance:{sessionId}:{effectType}:{subjectId}` as the authority idempotency key. If the projection already records that key, settlement classifies the effect as applied using that canonical result; it never awards it again. NPC sessions provide public performance evidence but player XP, player achievements, and player finance effects are `not_applicable`.
+The production worker claims with `claim_next_festival_settlement_effect`, invokes the mapped RPC, and calls `acknowledge_festival_settlement_effect`. Acknowledgement re-reads the typed canonical row. `finalise_festival_settlement_effects` must reject completion while any required core effect is unresolved. An expired lease or interruption after mutation re-enters the same RPC; the stored receipt returns the original canonical identifier and domain timestamp.
 
-## Lifecycle
+## Fail-closed effects
 
-Calculation reads the locked runtime/settlement snapshots, records every component's source/raw/normalised/weight/contribution/missing handling/rules version, and creates `pending` effects. A bounded worker claims one row with a lease. Only a canonical authority response can acknowledge `applied`; failures preserve earlier results. Outcome `applied_at` is derived only after all its effects are `applied` or `not_applicable`. Final history must project `applied_result` and canonical identifiers, never requested payloads.
+| Effect | State |
+|---|---|
+| `festival_company_reputation` | Incomplete — fail-closed (`implementation_pending`) |
+| `festival_company_fame` | Incomplete — fail-closed (`implementation_pending`) |
+| `artist_relationship` | Incomplete — fail-closed (`implementation_pending`) |
+| `sponsor_relationship` | Incomplete — fail-closed (`implementation_pending`) |
+| `achievement_award` | Incomplete — fail-closed (`implementation_pending`) |
+| `licence_progress` | Incomplete — fail-closed (`implementation_pending`) |
+| `world_event` | Incomplete — fail-closed (`implementation_pending`) |
+| `notification` | Incomplete — fail-closed (`implementation_pending`) |
+| `tax_projection` | Incomplete — fail-closed (`implementation_pending`) |
+
+These effects must never receive a fabricated applied envelope. Their recoverable failure/dead-letter state must preserve attempts and error details and must not interfere with settlements containing only supported core effects.
