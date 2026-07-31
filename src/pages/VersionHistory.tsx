@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.611",
+    date: "2026-07-31",
+    changes: [
+      { type: 'fix', description: "Company share panels and share hooks now look up player names correctly, clearing the type errors that could break the build on the shares screens." },
+      { type: 'fix', description: "Festival live control room readiness tiles and settlement data access no longer fail type checks." },
+    ],
+  },
+  {
     version: "1.1.610",
     date: "2026-07-30",
     changes: [
