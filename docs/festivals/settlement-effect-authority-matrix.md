@@ -4,7 +4,7 @@
 
 | Effect | Wrapper | Domain mutation | Canonical record | Shared with gigs | Integration tested | DB tested |
 |---|---|---|---|---|---|---|
-| performance_result | `apply_festival_performance_result_effect` | immutable outcome | `live_performance_outcomes` | Yes | Yes | Not run (disposable DB required) |
+| performance_result | `apply_festival_performance_result_effect` | immutable outcome | `live_performance_outcomes` | Yes | Yes | DB certification pending |
 | band_fans | `apply_festival_band_fans_effect` | band/city/country fan tiers | `band_fan_progression_events` | Yes | Yes | Not run (disposable DB required) |
 | band_fame | `apply_festival_band_fame_effect` | band fame and fame history | `band_fame_progression_events` | Yes | Yes | Not run (disposable DB required) |
 | member_xp | `apply_festival_member_xp_effect` | profile XP and `experience_ledger` | `member_xp_transactions` | Yes | Yes | Not run (disposable DB required) |
