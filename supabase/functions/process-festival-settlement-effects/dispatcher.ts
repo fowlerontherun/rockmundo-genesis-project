@@ -39,6 +39,9 @@ const authorities: Record<FestivalEffectType, string> = {
   tax_projection: "apply_festival_tax_projection_effect",
 };
 
+export const SUPPORTED_EFFECT_TYPES = EFFECT_TYPES.slice(0, 7);
+export const INCOMPLETE_EFFECT_TYPES = EFFECT_TYPES.slice(7);
+
 const canonicalRecordTypes: Record<FestivalEffectType, string> = {
   performance_result: "performance_outcome", band_fans: "fan_event", band_fame: "fame_event",
   member_xp: "xp_transaction", band_chemistry: "contribution_event",
@@ -70,6 +73,13 @@ export function validateEffect(value: Effect): void {
 
 export async function dispatchFestivalEffect(client: RpcClient, effect: Effect): Promise<DispatchResult> {
   validateEffect(effect);
+  if (INCOMPLETE_EFFECT_TYPES.includes(effect.effect_type as FestivalEffectType)) {
+    throw new FestivalEffectError(
+      "FESTIVAL_EFFECT_IMPLEMENTATION_PENDING",
+      `${effect.effect_type} is incomplete and explicitly fail-closed`,
+      false,
+    );
+  }
   const authority = authorities[effect.effect_type as FestivalEffectType];
   if (!authority) throw new FestivalEffectError("FESTIVAL_EFFECT_CANONICAL_AUTHORITY_MISSING", `No canonical authority for ${effect.effect_type}`);
   const { data, error } = await client.rpc(authority, {
