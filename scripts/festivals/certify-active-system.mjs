@@ -23,11 +23,22 @@ const contents = new Map(allFiles.map(file => [file, read(file)]));
 const festivalFiles = tsFiles.filter(file => /festival/i.test(file) || /festival/i.test(contents.get(file)));
 const finalSettlementMigration = read("supabase/migrations/20291218243900_complete_festival_settlement_finalisation.sql");
 const effectLifecycleMigration = read("supabase/migrations/20291218244000_festival_settlement_effect_lifecycle.sql");
+const canonicalEffectMigration = read("supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql");
+const dispatcher = read("supabase/functions/process-festival-settlement-effects/dispatcher.ts");
 if (!/ALTER COLUMN applied_at DROP DEFAULT/i.test(effectLifecycleMigration) || !/status NOT IN\('applied','not_applicable'\)/i.test(effectLifecycleMigration)) {
   throw new Error("Festival effects may be recorded as applied before canonical completion.");
 }
 if (/SET requested_payload=result,status='applied'/i.test(effectLifecycleMigration)) throw new Error("Requested Festival effects are treated as applied results.");
 if (!/FESTIVAL_EFFECT_RECOVERY_REQUIRED/.test(effectLifecycleMigration) || !/lease_expires_at/.test(effectLifecycleMigration)) throw new Error("Festival effect recovery lifecycle is incomplete.");
+const dispatcherAuthorities = [...dispatcher.matchAll(/:\s*"(apply_festival_[a-z_]+_effect)"/g)].map(match => match[1]);
+for (const authority of dispatcherAuthorities) if (!new RegExp(`CREATE\\s+OR\\s+REPLACE\\s+FUNCTION\\s+public\\.${authority}\\s*\\(`, "i").test(canonicalEffectMigration)) throw new Error(`Festival dispatcher authority is undefined: ${authority}`);
+const builder = canonicalEffectMigration.match(/CREATE OR REPLACE FUNCTION public\._festival_apply_outcomes[\s\S]*?(?=CREATE OR REPLACE FUNCTION public\.apply_festival_edition_outcomes)/i)?.[0] ?? "";
+if (/applied_at[^;]*now\(\)/i.test(builder) || /SET\s+applied_at/i.test(builder)) throw new Error("Festival outcome calculation marks outcomes applied.");
+if (/effect_type[^;]*(?:'audience'|'artist'|'sponsor')/i.test(builder)) throw new Error("Festival outcome calculation creates unsupported generic effect types.");
+if ((builder.match(/\b70\b/g) ?? []).length > 2) throw new Error("Festival outcome calculation uses hard-coded neutral scores.");
+const finaliser = canonicalEffectMigration.match(/CREATE OR REPLACE FUNCTION public\.finalise_festival_edition_settlement[\s\S]*?(?=CREATE OR REPLACE FUNCTION public\._festival_effect_completion_guard)/i)?.[0] ?? "";
+if (/_festival_apply_outcomes/i.test(finaliser) || /financial_posting_complete|applying_outcomes/i.test(finaliser.match(/s\.state[^;]+/i)?.[0] ?? "")) throw new Error("Festival finalisation bypasses effects_complete.");
+if (/requested_payload/i.test(finaliser)) throw new Error("Festival history treats requested payload as an applied result.");
 const browserProgressionWrite = festivalFiles.filter(file => file.includes("/settlement/")).some(file => /\.from\(["'`](?:bands|profiles|player_achievements|band_chemistry_snapshots|companies)["'`]\)\s*\.\s*(?:update|insert|upsert)/i.test(contents.get(file)));
 if (browserProgressionWrite) throw new Error("Browser Festival code writes canonical progression directly.");
 if (!/DROP\s+FUNCTION\s+IF\s+EXISTS\s+public\.post_festival_edition_settlement\(uuid,integer,uuid\)/i.test(finalSettlementMigration.replaceAll(/\s+/g, " ").replaceAll(/,\s+/g, ","))) {
