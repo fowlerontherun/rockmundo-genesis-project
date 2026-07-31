@@ -39,8 +39,18 @@ const authorities: Record<FestivalEffectType, string> = {
   tax_projection: "apply_festival_tax_projection_effect",
 };
 
-export const SUPPORTED_EFFECT_TYPES = EFFECT_TYPES.slice(0, 7);
-export const INCOMPLETE_EFFECT_TYPES = EFFECT_TYPES.slice(7);
+// Keep both sets explicit.  Settlement compatibility is a domain decision, not
+// an accident of where a value happens to occur in EFFECT_TYPES.
+export const SUPPORTED_EFFECT_TYPES = [
+  "performance_result", "band_fans", "band_fame", "member_xp",
+  "band_chemistry", "song_familiarity", "song_popularity",
+] as const satisfies readonly FestivalEffectType[];
+
+export const INCOMPLETE_EFFECT_TYPES = [
+  "festival_company_reputation", "festival_company_fame", "artist_relationship",
+  "sponsor_relationship", "achievement_award", "licence_progress", "world_event",
+  "notification", "tax_projection",
+] as const satisfies readonly FestivalEffectType[];
 
 const canonicalRecordTypes: Record<FestivalEffectType, string> = {
   performance_result: "performance_outcome", band_fans: "fan_event", band_fame: "fame_event",
