@@ -31,6 +31,7 @@ jobs:
       FESTIVAL_TEST_DATABASE_CONFIRMED: 'true'
       SUPABASE_CLI_VERSION: '2.31.8'
       SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_STARTED: 'false'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +51,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Lint
-        run: npm run lint
+        run: npm run lint:ci
       - name: Typecheck
         run: npm run typecheck
       - name: Run Festival static certification
@@ -79,6 +80,7 @@ jobs:
       - name: Start local Supabase stack
         run: |
           supabase start
+          echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
           db_url="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$db_url"
           case "$db_url" in
@@ -130,5 +132,5 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: Stop local Supabase stack
-        if: always()
+        if: ${{ always() && env.SUPABASE_STARTED == 'true' }}
         run: supabase stop --no-backup
