@@ -38224,6 +38224,90 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_performance_result_effect",
+      "migration": "supabase/migrations/20291218244500_shared_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_band_fans_effect",
+      "migration": "supabase/migrations/20291218244500_shared_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_band_fame_effect",
+      "migration": "supabase/migrations/20291218244500_shared_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_member_xp_effect",
+      "migration": "supabase/migrations/20291218244500_shared_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_band_chemistry_effect",
+      "migration": "supabase/migrations/20291218244500_shared_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_song_familiarity_effect",
+      "migration": "supabase/migrations/20291218244500_shared_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_festival_song_popularity_effect",
+      "migration": "supabase/migrations/20291218244500_shared_live_performance_progression.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -38774,7 +38858,8 @@
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
         "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -38788,7 +38873,8 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql"
+        "supabase/migrations/20291218244400_fail_closed_festival_canonical_effects.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -39276,7 +39362,8 @@
       "name": "_festival_record_authority_result",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql"
+        "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -40647,7 +40734,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
@@ -40664,7 +40752,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
@@ -40682,7 +40771,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
@@ -40785,7 +40875,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
@@ -40819,7 +40910,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
@@ -40851,7 +40943,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
@@ -40868,7 +40961,8 @@
       "sqlCallers": [
         "supabase/migrations/20291218244200_operational_festival_effect_worker.sql",
         "supabase/migrations/20291218244300_canonical_festival_effect_authorities.sql",
-        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql"
+        "supabase/migrations/20291218244401_require_complete_festival_canonical_evidence.sql",
+        "supabase/migrations/20291218244500_shared_live_performance_progression.sql"
       ],
       "workerCallers": [
         "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
