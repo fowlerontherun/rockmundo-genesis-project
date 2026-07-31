@@ -5,7 +5,7 @@ import type { GigLiveSegment, LiveGigSessionState, LiveIncident, LiveSegmentType
 export type LivePresentationScene = 'intro' | 'song' | 'transition' | 'incident' | 'decision' | 'encore' | 'outro';
 export type CrowdPresentationState = 'sparse' | 'waiting' | 'bored' | 'passive' | 'swaying' | 'engaged' | 'clapping' | 'hands_raised' | 'jumping' | 'singing' | 'wild' | 'ecstatic' | 'disappointed' | 'leaving_early';
 export type LightingPresentationState = 'house_lights' | 'basic_wash' | 'warm_wash' | 'cool_wash' | 'spotlights' | 'pulsing' | 'dramatic_silhouette' | 'encore_lighting' | 'finale_lighting' | 'failure_state';
-export type VenuePresentationTier = 'dive_basement' | 'small_bar' | 'local_club' | 'warehouse' | 'theatre' | 'music_hall' | 'large_venue' | 'arena' | 'stadium' | 'amphitheatre' | 'park_bandstand' | 'beach_stage' | 'festival_stage' | 'festival_main_stage' | 'festival_second_stage' | 'festival_tent' | 'festival_acoustic_field';
+export type VenuePresentationTier = 'street_corner' | 'dive_basement' | 'small_bar' | 'church_hall' | 'school_hall' | 'student_union' | 'jazz_lounge' | 'local_club' | 'warehouse' | 'theatre' | 'opera_house' | 'casino_ballroom' | 'cruise_ship' | 'riverside_barge' | 'rooftop_terrace' | 'music_hall' | 'large_venue' | 'ice_arena' | 'arena' | 'stadium' | 'amphitheatre' | 'park_bandstand' | 'city_square' | 'vineyard_stage' | 'mountain_stage' | 'desert_stage' | 'beach_stage' | 'festival_stage' | 'festival_main_stage' | 'festival_second_stage' | 'festival_tent' | 'festival_dance_tent' | 'festival_forest_stage' | 'festival_airfield' | 'festival_acoustic_field';
 export type StageLayoutKey = 'solo' | 'duo' | 'three_piece' | 'four_piece' | 'five_piece' | 'six_plus' | 'festival_stage' | 'festival_tent_layout' | 'amphitheatre_arc' | 'small_club';
 export type PerformerVisualState = 'waiting' | 'performing' | 'energetic' | 'focused' | 'struggling' | 'recovering' | 'celebrating' | 'incident_affected' | 'standout_performance' | 'absent';
 
@@ -49,18 +49,37 @@ export function mapVenueToTier(venue?: LiveGigVenueInput | null): VenuePresentat
   const descriptor = `${venue?.venueType ?? ''} ${venue?.stageSize ?? ''} ${venue?.name ?? ''}`;
   const isFestival = venue?.isFestival || /festival/i.test(descriptor);
   if (isFestival) {
+    if (/dance|electronic|techno|rave|silent disco/i.test(descriptor)) return 'festival_dance_tent';
     if (/tent|big top|marquee/i.test(descriptor)) return 'festival_tent';
+    if (/forest|woods|woodland|glade|grove/i.test(descriptor)) return 'festival_forest_stage';
+    if (/airfield|airstrip|hangar|runway/i.test(descriptor)) return 'festival_airfield';
     if (/acoustic|folk|unplugged|garden/i.test(descriptor)) return 'festival_acoustic_field';
     if (/second|other|third|bbc introducing|emerging|small/i.test(descriptor)) return 'festival_second_stage';
     if (/main|headline|pyramid|primary/i.test(descriptor)) return 'festival_main_stage';
     return 'festival_stage';
   }
+  if (/busk|street corner|sidewalk|pavement|subway|metro station|market stall/i.test(descriptor)) return 'street_corner';
   if (/beach|seafront|pier|coastal/i.test(descriptor)) return 'beach_stage';
-  if (/bandstand|park|common|square/i.test(descriptor)) return 'park_bandstand';
+  if (/desert|dune|canyon|oasis/i.test(descriptor)) return 'desert_stage';
+  if (/mountain|alpine|ski|summit|highland/i.test(descriptor)) return 'mountain_stage';
+  if (/vineyard|winery|orchard|estate garden/i.test(descriptor)) return 'vineyard_stage';
+  if (/city square|plaza|piazza|town square|market square/i.test(descriptor)) return 'city_square';
+  if (/bandstand|park|common/i.test(descriptor)) return 'park_bandstand';
+  if (/rooftop|roof terrace|sky bar|skydeck/i.test(descriptor)) return 'rooftop_terrace';
+  if (/cruise|ocean liner|ferry|ship lounge/i.test(descriptor)) return 'cruise_ship';
+  if (/barge|riverboat|canal|quay|dock/i.test(descriptor)) return 'riverside_barge';
+  if (/casino|ballroom|banquet|gala/i.test(descriptor)) return 'casino_ballroom';
+  if (/opera|philharmon|concert hall|conservatoire/i.test(descriptor)) return 'opera_house';
+  if (/jazz|lounge|speakeasy|supper club|piano bar/i.test(descriptor)) return 'jazz_lounge';
+  if (/church|chapel|cathedral|parish|community hall/i.test(descriptor)) return 'church_hall';
+  if (/school|college hall|gym|sports hall|assembly/i.test(descriptor)) return 'school_hall';
+  if (/university|student union|campus|freshers/i.test(descriptor)) return 'student_union';
+  if (/ice rink|ice arena|hockey|skating/i.test(descriptor)) return 'ice_arena';
   if (/amphitheat|bowl/i.test(descriptor)) return 'amphitheatre';
   if (/warehouse|rave|industrial/i.test(descriptor)) return 'warehouse';
   if (/basement|dive|cellar/i.test(descriptor)) return 'dive_basement';
   const capacity = venue?.capacity ?? 120;
+  if (capacity <= 40) return 'street_corner';
   if (capacity <= 120) return 'small_bar';
   if (capacity <= 450) return 'local_club';
   if (capacity <= 1000) return 'theatre';
