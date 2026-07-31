@@ -74,6 +74,8 @@ jobs:
         run: supabase start
       - name: Reset migrated test database
         run: supabase db reset
+      - name: Run live-performance database certification
+        run: npm run test:festivals:performance-effects:db
       - name: Verify required Supabase RPCs
         run: npm run verify:supabase-rpcs
       - name: Verify database safety guard
