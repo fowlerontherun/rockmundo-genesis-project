@@ -45,10 +45,12 @@ can be acknowledged or allow settlement completion.
 1. `_festival_apply_canonical_effect` contains no generic success path. Until a
    wrapper is replaced by its domain implementation it fails closed.
 2. Worker responses must declare the effect-specific canonical record type and
-   match canonical ID, subject, stable reference and evidence digest, with
-   structured before/validated/after state.
+   match canonical ID, authority, domain table/service, subject, stable reference,
+   rules version, requested change and evidence digest, with structured
+   before/validated/after state and a valid application timestamp.
 3. `acknowledge_festival_settlement_effect` repeats that validation and rejects a
-   canonical ID that points to `festival_effect_authority_results`.
+   canonical ID or table/service that points to
+   `festival_effect_authority_results`.
 4. Missing/incomplete authorities dead-letter immediately into a non-completable
    repair state instead of being retried as though a transient outage occurred.
 5. World-event stable references are unique at the domain table boundary.

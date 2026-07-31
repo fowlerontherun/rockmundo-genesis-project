@@ -49,6 +49,16 @@ const canonicalRecordTypes: Record<FestivalEffectType, string> = {
   world_event: "world_event", notification: "notification", tax_projection: "tax_projection",
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (isRecord(value)) return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+  return JSON.stringify(value);
+}
+
 export function validateEffect(value: Effect): void {
   if (!value.id || !value.settlement_id || !value.outcome_id || !value.subject_id || !value.claim_token)
     throw new FestivalEffectError("FESTIVAL_EFFECT_INVALID_SUBJECT", "Effect identity is incomplete");
@@ -81,8 +91,14 @@ export async function dispatchFestivalEffect(client: RpcClient, effect: Effect):
   if (applied.canonical_record_type !== expectedType || applied.stable_reference !== effect.stable_reference ||
       applied.subject_type !== effect.subject_type || String(applied.subject_id ?? "") !== effect.subject_id ||
       applied.canonical_record_id !== result.canonicalId || typeof applied.evidence_digest !== "string" ||
-      typeof applied.before_state !== "object" || typeof applied.after_state !== "object" ||
-      typeof applied.validated_change !== "object") {
+      applied.evidence_digest.length === 0 || applied.canonical_authority !== authority ||
+      typeof applied.canonical_table_or_service !== "string" || !applied.canonical_table_or_service ||
+      applied.canonical_table_or_service === "festival_effect_authority_results" ||
+      !isRecord(applied.before_state) || !isRecord(applied.requested_change) ||
+      canonicalJson(applied.requested_change) !== canonicalJson(effect.requested_payload) ||
+      !isRecord(applied.validated_change) || !isRecord(applied.after_state) ||
+      typeof applied.rules_version !== "string" || !applied.rules_version ||
+      typeof applied.applied_at !== "string" || Number.isNaN(Date.parse(applied.applied_at))) {
     throw new FestivalEffectError("FESTIVAL_EFFECT_CANONICAL_RESULT_INVALID", `${authority} returned unverifiable canonical evidence`, false);
   }
   return { status: "applied", canonicalId: result.canonicalId, result: applied };
