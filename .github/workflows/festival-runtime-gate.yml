@@ -73,17 +73,24 @@ jobs:
       - name: Start local Supabase stack
         run: supabase start
       - name: Reset migrated test database
-        run: supabase db reset
+        run: |
+          mkdir -p festival-runtime-diagnostics
+          set -o pipefail
+          supabase db reset 2>&1 | tee festival-runtime-diagnostics/migration-reset.log
       - name: Run live-performance database certification
-        run: npm run test:festivals:performance-effects:db
+        run: |
+          set -o pipefail
+          npm run test:festivals:performance-effects:db 2>&1 | tee festival-runtime-diagnostics/performance-effects-first-run.log
       - name: Verify required Supabase RPCs
         run: npm run verify:supabase-rpcs
       - name: Verify database safety guard
         run: npm run test:festivals:safety-guard
       - name: Run canonical festival runtime gate
         run: npm run test:festivals:company-runtime
-      - name: Prove canonical festival runtime gate is rerunnable
-        run: npm run test:festivals:company-runtime
+      - name: Rerun live-performance database certification
+        run: |
+          set -o pipefail
+          npm run test:festivals:performance-effects:db 2>&1 | tee festival-runtime-diagnostics/performance-effects-replay-run.log
 
       - name: Capture runtime diagnostics
         if: always()
@@ -104,4 +111,4 @@ jobs:
           retention-days: 7
       - name: Stop local Supabase stack
         if: always()
-        run: supabase stop --no-backup || true
+        run: supabase stop --no-backup
