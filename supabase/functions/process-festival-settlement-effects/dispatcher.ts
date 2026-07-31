@@ -39,6 +39,16 @@ const authorities: Record<FestivalEffectType, string> = {
   tax_projection: "apply_festival_tax_projection_effect",
 };
 
+const canonicalRecordTypes: Record<FestivalEffectType, string> = {
+  performance_result: "performance_outcome", band_fans: "fan_event", band_fame: "fame_event",
+  member_xp: "xp_transaction", band_chemistry: "contribution_event",
+  song_familiarity: "song_progression_event", song_popularity: "song_popularity_event",
+  festival_company_reputation: "company_reputation_event", festival_company_fame: "company_fame_event",
+  artist_relationship: "artist_relationship_event", sponsor_relationship: "sponsor_relationship_event",
+  achievement_award: "achievement_award", licence_progress: "licence_progress_record",
+  world_event: "world_event", notification: "notification", tax_projection: "tax_projection",
+};
+
 export function validateEffect(value: Effect): void {
   if (!value.id || !value.settlement_id || !value.outcome_id || !value.subject_id || !value.claim_token)
     throw new FestivalEffectError("FESTIVAL_EFFECT_INVALID_SUBJECT", "Effect identity is incomplete");
@@ -66,7 +76,16 @@ export async function dispatchFestivalEffect(client: RpcClient, effect: Effect):
   if (result?.status === "not_applicable" && typeof result.reason === "string") return { status: "not_applicable", reason: result.reason };
   if (result?.status !== "applied" || typeof result.canonicalId !== "string" || !result.canonicalId)
     throw new FestivalEffectError("FESTIVAL_EFFECT_CANONICAL_ID_MISSING", `${authority} did not return a canonical ID`, false);
-  return { status: "applied", canonicalId: result.canonicalId, result: (result.result ?? {}) as Record<string, unknown> };
+  const applied = (result.result ?? {}) as Record<string, unknown>;
+  const expectedType = canonicalRecordTypes[effect.effect_type as FestivalEffectType];
+  if (applied.canonical_record_type !== expectedType || applied.stable_reference !== effect.stable_reference ||
+      applied.subject_type !== effect.subject_type || String(applied.subject_id ?? "") !== effect.subject_id ||
+      applied.canonical_record_id !== result.canonicalId || typeof applied.evidence_digest !== "string" ||
+      typeof applied.before_state !== "object" || typeof applied.after_state !== "object" ||
+      typeof applied.validated_change !== "object") {
+    throw new FestivalEffectError("FESTIVAL_EFFECT_CANONICAL_RESULT_INVALID", `${authority} returned unverifiable canonical evidence`, false);
+  }
+  return { status: "applied", canonicalId: result.canonicalId, result: applied };
 }
 
 export function authorityFor(type: FestivalEffectType): string { return authorities[type]; }
