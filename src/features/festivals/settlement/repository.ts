@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseFinalisation, parsePostingResult, parsePublicHistory, parseReadiness, type FinalisationResult, type PostingResult, type SettlementReadiness, type SettlementReport } from "./model";
 
 type RpcClient={rpc(name:string,args:Record<string,unknown>):Promise<{data:unknown;error:{message:string}|null}>};
-const rpcClient:RpcClient=supabase;
+const rpcClient:RpcClient=supabase as unknown as RpcClient;
 async function rpc(name:string,args:Record<string,unknown>){const {data,error}=await rpcClient.rpc(name,args);if(error)throw new Error(error.message);return data;}
 export const settlementRepository={
  readiness:async(companyId:string,editionId:string):Promise<SettlementReadiness>=>parseReadiness(await rpc("get_festival_edition_settlement_readiness",{p_festival_company_id:companyId,p_edition_id:editionId})),

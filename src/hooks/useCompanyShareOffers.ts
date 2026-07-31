@@ -99,7 +99,7 @@ export const useCompanyShareOffers = (
       if (rows.length === 0) return rows;
 
       const issuerProfileIds = [...new Set(rows.map((offer) => offer.issuer_profile_id))];
-      const { data: profiles, error: profileError } = await supabase
+      const { data: profiles, error: profileError } = await (supabase as any)
         .from("public_profiles")
         .select("id, display_name, username")
         .in("id", issuerProfileIds);

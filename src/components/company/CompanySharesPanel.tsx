@@ -57,7 +57,7 @@ export function CompanySharesPanel({ companyId, isMajorityOwner }: CompanyShares
       const query = recipientQuery.trim().replace(/[,%()]/g, " ");
       if (query.length < 2) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("public_profiles")
         .select("id, display_name, username")
         .or(`display_name.ilike.%${query}%,username.ilike.%${query}%`)
