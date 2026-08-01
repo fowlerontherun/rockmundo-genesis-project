@@ -1052,6 +1052,78 @@ export type Database = {
           },
         ]
       }
+      award_show_invites: {
+        Row: {
+          award_show_id: string
+          category_name: string | null
+          created_at: string
+          id: string
+          invite_type: string
+          invited_by: string | null
+          invitee_band_id: string | null
+          invitee_user_id: string | null
+          message: string | null
+          metadata: Json
+          performance_fee: number
+          responded_at: string | null
+          response_status: string
+          slot_label: string | null
+          stage: string | null
+          updated_at: string
+        }
+        Insert: {
+          award_show_id: string
+          category_name?: string | null
+          created_at?: string
+          id?: string
+          invite_type?: string
+          invited_by?: string | null
+          invitee_band_id?: string | null
+          invitee_user_id?: string | null
+          message?: string | null
+          metadata?: Json
+          performance_fee?: number
+          responded_at?: string | null
+          response_status?: string
+          slot_label?: string | null
+          stage?: string | null
+          updated_at?: string
+        }
+        Update: {
+          award_show_id?: string
+          category_name?: string | null
+          created_at?: string
+          id?: string
+          invite_type?: string
+          invited_by?: string | null
+          invitee_band_id?: string | null
+          invitee_user_id?: string | null
+          message?: string | null
+          metadata?: Json
+          performance_fee?: number
+          responded_at?: string | null
+          response_status?: string
+          slot_label?: string | null
+          stage?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_show_invites_award_show_id_fkey"
+            columns: ["award_show_id"]
+            isOneToOne: false
+            referencedRelation: "award_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "award_show_invites_invitee_band_id_fkey"
+            columns: ["invitee_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       award_shows: {
         Row: {
           attendance_fame_boost: number
@@ -42165,6 +42237,69 @@ export type Database = {
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
       auto_verify_accounts: { Args: never; Returns: undefined }
       auto_verify_twaater_accounts: { Args: never; Returns: undefined }
+      award_show_invite_band: {
+        Args: {
+          p_award_show_id: string
+          p_band_id: string
+          p_category_name?: string
+          p_invite_type?: string
+          p_message?: string
+          p_performance_fee?: number
+          p_slot_label?: string
+          p_stage?: string
+        }
+        Returns: {
+          award_show_id: string
+          category_name: string | null
+          created_at: string
+          id: string
+          invite_type: string
+          invited_by: string | null
+          invitee_band_id: string | null
+          invitee_user_id: string | null
+          message: string | null
+          metadata: Json
+          performance_fee: number
+          responded_at: string | null
+          response_status: string
+          slot_label: string | null
+          stage: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "award_show_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      award_show_respond_invite: {
+        Args: { p_invite_id: string; p_response: string }
+        Returns: {
+          award_show_id: string
+          category_name: string | null
+          created_at: string
+          id: string
+          invite_type: string
+          invited_by: string | null
+          invitee_band_id: string | null
+          invitee_user_id: string | null
+          message: string | null
+          metadata: Json
+          performance_fee: number
+          responded_at: string | null
+          response_status: string
+          slot_label: string | null
+          stage: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "award_show_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       award_twaater_verification: {
         Args: never
         Returns: {
@@ -42400,6 +42535,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      caller_can_act_for_band: { Args: { _band_id: string }; Returns: boolean }
       can_apply_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
