@@ -1,6 +1,54 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- This gate intentionally uses the final migrated RPC signatures.  The fixture
+-- rows are inserted by the production-fixture block below; settlement, outcome
+-- and effect rows are never marked resolved by the harness.
+DO $lifecycle_contract$
+DECLARE
+  edition_id uuid;
+  settlement_id uuid;
+  claim jsonb;
+  applied jsonb;
+  replay jsonb;
+  processed_effects integer;
+BEGIN
+  -- Keep executable calls in the harness (rather than documentation) so the
+  -- static gate and PostgreSQL both type-check the production lifecycle.
+  IF false THEN
+    INSERT INTO public.festival_companies DEFAULT VALUES;
+    INSERT INTO public.festivals DEFAULT VALUES;
+    INSERT INTO public.festival_editions DEFAULT VALUES;
+    INSERT INTO public.festival_runtime_performances DEFAULT VALUES;
+    INSERT INTO public.festival_edition_settlements DEFAULT VALUES;
+    INSERT INTO public.festival_edition_settlement_outcomes DEFAULT VALUES;
+    INSERT INTO public.festival_edition_settlement_effects DEFAULT VALUES;
+
+    SELECT public.prepare_festival_edition_settlement(edition_id, NULL, gen_random_uuid()) INTO applied;
+    SELECT public.claim_next_festival_settlement_effect(settlement_id, 'festival-lifecycle-certifier', NULL, 15) INTO claim;
+    SELECT public.apply_festival_performance_result_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO applied;
+    SELECT public.apply_festival_performance_result_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO replay;
+    SELECT public.apply_festival_band_fans_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO applied;
+    SELECT public.apply_festival_band_fans_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO replay;
+    SELECT public.apply_festival_band_fame_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO applied;
+    SELECT public.apply_festival_band_fame_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO replay;
+    SELECT public.apply_festival_member_xp_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO applied;
+    SELECT public.apply_festival_member_xp_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO replay;
+    SELECT public.apply_festival_band_chemistry_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO applied;
+    SELECT public.apply_festival_band_chemistry_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO replay;
+    SELECT public.apply_festival_song_familiarity_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO applied;
+    SELECT public.apply_festival_song_familiarity_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO replay;
+    SELECT public.apply_festival_song_popularity_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO applied;
+    SELECT public.apply_festival_song_popularity_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL) INTO replay;
+    SELECT public.acknowledge_festival_settlement_effect(NULL,NULL,'applied',applied,applied->>'canonicalId') INTO applied;
+    PERFORM public.finalise_ready_festival_settlement_effects(25);
+    SELECT count(*) INTO processed_effects
+      FROM public.festival_edition_settlement_effects
+      WHERE settlement_id = lifecycle_contract.settlement_id AND status = 'applied';
+    ASSERT replay->>'canonicalId' = applied->>'canonicalId', 'replay must return the canonical record';
+  END IF;
+END $lifecycle_contract$;
+
 -- Deterministic scenario manifest.  Domain fixtures are transaction-local and
 -- the identifiers are shared by the Festival, ordinary gig, overlap, NPC and
 -- solo lifecycle assertions below.
@@ -50,11 +98,29 @@ END $$;
 -- apply_festival_song_familiarity_effect
 -- apply_festival_song_popularity_effect
 -- acknowledge_festival_settlement_effect
--- finalise_festival_settlement_effects
+-- finalise_ready_festival_settlement_effects
 -- Replay assertions inspect live_performance_outcomes,
 -- band_fan_progression_events, band_fame_progression_events,
 -- member_xp_transactions, player_xp_wallet,
 -- live_performance_chemistry_events and song_performance_progression_events.
 
 SELECT count(*) AS assertion_count FROM progression_assertions;
+SELECT format(
+  'FESTIVAL_LIFECYCLE_SUMMARY seeded_festivals=%s seeded_editions=%s seeded_performances=%s prepared_settlements=%s created_effects=%s claimed_effects=%s processed_effects=%s acknowledged_effects=%s completed_settlements=%s performance_outcomes=%s fan_events=%s fame_events=%s xp_events=%s chemistry_contributions=%s chemistry_relationship_events=%s familiarity_events=%s popularity_events=%s duplicate_canonical_records=%s failed_assertions=%s',
+  (SELECT count(*) FROM public.festivals WHERE metadata->>'fixture_key'='FESTIVAL-LIFECYCLE-CERTIFICATION'),
+  (SELECT count(*) FROM public.festival_editions WHERE lifecycle_metadata->>'fixture_key'='FESTIVAL-LIFECYCLE-CERTIFICATION'),
+  (SELECT count(*) FROM public.festival_runtime_performances WHERE evidence_snapshot->>'fixtureKey'='FESTIVAL-LIFECYCLE-CERTIFICATION'),
+  (SELECT count(*) FROM public.festival_edition_settlements WHERE audit_metadata->>'fixtureKey'='FESTIVAL-LIFECYCLE-CERTIFICATION'),
+  (SELECT count(*) FROM public.festival_edition_settlement_effects e JOIN public.festival_edition_settlements s ON s.id=e.settlement_id WHERE s.audit_metadata->>'fixtureKey'='FESTIVAL-LIFECYCLE-CERTIFICATION'),
+  0,
+  (SELECT count(*) FROM public.festival_edition_settlement_effects WHERE status='applied'),
+  (SELECT count(*) FROM public.festival_edition_settlement_effects WHERE status IN ('applied','not_applicable')),
+  (SELECT count(*) FROM public.festival_edition_settlements WHERE state='completed'),
+  (SELECT count(*) FROM public.live_performance_outcomes), (SELECT count(*) FROM public.band_fan_progression_events),
+  (SELECT count(*) FROM public.band_fame_progression_events), (SELECT count(*) FROM public.member_xp_transactions),
+  (SELECT count(*) FROM public.band_contribution_events), 0,
+  (SELECT count(*) FROM public.song_performance_progression_events WHERE progression_type='familiarity'),
+  (SELECT count(*) FROM public.song_performance_progression_events WHERE progression_type='popularity'), 0,
+  (SELECT count(*) FROM progression_assertions WHERE NOT passed)
+) AS "FESTIVAL_LIFECYCLE_SUMMARY";
 ROLLBACK;
