@@ -69,6 +69,11 @@ export function certifyPerformanceEffectsHarness(sql) {
   addPatternFailure(failures, executable, /\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\b/i, "lifecycle calls in harness-defined routine");
   addPatternFailure(failures, executable, /\bapply_festival_(?:performance_result|band_fans|band_fame|member_xp|band_chemistry|song_familiarity|song_popularity)_effect\s*\(\s*(?:NULL\s*,\s*){6}NULL\s*\)/i, "placeholder-only NULL effect call");
   addPatternFailure(failures, executable, /\b(?:claimed_effects|processed_effects|duplicate_canonical_records)\s*:=\s*\d+\b/i, "hard-coded lifecycle count");
+  addPatternFailure(failures, sql, /->>?'(?:effectId|effectType|outcomeId|subjectType|subjectId|stableReference|requestedPayload|claimToken)'/i, "camelCase claim payload access");
+  addPatternFailure(failures, executable, /\binsert\s+into\s+(?:public\.)?(?:festival_companies|festivals|festival_editions_v2|festival_edition_runtimes|festival_runtime_completion_digests|festival_runtime_performances)\s*\(\s*id\s*\)/i, "ID-only production fixture");
+  addPatternFailure(failures, sql, /\bLOOP\b[\s\S]{0,600}?post_next_festival_edition_settlement_item\s*\([^,]+,\s*'[0-9a-f-]{36}'/i, "constant posting idempotency key in loop");
+  addPatternFailure(failures, sql, /EXIT\s+WHEN[\s\S]{0,100}?->>?'effectId'/i, "worker exits on nonexistent claim key");
+  addPatternFailure(failures, sql, /\b(?:ordinary-gig|NPC|solo|Festival\/gig overlap) scenario\b/i, "unimplemented scenario label");
 
   for (const fn of lifecycleFunctions) {
     const call = new RegExp(`\\b(?:select|perform|call|:=|then)\\s+(?:public\\.)?${fn}\\s*\\([^;]+?\\)`, "i");
@@ -77,6 +82,11 @@ export function certifyPerformanceEffectsHarness(sql) {
   for (const table of fixtureTables) {
     if (!new RegExp(`\\binsert\\s+into\\s+(?:public\\.)?${table}\\s*\\(`, "i").test(executable)) failures.push(`explicit persisted fixture ${table}`);
   }
+  if (!/\binsert\s+into\s+auth\.users\s*\(/i.test(executable)) failures.push("authenticated fixture user");
+  if (!/set_config\s*\(\s*'request\.jwt\.claims'/i.test(sql)) failures.push("JWT user context");
+  if (!/\bauth\.uid\s*\(\s*\)\s*=|ASSERT\s+auth\.uid\s*\(\s*\)/i.test(executable)) failures.push("auth.uid assertion");
+  if (!/ARRAY\s*\[[^\]]*'performance_result'[^\]]*'band_fans'[^\]]*'band_fame'[^\]]*'member_xp'[^\]]*'band_chemistry'[^\]]*'song_familiarity'[^\]]*'song_popularity'/i.test(sql)) failures.push("all-seven-effect cardinality assertion");
+  if (!/\ball_seven_effects_replayed\b/i.test(executable)) failures.push("all-seven effect replay assertion");
   if (/\bCREATE\s+TEMP(?:ORARY)?\s+TABLE\s+(?:public\.)?(?:festivals|festival_editions|festival_runtime_performances)\b/i.test(executable)) failures.push("temporary-table-only domain fixture");
   if (/\bupdate\s+(?:public\.)?festival_edition_settlement_effects\b[\s\S]{0,500}?\bset\s+[\s\S]{0,200}?\b(?:status|applied_at)\s*=/i.test(executable)) failures.push("effect lifecycle bypass");
   if (/\binsert\s+into\s+(?:public\.)?(?:festival_edition_settlement_outcomes|festival_edition_settlement_effects|live_performance_outcomes|band_fan_progression_events|band_fame_progression_events|member_xp_transactions|song_performance_progression_events|festival_effect_authority_results)\b/i.test(executable)) failures.push("fabricated production result");
