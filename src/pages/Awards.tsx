@@ -161,7 +161,9 @@ export default function Awards() {
                   <Badge variant="secondary">{invite.response_status}</Badge>
                 )}
               </div>
-            ))}
+              );
+            })}
+
           </CardContent>
         </Card>
       )}
