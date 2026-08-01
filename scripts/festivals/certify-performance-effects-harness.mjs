@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const lifecycleFunctions = [
+  "prepare_festival_edition_settlement",
   "claim_next_festival_settlement_effect",
   "apply_festival_performance_result_effect",
   "apply_festival_band_fans_effect",
@@ -11,7 +12,7 @@ export const lifecycleFunctions = [
   "apply_festival_song_familiarity_effect",
   "apply_festival_song_popularity_effect",
   "acknowledge_festival_settlement_effect",
-  "finalise_festival_settlement_effects",
+  "finalise_ready_festival_settlement_effects",
 ];
 
 const fixtureTables = [
@@ -82,8 +83,8 @@ export function certifyPerformanceEffectsHarness(sql) {
     failures.push("fabricated canonical record");
   if (/\binsert\s+into\s+(?:public\.)?festival_edition_settlement_effects\s*\([^)]*\b(?:status|applied_at)\b/i.test(executable))
     failures.push("pre-resolved seeded effect");
-  if (!/\bprepare_festival_(?:edition_)?settlement\s*\(/i.test(executable))
-    failures.push("production settlement preparation");
+  if (!/(?:\bselect\b[\s\S]{0,200}\binto\s+processed_effects\b|\bprocessed_effects\s*:?=\s*\(?\s*select\b)/i.test(executable))
+    failures.push("database-derived processed_effects");
   if (!/\bFESTIVAL_LIFECYCLE_SUMMARY\b/.test(sql)) failures.push("deterministic lifecycle summary");
   if (!/\b(?:raise\s+exception|assert)\b/i.test(executable) || !/\b(?:replay|duplicate|idempotent)[A-Za-z_0-9]*\b/i.test(executable)) failures.push("executable replay assertion");
   if (failures.length) throw new Error(`progression harness missing required coverage: ${failures.join(", ")}`);
