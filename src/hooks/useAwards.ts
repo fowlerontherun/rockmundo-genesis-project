@@ -412,18 +412,17 @@ export const useAwards = (userId?: string, bandId?: string) => {
       invite_id: string;
       response_status: "accepted" | "declined";
     }) => {
-      const { data, error } = await (supabase as any)
-        .from("award_show_invites")
-        .update({ response_status: params.response_status })
-        .eq("id", params.invite_id)
-        .select("*")
-        .single();
+      const { data, error } = await (supabase as any).rpc("award_show_respond_invite", {
+        p_invite_id: params.invite_id,
+        p_response: params.response_status,
+      });
 
       if (error) throw error;
       return data as AwardShowInvite;
     },
     onSuccess: (_, params) => {
       queryClient.invalidateQueries({ queryKey: ["award-invites"] });
+      queryClient.invalidateQueries({ queryKey: ["award-performance-bookings"] });
       toast.success(
         params.response_status === "accepted"
           ? "Invitation accepted"
@@ -434,6 +433,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       toast.error("Failed to respond to invitation", { description: error.message });
     },
   });
+
 
   // Book performance slot
   const bookPerformance = useMutation({
