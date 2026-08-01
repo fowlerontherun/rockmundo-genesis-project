@@ -14,8 +14,31 @@ CREATE TABLE public.band_stage_equipment (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Create band_crew_members table
-CREATE TABLE public.band_crew_members (
+-- Canonical crew catalogue. Catalogue identifiers are deliberately text: they
+-- are stable game-data keys (for example, t1-tm-rookie), not entity UUIDs.
+CREATE TABLE IF NOT EXISTS public.crew_catalog (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  headline TEXT NOT NULL,
+  background TEXT NOT NULL,
+  skill INTEGER NOT NULL CHECK (skill BETWEEN 0 AND 100),
+  salary INTEGER NOT NULL CHECK (salary >= 0),
+  experience INTEGER NOT NULL DEFAULT 0 CHECK (experience >= 0),
+  morale TEXT NOT NULL DEFAULT 'steady',
+  loyalty INTEGER NOT NULL DEFAULT 50 CHECK (loyalty BETWEEN 0 AND 100),
+  assignment TEXT NOT NULL DEFAULT 'Standby',
+  focus TEXT NOT NULL DEFAULT '',
+  specialties TEXT[] NOT NULL DEFAULT '{}',
+  traits TEXT[] NOT NULL DEFAULT '{}',
+  openings INTEGER NOT NULL DEFAULT 1 CHECK (openings >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Canonical band employment table. Later migrations add catalogue linkage and
+-- progression fields without replacing this ownership authority.
+CREATE TABLE IF NOT EXISTS public.band_crew_members (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   band_id UUID NOT NULL REFERENCES public.bands(id) ON DELETE CASCADE,
   crew_type VARCHAR NOT NULL,
@@ -215,7 +238,7 @@ CREATE POLICY "Band members can manage their merchandise"
 
 -- Create indexes for performance
 CREATE INDEX idx_band_equipment_band_id ON public.band_stage_equipment(band_id);
-CREATE INDEX idx_band_crew_band_id ON public.band_crew_members(band_id);
+CREATE INDEX IF NOT EXISTS idx_band_crew_band_id ON public.band_crew_members(band_id);
 CREATE INDEX idx_song_rehearsals_song_band ON public.song_rehearsals(song_id, band_id);
 CREATE INDEX idx_gig_performances_gig_id ON public.gig_song_performances(gig_id);
 CREATE INDEX idx_gig_outcomes_gig_id ON public.gig_outcomes(gig_id);

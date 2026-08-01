@@ -1,25 +1,26 @@
 
 -- Add new columns to crew_catalog for star rating, fame-based unlocking, and exclusivity
-ALTER TABLE crew_catalog ADD COLUMN IF NOT EXISTS star_rating INTEGER NOT NULL DEFAULT 5 CHECK (star_rating >= 1 AND star_rating <= 10);
-ALTER TABLE crew_catalog ADD COLUMN IF NOT EXISTS min_fame_required INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE crew_catalog ADD COLUMN IF NOT EXISTS hired_by_band_id UUID REFERENCES public.bands(id) ON DELETE SET NULL;
-ALTER TABLE crew_catalog ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE public.crew_catalog ADD COLUMN IF NOT EXISTS star_rating INTEGER NOT NULL DEFAULT 5 CHECK (star_rating >= 1 AND star_rating <= 10);
+ALTER TABLE public.crew_catalog ADD COLUMN IF NOT EXISTS min_fame_required INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.crew_catalog ADD COLUMN IF NOT EXISTS hired_by_band_id UUID REFERENCES public.bands(id) ON DELETE SET NULL;
+ALTER TABLE public.crew_catalog ADD COLUMN IF NOT EXISTS city TEXT;
 
 -- Add new columns to band_crew_members for cohesion mechanics
-ALTER TABLE band_crew_members ADD COLUMN IF NOT EXISTS star_rating INTEGER DEFAULT 5 CHECK (star_rating >= 1 AND star_rating <= 10);
-ALTER TABLE band_crew_members ADD COLUMN IF NOT EXISTS cohesion_rating NUMERIC NOT NULL DEFAULT 0 CHECK (cohesion_rating >= 0 AND cohesion_rating <= 100);
-ALTER TABLE band_crew_members ADD COLUMN IF NOT EXISTS gigs_together INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE band_crew_members ADD COLUMN IF NOT EXISTS catalog_crew_id TEXT;
+ALTER TABLE public.band_crew_members ADD COLUMN IF NOT EXISTS star_rating INTEGER DEFAULT 5 CHECK (star_rating >= 1 AND star_rating <= 10);
+ALTER TABLE public.band_crew_members ADD COLUMN IF NOT EXISTS cohesion_rating NUMERIC NOT NULL DEFAULT 0 CHECK (cohesion_rating >= 0 AND cohesion_rating <= 100);
+ALTER TABLE public.band_crew_members ADD COLUMN IF NOT EXISTS gigs_together INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.band_crew_members ADD COLUMN IF NOT EXISTS catalog_crew_id TEXT REFERENCES public.crew_catalog(id) ON DELETE SET NULL;
 
--- Create unique constraint so one crew member can only be hired by one band
-CREATE UNIQUE INDEX IF NOT EXISTS idx_crew_catalog_hired_by_band ON crew_catalog(id) WHERE hired_by_band_id IS NOT NULL;
-
--- Clear existing crew_catalog to seed fresh data
-DELETE FROM crew_catalog;
+-- A catalogue NPC may have at most one active band employment. The catalogue
+-- primary key already makes hired_by_band_id exclusive there; this index closes
+-- the race between inserting employment and updating catalogue availability.
+CREATE UNIQUE INDEX IF NOT EXISTS band_crew_members_catalog_crew_active_uidx
+  ON public.band_crew_members (catalog_crew_id)
+  WHERE catalog_crew_id IS NOT NULL;
 
 -- Seed 54 crew members across 5 tiers
 -- TIER 1 (1-2 stars): Entry-level, requires 0 fame - $200-500/gig
-INSERT INTO crew_catalog (id, name, role, headline, background, skill, salary, experience, morale, loyalty, assignment, focus, specialties, traits, openings, star_rating, min_fame_required) VALUES
+INSERT INTO public.crew_catalog (id, name, role, headline, background, skill, salary, experience, morale, loyalty, assignment, focus, specialties, traits, openings, star_rating, min_fame_required) VALUES
 ('t1-tm-rookie', 'Dave Murphy', 'Tour Manager', 'Fresh out of college but eager to learn the ropes.', 'Recently graduated from music business school. Organized campus concerts.', 25, 200, 1, 'steady', 50, 'Touring', 'Basic logistics', ARRAY['Schedule management', 'Basic routing'], ARRAY['Eager', 'Learning'], 1, 2, 0),
 ('t1-foh-beginner', 'Sarah Chen', 'Front of House Engineer', 'Local venue mixer taking first tour gig.', 'Spent two years mixing at a local club. Knows the basics well.', 30, 250, 2, 'steady', 55, 'Touring', 'Basic mixing', ARRAY['PA setup', 'Basic EQ'], ARRAY['Patient', 'Detail-oriented'], 1, 2, 0),
 ('t1-ld-starter', 'Mike Torres', 'Lighting Director', 'DIY venue tech branching into touring.', 'Self-taught lighting designer from the punk scene.', 28, 220, 1, 'steady', 52, 'Production', 'Basic lighting', ARRAY['Par cans', 'Basic cues'], ARRAY['Resourceful', 'Budget-conscious'], 1, 2, 0),
@@ -77,4 +78,21 @@ INSERT INTO crew_catalog (id, name, role, headline, background, skill, salary, e
 ('t5-backline-legend', 'Eddie "Golden Hands" Sanchez', 'Backline Technician', 'The tech who maintains historys most valuable instruments.', 'Trusted with guitars worth millions. Priceless expertise.', 95, 5500, 25, 'electric', 94, 'Touring', 'Priceless care', ARRAY['Museum pieces', 'Custom builds', 'Restoration'], ARRAY['Trusted', 'Irreplaceable'], 1, 9, 50000),
 ('t5-merch-mogul', 'Zara Diamond', 'Merch Director', 'Built merchandise into a billion-dollar business.', 'Transformed artist merchandise into lifestyle brands.', 94, 5200, 18, 'electric', 92, 'Standby', 'Empire building', ARRAY['Brand licensing', 'Fashion lines', 'Global retail'], ARRAY['Mogul', 'Visionary'], 1, 9, 50000),
 ('t5-security-legend', 'John "Ghost" Mitchell', 'Security Lead', 'The security chief every superstar wants.', 'Protected the biggest names for decades. Invisible and invincible.', 98, 7500, 30, 'electric', 97, 'Touring', 'Superstar protection', ARRAY['Intelligence networks', 'Global coordination', 'Zero incidents'], ARRAY['Ghost', 'Legend'], 1, 10, 50000),
-('t5-wardrobe-icon', 'Isabella DeLuca', 'Wardrobe Stylist', 'The stylist whose looks become iconic moments.', 'Created outfits that defined generations of artists.', 96, 6000, 20, 'electric', 94, 'Standby', 'Iconic fashion', ARRAY['Costume design', 'Brand creation', 'Cultural impact'], ARRAY['Icon maker', 'Legendary'], 1, 10, 50000);
+('t5-wardrobe-icon', 'Isabella DeLuca', 'Wardrobe Stylist', 'The stylist whose looks become iconic moments.', 'Created outfits that defined generations of artists.', 96, 6000, 20, 'electric', 94, 'Standby', 'Iconic fashion', ARRAY['Costume design', 'Brand creation', 'Cultural impact'], ARRAY['Icon maker', 'Legendary'], 1, 10, 50000)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  role = EXCLUDED.role,
+  headline = EXCLUDED.headline,
+  background = EXCLUDED.background,
+  skill = EXCLUDED.skill,
+  salary = EXCLUDED.salary,
+  experience = EXCLUDED.experience,
+  morale = EXCLUDED.morale,
+  loyalty = EXCLUDED.loyalty,
+  focus = EXCLUDED.focus,
+  specialties = EXCLUDED.specialties,
+  traits = EXCLUDED.traits,
+  openings = EXCLUDED.openings,
+  star_rating = EXCLUDED.star_rating,
+  min_fame_required = EXCLUDED.min_fame_required,
+  updated_at = now();

@@ -1,9 +1,27 @@
 \set ON_ERROR_STOP on
 BEGIN;
--- Explicit deterministic production fixtures (all constraints remain enabled).
-INSERT INTO public.festival_companies (id, created_at) VALUES ('a1000000-0000-4000-8000-000000000001', '2030-01-01T00:00:00Z');
-INSERT INTO public.festivals (id, created_at) VALUES ('a1000000-0000-4000-8000-000000000011', '2030-01-01T00:00:00Z');
-INSERT INTO public.festival_editions_v2 (id, created_at) VALUES ('a1000000-0000-4000-8000-000000000002', '2030-01-01T00:00:00Z');
+-- Authentication and its canonical profile are always established before the
+-- player-owned Festival graph. All constraints, triggers and RLS remain active.
+INSERT INTO auth.users (id, email, created_at, updated_at)
+VALUES ('a1000000-0000-4000-8000-000000000099','festival-owner@example.test','2030-01-01T00:00:00Z','2030-01-01T00:00:00Z');
+INSERT INTO public.profiles (id, user_id, username, display_name, cash, premium_tokens, is_vip)
+VALUES ('a1000000-0000-4000-8000-000000000098','a1000000-0000-4000-8000-000000000099','festival_certifier','Festival Certifier',5000000,100,true);
+INSERT INTO public.cities (id, name, country, timezone)
+VALUES ('a1000000-0000-4000-8000-000000000097','Certification City','GB','UTC');
+INSERT INTO public.companies (id, owner_id, name, company_type, balance, headquarters_city_id)
+VALUES ('a1000000-0000-4000-8000-000000000096','a1000000-0000-4000-8000-000000000099','Certification Festivals Ltd','festival',1000000,'a1000000-0000-4000-8000-000000000097');
+INSERT INTO public.festival_companies
+  (id, company_id, owner_profile_id, public_name, slug, status, default_city_id, setup_completed, created_at)
+VALUES
+  ('a1000000-0000-4000-8000-000000000001','a1000000-0000-4000-8000-000000000096','a1000000-0000-4000-8000-000000000098','Certification Festival','certification-festival','active','a1000000-0000-4000-8000-000000000097',true,'2030-01-01T00:00:00Z');
+INSERT INTO public.festivals
+  (id, name, city_id, start_date, end_date, expected_attendance, metadata, created_at)
+VALUES
+  ('a1000000-0000-4000-8000-000000000011','Certification Festival','a1000000-0000-4000-8000-000000000097','2030-06-01','2030-06-01',1000,'{"fixture_key":"FESTIVAL-LIFECYCLE-CERTIFICATION"}','2030-01-01T00:00:00Z');
+INSERT INTO public.festival_editions_v2
+  (id, festival_company_id, edition_year, name, status, starts_on, ends_on, city_id, runtime_inputs, created_at)
+VALUES
+  ('a1000000-0000-4000-8000-000000000002','a1000000-0000-4000-8000-000000000001',2030,'Certification Festival 2030','completed','2030-06-01','2030-06-01','a1000000-0000-4000-8000-000000000097','{"capacity":1000,"ticketsSold":1000,"fixtureKey":"FESTIVAL-LIFECYCLE-CERTIFICATION"}','2030-01-01T00:00:00Z');
 INSERT INTO public.festival_edition_runtimes (id, created_at) VALUES ('a1000000-0000-4000-8000-000000000003', '2030-01-01T00:00:00Z');
 INSERT INTO public.festival_runtime_completion_digests (id, created_at) VALUES ('a1000000-0000-4000-8000-000000000004', '2030-01-01T00:00:00Z');
 INSERT INTO public.festival_runtime_performances (id, created_at) VALUES ('a1000000-0000-4000-8000-000000000005', '2030-01-01T00:00:00Z');
@@ -22,12 +40,14 @@ DECLARE
   claimed_effects integer;
   processed_effects integer;
   duplicate_canonical_records integer;
-  all_seven_effects_replayed boolean := true;
+  all_seven_effects_replayed integer;
 BEGIN
-  INSERT INTO auth.users (id, email, created_at, updated_at) VALUES ('a1000000-0000-4000-8000-000000000099','festival-owner@example.test','2030-01-01T00:00:00Z','2030-01-01T00:00:00Z');
   PERFORM set_config('request.jwt.claims', jsonb_build_object('sub','a1000000-0000-4000-8000-000000000099','role','authenticated')::text, true);
   ASSERT auth.uid() = 'a1000000-0000-4000-8000-000000000099'::uuid, 'authenticated fixture owner required';
-  ASSERT ARRAY['performance_result','band_fans','band_fame','member_xp','band_chemistry','song_familiarity','song_popularity']::text[] <@ ARRAY['performance_result','band_fans','band_fame','member_xp','band_chemistry','song_familiarity','song_popularity']::text[], 'all seven effects required';
+  ASSERT NOT EXISTS (
+    SELECT required.effect_type FROM unnest(ARRAY['performance_result','band_fans','band_fame','member_xp','band_chemistry','song_familiarity','song_popularity']::text[]) required(effect_type)
+    EXCEPT SELECT DISTINCT effect_type FROM public.festival_edition_settlement_effects WHERE settlement_id=lifecycle_contract.settlement_id
+  ), 'all seven effects required';
   -- The deterministic production graph is seeded below with explicit columns.
   -- From this point every authority is invoked; any missing evidence or invalid
   -- transition aborts psql because ON_ERROR_STOP is enabled.
@@ -52,16 +72,17 @@ BEGIN
   LOOP
     SELECT public.claim_next_festival_settlement_effect(settlement_id, 'festival-lifecycle-certifier', settlement_version, 1) INTO claim;
     EXIT WHEN claim IS NULL OR claim = 'null'::jsonb OR claim->>'id' IS NULL;
-    applied := CASE claim->>'effect_type'
-      WHEN 'performance_result' THEN public.apply_festival_performance_result_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload')
-      WHEN 'band_fans' THEN public.apply_festival_band_fans_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload')
-      WHEN 'band_fame' THEN public.apply_festival_band_fame_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload')
-      WHEN 'member_xp' THEN public.apply_festival_member_xp_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload')
-      WHEN 'band_chemistry' THEN public.apply_festival_band_chemistry_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload')
-      WHEN 'song_familiarity' THEN public.apply_festival_song_familiarity_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload')
-      WHEN 'song_popularity' THEN public.apply_festival_song_popularity_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload')
-      ELSE NULL
-    END;
+    CASE claim->>'effect_type'
+      WHEN 'performance_result' THEN SELECT public.apply_festival_performance_result_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload') INTO applied;
+      WHEN 'band_fans' THEN SELECT public.apply_festival_band_fans_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload') INTO applied;
+      WHEN 'band_fame' THEN SELECT public.apply_festival_band_fame_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload') INTO applied;
+      WHEN 'member_xp' THEN SELECT public.apply_festival_member_xp_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload') INTO applied;
+      WHEN 'band_chemistry' THEN SELECT public.apply_festival_band_chemistry_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload') INTO applied;
+      WHEN 'song_familiarity' THEN SELECT public.apply_festival_song_familiarity_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload') INTO applied;
+      WHEN 'song_popularity' THEN SELECT public.apply_festival_song_popularity_effect((claim->>'id')::uuid,settlement_id,(claim->>'outcome_id')::uuid,claim->>'subject_type',claim->>'subject_id',claim->>'stable_reference',claim->'requested_payload') INTO applied;
+      ELSE
+        RAISE EXCEPTION 'Unexpected settlement effect: %', claim->>'effect_type'
+    END CASE;
     ASSERT applied->>'canonicalId' IS NOT NULL, 'authority must return a canonical record';
     SELECT public.acknowledge_festival_settlement_effect((claim->>'id')::uuid,(claim->>'claim_token')::uuid,applied->>'status',applied->'result',applied->>'canonicalId') INTO replay;
   END LOOP;
@@ -76,7 +97,10 @@ BEGIN
   SELECT count(*) INTO processed_effects FROM public.festival_effect_authority_results WHERE settlement_id=lifecycle_contract.settlement_id;
   SELECT count(*) INTO duplicate_canonical_records FROM (SELECT stable_reference FROM public.festival_effect_authority_results WHERE settlement_id=lifecycle_contract.settlement_id GROUP BY stable_reference HAVING count(*)>1) duplicates;
   ASSERT claimed_effects>0 AND processed_effects>0 AND duplicate_canonical_records=0, 'executed lifecycle counts must reconcile';
-  ASSERT all_seven_effects_replayed, 'all supported effect authorities replayed idempotently';
+  SELECT count(DISTINCT effect_type) INTO all_seven_effects_replayed
+    FROM public.festival_effect_authority_results
+   WHERE settlement_id=lifecycle_contract.settlement_id;
+  ASSERT all_seven_effects_replayed = 7, 'all supported effect authorities replayed idempotently';
 END $lifecycle_contract$;
 
 -- Deterministic scenario manifest.  Domain fixtures are transaction-local and
