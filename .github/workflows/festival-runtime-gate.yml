@@ -113,15 +113,26 @@ jobs:
         run: |
           set -o pipefail
           npm run test:festivals:performance-effects:db 2>&1 | tee festival-runtime-diagnostics/performance-effects-replay-run.log
+      - name: Compare clean-database certification summaries
+        run: |
+          first="$(grep '^FESTIVAL_LIFECYCLE_SUMMARY ' festival-runtime-diagnostics/performance-effects-first-run.log)"
+          second="$(grep '^FESTIVAL_LIFECYCLE_SUMMARY ' festival-runtime-diagnostics/performance-effects-replay-run.log)"
+          test -n "$first"
+          test "$first" = "$second"
 
       - name: Capture runtime diagnostics
         if: always()
         run: |
           mkdir -p festival-runtime-diagnostics
-          supabase status > festival-runtime-diagnostics/supabase-status.txt 2>&1 || true
-          supabase logs db > festival-runtime-diagnostics/db.log 2>&1 || true
-          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=0 -f scripts/festivals/runtime-diagnostics.sql \
-            > festival-runtime-diagnostics/database-summary.txt 2>&1 || true
+          if [ "$SUPABASE_STARTED" = true ]; then
+            supabase status > festival-runtime-diagnostics/supabase-status.txt 2>&1 || true
+            supabase logs db > festival-runtime-diagnostics/db.log 2>&1 || true
+            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=0 -f scripts/festivals/runtime-diagnostics.sql \
+              > festival-runtime-diagnostics/database-summary.txt 2>&1 || true
+          else
+            printf '%s\n' 'Supabase was not started; database diagnostics skipped.' \
+              > festival-runtime-diagnostics/supabase-status.txt
+          fi
           sed -i -E 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g; s#(password=)[^[:space:]]+#\1[redacted]#g' festival-runtime-diagnostics/* || true
       - name: Upload runtime diagnostics
         if: always()
