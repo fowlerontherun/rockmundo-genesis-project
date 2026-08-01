@@ -23,6 +23,21 @@ const AwardsAdmin = () => {
     venue_name: "",
     categories: "",
   });
+  const [bandSearch, setBandSearch] = useState("");
+  const [selectedBand, setSelectedBand] = useState<{ id: string; name: string } | null>(null);
+  const [inviteForm, setInviteForm] = useState({
+    award_show_id: "",
+    invite_type: "performer" as "performer" | "presenter" | "attendee",
+    slot_label: "",
+    stage: "",
+    performance_fee: "0",
+    message: "",
+  });
+
+  const { data: bandOptions = [] } = useNominatableBands(bandSearch);
+  const { data: invites = [] } = useAwardShowInvites();
+  const inviteBand = useInviteBandToPerform();
+
 
   const { data: shows = [] } = useQuery({
     queryKey: ["admin-award-shows"],
