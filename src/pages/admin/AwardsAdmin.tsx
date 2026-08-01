@@ -201,8 +201,161 @@ const AwardsAdmin = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="invites" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Invite a band to perform
+              </CardTitle>
+              <CardDescription>Send performance, presenter or attendance invitations to any band.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Award show</Label>
+                  <select
+                    className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                    value={inviteForm.award_show_id}
+                    onChange={(e) => setInviteForm({ ...inviteForm, award_show_id: e.target.value })}
+                  >
+                    <option value="">Select a show…</option>
+                    {shows.map((show: any) => (
+                      <option key={show.id} value={show.id}>{show.show_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Invite type</Label>
+                  <select
+                    className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                    value={inviteForm.invite_type}
+                    onChange={(e) => setInviteForm({ ...inviteForm, invite_type: e.target.value as any })}
+                  >
+                    <option value="performer">Performer</option>
+                    <option value="presenter">Presenter</option>
+                    <option value="attendee">Attendee</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Slot label</Label>
+                  <Input
+                    value={inviteForm.slot_label}
+                    onChange={(e) => setInviteForm({ ...inviteForm, slot_label: e.target.value })}
+                    placeholder="e.g., Opening number"
+                  />
+                </div>
+                <div>
+                  <Label>Stage</Label>
+                  <Input
+                    value={inviteForm.stage}
+                    onChange={(e) => setInviteForm({ ...inviteForm, stage: e.target.value })}
+                    placeholder="e.g., Main stage"
+                  />
+                </div>
+                <div>
+                  <Label>Performance fee ($)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={inviteForm.performance_fee}
+                    onChange={(e) => setInviteForm({ ...inviteForm, performance_fee: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Message</Label>
+                  <Input
+                    value={inviteForm.message}
+                    onChange={(e) => setInviteForm({ ...inviteForm, message: e.target.value })}
+                    placeholder="Optional note to the band"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Band</Label>
+                <Input
+                  value={bandSearch}
+                  onChange={(e) => setBandSearch(e.target.value)}
+                  placeholder="Search bands by name…"
+                />
+                <div className="max-h-48 overflow-y-auto divide-y rounded-md border">
+                  {bandOptions.length === 0 && (
+                    <p className="p-3 text-xs text-muted-foreground">No bands matched that search.</p>
+                  )}
+                  {bandOptions.map((band) => (
+                    <button
+                      key={band.id}
+                      type="button"
+                      onClick={() => setSelectedBand({ id: band.id, name: band.name })}
+                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-muted/60 ${selectedBand?.id === band.id ? "bg-primary/10" : ""}`}
+                    >
+                      <span className="font-medium">{band.name}</span>
+                      <span className="text-muted-foreground">
+                        {band.genre || "Unknown"} · {Number(band.fame ?? 0).toLocaleString()} fame
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                disabled={!inviteForm.award_show_id || !selectedBand || inviteBand.isPending}
+                onClick={() => {
+                  if (!selectedBand) return;
+                  inviteBand.mutate({
+                    award_show_id: inviteForm.award_show_id,
+                    band_id: selectedBand.id,
+                    invite_type: inviteForm.invite_type,
+                    slot_label: inviteForm.slot_label || undefined,
+                    stage: inviteForm.stage || undefined,
+                    performance_fee: Number(inviteForm.performance_fee) || 0,
+                    message: inviteForm.message || undefined,
+                  });
+                }}
+              >
+                <Award className="h-4 w-4 mr-2" />
+                Send invitation{selectedBand ? ` to ${selectedBand.name}` : ""}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Sent invitations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Show</TableHead>
+                    <TableHead>Band</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Slot</TableHead>
+                    <TableHead>Fee</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invites.map((invite) => (
+                    <TableRow key={invite.id}>
+                      <TableCell>{shows.find((show: any) => show.id === invite.award_show_id)?.show_name || "—"}</TableCell>
+                      <TableCell>{invite.bands?.name || "—"}</TableCell>
+                      <TableCell className="capitalize">{invite.invite_type}</TableCell>
+                      <TableCell>{[invite.slot_label, invite.stage].filter(Boolean).join(" · ") || "—"}</TableCell>
+                      <TableCell>${Number(invite.performance_fee || 0).toLocaleString()}</TableCell>
+                      <TableCell><Badge variant="secondary">{invite.response_status}</Badge></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
+
   );
 };
 
