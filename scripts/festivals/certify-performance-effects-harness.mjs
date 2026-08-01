@@ -78,6 +78,13 @@ export function certifyPerformanceEffectsHarness(sql) {
   }
   if (/\bupdate\s+(?:public\.)?festival_edition_settlement_effects\b[\s\S]{0,500}?\bset\s+[\s\S]{0,200}?\b(?:status|applied_at)\s*=/i.test(executable))
     failures.push("effect lifecycle bypass");
+  if (/\binsert\s+into\s+(?:public\.)?(?:live_performance_outcomes|band_fan_progression_events|band_fame_progression_events|member_xp_transactions|song_performance_progression_events|festival_effect_authority_results)\b/i.test(executable))
+    failures.push("fabricated canonical record");
+  if (/\binsert\s+into\s+(?:public\.)?festival_edition_settlement_effects\s*\([^)]*\b(?:status|applied_at)\b/i.test(executable))
+    failures.push("pre-resolved seeded effect");
+  if (!/\bprepare_festival_(?:edition_)?settlement\s*\(/i.test(executable))
+    failures.push("production settlement preparation");
+  if (!/\bFESTIVAL_LIFECYCLE_SUMMARY\b/.test(sql)) failures.push("deterministic lifecycle summary");
   if (!/\b(?:raise\s+exception|assert)\b/i.test(executable) || !/\b(?:replay|duplicate|idempotent)[A-Za-z_0-9]*\b/i.test(executable)) failures.push("executable replay assertion");
   if (failures.length) throw new Error(`progression harness missing required coverage: ${failures.join(", ")}`);
   return { lifecycleCalls: lifecycleFunctions.length, persistedFixtureKinds: fixtureTables.length };
