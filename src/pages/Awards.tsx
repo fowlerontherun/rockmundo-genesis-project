@@ -137,12 +137,21 @@ export default function Awards() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {invites.slice(0, 4).map((invite) => (
+            {invites.slice(0, 6).map((invite) => {
+              const show = shows.find((entry) => entry.id === invite.award_show_id);
+              const anyInvite = invite as any;
+              return (
               <div key={invite.id} className="flex items-center justify-between border rounded-md p-2">
                 <div>
-                  <p className="text-sm font-medium">{invite.invite_type.replace("_", " ")}</p>
-                  <p className="text-xs text-muted-foreground">{invite.category_name || "General ceremony invite"}</p>
+                  <p className="text-sm font-medium capitalize">
+                    {invite.invite_type.replace("_", " ")} · {show?.show_name || "Award show"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {[anyInvite.slot_label, anyInvite.stage, invite.category_name].filter(Boolean).join(" · ") || "General ceremony invite"}
+                    {Number(anyInvite.performance_fee || 0) > 0 ? ` · $${Number(anyInvite.performance_fee).toLocaleString()} fee` : ""}
+                  </p>
                 </div>
+
                 {invite.response_status === "pending" ? (
                   <div className="flex gap-1">
                     <Button size="sm" onClick={() => respondToInvite({ invite_id: invite.id, response_status: "accepted" })} disabled={isRespondingInvite}>Accept</Button>
