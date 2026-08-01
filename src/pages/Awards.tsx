@@ -210,13 +210,16 @@ export default function Awards() {
                   onNominate={() => {
                     setSelectedShow(show);
                     setSelectedCategory("");
+                    setBandSearch("");
+                    setNomineeBand(userBand ? { id: userBand.id, name: userBand.name, fame: userBand.fame ?? 0, genre: (userBand as any).genre ?? null } : null);
                     setShowNominateDialog(true);
                   }}
                   onAttendCeremony={() => {
                     setSelectedShow(show);
                     setShowCeremonyDialog(true);
                   }}
-                  canNominate={!!userBand && show.status === 'nominations_open'}
+                  canNominate={show.status === 'nominations_open'}
+
                   canVote={show.status === 'voting_open' || show.status === 'nominations_open'}
                   canAttend={show.status === 'live'}
                   isSubmitting={isSubmitting}
