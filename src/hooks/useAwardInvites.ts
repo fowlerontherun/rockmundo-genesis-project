@@ -17,7 +17,7 @@ export const useNominatableBands = (search: string) => {
   return useQuery({
     queryKey: ["nominatable-bands", term],
     queryFn: async (): Promise<NominatableBand[]> => {
-      let query = (supabase as any)
+      let query = supabase
         .from("bands")
         .select("id, name, genre, fame, popularity")
         .eq("status", "active")
@@ -56,7 +56,7 @@ export const useAwardShowInvites = (showId?: string) =>
   useQuery({
     queryKey: ["award-show-invites", showId ?? "all"],
     queryFn: async (): Promise<AwardShowInviteRow[]> => {
-      let query = (supabase as any)
+      let query = supabase
         .from("award_show_invites")
         .select("*, bands:invitee_band_id(name)")
         .order("created_at", { ascending: false });
@@ -83,7 +83,7 @@ export const useInviteBandToPerform = () => {
       category_name?: string;
       message?: string;
     }) => {
-      const { data, error } = await (supabase as any).rpc("award_show_invite_band", {
+      const { data, error } = await supabase.rpc("award_show_invite_band", {
         p_award_show_id: input.award_show_id,
         p_band_id: input.band_id,
         p_invite_type: input.invite_type ?? "performer",
@@ -101,7 +101,7 @@ export const useInviteBandToPerform = () => {
       queryClient.invalidateQueries({ queryKey: ["award-invites"] });
       toast.success("Performance invitation sent");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error("Failed to send invitation", { description: error.message });
     },
   });

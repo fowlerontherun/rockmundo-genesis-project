@@ -412,7 +412,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       invite_id: string;
       response_status: "accepted" | "declined";
     }) => {
-      const { data, error } = await (supabase as any).rpc("award_show_respond_invite", {
+      const { data, error } = await supabase.rpc("award_show_respond_invite", {
         p_invite_id: params.invite_id,
         p_response: params.response_status,
       });
@@ -429,7 +429,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
           : "Invitation declined"
       );
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error("Failed to respond to invitation", { description: error.message });
     },
   });
