@@ -30,7 +30,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
-        run: npm run lint
+        run: npm run lint:ci
       - name: Unit tests
         run: npm run test:unit -- --reporter=default
       - name: Balance validation gate

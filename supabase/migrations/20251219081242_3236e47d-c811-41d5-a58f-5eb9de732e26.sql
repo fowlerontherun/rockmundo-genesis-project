@@ -1,4 +1,11 @@
--- Add more real-world Radio Stations (quality_level 1-5 only)
+-- A national station's catalogue identity is its name and country.  Keep the
+-- generated UUID as the runtime identity, while making catalogue deployment
+-- repeatable and giving dependent seeds a stable lookup key.
+CREATE UNIQUE INDEX IF NOT EXISTS radio_stations_national_name_country_uidx
+  ON public.radio_stations (name, country)
+  WHERE station_type = 'national' AND country IS NOT NULL;
+
+-- Add more real-world Radio Stations (quality_level 1-5 only).
 INSERT INTO radio_stations (name, country, station_type, accepted_genres, listener_base, min_fame_required, is_active, quality_level) VALUES
 -- UK National
 ('BBC Radio 1', 'United Kingdom', 'national', ARRAY['pop', 'electronic', 'indie'], 9000000, 5000, true, 5),
@@ -45,4 +52,11 @@ INSERT INTO radio_stations (name, country, station_type, accepted_genres, listen
 ('The Hit Network', 'Australia', 'national', ARRAY['pop', 'dance'], 2500000, 2000, true, 3),
 ('Radio NZ', 'New Zealand', 'national', ARRAY['indie', 'rock', 'world'], 500000, 1000, true, 3),
 ('RTL Belgium', 'Belgium', 'national', ARRAY['pop', 'dance'], 700000, 1000, true, 3),
-('Rai Radio 1', 'Italy', 'national', ARRAY['pop', 'talk'], 3500000, 3000, true, 4);
+('Rai Radio 1', 'Italy', 'national', ARRAY['pop', 'talk'], 3500000, 3000, true, 4)
+ON CONFLICT (name, country)
+  WHERE station_type = 'national' AND country IS NOT NULL
+DO UPDATE SET
+  accepted_genres = EXCLUDED.accepted_genres,
+  listener_base = EXCLUDED.listener_base,
+  min_fame_required = EXCLUDED.min_fame_required,
+  quality_level = EXCLUDED.quality_level;
