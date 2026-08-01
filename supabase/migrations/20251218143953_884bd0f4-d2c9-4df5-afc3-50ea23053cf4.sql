@@ -1,6 +1,51 @@
--- Seed record labels across major music cities worldwide
-INSERT INTO labels (name, description, headquarters_city, roster_slot_capacity, marketing_budget, genre_focus, reputation_score, market_share)
-VALUES
+-- Seed record labels across major music cities worldwide. Migrations do not run
+-- with an authenticated request, so auth.uid() cannot satisfy labels.created_by.
+-- Keep a real, deterministic auth principal for system-owned catalogue records.
+INSERT INTO auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+)
+VALUES (
+  '00000000-0000-0000-0000-000000000000'::uuid,
+  '00000000-0000-0000-0000-00000000a11e'::uuid,
+  'authenticated',
+  'authenticated',
+  'system-label-catalogue@rockmundo.invalid',
+  '',
+  '2000-01-01 00:00:00+00'::timestamptz,
+  '{"provider":"email","providers":["email"],"system_owned":true}'::jsonb,
+  '{"display_name":"Rockmundo label catalogue"}'::jsonb,
+  '2000-01-01 00:00:00+00'::timestamptz,
+  '2000-01-01 00:00:00+00'::timestamptz
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO labels (
+  id,
+  name,
+  description,
+  headquarters_city,
+  roster_slot_capacity,
+  marketing_budget,
+  genre_focus,
+  reputation_score,
+  market_share,
+  created_by
+)
+SELECT
+  md5('rockmundo:system-label:' || seed.name)::uuid,
+  seed.*,
+  '00000000-0000-0000-0000-00000000a11e'::uuid
+FROM (VALUES
   -- USA Labels
   ('Sonic Empire Records', 'Major label dominating the American rock and pop scene with worldwide distribution.', 'Los Angeles', 25, 5000000, ARRAY['Pop', 'Rock', 'R&B'], 85, 12.5),
   ('Brooklyn Underground', 'Indie label championing emerging artists from the NYC underground scene.', 'New York', 12, 500000, ARRAY['Indie Rock', 'Hip Hop', 'Electronic'], 45, 2.1),
@@ -62,4 +107,14 @@ VALUES
   ('Moscow Red Square Music', 'Russian label with diverse roster from classical to pop.', 'Moscow', 15, 2000000, ARRAY['Pop', 'Classical', 'Rock'], 60, 2.8),
   ('Warsaw Rising Records', 'Polish label championing Central European alternative music.', 'Warsaw', 10, 700000, ARRAY['Alternative', 'Electronic', 'Hip Hop'], 45, 1.0),
   ('Prague Bohemian Sounds', 'Czech label blending classical traditions with modern rock.', 'Prague', 8, 600000, ARRAY['Rock', 'Classical', 'Indie'], 42, 0.8)
+) AS seed (
+  name,
+  description,
+  headquarters_city,
+  roster_slot_capacity,
+  marketing_budget,
+  genre_focus,
+  reputation_score,
+  market_share
+)
 ON CONFLICT DO NOTHING;
