@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  festival-runtime-gate:
+  quality:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -65,6 +65,28 @@ jobs:
           npm run test:festivals:performance-effects
       - name: Build
         run: npm run build
+
+  database-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      FESTIVAL_TEST_DATABASE_CONFIRMED: 'true'
+      SUPABASE_CLI_VERSION: '2.31.8'
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_STARTED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+      - name: Install dependencies
+        run: npm ci
       - name: Verify Docker
         run: |
           command -v docker
@@ -119,6 +141,14 @@ jobs:
           second="$(grep '^FESTIVAL_LIFECYCLE_SUMMARY ' festival-runtime-diagnostics/performance-effects-replay-run.log)"
           test -n "$first"
           test "$first" = "$second"
+          for summary in "$first" "$second"; do
+            echo "$summary" | grep -Eq 'claimed_effects=[1-9][0-9]*'
+            echo "$summary" | grep -Eq 'processed_effects=[1-9][0-9]*'
+            echo "$summary" | grep -Eq 'acknowledged_effects=[1-9][0-9]*'
+            echo "$summary" | grep -q 'completed_settlements=1'
+            echo "$summary" | grep -q 'duplicate_canonical_records=0'
+            echo "$summary" | grep -q 'failed_assertions=0'
+          done
 
       - name: Capture runtime diagnostics
         if: always()
