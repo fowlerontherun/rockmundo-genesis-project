@@ -19,6 +19,9 @@ import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { isLifetimeAchievementCategory, isLifetimeAchievementYear } from "@/lib/api/awards";
 import { cn } from "@/lib/utils";
 import { AwardCeremonyExperience } from "@/components/awards/AwardCeremonyExperience";
+import { Input } from "@/components/ui/input";
+import { useNominatableBands } from "@/hooks/useAwardInvites";
+
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   upcoming: { label: "Upcoming", variant: "outline" },
