@@ -140,7 +140,9 @@ const AwardsAdmin = () => {
         <TabsList>
           <TabsTrigger value="shows">Award Shows</TabsTrigger>
           <TabsTrigger value="nominations">Nominations</TabsTrigger>
+          <TabsTrigger value="invites">Performance Invites</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="shows" className="space-y-4">
           <div className="grid gap-4">
