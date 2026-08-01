@@ -17,6 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.613",
+    date: "2026-07-31",
+    changes: [
+      { type: 'feature', description: "You can now nominate any band in the world for an award, not just your own — search bands by name in the nomination window, with a one-tap shortcut for your own band." },
+      { type: 'feature', description: "Voting now accepts votes cast as your player or as a band you lead or belong to, with duplicate nominations and duplicate votes blocked automatically." },
+      { type: 'feature', description: "Award shows can invite bands to perform: admins can send performer, presenter or attendee invitations with a slot, stage, fee and message, and see every invitation and its response." },
+      { type: 'feature', description: "Bands receiving an invitation can accept or decline from the awards page, and accepting automatically creates their ceremony performance booking." },
+      { type: 'improvement', description: "Invitation cards now show the show name, slot, stage and performance fee instead of just the invite type." },
+    ],
+  },
+  {
+
     version: "1.1.612",
     date: "2026-07-31",
     changes: [
