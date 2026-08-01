@@ -101,7 +101,8 @@ jobs:
           psql --version
       - name: Start local Supabase stack
         run: |
-          supabase start
+          supabase stop --no-backup || true
+          supabase start --debug
           echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
           db_url="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$db_url"
@@ -115,6 +116,8 @@ jobs:
           mkdir -p festival-runtime-diagnostics
           set -o pipefail
           supabase db reset 2>&1 | tee festival-runtime-diagnostics/migration-reset.log
+      - name: Verify deterministic radio catalogue seeds
+        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/radio_catalogue_seed_regression.sql
       - name: Run live-performance database certification
         run: |
           set -o pipefail
@@ -146,6 +149,10 @@ jobs:
             echo "$summary" | grep -Eq 'processed_effects=[1-9][0-9]*'
             echo "$summary" | grep -Eq 'acknowledged_effects=[1-9][0-9]*'
             echo "$summary" | grep -q 'completed_settlements=1'
+            echo "$summary" | grep -q 'distinct_effect_types=7'
+            echo "$summary" | grep -q 'replayed_effect_types=7'
+            echo "$summary" | grep -q 'recovered_effects=1'
+            echo "$summary" | grep -q 'overlap_duplicates=0'
             echo "$summary" | grep -q 'duplicate_canonical_records=0'
             echo "$summary" | grep -q 'failed_assertions=0'
           done
