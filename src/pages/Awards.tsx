@@ -19,6 +19,9 @@ import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { isLifetimeAchievementCategory, isLifetimeAchievementYear } from "@/lib/api/awards";
 import { cn } from "@/lib/utils";
 import { AwardCeremonyExperience } from "@/components/awards/AwardCeremonyExperience";
+import { Input } from "@/components/ui/input";
+import { useNominatableBands } from "@/hooks/useAwardInvites";
+
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   upcoming: { label: "Upcoming", variant: "outline" },
@@ -66,6 +69,10 @@ export default function Awards() {
   const [outfitChoice, setOutfitChoice] = useState("standard");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [voteAs, setVoteAs] = useState<"player" | "band" | "movement">("player");
+  const [bandSearch, setBandSearch] = useState("");
+  const [nomineeBand, setNomineeBand] = useState<{ id: string; name: string; fame: number | null; genre: string | null } | null>(null);
+  const { data: nominatableBands = [], isLoading: bandsLoading } = useNominatableBands(bandSearch);
+
 
   // Fetch nominations when a show is selected for voting
   const { data: showNominations = [], isLoading: nominationsLoading } = useQuery({
@@ -130,12 +137,21 @@ export default function Awards() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {invites.slice(0, 4).map((invite) => (
+            {invites.slice(0, 6).map((invite) => {
+              const show = shows.find((entry) => entry.id === invite.award_show_id);
+              const anyInvite = invite as any;
+              return (
               <div key={invite.id} className="flex items-center justify-between border rounded-md p-2">
                 <div>
-                  <p className="text-sm font-medium">{invite.invite_type.replace("_", " ")}</p>
-                  <p className="text-xs text-muted-foreground">{invite.category_name || "General ceremony invite"}</p>
+                  <p className="text-sm font-medium capitalize">
+                    {invite.invite_type.replace("_", " ")} · {show?.show_name || "Award show"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {[anyInvite.slot_label, anyInvite.stage, invite.category_name].filter(Boolean).join(" · ") || "General ceremony invite"}
+                    {Number(anyInvite.performance_fee || 0) > 0 ? ` · $${Number(anyInvite.performance_fee).toLocaleString()} fee` : ""}
+                  </p>
                 </div>
+
                 {invite.response_status === "pending" ? (
                   <div className="flex gap-1">
                     <Button size="sm" onClick={() => respondToInvite({ invite_id: invite.id, response_status: "accepted" })} disabled={isRespondingInvite}>Accept</Button>
@@ -145,7 +161,9 @@ export default function Awards() {
                   <Badge variant="secondary">{invite.response_status}</Badge>
                 )}
               </div>
-            ))}
+              );
+            })}
+
           </CardContent>
         </Card>
       )}
@@ -203,13 +221,16 @@ export default function Awards() {
                   onNominate={() => {
                     setSelectedShow(show);
                     setSelectedCategory("");
+                    setBandSearch("");
+                    setNomineeBand(userBand ? { id: userBand.id, name: userBand.name, fame: userBand.fame ?? 0, genre: (userBand as any).genre ?? null } : null);
                     setShowNominateDialog(true);
                   }}
                   onAttendCeremony={() => {
                     setSelectedShow(show);
                     setShowCeremonyDialog(true);
                   }}
-                  canNominate={!!userBand && show.status === 'nominations_open'}
+                  canNominate={show.status === 'nominations_open'}
+
                   canVote={show.status === 'voting_open' || show.status === 'nominations_open'}
                   canAttend={show.status === 'live'}
                   isSubmitting={isSubmitting}
@@ -388,7 +409,7 @@ export default function Awards() {
               Nominate - {selectedShow?.show_name}
             </DialogTitle>
             <DialogDescription>
-              Select a category to nominate your band for
+              Pick a category and nominate any band in the world — including your own
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -413,11 +434,55 @@ export default function Awards() {
             {selectedCategory && isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear) && (
               <p className="text-xs text-destructive">Lifetime Achievement can only be nominated every 4 in-game years.</p>
             )}
-            {userBand && (
+
+            <div className="space-y-2">
+              <Input
+                value={bandSearch}
+                onChange={(event) => setBandSearch(event.target.value)}
+                placeholder="Search bands by name…"
+              />
+              {userBand && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setNomineeBand({ id: userBand.id, name: userBand.name, fame: userBand.fame ?? 0, genre: (userBand as any).genre ?? null })}
+                >
+                  Nominate my band ({userBand.name})
+                </Button>
+              )}
+              <ScrollArea className="h-48 rounded-md border">
+                <div className="divide-y">
+                  {bandsLoading && <p className="p-3 text-xs text-muted-foreground">Loading bands…</p>}
+                  {!bandsLoading && nominatableBands.length === 0 && (
+                    <p className="p-3 text-xs text-muted-foreground">No bands matched that search.</p>
+                  )}
+                  {nominatableBands.map((band) => (
+                    <button
+                      key={band.id}
+                      type="button"
+                      onClick={() => setNomineeBand({ id: band.id, name: band.name, fame: band.fame ?? 0, genre: band.genre })}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-muted/60",
+                        nomineeBand?.id === band.id && "bg-primary/10",
+                      )}
+                    >
+                      <span className="font-medium">{band.name}</span>
+                      <span className="text-muted-foreground">
+                        {band.genre || "Unknown"} · {Number(band.fame ?? 0).toLocaleString()} fame
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {nomineeBand && (
               <div className="p-3 rounded-lg bg-muted/50 space-y-1">
-                <p className="text-sm font-medium">Nominating: {userBand.name}</p>
+                <p className="text-sm font-medium">Nominating: {nomineeBand.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  Fame: {userBand.fame?.toLocaleString() || 0} | Genre: {(userBand as any).genre || "Unknown"}
+                  Fame: {Number(nomineeBand.fame ?? 0).toLocaleString()} | Genre: {nomineeBand.genre || "Unknown"}
                 </p>
               </div>
             )}
@@ -426,19 +491,20 @@ export default function Awards() {
             <Button variant="outline" onClick={() => setShowNominateDialog(false)}>Cancel</Button>
             <Button
               onClick={() => {
-                if (!userBand || !profileId || !selectedCategory || !selectedShow) return;
+                if (!nomineeBand || !profileId || !selectedCategory || !selectedShow) return;
                 submitNomination({
                   award_show_id: selectedShow.id,
                   category_name: selectedCategory,
                   nominee_type: "band",
-                  nominee_id: userBand.id,
-                  nominee_name: userBand.name,
-                  band_id: userBand.id,
+                  nominee_id: nomineeBand.id,
+                  nominee_name: nomineeBand.name,
+                  band_id: nomineeBand.id,
                   submission_data: {
-                    auto_nomination_score: Number(userBand.fame || 0),
+                    auto_nomination_score: Number(nomineeBand.fame || 0),
                     auto_nomination_threshold: 85,
                     auto_nomination_reason: "Band fame reached automatic shortlist threshold",
                     nomination_source: "player_submission",
+                    nominated_by_profile_id: profileId,
                   },
                 });
                 setShowNominateDialog(false);
@@ -446,6 +512,7 @@ export default function Awards() {
               disabled={
                 isSubmitting ||
                 !selectedCategory ||
+                !nomineeBand ||
                 (isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear))
               }
             >
@@ -455,6 +522,7 @@ export default function Awards() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Ceremony Experience Dialog */}
       <Dialog open={showCeremonyDialog} onOpenChange={setShowCeremonyDialog}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
