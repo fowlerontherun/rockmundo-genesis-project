@@ -63,11 +63,15 @@ ALTER TABLE vehicle_catalog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE band_vehicles ENABLE ROW LEVEL SECURITY;
 
 -- Public read access for vehicle catalog
+DROP POLICY IF EXISTS "Vehicle catalog is publicly readable"
+ON public.vehicle_catalog;
 CREATE POLICY "Vehicle catalog is publicly readable"
 ON vehicle_catalog FOR SELECT
 USING (true);
 
 -- Band vehicles RLS - band members can manage
+DROP POLICY IF EXISTS "Band members can view their vehicles"
+ON public.band_vehicles;
 CREATE POLICY "Band members can view their vehicles"
 ON band_vehicles FOR SELECT
 USING (
@@ -78,6 +82,8 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Band leaders can manage vehicles"
+ON public.band_vehicles;
 CREATE POLICY "Band leaders can manage vehicles"
 ON band_vehicles FOR ALL
 USING (

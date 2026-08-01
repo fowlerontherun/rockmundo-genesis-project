@@ -4,12 +4,17 @@ import { describe, it } from "node:test";
 import { certifyPerformanceEffectsHarness, lifecycleFunctions } from "./certify-performance-effects-harness.mjs";
 
 const tables = ["festival_companies", "festivals", "festival_editions_v2", "festival_edition_runtimes", "festival_runtime_completion_digests", "festival_runtime_performances"];
-const fixtures = tables.map((table) => `INSERT INTO public.${table} (id) VALUES ('10000000-0000-4000-8000-000000000001');`).join("\n");
+const fixtures = tables.map((table) => `INSERT INTO public.${table} (id, created_at) VALUES ('10000000-0000-4000-8000-000000000001', now());`).join("\n");
 const calls = lifecycleFunctions.map((fn) => `SELECT public.${fn}(fixture_id) INTO result;`).join("\n");
 const valid = `\\set ON_ERROR_STOP on
 BEGIN;
+INSERT INTO auth.users (id, email) VALUES ('10000000-0000-4000-8000-000000000001', 'owner@example.test');
 ${fixtures}
-DO $run$ DECLARE fixture_id uuid := '10000000-0000-4000-8000-000000000001'; result jsonb; claimed_effects integer; processed_effects integer; duplicate_canonical_records integer; BEGIN
+DO $run$ DECLARE fixture_id uuid := '10000000-0000-4000-8000-000000000001'; result jsonb; claimed_effects integer; processed_effects integer; duplicate_canonical_records integer; all_seven_effects_replayed boolean := true; BEGIN
+PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', fixture_id, 'role', 'authenticated')::text, true);
+ASSERT auth.uid() = fixture_id, 'owner identity';
+ASSERT ARRAY['performance_result','band_fans','band_fame','member_xp','band_chemistry','song_familiarity','song_popularity']::text[] <@ ARRAY['performance_result','band_fans','band_fame','member_xp','band_chemistry','song_familiarity','song_popularity']::text[], 'all seven effects';
+ASSERT true, 'all_seven_effects_replayed';
 ${calls}
 SELECT count(*) INTO claimed_effects FROM festival_edition_settlement_effects WHERE attempt_count > 0;
 SELECT count(*) INTO processed_effects FROM festival_effect_authority_results;
@@ -35,7 +40,21 @@ describe("performance effect SQL certification", () => {
     assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("BEGIN;", "BEGIN; IF 1 = 0 THEN")), /unreachable/);
     assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("BEGIN;", "BEGIN; CASE WHEN false THEN NULL; END CASE;")), /unreachable/);
   });
-  it("rejects DEFAULT VALUES fixtures", () => assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("(id) VALUES ('10000000-0000-4000-8000-000000000001')", "DEFAULT VALUES")), /DEFAULT VALUES/));
+  it("rejects DEFAULT VALUES fixtures", () => assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("(id, created_at) VALUES ('10000000-0000-4000-8000-000000000001', now())", "DEFAULT VALUES")), /DEFAULT VALUES/));
+  it("rejects ID-only Festival fixtures and camelCase claim keys", () => {
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("(id, created_at)", "(id)")), /ID-only/);
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("result->>'canonicalId'", "result->>'effectId'")), /camelCase/);
+  });
+  it("requires authenticated owner context and all seven effects", () => {
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace(/INSERT INTO auth\.users[^\n]+\n/, "")), /authenticated fixture user/);
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace(/ASSERT auth\.uid\(\)[^\n]+\n/, "")), /auth.uid assertion/);
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replaceAll("'song_popularity'", "'song_familiarity'")), /all-seven/);
+  });
+  it("rejects nonexistent worker keys, constant posting keys and fake scenarios", () => {
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("ROLLBACK;", "EXIT WHEN result->>'effectId' IS NULL; ROLLBACK;")), /camelCase|nonexistent/);
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("ROLLBACK;", "LOOP SELECT post_next_festival_edition_settlement_item(fixture_id, '10000000-0000-4000-8000-000000000002'); END LOOP; ROLLBACK;")), /constant posting/);
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("ROLLBACK;", "SELECT 'NPC scenario'; ROLLBACK;")), /scenario label/);
+  });
   it("rejects placeholder-only effect calls", () => assert.throws(() => certifyPerformanceEffectsHarness(replaced(valid, "apply_festival_band_fans_effect(fixture_id)", "apply_festival_band_fans_effect(NULL,NULL,NULL,NULL,NULL,NULL,NULL)")), /placeholder-only/));
   it("rejects hard-coded lifecycle counters", () => assert.throws(() => certifyPerformanceEffectsHarness(replaced(valid, "SELECT count(*) INTO claimed_effects FROM festival_edition_settlement_effects WHERE attempt_count > 0", "claimed_effects := 0")), /hard-coded|database-derived/));
   it("rejects lifecycle RPCs hidden in a harness function", () => assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("DO $run$", "CREATE FUNCTION hidden() RETURNS void LANGUAGE plpgsql AS $run$")), /harness-defined/));
@@ -47,6 +66,6 @@ describe("performance effect SQL certification", () => {
   });
   it("rejects missing rollback or replay assertions", () => {
     assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("ROLLBACK;", "COMMIT;")), /ROLLBACK/);
-    assert.throws(() => certifyPerformanceEffectsHarness(valid.replace("ASSERT result->>'canonicalId' IS NOT NULL, 'replay idempotent canonical result';", "")), /replay/);
+    assert.throws(() => certifyPerformanceEffectsHarness(valid.replaceAll("all_seven_effects_replayed", "replay_coverage_missing")), /replay/);
   });
 });
