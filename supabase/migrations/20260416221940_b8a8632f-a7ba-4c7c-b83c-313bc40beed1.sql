@@ -64,4 +64,23 @@ INSERT INTO public.crew_catalog (id, name, role, headline, background, skill, sa
 ('seed-ward-02','Andre Lefevre','Wardrobe Stylist','Theater-tour stylist with capsule-collection chops.','French stylist known for dramatic theater capsules.',62,1800,5,'steady',62,'Studio','Theater wardrobe',ARRAY['Capsule collections','Quick changes','Wardrobe budgets'],ARRAY['Visionary','Detail-driven'],1,4,1400,'wardrobe-stylist'),
 ('seed-ward-03','Mei Tanaka','Wardrobe Stylist','Festival stylist who builds tour looks that photograph beautifully.','Tokyo stylist with editorial credits, now styling festival runs.',72,2500,7,'electric',68,'Studio','Festival wardrobe',ARRAY['Editorial styling','On-stage durability','Photo-ready looks'],ARRAY['Trend-spotter','Composed'],1,6,4000,'wardrobe-stylist'),
 ('seed-ward-04','Lior Ben-Ami','Wardrobe Stylist','Arena tour stylist with award-show credits.','Worked award-show red-carpet styling, now leads arena wardrobe.',83,3300,9,'electric',76,'Studio','Arena wardrobe',ARRAY['Award-show looks','Tour capsule','Atelier collabs'],ARRAY['Visionary','Network-rich'],1,8,18000,'wardrobe-stylist'),
-('seed-ward-05','Cyra Devereux','Wardrobe Stylist','Stadium-level stylist with iconic tour-defining looks.','Defined the visual identity of two record-setting tours.',94,4700,14,'electric',86,'Studio','Stadium & broadcast wardrobe',ARRAY['Tour identity','Couture collabs','Broadcast wardrobe'],ARRAY['Iconic','Visionary'],1,10,80000,'wardrobe-stylist');
+('seed-ward-05','Cyra Devereux','Wardrobe Stylist','Stadium-level stylist with iconic tour-defining looks.','Defined the visual identity of two record-setting tours.',94,4700,14,'electric',86,'Studio','Stadium & broadcast wardrobe',ARRAY['Tour identity','Couture collabs','Broadcast wardrobe'],ARRAY['Iconic','Visionary'],1,10,80000,'wardrobe-stylist')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  role = EXCLUDED.role,
+  headline = EXCLUDED.headline,
+  background = EXCLUDED.background,
+  skill = EXCLUDED.skill,
+  salary = EXCLUDED.salary,
+  experience = EXCLUDED.experience,
+  morale = EXCLUDED.morale,
+  loyalty = EXCLUDED.loyalty,
+  assignment = EXCLUDED.assignment,
+  focus = EXCLUDED.focus,
+  specialties = EXCLUDED.specialties,
+  traits = EXCLUDED.traits,
+  openings = EXCLUDED.openings,
+  star_rating = EXCLUDED.star_rating,
+  min_fame_required = EXCLUDED.min_fame_required,
+  image_url = EXCLUDED.image_url,
+  updated_at = now();
