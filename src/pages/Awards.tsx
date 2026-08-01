@@ -69,6 +69,10 @@ export default function Awards() {
   const [outfitChoice, setOutfitChoice] = useState("standard");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [voteAs, setVoteAs] = useState<"player" | "band" | "movement">("player");
+  const [bandSearch, setBandSearch] = useState("");
+  const [nomineeBand, setNomineeBand] = useState<{ id: string; name: string; fame: number | null; genre: string | null } | null>(null);
+  const { data: nominatableBands = [], isLoading: bandsLoading } = useNominatableBands(bandSearch);
+
 
   // Fetch nominations when a show is selected for voting
   const { data: showNominations = [], isLoading: nominationsLoading } = useQuery({
