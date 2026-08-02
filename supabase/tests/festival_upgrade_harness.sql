@@ -3,7 +3,7 @@ BEGIN;
 CREATE SCHEMA IF NOT EXISTS test_festival_upgrade;
 CREATE OR REPLACE FUNCTION test_festival_upgrade.as_user(user_id uuid) RETURNS void LANGUAGE plpgsql AS $$BEGIN EXECUTE 'SET LOCAL ROLE authenticated';PERFORM set_config('request.jwt.claim.sub',user_id::text,true);PERFORM set_config('request.jwt.claim.role','authenticated',true);PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated')::text,true);END$$;
 DO $$
-DECLARE u constant uuid:='82a10000-0000-4000-8000-000000000001';p constant uuid:='82a10000-0000-4000-8000-000000000002'; company uuid;fc uuid;before_balance bigint;cost bigint;result jsonb;preview jsonb;tx uuid;snapshot1 uuid;snapshot2 uuid; edition uuid;
+DECLARE u constant uuid:='82a10000-0000-4000-8000-000000000001';p constant uuid:='82a10000-0000-4000-8000-000000000002'; company uuid;fc uuid;before_balance bigint;cost bigint;result jsonb;preview jsonb;tx uuid;snapshot1 uuid;snapshot2 uuid;edition uuid;city uuid;configuration_version integer;setup jsonb;
 BEGIN
  INSERT INTO auth.users(id,email,role) VALUES(u,'festival-upgrade-gate@example.test','authenticated');
  INSERT INTO public.profiles(id,user_id,username,display_name,cash,is_active,is_vip) VALUES(p,u,'festival_upgrade_gate','Festival Upgrade Gate',10000000,true,true);
@@ -18,8 +18,14 @@ BEGIN
  UPDATE public.financial_accounts SET current_balance_minor=1000000000 WHERE owner_type='company' AND owner_id=company AND is_primary;
  UPDATE public.companies SET reputation_score=100 WHERE id=company;
  INSERT INTO public.festival_company_licences(festival_company_id,tier_key,status,valid_from,valid_until) SELECT fc,key,'active',now()-interval '1 day',now()+interval '1 year' FROM public.festival_licence_tiers WHERE rank=5;
- SELECT id INTO edition FROM public.festival_editions_v2 WHERE festival_company_id=fc ORDER BY festival_year LIMIT 1;
- IF edition IS NULL THEN RAISE EXCEPTION 'founding lifecycle did not create annual edition';END IF;
+ SELECT id INTO city FROM public.cities ORDER BY id LIMIT 1;
+ SELECT fcg.configuration_version INTO configuration_version FROM public.festival_configurations fcg WHERE fcg.festival_company_id=fc;
+ setup:=jsonb_build_object('publicName','Upgrade Gate Festival','shortName','Upgrade Gate','tagline','Certified','description','Authenticated upgrade proof','annualMonth',6,'homeCityId',city,'festivalScale',(SELECT key FROM public.festival_scale_catalogue WHERE active ORDER BY key LIMIT 1),'vibe',(SELECT key FROM public.festival_vibe_catalogue WHERE active ORDER BY key LIMIT 1),'siteType',(SELECT key FROM public.festival_site_type_catalogue WHERE active ORDER BY key LIMIT 1),'environmentalPolicy',(SELECT key FROM public.festival_environmental_policy_catalogue WHERE active ORDER BY key LIMIT 1),'plannedStartDate',(current_date+interval '60 days')::date,'plannedEndDate',(current_date+interval '61 days')::date);
+ PERFORM test_festival_upgrade.as_user(u);
+ result:=public.complete_festival_setup_with_edition(fc,configuration_version,setup,'82a10000-0000-4000-8000-000000000009');
+ edition:=(result->>'festivalEditionId')::uuid;
+ RESET ROLE;
+ IF edition IS NULL OR (SELECT count(*) FROM public.festival_editions_v2 WHERE festival_company_id=fc)<>1 THEN RAISE EXCEPTION 'setup lifecycle did not create exactly one annual edition';END IF;
  IF (SELECT count(*) FROM public.festival_upgrade_levels WHERE catalogue_version=1)<>55 THEN RAISE EXCEPTION 'v1 row count';END IF;
  IF (SELECT count(*) FROM public.festival_upgrade_levels WHERE catalogue_version=2 AND active)<>550 THEN RAISE EXCEPTION 'v2 row count';END IF;
  IF (SELECT count(*) FROM public.festival_upgrade_catalogue_versions WHERE status='published' AND retired_at IS NULL)<>1 THEN RAISE EXCEPTION 'published catalogue uniqueness';END IF;
