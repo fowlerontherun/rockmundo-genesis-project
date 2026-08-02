@@ -125,8 +125,10 @@ jobs:
           psql --version
       - name: Start local Supabase stack
         run: |
+          mkdir -p festival-runtime-diagnostics
           supabase stop --no-backup || true
-          supabase start --debug
+          set -o pipefail
+          supabase start --debug 2>&1 | tee festival-runtime-diagnostics/supabase-start.log
           echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
           db_url="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
           test -n "$db_url"
@@ -195,17 +197,22 @@ jobs:
         if: always()
         run: |
           mkdir -p festival-runtime-diagnostics
+          docker ps -a > festival-runtime-diagnostics/docker-ps.txt 2>&1 || true
+          docker system df > festival-runtime-diagnostics/docker-disk-usage.txt 2>&1 || true
+          df -h > festival-runtime-diagnostics/filesystem-space.txt 2>&1 || true
+          supabase --version > festival-runtime-diagnostics/supabase-version.txt 2>&1 || true
+          docker version > festival-runtime-diagnostics/docker-version.txt 2>&1 || true
+          supabase status > festival-runtime-diagnostics/supabase-status.txt 2>&1 || true
+          for container in $(docker ps -a --filter 'name=supabase' --format '{{.Names}}'); do
+            docker logs "$container" > "festival-runtime-diagnostics/container-${container}.log" 2>&1 || true
+          done
           if [ "$SUPABASE_STARTED" = true ]; then
-            supabase status > festival-runtime-diagnostics/supabase-status.txt 2>&1 || true
             supabase logs db > festival-runtime-diagnostics/db.log 2>&1 || true
             psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=0 -f scripts/festivals/runtime-diagnostics.sql \
               > festival-runtime-diagnostics/database-summary.txt 2>&1 || true
             psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=0 -c "SELECT * FROM public.festival_upgrade_migration_summary; SELECT * FROM public.festival_upgrade_purchase_operations; SELECT * FROM public.festival_company_upgrades; SELECT * FROM public.festival_edition_upgrade_snapshots;" > festival-runtime-diagnostics/upgrade-summary.txt 2>&1 || true
-          else
-            printf '%s\n' 'Supabase was not started; database diagnostics skipped.' \
-              > festival-runtime-diagnostics/supabase-status.txt
           fi
-          sed -i -E 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g; s#(password=)[^[:space:]]+#\1[redacted]#g' festival-runtime-diagnostics/* || true
+          find festival-runtime-diagnostics -type f -exec sed -i -E 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g; s#(password=)[^[:space:]]+#\1[redacted]#g; s#(JWT_SECRET|ACCESS_TOKEN|SUPABASE_ACCESS_TOKEN)=([^[:space:]]+)#\1=[redacted]#g' {} +
       - name: Upload runtime diagnostics
         if: always()
         uses: actions/upload-artifact@v4
