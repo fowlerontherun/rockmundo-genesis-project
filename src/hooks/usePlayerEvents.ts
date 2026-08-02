@@ -5,78 +5,108 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface RandomEvent {
   id: string;
-  name: string;
+  title: string;
   description: string;
+  category: string | null;
+  is_common: boolean | null;
   option_a_text: string;
   option_b_text: string;
-  success_chance_a: number;
-  success_chance_b: number;
-  success_result_a: string;
-  success_result_b: string;
-  failure_result_a: string;
-  failure_result_b: string;
-  image_url: string | null;
-  event_type: string | null;
+  option_a_outcome_text: string | null;
+  option_b_outcome_text: string | null;
+  option_a_effects: Record<string, number> | null;
+  option_b_effects: Record<string, number> | null;
 }
+
+export type PlayerEventStatus = "pending_choice" | "awaiting_outcome" | "completed";
 
 export interface PlayerEvent {
   id: string;
-  profile_id: string;
-  random_event_id: string;
-  status: "pending_choice" | "completed";
-  chosen_option: "a" | "b" | null;
-  success: boolean | null;
-  result_text: string | null;
+  user_id: string;
+  profile_id: string | null;
+  event_id: string;
+  status: PlayerEventStatus;
+  choice_made: "a" | "b" | null;
+  choice_made_at: string | null;
+  outcome_applied: boolean;
+  outcome_message: string | null;
+  outcome_effects: Record<string, number> | null;
   triggered_at: string;
-  random_events: RandomEvent;
+  created_at: string;
+  random_events: RandomEvent | null;
 }
 
+const EVENT_SELECT = `
+  id, user_id, profile_id, event_id, status, choice_made, choice_made_at,
+  outcome_applied, outcome_message, outcome_effects, triggered_at, created_at,
+  random_events (
+    id, title, description, category, is_common,
+    option_a_text, option_b_text,
+    option_a_outcome_text, option_b_outcome_text,
+    option_a_effects, option_b_effects
+  )
+`;
+
+/** All events for the signed-in account's active character. */
 export function usePlayerEvents() {
-  const { profileId } = useActiveProfile();
+  const { userId, profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["player-events", profileId],
+    queryKey: ["player-events", userId, profileId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!userId) return [];
 
       const { data, error } = await (supabase as any)
         .from("player_events")
-        .select(`*, random_events (*)`)
-        .eq("profile_id", profileId)
-        .order("triggered_at", { ascending: false });
+        .select(EVENT_SELECT)
+        .eq("user_id", userId)
+        .order("triggered_at", { ascending: false })
+        .limit(50);
 
       if (error) throw error;
-      return data as PlayerEvent[];
+      const rows = (data ?? []) as PlayerEvent[];
+      // Legacy rows have no profile_id — keep them visible.
+      return rows.filter((r) => !r.profile_id || !profileId || r.profile_id === profileId);
     },
-    enabled: !!profileId,
-    staleTime: 1000 * 60,
+    enabled: !!userId,
+    staleTime: 1000 * 30,
   });
 }
 
+/** The single event that is waiting for the player to make a choice. */
 export function usePendingEvent() {
-  const { profileId } = useActiveProfile();
+  const { userId, profileId } = useActiveProfile();
 
   return useQuery({
-    queryKey: ["pending-event", profileId],
+    queryKey: ["pending-event", userId, profileId],
     queryFn: async () => {
-      if (!profileId) return null;
+      if (!userId) return null;
 
       const { data, error } = await (supabase as any)
         .from("player_events")
-        .select(`*, random_events (*)`)
-        .eq("profile_id", profileId)
+        .select(EVENT_SELECT)
+        .eq("user_id", userId)
         .eq("status", "pending_choice")
         .order("triggered_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(5);
 
       if (error) throw error;
-      return data as PlayerEvent | null;
+      const rows = (data ?? []) as PlayerEvent[];
+      const match = rows.filter((r) => !r.profile_id || !profileId || r.profile_id === profileId);
+      return match[0] ?? null;
     },
-    enabled: !!profileId,
-    staleTime: 1000 * 30,
-    refetchInterval: 1000 * 60 * 5,
+    enabled: !!userId,
+    staleTime: 1000 * 15,
+    refetchInterval: 1000 * 60 * 2,
   });
+}
+
+/** Events where the choice is made but the outcome has not landed yet. */
+export function useAwaitingOutcomeEvents() {
+  const events = usePlayerEvents();
+  return {
+    ...events,
+    data: (events.data ?? []).filter((e) => e.status === "awaiting_outcome"),
+  };
 }
 
 export function useChooseEventOption() {
@@ -85,22 +115,24 @@ export function useChooseEventOption() {
 
   return useMutation({
     mutationFn: async ({ eventId, option }: { eventId: string; option: "a" | "b" }) => {
-      const { data, error } = await (supabase as any).from("player_events").update({
-        status: "completed",
-        chosen_option: option,
-      }).eq("id", eventId);
+      const { data, error } = await supabase.functions.invoke("choose-event-option", {
+        body: { playerEventId: eventId, choice: option },
+      });
 
       if (error) throw error;
+      if (data && (data as any).error) throw new Error((data as any).error);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-events"] });
       queryClient.invalidateQueries({ queryKey: ["pending-event"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-random-events"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["inbox"] });
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to choose event option",
+        title: "Failed to record your choice",
         description: error.message,
         variant: "destructive",
       });
@@ -108,27 +140,13 @@ export function useChooseEventOption() {
   });
 }
 
-export function useRecentEventOutcomes() {
-  const { profileId } = useActiveProfile();
-
-  return useQuery({
-    queryKey: ["recent-event-outcomes", profileId],
-    queryFn: async () => {
-      if (!profileId) return [];
-
-      const { data, error } = await (supabase as any)
-        .from("player_events")
-        .select(`*, random_events (*)`)
-        .eq("profile_id", profileId)
-        .eq("status", "completed")
-        .not("result_text", "is", null)
-        .order("triggered_at", { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      return data as PlayerEvent[];
-    },
-    enabled: !!profileId,
-    staleTime: 1000 * 60 * 5,
-  });
+/** Recently resolved outcomes, newest first. */
+export function useRecentEventOutcomes(limit = 5) {
+  const events = usePlayerEvents();
+  return {
+    ...events,
+    data: (events.data ?? [])
+      .filter((e) => e.status === "completed" && !!e.outcome_message)
+      .slice(0, limit),
+  };
 }

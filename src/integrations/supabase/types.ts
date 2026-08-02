@@ -1735,13 +1735,6 @@ export type Database = {
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "band_crew_members_catalog_crew_id_fkey"
-            columns: ["catalog_crew_id"]
-            isOneToOne: true
-            referencedRelation: "crew_catalog"
-            referencedColumns: ["id"]
-          },
         ]
       }
       band_demographic_fans: {
