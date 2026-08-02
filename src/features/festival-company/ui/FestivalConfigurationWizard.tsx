@@ -116,10 +116,12 @@ export function FestivalConfigurationWizard({
       draft.currentStep === 1
         ? validation.identityValid
         : draft.currentStep === 2
-          ? validation.locationValid
-          : draft.currentStep === 3
-            ? validation.datesValid
-            : validation.allValid;
+            ? validation.fields.homeCityId.valid && validation.fields.annualMonth.valid
+            : draft.currentStep === 3
+              ? validation.fields.vibe.valid && validation.fields.siteType.valid
+              : draft.currentStep === 4
+                ? validation.fields.festivalScale.valid && validation.fields.environmentalPolicy.valid
+                : draft.currentStep === 5 ? validation.datesValid : validation.allValid;
     if (showErrors(stepValid && (!complete || validation.allValid))) return;
     const configuration = { ...draft, currentStep: nextStep, complete };
     const payload = JSON.stringify(configuration);
@@ -185,9 +187,16 @@ export function FestivalConfigurationWizard({
           </AlertDescription>
         </Alert>
       )}
+      {query.data.festivalEditionId && query.data.editionYear && (
+        <Alert>
+          <AlertDescription>
+            Annual edition {query.data.editionYear} was created and is ready for private planning.
+          </AlertDescription>
+        </Alert>
+      )}
       <FestivalWizardProgress
         currentStep={draft.currentStep}
-        maximumStep={canWrite ? maximumStep : 4}
+        maximumStep={canWrite ? (validation.allValid ? 6 : maximumStep) : 6}
         onSelect={(currentStep) => patch({ currentStep })}
       />
       <FestivalSaveStatus
@@ -247,6 +256,12 @@ export function FestivalConfigurationWizard({
         />
       )}
       {draft.currentStep === 3 && (
+        <VibeSiteStep draft={draft} disabled={!canWrite} attempted={attempted} configuration={query.data} validation={validation.fields} patch={patch} />
+      )}
+      {draft.currentStep === 4 && (
+        <ScalePolicyStep draft={draft} disabled={!canWrite} attempted={attempted} configuration={query.data} validation={validation.fields} patch={patch} />
+      )}
+      {draft.currentStep === 5 && (
         <ScheduleStep
           draft={draft}
           disabled={!canWrite}
@@ -257,7 +272,7 @@ export function FestivalConfigurationWizard({
           patch={patch}
         />
       )}
-      {draft.currentStep === 4 && (
+      {draft.currentStep === 6 && (
         <ReviewStep
           draft={draft}
           legalName={query.data.legalCompanyName}
@@ -287,7 +302,7 @@ export function FestivalConfigurationWizard({
           >
             Save draft
           </Button>
-          {draft.currentStep < 4 ? (
+          {draft.currentStep < 6 ? (
             <Button
               type="button"
               disabled={save.isPending}
@@ -299,7 +314,7 @@ export function FestivalConfigurationWizard({
             <Button
               type="button"
               disabled={save.isPending}
-              onClick={() => persist(4, true)}
+              onClick={() => persist(6, true)}
             >
               Complete initial setup
             </Button>
@@ -484,44 +499,20 @@ function LocationStep({
           show={attempted}
         />
       </div>
-      <fieldset disabled={disabled} aria-describedby="scale-error">
-        <legend className="font-medium">Initial scale</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {configuration.scales.map((scale: any) => (
-            <label key={scale.key} className="min-h-11 rounded border p-4">
-              <input
-                type="radio"
-                name="scale"
-                checked={draft.festivalScale === scale.key}
-                onChange={() => patch({ festivalScale: scale.key })}
-              />{" "}
-              <strong>{scale.displayName}</strong>
-              <span className="block">
-                {scale.description} {scale.minimumCapacity.toLocaleString()}–
-                {scale.maximumCapacity.toLocaleString()} daily capacity · up to{" "}
-                {scale.maximumDurationDays} days · {scale.complexity}{" "}
-                complexity.
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <ErrorText
-        id="scale-error"
-        state={validation.festivalScale}
-        show={attempted}
-      />
       <div className="grid gap-4 sm:grid-cols-2">
         <div><Label htmlFor="annual-month">Recurring annual month</Label><select id="annual-month" disabled={disabled} className="min-h-11 w-full rounded border bg-background p-2" value={draft.annualMonth ?? ""} onChange={(event) => patch({ annualMonth: event.target.value ? Number(event.target.value) : null })}><option value="">Choose a month</option>{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, index, 1)))}</option>)}</select><ErrorText id="annual-month-error" state={validation.annualMonth} show={attempted} /></div>
-        <CatalogueSelect id="vibe" label="Festival vibe" value={draft.vibe} disabled={disabled} options={["community", "alternative", "mainstream", "premium"]} validation={validation.vibe} attempted={attempted} onChange={(vibe) => patch({ vibe })} />
-        <CatalogueSelect id="site-type" label="Site approach" value={draft.siteType} disabled={disabled} options={["indoor", "outdoor", "mixed"]} validation={validation.siteType} attempted={attempted} onChange={(siteType) => patch({ siteType })} />
-        <CatalogueSelect id="environmental-policy" label="Environmental policy" value={draft.environmentalPolicy} disabled={disabled} options={["standard", "responsible", "regenerative"]} validation={validation.environmentalPolicy} attempted={attempted} onChange={(environmentalPolicy) => patch({ environmentalPolicy })} />
       </div>
     </div>
   );
 }
 function CatalogueSelect({ id, label, value, disabled, options, validation, attempted, onChange }: any) {
-  return <div><Label htmlFor={id}>{label}</Label><select id={id} disabled={disabled} className="min-h-11 w-full rounded border bg-background p-2" value={value ?? ""} onChange={(event) => onChange(event.target.value || null)}><option value="">Choose an option</option>{options.map((option: string) => <option key={option} value={option}>{option.replaceAll("_", " ")}</option>)}</select><ErrorText id={`${id}-error`} state={validation} show={attempted} /></div>;
+  return <div><Label htmlFor={id}>{label}</Label><select id={id} disabled={disabled} className="min-h-11 w-full rounded border bg-background p-2" value={value ?? ""} onChange={(event) => onChange(event.target.value || null)}><option value="">Choose an option</option>{options.map((option: any) => <option key={option.key} value={option.key}>{option.displayName}</option>)}</select><ErrorText id={`${id}-error`} state={validation} show={attempted} /></div>;
+}
+function VibeSiteStep({ draft, disabled, attempted, configuration, validation, patch }: any) {
+  return <div className="grid gap-4 sm:grid-cols-2"><CatalogueSelect id="vibe" label="Festival vibe" value={draft.vibe} disabled={disabled} options={configuration.vibes} validation={validation.vibe} attempted={attempted} onChange={(vibe: string | null) => patch({ vibe })} /><CatalogueSelect id="site-type" label="Site approach" value={draft.siteType} disabled={disabled} options={configuration.siteTypes} validation={validation.siteType} attempted={attempted} onChange={(siteType: string | null) => patch({ siteType })} /></div>;
+}
+function ScalePolicyStep({ draft, disabled, attempted, configuration, validation, patch }: any) {
+  return <div className="space-y-4"><fieldset disabled={disabled} aria-describedby="scale-error"><legend className="font-medium">Festival scale and duration</legend><div className="grid gap-3 sm:grid-cols-2">{configuration.scales.map((scale: any) => <label key={scale.key} className="min-h-11 rounded border p-4"><input type="radio" name="scale" checked={draft.festivalScale === scale.key} onChange={() => patch({ festivalScale: scale.key })} /> <strong>{scale.displayName}</strong><span className="block">{scale.description} {scale.minimumCapacity.toLocaleString()}–{scale.maximumCapacity.toLocaleString()} daily capacity · 1–{scale.maximumDurationDays} days · {scale.complexity} complexity.</span></label>)}</div></fieldset><ErrorText id="scale-error" state={validation.festivalScale} show={attempted} /><CatalogueSelect id="environmental-policy" label="Environmental policy" value={draft.environmentalPolicy} disabled={disabled} options={configuration.environmentalPolicies} validation={validation.environmentalPolicy} attempted={attempted} onChange={(environmentalPolicy: string | null) => patch({ environmentalPolicy })} /></div>;
 }
 function ScheduleStep({
   draft,

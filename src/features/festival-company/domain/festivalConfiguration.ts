@@ -38,6 +38,11 @@ export interface FestivalCity {
   country: string;
   timezone: string | null;
 }
+export interface FestivalCatalogueOption {
+  key: string;
+  displayName: string;
+  description: string;
+}
 export interface FestivalConfiguration {
   festivalCompanyId: string;
   legalCompanyName: string;
@@ -64,6 +69,9 @@ export interface FestivalConfiguration {
   canWrite: boolean;
   scales: FestivalScaleOption[];
   cities: FestivalCity[];
+  vibes: FestivalCatalogueOption[];
+  siteTypes: FestivalCatalogueOption[];
+  environmentalPolicies: FestivalCatalogueOption[];
 }
 export interface FestivalConfigurationDraft {
   publicName: string;
@@ -173,17 +181,27 @@ export function parseFestivalConfiguration(
     ) ||
     !Number.isInteger(value.currentStep) ||
     (value.currentStep as number) < 1 ||
-    (value.currentStep as number) > 4 ||
+    (value.currentStep as number) > 6 ||
     !Number.isInteger(value.configurationVersion) ||
     (value.configurationVersion as number) < 1 ||
     typeof value.canWrite !== "boolean" ||
     !Array.isArray(value.scales) ||
-    !Array.isArray(value.cities)
+    !Array.isArray(value.cities) ||
+    !Array.isArray(value.vibes) ||
+    !Array.isArray(value.siteTypes) ||
+    !Array.isArray(value.environmentalPolicies)
   )
     return malformed();
   const scales = value.scales.map(parseScale);
   const cities = value.cities.map(parseCity);
-  if (scales.some((entry) => !entry) || cities.some((entry) => !entry))
+  const parseCatalogue = (entry: unknown): FestivalCatalogueOption | null =>
+    object(entry) && nonEmpty(entry.key) && nonEmpty(entry.displayName) && nonEmpty(entry.description)
+      ? entry as unknown as FestivalCatalogueOption
+      : null;
+  const vibes = value.vibes.map(parseCatalogue);
+  const siteTypes = value.siteTypes.map(parseCatalogue);
+  const environmentalPolicies = value.environmentalPolicies.map(parseCatalogue);
+  if (scales.some((entry) => !entry) || cities.some((entry) => !entry) || vibes.some((entry) => !entry) || siteTypes.some((entry) => !entry) || environmentalPolicies.some((entry) => !entry))
     return malformed();
   const homeCity = value.homeCity === null ? null : parseCity(value.homeCity);
   const festivalScale = value.festivalScale;
@@ -259,6 +277,9 @@ export function parseFestivalConfiguration(
     canWrite: value.canWrite,
     scales: scales as FestivalScaleOption[],
     cities: cities as FestivalCity[],
+    vibes: vibes as FestivalCatalogueOption[],
+    siteTypes: siteTypes as FestivalCatalogueOption[],
+    environmentalPolicies: environmentalPolicies as FestivalCatalogueOption[],
     annualMonth: Number.isInteger(value.annualMonth) ? value.annualMonth as number : null,
     countryCode: typeof value.countryCode === "string" ? value.countryCode : (homeCity?.country ?? ""),
     vibe: festivalVibes.includes(value.vibe as FestivalVibe) ? value.vibe as FestivalVibe : null,
