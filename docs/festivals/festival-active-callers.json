@@ -36920,7 +36920,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -38789,6 +38791,82 @@
       ],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_effective_level",
+      "migration": "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_upgrade_purchase_window",
+      "migration": "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_upgrade_category_json",
+      "migration": "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_company_upgrades",
+      "migration": "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_upgrade_purchase_preview",
+      "migration": "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "purchase_festival_company_upgrade",
+      "migration": "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -39421,11 +39499,14 @@
       "name": "_festival_effective_level",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
-      "testCallers": [],
-      "classification": "no_known_runtime_callers",
+      "testCallers": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "classification": "test_only",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -40502,7 +40583,8 @@
       "name": "_festival_upgrade_actor",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -40513,7 +40595,8 @@
       "name": "_festival_upgrade_authorised",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -40524,11 +40607,25 @@
       "name": "_festival_upgrade_category_json",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
       "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_upgrade_purchase_window",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "classification": "test_only",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -44055,7 +44152,8 @@
         "src/features/festival-company/upgrades/repository.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -44189,7 +44287,8 @@
       "name": "get_festival_licence_progress",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -44546,7 +44645,8 @@
         "src/features/festival-company/upgrades/repository.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -45735,7 +45835,8 @@
         "src/features/festival-company/upgrades/repository.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql"
+        "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
