@@ -66,7 +66,8 @@
     "test:festivals:settlement": "vitest run --config vitest.settlement.config.ts src/features/festivals/settlement/model.test.ts src/features/festivals/settlement/outcomeLifecycle.test.ts",
     "test:festivals:effects": "vitest run --config vitest.settlement.config.ts supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
     "test:festivals:performance-effects": "node --test scripts/festivals/certify-performance-effects-harness.test.mjs && vitest run --config vitest.settlement.config.ts supabase/functions/_shared/__tests__/live-performance-progression.test.ts supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
-    "test:festivals:performance-effects:db": "bash scripts/festivals/run-performance-effects-db-gate.sh"
+    "test:festivals:performance-effects:db": "bash scripts/festivals/run-performance-effects-db-gate.sh",
+    "test:festivals:upgrades:db": "bash scripts/festivals/run-upgrade-db-gate.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -161,7 +162,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "rrweb-cssom": "0.8.0"
   },
   "engines": {
     "node": "20.x",
