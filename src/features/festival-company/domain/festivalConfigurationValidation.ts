@@ -163,8 +163,12 @@ export function validateFestivalDraft(
 export const maximumReachableStep = (validation: FestivalDraftValidation) =>
   !validation.identityValid
     ? 1
-    : !validation.locationValid
+    : !validation.fields.homeCityId.valid || !validation.fields.annualMonth.valid
       ? 2
-      : !validation.datesValid
+      : !validation.fields.vibe.valid || !validation.fields.siteType.valid
         ? 3
-        : 4;
+        : !validation.fields.festivalScale.valid || !validation.fields.environmentalPolicy.valid
+          ? 4
+          : !validation.datesValid
+            ? 5
+            : 6;
