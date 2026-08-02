@@ -94,7 +94,8 @@ become read-only snapshot rows.
 |---|---|---|---|---|
 | 2. Festival company | `festival_companies`, company ledger and permissions | Aligned | None in this boundary | — |
 | 3. Configuration + annual editions | `festival_configurations` and canonical `festival_editions_v2` | **Resolved here** | Planning was company-unique; completion did not create an edition; original setup fields were missing | Realignment 1 |
-| 4. Upgrades | Five upgrade levels | Deviated | Original contract requires levels 1–50 and a rolling purchase limit | Later upgrades realignment |
+| 4. Upgrades | Eleven categories, 50 levels, two purchases per rolling 30 days | Realigned by 2A | V2 preserves v1 economics/effects at levels 10/20/30/40/50 and migrates ownership without finance or history rewrites | Certified by upgrade source and disposable DB gates |
+| 4. Upgrade charging cadence | Weekly upkeep | Deviated | Original plan called for annual upgrade costs; Realignment 2A intentionally leaves weekly upkeep operational | Realignment 2B |
 | 5. Stages + timetable | Flexible timetable | Deviated | Original slot durations and 13:00–22:00 rules are not enforced | Later timetable realignment |
 | 6–8. Applications, contracts, fallback | Mature planning workflows | Partially aligned | Root planning records were company-scoped; new roots are now edition-addressable | Realignment 1 plus caller conversion |
 | 9–11. Runtime, settlement, history | Edition runtime, settlement and immutable snapshots | Aligned boundary | Rewards and formulas are deliberately unchanged | Later balancing only if approved |
