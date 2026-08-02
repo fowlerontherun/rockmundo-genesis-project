@@ -511,8 +511,17 @@ function LocationStep({
         state={validation.festivalScale}
         show={attempted}
       />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div><Label htmlFor="annual-month">Recurring annual month</Label><select id="annual-month" disabled={disabled} className="min-h-11 w-full rounded border bg-background p-2" value={draft.annualMonth ?? ""} onChange={(event) => patch({ annualMonth: event.target.value ? Number(event.target.value) : null })}><option value="">Choose a month</option>{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, index, 1)))}</option>)}</select><ErrorText id="annual-month-error" state={validation.annualMonth} show={attempted} /></div>
+        <CatalogueSelect id="vibe" label="Festival vibe" value={draft.vibe} disabled={disabled} options={["community", "alternative", "mainstream", "premium"]} validation={validation.vibe} attempted={attempted} onChange={(vibe) => patch({ vibe })} />
+        <CatalogueSelect id="site-type" label="Site approach" value={draft.siteType} disabled={disabled} options={["indoor", "outdoor", "mixed"]} validation={validation.siteType} attempted={attempted} onChange={(siteType) => patch({ siteType })} />
+        <CatalogueSelect id="environmental-policy" label="Environmental policy" value={draft.environmentalPolicy} disabled={disabled} options={["standard", "responsible", "regenerative"]} validation={validation.environmentalPolicy} attempted={attempted} onChange={(environmentalPolicy) => patch({ environmentalPolicy })} />
+      </div>
     </div>
   );
+}
+function CatalogueSelect({ id, label, value, disabled, options, validation, attempted, onChange }: any) {
+  return <div><Label htmlFor={id}>{label}</Label><select id={id} disabled={disabled} className="min-h-11 w-full rounded border bg-background p-2" value={value ?? ""} onChange={(event) => onChange(event.target.value || null)}><option value="">Choose an option</option>{options.map((option: string) => <option key={option} value={option}>{option.replaceAll("_", " ")}</option>)}</select><ErrorText id={`${id}-error`} state={validation} show={attempted} /></div>;
 }
 function ScheduleStep({
   draft,
@@ -584,6 +593,8 @@ function ReviewStep({ draft, legalName, city, scale, duration, status }: any) {
         <dd>{city ?? "Incomplete"}</dd>
         <dt>Scale</dt>
         <dd>{scale ?? "Incomplete"}</dd>
+        <dt>Annual pattern</dt><dd>Month {draft.annualMonth ?? "Incomplete"} · {draft.vibe ?? "Incomplete"} · {draft.siteType ?? "Incomplete"}</dd>
+        <dt>Environmental policy</dt><dd>{draft.environmentalPolicy ?? "Incomplete"}</dd>
         <dt>Dates</dt>
         <dd>
           {draft.plannedStartDate ?? "Incomplete"} –{" "}
@@ -595,8 +606,8 @@ function ReviewStep({ draft, legalName, city, scale, duration, status }: any) {
         <dd>{status.replaceAll("_", " ")}</dd>
       </dl>
       <p>
-        Completion only enables later planning. It does not announce the
-        festival or create editions, stages, tickets or bookings.
+        Completion creates a private draft annual edition. It does not announce
+        the festival or create stages, tickets, sales or bookings.
       </p>
     </div>
   );

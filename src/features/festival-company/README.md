@@ -1,4 +1,26 @@
-# festival-company (PR1 skeleton)
+# Festival Company replacement module
+
+## Canonical aggregate boundary
+
+`festival_companies` is permanent identity: company relationship, balance,
+permissions, reputation, upgrades, staff relationships and annual defaults.
+`festival_editions_v2` is the canonical occurrence aggregate: game year, dates,
+location, site, scale, programme, operations, sponsorship, timetable, runtime,
+settlement and immutable history. Company-only planning keys are transitional
+compatibility fields, not the final architecture.
+
+### Current-table mapping (Realignment 1 audit)
+
+| Classification | Tables |
+|---|---|
+| Permanent Festival Company data | `festival_companies`, `companies`, `festival_company_upgrades`, company ledger and permission relationships |
+| Annual Festival Edition data | `festival_editions_v2`; configuration, site, ticket, artist, operations, sponsorship and timetable roots linked by `festival_edition_id`; edition runtime and settlement tables |
+| Immutable historical data | `festival_edition_history_snapshots`, settlement evidence/digests, readiness snapshots and completed runtime evidence |
+| Legacy compatibility data | `festivals`, `festival_editions`, public legacy bridges/mappings, route resolvers and retained company IDs on planning rows |
+
+The additive migration links a planning root only when exactly one edition is a
+candidate. Ambiguous and unmapped rows are recorded in
+`festival_edition_migration_review`; no completed history is inferred or deleted.
 
 Replacement bounded context for the legacy festival system. PR1 introduces
 only the module boundary, feature flags and a legacy gate. No gameplay,

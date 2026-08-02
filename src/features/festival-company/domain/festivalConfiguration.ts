@@ -16,6 +16,12 @@ export const festivalConfigurationStatuses = [
 export type FestivalScale = (typeof festivalScales)[number];
 export type FestivalConfigurationStatus =
   (typeof festivalConfigurationStatuses)[number];
+export const festivalVibes = ["community", "alternative", "mainstream", "premium"] as const;
+export const festivalSiteTypes = ["indoor", "outdoor", "mixed"] as const;
+export const festivalEnvironmentalPolicies = ["standard", "responsible", "regenerative"] as const;
+export type FestivalVibe = (typeof festivalVibes)[number];
+export type FestivalSiteType = (typeof festivalSiteTypes)[number];
+export type FestivalEnvironmentalPolicy = (typeof festivalEnvironmentalPolicies)[number];
 
 export interface FestivalScaleOption {
   key: FestivalScale;
@@ -41,6 +47,13 @@ export interface FestivalConfiguration {
   description: string;
   homeCity: FestivalCity | null;
   festivalScale: FestivalScale | null;
+  annualMonth: number | null;
+  countryCode: string;
+  vibe: FestivalVibe | null;
+  siteType: FestivalSiteType | null;
+  environmentalPolicy: FestivalEnvironmentalPolicy | null;
+  festivalEditionId: string | null;
+  editionYear: number | null;
   plannedStartDate: string | null;
   plannedEndDate: string | null;
   durationDays: number | null;
@@ -59,6 +72,10 @@ export interface FestivalConfigurationDraft {
   description: string;
   homeCityId: string | null;
   festivalScale: FestivalScale | null;
+  annualMonth: number | null;
+  vibe: FestivalVibe | null;
+  siteType: FestivalSiteType | null;
+  environmentalPolicy: FestivalEnvironmentalPolicy | null;
   plannedStartDate: string | null;
   plannedEndDate: string | null;
   currentStep: number;
@@ -242,6 +259,13 @@ export function parseFestivalConfiguration(
     canWrite: value.canWrite,
     scales: scales as FestivalScaleOption[],
     cities: cities as FestivalCity[],
+    annualMonth: Number.isInteger(value.annualMonth) ? value.annualMonth as number : null,
+    countryCode: typeof value.countryCode === "string" ? value.countryCode : (homeCity?.country ?? ""),
+    vibe: festivalVibes.includes(value.vibe as FestivalVibe) ? value.vibe as FestivalVibe : null,
+    siteType: festivalSiteTypes.includes(value.siteType as FestivalSiteType) ? value.siteType as FestivalSiteType : null,
+    environmentalPolicy: festivalEnvironmentalPolicies.includes(value.environmentalPolicy as FestivalEnvironmentalPolicy) ? value.environmentalPolicy as FestivalEnvironmentalPolicy : null,
+    festivalEditionId: typeof value.festivalEditionId === "string" && uuid.test(value.festivalEditionId) ? value.festivalEditionId : null,
+    editionYear: Number.isInteger(value.editionYear) ? value.editionYear as number : null,
   };
 }
 
@@ -254,6 +278,10 @@ export const configurationToDraft = (
   description: configuration.description,
   homeCityId: configuration.homeCity?.id ?? null,
   festivalScale: configuration.festivalScale,
+  annualMonth: configuration.annualMonth,
+  vibe: configuration.vibe,
+  siteType: configuration.siteType,
+  environmentalPolicy: configuration.environmentalPolicy,
   plannedStartDate: configuration.plannedStartDate,
   plannedEndDate: configuration.plannedEndDate,
   currentStep: configuration.currentStep,

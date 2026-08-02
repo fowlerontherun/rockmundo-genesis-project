@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFestivalConfiguration, saveFestivalConfiguration } from "../data/festivalCompanyRepository";
+import { completeFestivalSetup, getFestivalConfiguration, saveFestivalConfiguration } from "../data/festivalCompanyRepository";
 import type { FestivalConfigurationDraft } from "../domain/festivalConfiguration";
 
 export const festivalConfigurationQueryKey = (id?: string) => ["festival-configuration", id] as const;
@@ -7,7 +7,11 @@ export const useFestivalConfiguration = (id?: string, enabled = true) => useQuer
 export const useSaveFestivalConfiguration = () => {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: { festivalCompanyId: string; expectedVersion: number; configuration: FestivalConfigurationDraft; idempotencyKey: string }) => saveFestivalConfiguration(input),
+    mutationFn: async (input: { festivalCompanyId: string; expectedVersion: number; configuration: FestivalConfigurationDraft; idempotencyKey: string }) => {
+      if (!input.configuration.complete) return saveFestivalConfiguration(input);
+      await completeFestivalSetup(input);
+      return getFestivalConfiguration(input.festivalCompanyId);
+    },
     onSuccess: (data) => {
       client.setQueryData(festivalConfigurationQueryKey(data.festivalCompanyId), data);
       void Promise.all(["festival-company-setup", "owned-festival-companies", "companies", "festival-company-capabilities"].map((key) => client.invalidateQueries({ queryKey: [key] })));

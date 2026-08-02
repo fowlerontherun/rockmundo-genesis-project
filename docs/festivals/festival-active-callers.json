@@ -5859,6 +5859,7 @@
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
         "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
@@ -5997,6 +5998,7 @@
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
         "src/lib/api/labels.ts",
         "src/lib/api/sponsorships.ts",
         "src/lib/workflows/contracts.ts",
@@ -9796,6 +9798,7 @@
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
         "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
@@ -10852,6 +10855,7 @@
         "src/features/festivals/booking/components/FestivalSetlistEditor.tsx",
         "src/features/festivals/settlement/components/SettlementProgress.tsx",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
+        "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
@@ -16391,6 +16395,7 @@
         "src/features/festivals/booking/components/FestivalSetlistEditor.tsx",
         "src/features/festivals/settlement/components/SettlementProgress.tsx",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
+        "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
@@ -16628,6 +16633,7 @@
         "src/features/festivals/booking/components/FestivalSetlistEditor.tsx",
         "src/features/festivals/settlement/components/SettlementProgress.tsx",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
+        "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
@@ -17066,7 +17072,8 @@
         "src/features/festival-company/application/useFestivalTicketPlan.ts",
         "src/features/festival-company/application/useFestivalTimetable.ts",
         "src/features/festival-company/application/useFoundFestivalCompany.ts",
-        "src/features/festival-company/ui/FestivalCompanyCard.tsx"
+        "src/features/festival-company/ui/FestivalCompanyCard.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx"
       ],
       "status": "canonical_active",
       "directDatabaseWriter": false,
@@ -17098,6 +17105,14 @@
         },
         {
           "target": "save_festival_configuration",
+          "operation": "rpc"
+        },
+        {
+          "target": "complete_festival_setup_with_edition",
+          "operation": "rpc"
+        },
+        {
+          "target": "plan_next_festival_edition",
           "operation": "rpc"
         },
         {
@@ -17263,6 +17278,7 @@
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
         "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
         "src/features/festival-company/upgrades/repository.ts",
@@ -17773,6 +17789,17 @@
         "src/features/festival-company/__tests__/appRouteBoundary.test.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
         "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx"
+      ],
+      "status": "canonical_active",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
+      "kind": "module",
+      "importers": [
+        "src/features/festival-company/ui/FestivalCompanySetupPage.tsx"
       ],
       "status": "canonical_active",
       "directDatabaseWriter": false,
@@ -19367,6 +19394,18 @@
     {
       "file": "src/features/festival-company/data/festivalCompanyRepository.ts",
       "target": "save_festival_configuration",
+      "operation": "rpc",
+      "classification": "canonical_rpc"
+    },
+    {
+      "file": "src/features/festival-company/data/festivalCompanyRepository.ts",
+      "target": "complete_festival_setup_with_edition",
+      "operation": "rpc",
+      "classification": "canonical_rpc"
+    },
+    {
+      "file": "src/features/festival-company/data/festivalCompanyRepository.ts",
+      "target": "plan_next_festival_edition",
       "operation": "rpc",
       "classification": "canonical_rpc"
     },
@@ -38573,6 +38612,140 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_vibe_catalogue",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_site_type_catalogue",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_environmental_policy_catalogue",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_creation_requests",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [
+        "supabase/tests/festival_editions_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_audit",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "festival_edition_migration_review",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "policy",
+      "name": "festival_edition_audit_owner_read",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "policy",
+      "name": "festival_edition_migration_admin_read",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "complete_festival_setup_with_edition",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "plan_next_festival_edition",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "view",
+      "name": "festival_edition_migration_summary",
+      "migration": "supabase/migrations/20291218244900_festival_annual_edition_realign.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -42161,6 +42334,19 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "complete_festival_setup_with_edition",
+      "typescriptCallers": [
+        "src/features/festival-company/data/festivalCompanyRepository.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218244900_festival_annual_edition_realign.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "complete_festival_site_clearance",
       "typescriptCallers": [
         "src/features/festival-company/data/festivalRuntimeRepository.ts"
@@ -45047,6 +45233,19 @@
       "testCallers": [
         "supabase/tests/live_festival_runtime_foundation_harness.sql"
       ],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "plan_next_festival_edition",
+      "typescriptCallers": [
+        "src/features/festival-company/data/festivalCompanyRepository.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218244900_festival_annual_edition_realign.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -52343,6 +52542,7 @@
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
         "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
@@ -52483,6 +52683,7 @@
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
         "src/lib/api/labels.ts",
         "src/lib/api/sponsorships.ts",
         "src/lib/workflows/contracts.ts",
@@ -56269,6 +56470,7 @@
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
+        "src/features/festival-company/ui/PlanNextAnnualEdition.tsx",
         "src/features/festival-company/ui/PublicFestivalDirectory.tsx",
         "src/features/festival-company/ui/PublicFestivalPage.tsx",
         "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
@@ -57329,6 +57531,7 @@
         "src/features/festivals/booking/components/FestivalSetlistEditor.tsx",
         "src/features/festivals/settlement/components/SettlementProgress.tsx",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
+        "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
@@ -63020,6 +63223,7 @@
         "src/features/festivals/booking/components/FestivalSetlistEditor.tsx",
         "src/features/festivals/settlement/components/SettlementProgress.tsx",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
+        "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
