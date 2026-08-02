@@ -17,7 +17,7 @@ export function FestivalUpgradeWorkspace({festivalCompanyId}:{festivalCompanyId:
  const q=useQuery({queryKey:["festival-company-upgrades",festivalCompanyId],queryFn:()=>getFestivalCompanyUpgrades(festivalCompanyId),enabled:Boolean(festivalCompanyId)});
  const selected=q.data?.categories.find(c=>c.key===selectedKey)??null;
  const preview=useQuery({queryKey:["festival-upgrade-preview",festivalCompanyId,selected?.key],queryFn:()=>previewFestivalUpgrade({festivalCompanyId,categoryKey:selected!.key}),enabled:Boolean(selected?.nextLevel)});
- const buy=useMutation({mutationFn:async()=>{const p=preview.data!;return purchaseFestivalUpgrade({festivalCompanyId,categoryKey:p.category.key,nextLevel:p.category.nextLevel!,catalogueVersion:p.catalogueVersion,companyVersion:p.companyVersion,idempotencyKey:crypto.randomUUID()})},onSuccess:async()=>{setSelectedKey(null);await qc.invalidateQueries({queryKey:["festival-company-upgrades",festivalCompanyId]})}});
+ const buy=useMutation({mutationFn:async(p:FestivalUpgradePreview)=>purchaseFestivalUpgrade({festivalCompanyId,categoryKey:p.category.key,nextLevel:p.category.nextLevel!,catalogueVersion:p.catalogueVersion,companyVersion:p.companyVersion,idempotencyKey:crypto.randomUUID()}),onSuccess:async()=>{setSelectedKey(null);await qc.invalidateQueries({queryKey:["festival-company-upgrades",festivalCompanyId]})}});
  if(q.isLoading)return <main className="p-6" role="status">Loading authoritative upgrade catalogue…</main>;
  if(q.error||!q.data)return <main className="p-6"><h1 className="text-2xl font-bold">Upgrades unavailable</h1><p role="alert">{q.error instanceof Error?q.error.message:"The server did not return the catalogue."}</p></main>;
  const window=q.data.purchaseWindow;
@@ -29,7 +29,7 @@ export function FestivalUpgradeWorkspace({festivalCompanyId}:{festivalCompanyId:
   <div className="grid gap-2 md:grid-cols-2">{q.data.categories.map(c=>{
    const isSelected=selected?.key===c.key;
    const currentPreview=isSelected&&preview.data?.category.key===c.key?preview.data:undefined;
-   return <UpgradeCard key={c.key} category={c} selected={isSelected} quotaAvailable={window.remaining>0} onToggle={()=>setSelectedKey(isSelected?null:c.key)} preview={currentPreview} previewLoading={isSelected&&preview.isLoading} previewError={isSelected&&preview.isError} onPurchase={()=>buy.mutate()} purchasePending={buy.isPending}/>;
+   return <UpgradeCard key={c.key} category={c} selected={isSelected} quotaAvailable={window.remaining>0} onToggle={()=>setSelectedKey(isSelected?null:c.key)} preview={currentPreview} previewLoading={isSelected&&preview.isLoading} previewError={isSelected&&preview.isError} onPurchase={()=>{if(currentPreview)buy.mutate(currentPreview)}} purchasePending={buy.isPending}/>;
   })}</div>
   {buy.error&&<p role="alert">{buy.error.message}</p>}
  </main>;
