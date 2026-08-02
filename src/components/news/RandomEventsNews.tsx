@@ -8,37 +8,41 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export const RandomEventsNews = () => {
-  const { profileId } = useActiveProfile();
+  const { userId, profileId } = useActiveProfile();
 
   const { data: pendingEvents } = useQuery({
-    queryKey: ["pending-random-events", profileId],
+    queryKey: ["pending-random-events", userId, profileId],
     queryFn: async () => {
-      if (!profileId) return [];
-      const { data, error } = await supabase
+      if (!userId) return [];
+      const { data, error } = await (supabase as any)
         .from("player_events")
         .select(`
-          id, status, created_at,
-          random_events(id, title, description, rarity, category)
+          id, status, created_at, profile_id,
+          random_events(id, title, description, category)
         `)
-        .eq("profile_id", profileId)
+        .eq("user_id", userId)
         .eq("status", "pending_choice")
         .order("created_at", { ascending: false })
         .limit(5);
       if (error) throw error;
-      return data || [];
+      return ((data as any[]) || []).filter(
+        (r) => !r.profile_id || !profileId || r.profile_id === profileId,
+      );
     },
-    enabled: !!profileId,
+    enabled: !!userId,
   });
 
   if (!pendingEvents || pendingEvents.length === 0) {
     return null;
   }
 
-  const getRarityColor = (rarity: string | undefined) => {
-    switch (rarity) {
-      case "legendary": return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
-      case "epic": return "bg-purple-500/20 text-purple-500 border-purple-500/30";
-      case "rare": return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+  const getCategoryColor = (category: string | undefined) => {
+    switch (category) {
+      case "financial": return "bg-green-500/20 text-green-500 border-green-500/30";
+      case "health": return "bg-red-500/20 text-red-500 border-red-500/30";
+      case "social": return "bg-purple-500/20 text-purple-500 border-purple-500/30";
+      case "career": return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+      case "industry": return "bg-cyan-500/20 text-cyan-500 border-cyan-500/30";
       default: return "bg-muted";
     }
   };
@@ -66,8 +70,8 @@ export const RandomEventsNews = () => {
                 <span className="font-medium truncate">
                   {pe.random_events?.title || "Unknown Event"}
                 </span>
-                <Badge className={`text-xs ${getRarityColor(pe.random_events?.rarity)}`}>
-                  {pe.random_events?.rarity || "common"}
+                <Badge className={`text-xs capitalize ${getCategoryColor(pe.random_events?.category)}`}>
+                  {(pe.random_events?.category || "random").replace(/_/g, " ")}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2">
