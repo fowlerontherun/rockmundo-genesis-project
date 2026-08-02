@@ -141,3 +141,23 @@ The settlement posting protocol now commits one finance item per RPC and derives
 ### Validation run 2026-07-30
 
 `run-settlement-db-gate.sh` and `run-full-lifecycle-db-gate.sh` refused to run because `SUPABASE_DB_URL` was not set. Consequently no disposable reset database was identified and database certification is not claimed. The upgrade, artist-application, scheduling and runtime database gates share that missing prerequisite and were not represented as passes.
+
+## 2026-08-02 Phase 10B certification closure evidence
+
+**Implementation under test:** `4b32de0` (`fix(festivals): restore phase 10 certification gates`), based on `ce1f156`. **Workflow:** `Festival & Touring Integration Gate` (`Touring integration`, `Festival static certification, lint and build`, and `database-lifecycle` jobs). General CI remains `.github/workflows/ci.yml`.
+
+The earliest locally reproduced failure was `npm test -- --run --maxWorkers=1`, before test collection, with `RangeError: options.minThreads and options.maxThreads must not conflict`. This is worker-pool configuration, not Festival/touring application behaviour, fixture data, authentication, database state, seeding, timing, or cleanup. Adding an explicit shared `minWorkers: 1` makes the requested serial maximum valid and deterministic. The regression command `node --test scripts/festivals/vitest-serial-certification.test.mjs` verifies the supported configuration rather than weakening an application assertion.
+
+| Command | Result | Evidence / count |
+|---|---|---|
+| `node --test scripts/festivals/vitest-serial-certification.test.mjs` | PASS | 1 test |
+| `npm test -- --run --maxWorkers=1` | BLOCKED in this workspace | Reproduction reached the worker error; clean reinstall was then blocked by registry HTTP 403. CI performs `npm ci` in a clean runner. |
+| `npm run test:touring` | Pending CI clean install | Hard-gated independently; no skips. |
+| `npm run test:festivals` | Pending CI clean install | Hard-gated independently; no skips. |
+| `npm run test:e2e:festival:pr` | Pending CI/browser environment | Existing London fixture. |
+| `npm run test:e2e:festival:main` | Pending CI/browser environment | Complete `tests/festivals` directory. |
+| `npm run certification:festival-phase10` | Pending CI clean install | Touring, focused Festival and static certification composition. |
+| `npm run lint:ci` / `npm run typecheck` / `npm run build` | Pending CI clean install | Festival static job remains hard-failing. |
+| disposable database lifecycle and radio seed regression | Pending CI Docker/Supabase | `database-lifecycle` remains hard-failing and performs two clean deterministic replays. |
+
+The only local limitation is dependency registry policy (`403 Forbidden` for `@types/aria-query` during `npm ci`); it is environmental and does not change, skip, soften, or suppress a gate. No known application limitation is waived. No Festival gameplay, rewards, settlement values or balancing changed in Phase 10B.
