@@ -1,6 +1,8 @@
 # Festival Replacement Architecture
 
-Status: **PR1 — safe boundary only. No gameplay changes.**
+Status: **Phase 10B — implementation complete through configuration, planning, runtime, settlement, progression, history and analytics; certification is the merge boundary.**
+
+The original replacement sequence and architectural decisions are retained below as implementation history. They no longer describe work that is merely starting: Phases 1–8 and 9A are implemented, and the Phase 9B progression, immutable history, analytics/export and admin-observability surfaces are present with executable coverage.
 
 ## 1. Why replace
 
@@ -527,7 +529,7 @@ Runtime events carry separate public and private payloads and feed the existing 
 
 Every table enables RLS and revokes browser mutation. Named action RPCs enforce role/ownership, expected versions, UUID idempotency, material hashes, append-only events/audit and canonical receipts. Only service role or admins can run `process_due_festival_runtime_jobs`.
 
-Roadmap: Phase 7B launch/ticket sales is complete; Phase 8A is this runtime foundation; Phase 8B adds crowds/incidents/operational outcomes; Phase 9A adds financial settlement/payments; Phase 9B adds results/reputation/awards/history.
+Roadmap status: Phase 7B launch/ticket sales, Phase 8A runtime foundation, Phase 8B crowds/incidents/operational outcomes and Phase 9A settlement/payments are complete. Phase 9B is also delivered: settlement progression effects, immutable edition and band history, analytics/export, and administrator operational observation are implemented and covered by the repository's Festival domain, effect dispatcher and lifecycle harnesses.
 
 ## Phase 9A: financial settlement and participant payments
 
@@ -548,3 +550,23 @@ The owner edition shell owns overview, schedule, applications, contracts, operat
 `/festivals` and the former owner/setup URLs are compatibility redirects for one removal cycle and preserve query strings. Owner redirects resolve on the server and fail closed as migration-blocked for legacy-only or ambiguous mappings. An unmapped completed record can be shown only as a labelled, read-only historical record. It never enables legacy writes or creates canonical data during a read.
 
 Legacy historical reads and legacy gameplay writes have separate gates. `legacyFestivalReadEnabled` defaults on for compatibility, while `legacyFestivalWriteEnabled` defaults off. Creation, applications and live-performance flags control their respective actions, not public schedules or history.
+
+
+## Phase 10 certification and steady-state maintenance
+
+**Phase 10A — certification scaffolding: complete.** The repository has static route/caller checks, focused Festival suites, disposable-database lifecycle and replay harnesses, PR/main Festival E2E entry points, and a composed `certification:festival-phase10` command. Certification remains evidence, not a substitute for the authority and lifecycle contracts documented above.
+
+**Phase 10B — certification closure: complete in this PR.** The integration gate's earliest failure was the shared Vitest worker configuration, before touring application assertions ran: the supported serial command supplied `--maxWorkers=1`, while Vitest 2 retained a higher implicit minimum and rejected the pool with `options.minThreads and options.maxThreads must not conflict`. Explicitly fixing the minimum at one restores the supported deterministic command. A source-level regression check protects that contract. Touring and Festival static certification now run as independent hard-failing jobs so a touring failure cannot conceal Festival, lint, typecheck and build evidence.
+
+### Maintenance merge gate
+
+Festival work is now steady-state maintenance rather than another numbered gameplay phase. Changes should remain inside the owning bounded context, add deterministic regression coverage at the nearest authority boundary, update lifecycle evidence when an authority or fixture changes, and avoid reviving legacy browser writes. Before future Festival work merges, the following must pass from a clean dependency installation:
+
+1. the serial general suite: `npm test -- --run --maxWorkers=1`;
+2. focused touring and Festival suites: `npm run test:touring` and `npm run test:festivals`;
+3. PR and main Festival browser gates: `npm run test:e2e:festival:pr` and `npm run test:e2e:festival:main`;
+4. `npm run certification:festival-phase10`, including static route/caller evidence;
+5. the disposable-database Festival lifecycle, radio seed regression and deterministic clean replay jobs;
+6. `npm run lint:ci`, `npm run typecheck`, and `npm run build`.
+
+Neither an unrelated touring failure nor a database failure may be suppressed. Independent jobs improve visibility only; every required job remains a merge-blocking check. New mechanics, rewards or balance changes require a separately scoped product phase and must not enter through certification maintenance.
