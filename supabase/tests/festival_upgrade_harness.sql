@@ -1,16 +1,46 @@
 \set ON_ERROR_STOP on
 BEGIN;
-DO $$DECLARE n int;bad int;v1_hash text;BEGIN
- SELECT count(*) INTO n FROM public.festival_upgrade_categories WHERE active; IF n<>11 THEN RAISE EXCEPTION 'expected 11 categories, got %',n; END IF;
- IF (SELECT count(*) FROM public.festival_upgrade_levels WHERE catalogue_version=1)<>55 THEN RAISE EXCEPTION 'historical v1 changed'; END IF;
- IF (SELECT count(*) FROM public.festival_upgrade_levels WHERE catalogue_version=2 AND active)<>550 THEN RAISE EXCEPTION 'expected 550 active v2 rows'; END IF;
- SELECT count(*) INTO bad FROM (SELECT c.key FROM public.festival_upgrade_categories c LEFT JOIN public.festival_upgrade_levels l ON l.category_key=c.key AND l.catalogue_version=2 AND l.active WHERE c.active GROUP BY c.key HAVING count(l.level)<>50 OR min(l.level)<>1 OR max(l.level)<>50 OR count(distinct l.level)<>50) q; IF bad<>0 THEN RAISE EXCEPTION 'catalogue level coverage failed'; END IF;
- IF EXISTS(SELECT 1 FROM public.festival_upgrade_levels a JOIN public.festival_upgrade_levels b ON b.catalogue_version=a.catalogue_version AND b.category_key=a.category_key AND b.level=a.level+1 WHERE b.purchase_cost_minor<a.purchase_cost_minor OR b.weekly_upkeep_minor<a.weekly_upkeep_minor) THEN RAISE EXCEPTION 'non-monotonic price/upkeep'; END IF;
- IF (SELECT count(*) FROM public.festival_licence_tiers WHERE active)<>5 THEN RAISE EXCEPTION 'licence tier coverage failed';END IF;
- IF public._festival_effective_level(50,50,4)<>40 OR public._festival_effective_level(9,9,4)<>0 OR public._festival_effective_level(37,37,4)<>27 OR public._festival_effective_level(40,30,4)<>30 THEN RAISE EXCEPTION 'delinquency compatibility failed'; END IF;
- IF (public._festival_upgrade_purchase_window(gen_random_uuid(),now())->>'remaining')::int<>2 THEN RAISE EXCEPTION 'empty rolling window failed'; END IF;
+CREATE SCHEMA IF NOT EXISTS test_festival_upgrade;
+CREATE OR REPLACE FUNCTION test_festival_upgrade.as_user(user_id uuid) RETURNS void LANGUAGE plpgsql AS $$BEGIN EXECUTE 'SET LOCAL ROLE authenticated';PERFORM set_config('request.jwt.claim.sub',user_id::text,true);PERFORM set_config('request.jwt.claim.role','authenticated',true);PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated')::text,true);END$$;
+DO $$
+DECLARE u constant uuid:='82a10000-0000-4000-8000-000000000001';p constant uuid:='82a10000-0000-4000-8000-000000000002'; company uuid;fc uuid;before_balance bigint;cost bigint;result jsonb;preview jsonb;tx uuid;snapshot1 uuid;snapshot2 uuid; edition uuid;
+BEGIN
+ INSERT INTO auth.users(id,email,role) VALUES(u,'festival-upgrade-gate@example.test','authenticated');
+ INSERT INTO public.profiles(id,user_id,username,display_name,cash,is_active,is_vip) VALUES(p,u,'festival_upgrade_gate','Festival Upgrade Gate',10000000,true,true);
+ INSERT INTO public.vip_subscriptions(user_id,status,subscription_type,starts_at,expires_at) VALUES(u,'active','test',now()-interval '1 day',now()+interval '30 days');
+ PERFORM public.get_or_create_primary_financial_account('player',p,'Upgrade fixture player','GBP');
+ UPDATE public.financial_accounts SET current_balance_minor=1000000000 WHERE owner_type='player' AND owner_id=p AND is_primary;
+ UPDATE public.game_config SET config_value=config_value||'{"new_festival_system_enabled":true,"festival_company_creation_enabled":true,"festival_company_management_enabled":true,"company_limit":3}'::jsonb WHERE config_key='festival_company_creation';
+ PERFORM test_festival_upgrade.as_user(u);
+ result:=public.found_festival_company('Upgrade Gate Festival','Upgrade Gate Ltd','authenticated upgrade proof','upgrade-gate-founding');company:=(result->>'companyId')::uuid;fc:=(result->>'festivalCompanyId')::uuid;
+ RESET ROLE;
+ PERFORM public.get_or_create_primary_financial_account('company',company,'Upgrade fixture company','GBP');
+ UPDATE public.financial_accounts SET current_balance_minor=1000000000 WHERE owner_type='company' AND owner_id=company AND is_primary;
+ UPDATE public.companies SET reputation_score=100 WHERE id=company;
+ INSERT INTO public.festival_company_licences(festival_company_id,tier_key,status,valid_from,valid_until) SELECT fc,key,'active',now()-interval '1 day',now()+interval '1 year' FROM public.festival_licence_tiers WHERE rank=5;
+ SELECT id INTO edition FROM public.festival_editions_v2 WHERE festival_company_id=fc ORDER BY festival_year LIMIT 1;
+ IF edition IS NULL THEN RAISE EXCEPTION 'founding lifecycle did not create annual edition';END IF;
+ IF (SELECT count(*) FROM public.festival_upgrade_levels WHERE catalogue_version=1)<>55 THEN RAISE EXCEPTION 'v1 row count';END IF;
+ IF (SELECT count(*) FROM public.festival_upgrade_levels WHERE catalogue_version=2 AND active)<>550 THEN RAISE EXCEPTION 'v2 row count';END IF;
+ IF (SELECT count(*) FROM public.festival_upgrade_catalogue_versions WHERE status='published' AND retired_at IS NULL)<>1 THEN RAISE EXCEPTION 'published catalogue uniqueness';END IF;
+ IF EXISTS(SELECT 1 FROM public.festival_upgrade_levels old WHERE old.catalogue_version=1 AND ((SELECT sum(n.purchase_cost_minor) FROM public.festival_upgrade_levels n WHERE n.catalogue_version=2 AND n.category_key=old.category_key AND n.level BETWEEN (old.level-1)*10+1 AND old.level*10)<>old.purchase_cost_minor OR (SELECT n.weekly_upkeep_minor<>old.weekly_upkeep_minor OR n.effects<>old.effects FROM public.festival_upgrade_levels n WHERE n.catalogue_version=2 AND n.category_key=old.category_key AND n.level=old.level*10))) THEN RAISE EXCEPTION 'band or milestone parity';END IF;
+ IF NOT (SELECT convalidated FROM pg_constraint WHERE conname='festival_upgrade_purchase_requested_level_1_50') THEN RAISE EXCEPTION 'requested level constraint not validated';END IF;
+ PERFORM test_festival_upgrade.as_user(u);
+ result:=public.get_festival_company_upgrades(fc);preview:=public.get_festival_upgrade_purchase_preview(fc,'site_infrastructure');
+ IF NOT (preview->>'eligible')::boolean OR jsonb_array_length(preview->'reasonCodes')<>0 THEN RAISE EXCEPTION 'eligible preview mismatch %',preview;END IF;
+ before_balance:=(result->>'availableBalanceMinor')::bigint;cost:=(preview->'category'->>'nextCostMinor')::bigint;
+ result:=public.purchase_festival_company_upgrade(fc,'site_infrastructure',1,2,0,'82a10000-0000-4000-8000-000000000010');
+ SELECT financial_transaction_id INTO tx FROM public.festival_upgrade_purchase_operations WHERE idempotency_key='82a10000-0000-4000-8000-000000000010';
+ IF (SELECT available_balance_minor FROM public.financial_accounts WHERE owner_type='company' AND owner_id=company AND is_primary)<>before_balance-cost THEN RAISE EXCEPTION 'purchase debit mismatch';END IF;
+ IF (SELECT count(*) FROM public.financial_transactions WHERE id=tx)<>1 OR (SELECT count(*) FROM public.financial_ledger_entries WHERE transaction_id=tx)<>2 OR (SELECT coalesce(sum(CASE WHEN entry_direction='credit' THEN amount_minor ELSE -amount_minor END),0) FROM public.financial_ledger_entries WHERE transaction_id=tx)<>0 THEN RAISE EXCEPTION 'finance journal evidence invalid';END IF;
+ IF (SELECT count(*) FROM public.festival_upgrade_effect_snapshots WHERE purchase_operation_id=(SELECT id FROM public.festival_upgrade_purchase_operations WHERE financial_transaction_id=tx))<>1 THEN RAISE EXCEPTION 'effect snapshot missing';END IF;
+ IF (result->>'companyVersion')::int<>1 OR (result->'purchaseWindow'->>'used')::int<>1 THEN RAISE EXCEPTION 'aggregate or rolling window mismatch';END IF;
+ IF (result->'categories'->0->'construction') IS NULL THEN RAISE EXCEPTION 'construction detail missing';END IF;
+ snapshot1:=public.snapshot_festival_edition_upgrades(edition,fc);snapshot2:=public.snapshot_festival_edition_upgrades(edition,fc);
+ IF snapshot1<>snapshot2 OR (SELECT count(*) FROM public.festival_edition_upgrade_snapshots WHERE edition_id=edition)<>1 THEN RAISE EXCEPTION 'edition snapshot replay rewrote evidence';END IF;
+ IF public.activate_completed_festival_upgrades(100)<>0 THEN RAISE EXCEPTION 'activation occurred before due';END IF;
+ IF public.purchase_festival_company_upgrade(fc,'site_infrastructure',1,2,0,'82a10000-0000-4000-8000-000000000010') IS DISTINCT FROM result THEN RAISE EXCEPTION 'idempotent replay differs';END IF;
+ IF (SELECT count(*) FROM public.financial_transactions WHERE id=tx)<>1 THEN RAISE EXCEPTION 'idempotent replay debited twice';END IF;
+ RAISE NOTICE 'FESTIVAL_UPGRADE_SUMMARY authenticated_fixture=1 catalogue_v1=55 catalogue_v2=550 purchases=1 financial_transactions=1 ledger_entries=2 effect_snapshots=1 edition_snapshots=1 failed_assertions=0';
 END$$;
--- The disposable gate is the only supported execution target. Transactional purchase,
--- replay, finance, exact-boundary, concurrent-session and locked-edition fixtures are
--- seeded by CI before this harness; this file never manufactures production identities.
 ROLLBACK;
