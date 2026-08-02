@@ -183,6 +183,28 @@ export const saveFestivalConfiguration = async (input: { festivalCompanyId: stri
   return parseFestivalConfiguration(data);
 };
 
+export interface FestivalEditionCreationResult {
+  festivalCompanyId: string;
+  festivalEditionId: string;
+  editionYear: number;
+  status: "draft";
+  idempotent: boolean;
+}
+
+export const completeFestivalSetup = async (input: { festivalCompanyId: string; expectedVersion: number; configuration: FestivalConfigurationDraft; idempotencyKey: string }): Promise<FestivalEditionCreationResult> => {
+  const { data, error } = await (supabase as any).rpc("complete_festival_setup_with_edition", { p_festival_company_id: input.festivalCompanyId, p_expected_version: input.expectedVersion, p_configuration: toJson(input.configuration), p_idempotency_key: input.idempotencyKey });
+  if (error) throw normalizeFestivalConfigurationError(error);
+  if (!data || !isUuid(data.festivalCompanyId) || !isUuid(data.festivalEditionId) || !Number.isInteger(data.editionYear) || data.status !== "draft" || typeof data.idempotent !== "boolean") throw new Error("malformed_festival_edition_result");
+  return data;
+};
+
+export const planNextFestivalEdition = async (festivalCompanyId: string, idempotencyKey: string): Promise<FestivalEditionCreationResult> => {
+  const { data, error } = await (supabase as any).rpc("plan_next_festival_edition", { p_festival_company_id: festivalCompanyId, p_idempotency_key: idempotencyKey });
+  if (error) throw error;
+  if (!data || !isUuid(data.festivalCompanyId) || !isUuid(data.festivalEditionId) || !Number.isInteger(data.editionYear) || data.status !== "draft" || typeof data.idempotent !== "boolean") throw new Error("malformed_festival_edition_result");
+  return data;
+};
+
 
 const siteErrors: Record<string, string> = { festival_site_plan_forbidden: "festival_site_plan_forbidden", festival_configuration_incomplete: "festival_configuration_incomplete", festival_site_invalid: "festival_site_invalid", festival_venue_invalid: "festival_venue_invalid", festival_city_mismatch: "festival_city_mismatch", festival_capacity_invalid: "festival_capacity_invalid", festival_stage_invalid: "festival_stage_invalid", festival_stage_limit_exceeded: "festival_stage_limit_exceeded", festival_site_plan_stale: "festival_site_plan_stale", festival_site_plan_idempotency_conflict: "festival_site_plan_idempotency_conflict" };
 const normalizeSiteError = (error: { message?: string }) => new Error(Object.entries(siteErrors).find(([key]) => error.message?.includes(key))?.[1] ?? "festival_site_plan_unavailable");

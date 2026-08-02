@@ -18,6 +18,10 @@ export interface FestivalDraftValidation {
     | "description"
     | "homeCityId"
     | "festivalScale"
+    | "annualMonth"
+    | "vibe"
+    | "siteType"
+    | "environmentalPolicy"
     | "plannedStartDate"
     | "plannedEndDate",
     FieldValidation
@@ -93,6 +97,10 @@ export function validateFestivalDraft(
           "The selected scale is no longer available. Choose another scale.",
         )
       : ok();
+  const annualMonth = !Number.isInteger(draft.annualMonth) || draft.annualMonth! < 1 || draft.annualMonth! > 12 ? error("festival_annual_month_required", "Choose the recurring annual month.") : ok();
+  const vibe = !draft.vibe ? error("festival_vibe_required", "Choose a festival vibe.") : ok();
+  const siteType = !draft.siteType ? error("festival_site_type_required", "Choose a site approach.") : ok();
+  const environmentalPolicy = !draft.environmentalPolicy ? error("festival_environmental_policy_required", "Choose an environmental policy.") : ok();
   const plannedStartDate = !draft.plannedStartDate
     ? error("festival_start_required", "Choose a start date.")
     : !dateValid(draft.plannedStartDate)
@@ -130,12 +138,16 @@ export function validateFestivalDraft(
     description,
     homeCityId,
     festivalScale,
+    annualMonth,
+    vibe,
+    siteType,
+    environmentalPolicy,
     plannedStartDate,
     plannedEndDate,
   };
   const identityValid =
     publicName.valid && shortName.valid && tagline.valid && description.valid;
-  const locationValid = homeCityId.valid && festivalScale.valid;
+  const locationValid = homeCityId.valid && festivalScale.valid && annualMonth.valid && vibe.valid && siteType.valid && environmentalPolicy.valid;
   const datesValid =
     plannedStartDate.valid && plannedEndDate.valid && durationDays !== null;
   return {

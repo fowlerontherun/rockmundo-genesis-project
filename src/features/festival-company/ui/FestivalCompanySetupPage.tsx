@@ -8,6 +8,7 @@ import { useFestivalCompanySetup } from "../application/useFestivalCompanySetup"
 import { FestivalSetupSummary } from "./FestivalSetupSummary";
 import { FestivalSetupState } from "./FestivalSetupState";
 import { FestivalConfigurationWizard } from "./FestivalConfigurationWizard";
+import { PlanNextAnnualEdition } from "./PlanNextAnnualEdition";
 import { FestivalSitePlanner } from "./FestivalSitePlanner";
 import { FestivalTicketPlanner } from "./FestivalTicketPlanner";
 import { FestivalArtistPlanner } from "./FestivalArtistPlanner";
@@ -47,7 +48,7 @@ const FestivalCompanySetupPage = () => {
     return <FMPageScaffold title={setup.publicName} subtitle="Festival configuration is paused." icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalSetupState title="Configuration unavailable" message="The setup shell is readable, but configuration submission is disabled by server rollout settings." /></FMPageScaffold>;
   }
 
-  return <FMPageScaffold title={setup.publicName} subtitle="Festival planning and commercial partnerships" icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><FestivalConfigurationWizard festivalCompanyId={festivalCompanyId} /><FestivalSitePlanner festivalCompanyId={festivalCompanyId} /><FestivalTicketPlanner festivalCompanyId={festivalCompanyId} /><FestivalArtistPlanner festivalCompanyId={festivalCompanyId} /><FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} /><FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} /><FestivalTimetablePlanner festivalCompanyId={festivalCompanyId} /><FestivalLaunchManager festivalCompanyId={festivalCompanyId} /></FMPageScaffold>;
+  return <FMPageScaffold title={setup.publicName} subtitle="Festival planning and commercial partnerships" icon={Tent} backTo="/my-companies"><FestivalSetupSummary setup={setup} /><PlanNextAnnualEdition festivalCompanyId={festivalCompanyId} active={setup.setupCompleted && setup.companyStatus === "active"} /><FestivalConfigurationWizard festivalCompanyId={festivalCompanyId} /><FestivalSitePlanner festivalCompanyId={festivalCompanyId} /><FestivalTicketPlanner festivalCompanyId={festivalCompanyId} /><FestivalArtistPlanner festivalCompanyId={festivalCompanyId} /><FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} /><FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} /><FestivalTimetablePlanner festivalCompanyId={festivalCompanyId} /><FestivalLaunchManager festivalCompanyId={festivalCompanyId} /></FMPageScaffold>;
 };
 
 export default FestivalCompanySetupPage;

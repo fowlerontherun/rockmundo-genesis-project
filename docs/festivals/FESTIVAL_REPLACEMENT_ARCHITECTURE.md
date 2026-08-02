@@ -1,6 +1,6 @@
 # Festival Replacement Architecture
 
-Status: **Phase 10B — implementation complete through configuration, planning, runtime, settlement, progression, history and analytics; certification is the merge boundary.**
+Status: **Realignment in progress. The original 12-PR sequence remains the normative product contract. Realignment 1 restores the annual-edition and setup boundary without changing later balancing.**
 
 The original replacement sequence and architectural decisions are retained below as implementation history. They no longer describe work that is merely starting: Phases 1–8 and 9A are implemented, and the Phase 9B progression, immutable history, analytics/export and admin-observability surfaces are present with executable coverage.
 
@@ -87,6 +87,20 @@ The festival **company** persists year-round: balance, upgrades, staff
 relationships, reputation. The annual **edition** owns per-year mutable
 state: dates, site, lineup, tickets, settlement. Completed editions
 become read-only snapshot rows.
+
+### Implementation alignment register
+
+| Original planned phase | Current implementation | Alignment status | Known deviation | Required realignment PR |
+|---|---|---|---|---|
+| 2. Festival company | `festival_companies`, company ledger and permissions | Aligned | None in this boundary | — |
+| 3. Configuration + annual editions | `festival_configurations` and canonical `festival_editions_v2` | **Resolved here** | Planning was company-unique; completion did not create an edition; original setup fields were missing | Realignment 1 |
+| 4. Upgrades | Five upgrade levels | Deviated | Original contract requires levels 1–50 and a rolling purchase limit | Later upgrades realignment |
+| 5. Stages + timetable | Flexible timetable | Deviated | Original slot durations and 13:00–22:00 rules are not enforced | Later timetable realignment |
+| 6–8. Applications, contracts, fallback | Mature planning workflows | Partially aligned | Root planning records were company-scoped; new roots are now edition-addressable | Realignment 1 plus caller conversion |
+| 9–11. Runtime, settlement, history | Edition runtime, settlement and immutable snapshots | Aligned boundary | Rewards and formulas are deliberately unchanged | Later balancing only if approved |
+| 12. Legacy retirement | Legacy routes and tables remain enabled | Deviated by design | Replacement is not global and legacy is not deleted | Dedicated retirement PR |
+
+Cancelled editions do not consume the company/year uniqueness slot; a replacement draft may be created for that canonical game year. Cancelled rows remain retained and auditable.
 
 ## 8. Authority boundaries
 
