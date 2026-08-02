@@ -6,11 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Zap, Heart, DollarSign, Users, Star, Sparkles, AlertTriangle, Clock } from "lucide-react";
-import { usePendingEvent, useChooseEventOption, type PlayerEvent } from "@/hooks/usePlayerEvents";
+import { AlertTriangle, Clock } from "lucide-react";
+import { usePendingEvent, useChooseEventOption } from "@/hooks/usePlayerEvents";
 
 const categoryColors: Record<string, string> = {
   career: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -19,6 +18,7 @@ const categoryColors: Record<string, string> = {
   social: "bg-purple-500/20 text-purple-400 border-purple-500/30",
   random: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   industry: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+  addiction_craving: "bg-orange-500/20 text-orange-400 border-orange-500/30",
 };
 
 export function EventNotificationModal() {
@@ -32,6 +32,7 @@ export function EventNotificationModal() {
   if (!event) return null;
 
   const handleChoose = async (choice: "a" | "b") => {
+    if (chooseOption.isPending) return;
     setSelectedOption(choice);
     await chooseOption.mutateAsync({
       eventId: pendingEvent.id,
@@ -39,8 +40,9 @@ export function EventNotificationModal() {
     });
   };
 
-  const eventType = event.event_type || "random";
-  const categoryClass = categoryColors[eventType] || categoryColors.random;
+  const category = event.category || "random";
+  const categoryClass = categoryColors[category] || categoryColors.random;
+  const categoryLabel = category.replace(/_/g, " ");
 
   return (
     <Dialog open={true}>
@@ -48,38 +50,32 @@ export function EventNotificationModal() {
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
-            <Badge variant="outline" className={categoryClass}>
-              {eventType.charAt(0).toUpperCase() + eventType.slice(1)} Event
+            <Badge variant="outline" className={`${categoryClass} capitalize`}>
+              {categoryLabel} Event
             </Badge>
           </div>
-          <DialogTitle className="text-xl">{event.name}</DialogTitle>
+          <DialogTitle className="text-xl">{event.title}</DialogTitle>
           <DialogDescription className="text-base leading-relaxed">
             {event.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 mt-4">
-          <Card
-            className={`cursor-pointer transition-all hover:border-primary ${
-              selectedOption === "a" ? "border-primary ring-2 ring-primary/20" : ""
-            }`}
-            onClick={() => !chooseOption.isPending && handleChoose("a")}
-          >
-            <CardContent className="p-4">
-              <div className="font-medium">{event.option_a_text}</div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all hover:border-primary ${
-              selectedOption === "b" ? "border-primary ring-2 ring-primary/20" : ""
-            }`}
-            onClick={() => !chooseOption.isPending && handleChoose("b")}
-          >
-            <CardContent className="p-4">
-              <div className="font-medium">{event.option_b_text}</div>
-            </CardContent>
-          </Card>
+          {(["a", "b"] as const).map((opt) => (
+            <Card
+              key={opt}
+              className={`cursor-pointer transition-all hover:border-primary ${
+                selectedOption === opt ? "border-primary ring-2 ring-primary/20" : ""
+              }`}
+              onClick={() => handleChoose(opt)}
+            >
+              <CardContent className="p-4">
+                <div className="font-medium">
+                  {opt === "a" ? event.option_a_text : event.option_b_text}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
