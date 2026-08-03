@@ -154,10 +154,12 @@ const Layout = () => {
         </Alert>
       )}
       <MaintenanceBanner />
-      <CharacterGate>
-        <Breadcrumbs />
-        <Outlet />
-      </CharacterGate>
+      <NoActiveCharacterGate>
+        <CharacterGate>
+          <Breadcrumbs />
+          <Outlet />
+        </CharacterGate>
+      </NoActiveCharacterGate>
       <TutorialTooltip />
 
       <EventNotificationModal />
