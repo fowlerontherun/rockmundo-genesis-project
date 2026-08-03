@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Bell, History, Calendar } from "lucide-react";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
+import { version } from "@/components/VersionHeader";
 
 export const BottomActionBar = () => {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export const BottomActionBar = () => {
         onClick={() => navigate("/version-history")}
       >
         <History className="h-3.5 w-3.5" />
-        <span className="text-xs">v1.1.397</span>
+        <span className="text-xs">v{version}</span>
       </Button>
 
       <Button
