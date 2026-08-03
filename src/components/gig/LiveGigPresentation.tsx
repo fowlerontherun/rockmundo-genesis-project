@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import type { GigLiveSegment, LiveGigSessionState, LiveIncident, LiveSongResult, TacticalDecision } from '@/utils/gigLive';
 import { StageSceneryLayers } from './StageSceneryLayers';
 import { LivePyroEffectsLayer } from './LivePyroEffectsLayer';
+import { AudienceActivityLayer } from './AudienceActivityLayer';
 import { buildLiveGigPresentationState, type LiveGigPerformerInput, type LiveGigProductionInput, type LiveGigSongPresentationInput, type LiveGigVenueInput } from '@/utils/gigLivePresentation';
 
 interface Props {
@@ -61,6 +62,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
                 </div>
               ))}
             </div>
+            <AudienceActivityLayer density={presentation.crowdDensity} intensity={presentation.intensity} animate={quality === 'full'} big={['arena', 'arena_bowl', 'stadium', 'stadium_bowl', 'festival_stage', 'festival_main_stage', 'festival_airfield', 'large_venue'].includes(presentation.venueTier)} />
             <div className="absolute bottom-0 left-0 right-0 h-[28%] border-t border-white/10 bg-gradient-to-t from-black via-slate-900/95 to-transparent">
               <div className="absolute inset-x-3 bottom-3 grid grid-cols-8 gap-1" aria-hidden="true">
                 {Array.from({ length: Math.max(2, Math.min(24, Math.round(presentation.crowdDensity / 4))) }).map((_, index) => <div key={index} className={`rounded-t-full bg-white/30 ${quality === 'full' && presentation.intensity > 65 ? 'animate-pulse' : ''}`} style={{ height: index % 3 === 0 ? '3rem' : '2.25rem' }} />)}

@@ -17,8 +17,8 @@ import { REDUCED_MOTION_STORAGE_KEY } from "@/features/gig-experience/viewer/eng
 import { PYRO_STORAGE_KEY } from "@/features/gig-experience/viewer/engine/Pyrotechnics";
 
 const presets = ["Empty club","Half-full small venue","Sold-out club","Poor arena booking","Sold-out arena","Solo act","Standard four-piece","Large ensemble","Rising momentum","Recovery","No encore","Excellent encore","No audio","Mixed audio","All songs playable","Audio load failure","Unsupported replay version","Malformed replay","Legacy replay unavailable"];
-const venueOptions = ["Club", "Theatre", "Arena", "Stadium", "Festival main stage", "Festival second stage", "Outdoor park festival"] as const;
-const VENUE_CAPACITY: Record<string, number> = { "Club": 250, "Theatre": 1500, "Arena": 18000, "Stadium": 55000, "Festival main stage": 42000, "Festival second stage": 9000, "Outdoor park festival": 15000 };
+const venueOptions = ["Club", "Theatre", "Arena", "Arena bowl (seated tiers)", "Stadium", "Bowl stadium (wide view)", "Festival main stage", "Festival second stage", "Outdoor park festival", "Festival big top tent", "Festival dance tent", "Festival cabaret tent", "Festival gospel tent", "Festival comedy tent", "Festival world music tent", "Festival forest stage", "Festival airfield stage", "Amphitheatre bowl"] as const;
+const VENUE_CAPACITY: Record<string, number> = { "Club": 250, "Theatre": 1500, "Arena": 18000, "Arena bowl (seated tiers)": 20000, "Stadium": 55000, "Bowl stadium (wide view)": 62000, "Festival main stage": 42000, "Festival second stage": 9000, "Outdoor park festival": 15000, "Festival big top tent": 4000, "Festival dance tent": 6000, "Festival cabaret tent": 1200, "Festival gospel tent": 900, "Festival comedy tent": 700, "Festival world music tent": 3500, "Festival forest stage": 2200, "Festival airfield stage": 28000, "Amphitheatre bowl": 12000 };
 const attendanceOptions = ["Empty", "Half-full", "Sold-out", "Poor booking"];
 const bandOptions = ["Solo act", "Standard four-piece", "Large ensemble"];
 const setlistOptions = ["Short", "Standard", "Long"];

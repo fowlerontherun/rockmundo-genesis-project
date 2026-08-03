@@ -149,6 +149,47 @@ export function StageSceneryLayers({ scenery, animate }: { scenery: StageScenery
         </div>
       ) : null}
 
+      {has('seating_bowl') ? (
+        <>
+          {[0, 1, 2].map((ring) => (
+            <div key={ring} className="absolute rounded-[46%] border border-white/15 bg-slate-900/70" style={{ inset: `${3 + ring * 5}% ${2 + ring * 4}% ${16 + ring * 6}%`, boxShadow: 'inset 0 0 20px rgba(0,0,0,.6)' }}>
+              <div className="absolute inset-x-2 top-1 flex justify-between opacity-70">
+                {Array.from({ length: 26 }).map((_, i) => <span key={i} className="h-1 w-1 rounded-sm" style={{ background: ['#38bdf8', '#f472b6', '#fbbf24'][(i + ring) % 3], opacity: 0.65 }} />)}
+              </div>
+              <div className="absolute inset-y-2 left-1 flex flex-col justify-between opacity-60">
+                {Array.from({ length: 10 }).map((_, i) => <span key={i} className="h-1 w-1 rounded-sm bg-white/60" />)}
+              </div>
+              <div className="absolute inset-y-2 right-1 flex flex-col justify-between opacity-60">
+                {Array.from({ length: 10 }).map((_, i) => <span key={i} className="h-1 w-1 rounded-sm bg-white/60" />)}
+              </div>
+            </div>
+          ))}
+        </>
+      ) : null}
+      {has('upper_tier') ? (
+        <div className="absolute inset-x-[1%] top-[2%] flex h-[7%] items-end justify-between rounded-t-[40%] border-b border-white/20 bg-black/50 px-2 text-[8px] font-semibold uppercase tracking-[0.3em] text-white/40">
+          <span>Upper tier</span><span>Upper tier</span>
+        </div>
+      ) : null}
+      {has('pitch_ring') ? <div className="absolute inset-x-[14%] bottom-[6%] top-[42%] rounded-[50%] border-2 border-white/20" /> : null}
+      {has('tent_stripes') ? (
+        <div className="absolute inset-x-[2%] top-[8%] flex h-[28%] overflow-hidden rounded-b-[46%] rounded-t-[60%] opacity-70">
+          {Array.from({ length: 14 }).map((_, i) => <span key={i} className="flex-1" style={{ background: i % 2 === 0 ? 'rgba(250,250,249,.35)' : 'rgba(217,70,239,.28)' }} />)}
+        </div>
+      ) : null}
+      {has('tent_pennants') ? (
+        <div className="absolute inset-x-[4%] top-[6%] flex justify-between">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <span key={i} className={`h-4 w-2 origin-top ${animate ? 'animate-pulse' : ''}`} style={{ background: ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#e879f9'][i % 5], clipPath: 'polygon(0 0,100% 0,50% 100%)', opacity: 0.8 }} />
+          ))}
+        </div>
+      ) : null}
+      {has('stall_seating') ? (
+        <div className="absolute inset-x-[10%] bottom-[4%] grid h-[22%] grid-cols-12 gap-[3px] opacity-45">
+          {Array.from({ length: 60 }).map((_, i) => <span key={i} className="rounded-sm bg-white/25" />)}
+        </div>
+      ) : null}
+
       <div className={`absolute inset-x-0 bottom-0 h-[30%] ${scenery.groundClass} opacity-80`} />
       {scenery.atmosphere !== 'clear' ? <div className={`absolute inset-0 ${scenery.atmosphere === 'smoky' ? 'bg-slate-500/15' : scenery.atmosphere === 'dusty' ? 'bg-amber-700/15' : scenery.atmosphere === 'humid' ? 'bg-teal-400/10' : scenery.atmosphere === 'breezy' ? 'bg-sky-300/5' : 'bg-white/5'}`} /> : null}
     </div>

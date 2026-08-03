@@ -5,7 +5,7 @@ import type { GigLiveSegment, LiveGigSessionState, LiveIncident, LiveSegmentType
 export type LivePresentationScene = 'intro' | 'song' | 'transition' | 'incident' | 'decision' | 'encore' | 'outro';
 export type CrowdPresentationState = 'sparse' | 'waiting' | 'bored' | 'passive' | 'swaying' | 'engaged' | 'clapping' | 'hands_raised' | 'jumping' | 'singing' | 'wild' | 'ecstatic' | 'disappointed' | 'leaving_early';
 export type LightingPresentationState = 'house_lights' | 'basic_wash' | 'warm_wash' | 'cool_wash' | 'spotlights' | 'pulsing' | 'dramatic_silhouette' | 'encore_lighting' | 'finale_lighting' | 'failure_state';
-export type VenuePresentationTier = 'street_corner' | 'dive_basement' | 'small_bar' | 'church_hall' | 'school_hall' | 'student_union' | 'jazz_lounge' | 'local_club' | 'warehouse' | 'theatre' | 'opera_house' | 'casino_ballroom' | 'cruise_ship' | 'riverside_barge' | 'rooftop_terrace' | 'music_hall' | 'large_venue' | 'ice_arena' | 'arena' | 'stadium' | 'amphitheatre' | 'park_bandstand' | 'city_square' | 'vineyard_stage' | 'mountain_stage' | 'desert_stage' | 'beach_stage' | 'festival_stage' | 'festival_main_stage' | 'festival_second_stage' | 'festival_tent' | 'festival_dance_tent' | 'festival_forest_stage' | 'festival_airfield' | 'festival_acoustic_field';
+export type VenuePresentationTier = 'street_corner' | 'dive_basement' | 'small_bar' | 'church_hall' | 'school_hall' | 'student_union' | 'jazz_lounge' | 'local_club' | 'warehouse' | 'theatre' | 'opera_house' | 'casino_ballroom' | 'cruise_ship' | 'riverside_barge' | 'rooftop_terrace' | 'music_hall' | 'large_venue' | 'ice_arena' | 'arena' | 'stadium' | 'amphitheatre' | 'park_bandstand' | 'city_square' | 'vineyard_stage' | 'mountain_stage' | 'desert_stage' | 'beach_stage' | 'festival_stage' | 'festival_main_stage' | 'festival_second_stage' | 'festival_tent' | 'festival_dance_tent' | 'festival_forest_stage' | 'festival_airfield' | 'festival_acoustic_field' | 'festival_cabaret_tent' | 'festival_gospel_tent' | 'festival_comedy_tent' | 'festival_world_tent' | 'arena_bowl' | 'stadium_bowl';
 export type StageLayoutKey = 'solo' | 'duo' | 'three_piece' | 'four_piece' | 'five_piece' | 'six_plus' | 'festival_stage' | 'festival_tent_layout' | 'amphitheatre_arc' | 'small_club';
 export type PerformerVisualState = 'waiting' | 'performing' | 'energetic' | 'focused' | 'struggling' | 'recovering' | 'celebrating' | 'incident_affected' | 'standout_performance' | 'absent';
 
@@ -50,6 +50,10 @@ export function mapVenueToTier(venue?: LiveGigVenueInput | null): VenuePresentat
   const isFestival = venue?.isFestival || /festival/i.test(descriptor);
   if (isFestival) {
     if (/dance|electronic|techno|rave|silent disco/i.test(descriptor)) return 'festival_dance_tent';
+    if (/cabaret|burlesque|variety|circus/i.test(descriptor)) return 'festival_cabaret_tent';
+    if (/gospel|choir|soul tent|spiritual/i.test(descriptor)) return 'festival_gospel_tent';
+    if (/comedy|cabaret comedy|spoken word|poetry/i.test(descriptor)) return 'festival_comedy_tent';
+    if (/world|global|afro|latin|reggae tent|roots/i.test(descriptor)) return 'festival_world_tent';
     if (/tent|big top|marquee/i.test(descriptor)) return 'festival_tent';
     if (/forest|woods|woodland|glade|grove/i.test(descriptor)) return 'festival_forest_stage';
     if (/airfield|airstrip|hangar|runway/i.test(descriptor)) return 'festival_airfield';
@@ -75,6 +79,8 @@ export function mapVenueToTier(venue?: LiveGigVenueInput | null): VenuePresentat
   if (/school|college hall|gym|sports hall|assembly/i.test(descriptor)) return 'school_hall';
   if (/university|student union|campus|freshers/i.test(descriptor)) return 'student_union';
   if (/ice rink|ice arena|hockey|skating/i.test(descriptor)) return 'ice_arena';
+  if (/stadium bowl|national stadium|olympic stadium|open ?air bowl/i.test(descriptor)) return 'stadium_bowl';
+  if (/arena bowl|indoor bowl|seated arena|dome arena/i.test(descriptor)) return 'arena_bowl';
   if (/amphitheat|bowl/i.test(descriptor)) return 'amphitheatre';
   if (/warehouse|rave|industrial/i.test(descriptor)) return 'warehouse';
   if (/basement|dive|cellar/i.test(descriptor)) return 'dive_basement';
