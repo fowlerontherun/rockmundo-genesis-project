@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -135,19 +135,14 @@ export function FestivalAnnualPlan({
         draft.preferredMonth,
   );
 
-  const localPreview = useMemo(() => {
-    if (!selectedScale) return null;
-    return {
+  const localPreview = selectedScale
+  ? {
       capacityRange: `${selectedScale.minimumCapacity.toLocaleString("en-GB")}–${selectedScale.maximumCapacity.toLocaleString("en-GB")}`,
-      maximumDuration: selectedScale.maximumDurationDays,
       demandEffect: selectedMarketing
         ? Math.round((selectedMarketing.demandBasisPoints - 10000) / 100)
         : 0,
-      costEffect: selectedMarketing
-        ? Math.round((selectedMarketing.costBasisPoints - 10000) / 100)
-        : 0,
-    };
-  }, [selectedMarketing, selectedScale]);
+    }
+  : null;
 
   const persist = () => {
     if (!complete || !dirty || save.isPending || !data.canWrite) return;
