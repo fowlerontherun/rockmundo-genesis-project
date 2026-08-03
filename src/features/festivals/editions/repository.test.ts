@@ -127,3 +127,20 @@ describe("festival edition directory SQL boundary", () => {
     expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\.get_festival_company_editions\(uuid\) TO authenticated/i);
   });
 });
+
+describe("canonical Festival owner route", () => {
+  const source = readFileSync(
+    "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+    "utf8",
+  );
+
+  it("mounts the setup wizard until the first annual edition is created", () => {
+    expect(source).toContain('import { FestivalConfigurationWizard }');
+    expect(source).toContain("queryKey: festivalCompanySetupQueryKey(festivalCompanyId)");
+    expect(source).toMatch(/!f\.setupCompleted&&<section[\s\S]*<FestivalConfigurationWizard festivalCompanyId=\{festivalCompanyId\}/);
+  });
+
+  it("only exposes the annual-edition directory after initial setup", () => {
+    expect(source).toMatch(/f\.setupCompleted&&<Link[\s\S]*festivalRoutes\.editions\(f\.festivalCompanyId\)/);
+  });
+});
