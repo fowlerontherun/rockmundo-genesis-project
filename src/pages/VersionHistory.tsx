@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.645",
+    date: "2026-08-03",
+    changes: [
+      { type: 'improvement', description: "Gig viewer crowds now show far more individual fans, scaled much closer to the real attendance figure — a sold-out arena or festival field genuinely looks packed." },
+      { type: 'improvement', description: "Fan icons are noticeably smaller so dense crowds read clearly instead of overlapping into blobs." },
+      { type: 'improvement', description: "The Gig Viewer Demo uses the same crowd engine, so demo previews match live gigs exactly." },
+    ],
+  },
+  {
     version: "1.1.644",
     date: "2026-08-03",
     changes: [
