@@ -11132,6 +11132,905 @@ export type Database = {
           },
         ]
       }
+      festival_artist_application_windows: {
+        Row: {
+          active: boolean
+          closes_at: string
+          created_at: string
+          eligible_artist_type: string
+          festival_artist_programme_id: string
+          id: string
+          maximum_band_members: number | null
+          maximum_fame: number | null
+          maximum_set_minutes: number | null
+          minimum_band_members: number | null
+          minimum_fame: number | null
+          name: string
+          opens_at: string
+          preferred_genres: string[]
+          target_stage_types: string[]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          closes_at: string
+          created_at?: string
+          eligible_artist_type: string
+          festival_artist_programme_id: string
+          id?: string
+          maximum_band_members?: number | null
+          maximum_fame?: number | null
+          maximum_set_minutes?: number | null
+          minimum_band_members?: number | null
+          minimum_fame?: number | null
+          name: string
+          opens_at: string
+          preferred_genres?: string[]
+          target_stage_types?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          closes_at?: string
+          created_at?: string
+          eligible_artist_type?: string
+          festival_artist_programme_id?: string
+          id?: string
+          maximum_band_members?: number | null
+          maximum_fame?: number | null
+          maximum_set_minutes?: number | null
+          minimum_band_members?: number | null
+          minimum_fame?: number | null
+          name?: string
+          opens_at?: string
+          preferred_genres?: string[]
+          target_stage_types?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_application_w_festival_artist_programme_id_fkey"
+            columns: ["festival_artist_programme_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_programmes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_applications: {
+        Row: {
+          application_window_id: string
+          artist_profile_id: string | null
+          artist_type: string
+          availability_snapshot: Json
+          band_id: string | null
+          fame_snapshot: number
+          festival_artist_programme_id: string
+          genre_snapshot: string[]
+          id: string
+          maximum_set_minutes: number
+          message: string | null
+          minimum_fee_minor: number | null
+          minimum_set_minutes: number
+          npc_artist_id: string | null
+          popularity_snapshot: number
+          preferred_dates: string[]
+          preferred_stage_types: string[]
+          requested_fee_minor: number | null
+          reviewed_at: string | null
+          status: string
+          submitted_at: string
+          submitted_by_profile_id: string | null
+          updated_at: string
+          version: number
+          withdrawn_at: string | null
+        }
+        Insert: {
+          application_window_id: string
+          artist_profile_id?: string | null
+          artist_type: string
+          availability_snapshot?: Json
+          band_id?: string | null
+          fame_snapshot: number
+          festival_artist_programme_id: string
+          genre_snapshot?: string[]
+          id?: string
+          maximum_set_minutes: number
+          message?: string | null
+          minimum_fee_minor?: number | null
+          minimum_set_minutes: number
+          npc_artist_id?: string | null
+          popularity_snapshot: number
+          preferred_dates?: string[]
+          preferred_stage_types?: string[]
+          requested_fee_minor?: number | null
+          reviewed_at?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by_profile_id?: string | null
+          updated_at?: string
+          version?: number
+          withdrawn_at?: string | null
+        }
+        Update: {
+          application_window_id?: string
+          artist_profile_id?: string | null
+          artist_type?: string
+          availability_snapshot?: Json
+          band_id?: string | null
+          fame_snapshot?: number
+          festival_artist_programme_id?: string
+          genre_snapshot?: string[]
+          id?: string
+          maximum_set_minutes?: number
+          message?: string | null
+          minimum_fee_minor?: number | null
+          minimum_set_minutes?: number
+          npc_artist_id?: string | null
+          popularity_snapshot?: number
+          preferred_dates?: string[]
+          preferred_stage_types?: string[]
+          requested_fee_minor?: number | null
+          reviewed_at?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by_profile_id?: string | null
+          updated_at?: string
+          version?: number
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_applications_application_window_id_fkey"
+            columns: ["application_window_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_application_windows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_applications_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_applications_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_applications_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_applications_festival_artist_programme_id_fkey"
+            columns: ["festival_artist_programme_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_applications_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_applications_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_bookings: {
+        Row: {
+          accommodation_support_minor: number
+          agreed_fee_minor: number
+          artist_profile_id: string | null
+          artist_type: string
+          band_id: string | null
+          billing_position: string
+          cancelled_at: string | null
+          confirmed_at: string
+          contract_terms: Json
+          created_at: string
+          currency_code: string
+          festival_artist_programme_id: string
+          id: string
+          npc_artist_id: string | null
+          offer_id: string
+          performance_count: number
+          provisional_date: string | null
+          provisional_stage_id: string | null
+          set_minutes: number
+          status: string
+          total_commitment_minor: number
+          travel_support_minor: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          accommodation_support_minor: number
+          agreed_fee_minor: number
+          artist_profile_id?: string | null
+          artist_type: string
+          band_id?: string | null
+          billing_position: string
+          cancelled_at?: string | null
+          confirmed_at?: string
+          contract_terms: Json
+          created_at?: string
+          currency_code: string
+          festival_artist_programme_id: string
+          id?: string
+          npc_artist_id?: string | null
+          offer_id: string
+          performance_count: number
+          provisional_date?: string | null
+          provisional_stage_id?: string | null
+          set_minutes: number
+          status?: string
+          total_commitment_minor: number
+          travel_support_minor: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          accommodation_support_minor?: number
+          agreed_fee_minor?: number
+          artist_profile_id?: string | null
+          artist_type?: string
+          band_id?: string | null
+          billing_position?: string
+          cancelled_at?: string | null
+          confirmed_at?: string
+          contract_terms?: Json
+          created_at?: string
+          currency_code?: string
+          festival_artist_programme_id?: string
+          id?: string
+          npc_artist_id?: string | null
+          offer_id?: string
+          performance_count?: number
+          provisional_date?: string | null
+          provisional_stage_id?: string | null
+          set_minutes?: number
+          status?: string
+          total_commitment_minor?: number
+          travel_support_minor?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_bookings_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_bookings_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_bookings_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_bookings_festival_artist_programme_id_fkey"
+            columns: ["festival_artist_programme_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_bookings_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: true
+            referencedRelation: "festival_artist_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_bookings_provisional_stage_id_fkey"
+            columns: ["provisional_stage_id"]
+            isOneToOne: false
+            referencedRelation: "festival_site_plan_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_invitations: {
+        Row: {
+          artist_profile_id: string | null
+          artist_type: string
+          band_id: string | null
+          created_at: string
+          expires_at: string | null
+          festival_artist_programme_id: string
+          id: string
+          invited_by_profile_id: string
+          message: string | null
+          npc_artist_id: string | null
+          responded_at: string | null
+          status: string
+          suggested_dates: string[]
+          suggested_fee_minor: number | null
+          suggested_set_minutes: number | null
+          suggested_stage_types: string[]
+          version: number
+        }
+        Insert: {
+          artist_profile_id?: string | null
+          artist_type: string
+          band_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          festival_artist_programme_id: string
+          id?: string
+          invited_by_profile_id: string
+          message?: string | null
+          npc_artist_id?: string | null
+          responded_at?: string | null
+          status?: string
+          suggested_dates?: string[]
+          suggested_fee_minor?: number | null
+          suggested_set_minutes?: number | null
+          suggested_stage_types?: string[]
+          version?: number
+        }
+        Update: {
+          artist_profile_id?: string | null
+          artist_type?: string
+          band_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          festival_artist_programme_id?: string
+          id?: string
+          invited_by_profile_id?: string
+          message?: string | null
+          npc_artist_id?: string | null
+          responded_at?: string | null
+          status?: string
+          suggested_dates?: string[]
+          suggested_fee_minor?: number | null
+          suggested_set_minutes?: number | null
+          suggested_stage_types?: string[]
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_invitations_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_invitations_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_invitations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_invitations_festival_artist_programme_id_fkey"
+            columns: ["festival_artist_programme_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_invitations_invited_by_profile_id_fkey"
+            columns: ["invited_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_invitations_invited_by_profile_id_fkey"
+            columns: ["invited_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_offer_revisions: {
+        Row: {
+          accommodation_support_minor: number
+          billing_position: string
+          created_at: string
+          fee_minor: number
+          id: string
+          merch_revenue_share_basis_points: number
+          message: string | null
+          offer_id: string
+          offer_version: number
+          preferred_date: string | null
+          preferred_stage_id: string | null
+          proposed_by_party: string
+          proposed_by_profile_id: string | null
+          set_minutes: number
+          terms_snapshot: Json
+          travel_support_minor: number
+        }
+        Insert: {
+          accommodation_support_minor?: number
+          billing_position: string
+          created_at?: string
+          fee_minor: number
+          id?: string
+          merch_revenue_share_basis_points?: number
+          message?: string | null
+          offer_id: string
+          offer_version: number
+          preferred_date?: string | null
+          preferred_stage_id?: string | null
+          proposed_by_party: string
+          proposed_by_profile_id?: string | null
+          set_minutes: number
+          terms_snapshot?: Json
+          travel_support_minor?: number
+        }
+        Update: {
+          accommodation_support_minor?: number
+          billing_position?: string
+          created_at?: string
+          fee_minor?: number
+          id?: string
+          merch_revenue_share_basis_points?: number
+          message?: string | null
+          offer_id?: string
+          offer_version?: number
+          preferred_date?: string | null
+          preferred_stage_id?: string | null
+          proposed_by_party?: string
+          proposed_by_profile_id?: string | null
+          set_minutes?: number
+          terms_snapshot?: Json
+          travel_support_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_offer_revisions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offer_revisions_preferred_stage_id_fkey"
+            columns: ["preferred_stage_id"]
+            isOneToOne: false
+            referencedRelation: "festival_site_plan_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offer_revisions_proposed_by_profile_id_fkey"
+            columns: ["proposed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offer_revisions_proposed_by_profile_id_fkey"
+            columns: ["proposed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_offers: {
+        Row: {
+          accepted_at: string | null
+          accommodation_support_minor: number
+          application_id: string | null
+          artist_profile_id: string | null
+          artist_type: string
+          band_id: string | null
+          billing_position: string
+          broadcast_permission: string | null
+          cancelled_at: string | null
+          created_at: string
+          created_by_profile_id: string
+          currency_code: string
+          declined_at: string | null
+          exclusivity_days_after: number | null
+          exclusivity_days_before: number | null
+          exclusivity_radius_km: number | null
+          festival_artist_programme_id: string
+          id: string
+          invitation_id: string | null
+          merch_revenue_share_basis_points: number
+          npc_artist_id: string | null
+          offer_version: number
+          offered_fee_minor: number
+          performance_count: number
+          preferred_date: string | null
+          preferred_stage_id: string | null
+          recording_permission: string | null
+          response_deadline: string | null
+          set_minutes: number
+          status: string
+          travel_support_minor: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accommodation_support_minor?: number
+          application_id?: string | null
+          artist_profile_id?: string | null
+          artist_type: string
+          band_id?: string | null
+          billing_position: string
+          broadcast_permission?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by_profile_id: string
+          currency_code: string
+          declined_at?: string | null
+          exclusivity_days_after?: number | null
+          exclusivity_days_before?: number | null
+          exclusivity_radius_km?: number | null
+          festival_artist_programme_id: string
+          id?: string
+          invitation_id?: string | null
+          merch_revenue_share_basis_points?: number
+          npc_artist_id?: string | null
+          offer_version?: number
+          offered_fee_minor: number
+          performance_count?: number
+          preferred_date?: string | null
+          preferred_stage_id?: string | null
+          recording_permission?: string | null
+          response_deadline?: string | null
+          set_minutes: number
+          status?: string
+          travel_support_minor?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accommodation_support_minor?: number
+          application_id?: string | null
+          artist_profile_id?: string | null
+          artist_type?: string
+          band_id?: string | null
+          billing_position?: string
+          broadcast_permission?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string
+          currency_code?: string
+          declined_at?: string | null
+          exclusivity_days_after?: number | null
+          exclusivity_days_before?: number | null
+          exclusivity_radius_km?: number | null
+          festival_artist_programme_id?: string
+          id?: string
+          invitation_id?: string | null
+          merch_revenue_share_basis_points?: number
+          npc_artist_id?: string | null
+          offer_version?: number
+          offered_fee_minor?: number
+          performance_count?: number
+          preferred_date?: string | null
+          preferred_stage_id?: string | null
+          recording_permission?: string | null
+          response_deadline?: string | null
+          set_minutes?: number
+          status?: string
+          travel_support_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_offers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_artist_profile_id_fkey"
+            columns: ["artist_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_festival_artist_programme_id_fkey"
+            columns: ["festival_artist_programme_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_offers_preferred_stage_id_fkey"
+            columns: ["preferred_stage_id"]
+            isOneToOne: false
+            referencedRelation: "festival_site_plan_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_plan_audit: {
+        Row: {
+          actor_profile_id: string | null
+          changed_fields: Json
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          festival_company_id: string
+          id: string
+          new_state: string | null
+          previous_state: string | null
+          target_artist_id: string | null
+          target_artist_type: string | null
+          version: number
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          changed_fields?: Json
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          festival_company_id: string
+          id?: string
+          new_state?: string | null
+          previous_state?: string | null
+          target_artist_id?: string | null
+          target_artist_type?: string | null
+          version: number
+        }
+        Update: {
+          actor_profile_id?: string | null
+          changed_fields?: Json
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          festival_company_id?: string
+          id?: string
+          new_state?: string | null
+          previous_state?: string | null
+          target_artist_id?: string | null
+          target_artist_type?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_plan_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_plan_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_plan_audit_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_plan_requests: {
+        Row: {
+          action: string
+          caller_profile_id: string
+          completed_at: string | null
+          created_at: string
+          festival_company_id: string
+          id: string
+          idempotency_key: string
+          payload_hash: string
+          result: Json | null
+          status: string
+          target_entity_id: string | null
+        }
+        Insert: {
+          action: string
+          caller_profile_id: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          idempotency_key: string
+          payload_hash: string
+          result?: Json | null
+          status?: string
+          target_entity_id?: string | null
+        }
+        Update: {
+          action?: string
+          caller_profile_id?: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          idempotency_key?: string
+          payload_hash?: string
+          result?: Json | null
+          status?: string
+          target_entity_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_plan_requests_caller_profile_id_fkey"
+            columns: ["caller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_plan_requests_caller_profile_id_fkey"
+            columns: ["caller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_plan_requests_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artist_programmes: {
+        Row: {
+          application_mode: string
+          applications_close_at: string | null
+          applications_open_at: string | null
+          artist_budget_minor: number
+          completed_at: string | null
+          contingency_budget_minor: number
+          created_at: string
+          currency_code: string
+          excluded_genres: string[]
+          festival_company_id: string
+          festival_ticket_plan_id: string
+          id: string
+          maximum_artist_fame: number | null
+          minimum_artist_fame: number | null
+          minimum_player_artist_share_basis_points: number
+          planning_version: number
+          preferred_genres: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          application_mode: string
+          applications_close_at?: string | null
+          applications_open_at?: string | null
+          artist_budget_minor: number
+          completed_at?: string | null
+          contingency_budget_minor?: number
+          created_at?: string
+          currency_code: string
+          excluded_genres?: string[]
+          festival_company_id: string
+          festival_ticket_plan_id: string
+          id?: string
+          maximum_artist_fame?: number | null
+          minimum_artist_fame?: number | null
+          minimum_player_artist_share_basis_points?: number
+          planning_version?: number
+          preferred_genres?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          application_mode?: string
+          applications_close_at?: string | null
+          applications_open_at?: string | null
+          artist_budget_minor?: number
+          completed_at?: string | null
+          contingency_budget_minor?: number
+          created_at?: string
+          currency_code?: string
+          excluded_genres?: string[]
+          festival_company_id?: string
+          festival_ticket_plan_id?: string
+          id?: string
+          maximum_artist_fame?: number | null
+          minimum_artist_fame?: number | null
+          minimum_player_artist_share_basis_points?: number
+          planning_version?: number
+          preferred_genres?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_programmes_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: true
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_programmes_festival_ticket_plan_id_fkey"
+            columns: ["festival_ticket_plan_id"]
+            isOneToOne: true
+            referencedRelation: "festival_ticket_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_attendance: {
         Row: {
           current_stage_id: string | null
@@ -14027,6 +14926,57 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: true
             referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_financial_commitments: {
+        Row: {
+          amount_minor: number
+          artist_booking_id: string
+          category: string
+          created_at: string
+          currency_code: string
+          festival_company_id: string
+          id: string
+          released_at: string | null
+          status: string
+        }
+        Insert: {
+          amount_minor: number
+          artist_booking_id: string
+          category?: string
+          created_at?: string
+          currency_code: string
+          festival_company_id: string
+          id?: string
+          released_at?: string | null
+          status?: string
+        }
+        Update: {
+          amount_minor?: number
+          artist_booking_id?: string
+          category?: string
+          created_at?: string
+          currency_code?: string
+          festival_company_id?: string
+          id?: string
+          released_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_financial_commitments_artist_booking_id_fkey"
+            columns: ["artist_booking_id"]
+            isOneToOne: true
+            referencedRelation: "festival_artist_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_financial_commitments_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
             referencedColumns: ["id"]
           },
         ]
@@ -43998,6 +44948,14 @@ export type Database = {
     }
     Functions: {
       _caller_profile_id: { Args: never; Returns: string }
+      _festival_artist_manager: {
+        Args: { p_company: string; p_profile: string }
+        Returns: boolean
+      }
+      _festival_artist_programme_result: {
+        Args: { p_company: string }
+        Returns: Json
+      }
       _festival_configuration_result: {
         Args: { p_company_id: string }
         Returns: Json
@@ -46155,6 +47113,10 @@ export type Database = {
           xp_delta: number
         }[]
       }
+      get_festival_artist_programme: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
       get_festival_company_founding_eligibility: { Args: never; Returns: Json }
       get_festival_company_setup: {
         Args: { p_festival_company_id: string }
@@ -46967,6 +47929,17 @@ export type Database = {
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
       run_botb_cycle: { Args: never; Returns: Json }
+      save_festival_artist_programme: {
+        Args: {
+          p_application_windows: Json
+          p_complete?: boolean
+          p_expected_version: number
+          p_festival_company_id: string
+          p_idempotency_key: string
+          p_programme: Json
+        }
+        Returns: Json
+      }
       save_festival_configuration: {
         Args: {
           p_configuration: Json
