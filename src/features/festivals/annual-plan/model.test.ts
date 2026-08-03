@@ -4,9 +4,10 @@ import {
   annualPlanToDraft,
   calculateAnnualPlanEndDate,
   festivalAnnualPlanSchema,
+  type FestivalAnnualPlan,
 } from "./model";
 
-const validPlan = {
+const validPlan: FestivalAnnualPlan = {
   festivalCompanyId: "11111111-1111-4111-8111-111111111111",
   festivalEditionId: "22222222-2222-4222-8222-222222222222",
   editionYear: 3,
