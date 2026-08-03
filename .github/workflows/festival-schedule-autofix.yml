@@ -1,0 +1,30 @@
+name: Festival schedule compatibility edit
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Replace unsupported Array toSorted usage
+        run: |
+          file="src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx"
+          if ! grep -q '\.toSorted(' "$file"; then
+            echo "Compatibility edit already applied."
+            exit 0
+          fi
+          sed -i 's/\.toSorted(/.sort(/' "$file"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$file"
+          git commit -m "Use ES2022-compatible schedule sorting"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
