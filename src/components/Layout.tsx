@@ -129,9 +129,11 @@ const Layout = () => {
 
     return (
       <MobileShell>
-        <CharacterGate>
-          {dedicatedEntry ?? <Outlet />}
-        </CharacterGate>
+        <NoActiveCharacterGate>
+          <CharacterGate>
+            {dedicatedEntry ?? <Outlet />}
+          </CharacterGate>
+        </NoActiveCharacterGate>
       </MobileShell>
     );
   }
