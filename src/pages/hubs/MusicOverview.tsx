@@ -19,20 +19,23 @@ const MusicOverview = () => {
   const userId = profile?.user_id ?? profileId;
 
   const songsQuery = useQuery({
-    queryKey: ["user-songs", userId],
-    enabled: !!userId,
+    queryKey: ["user-songs", profileId, userId],
+    enabled: !!profileId || !!userId,
     queryFn: async () => {
-      if (!userId) return [];
-      const { data, error } = await (supabase as any)
+      if (!profileId && !userId) return [];
+      let query = (supabase as any)
         .from("songs")
-        .select("id,title,status,genre,quality_score,practice_level,archived,created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(12);
+        .select("id,title,status,genre,quality_score,practice_level,archived,created_at,profile_id");
+      // Scope to the active character; legacy rows without a character fall back to the account.
+      if (profileId && userId) query = query.or(`profile_id.eq.${profileId},and(profile_id.is.null,user_id.eq.${userId})`);
+      else if (profileId) query = query.eq("profile_id", profileId);
+      else query = query.eq("user_id", userId);
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(12);
       if (error) throw error;
       return data ?? [];
     },
   });
+
 
   const recordingsQuery = useQuery({
     queryKey: ["recording_sessions", userId, "music-overview"],
