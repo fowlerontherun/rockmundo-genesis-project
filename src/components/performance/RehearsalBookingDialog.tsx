@@ -52,6 +52,8 @@ import {
 } from "@/utils/facilitySlots";
 import { useRehearsalRoomAvailability } from "@/hooks/useRehearsalRoomAvailability";
 import { isSlotInPast } from "@/utils/timeSlotValidation";
+import { useBandPaymentSource } from "@/hooks/useBandPaymentSource";
+import { BandPaymentSourceSelector } from "@/components/bands/BandPaymentSourceSelector";
 import {
   getErrorMessage,
   validateDurationHours,
@@ -77,6 +79,7 @@ interface RehearsalBookingDialogProps {
     songId: string | null,
     setlistId: string | null,
     scheduledStart: Date,
+    paymentSource?: "band" | "personal",
   ) => Promise<string | void>;
   onClose: () => void;
 }
@@ -161,6 +164,8 @@ export const RehearsalBookingDialog = ({
   // Calculate how many consecutive slots are needed for the selected duration
   const slotsNeeded = Math.ceil(selectedDuration / 2);
 
+  const payment = useBandPaymentSource(band.id);
+
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
   const totalCost = selectedRoom
     ? selectedRoom.hourly_rate * selectedDuration
@@ -223,7 +228,9 @@ export const RehearsalBookingDialog = ({
     }
 
     if (!canAfford) {
-      return "Your band does not have enough funds for this rehearsal.";
+      return payment.source === "band"
+        ? "Your band does not have enough funds for this rehearsal."
+        : "You do not have enough personal funds for this rehearsal.";
     }
 
     return "";
@@ -250,6 +257,7 @@ export const RehearsalBookingDialog = ({
         practiceType === "song" ? selectedSongId : null,
         practiceType === "setlist" ? selectedSetlistId : null,
         start,
+        payment.source,
       );
 
       onClose();
@@ -262,7 +270,7 @@ export const RehearsalBookingDialog = ({
     }
   };
 
-  const canAfford = (band.band_balance || 0) >= totalCost;
+  const canAfford = payment.canAfford(totalCost);
   const canBook =
     selectedRoomId &&
     selectedSlotId &&
@@ -714,23 +722,16 @@ export const RehearsalBookingDialog = ({
             </Card>
           )}
 
-          {/* Band Balance */}
-          <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
-            <span>Band Balance:</span>
-            <span
-              className={cn("font-semibold", !canAfford && "text-destructive")}
-            >
-              ${band.band_balance || 0}
-            </span>
-          </div>
-
-          {!canAfford && (
-            <p className="text-sm text-destructive flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              Insufficient funds. Your band needs $
-              {totalCost - (band.band_balance || 0)} more.
-            </p>
-          )}
+          {/* Payment source */}
+          <BandPaymentSourceSelector
+            cost={totalCost}
+            source={payment.source}
+            onChange={payment.setSource}
+            bandBalance={payment.bandBalance}
+            personalBalance={payment.personalBalance}
+            bandName={band.name}
+            disabled={booking}
+          />
         </div>
 
         <DialogFooter>
