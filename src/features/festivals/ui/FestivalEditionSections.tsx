@@ -8,6 +8,7 @@ import { FestivalOperationsPlanner } from "@/features/festival-company/ui/Festiv
 import { FestivalSponsorshipPlanner } from "@/features/festival-company/ui/FestivalSponsorshipPlanner";
 import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
 import { getFestivalCompanyEditions } from "@/features/festivals/editions/repository";
+import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
 
 const SectionShell = ({
@@ -94,6 +95,19 @@ export function FestivalEditionOverview({ festivalCompanyId, editionId }: { fest
   );
 }
 
+export function FestivalEditionSchedule({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
+  return (
+    <SectionShell
+      title="Timetable and readiness"
+      description="Build the stage-by-stage running order for this edition using the canonical revisioned schedule."
+    >
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+        <FestivalScheduleWorkspace editionId={editionId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
 export function FestivalEditionApplications({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
   return (
     <SectionShell
@@ -176,7 +190,7 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
           <HistoryStat label="Headliners" value={query.data.headliners.map(String).join(", ") || "—"} />
           <HistoryStat
             label="Reputation change"
-            value={`${query.data.reputationChange >= 0 ? "+" : ""}${query.data.reputationChange}`}
+            value={`${query.data.reputationChange >= 0 ? "+":""}${query.data.reputationChange}`}
           />
         </div>
       )}
