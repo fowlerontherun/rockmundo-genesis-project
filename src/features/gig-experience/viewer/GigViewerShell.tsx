@@ -17,7 +17,8 @@ import { useGigReplayPlayback } from "./hooks/useGigReplayPlayback";
 import { useGigViewerPreferences } from "./hooks/useGigViewerPreferences";
 import { useGigViewerAudio } from "./audio/useGigViewerAudio";
 import { useCrowdAmbience } from "./audio/useCrowdAmbience";
-import { selectStageType, StageTypeLabels } from "./engine/VenueLayout";
+import { selectStageType } from "./engine/VenueLayout";
+import { StageTypeLabels } from "./engine/StageDecor";
 import { GigViewerAudioControls } from "./audio/GigViewerAudioControls";
 
 export function GigViewerShell({ gigId, experience, open, onViewResult, onClose, replayOverride }: { gigId: string; experience?: GigExperienceDTO | null; open: boolean; onViewResult: () => void; onClose: () => void; replayOverride?: import("../events/types").GigViewerReplay | null }) {
