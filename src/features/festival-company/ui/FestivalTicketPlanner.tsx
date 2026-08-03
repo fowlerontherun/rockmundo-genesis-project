@@ -1,22 +1,437 @@
-import {useEffect,useMemo,useRef,useState} from "react";
-import {Alert,AlertDescription} from "@/components/ui/alert";
-import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
-import {useFestivalSitePlan} from "../application/useFestivalSitePlan";
-import {useFestivalConfiguration} from "../application/useFestivalConfiguration";
-import {useFestivalTicketPlan,useSaveFestivalTicketPlan} from "../application/useFestivalTicketPlan";
-import {formatMinorMoney,parseMoneyToMinor,ticketPlanToDraft,type FestivalTicketPlanDraft,type FestivalTicketProduct} from "../domain/festivalTicketPlan";
-import {previewTicketForecast} from "../domain/festivalTicketForecast";
-import {validateFestivalTicketDraft} from "../domain/festivalTicketValidation";
-const slug=(s:string)=>s.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-export function FestivalTicketPlanner({festivalCompanyId}:{festivalCompanyId:string}){const config=useFestivalConfiguration(festivalCompanyId),site=useFestivalSitePlan(festivalCompanyId),query=useFestivalTicketPlan(festivalCompanyId,site.data?.ready===true),save=useSaveFestivalTicketPlan();const [draft,setDraft]=useState<FestivalTicketPlanDraft|null>(null),[tab,setTab]=useState<"tickets"|"capacity"|"releases"|"forecast"|"review">("tickets"),[conflict,setConflict]=useState(false);const retry=useRef<{hash:string;key:string}|null>(null);useEffect(()=>{if(query.data)setDraft(ticketPlanToDraft(query.data))},[query.data]);const dates=query.data?.festivalDates??[];const initial=():FestivalTicketPlanDraft=>({ticketPlan:{id:null,currencyCode:"GBP",salesTaxRateBasisPoints:2000,bookingFeeMode:"none",bookingFeeMinor:0,bookingFeeBasisPoints:0,bookingFeePayer:"customer",refundPolicy:"",transferPolicy:"",minimumPurchaseQuantity:1,maximumPurchaseQuantity:8,expectedSellThroughBasisPoints:8000,expectedRefundBasisPoints:300,expectedComplimentaryUseBasisPoints:8000,expectedNoShowBasisPoints:500,status:"in_progress"},products:[],releasePhases:[],capacityAllocations:[]});const d=draft??initial();const issues=useMemo(()=>validateFestivalTicketDraft(d,dates,query.data?.usableSiteCapacity??1),[d,dates,query.data?.usableSiteCapacity]);const forecast=useMemo(()=>previewTicketForecast(d,dates,query.data?.usableSiteCapacity??1),[d,dates,query.data?.usableSiteCapacity]);const dirty=Boolean(draft&&query.data&&JSON.stringify(draft)!==JSON.stringify(ticketPlanToDraft(query.data)));useEffect(()=>{const guard=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue=""}};addEventListener("beforeunload",guard);return()=>removeEventListener("beforeunload",guard)},[dirty]);
- if(config.isLoading||site.isLoading)return <p role="status">Checking ticket-planning readiness…</p>;if(!site.data?.ready)return <Alert><AlertDescription>Complete Site and Stages before Tickets, Capacity and Forecast unlock.</AlertDescription></Alert>;if(query.isLoading)return <p role="status">Loading ticket plan…</p>;if(query.isError||!query.data)return <Alert variant="destructive"><AlertDescription>Ticket planning could not be loaded. Check your access and try again.</AlertDescription></Alert>;
- const patchProduct=(i:number,x:Partial<FestivalTicketProduct>)=>{const products=d.products.map((p,n)=>n===i?{...p,...x}:p);const changed=products[i];let capacityAllocations=d.capacityAllocations;if(x.capacityLimit!==undefined&&changed.productClass==="admission")capacityAllocations=dates.map(date=>({id:null,productId:changed.id,productSlug:changed.slug,festivalDate:date,capacityAllocated:x.capacityLimit!,capacityReserved:0,capacityComplimentary:0})).concat(d.capacityAllocations.filter(a=>a.productSlug!==d.products[i].slug));setDraft({...d,products,capacityAllocations})};const addProduct=(kind:"admission"|"add_on"="admission")=>{const name=kind==="admission"?"Full Festival":"Camping Add-on";setDraft({...d,products:[...d.products,{id:null,name,slug:slug(name+" "+(d.products.length+1)),ticketType:kind==="admission"?"full_festival":"camping",productClass:kind,accessScope:kind==="admission"?"full_festival":"non_admission",validFromDate:dates[0],validToDate:dates.at(-1)!,priceMinor:0,faceValueMinor:0,capacityLimit:0,minimumAge:null,includesCamping:kind==="add_on",includesParking:false,includesVipArea:false,includesBackstage:false,transferable:true,refundable:false,salePriority:d.products.length,active:true}]})};const persist=(complete=false)=>{if(save.isPending)return;const hash=JSON.stringify({d,complete});if(retry.current?.hash!==hash)retry.current={hash,key:crypto.randomUUID()};save.mutate({festivalCompanyId,expectedVersion:query.data.planningVersion,draft:d,idempotencyKey:retry.current.key,complete},{onSuccess:r=>{setDraft(ticketPlanToDraft(r));retry.current=null;setConflict(false)},onError:e=>setConflict(e.message==="festival_ticket_plan_stale")})};
- return <section className="mt-8 space-y-5" aria-labelledby="ticket-planning-title"><header><h2 id="ticket-planning-title" className="text-2xl font-bold">Ticketing and capacity planning</h2><p className="text-muted-foreground">Planning only — no tickets have been sold and no revenue has been earned.</p></header><nav aria-label="Festival setup phases" className="flex flex-wrap gap-2">{(["tickets","capacity","releases","forecast","review"] as const).map(x=><Button key={x} type="button" variant={tab===x?"default":"outline"} onClick={()=>setTab(x)}>{x[0].toUpperCase()+x.slice(1)}</Button>)}<Button disabled title="Complete ticket planning first" variant="outline">Artists — locked</Button></nav>{conflict&&<Alert variant="destructive" role="alert"><AlertDescription>A newer ticket plan exists. Your local edits are preserved. Reload latest before saving.</AlertDescription></Alert>}
- {tab==="tickets"&&<div className="space-y-4"><div className="flex gap-2"><Button onClick={()=>addProduct()}>Add ticket product</Button><Button variant="outline" onClick={()=>addProduct("add_on")}>Add add-on</Button></div><ul className="space-y-4">{d.products.map((p,i)=><li key={p.slug} className="rounded border p-4 grid gap-3 sm:grid-cols-2"><div><Label htmlFor={`name-${i}`}>Product name</Label><Input id={`name-${i}`} value={p.name} onChange={e=>patchProduct(i,{name:e.target.value,slug:slug(e.target.value)})}/></div><div><Label htmlFor={`price-${i}`}>Price ({d.ticketPlan.currencyCode})</Label><Input id={`price-${i}`} inputMode="decimal" value={(p.priceMinor/100).toFixed(2)} onChange={e=>{const value=parseMoneyToMinor(e.target.value);if(value!==null)patchProduct(i,{priceMinor:value,faceValueMinor:value})}}/></div><div><Label htmlFor={`cap-${i}`}>Product allocation</Label><Input id={`cap-${i}`} type="number" min={0} value={p.capacityLimit} onChange={e=>patchProduct(i,{capacityLimit:Number(e.target.value)})}/></div><p>{p.productClass==="admission"?`Admission: consumes capacity on ${p.accessScope==="full_festival"?"every Festival day":"selected dates"}.`:"Add-on: does not consume admission capacity."}</p><Button variant="destructive" onClick={()=>confirm(`Remove ${p.name}?`)&&setDraft({...d,products:d.products.filter((_,n)=>n!==i)})}>Remove</Button></li>)}</ul></div>}
- {tab==="capacity"&&<div><h3 className="font-semibold">Daily capacity allocation</h3><p>Usable site capacity: {query.data.usableSiteCapacity.toLocaleString("en-GB")}. Multi-day admission allocations consume the same capacity on every covered date.</p><div className="grid gap-3">{dates.map(date=>{const rows=d.capacityAllocations.filter(a=>a.festivalDate===date),used=rows.reduce((s,a)=>s+a.capacityAllocated+a.capacityReserved+a.capacityComplimentary,0);return <article key={date} className="rounded border p-4"><h4>{date}</h4><p>{used} allocated · {query.data.usableSiteCapacity-used} remaining · {Math.round(used*100/query.data.usableSiteCapacity)}% utilised</p><progress value={Math.min(used,query.data.usableSiteCapacity)} max={query.data.usableSiteCapacity} aria-label={`${date} capacity utilisation`}/></article>})}</div></div>}
- {tab==="releases"&&<div><h3 className="font-semibold">Planned sales phases</h3><p>Release allocations are plans only and cannot place tickets on sale. The server rejects totals above their product allocation.</p>{d.releasePhases.length===0&&<p>No early release configured.</p>}</div>}
- {tab==="forecast"&&<div><h3 className="font-semibold">Planning forecast</h3><p>No tickets have been sold. Forecast values are not yet earned and are not accounting or legal advice.</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[["Maximum ticket revenue",forecast.maximumAdmissionRevenueMinor],["Expected gross receipts",forecast.expectedGrossTicketReceiptsMinor],["Estimated tax",forecast.estimatedTaxMinor],["Expected booking fees",forecast.expectedBookingFeesMinor],["Expected refunds",forecast.expectedRefundsMinor],["Expected net receipts",forecast.expectedNetTicketReceiptsMinor]].map(([label,value])=><article className="rounded border p-4" key={label as string}><h4>{label}</h4><strong>{formatMinorMoney(value as number,d.ticketPlan.currencyCode)}</strong></article>)}</div></div>}
- {tab==="review"&&<div tabIndex={-1}><h3 className="font-semibold">Ticket-plan review</h3><p>{d.products.length} products · {d.releasePhases.length} planned phases · currency {d.ticketPlan.currencyCode}</p>{issues.length>0&&<Alert variant="destructive"><AlertDescription>{issues.length} blocking issue(s) must be resolved before completion.</AlertDescription></Alert>}<Button disabled={issues.length>0||save.isPending} onClick={()=>persist(true)}>Complete ticket planning</Button>{query.data.ready&&<p role="status">Ticket planning complete. Artist applications and booking can now be configured.</p>}</div>}
- <footer className="sticky bottom-2 flex items-center justify-between rounded border bg-background p-3"><span role="status">{save.isPending?"Saving…":dirty?"Unsaved changes":"Saved"}</span><Button disabled={save.isPending||!query.data.canWrite} onClick={()=>persist(false)}>Save ticket plan</Button></footer></section>}
+import { useEffect, useRef, useState } from "react";
+import { Calculator, Ticket, WandSparkles } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useFestivalSitePlan } from "../application/useFestivalSitePlan";
+import {
+  useFestivalTicketPlan,
+  useSaveFestivalTicketPlan,
+} from "../application/useFestivalTicketPlan";
+import {
+  formatMinorMoney,
+  parseMoneyToMinor,
+  ticketPlanToDraft,
+  type FestivalTicketPlanDraft,
+  type FestivalTicketPlanResult,
+  type FestivalTicketProduct,
+} from "../domain/festivalTicketPlan";
+import { previewTicketForecast } from "../domain/festivalTicketForecast";
+import { validateFestivalTicketDraft } from "../domain/festivalTicketValidation";
+
+const SIMPLE_TICKET_SLUG = "standard-festival-ticket";
+
+function standardTicket(
+  dates: string[],
+  capacity: number,
+): FestivalTicketProduct {
+  return {
+    id: null,
+    name: "Standard Festival Ticket",
+    slug: SIMPLE_TICKET_SLUG,
+    ticketType: "full_festival",
+    productClass: "admission",
+    accessScope: "full_festival",
+    validFromDate: dates[0],
+    validToDate: dates.at(-1)!,
+    priceMinor: 0,
+    faceValueMinor: 0,
+    capacityLimit: capacity,
+    minimumAge: null,
+    includesCamping: false,
+    includesParking: false,
+    includesVipArea: false,
+    includesBackstage: false,
+    transferable: true,
+    refundable: false,
+    salePriority: 0,
+    active: true,
+  };
+}
+
+function simpleDraftFromResult(
+  result: FestivalTicketPlanResult,
+): FestivalTicketPlanDraft {
+  const existing = ticketPlanToDraft(result);
+  const draft: FestivalTicketPlanDraft = existing ?? {
+    ticketPlan: {
+      id: null,
+      currencyCode: "GBP",
+      salesTaxRateBasisPoints: 2000,
+      bookingFeeMode: "none",
+      bookingFeeMinor: 0,
+      bookingFeeBasisPoints: 0,
+      bookingFeePayer: "customer",
+      refundPolicy: "Standard Festival refund policy",
+      transferPolicy: "Tickets may be transferred before the Festival starts.",
+      minimumPurchaseQuantity: 1,
+      maximumPurchaseQuantity: 8,
+      expectedSellThroughBasisPoints: 8000,
+      expectedRefundBasisPoints: 300,
+      expectedComplimentaryUseBasisPoints: 0,
+      expectedNoShowBasisPoints: 500,
+      status: "in_progress",
+    },
+    products: [],
+    releasePhases: [],
+    capacityAllocations: [],
+  };
+
+  const admissionIndex = draft.products.findIndex(
+    (product) => product.active && product.productClass === "admission",
+  );
+  const product =
+    admissionIndex >= 0
+      ? draft.products[admissionIndex]
+      : standardTicket(result.festivalDates, result.usableSiteCapacity);
+  const products =
+    admissionIndex >= 0 ? draft.products : [product, ...draft.products];
+  const existingAllocations = new Map(
+    draft.capacityAllocations
+      .filter((allocation) => allocation.productSlug === product.slug)
+      .map((allocation) => [allocation.festivalDate, allocation]),
+  );
+  const capacityAllocations = [
+    ...result.festivalDates.map((festivalDate) => ({
+      id: existingAllocations.get(festivalDate)?.id ?? null,
+      productId: product.id,
+      productSlug: product.slug,
+      festivalDate,
+      capacityAllocated:
+        existingAllocations.get(festivalDate)?.capacityAllocated ??
+        product.capacityLimit,
+      capacityReserved:
+        existingAllocations.get(festivalDate)?.capacityReserved ?? 0,
+      capacityComplimentary:
+        existingAllocations.get(festivalDate)?.capacityComplimentary ?? 0,
+    })),
+    ...draft.capacityAllocations.filter(
+      (allocation) => allocation.productSlug !== product.slug,
+    ),
+  ];
+
+  return {
+    ...draft,
+    products,
+    capacityAllocations,
+  };
+}
+
+export function FestivalTicketPlanner({
+  festivalCompanyId,
+}: {
+  festivalCompanyId: string;
+}) {
+  const site = useFestivalSitePlan(festivalCompanyId);
+  const query = useFestivalTicketPlan(
+    festivalCompanyId,
+    site.data?.ready === true,
+  );
+  const save = useSaveFestivalTicketPlan();
+  const [draft, setDraft] = useState<FestivalTicketPlanDraft | null>(null);
+  const retry = useRef<{ hash: string; key: string } | null>(null);
+
+  useEffect(() => {
+    if (query.data) setDraft(simpleDraftFromResult(query.data));
+  }, [query.data]);
+
+  if (site.isLoading) {
+    return <p role="status">Checking Festival readiness…</p>;
+  }
+
+  if (!site.data?.ready) {
+    return (
+      <Alert>
+        <AlertDescription>
+          Complete the high-level Festival plan before setting tickets. Detailed
+          site operations are generated from company upgrades and scale.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (query.isLoading) {
+    return <p role="status">Loading ticket choices…</p>;
+  }
+
+  if (query.isError || !query.data || !draft) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Ticket choices could not be loaded. Check your company access and try
+          again.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  const data = query.data;
+  const admissionIndex = draft.products.findIndex(
+    (product) => product.active && product.productClass === "admission",
+  );
+  const admission = draft.products[admissionIndex];
+  const currency = draft.ticketPlan.currencyCode;
+  const issues = validateFestivalTicketDraft(
+    draft,
+    data.festivalDates,
+    data.usableSiteCapacity,
+  );
+  const forecast = previewTicketForecast(
+    draft,
+    data.festivalDates,
+    data.usableSiteCapacity,
+  );
+  const savedDraft = simpleDraftFromResult(data);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft);
+
+  const updateAdmission = (patch: Partial<FestivalTicketProduct>) => {
+    setDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        products: current.products.map((product, index) =>
+          index === admissionIndex ? { ...product, ...patch } : product,
+        ),
+      };
+    });
+  };
+
+  const updateCapacity = (requested: number) => {
+    const capacity = Math.min(
+      data.usableSiteCapacity,
+      Math.max(0, Math.floor(requested)),
+    );
+    setDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        products: current.products.map((product, index) =>
+          index === admissionIndex
+            ? { ...product, capacityLimit: capacity }
+            : product,
+        ),
+        capacityAllocations: current.capacityAllocations.map((allocation) =>
+          allocation.productSlug === admission.slug
+            ? { ...allocation, capacityAllocated: capacity }
+            : allocation,
+        ),
+      };
+    });
+  };
+
+  const persist = (complete = false) => {
+    if (save.isPending || !data.canWrite) return;
+    const hash = JSON.stringify({ draft, complete });
+    if (retry.current?.hash !== hash) {
+      retry.current = { hash, key: crypto.randomUUID() };
+    }
+    save.mutate(
+      {
+        festivalCompanyId,
+        expectedVersion: data.planningVersion,
+        draft,
+        idempotencyKey: retry.current.key,
+        complete,
+      },
+      {
+        onSuccess: (result) => {
+          setDraft(simpleDraftFromResult(result));
+          retry.current = null;
+        },
+      },
+    );
+  };
+
+  return (
+    <section className="space-y-5" aria-labelledby="simple-ticket-title">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle id="simple-ticket-title" className="flex items-center gap-2">
+                <Ticket className="h-5 w-5" /> Standard Festival ticket
+              </CardTitle>
+              <CardDescription>
+                One price and one availability figure. The game handles release
+                timing, taxes, fees and demand calculations.
+              </CardDescription>
+            </div>
+            <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium">
+              Capacity {data.usableSiteCapacity.toLocaleString("en-GB")}
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-5 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="festival-ticket-price">
+              Ticket price ({currency})
+            </Label>
+            <Input
+              id="festival-ticket-price"
+              inputMode="decimal"
+              value={(admission.priceMinor / 100).toFixed(2)}
+              onChange={(event) => {
+                const amount = parseMoneyToMinor(event.target.value);
+                if (amount === null) return;
+                updateAdmission({ priceMinor: amount, faceValueMinor: amount });
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="festival-tickets-available">Tickets available</Label>
+            <Input
+              id="festival-tickets-available"
+              type="number"
+              min={0}
+              max={data.usableSiteCapacity}
+              value={admission.capacityLimit}
+              onChange={(event) => updateCapacity(Number(event.target.value))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="festival-expected-demand">
+              Expected sell-through (%)
+            </Label>
+            <Input
+              id="festival-expected-demand"
+              type="number"
+              min={0}
+              max={100}
+              value={Math.round(
+                draft.ticketPlan.expectedSellThroughBasisPoints / 100,
+              )}
+              onChange={(event) => {
+                const percentage = Math.min(
+                  100,
+                  Math.max(0, Number(event.target.value)),
+                );
+                setDraft((current) =>
+                  current
+                    ? {
+                        ...current,
+                        ticketPlan: {
+                          ...current.ticketPlan,
+                          expectedSellThroughBasisPoints: Math.round(
+                            percentage * 100,
+                          ),
+                        },
+                      }
+                    : current,
+                );
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ForecastCard
+          title="Expected tickets sold"
+          value={forecast.expectedTicketsSold.toLocaleString("en-GB")}
+        />
+        <ForecastCard
+          title="Expected gross sales"
+          value={formatMinorMoney(
+            forecast.expectedGrossTicketReceiptsMinor,
+            currency,
+          )}
+        />
+        <ForecastCard
+          title="Estimated tax and refunds"
+          value={formatMinorMoney(
+            forecast.estimatedTaxMinor + forecast.expectedRefundsMinor,
+            currency,
+          )}
+        />
+        <ForecastCard
+          title="Expected net ticket income"
+          value={formatMinorMoney(
+            forecast.expectedNetTicketReceiptsMinor,
+            currency,
+          )}
+        />
+      </div>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <WandSparkles className="h-5 w-5" /> Automatic ticket operations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
+          <p>• General-sale timing and availability</p>
+          <p>• Booking fees, tax and expected refunds</p>
+          <p>• Daily attendance allocation</p>
+          <p>• Demand effects from marketing and reputation</p>
+        </CardContent>
+      </Card>
+
+      {issues.length ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {issues.length} ticket blocker(s) remain. Check the price and ensure
+            tickets available do not exceed Festival capacity.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {save.error ? (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>
+            Ticket choices could not be saved. {save.error.message}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
+        <span role="status" className="text-sm text-muted-foreground">
+          {save.isPending
+            ? "Saving…"
+            : dirty
+              ? "Unsaved ticket choices"
+              : data.ready
+                ? "Ticket plan ready"
+                : "Ticket choices saved"}
+        </span>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={!dirty || save.isPending || !data.canWrite}
+            onClick={() => persist(false)}
+          >
+            Save choices
+          </Button>
+          <Button
+            disabled={issues.length > 0 || save.isPending || !data.canWrite}
+            onClick={() => persist(true)}
+          >
+            <Calculator className="mr-2 h-4 w-4" /> Confirm ticket plan
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ForecastCard({ title, value }: { title: string; value: string }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-lg font-semibold">{value}</CardContent>
+    </Card>
+  );
+}
