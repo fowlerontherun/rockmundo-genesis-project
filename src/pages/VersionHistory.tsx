@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.643",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival legacy layer is now live: published Festival results, Historical archive, Awards, Hall of Fame, World records and Statistics pages all read real data instead of failing." },
+      { type: 'feature', description: "Each completed Festival edition can be published as a permanent result with attendance, capacity, sell-out percentage, revenue, profit/loss, crowd satisfaction and a seven-category review (organisation, line-up, crowd atmosphere, stage production, value for money, food & drink, facilities)." },
+      { type: 'feature', description: "Season awards (Festival of the Year, Best Crowd, Best Organised Festival) and world records (highest attendance, largest profit, biggest loss, highest rated, most performances) can now be generated and are publicly viewable." },
+      { type: 'improvement', description: "Published Festival history is public and read-only: nobody can edit or delete it from the app, owners can only publish results for their own completed editions, and awards/records refreshes are admin-only." },
+    ],
+  },
+  {
     version: "1.1.642",
     date: "2026-08-03",
     changes: [
