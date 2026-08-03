@@ -35,7 +35,7 @@ async function resolveScheduleEditionId(
   festivalEditionId: string,
 ): Promise<string> {
   const bridge = scheduleBridgeSchema.parse(
-    await rpc("ensure_festival_v2_schedule_bridge", {
+    await rpc("ensure_festival_v2_schedule_workspace", {
       p_festival_edition_id: festivalEditionId,
     }),
   );

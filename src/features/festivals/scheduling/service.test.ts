@@ -57,7 +57,7 @@ describe("canonical Festival scheduling service", () => {
       timeZone: "Europe/London",
     });
 
-    expect(rpcMock).toHaveBeenNthCalledWith(1, "ensure_festival_v2_schedule_bridge", {
+    expect(rpcMock).toHaveBeenNthCalledWith(1, "ensure_festival_v2_schedule_workspace", {
       p_festival_edition_id: canonicalEditionId,
     });
     expect(rpcMock).toHaveBeenNthCalledWith(2, "festival_edition_schedule_workspace", {
