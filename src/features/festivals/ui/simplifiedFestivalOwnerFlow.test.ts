@@ -36,7 +36,9 @@ describe("simplified company-owned Festival owner flow", () => {
       "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
     );
 
-    expect(routes).toMatch(/case "schedule":\s*case "contracts":\s*case "operations":/s);
+    expect(routes).toMatch(
+      /case "schedule":\s*case "contracts":\s*case "operations":/s,
+    );
     expect(routes).toMatch(/case "settlement":[\s\S]*festivalRoutes\.live/);
     expect(routes).not.toContain("FestivalScheduleWorkspace");
     expect(routes).not.toContain("FestivalOperationsPlanner");
@@ -55,9 +57,13 @@ describe("simplified company-owned Festival owner flow", () => {
     expect(sections).toContain("View eleven upgrades");
     expect(sections).toContain("Generated automatically by the game");
     expect(contract).toContain("A Festival is a **player-owned company type**");
-    expect(contract).toContain("The existing categories remain the long-term company progression system");
+    expect(contract).toContain(
+      "The existing categories remain the long-term company progression system",
+    );
     expect(contract).toContain("edit a minute-by-minute stage timetable");
-    expect(contract).toContain("build staff departments or individual shifts");
+    expect(contract).toContain(
+      "build staff departments or individual shifts",
+    );
     expect(contract).toContain("compare supplier tenders");
   });
 
@@ -76,5 +82,20 @@ describe("simplified company-owned Festival owner flow", () => {
     expect(sections).not.toContain(
       'requiredBindings={["site", "tickets"]}',
     );
+  });
+
+  it("presents live runtime as an automatic Festival simulation", () => {
+    const runtime = source(
+      "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
+    );
+
+    expect(runtime).toContain("Annual Festival simulation");
+    expect(runtime).toContain("Automatic operations");
+    expect(runtime).toContain(
+      "These systems are simulated from company upgrades and are not",
+    );
+    expect(runtime).not.toContain("Authoritative live runtime");
+    expect(runtime).not.toContain("Authorised actions:");
+    expect(runtime).not.toContain("Site capacity");
   });
 });
