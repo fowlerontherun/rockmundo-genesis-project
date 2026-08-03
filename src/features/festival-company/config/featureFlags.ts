@@ -53,16 +53,17 @@ export const resolveFestivalFeatureFlags = (
     overrides.legacyFestivalWriteEnabled ?? bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_WRITE"), false),
   newFestivalSystemEnabled:
     overrides.newFestivalSystemEnabled ??
-    bool(readEnv("VITE_FEATURE_NEW_FESTIVAL_SYSTEM"), false),
+    bool(readEnv("VITE_FEATURE_NEW_FESTIVAL_SYSTEM"), true),
   festivalCreationEnabled:
     overrides.festivalCreationEnabled ??
-    bool(readEnv("VITE_FEATURE_FESTIVAL_CREATION"), false),
+    bool(readEnv("VITE_FEATURE_FESTIVAL_CREATION"), true),
   festivalApplicationsEnabled:
     overrides.festivalApplicationsEnabled ??
-    bool(readEnv("VITE_FEATURE_FESTIVAL_APPLICATIONS"), false),
+    bool(readEnv("VITE_FEATURE_FESTIVAL_APPLICATIONS"), true),
   festivalLivePerformanceEnabled:
     overrides.festivalLivePerformanceEnabled ??
-    bool(readEnv("VITE_FEATURE_FESTIVAL_LIVE_PERFORMANCE"), false),
+    bool(readEnv("VITE_FEATURE_FESTIVAL_LIVE_PERFORMANCE"), true),
+
 });
 
 export const festivalFeatureFlags: FestivalFeatureFlags =
