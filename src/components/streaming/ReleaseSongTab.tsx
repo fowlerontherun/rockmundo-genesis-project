@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+
 import { Music, Sparkles, DollarSign, AlertCircle } from "lucide-react";
 
 interface ReleaseSongTabProps {
