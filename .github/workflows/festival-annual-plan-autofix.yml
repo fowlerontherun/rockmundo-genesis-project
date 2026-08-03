@@ -18,7 +18,6 @@ jobs:
       - name: Keep annual plan component hook-safe
         run: |
           python3 - <<'PY'
-          import re
           from pathlib import Path
 
           path = Path("src/features/festivals/annual-plan/FestivalAnnualPlan.tsx")
@@ -27,21 +26,13 @@ jobs:
               'import { useEffect, useMemo, useRef, useState } from "react";',
               'import { useEffect, useRef, useState } from "react";',
           )
-          pattern = re.compile(
-              r"  const localPreview = useMemo\(\(\) => \{\n"
-              r"    if \(!selectedScale\) return null;\n"
-              r"    return \{\n"
-              r"      capacityRange: `\$\{selectedScale\.minimumCapacity\.toLocaleString\(\"en-GB\"\)\}–\$\{selectedScale\.maximumCapacity\.toLocaleString\(\"en-GB\"\)\}`,\n"
-              r"      maximumDuration: selectedScale\.maximumDurationDays,\n"
-              r"      demandEffect: selectedMarketing\n"
-              r"        \? Math\.round\(\(selectedMarketing\.demandBasisPoints - 10000\) / 100\)\n"
-              r"        : 0,\n"
-              r"      costEffect: selectedMarketing\n"
-              r"        \? Math\.round\(\(selectedMarketing\.costBasisPoints - 10000\) / 100\)\n"
-              r"        : 0,\n"
-              r"    \};\n"
-              r"  \}, \[selectedMarketing, selectedScale\]\);"
-          )
+          start_marker = "  const localPreview = useMemo(() => {"
+          end_marker = "  }, [selectedMarketing, selectedScale]);"
+          start = source.find(start_marker)
+          end = source.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit(f"annual preview markers missing: start={start}, end={end}")
+          end += len(end_marker)
           replacement = '''  const localPreview = selectedScale
             ? {
                 capacityRange: `${selectedScale.minimumCapacity.toLocaleString("en-GB")}–${selectedScale.maximumCapacity.toLocaleString("en-GB")}`,
@@ -50,10 +41,7 @@ jobs:
                   : 0,
               }
             : null;'''
-          source, replacements = pattern.subn(replacement, source)
-          if replacements != 1:
-              raise SystemExit(f"expected one annual preview block, found {replacements}")
-          path.write_text(source)
+          path.write_text(source[:start] + replacement + source[end:])
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
