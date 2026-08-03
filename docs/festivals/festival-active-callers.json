@@ -1033,6 +1033,9 @@
         "src/hooks/useFestivalHistory.ts",
         "src/hooks/useFestivals.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festival-company/__tests__/appRouteBoundary.test.ts",
         "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
@@ -2446,6 +2449,8 @@
         "src/hooks/useTourBooking.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/booking/__tests__/mode.test.ts",
         "src/features/festival-company/__tests__/appRouteBoundary.test.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
@@ -3937,7 +3942,6 @@
         "src/components/bands/__tests__/AddMoneyToBand.authority.test.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/service.ts",
-        "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/runtime/model.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
@@ -4517,6 +4521,8 @@
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
         "src/features/festivals/admin/components/FestivalOperationalReadiness.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.ts",
@@ -4539,7 +4545,6 @@
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
         "src/features/festival-company/ui/FestivalArtistPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
-        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/LegacyFestivalGate.tsx",
         "src/services/__tests__/bandApplications.test.ts",
         "src/services/banking/mortgagePhase8B.test.ts",
@@ -5991,14 +5996,12 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
-        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
-        "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/model.test.ts",
         "src/features/festivals/settlement/model.ts",
         "src/features/festivals/settlement/service.ts",
         "src/features/festivals/settlement/types.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.test.ts",
@@ -7045,6 +7048,7 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/data/festivalSettlementRepository.ts",
         "src/features/festival-company/domain/festivalCompany.ts",
+        "src/features/festival-company/ui/FestivalArtistPlanner.tsx",
         "src/features/festival-company/ui/FestivalCompanyEligibilityCard.tsx",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalLaunchManager.tsx",
@@ -7239,6 +7243,7 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/domain/festivalRuntime.ts",
+        "src/features/festival-company/ui/FestivalArtistPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/services/playerProfileService.ts",
         "src/services/__tests__/playerProfileService.test.ts",
@@ -7756,6 +7761,7 @@
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
         "src/features/festivals/settlement/repository.ts",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
         "src/features/festivals/admin/components/FestivalOperationalReadiness.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.ts",
@@ -10941,6 +10947,7 @@
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
+        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/services/__tests__/profileService.activeProfile.test.ts",
         "src/services/banking/bankingService.ts",
@@ -12681,7 +12688,8 @@
       "file": "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
@@ -14019,9 +14027,9 @@
       "file": "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
-      "status": "legacy_active_or_cross_domain",
+      "status": "test_only",
       "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": true,
       "writes": []
@@ -15039,7 +15047,6 @@
         "src/components/bands/__tests__/AddMoneyToBand.authority.test.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/service.ts",
-        "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/runtime/model.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
@@ -15626,7 +15633,8 @@
       "file": "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/editions/repository.test.ts"
+        "src/features/festivals/editions/repository.test.ts",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
       "status": "test_only",
       "directDatabaseWriter": false,
@@ -15637,9 +15645,19 @@
       "file": "src/features/festivals/ui/FestivalEditionSections.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
       "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
       "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": false,
       "writes": []
@@ -16315,7 +16333,7 @@
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/service.ts",
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/scheduling/components/FestivalScheduleWorkspace.test.tsx"
       ],
       "status": "legacy_active_or_cross_domain",
@@ -16516,6 +16534,7 @@
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
+        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/services/__tests__/profileService.activeProfile.test.ts",
         "src/services/banking/bankingService.ts",
@@ -16755,6 +16774,7 @@
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
+        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/services/__tests__/profileService.activeProfile.test.ts",
         "src/services/banking/bankingService.ts",
@@ -17035,7 +17055,6 @@
       "importers": [
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalSitePlanner.tsx",
-        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/useFestivalConfigurationDraft.ts"
       ],
       "status": "canonical_active",
@@ -17303,7 +17322,8 @@
         "src/features/festival-company/__tests__/festivalArtistProgramme.test.ts",
         "src/features/festival-company/application/useFestivalArtistProgramme.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
-        "src/features/festival-company/domain/festivalArtistWorkflows.ts"
+        "src/features/festival-company/domain/festivalArtistWorkflows.ts",
+        "src/features/festival-company/ui/FestivalArtistPlanner.tsx"
       ],
       "status": "canonical_active",
       "directDatabaseWriter": false,
@@ -17764,7 +17784,6 @@
       "file": "src/features/festival-company/ui/FestivalLaunchManager.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festival-company/index.ts",
         "src/features/festival-company/ui/FestivalCompanySetupPage.tsx"
       ],
@@ -17777,7 +17796,7 @@
       "file": "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festival-company/index.ts",
         "src/features/festival-company/ui/FestivalCompanySetupPage.tsx"
       ],
@@ -17859,7 +17878,6 @@
       "file": "src/features/festival-company/ui/FestivalSitePlanner.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festival-company/ui/FestivalCompanySetupPage.tsx"
       ],
       "status": "canonical_active",
@@ -17871,7 +17889,7 @@
       "file": "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
       "kind": "module",
       "importers": [
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festival-company/index.ts",
         "src/features/festival-company/ui/FestivalCompanySetupPage.tsx"
       ],
@@ -18543,6 +18561,8 @@
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
@@ -18675,7 +18695,6 @@
         "src/features/festivals/legacy/service.ts",
         "src/features/festivals/legacy/types.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalWarnings.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
         "src/features/festivals/admin/components/FestivalLegacyRecordsManagement.tsx",
@@ -50854,6 +50873,9 @@
         "src/hooks/useFestivalHistory.ts",
         "src/hooks/useFestivals.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festival-company/__tests__/appRouteBoundary.test.ts",
         "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
@@ -52330,6 +52352,8 @@
         "src/hooks/useTourBooking.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/booking/__tests__/mode.test.ts",
         "src/features/festival-company/__tests__/appRouteBoundary.test.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
@@ -53830,7 +53854,6 @@
         "src/components/bands/__tests__/AddMoneyToBand.authority.test.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/service.ts",
-        "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/runtime/model.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
@@ -54418,6 +54441,8 @@
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
         "src/features/festivals/admin/components/FestivalOperationalReadiness.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.ts",
@@ -54440,7 +54465,6 @@
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
         "src/features/festival-company/ui/FestivalArtistPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
-        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/LegacyFestivalGate.tsx",
         "src/services/__tests__/bandApplications.test.ts",
         "src/services/banking/mortgagePhase8B.test.ts",
@@ -55881,14 +55905,12 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
-        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
-        "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/model.test.ts",
         "src/features/festivals/settlement/model.ts",
         "src/features/festivals/settlement/service.ts",
         "src/features/festivals/settlement/types.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.test.ts",
@@ -56930,6 +56952,7 @@
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/data/festivalSettlementRepository.ts",
         "src/features/festival-company/domain/festivalCompany.ts",
+        "src/features/festival-company/ui/FestivalArtistPlanner.tsx",
         "src/features/festival-company/ui/FestivalCompanyEligibilityCard.tsx",
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalLaunchManager.tsx",
@@ -57126,6 +57149,7 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/domain/festivalRuntime.ts",
+        "src/features/festival-company/ui/FestivalArtistPlanner.tsx",
         "src/features/festival-company/ui/FestivalTimetablePlanner.tsx",
         "src/services/playerProfileService.ts",
         "src/services/__tests__/playerProfileService.test.ts",
@@ -57630,6 +57654,7 @@
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
         "src/features/festivals/settlement/repository.ts",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
         "src/features/festivals/admin/components/FestivalOperationalReadiness.tsx",
         "src/features/festivals/admin/dashboard/buildFestivalDashboardModel.ts",
@@ -60828,6 +60853,7 @@
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
+        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/services/__tests__/profileService.activeProfile.test.ts",
         "src/services/banking/bankingService.ts",
@@ -62586,7 +62612,8 @@
     {
       "candidate": "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
       "currentCallers": [
-        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
@@ -63938,19 +63965,6 @@
       "category": "remove_after_route_migration"
     },
     {
-      "candidate": "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
-      "currentCallers": [
-        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
-      ],
-      "replacement": "festival-company domain",
-      "dataMigrationRequirement": "none for source file; preserve data tables",
-      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
-      "recommendedRetirementPr": "festival-route-migration",
-      "risk": "medium",
-      "verification": "npm run test:festivals:active-callers",
-      "category": "remove_after_route_migration"
-    },
-    {
       "candidate": "src/features/festivals/settlement/hooks.ts",
       "currentCallers": [
         "src/pages/AchievementsProgress.tsx",
@@ -64961,7 +64975,6 @@
         "src/components/bands/__tests__/AddMoneyToBand.authority.test.ts",
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/admin/service.ts",
-        "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/runtime/model.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
@@ -65541,7 +65554,8 @@
     {
       "candidate": "src/features/festivals/ui/FestivalEditionSections.tsx",
       "currentCallers": [
-        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx"
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
@@ -65550,6 +65564,17 @@
       "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
     },
     {
       "candidate": "src/features/festivals/admin/__tests__/adminFestivalCatalogueErrors.test.ts",
@@ -66335,7 +66360,7 @@
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/scheduling/model.ts",
         "src/features/festivals/scheduling/service.ts",
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/scheduling/components/FestivalScheduleWorkspace.test.tsx"
       ],
       "replacement": "festival-company domain",
@@ -66544,6 +66569,7 @@
         "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
         "src/features/festival-company/ui/FestivalOperationsPlanner.tsx",
         "src/features/festival-company/ui/FestivalSponsorshipPlanner.tsx",
+        "src/features/festival-company/ui/FestivalTicketPlanner.tsx",
         "src/features/festival-company/ui/FestivalWizardProgress.tsx",
         "src/services/__tests__/profileService.activeProfile.test.ts",
         "src/services/banking/bankingService.ts",
@@ -67041,6 +67067,8 @@
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/__tests__/operationsSummarySchema.test.ts",
         "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
         "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
@@ -67175,7 +67203,6 @@
         "src/features/festivals/legacy/service.ts",
         "src/features/festivals/legacy/types.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
-        "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festivals/admin/__tests__/adminFestivalWarnings.test.ts",
         "src/features/festivals/admin/__tests__/stabilisation.test.ts",
         "src/features/festivals/admin/components/FestivalLegacyRecordsManagement.tsx",
