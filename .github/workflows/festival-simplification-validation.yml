@@ -23,6 +23,7 @@ jobs:
           npx eslint
           src/features/festival-company/ui/FestivalArtistPlanner.tsx
           src/features/festival-company/ui/FestivalTicketPlanner.tsx
+          src/features/festivals/runtime/FestivalLiveControlRoom.tsx
           src/features/festivals/ui/CanonicalFestivalRoutes.tsx
           src/features/festivals/ui/FestivalEditionSections.tsx
           src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts
