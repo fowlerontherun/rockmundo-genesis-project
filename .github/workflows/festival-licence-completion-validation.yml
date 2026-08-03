@@ -1,0 +1,47 @@
+name: Festival licence completion validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install without rewriting stale lockfile
+        run: |
+          for attempt in 1 2 3; do
+            npm install --package-lock=false --ignore-scripts --no-audit --no-fund --legacy-peer-deps && exit 0
+            sleep $((attempt * 10))
+          done
+          exit 1
+      - name: Focused lint
+        run: >-
+          npx eslint
+          src/features/festival-company/upgrades/types.ts
+          src/features/festival-company/upgrades/repository.ts
+          src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx
+          src/features/festival-company/upgrades/licenceCompletion.test.ts
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Focused Festival tests
+        run: >-
+          npx vitest run
+          src/features/festival-company/upgrades/licenceCompletion.test.ts
+          src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts
+      - name: Festival routes
+        run: npm run test:festivals:routes
+      - name: Festival route components
+        run: npm run test:festivals:route-components
+      - name: Migration ordering
+        run: npm run verify:migration-timestamps
+      - name: Production build
+        run: npm run build
