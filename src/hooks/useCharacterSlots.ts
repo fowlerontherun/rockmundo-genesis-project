@@ -194,7 +194,8 @@ export function useCharacterSlots() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .is("died_at", null);
+        .is("deleted_at", null);
+
 
       const usedSlots = count ?? 1;
 
