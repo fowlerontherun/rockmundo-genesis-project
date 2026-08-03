@@ -13115,6 +13115,50 @@ export type Database = {
           },
         ]
       }
+      festival_edition_plan_requests: {
+        Row: {
+          caller_profile_id: string
+          created_at: string
+          festival_company_id: string
+          id: string
+          idempotency_key: string
+          payload_hash: string
+          result: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          caller_profile_id: string
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          idempotency_key: string
+          payload_hash: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          caller_profile_id?: string
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          idempotency_key?: string
+          payload_hash?: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_plan_requests_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_edition_settlements: {
         Row: {
           calculation_config_version: string
@@ -43958,6 +44002,14 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: Json
       }
+      _festival_plan_edition: {
+        Args: {
+          p_festival_company_id: string
+          p_idempotency_key: string
+          p_payload_hash: string
+        }
+        Returns: Json
+      }
       _festival_site_plan_result: { Args: { p_company: string }; Returns: Json }
       _festival_slug: { Args: { p_name: string }; Returns: string }
       _festival_ticket_plan_result: {
@@ -45073,6 +45125,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_festival_setup_with_edition: {
+        Args: {
+          p_configuration: Json
+          p_expected_version: number
+          p_festival_company_id: string
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
       complete_festival_soundcheck: {
         Args: { p_idempotency_key?: string; p_session_id: string }
         Returns: {
@@ -45690,6 +45751,7 @@ export type Database = {
           unavailable_reason: string
         }[]
       }
+      festival_company_capabilities: { Args: never; Returns: Json }
       festival_contract_repertoire: {
         Args: { p_contract_id: string }
         Returns: {
@@ -46060,6 +46122,11 @@ export type Database = {
           xp_delta: number
         }[]
       }
+      get_festival_company_founding_eligibility: { Args: never; Returns: Json }
+      get_festival_company_setup: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
       get_festival_configuration: {
         Args: { p_festival_company_id: string }
         Returns: Json
@@ -46095,6 +46162,7 @@ export type Database = {
         Args: { p_transaction_limit?: number }
         Returns: Json
       }
+      get_owned_festival_companies: { Args: never; Returns: Json }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_recent_twaat_count: { Args: never; Returns: number }
       get_release_sale_dates: {
@@ -46457,6 +46525,10 @@ export type Database = {
         }
         Returns: Json
       }
+      plan_next_festival_edition: {
+        Args: { p_festival_company_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
       prepare_festival_edition_settlement: {
         Args: {
           p_admin_override_reason?: string
@@ -46745,6 +46817,10 @@ export type Database = {
       }
       resolve_festival_stage_legacy_domain: {
         Args: { p_stage_id: string }
+        Returns: Json
+      }
+      resolve_owner_festival_identifier: {
+        Args: { p_edition_identifier?: string; p_identifier: string }
         Returns: Json
       }
       respond_band_application: {

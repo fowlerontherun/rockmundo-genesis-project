@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.634",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival companies: added the missing backend for the company shell — capability flags, founding eligibility (VIP and cash checks), your owned festival companies list, and per-company setup state." },
+      { type: 'feature', description: "Festival URLs now resolve for owners and admins by slug, id or edition year, so festival company and edition pages open correctly." },
+      { type: 'feature', description: "Added planning of the next festival edition and a single retry-safe action that completes setup and creates the first edition." },
+      { type: 'fix', description: "Founding a festival company now returns the personal cash charge reference, fixing the 'malformed festival foundation result' error after paying the $2,000,000 setup fee." },
+    ],
+  },
+  {
     version: "1.1.633",
     date: "2026-08-03",
     changes: [
