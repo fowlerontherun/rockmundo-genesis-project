@@ -107,6 +107,10 @@ describe("annual Festival internal projection SQL", () => {
       expect(migration).toContain(rpc);
       expect(repository).toContain(rpc);
     }
+    expect(repository).toContain("p_festival_company_id");
+    expect(repository).toContain("p_festival_edition_id");
+    expect(repository).toContain("const projectionRpc = supabase.rpc as unknown as");
+    expect(repository).not.toContain("as any");
     expect(migration).toMatch(/festival_ticket_plan_stale/i);
     expect(migration).toMatch(/festival_artist_programme_stale/i);
     expect(migration).toContain("festival_ticket_plan_idempotency_conflict");
