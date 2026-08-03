@@ -12719,6 +12719,7 @@ export type Database = {
           counterparty_id: string | null
           counterparty_type: string | null
           created_at: string
+          currency_code: string | null
           description: string | null
           direction: string
           edition_id: string | null
@@ -12733,6 +12734,7 @@ export type Database = {
           counterparty_id?: string | null
           counterparty_type?: string | null
           created_at?: string
+          currency_code?: string | null
           description?: string | null
           direction: string
           edition_id?: string | null
@@ -12747,6 +12749,7 @@ export type Database = {
           counterparty_id?: string | null
           counterparty_type?: string | null
           created_at?: string
+          currency_code?: string | null
           description?: string | null
           direction?: string
           edition_id?: string | null
@@ -13294,6 +13297,83 @@ export type Database = {
           {
             foreignKeyName: "festival_offer_revisions_proposed_by_profile_id_fkey"
             columns: ["proposed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_operation_migration_issues: {
+        Row: {
+          created_at: string
+          evidence: Json
+          festival_id: string | null
+          id: string
+          issue_type: string
+          metadata: Json
+          proposed_edition_id: string | null
+          resolution_status: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          source_id: string
+          source_table: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json
+          festival_id?: string | null
+          id?: string
+          issue_type: string
+          metadata?: Json
+          proposed_edition_id?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_id: string
+          source_table: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json
+          festival_id?: string | null
+          id?: string
+          issue_type?: string
+          metadata?: Json
+          proposed_edition_id?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_id?: string
+          source_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_operation_migration_issues_proposed_edition_id_fkey"
+            columns: ["proposed_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operation_migration_issues_proposed_edition_id_fkey"
+            columns: ["proposed_edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operation_migration_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operation_migration_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
@@ -44330,6 +44410,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      resolve_festival_stage_legacy_domain: {
+        Args: { p_stage_id: string }
+        Returns: Json
       }
       respond_band_application: {
         Args: { application_id: string; decision: string }
