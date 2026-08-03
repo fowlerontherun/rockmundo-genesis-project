@@ -396,7 +396,13 @@ const Dashboard = () => {
           <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
         </TabsContent>
 
-
+        {/* Alerts — notifications and world news */}
+        <TabsContent value="alerts" className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-2">
+            <NotificationsPanel userId={user?.id} profileId={profile?.id} />
+            <WorldNewsList limit={6} showViewAllLink />
+          </div>
+        </TabsContent>
 
 
         {/* Fame & Fans Tab */}
