@@ -1213,22 +1213,22 @@ AS $$
     ) END,
     'applicationWindows', coalesce((
       SELECT jsonb_agg(jsonb_build_object(
-        'id', window.id,
-        'name', window.name,
-        'opensAt', window.opens_at,
-        'closesAt', window.closes_at,
-        'eligibleArtistType', window.eligible_artist_type,
-        'minimumFame', window.minimum_fame,
-        'maximumFame', window.maximum_fame,
-        'preferredGenres', window.preferred_genres,
-        'minimumBandMembers', window.minimum_band_members,
-        'maximumBandMembers', window.maximum_band_members,
-        'targetStageTypes', window.target_stage_types,
-        'maximumSetMinutes', window.maximum_set_minutes,
-        'active', window.active
-      ) ORDER BY window.opens_at)
-      FROM public.festival_artist_application_windows window
-      WHERE window.festival_artist_programme_id = programme.id
+        'id', application_window.id,
+        'name', application_window.name,
+        'opensAt', application_window.opens_at,
+        'closesAt', application_window.closes_at,
+        'eligibleArtistType', application_window.eligible_artist_type,
+        'minimumFame', application_window.minimum_fame,
+        'maximumFame', application_window.maximum_fame,
+        'preferredGenres', application_window.preferred_genres,
+        'minimumBandMembers', application_window.minimum_band_members,
+        'maximumBandMembers', application_window.maximum_band_members,
+        'targetStageTypes', application_window.target_stage_types,
+        'maximumSetMinutes', application_window.maximum_set_minutes,
+        'active', application_window.active
+      ) ORDER BY application_window.opens_at)
+      FROM public.festival_artist_application_windows application_window
+      WHERE application_window.festival_artist_programme_id = programme.id
     ), '[]'::jsonb),
     'applications', '[]'::jsonb,
     'invitations', '[]'::jsonb,
@@ -1324,7 +1324,7 @@ DECLARE
   maximum_fame integer;
   preferred_genres text[];
   excluded_genres text[];
-  window jsonb;
+  application_window_payload jsonb;
   response jsonb;
   old_version integer;
 BEGIN
@@ -1480,7 +1480,7 @@ END IF;
 
   IF application_mode IN ('applications_only', 'hybrid')
      AND jsonb_array_length(coalesce(p_application_windows, '[]'::jsonb)) > 0 THEN
-    window := p_application_windows->0;
+    application_window_payload := p_application_windows->0;
     INSERT INTO public.festival_artist_application_windows(
       festival_artist_programme_id,
       name,
@@ -1497,17 +1497,17 @@ END IF;
       active
     ) VALUES (
       programme.id,
-      coalesce(nullif(btrim(window->>'name'), ''), 'General Festival applications'),
-      (window->>'opensAt')::timestamptz,
-      (window->>'closesAt')::timestamptz,
-      coalesce(window->>'eligibleArtistType', 'player_only'),
-      nullif(window->>'minimumFame', '')::integer,
-      nullif(window->>'maximumFame', '')::integer,
-      ARRAY(SELECT jsonb_array_elements_text(coalesce(window->'preferredGenres', '[]'::jsonb))),
-      nullif(window->>'minimumBandMembers', '')::integer,
-      nullif(window->>'maximumBandMembers', '')::integer,
-      ARRAY(SELECT jsonb_array_elements_text(coalesce(window->'targetStageTypes', '[]'::jsonb))),
-      coalesce(nullif(window->>'maximumSetMinutes', '')::integer, 60),
+      coalesce(nullif(btrim(application_window_payload->>'name'), ''), 'General Festival applications'),
+      (application_window_payload->>'opensAt')::timestamptz,
+      (application_window_payload->>'closesAt')::timestamptz,
+      coalesce(application_window_payload->>'eligibleArtistType', 'player_only'),
+      nullif(application_window_payload->>'minimumFame', '')::integer,
+      nullif(application_window_payload->>'maximumFame', '')::integer,
+      ARRAY(SELECT jsonb_array_elements_text(coalesce(application_window_payload->'preferredGenres', '[]'::jsonb))),
+      nullif(application_window_payload->>'minimumBandMembers', '')::integer,
+      nullif(application_window_payload->>'maximumBandMembers', '')::integer,
+      ARRAY(SELECT jsonb_array_elements_text(coalesce(application_window_payload->'targetStageTypes', '[]'::jsonb))),
+      coalesce(nullif(application_window_payload->>'maximumSetMinutes', '')::integer, 60),
       true
     )
     ON CONFLICT (festival_artist_programme_id, name)
