@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -11,8 +10,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Calendar, Heart, Zap, MapPin, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles, Bell, Target } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
@@ -22,7 +20,6 @@ import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { DebtWarningBanner } from "@/components/prison/DebtWarningBanner";
 import { CharacterFameOverview } from "@/components/fame/CharacterFameOverview";
 import { LocationHeader } from "@/components/location/LocationHeader";
-import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
 import { DashboardOverviewTabs } from "@/components/dashboard/DashboardOverviewTabs";
 import { VipStatusCard } from "@/components/VipStatusCard";
@@ -40,7 +37,7 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
 
-const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Heart }) => (
+const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Bell }) => (
   <div className="rounded-lg border bg-card/50 p-3">
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <Icon className="h-3.5 w-3.5 text-primary" />
@@ -50,44 +47,6 @@ const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: stri
   </div>
 );
 
-const KeyStatusPanel = ({ profile, currentCity }: { profile: any; currentCity: any }) => (
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="flex items-center gap-2 text-base">
-        <ActivityIcon className="h-4 w-4 text-primary" />
-        Key Character/Band Status
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      {!profile ? (
-        <PageLoadingState title="Loading character status" description="Fetching your active character snapshot..." />
-      ) : (
-        <>
-          <div className="flex items-start gap-4">
-            <Avatar className="h-16 w-16 border-2 border-primary/30 flex-shrink-0">
-              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || profile?.username || "Character"} />
-              <AvatarFallback className="text-xl"><User className="h-8 w-8" /></AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-lg font-bold text-foreground">{profile?.display_name || profile?.username || "Unknown"}</h2>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                {profile?.age && <span>Age {profile.age}</span>}
-                {profile?.gender && <span className="capitalize">{profile.gender}</span>}
-                {currentCity ? <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{currentCity.name}, {currentCity.country}</span> : null}
-              </div>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatusMetric label="Health" value={`${profile?.health ?? 100}%`} icon={Heart} />
-            <StatusMetric label="Energy" value={`${profile?.energy ?? 100}%`} icon={Zap} />
-            <StatusMetric label="Fame" value={profile?.fame ?? 0} icon={Star} />
-            <StatusMetric label="Level" value={profile?.level ?? 1} icon={Trophy} />
-          </div>
-        </>
-      )}
-    </CardContent>
-  </Card>
-);
 
 
 const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string }) => {
@@ -355,8 +314,16 @@ const Dashboard = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-6 gap-1">
+          <TabsList className="inline-flex w-max lg:grid lg:w-full lg:grid-cols-9 gap-1">
             <TabsTrigger value="profile" className="flex-shrink-0">
+              <Sparkles className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Today</span>
+            </TabsTrigger>
+            <TabsTrigger value="goals" className="flex-shrink-0">
+              <Target className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Goals</span>
+            </TabsTrigger>
+            <TabsTrigger value="character" className="flex-shrink-0">
               <User className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('common.profile')}</span>
             </TabsTrigger>
@@ -376,6 +343,10 @@ const Dashboard = () => {
               <Calendar className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('nav.schedule')}</span>
             </TabsTrigger>
+            <TabsTrigger value="alerts" className="flex-shrink-0">
+              <Bell className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Alerts</span>
+            </TabsTrigger>
             <TabsTrigger value="activity" className="flex-shrink-0">
               <ActivityIcon className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Activity</span>
@@ -383,56 +354,32 @@ const Dashboard = () => {
           </TabsList>
         </div>
 
-        {/* Profile Tab — identity only */}
+        {/* Today — snapshot, briefing and what to do next */}
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
           <GettingStartedPanel profile={profile} userId={user?.id} />
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
-            <div className="space-y-4">
-              <TodaysBriefing profile={profile} userId={user?.id} />
-              <GoalsProgressPanel profile={profile} userId={user?.id} />
-              <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
-              <UpcomingSchedulePanel currentDate={currentDate} userId={user?.id} />
-            </div>
-            <div className="space-y-4">
-              <NotificationsPanel userId={user?.id} profileId={profile?.id} />
-              <WorldNewsList limit={4} showViewAllLink />
-              <KeyStatusPanel profile={profile} currentCity={currentCity} />
-            </div>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+            <TodaysBriefing profile={profile} userId={user?.id} />
+            <UpcomingSchedulePanel currentDate={currentDate} userId={user?.id} />
           </div>
-
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Character Identity
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <CharacterIdentityCard />
-            </CollapsibleContent>
-          </Collapsible>
-
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Reputation
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <ReputationCard />
-            </CollapsibleContent>
-          </Collapsible>
         </TabsContent>
 
-        {/* Stats Tab — detailed overview, location, VIP */}
+        {/* Goals — objectives and manager advice */}
+        <TabsContent value="goals" className="space-y-4">
+          <GoalsProgressPanel profile={profile} userId={user?.id} />
+          <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
+        </TabsContent>
+
+        {/* Character — identity, reputation and membership */}
+        <TabsContent value="character" className="space-y-4">
+          <CharacterIdentityCard />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <ReputationCard />
+            <VipStatusCard />
+          </div>
+        </TabsContent>
+
+        {/* Stats Tab — detailed overview and location */}
         <TabsContent value="stats" className="space-y-4">
           {currentCity && (
             <LocationHeader
@@ -444,22 +391,15 @@ const Dashboard = () => {
             />
           )}
           <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  VIP Status
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <VipStatusCard />
-            </CollapsibleContent>
-          </Collapsible>
         </TabsContent>
 
+        {/* Alerts — notifications and world news */}
+        <TabsContent value="alerts" className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-2">
+            <NotificationsPanel userId={user?.id} profileId={profile?.id} />
+            <WorldNewsList limit={6} showViewAllLink />
+          </div>
+        </TabsContent>
 
 
         {/* Fame & Fans Tab */}
@@ -535,20 +475,17 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4" />
-                  {t('awards.achievements')}
-                  {achievements && achievements.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">{achievements.length}</Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-4 w-4 text-primary" />
+                {t('awards.achievements')}
+                {achievements && achievements.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{achievements.length}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               {achievementsLoading ? (
                 <PageLoadingState
                   title="Loading achievements"
@@ -583,8 +520,9 @@ const Dashboard = () => {
                       </div>
                     </div>)}
                 </div>}
-            </CollapsibleContent>
-          </Collapsible>
+            </CardContent>
+          </Card>
+
         </TabsContent>
       </Tabs>
     </StandardPageLayout>;
