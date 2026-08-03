@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.638",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival artist booking workflow is now live end to end: bands and solo artists can see open festival application windows, apply, withdraw, and accept or decline invitations." },
+      { type: 'feature', description: "Festival owners and managers can search artist candidates, review applications, send invitations, and create, send, counter, withdraw or respond to artist offers." },
+      { type: 'feature', description: "Accepted offers automatically create a confirmed booking and reserve the fee against the festival's artist budget; cancelling a booking releases the reserved money." },
+      { type: 'improvement', description: "All festival artist actions are audited, authority-checked server-side, and safe to retry without creating duplicate records." },
+    ],
+  },
+  {
     version: "1.1.637",
     date: "2026-08-03",
     changes: [
