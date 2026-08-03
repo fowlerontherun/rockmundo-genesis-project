@@ -44948,9 +44948,40 @@ export type Database = {
     }
     Functions: {
       _caller_profile_id: { Args: never; Returns: string }
+      _festival_artist_audit: {
+        Args: {
+          p_artist_id?: string
+          p_artist_type?: string
+          p_company: string
+          p_entity_id: string
+          p_entity_type: string
+          p_event: string
+          p_new: Json
+          p_previous: Json
+          p_version: number
+        }
+        Returns: undefined
+      }
+      _festival_artist_identity: {
+        Args: {
+          p_band: string
+          p_npc: string
+          p_profile: string
+          p_type: string
+        }
+        Returns: Json
+      }
+      _festival_artist_managed_bands: {
+        Args: { p_profile: string }
+        Returns: string[]
+      }
       _festival_artist_manager: {
         Args: { p_company: string; p_profile: string }
         Returns: boolean
+      }
+      _festival_artist_programme_company: {
+        Args: { p_programme: string }
+        Returns: string
       }
       _festival_artist_programme_result: {
         Args: { p_company: string }
@@ -45935,6 +45966,15 @@ export type Database = {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
       }
+      cancel_festival_artist_booking: {
+        Args: {
+          p_booking_id: string
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       cancel_festival_contract: {
         Args: {
           p_contract_id: string
@@ -46197,6 +46237,17 @@ export type Database = {
             Returns: string
           }
       coop_quest_pair_key: { Args: { _a: string; _b: string }; Returns: string }
+      counter_festival_artist_offer: {
+        Args: {
+          p_expected_version?: number
+          p_fee_minor: number
+          p_idempotency_key?: string
+          p_message?: string
+          p_offer_id: string
+          p_set_minutes?: number
+        }
+        Returns: Json
+      }
       counter_festival_offer: {
         Args: {
           p_change_summary?: string
@@ -46314,6 +46365,27 @@ export type Database = {
       create_default_habits_for_user: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      create_festival_artist_offer: {
+        Args: {
+          p_accommodation_support_minor?: number
+          p_application_id?: string
+          p_artist_profile_id?: string
+          p_artist_type: string
+          p_band_id?: string
+          p_billing_position?: string
+          p_festival_company_id: string
+          p_idempotency_key?: string
+          p_invitation_id?: string
+          p_npc_artist_id?: string
+          p_offered_fee_minor?: number
+          p_preferred_date?: string
+          p_preferred_stage_id?: string
+          p_response_deadline?: string
+          p_set_minutes?: number
+          p_travel_support_minor?: number
+        }
+        Returns: Json
       }
       create_festival_edition:
         | {
@@ -47153,6 +47225,7 @@ export type Database = {
           provider_name: string
         }[]
       }
+      get_my_festival_artist_opportunities: { Args: never; Returns: Json }
       get_my_finance_command_center: {
         Args: { p_transaction_limit?: number }
         Returns: Json
@@ -47838,6 +47911,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      respond_to_festival_artist_invitation: {
+        Args: {
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_invitation_id: string
+          p_response: string
+        }
+        Returns: Json
+      }
+      respond_to_festival_artist_offer: {
+        Args: {
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_offer_id: string
+          p_response: string
+        }
+        Returns: Json
+      }
       resurrect_character: {
         Args: { p_profile_id: string }
         Returns: undefined
@@ -47853,6 +47944,15 @@ export type Database = {
           p_idempotency_key?: string
           p_offer_terms?: Json
           p_reason?: string
+        }
+        Returns: Json
+      }
+      review_festival_artist_application: {
+        Args: {
+          p_application_id: string
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_status: string
         }
         Returns: Json
       }
@@ -48019,7 +48119,45 @@ export type Database = {
         }
         Returns: Json
       }
+      search_festival_artist_candidates: {
+        Args: {
+          p_artist_type?: string
+          p_festival_company_id: string
+          p_genres?: string[]
+          p_limit?: number
+          p_maximum_fame?: number
+          p_minimum_fame?: number
+          p_offset?: number
+          p_query?: string
+        }
+        Returns: Json
+      }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
+      send_festival_artist_invitation: {
+        Args: {
+          p_artist_profile_id?: string
+          p_artist_type: string
+          p_band_id?: string
+          p_expires_at?: string
+          p_festival_company_id: string
+          p_idempotency_key?: string
+          p_message?: string
+          p_npc_artist_id?: string
+          p_suggested_dates?: string[]
+          p_suggested_fee_minor?: number
+          p_suggested_set_minutes?: number
+          p_suggested_stage_types?: string[]
+        }
+        Returns: Json
+      }
+      send_festival_artist_offer: {
+        Args: {
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_offer_id: string
+        }
+        Returns: Json
+      }
       settle_legacy_festival_participation: {
         Args: {
           p_crowd_energy_avg?: number
@@ -48223,6 +48361,24 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_festival_artist_application: {
+        Args: {
+          p_application_window_id: string
+          p_artist_profile_id?: string
+          p_artist_type: string
+          p_band_id?: string
+          p_festival_company_id: string
+          p_idempotency_key?: string
+          p_maximum_set_minutes?: number
+          p_message?: string
+          p_minimum_fee_minor?: number
+          p_minimum_set_minutes?: number
+          p_preferred_dates?: string[]
+          p_preferred_stage_types?: string[]
+          p_requested_fee_minor?: number
+        }
+        Returns: Json
       }
       submit_festival_setlist:
         | {
@@ -48587,6 +48743,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      withdraw_festival_artist_application: {
+        Args: {
+          p_application_id: string
+          p_expected_version?: number
+          p_idempotency_key?: string
+        }
+        Returns: Json
+      }
+      withdraw_festival_artist_offer: {
+        Args: {
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_offer_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {
