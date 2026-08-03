@@ -21,6 +21,8 @@ jobs:
       - name: Lint changed Festival scheduling sources
         run: >-
           npx eslint
+          src/features/festivals/scheduling/errors.ts
+          src/features/festivals/scheduling/errors.test.ts
           src/features/festivals/scheduling/model.ts
           src/features/festivals/scheduling/service.ts
           src/features/festivals/scheduling/service.test.ts
@@ -35,6 +37,7 @@ jobs:
       - name: Run focused Festival scheduling tests
         run: >-
           npx vitest run
+          src/features/festivals/scheduling/errors.test.ts
           src/features/festivals/scheduling/service.test.ts
           src/features/festivals/scheduling/time.test.ts
           src/features/festivals/scheduling/scheduleBridgeMigration.test.ts
