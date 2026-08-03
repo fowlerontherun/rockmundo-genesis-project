@@ -220,6 +220,7 @@ const AdminWorldReset = lazyWithRetry(() => import("./pages/admin/WorldReset"));
 const AdminDebugPanel = lazyWithRetry(() => import("./pages/admin/DebugPanel"));
 const AdminFinanceDiagnostics = lazyWithRetry(() => import("./pages/admin/FinanceDiagnostics"));
 const AdminDeathSystem = lazyWithRetry(() => import("./pages/admin/DeathSystemAdmin"));
+const AdminCharacterRecovery = lazyWithRetry(() => import("./pages/admin/CharacterRecoveryAdmin"));
 const AdminOfferAutomation = lazyWithRetry(() => import("./pages/admin/OfferAutomation"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
