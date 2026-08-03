@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarDays, History, LockKeyhole, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  Gauge,
+  History,
+  LockKeyhole,
+  Plus,
+  WalletCards,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { planNextFestivalEdition } from "@/features/festival-company/data/festivalCompanyRepository";
 import { festivalRoutes } from "@/features/festivals/routes";
 import {
@@ -29,6 +37,12 @@ const date = (value: string | null) =>
     : "Dates not set";
 
 const statusLabel = (status: string) => status.replaceAll("_", " ");
+const money = (minor: number) =>
+  new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  }).format(minor / 100);
 
 function EditionCard({
   festivalCompanyId,
@@ -52,12 +66,22 @@ function EditionCard({
               Annual company Festival · game year {edition.editionYear}
             </CardDescription>
           </div>
-          <Badge
-            variant={edition.editable ? "secondary" : "outline"}
-            className="capitalize"
-          >
-            {statusLabel(edition.status)}
-          </Badge>
+          <div className="flex flex-col items-end gap-2">
+            <Badge
+              variant={edition.editable ? "secondary" : "outline"}
+              className="capitalize"
+            >
+              {statusLabel(edition.status)}
+            </Badge>
+            {edition.editable ? (
+              <Badge
+                variant={edition.planningStatus === "ready" ? "default" : "outline"}
+                className="capitalize"
+              >
+                {statusLabel(edition.planningStatus)}
+              </Badge>
+            ) : null}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -75,20 +99,32 @@ function EditionCard({
             </strong>
           </p>
           <p>
-            Length:{" "}
-            <strong>
-              {edition.durationDays
-                ? `${edition.durationDays} day(s)`
-                : "Not set"}
-            </strong>
-          </p>
-          <p>
             Target attendance:{" "}
             <strong>
               {edition.expectedCapacity?.toLocaleString("en-GB") ?? "Not set"}
             </strong>
           </p>
+          <p className="flex items-center gap-2">
+            <WalletCards className="h-4 w-4 text-muted-foreground" />
+            <strong>
+              {edition.estimatedOperatingCostMinor
+                ? money(edition.estimatedOperatingCostMinor)
+                : "Cost not calculated"}
+            </strong>
+          </p>
         </div>
+
+        {edition.editable ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Gauge className="h-3.5 w-3.5" /> Planning readiness
+              </span>
+              <strong>{edition.readinessScore}%</strong>
+            </div>
+            <Progress value={edition.readinessScore} />
+          </div>
+        ) : null}
 
         {edition.lockedAt ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import { FestivalAnnualPlan } from "@/features/festivals/annual-plan/FestivalAnnualPlan";
 import {
   getFestivalCompanyEditions,
   type FestivalEditionPlanBindingKey,
@@ -135,10 +136,7 @@ function EditionScope({
             </strong>
           </p>
           <p>
-            Target capacity:{" "}
-            <strong>
-              {edition.expectedCapacity?.toLocaleString("en-GB") ?? "Not set"}
-            </strong>
+            Readiness: <strong>{edition.readinessScore}%</strong>
           </p>
         </CardContent>
       </Card>
@@ -187,12 +185,18 @@ export function FestivalEditionOverview({
   return (
     <SectionShell
       title="Plan the annual Festival"
-      description="Make the important music-business choices. The game handles detailed event operations automatically."
+      description="Choose the dates, city, style, size, vibe and marketing emphasis. The game calculates operational detail from the company upgrades."
     >
       <EditionScope
         festivalCompanyId={festivalCompanyId}
         editionId={editionId}
-      />
+        requireEditable
+      >
+        <FestivalAnnualPlan
+          festivalCompanyId={festivalCompanyId}
+          editionId={editionId}
+        />
+      </EditionScope>
 
       <Card>
         <CardHeader>
@@ -254,11 +258,11 @@ export function FestivalEditionOverview({
           <CardTitle>Generated automatically by the game</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
+          <p>• Capacity based on scale and company upgrades</p>
           <p>• Stage count and running order</p>
           <p>• Security, medical and welfare requirements</p>
           <p>• Staff, supplier and operating costs</p>
           <p>• Weather, transport and technical risks</p>
-          <p>• NPC acts for remaining line-up spaces</p>
           <p>• Final attendance, revenue and settlement</p>
         </CardContent>
       </Card>

@@ -45,6 +45,33 @@ The owner should make only decisions that are meaningful in a music-management g
 
 The game derives detailed operating requirements from these choices, company upgrades, licence tier, reputation, city conditions and random events.
 
+## Edition-native annual planning contract
+
+Every annual Festival stores its own high-level plan. Saving one year must never overwrite another year or the permanent Festival company.
+
+The annual Plan screen requires only:
+
+1. preferred Festival month and exact start date;
+2. city;
+3. indoor, outdoor or mixed site style;
+4. Festival scale;
+5. duration;
+6. vibe;
+7. marketing emphasis.
+
+The exact annual edition ID is required for every read and save. Saves are owner/admin authorised, optimistic, idempotent and unavailable after the edition is completed, cancelled or locked.
+
+The server derives and stores:
+
+- the end date;
+- expected capacity from scale and relevant company upgrades;
+- an estimated operating cost from capacity, duration, site style, environmental policy, marketing choice and upgrade efficiency;
+- marketing demand, reputation and local-artist effects;
+- licence blockers;
+- a simple readiness score.
+
+Licence blockers prevent launch readiness but do not force the owner into a detailed permit or operations workflow. The owner can change the annual choices or improve the permanent company licence and upgrades.
+
 ## Eleven upgrade categories
 
 The existing categories remain the long-term company progression system:
