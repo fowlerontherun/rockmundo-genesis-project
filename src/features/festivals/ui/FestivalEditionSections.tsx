@@ -7,7 +7,7 @@ import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalAr
 import { FestivalOperationsPlanner } from "@/features/festival-company/ui/FestivalOperationsPlanner";
 import { FestivalSponsorshipPlanner } from "@/features/festival-company/ui/FestivalSponsorshipPlanner";
 import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
-import { getFestivalCompanyEditions } from "@/features/festivals/editions/repository";
+import { getFestivalCompanyEditions, type FestivalEditionPlanBindingKey } from "@/features/festivals/editions/repository";
 import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
 
@@ -29,16 +29,28 @@ const SectionShell = ({
   </section>
 );
 
+const bindingLabels: Record<FestivalEditionPlanBindingKey, string> = {
+  configuration: "configuration",
+  site: "site",
+  tickets: "ticket",
+  artists: "artist programme",
+  operations: "operations",
+  sponsorship: "sponsorship",
+  timetable: "legacy timetable",
+};
+
 function EditionScope({
   festivalCompanyId,
   editionId,
   children,
   requireEditable = false,
+  requiredBindings = [],
 }: {
   festivalCompanyId: string;
   editionId: string;
   children?: React.ReactNode;
   requireEditable?: boolean;
+  requiredBindings?: FestivalEditionPlanBindingKey[];
 }) {
   const query = useQuery({
     queryKey: ["festival-company-editions", festivalCompanyId],
@@ -50,6 +62,8 @@ function EditionScope({
   if (query.error || !edition) {
     return <Card><CardContent className="pt-6">This annual edition could not be loaded.</CardContent></Card>;
   }
+
+  const missingBindings = requiredBindings.filter((binding) => !edition.planBindings[binding]);
 
   return (
     <>
@@ -78,6 +92,18 @@ function EditionScope({
             <CardTitle>Edition is read-only</CardTitle>
             <CardDescription>Completed, cancelled or locked editions cannot change planning data.</CardDescription>
           </CardHeader>
+        </Card>
+      ) : missingBindings.length ? (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle>Planning controls safely blocked</CardTitle>
+            <CardDescription>
+              This edition is not bound to its {missingBindings.map((binding) => bindingLabels[binding]).join(", ")} plan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            The existing compatibility planner is company-scoped. It has not been mounted because doing so could modify another annual edition. Complete the edition-native planner migration before enabling these controls.
+          </CardContent>
         </Card>
       ) : children}
     </>
@@ -114,7 +140,7 @@ export function FestivalEditionApplications({ festivalCompanyId, editionId }: { 
       title="Artist programme"
       description="Application windows, candidate discovery, invitations, offers and confirmed bookings for this edition."
     >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable requiredBindings={["artists"]}>
         <FestivalArtistPlanner festivalCompanyId={festivalCompanyId} />
       </EditionScope>
     </SectionShell>
@@ -127,7 +153,12 @@ export function FestivalEditionContracts({ festivalCompanyId, editionId }: { fes
       title="Commercial partnerships and launch"
       description="Sponsorship packages and commercial agreements, followed by the atomic launch and ticket-sales controls for this edition."
     >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+        requiredBindings={["configuration", "site", "tickets", "artists", "operations", "sponsorship"]}
+      >
         <FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} />
         <FestivalLaunchManager festivalCompanyId={festivalCompanyId} />
       </EditionScope>
@@ -141,7 +172,7 @@ export function FestivalEditionOperations({ festivalCompanyId, editionId }: { fe
       title="Site, staffing and suppliers"
       description="Site layout and stages, then departments, staffing coverage and supplier contracts for this edition."
     >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable requiredBindings={["site", "operations"]}>
         <FestivalSitePlanner festivalCompanyId={festivalCompanyId} />
         <FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} />
       </EditionScope>
@@ -155,7 +186,7 @@ export function FestivalEditionFinance({ festivalCompanyId, editionId }: { festi
       title="Ticketing and revenue planning"
       description="Ticket products, daily capacity allocation, release phases and deterministic revenue forecasts for this edition. Planning only — nothing is sold here."
     >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable requiredBindings={["site", "tickets"]}>
         <FestivalTicketPlanner festivalCompanyId={festivalCompanyId} />
       </EditionScope>
     </SectionShell>
@@ -190,7 +221,7 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
           <HistoryStat label="Headliners" value={query.data.headliners.map(String).join(", ") || "—"} />
           <HistoryStat
             label="Reputation change"
-            value={`${query.data.reputationChange >= 0 ? "+":""}${query.data.reputationChange}`}
+            value={`${query.data.reputationChange >= 0 ? "+" : ""}${query.data.reputationChange}`}
           />
         </div>
       )}
