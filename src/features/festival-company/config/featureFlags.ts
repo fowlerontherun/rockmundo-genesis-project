@@ -1,16 +1,21 @@
 /**
  * Central feature flags for the new festival-company replacement programme.
  *
- * Legacy defaults ON while replacement defaults OFF so PR1 is a pure
- * safety boundary. Toggle via Vite env vars at build time or override
- * per-render for tests.
+ * Phase 11 (activation): the replacement system defaults ON now that
+ * Phases 1-10B are implemented and server capabilities report enabled.
+ * Legacy festival reads stay ON as read-only compatibility; legacy
+ * gameplay writes stay OFF. Toggle via Vite env vars at build time or
+ * override per-render for tests.
  *
  * VITE_FEATURE_LEGACY_FESTIVAL_SYSTEM   ("true"|"false", default "true")
- * VITE_FEATURE_NEW_FESTIVAL_SYSTEM      (default "false")
- * VITE_FEATURE_FESTIVAL_CREATION        (default "false")
- * VITE_FEATURE_FESTIVAL_APPLICATIONS    (default "false")
- * VITE_FEATURE_FESTIVAL_LIVE_PERFORMANCE(default "false")
+ * VITE_FEATURE_LEGACY_FESTIVAL_READ     (default "true")
+ * VITE_FEATURE_LEGACY_FESTIVAL_WRITE    (default "false")
+ * VITE_FEATURE_NEW_FESTIVAL_SYSTEM      (default "true")
+ * VITE_FEATURE_FESTIVAL_CREATION        (default "true")
+ * VITE_FEATURE_FESTIVAL_APPLICATIONS    (default "true")
+ * VITE_FEATURE_FESTIVAL_LIVE_PERFORMANCE(default "true")
  */
+
 
 export interface FestivalFeatureFlags {
   legacyFestivalSystemEnabled: boolean;
@@ -48,16 +53,17 @@ export const resolveFestivalFeatureFlags = (
     overrides.legacyFestivalWriteEnabled ?? bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_WRITE"), false),
   newFestivalSystemEnabled:
     overrides.newFestivalSystemEnabled ??
-    bool(readEnv("VITE_FEATURE_NEW_FESTIVAL_SYSTEM"), false),
+    bool(readEnv("VITE_FEATURE_NEW_FESTIVAL_SYSTEM"), true),
   festivalCreationEnabled:
     overrides.festivalCreationEnabled ??
-    bool(readEnv("VITE_FEATURE_FESTIVAL_CREATION"), false),
+    bool(readEnv("VITE_FEATURE_FESTIVAL_CREATION"), true),
   festivalApplicationsEnabled:
     overrides.festivalApplicationsEnabled ??
-    bool(readEnv("VITE_FEATURE_FESTIVAL_APPLICATIONS"), false),
+    bool(readEnv("VITE_FEATURE_FESTIVAL_APPLICATIONS"), true),
   festivalLivePerformanceEnabled:
     overrides.festivalLivePerformanceEnabled ??
-    bool(readEnv("VITE_FEATURE_FESTIVAL_LIVE_PERFORMANCE"), false),
+    bool(readEnv("VITE_FEATURE_FESTIVAL_LIVE_PERFORMANCE"), true),
+
 });
 
 export const festivalFeatureFlags: FestivalFeatureFlags =

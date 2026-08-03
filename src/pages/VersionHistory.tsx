@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.644",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival Phase 11 (activation): the rebuilt Festival system is now switched ON by default for all players — founding a Festival company, edition setup, artist applications and live Festival performance are all reachable in-game instead of hidden behind disabled flags." },
+      { type: 'improvement', description: "Legacy Festival pages remain viewable as read-only history while legacy Festival gameplay writes stay disabled, so old records are preserved without splitting play across two systems." },
+      { type: 'improvement', description: "Activation can still be tuned per deployment via the VITE_FEATURE_NEW_FESTIVAL_SYSTEM, VITE_FEATURE_FESTIVAL_CREATION, VITE_FEATURE_FESTIVAL_APPLICATIONS and VITE_FEATURE_FESTIVAL_LIVE_PERFORMANCE build settings." },
+    ],
+  },
+  {
+
     version: "1.1.643",
     date: "2026-08-03",
     changes: [

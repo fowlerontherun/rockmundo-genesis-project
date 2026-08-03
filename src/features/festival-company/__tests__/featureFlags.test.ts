@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { resolveFestivalFeatureFlags } from "../config/featureFlags";
 
 describe("festival feature flags", () => {
-  it("defaults legacy on and new off", () => {
+  it("defaults legacy read on and the replacement system on (Phase 11 activation)", () => {
     const flags = resolveFestivalFeatureFlags({
       legacyFestivalSystemEnabled: undefined,
       newFestivalSystemEnabled: undefined,
@@ -11,11 +11,13 @@ describe("festival feature flags", () => {
       festivalLivePerformanceEnabled: undefined,
     } as never);
     expect(flags.legacyFestivalSystemEnabled).toBe(true);
-    expect(flags.newFestivalSystemEnabled).toBe(false);
-    expect(flags.festivalCreationEnabled).toBe(false);
-    expect(flags.festivalApplicationsEnabled).toBe(false);
-    expect(flags.festivalLivePerformanceEnabled).toBe(false);
+    expect(flags.legacyFestivalWriteEnabled).toBe(false);
+    expect(flags.newFestivalSystemEnabled).toBe(true);
+    expect(flags.festivalCreationEnabled).toBe(true);
+    expect(flags.festivalApplicationsEnabled).toBe(true);
+    expect(flags.festivalLivePerformanceEnabled).toBe(true);
   });
+
 
   it("respects explicit overrides", () => {
     const flags = resolveFestivalFeatureFlags({
