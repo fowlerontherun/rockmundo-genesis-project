@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.627",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival companies can now be founded properly: VIP players can pay the setup fee once and get a festival company, its editions ledger and a full audit trail." },
+      { type: 'feature', description: "Added the festival setup wizard backend, including festival scales (Local through Major) with capacity and duration limits." },
+      { type: 'feature', description: "Festival draft configuration (name, tagline, home city, scale, planned dates) now saves securely with version checks so two tabs can't overwrite each other." },
+      { type: 'improvement', description: "Retried festival saves are now ignored safely instead of applying twice, and every configuration change is recorded." },
+      { type: 'improvement', description: "Only the festival owner or an admin can read or change a festival's configuration." },
+    ],
+  },
+  {
     version: "1.1.626",
     date: "2026-08-03",
     changes: [
