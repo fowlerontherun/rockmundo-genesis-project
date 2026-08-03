@@ -6,7 +6,8 @@ import { buildEntityLayout, type EntityLayout } from "./EntityLayout";
 import { buildPerformerPlan, reconstructPerformerState, type PerformerPlan } from "./PerformerLifecycle";
 import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEngine";
 import type { Size } from "./Viewport";
-import { selectVenuePreset, scaleVenuePreset } from "./VenueLayout";
+import { selectVenuePreset, scaleVenuePreset, selectStageType } from "./VenueLayout";
+import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 
 export class CanvasRenderer {
@@ -18,12 +19,19 @@ export class CanvasRenderer {
   private performerPlan: PerformerPlan | null = null;
   private storyModel: StoryModel;
   private lastFrameMs = 0;
+  private pyroPlan: PyroPlan | null = null;
 
-  constructor(private canvas: HTMLCanvasElement, private replay: GigViewerReplay, private experience: GigExperienceDTO | null, private reducedMotion: boolean) {
+  constructor(private canvas: HTMLCanvasElement, private replay: GigViewerReplay, private experience: GigExperienceDTO | null, private reducedMotion: boolean, private options: { pyrotechnics?: boolean; pyroIntensity?: number } = {}) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas is unavailable");
     this.ctx = ctx;
     this.storyModel = buildStoryModel(replay, experience);
+    this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
+      story: this.storyModel,
+      stageType: selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: (experience?.gig?.venue as any)?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }),
+      seed: (replay as any).simulationSeed ?? replay.id,
+      intensity: this.options.pyroIntensity ?? 1,
+    });
   }
 
   resize(size: Size) {
@@ -107,6 +115,8 @@ export class CanvasRenderer {
 
     // Atmosphere overlay (haze/strobe) above the crowd but below overlays
     drawAtmosphere(ctx, preset, size, storySnapshot.crowdEnergy, state.positionMs, this.reducedMotion);
+    // Pyrotechnics / fireworks cue sheet (presentation only)
+    drawPyrotechnics(ctx, preset, size, { plan: this.pyroPlan, positionMs: state.positionMs, reducedMotion: this.reducedMotion, crowdEnergy: storySnapshot.crowdEnergy });
 
     if (state.activeEvent?.visualPayload.type === "spotlight" || state.activeEvent?.visualPayload.type === "moment_effect") {
       ctx.strokeStyle = "rgba(250, 204, 21, .75)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(size.width / 2, preset.stage.y + preset.stage.height / 2, 48 + (this.reducedMotion ? 0 : Math.sin(state.positionMs / 180) * 8), 0, Math.PI * 2); ctx.stroke();
