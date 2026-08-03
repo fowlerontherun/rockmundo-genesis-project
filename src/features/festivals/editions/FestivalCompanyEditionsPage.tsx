@@ -7,10 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { planNextFestivalEdition } from "@/features/festival-company/data/festivalCompanyRepository";
 import { festivalRoutes } from "@/features/festivals/routes";
-import { getFestivalCompanyEditions, type FestivalCompanyEdition } from "./repository";
-
-export const festivalCompanyEditionsQueryKey = (festivalCompanyId: string) =>
-  ["festival-company-editions", festivalCompanyId] as const;
+import { festivalCompanyEditionsQueryKey, getFestivalCompanyEditions, type FestivalCompanyEdition } from "./repository";
 
 const date = (value: string | null) =>
   value
