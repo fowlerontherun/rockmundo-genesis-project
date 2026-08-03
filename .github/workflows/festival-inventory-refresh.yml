@@ -1,9 +1,9 @@
 name: Festival inventory refresh
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/festival-edition-stabilisation
+      - main
 
 permissions:
   contents: read
