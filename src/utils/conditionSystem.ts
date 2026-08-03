@@ -206,30 +206,35 @@ export function aggregateConditionEffects(
 ): ConditionEffects {
   const result: ConditionEffects = {};
 
+  // Conditions are now a light-touch mechanic: they never hard-block activities
+  // and their numeric penalties are scaled down heavily.
+  const SOFTEN = 0.25;
+
   for (const condition of conditions) {
     const effects = condition.effects || CONDITION_DEFINITIONS[condition.condition_name]?.effects || {};
-    const severityMultiplier = condition.severity / 100;
+    const severityMultiplier = (condition.severity / 100) * SOFTEN;
 
-    // Boolean effects — any true wins
-    if (effects.blocks_gigs) result.blocks_gigs = true;
-    if (effects.blocks_guitar_gigs) result.blocks_guitar_gigs = true;
-    if (effects.blocks_singing) result.blocks_singing = true;
-    if (effects.blocks_travel) result.blocks_travel = true;
+    // Blocking effects are disabled — conditions only reduce performance now.
+    result.blocks_gigs = false;
+    result.blocks_guitar_gigs = false;
+    result.blocks_singing = false;
+    result.blocks_travel = false;
 
-    // Numeric penalties stack (capped)
-    result.xp_penalty = Math.min(50, (result.xp_penalty || 0) + (effects.xp_penalty || 0) * severityMultiplier);
+    // Numeric penalties stack (capped low)
+    result.xp_penalty = Math.min(15, (result.xp_penalty || 0) + (effects.xp_penalty || 0) * severityMultiplier);
     result.health_drain = (result.health_drain || 0) + (effects.health_drain || 0) * severityMultiplier;
-    result.gig_score_penalty = Math.min(50, (result.gig_score_penalty || 0) + (effects.gig_score_penalty || 0) * severityMultiplier);
-    result.fan_interaction_penalty = Math.min(50, (result.fan_interaction_penalty || 0) + (effects.fan_interaction_penalty || 0) * severityMultiplier);
+    result.gig_score_penalty = Math.min(15, (result.gig_score_penalty || 0) + (effects.gig_score_penalty || 0) * severityMultiplier);
+    result.fan_interaction_penalty = Math.min(15, (result.fan_interaction_penalty || 0) + (effects.fan_interaction_penalty || 0) * severityMultiplier);
 
-    // Energy cap takes the lowest
+    // Energy cap takes the lowest, floored so it never cripples play
     if (effects.energy_cap != null) {
-      result.energy_cap = Math.min(result.energy_cap ?? 100, effects.energy_cap);
+      result.energy_cap = Math.max(85, Math.min(result.energy_cap ?? 100, effects.energy_cap));
     }
 
     // Rest/recovery modifiers stack
-    result.rest_effectiveness = (result.rest_effectiveness || 0) + (effects.rest_effectiveness || 0);
+    result.rest_effectiveness = (result.rest_effectiveness || 0) + (effects.rest_effectiveness || 0) * SOFTEN;
     result.health_recovery = (result.health_recovery || 0) + (effects.health_recovery || 0);
+
 
     // Songwriting quality can be positive (depression boost)
     result.songwriting_quality = (result.songwriting_quality || 0) + (effects.songwriting_quality || 0);
