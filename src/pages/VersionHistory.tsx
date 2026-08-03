@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.624",
+    date: "2026-08-03",
+    changes: [
+      { type: 'improvement', description: "Removed fan flags, hand-painted banners and mosh/pit circles from the gig viewer, viewer demo and replay canvas for a cleaner crowd." },
+      { type: 'improvement', description: "Pit security line and crowd surfers remain, still scaled by attendance and crowd energy." },
+    ],
+  },
+  {
     version: "1.1.623",
     date: "2026-08-03",
     changes: [
