@@ -41,6 +41,10 @@ jobs:
         run: npm run test:festivals:routes
       - name: Festival route components
         run: npm run test:festivals:route-components
+      - name: Festival active callers
+        run: npm run test:festivals:active-callers
+      - name: Supabase RPC contracts
+        run: npm run verify:supabase-rpcs
       - name: Migration ordering
         run: npm run verify:migration-timestamps
       - name: Production build
