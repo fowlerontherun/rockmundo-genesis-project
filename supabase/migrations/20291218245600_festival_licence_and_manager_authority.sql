@@ -450,7 +450,7 @@ DECLARE
   payload_hash text;
   action text;
   transaction_id uuid;
-  result jsonb;
+  licence_result jsonb;
   renewal_base timestamptz;
 BEGIN
   IF auth.uid() IS NULL OR actor IS NULL THEN
@@ -647,15 +647,15 @@ BEGIN
 
   PERFORM public._refresh_festival_company_edition_readiness(company.id);
 
-  result := public.get_festival_company_upgrades(company.id);
+  licence_result := public.get_festival_company_upgrades(company.id);
   UPDATE public.festival_licence_requests
   SET status = 'succeeded',
       financial_transaction_id = transaction_id,
-      result = result,
+      result = licence_result,
       completed_at = now()
   WHERE id = request.id;
 
-  RETURN result;
+  RETURN licence_result;
 END;
 $$;
 
