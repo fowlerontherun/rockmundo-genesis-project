@@ -54,7 +54,7 @@ export function calculateHealthRecovery(
   behaviorModifiers?: BehaviorHealthModifiers
 ): number {
   const hours = timeSinceLastActivityMs / (1000 * 60 * 60);
-  let rate = isResting ? 10 : 2; // Rest = 10/hr, passive = 2/hr
+  let rate = isResting ? 25 : 8; // Rest = 25/hr, passive = 8/hr (fast recovery)
   
   // Apply behavior modifiers if provided
   if (behaviorModifiers) {
@@ -75,11 +75,11 @@ export function applyHealthPenalties(
   let penalty = 0;
   
   if (health <= 10) {
-    penalty = 0.5; // -50%
+    penalty = 0.15; // -15%
   } else if (health <= 30) {
-    penalty = 0.25; // -25%
+    penalty = 0.07; // -7%
   } else if (health <= 50) {
-    penalty = 0.1; // -10%
+    penalty = 0.03; // -3%
   }
   
   return {
@@ -88,6 +88,7 @@ export function applyHealthPenalties(
     penalty: penalty * 100,
   };
 }
+
 
 export function getHealthStatus(health: number): {
   label: string;
