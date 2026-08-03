@@ -373,7 +373,7 @@ DECLARE
   start_date date;
   end_date date;
   duration integer;
-  preferred_month integer;
+  selected_month integer;
   city_id uuid;
   scale_key text;
   vibe_key text;
@@ -464,7 +464,7 @@ BEGIN
 
   start_date := nullif(p_plan->>'startsOn', '')::date;
   duration := nullif(p_plan->>'durationDays', '')::integer;
-  preferred_month := nullif(p_plan->>'preferredMonth', '')::integer;
+  selected_month := nullif(p_plan->>'preferredMonth', '')::integer;
   city_id := nullif(p_plan->>'cityId', '')::uuid;
   scale_key := nullif(p_plan->>'festivalScale', '');
   vibe_key := nullif(p_plan->>'vibe', '');
@@ -472,15 +472,15 @@ BEGIN
   environmental_key := coalesce(nullif(p_plan->>'environmentalPolicy', ''), 'standard');
   marketing_key := nullif(p_plan->>'marketingEmphasis', '');
 
-  IF start_date IS NULL OR duration IS NULL OR preferred_month IS NULL
+  IF start_date IS NULL OR duration IS NULL OR selected_month IS NULL
      OR city_id IS NULL OR scale_key IS NULL OR vibe_key IS NULL
      OR site_key IS NULL OR marketing_key IS NULL THEN
     RAISE EXCEPTION 'festival_annual_plan_invalid' USING ERRCODE = 'P0001';
   END IF;
 
   IF start_date < current_date
-     OR preferred_month NOT BETWEEN 1 AND 12
-     OR extract(month FROM start_date)::integer <> preferred_month THEN
+     OR selected_month NOT BETWEEN 1 AND 12
+     OR extract(month FROM start_date)::integer <> selected_month THEN
     RAISE EXCEPTION 'festival_annual_plan_dates_invalid' USING ERRCODE = 'P0001';
   END IF;
 
@@ -530,7 +530,7 @@ BEGIN
   UPDATE public.festival_editions_v2
   SET starts_on = start_date,
       ends_on = end_date,
-      preferred_month = preferred_month,
+      preferred_month = selected_month,
       city_id = city.id,
       country_code = city.country,
       site_type = site_key,
