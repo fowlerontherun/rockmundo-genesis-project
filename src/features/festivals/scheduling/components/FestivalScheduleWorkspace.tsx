@@ -360,7 +360,7 @@ function FestivalMobileAgenda({
 }) {
   const stageItems = items
     .filter((item) => item.stage_id === stageIdValue)
-    .toSorted((a, b) => text(a.starts_at).localeCompare(text(b.starts_at)));
+    .sort((a, b) => text(a.starts_at).localeCompare(text(b.starts_at)));
   return (
     <Card className="lg:hidden">
       <CardHeader>
