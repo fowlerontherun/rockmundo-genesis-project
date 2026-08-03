@@ -17,7 +17,17 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: Install without rewriting stale lockfile
-        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+        run: |
+          for attempt in 1 2 3; do
+            if npm install --package-lock=false --ignore-scripts --no-audit --no-fund --legacy-peer-deps; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            rm -rf node_modules
+            sleep $((attempt * 10))
+          done
       - name: Lint Festival projection sources
         run: >-
           npx eslint
