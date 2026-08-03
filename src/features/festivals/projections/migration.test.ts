@@ -49,6 +49,27 @@ describe("annual Festival internal projection SQL", () => {
     );
   });
 
+  it("refreshes hidden projections without consuming player-facing versions", () => {
+    expect(migration).toContain(
+      "planning_version = public.festival_site_plans.planning_version,",
+    );
+    expect(migration).toContain(
+      "planning_version = public.festival_ticket_plans.planning_version,",
+    );
+    expect(migration).not.toContain(
+      "planning_version = public.festival_site_plans.planning_version + 1",
+    );
+    expect(migration).not.toContain(
+      "planning_version = public.festival_ticket_plans.planning_version + 1",
+    );
+    expect(migration).toMatch(
+      /UPDATE public\.festival_ticket_plans[\s\S]*planning_version = planning_version \+ 1/i,
+    );
+    expect(migration).toMatch(
+      /ON CONFLICT \(festival_edition_id\)[\s\S]*planning_version = public\.festival_artist_programmes\.planning_version \+ 1/i,
+    );
+  });
+
   it("generates the hidden site, stages, standard ticket and forecast", () => {
     for (const table of [
       "festival_site_plans",
