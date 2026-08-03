@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { useBandPaymentSource } from "@/hooks/useBandPaymentSource";
+import { BandPaymentSourceSelector } from "@/components/bands/BandPaymentSourceSelector";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -49,6 +51,7 @@ export interface BookingForecast {
 }
 
 export interface GigBookingSubmission {
+  paymentSource?: "band" | "personal";
   setlistId: string;
   ticketPrice: number;
   selectedDate: Date;
@@ -72,6 +75,7 @@ interface GigBookingDialogProps {
 
 export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, isBooking, initialDate }: GigBookingDialogProps) => {
   const { toast } = useToast();
+  const payment = useBandPaymentSource(band.id);
   const [selectedSetlistId, setSelectedSetlistId] = useState<string>("");
   const [ticketPrice, setTicketPrice] = useState<number>(20);
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate ? new Date(initialDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
@@ -233,7 +237,38 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
       return;
     }
 
+    // Booking fee mirrors the server rule: max($50, 10% of projected revenue).
+    const estimatedBookingFee = Math.max(50, Math.round(estimatedRevenue * 0.1));
+
+    if (!payment.canAfford(estimatedBookingFee)) {
+      toast({
+        title: "Insufficient funds",
+        description: payment.source === "band"
+          ? "The band cannot cover the booking fee. Switch to personal funds or top up the treasury."
+          : "Your personal funds cannot cover the booking fee.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Personal override: move money into the treasury first (with a small buffer
+      // for server-side fee rounding) so the atomic booking RPC stays unchanged.
+      await payment.prepareFunds(
+        Math.ceil(estimatedBookingFee * 1.15),
+        "Gig booking (personal funds)"
+      );
+    } catch (error) {
+      toast({
+        title: "Payment failed",
+        description: error instanceof Error ? error.message : "Could not use your personal funds.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     await onConfirm({
+      paymentSource: payment.source,
       setlistId: selectedSetlistId,
       ticketPrice,
       selectedDate,
@@ -696,6 +731,16 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
             </>
           )}
         </div>
+
+        <BandPaymentSourceSelector
+          cost={Math.max(50, Math.round(estimatedRevenue * 0.1))}
+          source={payment.source}
+          onChange={payment.setSource}
+          bandBalance={payment.bandBalance}
+          personalBalance={payment.personalBalance}
+          bandName={band.name}
+          disabled={isBooking}
+        />
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isBooking}>
