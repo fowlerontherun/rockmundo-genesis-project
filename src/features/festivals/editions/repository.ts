@@ -31,6 +31,7 @@ export const festivalCompanyEditionSchema = z.object({
   status: z.string().min(1),
   startsOn: nullableString,
   endsOn: nullableString,
+  preferredMonth: nullableNumber.optional().default(null),
   countryCode: nullableString,
   cityId: z.string().uuid().nullable(),
   vibe: nullableString,
@@ -38,7 +39,14 @@ export const festivalCompanyEditionSchema = z.object({
   durationDays: nullableNumber,
   environmentalPolicy: nullableString,
   festivalScale: nullableString,
+  marketingEmphasis: nullableString.optional().default(null),
   expectedCapacity: nullableNumber,
+  estimatedOperatingCostMinor: z.number().int().nonnegative().optional().default(0),
+  planningStatus: z
+    .enum(["not_started", "in_progress", "ready"])
+    .optional()
+    .default("not_started"),
+  readinessScore: z.number().int().min(0).max(100).optional().default(0),
   version: z.number().int().nonnegative(),
   lockedAt: nullableString,
   creationSource: z.string().min(1),
@@ -56,7 +64,9 @@ export const festivalCompanyEditionsSchema = z.object({
   editions: z.array(festivalCompanyEditionSchema),
 });
 
-export type FestivalEditionPlanBindings = z.infer<typeof festivalEditionPlanBindingsSchema>;
+export type FestivalEditionPlanBindings = z.infer<
+  typeof festivalEditionPlanBindingsSchema
+>;
 export type FestivalEditionPlanBindingKey = keyof FestivalEditionPlanBindings;
 export type FestivalCompanyEdition = z.infer<typeof festivalCompanyEditionSchema>;
 export type FestivalCompanyEditions = z.infer<typeof festivalCompanyEditionsSchema>;
@@ -64,10 +74,9 @@ export type FestivalCompanyEditions = z.infer<typeof festivalCompanyEditionsSche
 export async function getFestivalCompanyEditions(
   festivalCompanyId: string,
 ): Promise<FestivalCompanyEditions> {
-  const { data, error } = await festivalRpc(
-    "get_festival_company_editions",
-    { p_festival_company_id: festivalCompanyId },
-  );
+  const { data, error } = await festivalRpc("get_festival_company_editions", {
+    p_festival_company_id: festivalCompanyId,
+  });
 
   if (error) throw new Error(error.message ?? "festival_editions_unavailable");
 
