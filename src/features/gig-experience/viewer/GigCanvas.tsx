@@ -5,11 +5,11 @@ import type { DerivedPlaybackState } from "./engine/PlaybackController";
 import { CanvasRenderer } from "./engine/CanvasRenderer";
 import { useCanvasSize } from "./hooks/useCanvasSize";
 
-export function GigCanvas({ replay, experience, playbackState, reducedMotion = false, pyrotechnics = true, pyroIntensity = 1, className }: { replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; reducedMotion?: boolean; pyrotechnics?: boolean; pyroIntensity?: number; className?: string }) {
+export function GigCanvas({ replay, experience, playbackState, reducedMotion = false, pyrotechnics = true, pyroIntensity = 1, fill = false, className }: { replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; reducedMotion?: boolean; pyrotechnics?: boolean; pyroIntensity?: number; fill?: boolean; className?: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasRenderer | null>(null);
-  const size = useCanvasSize(wrapRef);
+  const size = useCanvasSize(wrapRef, { fill });
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -21,7 +21,7 @@ export function GigCanvas({ replay, experience, playbackState, reducedMotion = f
   useEffect(() => { rendererRef.current?.resize(size); }, [size]);
   useEffect(() => { rendererRef.current?.render(playbackState); }, [playbackState, size]);
   return (
-    <div ref={wrapRef} className={className ?? "w-full"}>
+    <div ref={wrapRef} className={className ?? (fill ? "h-full w-full" : "w-full")}>
       <canvas ref={canvasRef} role="img" aria-label="Top-down replay canvas. Use the text timeline for a full accessible description." className="w-full rounded-xl border bg-slate-950" />
     </div>
   );
