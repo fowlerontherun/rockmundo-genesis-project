@@ -121,21 +121,21 @@ export function getHealthStatus(health: number): {
     return {
       label: "Exhausted",
       color: "text-orange-600",
-      warning: "You're exhausted! Performance quality is significantly reduced. Rest immediately!",
+      warning: "You're exhausted. A short rest will bring you back quickly.",
       canPerform: true,
     };
   } else if (health > 0) {
     return {
       label: "Burned Out",
       color: "text-red-600",
-      warning: "Critical burnout! You're at risk of collapsing. Cannot perform activities!",
-      canPerform: false,
+      warning: "You're running on empty — rest soon, but you can still perform.",
+      canPerform: true,
     };
   } else {
     return {
       label: "Collapsed",
       color: "text-red-800",
-      warning: "You've collapsed from exhaustion. Mandatory rest period required!",
+      warning: "You've collapsed from exhaustion. A short rest is required.",
       canPerform: false,
     };
   }
@@ -143,7 +143,8 @@ export function getHealthStatus(health: number): {
 
 export function calculateTimeToFullRecovery(currentHealth: number): number {
   const healthNeeded = 100 - currentHealth;
-  const hoursNeeded = healthNeeded / 2; // 2 health per hour passive recovery
+  const hoursNeeded = healthNeeded / 8; // 8 health per hour passive recovery
+
   return Math.ceil(hoursNeeded);
 }
 
