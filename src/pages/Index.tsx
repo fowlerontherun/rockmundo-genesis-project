@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useOptionalGameData } from "@/hooks/useGameData";
 import { usePlayerCharacterIdentity } from "@/hooks/useCharacterIdentity";
 import { useCharacterDeath } from "@/hooks/useCharacterDeath";
-import { CharacterDeathScreen } from "@/components/character/CharacterDeathScreen";
+import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -20,13 +20,9 @@ const Index = () => {
   
   const { data: characterIdentity, isLoading: identityLoading } = usePlayerCharacterIdentity();
   const {
-    deadCharacters,
     deadCharactersLoading,
     hasLivingCharacter,
     hasLivingCharacterLoading,
-    resurrectCharacter,
-    createChildCharacter,
-    createFreshCharacter,
     updateLastLogin,
   } = useCharacterDeath();
 
@@ -64,72 +60,9 @@ const Index = () => {
     // If no living character, the death screen or fresh start will render below
   }, [authLoading, dataLoading, identityLoading, hasLivingCharacterLoading, deadCharactersLoading, gameData, navigate, user, profile, characterIdentity, hasLivingCharacter]);
 
-  // Show death screen if no living character and there are dead ones
-  if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter && deadCharacters.length > 0) {
-    const mostRecentDeath = deadCharacters[0];
-    return (
-      <CharacterDeathScreen
-        deadCharacter={mostRecentDeath}
-        onResurrect={(profileId) => {
-          resurrectCharacter.mutate(profileId, {
-            onSuccess: () => {
-              window.location.href = "/home";
-            },
-          });
-        }}
-        onCreateChild={(parentId, opts) => {
-          createChildCharacter.mutate(
-            { parentProfileId: parentId, displayName: opts.displayName, username: opts.username },
-            {
-              onSuccess: () => {
-                window.location.href = "/onboarding";
-              },
-            }
-          );
-        }}
-        onCreateFresh={(opts) => {
-          createFreshCharacter.mutate(opts, {
-            onSuccess: () => {
-              window.location.href = "/onboarding";
-            },
-          });
-        }}
-        isLoading={resurrectCharacter.isPending || createChildCharacter.isPending || createFreshCharacter.isPending}
-      />
-    );
-  }
-
-  // No living character and no dead ones — brand-new account fresh start.
-  if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter && deadCharacters.length === 0) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4">
-        <div className="w-full max-w-md space-y-6 rounded-xl bg-background/95 p-8 text-center shadow-xl">
-          <h2 className="text-xl font-bold">Welcome to RockMundo</h2>
-          <p className="text-sm text-muted-foreground">
-            Let's create your first character. You can personalize everything in onboarding right after.
-          </p>
-          <Button
-            onClick={() => {
-              createFreshCharacter.mutate(undefined, {
-                onSuccess: () => {
-                  window.location.href = "/onboarding";
-                },
-              });
-            }}
-            disabled={createFreshCharacter.isPending}
-          >
-            {createFreshCharacter.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              "Create New Character"
-            )}
-          </Button>
-        </div>
-      </div>
-    );
+  // No living character: show the revive / create choice immediately.
+  if (!authLoading && user && !hasLivingCharacterLoading && !deadCharactersLoading && !hasLivingCharacter) {
+    return <NoActiveCharacterGate>{null}</NoActiveCharacterGate>;
   }
 
   if (authLoading || identityLoading || hasLivingCharacterLoading || deadCharactersLoading || (!gameData && user) || (user && dataLoading)) {
