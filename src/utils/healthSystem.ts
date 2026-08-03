@@ -3,32 +3,32 @@ import { clampPercent } from "@/utils/number";
 
 type Profile = Tables<"profiles">;
 
-// Health drain rates per hour (post-rebalance: young players should barely
-// notice fatigue, older players feel the cost).
+// Health drain rates per hour. Health is now a very light touch mechanic:
+// activities nudge it down slightly and rest restores it quickly.
 const HEALTH_COSTS = {
-  busking_session: 1.5,
-  gig: 1.5,
-  recording: 0.5,
-  jam_session: 0.5,
-  songwriting: 0.25,
-  travel: 1,
-  release_promo: 0.5,
-  default: 0.5,
+  busking_session: 0.3,
+  gig: 0.3,
+  recording: 0.1,
+  jam_session: 0.1,
+  songwriting: 0.05,
+  travel: 0.2,
+  release_promo: 0.1,
+  default: 0.1,
 } as const;
 
 /**
- * Age-based drain multiplier. Under 30 = extremely forgiving. Scales up smoothly
- * so older characters feel their years. Applied on top of activity base cost.
+ * Age-based drain multiplier. Very forgiving at all ages; older characters
+ * feel a mild extra cost but never a punishing one.
  */
 export function getAgeHealthDrainMultiplier(age?: number | null): number {
   const a = Math.max(0, Math.floor(age ?? 25));
-  if (a < 20) return 0.08;
-  if (a < 30) return 0.15;
-  if (a < 40) return 0.35;
-  if (a < 50) return 0.6;
-  if (a < 60) return 0.85;
-  if (a < 70) return 1.1;
-  return 1.4;
+  if (a < 20) return 0.05;
+  if (a < 30) return 0.08;
+  if (a < 40) return 0.15;
+  if (a < 50) return 0.25;
+  if (a < 60) return 0.35;
+  if (a < 70) return 0.45;
+  return 0.6;
 }
 
 export function calculateHealthDrain(
@@ -42,6 +42,7 @@ export function calculateHealthDrain(
   return Math.max(0, Math.round(hourlyRate * hours * multiplier));
 }
 
+
 export interface BehaviorHealthModifiers {
   recoveryModifier: number; // -25 to +5 percent
   restEffectiveness: number; // -10 to +20 percent
@@ -53,7 +54,7 @@ export function calculateHealthRecovery(
   behaviorModifiers?: BehaviorHealthModifiers
 ): number {
   const hours = timeSinceLastActivityMs / (1000 * 60 * 60);
-  let rate = isResting ? 10 : 2; // Rest = 10/hr, passive = 2/hr
+  let rate = isResting ? 25 : 8; // Rest = 25/hr, passive = 8/hr (fast recovery)
   
   // Apply behavior modifiers if provided
   if (behaviorModifiers) {
@@ -74,11 +75,11 @@ export function applyHealthPenalties(
   let penalty = 0;
   
   if (health <= 10) {
-    penalty = 0.5; // -50%
+    penalty = 0.15; // -15%
   } else if (health <= 30) {
-    penalty = 0.25; // -25%
+    penalty = 0.07; // -7%
   } else if (health <= 50) {
-    penalty = 0.1; // -10%
+    penalty = 0.03; // -3%
   }
   
   return {
@@ -87,6 +88,7 @@ export function applyHealthPenalties(
     penalty: penalty * 100,
   };
 }
+
 
 export function getHealthStatus(health: number): {
   label: string;
@@ -119,21 +121,21 @@ export function getHealthStatus(health: number): {
     return {
       label: "Exhausted",
       color: "text-orange-600",
-      warning: "You're exhausted! Performance quality is significantly reduced. Rest immediately!",
+      warning: "You're exhausted. A short rest will bring you back quickly.",
       canPerform: true,
     };
   } else if (health > 0) {
     return {
       label: "Burned Out",
       color: "text-red-600",
-      warning: "Critical burnout! You're at risk of collapsing. Cannot perform activities!",
-      canPerform: false,
+      warning: "You're running on empty — rest soon, but you can still perform.",
+      canPerform: true,
     };
   } else {
     return {
       label: "Collapsed",
       color: "text-red-800",
-      warning: "You've collapsed from exhaustion. Mandatory rest period required!",
+      warning: "You've collapsed from exhaustion. A short rest is required.",
       canPerform: false,
     };
   }
@@ -141,7 +143,8 @@ export function getHealthStatus(health: number): {
 
 export function calculateTimeToFullRecovery(currentHealth: number): number {
   const healthNeeded = 100 - currentHealth;
-  const hoursNeeded = healthNeeded / 2; // 2 health per hour passive recovery
+  const hoursNeeded = healthNeeded / 8; // 8 health per hour passive recovery
+
   return Math.ceil(hoursNeeded);
 }
 

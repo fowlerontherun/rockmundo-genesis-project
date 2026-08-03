@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.618",
+    date: "2026-08-03",
+    changes: [
+      { type: 'improvement', description: "Health and wellness rebalanced to be a light-touch mechanic: activity health drain cut by roughly 80%, age multipliers reduced across every bracket, and passive/rest recovery increased to 8/hr and 25/hr." },
+      { type: 'improvement', description: "Low-health penalties massively reduced (max 15% instead of 50%) and low health no longer blocks performing — only a full collapse requires a short rest." },
+      { type: 'improvement', description: "Ailments and conditions no longer hard-block gigs, singing, guitar or travel; their penalties are scaled to a quarter, capped at 15%, and energy caps are floored at 85%." },
+      { type: 'feature', description: "Inactive players now find their character in a coma rather than lost: after 45 days without logging in the character is placed in a coma and surfaced on next login, where it can be revived for free." },
+    ],
+  },
+  {
+
     version: "1.1.617",
     date: "2026-08-03",
     changes: [

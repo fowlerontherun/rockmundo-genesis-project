@@ -76,14 +76,15 @@ export async function checkHealthForActivity(
 
   let healthPenalty = 0;
   if (health <= 30) {
-    healthPenalty = 50;
+    healthPenalty = 15;
   } else if (health <= 50) {
-    healthPenalty = 25;
+    healthPenalty = 7;
   } else if (health <= 70) {
-    healthPenalty = 10;
+    healthPenalty = 3;
   }
 
-  healthPenalty = Math.min(75, healthPenalty + (conditionEffects.xp_penalty || 0));
+  healthPenalty = Math.min(25, healthPenalty + (conditionEffects.xp_penalty || 0));
+
 
   return { canPerform: true, message: null, healthPenalty };
 }
@@ -106,31 +107,32 @@ export async function applyHealthDrain(
 
   if (!profile) return;
 
-  // Rebalanced base drain: gentler baseline. Age scales impact so
-  // under-30 characters can comfortably manage their vitals.
+  // Health is a light-touch mechanic: activities barely dent it and rest
+  // restores it fast. Age adds only a mild extra cost.
   const healthCosts: Record<string, number> = {
-    gig: 3,
-    recording: 1,
-    songwriting: 0.5,
-    rehearsal: 1,
-    travel: 2,
-    busking: 2,
-    release_promo: 1,
-    default: 1,
+    gig: 0.6,
+    recording: 0.2,
+    songwriting: 0.1,
+    rehearsal: 0.2,
+    travel: 0.4,
+    busking: 0.4,
+    release_promo: 0.2,
+    default: 0.2,
   };
 
   const age = (profile as any).age ?? 25;
   const ageMultiplier =
-    age < 20 ? 0.15 :
-    age < 30 ? 0.25 :
-    age < 40 ? 0.5 :
-    age < 50 ? 0.75 :
-    age < 60 ? 1.0 :
-    age < 70 ? 1.3 : 1.6;
+    age < 20 ? 0.05 :
+    age < 30 ? 0.08 :
+    age < 40 ? 0.15 :
+    age < 50 ? 0.25 :
+    age < 60 ? 0.35 :
+    age < 70 ? 0.45 : 0.6;
 
   const hourlyHealthDrain = healthCosts[activityType] || healthCosts.default;
   const hours = durationMinutes / 60;
   const healthDrain = Math.max(0, Math.round(hourlyHealthDrain * hours * ageMultiplier));
+
 
   const newHealth = Math.max(0, (profile.health ?? 100) - healthDrain);
   const newEnergy = Math.max(0, (profile.energy ?? 100) - energyCost);
