@@ -1213,22 +1213,22 @@ AS $$
     ) END,
     'applicationWindows', coalesce((
       SELECT jsonb_agg(jsonb_build_object(
-        'id', application_application_application_application_window.id,
-        'name', application_application_application_application_window.name,
-        'opensAt', application_application_application_application_window.opens_at,
-        'closesAt', application_application_application_application_window.closes_at,
-        'eligibleArtistType', application_application_application_application_window.eligible_artist_type,
-        'minimumFame', application_application_application_application_window.minimum_fame,
-        'maximumFame', application_application_application_application_window.maximum_fame,
-        'preferredGenres', application_application_application_application_window.preferred_genres,
-        'minimumBandMembers', application_application_application_application_window.minimum_band_members,
-        'maximumBandMembers', application_application_application_application_window.maximum_band_members,
-        'targetStageTypes', application_application_application_application_window.target_stage_types,
-        'maximumSetMinutes', application_application_application_application_window.maximum_set_minutes,
-        'active', application_application_application_application_window.active
-      ) ORDER BY application_application_application_application_window.opens_at)
+        'id', application_window.id,
+        'name', application_window.name,
+        'opensAt', application_window.opens_at,
+        'closesAt', application_window.closes_at,
+        'eligibleArtistType', application_window.eligible_artist_type,
+        'minimumFame', application_window.minimum_fame,
+        'maximumFame', application_window.maximum_fame,
+        'preferredGenres', application_window.preferred_genres,
+        'minimumBandMembers', application_window.minimum_band_members,
+        'maximumBandMembers', application_window.maximum_band_members,
+        'targetStageTypes', application_window.target_stage_types,
+        'maximumSetMinutes', application_window.maximum_set_minutes,
+        'active', application_window.active
+      ) ORDER BY application_window.opens_at)
       FROM public.festival_artist_application_windows application_window
-      WHERE application_application_application_application_window.festival_artist_programme_id = programme.id
+      WHERE application_window.festival_artist_programme_id = programme.id
     ), '[]'::jsonb),
     'applications', '[]'::jsonb,
     'invitations', '[]'::jsonb,
