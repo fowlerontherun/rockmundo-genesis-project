@@ -1,8 +1,14 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FestivalScheduleWorkspace } from "./FestivalScheduleWorkspace";
 
-const upsertItem = { mutate: vi.fn() };
+const upsertItem = { isPending: false, mutate: vi.fn() };
 const publish = { isPending: false, mutate: vi.fn() };
 const previewTemplate = { mutate: vi.fn() };
 const applyTemplate = { mutate: vi.fn() };
@@ -20,7 +26,15 @@ const workspace = {
     { id: "stage-main", public_name: "Main Stage" },
     { id: "stage-second", public_name: "Second Stage" },
   ],
-  operatingHours: [],
+  operatingHours: [
+    {
+      id: "hours-main",
+      stage_id: "stage-main",
+      festival_date: "2030-06-01",
+      opens_at: "2030-06-01T11:00:00.000Z",
+      curfew_at: "2030-06-02T01:00:00.000Z",
+    },
+  ],
   scheduleItems: [
     {
       id: "slot-1",
@@ -38,14 +52,18 @@ const workspace = {
     },
   ],
   unscheduledItems: [],
-  conflictSummary: { items: [], blockingCount: 0 },
+  conflictSummary: { items: [], blockingCount: 0, warningCount: 0 },
   readinessSummary: {},
   permissions: { viewSchedule: true, manageSchedule: true },
   availableActions: ["manage_schedule", "publish_schedule"],
 };
 
 vi.mock("../hooks", () => ({
-  useFestivalScheduleWorkspace: () => ({ data: workspace, isLoading: false, error: null }),
+  useFestivalScheduleWorkspace: () => ({
+    data: workspace,
+    isLoading: false,
+    error: null,
+  }),
   useScheduleMutations: () => ({
     upsertItem,
     publish,
@@ -66,23 +84,30 @@ afterEach(() => {
 });
 
 describe("FestivalScheduleWorkspace owner slot management", () => {
-  it("shows the stage schedule timeline with existing festival slots", () => {
+  it("shows the stage schedule timeline in Festival local time through overnight curfew", () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
     expect(screen.getByText("Main Stage")).toBeInTheDocument();
     expect(screen.getByText("Second Stage")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Sunset opener/i })).toBeInTheDocument();
+    expect(screen.getByText("00:00 (+1)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /19:00–19:45.*Sunset opener/i })).toBeInTheDocument();
   });
 
-  it("creates a manual festival slot in the owner schedule workspace", async () => {
+  it("creates a manual festival slot using the Festival timezone", async () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
     fireEvent.click(screen.getByRole("button", { name: /Manual slot/i }));
     const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByPlaceholderText("Title"), { target: { value: "Late night headline slot" } });
-    fireEvent.change(within(dialog).getByDisplayValue("18:00"), { target: { value: "21:30" } });
-    fireEvent.change(within(dialog).getByDisplayValue("45"), { target: { value: "75" } });
+    fireEvent.change(within(dialog).getByPlaceholderText("Title"), {
+      target: { value: "Late night headline slot" },
+    });
+    fireEvent.change(within(dialog).getByDisplayValue("18:00"), {
+      target: { value: "21:30" },
+    });
+    fireEvent.change(within(dialog).getByDisplayValue("45"), {
+      target: { value: "75" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(upsertItem.mutate).toHaveBeenCalled());
@@ -94,20 +119,49 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
         itemType: "performance_slot",
         stageId: "stage-main",
         festivalDate: "2030-06-01",
-        startsAt: "2030-06-01T21:30:00",
+        startsAt: "2030-06-01T20:30:00.000Z",
+        endsAt: "2030-06-01T21:45:00.000Z",
         durationMinutes: 75,
         publicVisible: true,
       },
     });
   });
 
-  it("edits an existing festival slot from the schedule inspector", async () => {
+  it("assigns an early-morning slot to the next calendar day of an overnight Festival window", async () => {
+    render(<FestivalScheduleWorkspace editionId="edition-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Manual slot/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByDisplayValue("18:00"), {
+      target: { value: "01:00" },
+    });
+    fireEvent.change(within(dialog).getByDisplayValue("45"), {
+      target: { value: "60" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(upsertItem.mutate).toHaveBeenCalled());
+    expect(upsertItem.mutate.mock.calls[0][0]).toMatchObject({
+      item: {
+        festivalDate: "2030-06-01",
+        startsAt: "2030-06-02T00:00:00.000Z",
+        endsAt: "2030-06-02T01:00:00.000Z",
+      },
+    });
+  });
+
+  it("edits an existing festival slot from Festival-local datetime inputs", async () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
     fireEvent.click(screen.getByRole("button", { name: /Sunset opener/i }));
     const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByDisplayValue("Sunset opener"), { target: { value: "Edited sunset opener" } });
-    fireEvent.change(within(dialog).getByDisplayValue("Hold for local act"), { target: { value: "Confirmed for local act" } });
+    expect(within(dialog).getByDisplayValue("2030-06-01T19:00")).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByDisplayValue("Sunset opener"), {
+      target: { value: "Edited sunset opener" },
+    });
+    fireEvent.change(within(dialog).getByDisplayValue("Hold for local act"), {
+      target: { value: "Confirmed for local act" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save draft" }));
 
     await waitFor(() => expect(upsertItem.mutate).toHaveBeenCalled());
@@ -121,6 +175,8 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
         itemType: "performance_slot",
         stageId: "stage-main",
         festivalDate: "2030-06-01",
+        startsAt: "2030-06-01T18:00:00.000Z",
+        endsAt: "2030-06-01T18:45:00.000Z",
         internalNotes: "Confirmed for local act",
         durationMinutes: 45,
       },
