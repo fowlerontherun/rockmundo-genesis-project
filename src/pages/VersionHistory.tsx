@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.615",
+    date: "2026-07-31",
+    changes: [
+      { type: 'feature', description: "Band activities that cost money now default to paying from the band's funds, and clearly show on screen which wallet is being used." },
+      { type: 'feature', description: "You can override the payer and use your own personal money instead — rehearsal bookings and gig bookings both show a Band funds / My personal funds switch with each balance." },
+      { type: 'improvement', description: "When you pay personally, the money is routed into the band treasury first so the spend still appears on the band's finance record." },
+      { type: 'improvement', description: "Booking buttons now warn you exactly how much you are short and let you switch payer instead of just blocking the booking." },
+    ],
+  },
+  {
     version: "1.1.614",
     date: "2026-07-31",
     changes: [
