@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { FestivalCompanyEligibilityCard } from "@/features/festival-company/ui/FestivalCompanyEligibilityCard";
+import { FestivalConfigurationWizard } from "@/features/festival-company/ui/FestivalConfigurationWizard";
+import { festivalCompanySetupQueryKey } from "@/features/festival-company/application/useFestivalCompanySetup";
 import { resolveOwnerFestivalIdentifier, resolvePublicFestivalIdentifier } from "../resolver";
 import { festivalRoutes } from "../routes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,11 +26,11 @@ export function FestivalCompanyHome() {
 }
 
 function FestivalCompanySummaryHome({ festivalCompanyId }: { festivalCompanyId: string }) {
-  const query = useQuery({ queryKey: ["festival-company-home", festivalCompanyId], queryFn: () => getFestivalCompanySetup(festivalCompanyId) });
+  const query = useQuery({ queryKey: festivalCompanySetupQueryKey(festivalCompanyId), queryFn: () => getFestivalCompanySetup(festivalCompanyId) });
   if (query.isLoading) return <main className="p-6" role="status">Loading Festival company…</main>;
   if (query.error || !query.data) return <RouteState title="Festival company unavailable" body="The company was not found or you do not have management permission." />;
   const f = query.data;
-  return <main className="mx-auto max-w-6xl space-y-5 p-6"><h1 className="text-3xl font-bold">{f.publicName}</h1><div className="grid gap-4 md:grid-cols-3"><Summary title="Company" value={f.legalCompanyName}/><Summary title="Balance" value={new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(f.companyBalance)}/><Summary title="Setup" value={f.setupCompleted ? "Ready" : "Action required"}/></div><p>{f.configurationComplete ? "Configuration complete." : "Configuration blocks the next edition."}</p><div className="flex flex-wrap gap-3"><Link className="underline" to={festivalRoutes.genericCompany(f.companyId)}>Generic company ownership and finance</Link><Link className="underline" to={festivalRoutes.editions(f.festivalCompanyId)}>Annual editions</Link><Link className="underline" to={festivalRoutes.upgrades(f.festivalCompanyId)}>Upgrades and licences</Link></div></main>;
+  return <main className="mx-auto max-w-6xl space-y-5 p-6"><h1 className="text-3xl font-bold">{f.publicName}</h1><div className="grid gap-4 md:grid-cols-3"><Summary title="Company" value={f.legalCompanyName}/><Summary title="Balance" value={new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(f.companyBalance)}/><Summary title="Setup" value={f.setupCompleted ? "Ready" : "Action required"}/></div><p>{f.configurationComplete ? "Configuration complete." : "Complete the initial configuration to create the first annual edition."}</p><div className="flex flex-wrap gap-3"><Link className="underline" to={festivalRoutes.genericCompany(f.companyId)}>Generic company ownership and finance</Link>{f.setupCompleted&&<Link className="underline" to={festivalRoutes.editions(f.festivalCompanyId)}>Annual editions</Link>}<Link className="underline" to={festivalRoutes.upgrades(f.festivalCompanyId)}>Upgrades and licences</Link></div>{!f.setupCompleted&&<section className="rounded-lg border p-4 md:p-6" aria-label="Initial Festival setup"><FestivalConfigurationWizard festivalCompanyId={festivalCompanyId}/></section>}</main>;
 }
 export function FestivalUpgradesPage(){const {festivalCompanyId}=useParams();return <FestivalUpgradeWorkspace festivalCompanyId={festivalCompanyId!}/>;}
 const Summary=({title,value}:{title:string;value:string})=><Card><CardHeader><CardTitle className="text-sm">{title}</CardTitle></CardHeader><CardContent>{value}</CardContent></Card>;
