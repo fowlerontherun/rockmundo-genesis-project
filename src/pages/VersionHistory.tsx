@@ -17,6 +17,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.620",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Pyrotechnics and fireworks added to the gig viewer: flame jets, sparkler fountains, CO2 jets, aerial firework shells and finale confetti, all driven deterministically by the stored replay so playback stays consistent." },
+      { type: 'feature', description: "New pop-out full screen stage view in the gig viewer, with the canvas filling the screen and controls docked below (Esc exits)." },
+      { type: 'feature', description: "Pyrotechnics toggle in the viewer controls, saved as a viewer preference alongside reduced motion." },
+      { type: 'improvement', description: "Outdoor venues (festivals and stadiums) now get aerial fireworks while indoor rooms use flames and fountains only; reduced motion dims and calms every effect." },
+      { type: 'improvement', description: "Gig Viewer Demo aligned with the live viewer: the venue selector now actually changes the stage type and capacity, and includes Stadium, Festival main stage, Festival second stage and Outdoor park festival views." },
+      { type: 'improvement', description: "Demo reduced-motion and pyrotechnics switches now write the same viewer preferences the real gig viewer reads, so previews match live playback." },
+    ],
+  },
+  {
+
     version: "1.1.619",
     date: "2026-08-03",
     changes: [
