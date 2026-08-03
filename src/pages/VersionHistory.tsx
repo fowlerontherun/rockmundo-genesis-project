@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.632",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Fixed Finances and Banking showing the wrong character's money: the balances were pulled from an arbitrary one of your characters instead of the one you have selected, so wallet cash and net worth did not match your header cash." },
+      { type: 'improvement', description: "All finance, banking and other character-scoped screens now consistently resolve your active character first." },
+    ],
+  },
+  {
     version: "1.1.631",
     date: "2026-08-03",
     changes: [
