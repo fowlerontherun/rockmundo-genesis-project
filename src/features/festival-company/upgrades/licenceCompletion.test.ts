@@ -59,7 +59,7 @@ describe("simplified Festival licence completion", () => {
     expect(workspace).not.toContain("Regulator review");
   });
 
-  it("uses normal company-manager authority across the simplified journey", () => {
+  it("uses normal company-manager authority without weakening the company home contract", () => {
     const migration = source(migrationPath);
 
     expect(migration).toContain("public.can_manage_company(company.company_id)");
@@ -78,6 +78,13 @@ describe("simplified Festival licence completion", () => {
     expect(migration).toMatch(
       /CREATE OR REPLACE FUNCTION public\._festival_projection_authorized[\s\S]*_festival_company_manager_authorized/,
     );
+    expect(migration).toContain(
+      "coalesce(owner.display_name, owner.username, 'Owner')",
+    );
+    expect(migration).toContain(
+      "'capabilities', public.festival_company_capabilities()",
+    );
+    expect(migration).not.toContain("owner.character_name");
   });
 
   it("protects licence charging with portable versioned receipts", () => {
