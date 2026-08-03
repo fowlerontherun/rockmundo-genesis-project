@@ -12308,6 +12308,56 @@ export type Database = {
         }
         Relationships: []
       }
+      festival_awards: {
+        Row: {
+          category: string
+          citation: string
+          created_at: string
+          festival_result_id: string | null
+          formula_version: string
+          id: string
+          score: number
+          season_year: number
+          winner_id: string | null
+          winner_name: string
+          winner_type: string
+        }
+        Insert: {
+          category: string
+          citation?: string
+          created_at?: string
+          festival_result_id?: string | null
+          formula_version?: string
+          id?: string
+          score?: number
+          season_year: number
+          winner_id?: string | null
+          winner_name: string
+          winner_type: string
+        }
+        Update: {
+          category?: string
+          citation?: string
+          created_at?: string
+          festival_result_id?: string | null
+          formula_version?: string
+          id?: string
+          score?: number
+          season_year?: number
+          winner_id?: string | null
+          winner_name?: string
+          winner_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_awards_festival_result_id_fkey"
+            columns: ["festival_result_id"]
+            isOneToOne: false
+            referencedRelation: "festival_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_backstage_events: {
         Row: {
           band_id: string
@@ -16927,6 +16977,188 @@ export type Database = {
           },
         ]
       }
+      festival_result_reviews: {
+        Row: {
+          crowd_atmosphere: number
+          facilities: number
+          festival_result_id: string
+          food_drink: number
+          formula_evidence: Json
+          formula_version: string
+          id: string
+          line_up: number
+          organisation: number
+          overall_rating: number
+          published_at: string
+          stage_production: number
+          value_for_money: number
+        }
+        Insert: {
+          crowd_atmosphere: number
+          facilities: number
+          festival_result_id: string
+          food_drink: number
+          formula_evidence?: Json
+          formula_version?: string
+          id?: string
+          line_up: number
+          organisation: number
+          overall_rating: number
+          published_at?: string
+          stage_production: number
+          value_for_money: number
+        }
+        Update: {
+          crowd_atmosphere?: number
+          facilities?: number
+          festival_result_id?: string
+          food_drink?: number
+          formula_evidence?: Json
+          formula_version?: string
+          id?: string
+          line_up?: number
+          organisation?: number
+          overall_rating?: number
+          published_at?: string
+          stage_production?: number
+          value_for_money?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_result_reviews_festival_result_id_fkey"
+            columns: ["festival_result_id"]
+            isOneToOne: true
+            referencedRelation: "festival_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_results: {
+        Row: {
+          attendance: number
+          city: string
+          country: string
+          crowd_satisfaction: number
+          currency_code: string
+          edition_year: number
+          fastest_sell_out_seconds: number | null
+          festival_company_id: string
+          festival_edition_id: string
+          festival_name: string
+          festival_type: string
+          food_drink_summary: Json
+          formula_versions: Json
+          genres: string[]
+          headliners: Json
+          id: string
+          incident_summary: Json
+          largest_performance_crowd: number
+          line_up: Json
+          merchandise_summary: Json
+          peak_attendance: number
+          performance_count: number
+          performance_highlights: Json
+          poster_url: string | null
+          profit_loss_minor: number
+          published_at: string
+          revenue_minor: number
+          sell_out_percentage: number
+          site_capacity: number
+          sold_out: boolean
+          source_digests: Json
+          sponsor_summary: Json
+          timetable: Json
+          weather_summary: Json
+        }
+        Insert: {
+          attendance?: number
+          city: string
+          country: string
+          crowd_satisfaction?: number
+          currency_code?: string
+          edition_year: number
+          fastest_sell_out_seconds?: number | null
+          festival_company_id: string
+          festival_edition_id: string
+          festival_name: string
+          festival_type?: string
+          food_drink_summary?: Json
+          formula_versions?: Json
+          genres?: string[]
+          headliners?: Json
+          id?: string
+          incident_summary?: Json
+          largest_performance_crowd?: number
+          line_up?: Json
+          merchandise_summary?: Json
+          peak_attendance?: number
+          performance_count?: number
+          performance_highlights?: Json
+          poster_url?: string | null
+          profit_loss_minor?: number
+          published_at?: string
+          revenue_minor?: number
+          sell_out_percentage?: number
+          site_capacity?: number
+          sold_out?: boolean
+          source_digests?: Json
+          sponsor_summary?: Json
+          timetable?: Json
+          weather_summary?: Json
+        }
+        Update: {
+          attendance?: number
+          city?: string
+          country?: string
+          crowd_satisfaction?: number
+          currency_code?: string
+          edition_year?: number
+          fastest_sell_out_seconds?: number | null
+          festival_company_id?: string
+          festival_edition_id?: string
+          festival_name?: string
+          festival_type?: string
+          food_drink_summary?: Json
+          formula_versions?: Json
+          genres?: string[]
+          headliners?: Json
+          id?: string
+          incident_summary?: Json
+          largest_performance_crowd?: number
+          line_up?: Json
+          merchandise_summary?: Json
+          peak_attendance?: number
+          performance_count?: number
+          performance_highlights?: Json
+          poster_url?: string | null
+          profit_loss_minor?: number
+          published_at?: string
+          revenue_minor?: number
+          sell_out_percentage?: number
+          site_capacity?: number
+          sold_out?: boolean
+          source_digests?: Json
+          sponsor_summary?: Json
+          timetable?: Json
+          weather_summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_results_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_results_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: true
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_revenue_streams: {
         Row: {
           amount: number | null
@@ -19906,6 +20138,56 @@ export type Database = {
             columns: ["stage_slot_id"]
             isOneToOne: false
             referencedRelation: "festival_stage_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_world_records: {
+        Row: {
+          achieved_year: number
+          category: string
+          currency_code: string | null
+          evidence: Json
+          festival_result_id: string
+          holder_name: string
+          id: string
+          refreshed_at: string
+          unit: string
+          value_text: string
+          value_type: string
+        }
+        Insert: {
+          achieved_year: number
+          category: string
+          currency_code?: string | null
+          evidence?: Json
+          festival_result_id: string
+          holder_name: string
+          id?: string
+          refreshed_at?: string
+          unit: string
+          value_text: string
+          value_type: string
+        }
+        Update: {
+          achieved_year?: number
+          category?: string
+          currency_code?: string | null
+          evidence?: Json
+          festival_result_id?: string
+          holder_name?: string
+          id?: string
+          refreshed_at?: string
+          unit?: string
+          value_text?: string
+          value_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_world_records_festival_result_id_fkey"
+            columns: ["festival_result_id"]
+            isOneToOne: false
+            referencedRelation: "festival_results"
             referencedColumns: ["id"]
           },
         ]
@@ -47767,6 +48049,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      festival_award_public_json: {
+        Args: {
+          p_award: Database["public"]["Tables"]["festival_awards"]["Row"]
+        }
+        Returns: Json
+      }
       festival_booking_slots: {
         Args: { p_edition_id: string }
         Returns: {
@@ -47886,6 +48174,12 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      festival_record_public_json: {
+        Args: {
+          p_record: Database["public"]["Tables"]["festival_world_records"]["Row"]
+        }
+        Returns: Json
+      }
       festival_represented_bands: {
         Args: never
         Returns: {
@@ -47939,6 +48233,13 @@ export type Database = {
           p_type: string
         }
         Returns: undefined
+      }
+      festival_result_public_json: {
+        Args: {
+          p_overall: number
+          p_result: Database["public"]["Tables"]["festival_results"]["Row"]
+        }
+        Returns: Json
       }
       festival_schedule_apply_template: {
         Args: {
@@ -48103,6 +48404,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      generate_festival_result: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
+      generate_festival_season_awards: {
+        Args: { p_year: number }
+        Returns: Json
+      }
       generate_festival_stage_slots: {
         Args: {
           p_apply?: boolean
@@ -48162,6 +48471,7 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_awards: { Args: { p_year?: number }; Returns: Json }
       get_festival_company_founding_eligibility: { Args: never; Returns: Json }
       get_festival_company_setup: {
         Args: { p_festival_company_id: string }
@@ -48171,12 +48481,55 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_hall_of_fame: { Args: never; Returns: Json }
+      get_festival_history: {
+        Args: {
+          p_city?: string
+          p_country?: string
+          p_festival_type?: string
+          p_genre?: string
+          p_limit?: number
+          p_offset?: number
+          p_year?: number
+        }
+        Returns: Json
+      }
       get_festival_operations_plan: {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_records: { Args: never; Returns: Json }
+      get_festival_result_detail: {
+        Args: { p_result_id: string }
+        Returns: Json
+      }
+      get_festival_results: {
+        Args: {
+          p_city?: string
+          p_country?: string
+          p_festival_type?: string
+          p_genre?: string
+          p_limit?: number
+          p_offset?: number
+          p_year?: number
+        }
+        Returns: Json
+      }
       get_festival_site_plan: {
         Args: { p_festival_company_id: string }
+        Returns: Json
+      }
+      get_festival_statistics: {
+        Args: {
+          p_city?: string
+          p_country?: string
+          p_festival_type?: string
+          p_genre?: string
+          p_group_by?: string
+          p_limit?: number
+          p_offset?: number
+          p_year?: number
+        }
         Returns: Json
       }
       get_festival_ticket_plan: {
@@ -48801,6 +49154,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      refresh_festival_world_records: { Args: never; Returns: Json }
       reorder_setlist_items: {
         Args: { p_setlist_id: string; p_updates: Json }
         Returns: undefined
