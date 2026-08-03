@@ -35,3 +35,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Execute simplified annual Festival contract
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/festival_simplified_annual_plan_harness.sql
+      - name: Apply and verify explicit RPC grants
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20291218245400_festival_simplified_annual_plan_security.sql
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF has_function_privilege('anon', 'public.get_festival_company_editions(uuid)', 'EXECUTE') THEN
+              RAISE EXCEPTION 'anon unexpectedly has edition directory execute privilege';
+            END IF;
+            IF NOT has_function_privilege('authenticated', 'public.get_festival_company_editions(uuid)', 'EXECUTE') THEN
+              RAISE EXCEPTION 'authenticated role is missing edition directory execute privilege';
+            END IF;
+          END
+          $$;
+          SQL
