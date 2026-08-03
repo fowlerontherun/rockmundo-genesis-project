@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, Music2, WandSparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -165,59 +165,46 @@ export function FestivalArtistPlanner({
     draft.preferredGenres !==
       (data.programme?.preferredGenres.join(", ") ?? "");
 
-  const programme = useMemo<FestivalArtistProgramme>(() => {
-    const current = data.programme;
-    const genres = toGenreList(draft.preferredGenres);
-    const acceptsApplications =
-      draft.applicationMode === "applications_only" ||
-      draft.applicationMode === "hybrid";
-    const applicationWindow = acceptsApplications
-      ? data.applicationWindows[0] ??
-        defaultWindow(data.festivalDates, draft.minimumArtistFame, genres)
-      : null;
+  const currentProgramme = data.programme;
+  const genres = toGenreList(draft.preferredGenres);
+  const acceptsApplications =
+    draft.applicationMode === "applications_only" ||
+    draft.applicationMode === "hybrid";
+  const applicationWindow = acceptsApplications
+    ? data.applicationWindows[0] ??
+      defaultWindow(data.festivalDates, draft.minimumArtistFame, genres)
+    : null;
 
-    return {
-      id: current?.id ?? null,
-      currencyCode: current?.currencyCode ?? "GBP",
-      applicationMode: draft.applicationMode,
-      applicationsOpenAt: applicationWindow?.opensAt ?? null,
-      applicationsCloseAt: applicationWindow?.closesAt ?? null,
-      minimumArtistFame: draft.minimumArtistFame,
-      maximumArtistFame: current?.maximumArtistFame ?? null,
-      preferredGenres: genres,
-      excludedGenres: current?.excludedGenres ?? [],
-      artistBudgetMinor: draft.artistBudgetMinor,
-      contingencyBudgetMinor: current?.contingencyBudgetMinor ?? 0,
-      minimumPlayerArtistShareBasisPoints:
-        current?.minimumPlayerArtistShareBasisPoints ?? 0,
-      status: current?.status ?? "not_started",
-    };
-  }, [data, draft]);
+  const programme: FestivalArtistProgramme = {
+    id: currentProgramme?.id ?? null,
+    currencyCode: currentProgramme?.currencyCode ?? "GBP",
+    applicationMode: draft.applicationMode,
+    applicationsOpenAt: applicationWindow?.opensAt ?? null,
+    applicationsCloseAt: applicationWindow?.closesAt ?? null,
+    minimumArtistFame: draft.minimumArtistFame,
+    maximumArtistFame: currentProgramme?.maximumArtistFame ?? null,
+    preferredGenres: genres,
+    excludedGenres: currentProgramme?.excludedGenres ?? [],
+    artistBudgetMinor: draft.artistBudgetMinor,
+    contingencyBudgetMinor: currentProgramme?.contingencyBudgetMinor ?? 0,
+    minimumPlayerArtistShareBasisPoints:
+      currentProgramme?.minimumPlayerArtistShareBasisPoints ?? 0,
+    status: currentProgramme?.status ?? "not_started",
+  };
 
-  const applicationWindows = useMemo<FestivalApplicationWindow[]>(() => {
-    if (
-      draft.applicationMode !== "applications_only" &&
-      draft.applicationMode !== "hybrid"
-    ) {
-      return [];
-    }
-
-    const genres = toGenreList(draft.preferredGenres);
-    const current = data.applicationWindows[0];
-    if (!current) {
-      return [
-        defaultWindow(data.festivalDates, draft.minimumArtistFame, genres),
-      ];
-    }
-
-    return [
-      {
-        ...current,
-        minimumFame: draft.minimumArtistFame,
-        preferredGenres: genres,
-      },
-    ];
-  }, [data.applicationWindows, data.festivalDates, draft]);
+  let applicationWindows: FestivalApplicationWindow[] = [];
+  if (acceptsApplications) {
+    const currentWindow = data.applicationWindows[0];
+    applicationWindows = currentWindow
+      ? [
+          {
+            ...currentWindow,
+            minimumFame: draft.minimumArtistFame,
+            preferredGenres: genres,
+          },
+        ]
+      : [defaultWindow(data.festivalDates, draft.minimumArtistFame, genres)];
+  }
 
   const persist = (complete = false) => {
     if (save.isPending || !data.canWrite) return;
