@@ -51,7 +51,44 @@ BEGIN
         'version', edition.version,
         'lockedAt', edition.locked_at,
         'creationSource', edition.creation_source,
-        'editable', edition.status NOT IN ('completed', 'cancelled') AND edition.locked_at IS NULL
+        'editable', edition.status NOT IN ('completed', 'cancelled') AND edition.locked_at IS NULL,
+        'planBindings', jsonb_build_object(
+          'configuration', EXISTS (
+            SELECT 1 FROM public.festival_configurations plan
+            WHERE plan.festival_company_id = v_company.id
+              AND plan.festival_edition_id = edition.id
+          ),
+          'site', EXISTS (
+            SELECT 1 FROM public.festival_site_plans plan
+            WHERE plan.festival_company_id = v_company.id
+              AND plan.festival_edition_id = edition.id
+          ),
+          'tickets', EXISTS (
+            SELECT 1 FROM public.festival_ticket_plans plan
+            WHERE plan.festival_company_id = v_company.id
+              AND plan.festival_edition_id = edition.id
+          ),
+          'artists', EXISTS (
+            SELECT 1 FROM public.festival_artist_programmes plan
+            WHERE plan.festival_company_id = v_company.id
+              AND plan.festival_edition_id = edition.id
+          ),
+          'operations', EXISTS (
+            SELECT 1 FROM public.festival_operations_plans plan
+            WHERE plan.festival_company_id = v_company.id
+              AND plan.festival_edition_id = edition.id
+          ),
+          'sponsorship', EXISTS (
+            SELECT 1 FROM public.festival_sponsorship_plans plan
+            WHERE plan.festival_company_id = v_company.id
+              AND plan.festival_edition_id = edition.id
+          ),
+          'timetable', EXISTS (
+            SELECT 1 FROM public.festival_timetable_plans plan
+            WHERE plan.festival_company_id = v_company.id
+              AND plan.festival_edition_id = edition.id
+          )
+        )
       )
       ORDER BY edition.edition_year DESC, edition.id DESC
     ),
@@ -77,6 +114,6 @@ REVOKE ALL ON FUNCTION public.get_festival_company_editions(uuid) FROM PUBLIC, a
 GRANT EXECUTE ON FUNCTION public.get_festival_company_editions(uuid) TO authenticated;
 
 COMMENT ON FUNCTION public.get_festival_company_editions(uuid) IS
-  'Owner/admin read model for canonical festival_editions_v2. Returns annual editions without exposing legacy festival rows.';
+  'Owner/admin read model for canonical festival_editions_v2. Includes compatibility-plan bindings so UI cannot write a different annual edition.';
 
 NOTIFY pgrst, 'reload schema';
