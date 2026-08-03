@@ -47,7 +47,7 @@ export class CanvasRenderer {
     this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion });
     this.crowdPlan = buildCrowdPlan({ replay: this.replay, attendance: this.layout.attendance, capacity: this.layout.capacity, size: this.size, reducedMotion: this.reducedMotion, devicePixelRatio: this.dpr });
     this.performerPlan = buildPerformerPlan({ replay: this.replay, experience: this.experience, size: this.size });
-    const scaledPreset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig?.venue?.capacity, venueName: this.experience?.gig?.venue?.name, venueType: (this.experience?.gig?.venue as any)?.type ?? null }), this.size);
+    const scaledPreset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig?.venue?.capacity, venueName: this.experience?.gig?.venue?.name, venueType: (this.experience?.gig?.venue as any)?.type ?? null, variantSeed: this.experience?.gig?.venue?.id ?? this.experience?.gig?.venue?.name ?? null }), this.size);
     this.audiencePlan = buildAudienceActivityPlan({ preset: scaledPreset, seed: (this.replay as any).simulationSeed ?? this.replay.id, attendanceRatio: this.layout.capacity > 0 ? this.layout.attendance / this.layout.capacity : 0.6, reducedMotion: this.reducedMotion });
   }
 
@@ -56,7 +56,7 @@ export class CanvasRenderer {
     const ctx = this.ctx;
     const size = this.size;
     if (!this.layout || !this.crowdPlan || !this.performerPlan) this.resize(size);
-    const preset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity, venueName: this.experience?.gig.venue.name, venueType: (this.experience?.gig.venue as any)?.type ?? null }), size);
+    const preset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity, venueName: this.experience?.gig.venue.name, venueType: (this.experience?.gig.venue as any)?.type ?? null, variantSeed: this.experience?.gig.venue.id ?? this.experience?.gig.venue.name ?? null }), size);
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
