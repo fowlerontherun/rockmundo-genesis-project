@@ -108,10 +108,15 @@ function defaultWindow(
 
 export function FestivalArtistPlanner({
   festivalCompanyId,
+  festivalEditionId,
 }: {
   festivalCompanyId: string;
+  festivalEditionId?: string;
 }) {
-  const query = useFestivalArtistProgramme(festivalCompanyId);
+  const query = useFestivalArtistProgramme(
+    festivalCompanyId,
+    festivalEditionId,
+  );
   const save = useSaveFestivalArtistProgramme();
   const [draft, setDraft] = useState<LineupDraft | null>(null);
 
@@ -210,6 +215,7 @@ export function FestivalArtistPlanner({
     if (save.isPending || !data.canWrite) return;
     save.mutate({
       festivalCompanyId,
+      festivalEditionId,
       expectedVersion: data.planningVersion,
       programme,
       applicationWindows,
