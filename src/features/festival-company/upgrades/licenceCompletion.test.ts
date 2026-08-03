@@ -91,6 +91,9 @@ describe("simplified Festival licence completion", () => {
     expect(migration).not.toMatch(
       /apply_festival_company_licence[\s\S]*payload_hash := encode\(digest/,
     );
+    expect(migration).toContain("licence_result jsonb;");
+    expect(migration).toContain("result = licence_result,");
+    expect(migration).not.toContain("result = result,");
     expect(migration).toContain(
       "festival_company_licences_festival_company_id_tier_key_status_k",
     );
