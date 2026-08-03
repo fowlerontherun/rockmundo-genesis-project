@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.639",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Songs are now tied to the character who wrote them, so a second character no longer sees songs written by your other characters." },
+      { type: 'fix', description: "Every existing song has been matched back to the character that wrote it, and new songs record their writer automatically." },
+      { type: 'improvement', description: "Rehearsal familiarity and release song pickers now use the active character's band, so the data shown is correct when your characters are in different bands." },
+    ],
+  },
+  {
+
     version: "1.1.638",
     date: "2026-08-03",
     changes: [
