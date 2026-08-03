@@ -5,6 +5,13 @@ import { describe, expect, it } from "vitest";
 const source = (path: string) =>
   readFileSync(resolve(process.cwd(), path), "utf8");
 
+const sqlFunction = (sql: string, name: string) => {
+  const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+  const end = sql.indexOf("\n$$;", start);
+  if (start < 0 || end < 0) throw new Error(`SQL function ${name} not found`);
+  return sql.slice(start, end + 4);
+};
+
 const migrationPath =
   "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql";
 
@@ -51,8 +58,8 @@ describe("simplified Festival licence completion", () => {
       "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
     );
 
-    expect(workspace).toContain(
-      "permits and insurance are automatic simulation details",
+    expect(workspace).toMatch(
+      /permits and\s+insurance are automatic simulation details/,
     );
     expect(workspace).not.toContain("Permit application");
     expect(workspace).not.toContain("Insurance document");
@@ -89,24 +96,28 @@ describe("simplified Festival licence completion", () => {
 
   it("protects licence charging with portable versioned receipts", () => {
     const migration = source(migrationPath);
+    const licenceFunction = sqlFunction(
+      migration,
+      "apply_festival_company_licence",
+    );
 
     expect(migration).toContain("festival_licence_requests");
-    expect(migration).toContain("p_expected_licence_version");
-    expect(migration).toContain("FESTIVAL_LICENCE_VERSION_CONFLICT");
-    expect(migration).toContain("FESTIVAL_LICENCE_IDEMPOTENCY_CONFLICT");
-    expect(migration).toContain("payload_hash := md5(jsonb_build_object(");
-    expect(migration).not.toMatch(
-      /apply_festival_company_licence[\s\S]*payload_hash := encode\(digest/,
+    expect(licenceFunction).toContain("p_expected_licence_version");
+    expect(licenceFunction).toContain("FESTIVAL_LICENCE_VERSION_CONFLICT");
+    expect(licenceFunction).toContain("FESTIVAL_LICENCE_IDEMPOTENCY_CONFLICT");
+    expect(licenceFunction).toContain(
+      "payload_hash := md5(jsonb_build_object(",
     );
-    expect(migration).toContain("licence_result jsonb;");
-    expect(migration).toContain("result = licence_result,");
-    expect(migration).not.toContain("result = result,");
+    expect(licenceFunction).not.toContain("payload_hash := encode(digest");
+    expect(licenceFunction).toContain("licence_result jsonb;");
+    expect(licenceFunction).toContain("result = licence_result,");
+    expect(licenceFunction).not.toContain("result = result,");
     expect(migration).toContain("pg_get_constraintdef(oid)");
     expect(migration).toContain(
       "'UNIQUE (festival_company_id, tier_key, status)'",
     );
     expect(migration).toContain("festival_company_one_active_licence");
-    expect(migration).toContain(
+    expect(licenceFunction).toContain(
       "PERFORM public._refresh_festival_company_edition_readiness(company.id)",
     );
   });
