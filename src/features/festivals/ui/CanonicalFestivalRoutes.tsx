@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
-import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
 import { FestivalCompanyEligibilityCard } from "@/features/festival-company/ui/FestivalCompanyEligibilityCard";
+import { FestivalConfigurationWizard } from "@/features/festival-company/ui/FestivalConfigurationWizard";
+import { festivalCompanySetupQueryKey } from "@/features/festival-company/application/useFestivalCompanySetup";
 import { resolveOwnerFestivalIdentifier, resolvePublicFestivalIdentifier } from "../resolver";
 import { festivalRoutes } from "../routes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,17 +11,26 @@ import { FestivalUpgradeWorkspace } from "@/features/festival-company/upgrades/F
 import { FestivalLiveControlRoom } from "@/features/festivals/runtime/FestivalLiveControlRoom";
 import { EditionSettlementWorkspace } from "@/features/festivals/settlement/EditionSettlementWorkspace";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
+import { FestivalCompanyEditionsPage } from "@/features/festivals/editions/FestivalCompanyEditionsPage";
 import { FestivalEditionOverview, FestivalEditionSchedule, FestivalEditionApplications, FestivalEditionContracts, FestivalEditionOperations, FestivalEditionFinance, FestivalEditionHistory } from "./FestivalEditionSections";
 
 export function FestivalFoundingPage() { return <main className="mx-auto max-w-3xl space-y-5 p-6"><h1 className="text-3xl font-bold">Found a Festival company</h1><p>Start an annual Festival brand. Eligibility, limits, authority, funds and price are verified by the server.</p><FestivalCompanyEligibilityCard /></main>; }
 
 export function FestivalCompanyHome() {
   const { festivalCompanyId } = useParams();
-  const query = useQuery({ queryKey: ["festival-company-home", festivalCompanyId], enabled: Boolean(festivalCompanyId), queryFn: () => getFestivalCompanySetup(festivalCompanyId!) });
+  const { pathname } = useLocation();
+  if (!festivalCompanyId) return <RouteState title="Festival company unavailable" body="The company route is missing its identifier." />;
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+  if (normalizedPath === festivalRoutes.editions(festivalCompanyId)) return <FestivalCompanyEditionsPage festivalCompanyId={festivalCompanyId} />;
+  return <FestivalCompanySummaryHome festivalCompanyId={festivalCompanyId} />;
+}
+
+function FestivalCompanySummaryHome({ festivalCompanyId }: { festivalCompanyId: string }) {
+  const query = useQuery({ queryKey: festivalCompanySetupQueryKey(festivalCompanyId), queryFn: () => getFestivalCompanySetup(festivalCompanyId) });
   if (query.isLoading) return <main className="p-6" role="status">Loading Festival company…</main>;
   if (query.error || !query.data) return <RouteState title="Festival company unavailable" body="The company was not found or you do not have management permission." />;
   const f = query.data;
-  return <main className="mx-auto max-w-6xl space-y-5 p-6"><h1 className="text-3xl font-bold">{f.publicName}</h1><div className="grid gap-4 md:grid-cols-3"><Summary title="Company" value={f.legalCompanyName}/><Summary title="Balance" value={new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(f.companyBalance)}/><Summary title="Setup" value={f.setupCompleted ? "Ready" : "Action required"}/></div><p>{f.configurationComplete ? "Configuration complete." : "Configuration blocks the next edition."}</p><div className="flex flex-wrap gap-3"><Link className="underline" to={festivalRoutes.genericCompany(f.companyId)}>Generic company ownership and finance</Link><Link className="underline" to={festivalRoutes.editions(f.festivalCompanyId)}>Annual editions</Link><Link className="underline" to={festivalRoutes.upgrades(f.festivalCompanyId)}>Upgrades and licences</Link></div></main>;
+  return <main className="mx-auto max-w-6xl space-y-5 p-6"><h1 className="text-3xl font-bold">{f.publicName}</h1><div className="grid gap-4 md:grid-cols-3"><Summary title="Company" value={f.legalCompanyName}/><Summary title="Balance" value={new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(f.companyBalance)}/><Summary title="Setup" value={f.setupCompleted ? "Ready" : "Action required"}/></div><p>{f.configurationComplete ? "Configuration complete." : "Complete the initial configuration to create the first annual edition."}</p><div className="flex flex-wrap gap-3"><Link className="underline" to={festivalRoutes.genericCompany(f.companyId)}>Generic company ownership and finance</Link>{f.setupCompleted&&<Link className="underline" to={festivalRoutes.editions(f.festivalCompanyId)}>Annual editions</Link>}<Link className="underline" to={festivalRoutes.upgrades(f.festivalCompanyId)}>Upgrades and licences</Link></div>{!f.setupCompleted&&<section className="rounded-lg border p-4 md:p-6" aria-label="Initial Festival setup"><FestivalConfigurationWizard festivalCompanyId={festivalCompanyId}/></section>}</main>;
 }
 export function FestivalUpgradesPage(){const {festivalCompanyId}=useParams();return <FestivalUpgradeWorkspace festivalCompanyId={festivalCompanyId!}/>;}
 const Summary=({title,value}:{title:string;value:string})=><Card><CardHeader><CardTitle className="text-sm">{title}</CardTitle></CardHeader><CardContent>{value}</CardContent></Card>;
@@ -33,18 +43,18 @@ export function FestivalEditionShell() {
   if (query.isLoading) return <main className="p-6" role="status">Resolving annual edition…</main>;
   if (query.error) return <RouteState title="Festival edition access denied" body="Your active character does not have authority to manage this edition." />;
   if (!query.data || query.data.status !== "resolved") return <ResolutionState status={query.data?.status ?? "not_found"}/>;
-  return <main className="mx-auto max-w-7xl space-y-5 p-4 md:p-6"><nav aria-label="Breadcrumb" className="text-sm text-muted-foreground"><Link className="underline" to={festivalRoutes.company(festivalCompanyId!)}>Festival company</Link> / <span>Annual edition {query.data.editionYear ?? ""}</span></nav><h1 className="text-3xl font-bold">Annual edition {query.data.editionYear ?? ""}</h1><nav className="-mx-1 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Edition navigation">{editionNavigation.map(item=>{const to=item === "overview" ? festivalRoutes.edition(festivalCompanyId!, editionId!) : festivalRoutes[item](festivalCompanyId!, editionId!);const active=pathname===to;return <Link className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${active?"bg-primary text-primary-foreground":"bg-muted text-muted-foreground hover:text-foreground"}`} key={item} to={to}>{item}</Link>;})}</nav><Outlet context={query.data}/></main>;
+  return <main className="mx-auto max-w-7xl space-y-5 p-4 md:p-6"><nav aria-label="Breadcrumb" className="text-sm text-muted-foreground"><Link className="underline" to={festivalRoutes.company(festivalCompanyId!)}>Festival company</Link> / <Link className="underline" to={festivalRoutes.editions(festivalCompanyId!)}>Annual editions</Link> / <span>Edition {query.data.editionYear ?? ""}</span></nav><h1 className="text-3xl font-bold">Annual edition {query.data.editionYear ?? ""}</h1><nav className="-mx-1 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Edition navigation">{editionNavigation.map(item=>{const to=item === "overview" ? festivalRoutes.edition(festivalCompanyId!, editionId!) : festivalRoutes[item](festivalCompanyId!, editionId!);const active=pathname===to;return <Link className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${active?"bg-primary text-primary-foreground":"bg-muted text-muted-foreground hover:text-foreground"}`} key={item} to={to}>{item}</Link>;})}</nav><Outlet context={query.data}/></main>;
 }
 export function FestivalEditionWorkspace({section}:{section:string}) {
   const { festivalCompanyId, editionId }=useParams();
   if(!festivalCompanyId||!editionId) return <RouteState title="Festival edition not found" body="This edition route is missing its identifiers."/>;
   switch(section){
-    case "overview": return <FestivalEditionOverview festivalCompanyId={festivalCompanyId}/>;
-    case "schedule": return <div className="space-y-6"><FestivalScheduleWorkspace editionId={editionId}/><FestivalEditionSchedule festivalCompanyId={festivalCompanyId}/></div>;
-    case "applications": return <FestivalEditionApplications festivalCompanyId={festivalCompanyId}/>;
-    case "contracts": return <FestivalEditionContracts festivalCompanyId={festivalCompanyId}/>;
-    case "operations": return <FestivalEditionOperations festivalCompanyId={festivalCompanyId}/>;
-    case "finance": return <FestivalEditionFinance festivalCompanyId={festivalCompanyId}/>;
+    case "overview": return <FestivalEditionOverview festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
+    case "schedule": return <FestivalEditionSchedule festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
+    case "applications": return <FestivalEditionApplications festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
+    case "contracts": return <FestivalEditionContracts festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
+    case "operations": return <FestivalEditionOperations festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
+    case "finance": return <FestivalEditionFinance festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
     case "live": return <FestivalLiveControlRoom companyId={festivalCompanyId} editionId={editionId}/>;
     case "settlement": return <EditionSettlementWorkspace companyId={festivalCompanyId} editionId={editionId}/>;
     case "history": return <FestivalEditionHistory editionId={editionId}/>;
