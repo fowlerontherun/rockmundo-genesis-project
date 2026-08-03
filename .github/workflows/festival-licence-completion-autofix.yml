@@ -51,6 +51,32 @@ jobs:
           elif new_hash not in source:
               raise SystemExit("licence payload hash anchor not found")
 
+          start = source.index(
+              "CREATE OR REPLACE FUNCTION public.apply_festival_company_licence("
+          )
+          end = source.index("\n$$;", start) + len("\n$$;")
+          function = source[start:end]
+          if "  result jsonb;" in function:
+              function = function.replace(
+                  "  result jsonb;", "  licence_result jsonb;", 1
+              )
+              function = function.replace(
+                  "  result := public.get_festival_company_upgrades(company.id);",
+                  "  licence_result := public.get_festival_company_upgrades(company.id);",
+                  1,
+              )
+              function = function.replace(
+                  "      result = result,",
+                  "      result = licence_result,",
+                  1,
+              )
+              function = function.replace(
+                  "  RETURN result;", "  RETURN licence_result;", 1
+              )
+              source = source[:start] + function + source[end:]
+          elif "  licence_result jsonb;" not in function:
+              raise SystemExit("licence result variable anchor not found")
+
           path.write_text(source)
           PY
           if git diff --quiet; then
@@ -60,5 +86,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql
-          git commit -m "fix(festivals): harden licence SQL portability"
+          git commit -m "fix(festivals): disambiguate licence receipt result"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
