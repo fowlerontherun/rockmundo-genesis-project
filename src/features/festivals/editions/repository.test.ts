@@ -116,10 +116,12 @@ describe("festivalCompanyEditionsSchema", () => {
 });
 
 describe("festival edition directory SQL boundary", () => {
-  const migration = readFileSync(
+  const migration = [
     "supabase/migrations/20291218245300_festival_simplified_annual_plan.sql",
-    "utf8",
-  );
+    "supabase/migrations/20291218245400_festival_simplified_annual_plan_security.sql",
+  ]
+    .map((path) => readFileSync(path, "utf8"))
+    .join("\n");
 
   it("reads only the canonical Festival company and annual-edition aggregates", () => {
     expect(migration).toMatch(/FROM public\.festival_companies/i);
@@ -160,6 +162,9 @@ describe("festival edition directory SQL boundary", () => {
   it("keeps execution unavailable to public and anonymous roles", () => {
     expect(migration).toMatch(
       /REVOKE ALL ON FUNCTION public\.get_festival_company_editions\(uuid\) FROM PUBLIC, anon/i,
+    );
+    expect(migration).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.get_festival_company_editions\(uuid\) TO authenticated/i,
     );
   });
 });
