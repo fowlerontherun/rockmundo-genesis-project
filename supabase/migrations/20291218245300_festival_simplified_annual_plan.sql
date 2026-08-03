@@ -387,7 +387,7 @@ DECLARE
   readiness integer;
   next_status text;
   effects jsonb;
-  result jsonb;
+  response jsonb;
 BEGIN
   IF auth.uid() IS NULL OR actor IS NULL THEN
     RAISE EXCEPTION 'festival_annual_plan_forbidden' USING ERRCODE = 'P0001';
@@ -594,12 +594,12 @@ BEGIN
     )
   );
 
-  result := public._festival_annual_plan_result(company.id, edition.id);
+  response := public._festival_annual_plan_result(company.id, edition.id);
   UPDATE public.festival_annual_plan_requests
-  SET status = 'succeeded', result = result, completed_at = now()
+  SET status = 'succeeded', result = response, completed_at = now()
   WHERE id = request.id;
 
-  RETURN result;
+  RETURN response;
 END;
 $$;
 
