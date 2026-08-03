@@ -48,19 +48,22 @@ jobs:
           )
           ticket_end = sql.index("\n$$;", ticket_start) + len("\n$$;")
           ticket = sql[ticket_start:ticket_end]
+          ticket = re.sub(
+              r"\n\s*IF ticket\.planning_version <> p_expected_version THEN\n"
+              r"\s*RAISE EXCEPTION 'festival_ticket_plan_stale' USING ERRCODE = 'P0001';\n"
+              r"\s*END IF;\n",
+              "\n",
+              ticket,
+          )
           ticket_check = '''  IF ticket.planning_version <> p_expected_version THEN
             RAISE EXCEPTION 'festival_ticket_plan_stale' USING ERRCODE = 'P0001';
           END IF;
+
           '''
-          ticket = ticket.replace(ticket_check, "", 1)
           ticket_mutation = "  UPDATE public.festival_ticket_plans\n  SET expected_sell_through_basis_points"
           if ticket.count(ticket_mutation) != 1:
               raise SystemExit("ticket mutation boundary missing")
-          ticket = ticket.replace(
-              ticket_mutation,
-              ticket_check + "\n" + ticket_mutation,
-              1,
-          )
+          ticket = ticket.replace(ticket_mutation, ticket_check + ticket_mutation, 1)
           if ticket.index("request.status = 'succeeded'") > ticket.index("festival_ticket_plan_stale"):
               raise SystemExit("ticket replay still follows stale check")
           sql = sql[:ticket_start] + ticket + sql[ticket_end:]
@@ -70,22 +73,28 @@ jobs:
           )
           artist_end = sql.index("\n$$;", artist_start) + len("\n$$;")
           artist = sql[artist_start:artist_end]
+          artist = re.sub(
+              r"\n\s*SELECT coalesce\(max\(planning_version\), 0\) INTO old_version\n"
+              r"\s*FROM public\.festival_artist_programmes\n"
+              r"\s*WHERE festival_edition_id = edition\.id;\n"
+              r"\s*IF old_version <> p_expected_version THEN\n"
+              r"\s*RAISE EXCEPTION 'festival_artist_programme_stale' USING ERRCODE = 'P0001';\n"
+              r"\s*END IF;\n",
+              "\n",
+              artist,
+          )
           artist_check = '''  SELECT coalesce(max(planning_version), 0) INTO old_version
           FROM public.festival_artist_programmes
           WHERE festival_edition_id = edition.id;
           IF old_version <> p_expected_version THEN
             RAISE EXCEPTION 'festival_artist_programme_stale' USING ERRCODE = 'P0001';
           END IF;
+
           '''
-          artist = artist.replace(artist_check, "", 1)
           artist_mutation = "  INSERT INTO public.festival_artist_programmes("
           if artist.count(artist_mutation) != 1:
               raise SystemExit("artist mutation boundary missing")
-          artist = artist.replace(
-              artist_mutation,
-              artist_check + "\n" + artist_mutation,
-              1,
-          )
+          artist = artist.replace(artist_mutation, artist_check + artist_mutation, 1)
           if artist.index("request.status = 'succeeded'") > artist.index("festival_artist_programme_stale"):
               raise SystemExit("artist replay still follows stale check")
           sql = sql[:artist_start] + artist + sql[artist_end:]
