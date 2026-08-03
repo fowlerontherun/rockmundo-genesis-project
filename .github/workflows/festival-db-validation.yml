@@ -1,0 +1,55 @@
+name: Festival DB validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      FESTIVAL_TEST_DATABASE_CONFIRMED: "true"
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Docker
+        run: docker version
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.31.8
+      - name: Start local Supabase stack
+        run: supabase start
+      - name: Reset migrated disposable database
+        run: supabase db reset --local
+      - name: Verify owner edition directory migration
+        run: |
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regprocedure('public.get_festival_company_editions(uuid)') IS NULL THEN
+              RAISE EXCEPTION 'get_festival_company_editions(uuid) was not deployed';
+            END IF;
+            IF has_function_privilege('anon', 'public.get_festival_company_editions(uuid)', 'EXECUTE') THEN
+              RAISE EXCEPTION 'anon must not execute get_festival_company_editions(uuid)';
+            END IF;
+            IF NOT has_function_privilege('authenticated', 'public.get_festival_company_editions(uuid)', 'EXECUTE') THEN
+              RAISE EXCEPTION 'authenticated role must execute get_festival_company_editions(uuid)';
+            END IF;
+          END
+          $$;
+          SELECT id, festival_company_id, edition_year, status
+          FROM public.festival_editions_v2
+          LIMIT 0;
+          SQL
+      - name: Lint migrated database
+        run: supabase db lint --local --level error
+      - name: Run full Festival lifecycle fixtures
+        run: bash scripts/festivals/run-full-lifecycle-db-gate.sh
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop --no-backup
