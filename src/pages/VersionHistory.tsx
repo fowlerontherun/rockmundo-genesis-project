@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.641",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Seeded thousands of new venues across every city, from street busking pitches, cafes and cellar bars up to student unions, live houses, warehouses, theatres, concert halls, rooftops, beach stages, amphitheatres, ice arenas, indoor arenas, stadium bowls, festival fields and festival tents." },
+      { type: 'fix', description: "Every venue now has a proper venue type instead of just club, arena or stadium, so booking lists and filters read correctly." },
+      { type: 'fix', description: "The gig viewer now receives the booked venue's type, so the correct stage environment (club, theatre, arena bowl, stadium bowl, festival field or tent) is used instead of guessing from capacity alone." },
+      { type: 'improvement', description: "Each venue now renders with its own slight visual variation (lighting rig, banner size, tent striping and colour shading) and its own sound, lighting, backstage, equipment, reputation and daily slot spread, so no two venues feel identical." },
+    ],
+  },
+  {
     version: "1.1.640",
     date: "2026-08-03",
     changes: [
