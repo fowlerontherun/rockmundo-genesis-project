@@ -1,0 +1,64 @@
+name: Festival licence completion SQL fix
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Fix licence migration portability
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql")
+          source = path.read_text()
+
+          long_drop = """ALTER TABLE public.festival_company_licences
+            DROP CONSTRAINT IF EXISTS festival_company_licences_festival_company_id_tier_key_status_key;
+          """
+          short_drop = """ALTER TABLE public.festival_company_licences
+            DROP CONSTRAINT IF EXISTS festival_company_licences_festival_company_id_tier_key_status_k;
+          """
+          if short_drop not in source:
+              if long_drop not in source:
+                  raise SystemExit("licence constraint drop anchor not found")
+              source = source.replace(long_drop, long_drop + short_drop, 1)
+
+          old_hash = """  payload_hash := encode(digest(jsonb_build_object(
+              'festivalCompanyId', company.id,
+              'tierKey', p_requested_tier_key,
+              'expectedLicenceVersion', p_expected_licence_version
+            )::text, 'sha256'), 'hex');
+          """
+          new_hash = """  payload_hash := md5(jsonb_build_object(
+              'festivalCompanyId', company.id,
+              'tierKey', p_requested_tier_key,
+              'expectedLicenceVersion', p_expected_licence_version
+            )::text);
+          """
+          if old_hash in source:
+              source = source.replace(old_hash, new_hash, 1)
+          elif new_hash not in source:
+              raise SystemExit("licence payload hash anchor not found")
+
+          path.write_text(source)
+          PY
+          if git diff --quiet; then
+            echo "Licence migration already fixed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql
+          git commit -m "fix(festivals): harden licence SQL portability"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
