@@ -17,7 +17,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.640",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival staffing and supplier planning (Phase 5) is now live: festival owners get an operations plan with staff, supplier and contingency budgets plus staffing and procurement modes." },
+      { type: 'feature', description: "Saving the plan automatically generates the festival's departments (security, medical, production, site, bars, food), staffing requirements and core supplier requirements such as fencing, power, sanitation, waste and water." },
+      { type: 'feature', description: "Staff vacancies, applications, assignments, shifts, supplier quotes and supplier contracts are now stored so staffing and procurement coverage can be tracked." },
+      { type: 'improvement', description: "Festival budget commitments now cover staff assignments and supplier contracts as well as artist bookings, and staffing/supplier coverage feeds the operations readiness score." },
+      { type: 'improvement', description: "All operations planning changes are owner or admin only, run through server functions, are audited and safe to retry." },
+    ],
+  },
+  {
     version: "1.1.639",
+
     date: "2026-08-03",
     changes: [
       { type: 'fix', description: "Songs are now tied to the character who wrote them, so a second character no longer sees songs written by your other characters." },

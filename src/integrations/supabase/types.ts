@@ -14933,36 +14933,42 @@ export type Database = {
       festival_financial_commitments: {
         Row: {
           amount_minor: number
-          artist_booking_id: string
+          artist_booking_id: string | null
           category: string
           created_at: string
           currency_code: string
           festival_company_id: string
           id: string
           released_at: string | null
+          staff_assignment_id: string | null
           status: string
+          supplier_contract_id: string | null
         }
         Insert: {
           amount_minor: number
-          artist_booking_id: string
+          artist_booking_id?: string | null
           category?: string
           created_at?: string
           currency_code: string
           festival_company_id: string
           id?: string
           released_at?: string | null
+          staff_assignment_id?: string | null
           status?: string
+          supplier_contract_id?: string | null
         }
         Update: {
           amount_minor?: number
-          artist_booking_id?: string
+          artist_booking_id?: string | null
           category?: string
           created_at?: string
           currency_code?: string
           festival_company_id?: string
           id?: string
           released_at?: string | null
+          staff_assignment_id?: string | null
           status?: string
+          supplier_contract_id?: string | null
         }
         Relationships: [
           {
@@ -14977,6 +14983,20 @@ export type Database = {
             columns: ["festival_company_id"]
             isOneToOne: false
             referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_financial_commitments_staff_assignment_id_fkey"
+            columns: ["staff_assignment_id"]
+            isOneToOne: true
+            referencedRelation: "festival_staff_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_financial_commitments_supplier_contract_id_fkey"
+            columns: ["supplier_contract_id"]
+            isOneToOne: true
+            referencedRelation: "festival_supplier_contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -15409,6 +15429,264 @@ export type Database = {
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_operational_departments: {
+        Row: {
+          created_at: string
+          department_type: string
+          festival_operations_plan_id: string
+          id: string
+          manager_profile_id: string | null
+          minimum_quality: number
+          name: string
+          priority: string
+          status: string
+          target_quality: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_type: string
+          festival_operations_plan_id: string
+          id?: string
+          manager_profile_id?: string | null
+          minimum_quality?: number
+          name: string
+          priority?: string
+          status?: string
+          target_quality?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_type?: string
+          festival_operations_plan_id?: string
+          id?: string
+          manager_profile_id?: string | null
+          minimum_quality?: number
+          name?: string
+          priority?: string
+          status?: string
+          target_quality?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_operational_departmen_festival_operations_plan_id_fkey"
+            columns: ["festival_operations_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operations_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operational_departments_manager_profile_id_fkey"
+            columns: ["manager_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operational_departments_manager_profile_id_fkey"
+            columns: ["manager_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_operations_audit: {
+        Row: {
+          actor_profile_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          festival_company_id: string
+          id: string
+          metadata: Json
+          new_state: string | null
+          previous_state: string | null
+          version: number
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          festival_company_id: string
+          id?: string
+          metadata?: Json
+          new_state?: string | null
+          previous_state?: string | null
+          version?: number
+        }
+        Update: {
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          festival_company_id?: string
+          id?: string
+          metadata?: Json
+          new_state?: string | null
+          previous_state?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_operations_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operations_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operations_audit_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_operations_plans: {
+        Row: {
+          artist_programme_id: string | null
+          completed_at: string | null
+          contingency_budget_minor: number
+          created_at: string
+          currency_code: string
+          festival_company_id: string
+          id: string
+          planning_version: number
+          procurement_mode: string
+          staff_budget_minor: number
+          staffing_mode: string
+          status: string
+          supplier_budget_minor: number
+          updated_at: string
+        }
+        Insert: {
+          artist_programme_id?: string | null
+          completed_at?: string | null
+          contingency_budget_minor?: number
+          created_at?: string
+          currency_code?: string
+          festival_company_id: string
+          id?: string
+          planning_version?: number
+          procurement_mode?: string
+          staff_budget_minor?: number
+          staffing_mode?: string
+          status?: string
+          supplier_budget_minor?: number
+          updated_at?: string
+        }
+        Update: {
+          artist_programme_id?: string | null
+          completed_at?: string | null
+          contingency_budget_minor?: number
+          created_at?: string
+          currency_code?: string
+          festival_company_id?: string
+          id?: string
+          planning_version?: number
+          procurement_mode?: string
+          staff_budget_minor?: number
+          staffing_mode?: string
+          status?: string
+          supplier_budget_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_operations_plans_artist_programme_id_fkey"
+            columns: ["artist_programme_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artist_programmes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operations_plans_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: true
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_operations_requests: {
+        Row: {
+          action: string
+          actor_profile_id: string
+          completed_at: string | null
+          created_at: string
+          festival_company_id: string
+          id: string
+          idempotency_key: string
+          payload_hash: string
+          result: Json | null
+          status: string
+          target_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_profile_id: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          idempotency_key: string
+          payload_hash: string
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_profile_id?: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          idempotency_key?: string
+          payload_hash?: string
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_operations_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operations_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operations_requests_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
             referencedColumns: ["id"]
           },
         ]
@@ -17995,6 +18273,415 @@ export type Database = {
           },
         ]
       }
+      festival_staff_applications: {
+        Row: {
+          applicant_profile_id: string
+          application_version: number
+          expected_pay_minor: number | null
+          id: string
+          message: string | null
+          reviewed_at: string | null
+          skill_snapshot: Json
+          status: string
+          submitted_at: string
+          vacancy_id: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          applicant_profile_id: string
+          application_version?: number
+          expected_pay_minor?: number | null
+          id?: string
+          message?: string | null
+          reviewed_at?: string | null
+          skill_snapshot?: Json
+          status?: string
+          submitted_at?: string
+          vacancy_id: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          applicant_profile_id?: string
+          application_version?: number
+          expected_pay_minor?: number | null
+          id?: string
+          message?: string | null
+          reviewed_at?: string | null
+          skill_snapshot?: Json
+          status?: string
+          submitted_at?: string
+          vacancy_id?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_staff_applications_applicant_profile_id_fkey"
+            columns: ["applicant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_applications_applicant_profile_id_fkey"
+            columns: ["applicant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_applications_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staff_vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_staff_assignments: {
+        Row: {
+          agreed_pay_minor: number
+          application_id: string | null
+          assignment_source: string
+          assignment_version: number
+          cancelled_at: string | null
+          company_id: string | null
+          created_at: string
+          currency_code: string
+          ends_at: string
+          festival_operations_plan_id: string
+          id: string
+          npc_staff_name: string | null
+          profile_id: string | null
+          quality_score: number
+          role_type: string
+          staffing_requirement_id: string
+          starts_at: string
+          status: string
+          updated_at: string
+          vacancy_id: string | null
+        }
+        Insert: {
+          agreed_pay_minor?: number
+          application_id?: string | null
+          assignment_source: string
+          assignment_version?: number
+          cancelled_at?: string | null
+          company_id?: string | null
+          created_at?: string
+          currency_code?: string
+          ends_at: string
+          festival_operations_plan_id: string
+          id?: string
+          npc_staff_name?: string | null
+          profile_id?: string | null
+          quality_score?: number
+          role_type: string
+          staffing_requirement_id: string
+          starts_at: string
+          status?: string
+          updated_at?: string
+          vacancy_id?: string | null
+        }
+        Update: {
+          agreed_pay_minor?: number
+          application_id?: string | null
+          assignment_source?: string
+          assignment_version?: number
+          cancelled_at?: string | null
+          company_id?: string | null
+          created_at?: string
+          currency_code?: string
+          ends_at?: string
+          festival_operations_plan_id?: string
+          id?: string
+          npc_staff_name?: string | null
+          profile_id?: string | null
+          quality_score?: number
+          role_type?: string
+          staffing_requirement_id?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          vacancy_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_staff_assignments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "festival_staff_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_assignments_festival_operations_plan_id_fkey"
+            columns: ["festival_operations_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operations_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_assignments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_assignments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_assignments_staffing_requirement_id_fkey"
+            columns: ["staffing_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staffing_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_assignments_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staff_vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_staff_shifts: {
+        Row: {
+          break_minutes: number
+          coverage_type: string
+          created_at: string
+          department_id: string
+          ends_at: string
+          festival_date: string
+          festival_operations_plan_id: string
+          id: string
+          location_type: string | null
+          staff_assignment_id: string
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          break_minutes?: number
+          coverage_type?: string
+          created_at?: string
+          department_id: string
+          ends_at: string
+          festival_date: string
+          festival_operations_plan_id: string
+          id?: string
+          location_type?: string | null
+          staff_assignment_id: string
+          starts_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          break_minutes?: number
+          coverage_type?: string
+          created_at?: string
+          department_id?: string
+          ends_at?: string
+          festival_date?: string
+          festival_operations_plan_id?: string
+          id?: string
+          location_type?: string | null
+          staff_assignment_id?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_staff_shifts_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operational_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_shifts_festival_operations_plan_id_fkey"
+            columns: ["festival_operations_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operations_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_shifts_staff_assignment_id_fkey"
+            columns: ["staff_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staff_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_staff_vacancies: {
+        Row: {
+          application_deadline: string | null
+          created_at: string
+          currency_code: string
+          description: string | null
+          employment_type: string
+          ends_at: string
+          festival_operations_plan_id: string
+          id: string
+          minimum_skill_level: number | null
+          npc_fallback_allowed: boolean
+          pay_minor: number
+          pay_type: string
+          player_only: boolean
+          positions_available: number
+          positions_filled: number
+          staffing_requirement_id: string
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          application_deadline?: string | null
+          created_at?: string
+          currency_code?: string
+          description?: string | null
+          employment_type?: string
+          ends_at: string
+          festival_operations_plan_id: string
+          id?: string
+          minimum_skill_level?: number | null
+          npc_fallback_allowed?: boolean
+          pay_minor?: number
+          pay_type?: string
+          player_only?: boolean
+          positions_available: number
+          positions_filled?: number
+          staffing_requirement_id: string
+          starts_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          application_deadline?: string | null
+          created_at?: string
+          currency_code?: string
+          description?: string | null
+          employment_type?: string
+          ends_at?: string
+          festival_operations_plan_id?: string
+          id?: string
+          minimum_skill_level?: number | null
+          npc_fallback_allowed?: boolean
+          pay_minor?: number
+          pay_type?: string
+          player_only?: boolean
+          positions_available?: number
+          positions_filled?: number
+          staffing_requirement_id?: string
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_staff_vacancies_festival_operations_plan_id_fkey"
+            columns: ["festival_operations_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operations_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_vacancies_staffing_requirement_id_fkey"
+            columns: ["staffing_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staffing_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_staffing_requirements: {
+        Row: {
+          coverage_end: string
+          coverage_start: string
+          created_at: string
+          department_id: string
+          estimated_cost_minor: number
+          festival_operations_plan_id: string
+          id: string
+          minimum_skill_level: number
+          npc_eligible: boolean
+          player_eligible: boolean
+          required_count: number
+          role_type: string
+          safety_critical: boolean
+          shift_length_minutes: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          coverage_end: string
+          coverage_start: string
+          created_at?: string
+          department_id: string
+          estimated_cost_minor?: number
+          festival_operations_plan_id: string
+          id?: string
+          minimum_skill_level?: number
+          npc_eligible?: boolean
+          player_eligible?: boolean
+          required_count: number
+          role_type: string
+          safety_critical?: boolean
+          shift_length_minutes?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          coverage_end?: string
+          coverage_start?: string
+          created_at?: string
+          department_id?: string
+          estimated_cost_minor?: number
+          festival_operations_plan_id?: string
+          id?: string
+          minimum_skill_level?: number
+          npc_eligible?: boolean
+          player_eligible?: boolean
+          required_count?: number
+          role_type?: string
+          safety_critical?: boolean
+          shift_length_minutes?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_staffing_requirements_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operational_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staffing_requirements_festival_operations_plan_id_fkey"
+            columns: ["festival_operations_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operations_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_stage_crowd_snapshots: {
         Row: {
           audience_total: number
@@ -18406,6 +19093,288 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_supplier_contracts: {
+        Row: {
+          accepted_quote_id: string
+          cancelled_at: string | null
+          contract_version: number
+          created_at: string
+          currency_code: string
+          delivery_end: string | null
+          delivery_start: string | null
+          deposit_commitment_minor: number
+          festival_operations_plan_id: string
+          id: string
+          npc_supplier_name: string | null
+          quality_score: number
+          reliability_score: number
+          service_end: string | null
+          service_start: string | null
+          status: string
+          supplier_company_id: string | null
+          supplier_requirement_id: string
+          supplier_source: string
+          terms_snapshot: Json
+          total_commitment_minor: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_quote_id: string
+          cancelled_at?: string | null
+          contract_version?: number
+          created_at?: string
+          currency_code?: string
+          delivery_end?: string | null
+          delivery_start?: string | null
+          deposit_commitment_minor?: number
+          festival_operations_plan_id: string
+          id?: string
+          npc_supplier_name?: string | null
+          quality_score?: number
+          reliability_score?: number
+          service_end?: string | null
+          service_start?: string | null
+          status?: string
+          supplier_company_id?: string | null
+          supplier_requirement_id: string
+          supplier_source: string
+          terms_snapshot?: Json
+          total_commitment_minor?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_quote_id?: string
+          cancelled_at?: string | null
+          contract_version?: number
+          created_at?: string
+          currency_code?: string
+          delivery_end?: string | null
+          delivery_start?: string | null
+          deposit_commitment_minor?: number
+          festival_operations_plan_id?: string
+          id?: string
+          npc_supplier_name?: string | null
+          quality_score?: number
+          reliability_score?: number
+          service_end?: string | null
+          service_start?: string | null
+          status?: string
+          supplier_company_id?: string | null
+          supplier_requirement_id?: string
+          supplier_source?: string
+          terms_snapshot?: Json
+          total_commitment_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_supplier_contracts_accepted_quote_id_fkey"
+            columns: ["accepted_quote_id"]
+            isOneToOne: true
+            referencedRelation: "festival_supplier_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_supplier_contracts_festival_operations_plan_id_fkey"
+            columns: ["festival_operations_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operations_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_supplier_contracts_supplier_company_id_fkey"
+            columns: ["supplier_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_supplier_contracts_supplier_requirement_id_fkey"
+            columns: ["supplier_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_supplier_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_supplier_quotes: {
+        Row: {
+          base_cost_minor: number
+          created_at: string
+          currency_code: string
+          delivery_cost_minor: number
+          delivery_terms: Json | null
+          deposit_minor: number
+          expires_at: string | null
+          id: string
+          npc_supplier_name: string | null
+          quality_score: number
+          quote_version: number
+          reliability_score: number
+          service_terms: Json | null
+          setup_cost_minor: number
+          staffing_cost_minor: number
+          status: string
+          submitted_by_profile_id: string | null
+          supplier_company_id: string | null
+          supplier_requirement_id: string
+          supplier_source: string
+          total_cost_minor: number
+          updated_at: string
+        }
+        Insert: {
+          base_cost_minor?: number
+          created_at?: string
+          currency_code?: string
+          delivery_cost_minor?: number
+          delivery_terms?: Json | null
+          deposit_minor?: number
+          expires_at?: string | null
+          id?: string
+          npc_supplier_name?: string | null
+          quality_score?: number
+          quote_version?: number
+          reliability_score?: number
+          service_terms?: Json | null
+          setup_cost_minor?: number
+          staffing_cost_minor?: number
+          status?: string
+          submitted_by_profile_id?: string | null
+          supplier_company_id?: string | null
+          supplier_requirement_id: string
+          supplier_source: string
+          total_cost_minor?: number
+          updated_at?: string
+        }
+        Update: {
+          base_cost_minor?: number
+          created_at?: string
+          currency_code?: string
+          delivery_cost_minor?: number
+          delivery_terms?: Json | null
+          deposit_minor?: number
+          expires_at?: string | null
+          id?: string
+          npc_supplier_name?: string | null
+          quality_score?: number
+          quote_version?: number
+          reliability_score?: number
+          service_terms?: Json | null
+          setup_cost_minor?: number
+          staffing_cost_minor?: number
+          status?: string
+          submitted_by_profile_id?: string | null
+          supplier_company_id?: string | null
+          supplier_requirement_id?: string
+          supplier_source?: string
+          total_cost_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_supplier_quotes_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_supplier_quotes_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_supplier_quotes_supplier_company_id_fkey"
+            columns: ["supplier_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_supplier_quotes_supplier_requirement_id_fkey"
+            columns: ["supplier_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_supplier_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_supplier_requirements: {
+        Row: {
+          category: string
+          created_at: string
+          delivery_end: string | null
+          delivery_start: string | null
+          description: string | null
+          estimated_cost_minor: number
+          festival_operations_plan_id: string
+          id: string
+          minimum_quality: number
+          npc_supplier_eligible: boolean
+          player_company_eligible: boolean
+          quantity: number
+          requirement_type: string
+          safety_critical: boolean
+          service_end: string | null
+          service_start: string | null
+          status: string
+          unit_type: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          delivery_end?: string | null
+          delivery_start?: string | null
+          description?: string | null
+          estimated_cost_minor?: number
+          festival_operations_plan_id: string
+          id?: string
+          minimum_quality?: number
+          npc_supplier_eligible?: boolean
+          player_company_eligible?: boolean
+          quantity: number
+          requirement_type: string
+          safety_critical?: boolean
+          service_end?: string | null
+          service_start?: string | null
+          status?: string
+          unit_type?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          delivery_end?: string | null
+          delivery_start?: string | null
+          description?: string | null
+          estimated_cost_minor?: number
+          festival_operations_plan_id?: string
+          id?: string
+          minimum_quality?: number
+          npc_supplier_eligible?: boolean
+          player_company_eligible?: boolean
+          quantity?: number
+          requirement_type?: string
+          safety_critical?: boolean
+          service_end?: string | null
+          service_start?: string | null
+          status?: string
+          unit_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_supplier_requirements_festival_operations_plan_id_fkey"
+            columns: ["festival_operations_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_operations_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -44991,6 +45960,10 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: Json
       }
+      _festival_operations_result: {
+        Args: { p_company: string }
+        Returns: Json
+      }
       _festival_plan_edition: {
         Args: {
           p_festival_company_id: string
@@ -47198,6 +48171,10 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_operations_plan: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
       get_festival_site_plan: {
         Args: { p_festival_company_id: string }
         Returns: Json
@@ -48046,6 +49023,16 @@ export type Database = {
           p_expected_version: number
           p_festival_company_id: string
           p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      save_festival_operations_plan: {
+        Args: {
+          p_complete?: boolean
+          p_expected_version: number
+          p_festival_company_id: string
+          p_idempotency_key: string
+          p_plan: Json
         }
         Returns: Json
       }
