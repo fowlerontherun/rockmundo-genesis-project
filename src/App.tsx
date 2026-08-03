@@ -218,6 +218,7 @@ const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/Twaater
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
 const AdminWorldReset = lazyWithRetry(() => import("./pages/admin/WorldReset"));
 const AdminDebugPanel = lazyWithRetry(() => import("./pages/admin/DebugPanel"));
+const AdminFinanceDiagnostics = lazyWithRetry(() => import("./pages/admin/FinanceDiagnostics"));
 const AdminDeathSystem = lazyWithRetry(() => import("./pages/admin/DeathSystemAdmin"));
 const AdminOfferAutomation = lazyWithRetry(() => import("./pages/admin/OfferAutomation"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
@@ -911,6 +912,7 @@ function App() {
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
                     <Route path="admin/world-reset" element={<AdminWorldReset />} />
                     <Route path="admin/debug-panel" element={<AdminDebugPanel />} />
+                    <Route path="admin/finance-diagnostics" element={<AdminFinanceDiagnostics />} />
                     <Route path="admin/death-system" element={<AdminDeathSystem />} />
                     <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />

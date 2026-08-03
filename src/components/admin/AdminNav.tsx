@@ -164,6 +164,7 @@ export const adminCategories: AdminCategory[] = [
     items: [
       { path: "/admin/dashboard", label: "Admin Dashboard", description: "Overview & quick actions" },
       { path: "/admin/debug-panel", label: "Debug Panel", description: "Troubleshoot player issues" },
+      { path: "/admin/finance-diagnostics", label: "Finance Diagnostics", description: "Finance RPC data sources" },
       { path: "/admin/companies", label: "Company Admin", description: "VIP company management" },
       { path: "/admin/security-firms", label: "Security Firms", description: "Global firm management" },
       { path: "/admin/merch-factories", label: "Merch Factories", description: "Factory administration" },
