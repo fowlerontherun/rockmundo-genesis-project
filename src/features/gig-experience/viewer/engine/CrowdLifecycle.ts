@@ -10,7 +10,7 @@ export interface CrowdMilestone { key: string; label: string; progress: number; 
 export interface CrowdState { entities: CrowdEntity[]; attendance: number; capacity: number; cap: number; fillProgress: number; phaseLabel: string; occupiedZones: string[]; milestones: CrowdMilestone[]; diagnostics: { entityCount: number; movingCount: number; settledCount: number } }
 export interface CrowdLayoutPlan { baseEntities: CrowdEntity[]; attendance: number; capacity: number; cap: number; entryStartMs: number; entryEndMs: number; milestones: CrowdMilestone[] }
 
-export const CROWD_ENTITY_CAPS = { reducedMotion: 40, mobileLow: 60, mobileDefault: 100, tablet: 140, desktopDefault: 200, desktopHigh: 300 } as const;
+export const CROWD_ENTITY_CAPS = { reducedMotion: 150, mobileLow: 420, mobileDefault: 650, tablet: 900, desktopDefault: 1400, desktopHigh: 2200 } as const;
 
 export function selectCrowdEntityCap({ reducedMotion, width, devicePixelRatio = 1, attendanceRatio = 0, highPerformance = false }: { reducedMotion: boolean; width: number; devicePixelRatio?: number; attendanceRatio?: number; highPerformance?: boolean }) {
   if (reducedMotion) return CROWD_ENTITY_CAPS.reducedMotion;
@@ -51,7 +51,7 @@ export function buildCrowdPlan({ replay, attendance, capacity, size, reducedMoti
     const stagger = weights.length <= 1 ? 0 : i / (weights.length - 1);
     const spawnOffsetMs = entryStartMs + stagger * Math.max(1, entryEndMs - entryStartMs) * .72;
     const travelMs = reducedMotion ? 0 : 2400 + rand() * 2200;
-    return { id: `crowd-${i}`, seedIndex: i, weight, entranceId: `entrance-${entranceIndex}`, targetZoneId: zone.id, x: start.x, y: start.y, start, waypoint, target, spawnOffsetMs, travelMs, speed: travelMs ? distance(start, target) / travelMs : 0, state: "queued" as CrowdEntityState, radius: Math.max(2.5, Math.min(5.5, 2.5 + Math.sqrt(weight) * .18)), idlePhase: rand() * Math.PI * 2, visible: false };
+    return { id: `crowd-${i}`, seedIndex: i, weight, entranceId: `entrance-${entranceIndex}`, targetZoneId: zone.id, x: start.x, y: start.y, start, waypoint, target, spawnOffsetMs, travelMs, speed: travelMs ? distance(start, target) / travelMs : 0, state: "queued" as CrowdEntityState, radius: Math.max(1, Math.min(2.4, 1 + Math.sqrt(weight) * .08)), idlePhase: rand() * Math.PI * 2, visible: false };
   });
   return { baseEntities, attendance: safeAttendance, capacity: safeCapacity, cap, entryStartMs, entryEndMs, milestones: milestoneTemplates() };
 }
