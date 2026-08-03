@@ -17,7 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.621",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Live stage presentation now renders real production visuals instead of text labels: flame jets, sparkler fountains, CO2 blasts, aerial fireworks, confetti, laser fans, haze and strobes, matched to the gig viewer's pyrotechnics." },
+      { type: 'improvement', description: "Outdoor and festival stages show aerial firework bursts high above the stage, while indoor venues keep effects at stage level." },
+      { type: 'improvement', description: "Reduced, minimal and data-only presentation modes calm or remove the new effects so accessibility settings still hold." },
+    ],
+  },
+  {
     version: "1.1.620",
+
     date: "2026-08-03",
     changes: [
       { type: 'feature', description: "Pyrotechnics and fireworks added to the gig viewer: flame jets, sparkler fountains, CO2 jets, aerial firework shells and finale confetti, all driven deterministically by the stored replay so playback stays consistent." },
