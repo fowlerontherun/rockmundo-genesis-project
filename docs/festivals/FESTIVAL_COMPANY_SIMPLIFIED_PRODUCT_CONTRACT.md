@@ -21,7 +21,7 @@ An annual edition is a lightweight yearly event owned by that company. It exists
 
 1. Found or open the Festival company.
 2. Fund it through the normal company-finance system.
-3. Improve the Festival through its eleven upgrade categories.
+3. Improve the Festival through its eleven upgrade categories and obtain the appropriate company licence.
 4. Plan the next annual Festival using a small number of high-impact choices.
 5. Select or approve the line-up and set the artist budget.
 6. Set the standard ticket price and tickets available.
@@ -59,7 +59,7 @@ The annual Plan screen requires only:
 6. vibe;
 7. marketing emphasis.
 
-The exact annual edition ID is required for every read and save. Saves are owner/admin authorised, optimistic, idempotent and unavailable after the edition is completed, cancelled or locked.
+The exact annual edition ID is required for every read and save. Saves are authorised for the owner, normal company managers and administrators, optimistic, idempotent and unavailable after the edition is completed, cancelled or locked.
 
 The server derives and stores:
 
@@ -106,12 +106,35 @@ The existing categories remain the long-term company progression system:
 
 Players buy upgrades from the Festival company's funds. Upgrade levels influence capacity, quality, operating cost, risk, reputation, artist attraction, audience satisfaction and revenue. Players do not manually administer the underlying operational detail.
 
+## Simplified licence progression
+
+The Festival company holds one active licence at a time. Licences control the maximum attendance, duration, stage count, acts per day and whether camping is allowed.
+
+The owner or an authorised company manager sees only:
+
+- the current or most recent licence and its expiry;
+- the highest eligible tier and the next actionable tier;
+- upgrade and company-reputation requirements;
+- attendance, duration and stage limits;
+- the licence fee and available company funds;
+- one **Apply**, **Upgrade** or **Renew** action.
+
+Licence fees are charged from the Festival company's normal financial account. Applications are approved immediately when the authoritative requirements and funds are satisfied. Renewals become available during the final 30 days of the active term, and a successful licence change refreshes readiness for every editable annual Festival.
+
+The licence action does not expose permits, insurance documents, regulator correspondence or approval queues. Those remain automatic simulation details represented through the single company licence and concise launch blockers.
+
+## Company management authority
+
+The Festival owner can use the normal company staffing and permission system to let trusted players manage the business. A player who can manage the underlying company can open the Festival company, view annual editions, plan the next edition, edit annual choices, manage edition-bound tickets and line-up settings, purchase upgrades and manage the licence.
+
+Founding the Festival company and changing ownership remain owner-level actions. Detailed Festival tables do not create a separate permission model.
+
 ## Player-facing screens
 
 The intended owner journey is deliberately small:
 
 - **Festival company** — balance, reputation, licence, current annual Festival and company actions.
-- **Upgrades** — the eleven upgrade categories and licence progression.
+- **Upgrades** — the eleven upgrade categories and the single licence action.
 - **Plan** — dates, place, vibe, size and readiness summary.
 - **Line-up** — line-up approach, artist budget, applications/invitations and confirmed acts.
 - **Tickets & budget** — standard price, available tickets and a simple forecast.
