@@ -80,13 +80,20 @@ describe("simplified Festival licence completion", () => {
     );
   });
 
-  it("protects licence charging with versioning and idempotency", () => {
+  it("protects licence charging with portable versioned receipts", () => {
     const migration = source(migrationPath);
 
     expect(migration).toContain("festival_licence_requests");
     expect(migration).toContain("p_expected_licence_version");
     expect(migration).toContain("FESTIVAL_LICENCE_VERSION_CONFLICT");
     expect(migration).toContain("FESTIVAL_LICENCE_IDEMPOTENCY_CONFLICT");
+    expect(migration).toContain("payload_hash := md5(jsonb_build_object(");
+    expect(migration).not.toMatch(
+      /apply_festival_company_licence[\s\S]*payload_hash := encode\(digest/,
+    );
+    expect(migration).toContain(
+      "festival_company_licences_festival_company_id_tier_key_status_k",
+    );
     expect(migration).toContain("festival_company_one_active_licence");
     expect(migration).toContain(
       "PERFORM public._refresh_festival_company_edition_readiness(company.id)",
