@@ -915,6 +915,7 @@ function App() {
                     <Route path="admin/debug-panel" element={<AdminDebugPanel />} />
                     <Route path="admin/finance-diagnostics" element={<AdminFinanceDiagnostics />} />
                     <Route path="admin/death-system" element={<AdminDeathSystem />} />
+                    <Route path="admin/character-recovery" element={<AdminCharacterRecovery />} />
                     <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
                     <Route path="admin/radio-stations" element={<AdminRadioStations />} />
