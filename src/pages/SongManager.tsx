@@ -18,6 +18,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 const SongManager = () => {
   const navigate = useNavigate();
   const { profile } = useGameData();
+  const { profileId } = useActiveProfile();
   const user = { id: profile?.user_id };
   const [searchQuery, setSearchQuery] = useState("");
   const [genreFilter, setGenreFilter] = useState("all");
@@ -26,11 +27,11 @@ const SongManager = () => {
   const [showArchived, setShowArchived] = useState(false);
 
   const { data: songs, isLoading } = useQuery({
-    queryKey: ["user-songs", user?.id],
+    queryKey: ["user-songs", profileId, user?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId && !user?.id) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("songs")
         .select(`
           *,
@@ -38,26 +39,36 @@ const SongManager = () => {
             name,
             genre
           )
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        `);
+
+      // Only show songs belonging to the active character.
+      // Legacy songs with no character recorded fall back to the account owner.
+      if (profileId && user?.id) {
+        query = query.or(`profile_id.eq.${profileId},and(profile_id.is.null,user_id.eq.${user.id})`);
+      } else if (profileId) {
+        query = query.eq("profile_id", profileId);
+      } else {
+        query = query.eq("user_id", user.id!);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!profileId || !!user?.id,
   });
 
-  // Fetch rehearsal levels for songs
+  // Fetch rehearsal levels for songs (scoped to the active character's bands)
   const { data: rehearsalData } = useQuery({
-    queryKey: ["song-rehearsals", user?.id],
+    queryKey: ["song-rehearsals", profileId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!profileId) return [];
 
       const { data: bandMembers } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", user.id);
+        .eq("profile_id", profileId);
 
       if (!bandMembers || bandMembers.length === 0) return [];
 
@@ -71,8 +82,9 @@ const SongManager = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!profileId,
   });
+
 
   const availableGenres = useMemo(() => {
     if (!songs) return [];
