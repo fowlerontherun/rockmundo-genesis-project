@@ -31218,6 +31218,7 @@ export type Database = {
           current_city_id: string | null
           death_cause: string | null
           debt_started_at: string | null
+          deleted_at: string | null
           died_at: string | null
           display_name: string | null
           energy: number
@@ -31286,6 +31287,7 @@ export type Database = {
           current_city_id?: string | null
           death_cause?: string | null
           debt_started_at?: string | null
+          deleted_at?: string | null
           died_at?: string | null
           display_name?: string | null
           energy?: number
@@ -31354,6 +31356,7 @@ export type Database = {
           current_city_id?: string | null
           death_cause?: string | null
           debt_started_at?: string | null
+          deleted_at?: string | null
           died_at?: string | null
           display_name?: string | null
           energy?: number
@@ -42868,6 +42871,7 @@ export type Database = {
           current_city_id: string | null
           death_cause: string | null
           debt_started_at: string | null
+          deleted_at: string | null
           died_at: string | null
           display_name: string | null
           energy: number
@@ -43218,6 +43222,10 @@ export type Database = {
       }
       decrement_merch_stock: {
         Args: { amount: number; merch_id: string }
+        Returns: undefined
+      }
+      delete_character_profile: {
+        Args: { p_profile_id: string }
         Returns: undefined
       }
       deposit_to_band_treasury: {
@@ -44743,6 +44751,10 @@ export type Database = {
       }
       swap_gettit_vote: {
         Args: { new_field: string; old_field: string; post_id: string }
+        Returns: undefined
+      }
+      switch_active_character: {
+        Args: { p_profile_id: string }
         Returns: undefined
       }
       switch_wellness_lifestyle: {
