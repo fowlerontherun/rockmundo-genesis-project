@@ -1,0 +1,48 @@
+name: Festival edition projection validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install without rewriting stale lockfile
+        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+      - name: Lint Festival projection sources
+        run: >-
+          npx eslint
+          src/features/festivals/projections/repository.ts
+          src/features/festivals/projections/migration.test.ts
+          src/features/festival-company/application/useFestivalSitePlan.ts
+          src/features/festival-company/application/useFestivalTicketPlan.ts
+          src/features/festival-company/application/useFestivalArtistProgramme.ts
+          src/features/festival-company/ui/FestivalTicketPlanner.tsx
+          src/features/festival-company/ui/FestivalArtistPlanner.tsx
+          src/features/festivals/ui/FestivalEditionSections.tsx
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run focused projection tests
+        run: >-
+          npx vitest run
+          src/features/festivals/projections/migration.test.ts
+          src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts
+          src/features/festivals/editions/repository.test.ts
+          --pool=forks --maxWorkers=1 --minWorkers=1
+      - name: Verify Festival routes
+        run: npm run test:festivals:routes && npm run test:festivals:route-components
+      - name: Verify Festival active-system inventory
+        run: npm run test:festivals:active-callers
+      - name: Verify migration timestamps
+        run: npm run verify:migration-timestamps
+      - name: Build production app
+        run: npm run build
