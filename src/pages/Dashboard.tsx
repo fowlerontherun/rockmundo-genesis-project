@@ -478,20 +478,17 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4" />
-                  {t('awards.achievements')}
-                  {achievements && achievements.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">{achievements.length}</Badge>
-                  )}
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-4 w-4 text-primary" />
+                {t('awards.achievements')}
+                {achievements && achievements.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{achievements.length}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               {achievementsLoading ? (
                 <PageLoadingState
                   title="Loading achievements"
@@ -526,8 +523,9 @@ const Dashboard = () => {
                       </div>
                     </div>)}
                 </div>}
-            </CollapsibleContent>
-          </Collapsible>
+            </CardContent>
+          </Card>
+
         </TabsContent>
       </Tabs>
     </StandardPageLayout>;
