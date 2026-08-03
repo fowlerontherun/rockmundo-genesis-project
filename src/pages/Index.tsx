@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useOptionalGameData } from "@/hooks/useGameData";
 import { usePlayerCharacterIdentity } from "@/hooks/useCharacterIdentity";
 import { useCharacterDeath } from "@/hooks/useCharacterDeath";
-import { CharacterDeathScreen } from "@/components/character/CharacterDeathScreen";
+import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
