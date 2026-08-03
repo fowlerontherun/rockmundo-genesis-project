@@ -251,6 +251,10 @@ export const RehearsalBookingDialog = ({
 
       const { start } = getSlotTimeRange(slot, selectedDate);
 
+      // When the player overrides with personal funds, move the money into the
+      // band treasury first so the booking engine stays band-authoritative.
+      await payment.prepareFunds(totalCost, "Rehearsal booking (personal funds)");
+
       await onConfirm(
         selectedRoomId,
         selectedDuration,
