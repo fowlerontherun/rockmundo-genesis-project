@@ -2916,7 +2916,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -4421,7 +4420,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -8533,7 +8531,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -11521,7 +11518,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -15564,7 +15560,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -15630,8 +15625,10 @@
     {
       "file": "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
       "kind": "module",
-      "importers": [],
-      "status": "unused_or_dynamic",
+      "importers": [
+        "src/features/festivals/editions/repository.test.ts"
+      ],
+      "status": "test_only",
       "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": false,
       "writes": []
@@ -17023,6 +17020,7 @@
       "file": "src/features/festival-company/application/useFestivalCompanySetup.ts",
       "kind": "module",
       "importers": [
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festival-company/application/useFoundFestivalCompany.ts",
         "src/features/festival-company/ui/FestivalCompanySetupPage.tsx"
       ],
@@ -17164,6 +17162,7 @@
         "src/pages/VersionHistory.tsx",
         "src/features/festival-company/index.ts",
         "src/features/festival-company/__tests__/featureFlags.test.ts",
+        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/application/useFoundFestivalCompany.ts",
         "src/features/festival-company/ui/FestivalCompanyEligibilityCard.tsx",
         "src/features/festival-company/ui/FestivalCompanySetupPage.tsx",
@@ -17741,6 +17740,8 @@
       "file": "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
       "kind": "module",
       "importers": [
+        "src/features/festivals/editions/repository.test.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festival-company/ui/FestivalCompanySetupPage.tsx"
       ],
       "status": "canonical_active",
@@ -18299,7 +18300,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -52795,7 +52795,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -54320,7 +54319,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -58414,7 +58412,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -61418,7 +61415,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -65477,7 +65473,6 @@
         "src/features/festivals/admin/components/creation/festivalCreationDirtyState.ts",
         "src/features/festivals/admin/components/workspace/selectPreferredFestivalEdition.ts",
         "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
-        "src/features/festival-company/__tests__/legacyFestivalGate.test.tsx",
         "src/features/festival-company/config/featureFlags.ts",
         "src/features/festival-company/data/festivalCompanyRepository.ts",
         "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
@@ -65542,17 +65537,6 @@
       "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "remove_after_route_migration"
-    },
-    {
-      "candidate": "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
-      "currentCallers": [],
-      "replacement": null,
-      "dataMigrationRequirement": "none for source file; preserve data tables",
-      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
-      "recommendedRetirementPr": "festival-route-migration",
-      "risk": "medium",
-      "verification": "npm run test:festivals:active-callers",
-      "category": "investigate"
     },
     {
       "candidate": "src/features/festivals/ui/FestivalEditionSections.tsx",
