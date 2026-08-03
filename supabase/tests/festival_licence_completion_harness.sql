@@ -13,6 +13,7 @@ CREATE TABLE public.profiles (
   id uuid PRIMARY KEY,
   user_id uuid NOT NULL,
   character_name text,
+  display_name text,
   username text
 );
 CREATE TABLE public.companies (
@@ -237,6 +238,16 @@ LANGUAGE sql STABLE AS $$
     SELECT 1 FROM public.company_managers manager
     WHERE manager.company_id = p_company_id
       AND manager.profile_id = public._caller_profile_id()
+  )
+$$;
+CREATE FUNCTION public.festival_company_capabilities() RETURNS jsonb
+LANGUAGE sql STABLE AS $$
+  SELECT jsonb_build_object(
+    'newFestivalSystemEnabled', true,
+    'festivalCompanyCreationEnabled', true,
+    'festivalCompanyManagementEnabled', true,
+    'festivalConfigurationEnabled', true,
+    'companyLimit', 3
   )
 $$;
 CREATE FUNCTION public.finance_debit_owner(

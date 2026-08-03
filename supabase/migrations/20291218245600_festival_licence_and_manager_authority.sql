@@ -758,7 +758,7 @@ BEGIN
     'setupStatus', festival.status,
     'setupCompleted', festival.setup_completed,
     'ownerProfileId', festival.owner_profile_id,
-    'ownerDisplayName', coalesce(owner.character_name, owner.username, 'Owner'),
+    'ownerDisplayName', coalesce(owner.display_name, owner.username, 'Owner'),
     'foundedAt', company.founded_at,
     'companyStatus', company.status,
     'isBankrupt', company.is_bankrupt,
@@ -772,7 +772,8 @@ BEGIN
     'firstEditionExists', EXISTS (
       SELECT 1 FROM public.festival_editions_v2 edition
       WHERE edition.festival_company_id = festival.id
-    )
+    ),
+    'capabilities', public.festival_company_capabilities()
   ) INTO result
   FROM public.festival_companies festival
   JOIN public.companies company ON company.id = festival.company_id
