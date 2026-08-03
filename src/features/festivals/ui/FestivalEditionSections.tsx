@@ -282,7 +282,7 @@ export function FestivalEditionApplications({
         festivalCompanyId={festivalCompanyId}
         editionId={editionId}
         requireEditable
-        requiredBindings={["artists"]}
+        requiredBindings={["tickets"]}
       >
         <FestivalArtistPlanner festivalCompanyId={festivalCompanyId} />
       </EditionScope>
@@ -306,7 +306,7 @@ export function FestivalEditionFinance({
         festivalCompanyId={festivalCompanyId}
         editionId={editionId}
         requireEditable
-        requiredBindings={["site", "tickets"]}
+        requiredBindings={["site"]}
       >
         <FestivalTicketPlanner festivalCompanyId={festivalCompanyId} />
       </EditionScope>
