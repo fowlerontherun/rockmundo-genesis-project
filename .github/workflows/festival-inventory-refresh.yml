@@ -6,13 +6,15 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -24,6 +26,17 @@ jobs:
           mv node_modules/package node_modules/typescript
       - name: Generate Festival inventory
         run: node scripts/festivals/certify-active-system.mjs
+      - name: Commit refreshed inventory
+        run: |
+          if git diff --quiet -- docs/festivals/festival-active-callers.json; then
+            echo "Festival inventory is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/festivals/festival-active-callers.json
+          git commit -m "Refresh festival active-system inventory"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
       - name: Upload Festival inventory
         uses: actions/upload-artifact@v4
         with:
