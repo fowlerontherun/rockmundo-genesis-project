@@ -1,0 +1,60 @@
+name: Festival edition projection SQL edit
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Harden projection SQL variables
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          migration = Path("supabase/migrations/20291218245500_festival_edition_internal_projections.sql")
+          sql = migration.read_text()
+          sql = sql.replace("  forecast jsonb;", "  projection_forecast jsonb;")
+          sql = sql.replace(
+              "  forecast := public._festival_projection_forecast(",
+              "  projection_forecast := public._festival_projection_forecast(",
+          )
+          sql = sql.replace(
+              "  SET forecast = forecast,",
+              "  SET forecast = projection_forecast,",
+          )
+          sql = sql.replace("  old_version integer;", "  old_version integer;")
+          sql, count = re.subn(
+              r"  SELECT coalesce\(planning_version, 0\) INTO old_version\n"
+              r"  FROM public\.festival_artist_programmes\n"
+              r"  WHERE festival_edition_id = edition\.id\n"
+              r"  FOR UPDATE;",
+              "  SELECT coalesce(max(planning_version), 0) INTO old_version\n"
+              "  FROM public.festival_artist_programmes\n"
+              "  WHERE festival_edition_id = edition.id;",
+              sql,
+          )
+          if count == 0 and "SELECT coalesce(max(planning_version), 0) INTO old_version" not in sql:
+              raise SystemExit("artist programme version marker missing")
+          if "SET forecast = forecast" in sql or "forecast := public._festival_projection_forecast" in sql:
+              raise SystemExit("ambiguous forecast variable remains")
+          migration.write_text(sql)
+          PY
+          if git diff --quiet -- supabase/migrations/20291218245500_festival_edition_internal_projections.sql; then
+            echo "Projection SQL variables already hardened."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/migrations/20291218245500_festival_edition_internal_projections.sql
+          git commit -m "Harden edition projection SQL variables"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
