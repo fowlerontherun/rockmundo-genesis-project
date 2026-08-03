@@ -997,9 +997,6 @@ BEGIN
   IF site.id IS NULL OR ticket.id IS NULL OR site.status <> 'ready_for_ticketing' THEN
     RAISE EXCEPTION 'festival_site_plan_incomplete' USING ERRCODE = 'P0001';
   END IF;
-  IF ticket.planning_version <> p_expected_version THEN
-    RAISE EXCEPTION 'festival_ticket_plan_stale' USING ERRCODE = 'P0001';
-  END IF;
 
   SELECT value INTO admission
   FROM jsonb_array_elements(coalesce(p_products, '[]'::jsonb)) value
@@ -1061,6 +1058,10 @@ BEGIN
       payload_hash
     ) RETURNING * INTO request;
   END IF;
+
+  IF ticket.planning_version <> p_expected_version THEN
+  RAISE EXCEPTION 'festival_ticket_plan_stale' USING ERRCODE = 'P0001';
+END IF;
 
   UPDATE public.festival_ticket_plans
   SET expected_sell_through_basis_points = sell_through,
@@ -1370,13 +1371,6 @@ BEGIN
     RAISE EXCEPTION 'festival_artist_programme_invalid' USING ERRCODE = 'P0001';
   END IF;
 
-  SELECT coalesce(max(planning_version), 0) INTO old_version
-  FROM public.festival_artist_programmes
-  WHERE festival_edition_id = edition.id;
-  IF old_version <> p_expected_version THEN
-    RAISE EXCEPTION 'festival_artist_programme_stale' USING ERRCODE = 'P0001';
-  END IF;
-
   payload_hash := encode(digest(jsonb_build_object(
     'festivalEditionId', edition.id,
     'expectedVersion', p_expected_version,
@@ -1419,6 +1413,13 @@ BEGIN
       payload_hash
     ) RETURNING * INTO request;
   END IF;
+
+  SELECT coalesce(max(planning_version), 0) INTO old_version
+FROM public.festival_artist_programmes
+WHERE festival_edition_id = edition.id;
+IF old_version <> p_expected_version THEN
+  RAISE EXCEPTION 'festival_artist_programme_stale' USING ERRCODE = 'P0001';
+END IF;
 
   INSERT INTO public.festival_artist_programmes(
     festival_company_id,
