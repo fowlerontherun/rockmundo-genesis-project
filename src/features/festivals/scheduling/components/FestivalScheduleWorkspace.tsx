@@ -37,6 +37,7 @@ import {
   useFestivalScheduleWorkspace,
   useScheduleMutations,
 } from "../hooks";
+import { festivalScheduleLoadErrorMessage } from "../errors";
 import {
   scheduleTemplates,
   type FestivalScheduleItem,
@@ -96,7 +97,7 @@ export function FestivalScheduleWorkspace({ editionId }: { editionId: string }) 
     return (
       <Card>
         <CardContent className="p-6 text-destructive">
-          Schedule workspace could not be loaded.
+          {festivalScheduleLoadErrorMessage(query.error)}
         </CardContent>
       </Card>
     );
@@ -282,7 +283,7 @@ function FestivalTimelineBoard({
     return (
       <Card className="hidden lg:block">
         <CardContent className="p-6 text-sm text-muted-foreground">
-          Add a stage before building the Festival schedule.
+          Complete site planning for this annual edition before building its schedule.
         </CardContent>
       </Card>
     );
@@ -371,7 +372,7 @@ function FestivalMobileAgenda({
       <CardContent className="space-y-2">
         {stages.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Add a stage before building the Festival schedule.
+            Complete site planning for this annual edition before building its schedule.
           </p>
         ) : stageItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">
