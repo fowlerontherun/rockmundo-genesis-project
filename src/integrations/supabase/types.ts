@@ -44346,6 +44346,39 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_revive_character: {
+        Args: {
+          p_energy?: number
+          p_grant_lives?: number
+          p_health?: number
+          p_make_active?: boolean
+          p_profile_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      admin_search_characters: {
+        Args: { p_limit?: number; p_only_dead?: boolean; p_search?: string }
+        Returns: {
+          cash: number
+          created_at: string
+          death_cause: string
+          deleted_at: string
+          died_at: string
+          display_name: string
+          energy: number
+          fame: number
+          health: number
+          is_active: boolean
+          last_login_at: string
+          level: number
+          profile_id: string
+          resurrection_lives: number
+          slot_number: number
+          user_id: string
+          username: string
+        }[]
+      }
       admin_transition_festival_edition: {
         Args: {
           p_edition_id: string

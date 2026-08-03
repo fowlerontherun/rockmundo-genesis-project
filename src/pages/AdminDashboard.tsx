@@ -144,6 +144,12 @@ const AdminDashboard = () => {
               <CardDescription>Configure permadeath, resurrection & inheritance</CardDescription>
             </CardHeader>
           </Card>
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/character-recovery'}>
+            <CardHeader>
+              <CardTitle>Character Recovery</CardTitle>
+              <CardDescription>Find and revive any character in the game</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
 
         <Card className="border-primary/20">

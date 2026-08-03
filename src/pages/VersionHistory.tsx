@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.635",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Added an admin Character Recovery tool (Admin → Character Recovery) to search every character in the game by stage name, username, character ID or account ID, including comatose and deleted ones." },
+      { type: 'feature', description: "Admins can now revive any character: it clears the coma and deletion state, restores health, energy, mood and wellness, can grant extra resurrection lives, and can make it the owner's active character." },
+      { type: 'improvement', description: "Every revival is recorded in the admin audit log with the admin's reason and the character's previous state." },
+    ],
+  },
+  {
+
     version: "1.1.634",
     date: "2026-08-03",
     changes: [
