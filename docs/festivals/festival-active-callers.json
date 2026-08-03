@@ -13890,6 +13890,15 @@
       "writes": []
     },
     {
+      "file": "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
       "file": "src/features/festivals/scheduling/schedulingModel.test.ts",
       "kind": "test",
       "importers": [],
@@ -42146,6 +42155,18 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "ensure_festival_v2_schedule_workspace",
+      "migration": "supabase/migrations/20291218245200_festival_v2_schedule_stage_sync.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -46012,15 +46033,18 @@
       "name": "create_festival_edition_stage",
       "typescriptCallers": [
         "src/pages/VersionHistory.tsx",
-        "src/features/festivals/admin/service.ts"
+        "src/features/festivals/admin/service.ts",
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts"
       ],
       "sqlCallers": [
         "supabase/migrations/20260722113844_afab3eaf-0b93-4fbc-9fb1-437007b03276.sql",
         "supabase/migrations/20291212090000_complete_festival_edition_operations.sql",
-        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql"
+        "supabase/migrations/20291217220000_authoritative_festival_edition_scheduling.sql",
+        "supabase/migrations/20291218245200_festival_v2_schedule_stage_sync.sql"
       ],
       "workerCallers": [],
       "testCallers": [
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts",
         "supabase/tests/festival_admin_management_harness.sql"
       ],
       "classification": "active_canonical",
@@ -46184,15 +46208,33 @@
       "name": "ensure_festival_v2_schedule_bridge",
       "typescriptCallers": [
         "src/features/festivals/scheduling/scheduleBridgeMigration.test.ts",
-        "src/features/festivals/scheduling/service.test.ts",
-        "src/features/festivals/scheduling/service.ts"
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218245100_festival_v2_schedule_bridge.sql"
+        "supabase/migrations/20291218245100_festival_v2_schedule_bridge.sql",
+        "supabase/migrations/20291218245200_festival_v2_schedule_stage_sync.sql"
       ],
       "workerCallers": [],
       "testCallers": [
         "src/features/festivals/scheduling/scheduleBridgeMigration.test.ts",
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts"
+      ],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "ensure_festival_v2_schedule_workspace",
+      "typescriptCallers": [
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts",
+        "src/features/festivals/scheduling/service.test.ts",
+        "src/features/festivals/scheduling/service.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218245200_festival_v2_schedule_stage_sync.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts",
         "src/features/festivals/scheduling/service.test.ts"
       ],
       "classification": "active_canonical",
@@ -46952,13 +46994,17 @@
     {
       "name": "festival_schedule_configure_stage_hours",
       "typescriptCallers": [
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts",
         "src/features/festivals/scheduling/service.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291215090000_festival_phase2a_visual_scheduling.sql"
+        "supabase/migrations/20291215090000_festival_phase2a_visual_scheduling.sql",
+        "supabase/migrations/20291218245200_festival_v2_schedule_stage_sync.sql"
       ],
       "workerCallers": [],
-      "testCallers": [],
+      "testCallers": [
+        "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -64410,6 +64456,17 @@
     },
     {
       "candidate": "src/features/festivals/scheduling/scheduleBridgeMigration.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
+    },
+    {
+      "candidate": "src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts",
       "currentCallers": [],
       "replacement": null,
       "dataMigrationRequirement": "none for source file; preserve data tables",
