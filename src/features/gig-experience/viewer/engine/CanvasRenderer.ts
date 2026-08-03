@@ -8,7 +8,8 @@ import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEn
 import type { Size } from "./Viewport";
 import { selectVenuePreset, scaleVenuePreset, selectStageType } from "./VenueLayout";
 import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
-import { drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
+import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
+import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -20,6 +21,7 @@ export class CanvasRenderer {
   private storyModel: StoryModel;
   private lastFrameMs = 0;
   private pyroPlan: PyroPlan | null = null;
+  private audiencePlan: AudienceActivityPlan | null = null;
 
   constructor(private canvas: HTMLCanvasElement, private replay: GigViewerReplay, private experience: GigExperienceDTO | null, private reducedMotion: boolean, private options: { pyrotechnics?: boolean; pyroIntensity?: number } = {}) {
     const ctx = canvas.getContext("2d");
@@ -45,6 +47,8 @@ export class CanvasRenderer {
     this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion });
     this.crowdPlan = buildCrowdPlan({ replay: this.replay, attendance: this.layout.attendance, capacity: this.layout.capacity, size: this.size, reducedMotion: this.reducedMotion, devicePixelRatio: this.dpr });
     this.performerPlan = buildPerformerPlan({ replay: this.replay, experience: this.experience, size: this.size });
+    const scaledPreset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig?.venue?.capacity, venueName: this.experience?.gig?.venue?.name, venueType: (this.experience?.gig?.venue as any)?.type ?? null }), this.size);
+    this.audiencePlan = buildAudienceActivityPlan({ preset: scaledPreset, seed: (this.replay as any).simulationSeed ?? this.replay.id, attendanceRatio: this.layout.capacity > 0 ? this.layout.attendance / this.layout.capacity : 0.6, reducedMotion: this.reducedMotion });
   }
 
   render(state: DerivedPlaybackState) {
@@ -60,6 +64,7 @@ export class CanvasRenderer {
     ctx.clearRect(0, 0, size.width, size.height);
     // Themed background + audience floor
     drawBackground(ctx, preset, size);
+    drawVenueShell(ctx, preset, size);
     drawFloor(ctx, preset);
     // Occupied audience zone tint
     if (crowd && preset.crowdZones.length > 1) {
@@ -113,6 +118,8 @@ export class CanvasRenderer {
       ctx.font = "bold 8px sans-serif"; ctx.fillText(p.label, p.currentPosition.x, p.currentPosition.y + 8);
     });
 
+    // Security line + crowd activity (pit circles, surfers, flags, banners) above the crowd
+    if (this.audiencePlan) drawAudienceActivity(ctx, this.audiencePlan, { positionMs: state.positionMs, energy: storySnapshot.crowdEnergy, reducedMotion: this.reducedMotion });
     // Atmosphere overlay (haze/strobe) above the crowd but below overlays
     drawAtmosphere(ctx, preset, size, storySnapshot.crowdEnergy, state.positionMs, this.reducedMotion);
     // Pyrotechnics / fireworks cue sheet (presentation only)
