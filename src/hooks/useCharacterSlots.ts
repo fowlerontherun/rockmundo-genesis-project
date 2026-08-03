@@ -43,7 +43,6 @@ async function switchActiveCharacterFallback(userId: string, profileId: string):
     .select("id")
     .eq("id", profileId)
     .eq("user_id", userId)
-    .is("died_at", null)
     .maybeSingle();
 
   if (targetError) throw targetError;
@@ -51,25 +50,24 @@ async function switchActiveCharacterFallback(userId: string, profileId: string):
     throw new Error("Character not found or unavailable");
   }
 
-  const { error: activateTargetError } = await supabase
-    .from("profiles")
-    .update({ is_active: true })
-    .eq("id", profileId)
-    .eq("user_id", userId)
-    .is("died_at", null);
-
-  if (activateTargetError) throw activateTargetError;
-
   const { error: deactivateOthersError } = await supabase
     .from("profiles")
     .update({ is_active: false })
     .eq("user_id", userId)
     .neq("id", profileId)
-    .eq("is_active", true)
-    .is("died_at", null);
+    .eq("is_active", true);
 
   if (deactivateOthersError) throw deactivateOthersError;
+
+  const { error: activateTargetError } = await supabase
+    .from("profiles")
+    .update({ is_active: true })
+    .eq("id", profileId)
+    .eq("user_id", userId);
+
+  if (activateTargetError) throw activateTargetError;
 }
+
 
 async function switchActiveCharacter(userId: string, profileId: string): Promise<void> {
   const { error } = await supabase.rpc("switch_active_character" as any, {
