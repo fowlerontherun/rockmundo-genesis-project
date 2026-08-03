@@ -17,6 +17,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.628",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival site planning is live: site plans with stages, usable capacity limits per festival scale, and automatic facility requirements (toilets, medical points, security)." },
+      { type: 'feature', description: "Festival ticket planning is live: ticket types (day, weekend, VIP, accessible, camping, parking and more), prices, capacities, age limits and inclusions." },
+      { type: 'feature', description: "Added ticket release phases (presale, early bird, general sale, final release) with allocation limits and discounts." },
+      { type: 'feature', description: "Added per-day capacity allocation with reserved and complimentary tickets, plus an automatic revenue and attendance forecast." },
+      { type: 'improvement', description: "Ticket currency is chosen automatically from the festival's home country, and plans are blocked if daily allocations exceed the site's usable capacity." },
+      { type: 'improvement', description: "Only the festival owner or an admin can view or edit site and ticket plans, and repeated saves are handled safely." },
+    ],
+  },
+  {
+
     version: "1.1.627",
     date: "2026-08-03",
     changes: [
