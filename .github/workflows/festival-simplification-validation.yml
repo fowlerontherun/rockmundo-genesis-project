@@ -1,0 +1,41 @@
+name: Festival simplification validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install without rewriting the stale repository lockfile
+        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+      - name: Lint simplified Festival sources
+        run: >-
+          npx eslint
+          src/features/festival-company/ui/FestivalArtistPlanner.tsx
+          src/features/festival-company/ui/FestivalTicketPlanner.tsx
+          src/features/festivals/ui/CanonicalFestivalRoutes.tsx
+          src/features/festivals/ui/FestivalEditionSections.tsx
+          src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run simplified Festival tests
+        run: >-
+          npx vitest run
+          src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts
+          --pool=forks --maxWorkers=1 --minWorkers=1
+      - name: Verify Festival routes
+        run: npm run test:festivals:routes && npm run test:festivals:route-components
+      - name: Verify Festival active-system inventory
+        run: npm run test:festivals:active-callers
+      - name: Build
+        run: npm run build
