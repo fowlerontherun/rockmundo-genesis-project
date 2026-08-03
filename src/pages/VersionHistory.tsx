@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.616",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Comatose characters are visible again in Characters and the character switcher, where they can be revived directly instead of disappearing from the account." },
+      { type: 'fix', description: "Band participation, skills, fame, gig XP, mentor discovery and rehearsal efficiency now resolve the exact member character by profile ID, preventing another character on the same account from receiving or supplying their stats." },
+      { type: 'fix', description: "Band member identity links are repaired and automatically kept aligned with their owning character and account." },
+      { type: 'improvement', description: "Players are no longer put into a coma or lose health simply because they have not logged in for a while." },
+    ],
+  },
+  {
     version: "1.1.615",
     date: "2026-07-31",
     changes: [

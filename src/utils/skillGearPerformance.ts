@@ -402,7 +402,7 @@ export async function calculateBandSkillAverage(bandId: string): Promise<{
     // Get band members with their roles
     const { data: members, error: memberError } = await supabase
       .from('band_members')
-      .select('id, user_id, instrument_role')
+      .select('id, user_id, profile_id, instrument_role')
       .eq('band_id', bandId)
       .eq('is_touring_member', false);
 
@@ -415,19 +415,10 @@ export async function calculateBandSkillAverage(bandId: string): Promise<{
     let totalGearBonus = 0;
 
     for (const member of members) {
-      if (!member.user_id) continue;
-
-      // Get profile for this user
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', member.user_id)
-        .single();
-
-      if (!profile) continue;
+      if (!member.profile_id) continue;
 
       const modifiers = await calculatePerformanceModifiers(
-        profile.id,
+        member.profile_id,
         member.instrument_role || 'Vocals'
       );
 

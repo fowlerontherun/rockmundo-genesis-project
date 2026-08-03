@@ -43,22 +43,15 @@ async function completeRehearsalDirectly(
   try {
     const { data: members } = await supabase
       .from('band_members')
-      .select('user_id, instrument_role')
+      .select('profile_id, instrument_role')
       .eq('band_id', bandId)
       .eq('is_touring_member', false);
 
     if (members && members.length > 0) {
-      const memberUserIds = members.map(m => m.user_id).filter(Boolean) as string[];
+      const profileIds = members.map(m => m.profile_id).filter(Boolean) as string[];
       const roles = members.map(m => m.instrument_role || 'Vocals');
 
-      // Get profile IDs for band members
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id')
-        .in('user_id', memberUserIds);
-
-      if (profiles && profiles.length > 0) {
-        const profileIds = profiles.map(p => p.id);
+      if (profileIds.length > 0) {
         const { data: skillData } = await supabase
           .from('skill_progress')
           .select('skill_slug, current_level')

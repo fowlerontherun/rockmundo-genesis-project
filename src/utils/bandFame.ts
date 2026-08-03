@@ -50,7 +50,7 @@ export async function calculateBandBaseFame(bandId: string): Promise<number> {
   try {
     const { data: members } = await supabase
       .from('band_members')
-      .select('user_id, vocal_role, joined_at, is_touring_member')
+      .select('user_id, profile_id, vocal_role, joined_at, is_touring_member')
       .eq('band_id', bandId);
 
     if (!members || members.length === 0) return 0;
@@ -67,12 +67,12 @@ export async function calculateBandBaseFame(bandId: string): Promise<number> {
     let totalWeight = 0;
 
     for (const member of members) {
-      if (member.is_touring_member || !member.user_id) continue;
+      if (member.is_touring_member || !member.profile_id) continue;
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('fame')
-        .eq('user_id', member.user_id)
+        .eq('id', member.profile_id)
         .single();
 
       const memberFame = profile?.fame || 0;
@@ -115,17 +115,17 @@ export async function calculateTotalBandFame(bandId: string): Promise<number> {
     if (band.is_solo_artist) {
       const { data: members } = await supabase
         .from('band_members')
-        .select('user_id')
+        .select('user_id, profile_id')
         .eq('band_id', bandId)
         .eq('is_touring_member', false)
         .limit(1)
         .single();
 
-      if (members?.user_id) {
+      if (members?.profile_id) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('fame')
-          .eq('user_id', members.user_id)
+          .eq('id', members.profile_id)
           .single();
 
         return Math.round((profile?.fame || 0) * 1.2);

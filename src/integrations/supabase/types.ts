@@ -44106,6 +44106,7 @@ export type Database = {
         }
         Returns: string
       }
+      process_offline_health_decay: { Args: never; Returns: Json }
       process_radio_submission: {
         Args: { p_submission_id: string }
         Returns: Json
