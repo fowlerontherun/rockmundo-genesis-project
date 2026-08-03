@@ -32,7 +32,6 @@ jobs:
               "  SET forecast = forecast,",
               "  SET forecast = projection_forecast,",
           )
-          sql = sql.replace("  old_version integer;", "  old_version integer;")
           sql, count = re.subn(
               r"  SELECT coalesce\(planning_version, 0\) INTO old_version\n"
               r"  FROM public\.festival_artist_programmes\n"
@@ -45,7 +44,9 @@ jobs:
           )
           if count == 0 and "SELECT coalesce(max(planning_version), 0) INTO old_version" not in sql:
               raise SystemExit("artist programme version marker missing")
-          if "SET forecast = forecast" in sql or "forecast := public._festival_projection_forecast" in sql:
+          if re.search(r"^\s*SET forecast = forecast,", sql, re.MULTILINE):
+              raise SystemExit("ambiguous forecast assignment remains")
+          if re.search(r"^\s*forecast := public\._festival_projection_forecast", sql, re.MULTILINE):
               raise SystemExit("ambiguous forecast variable remains")
           migration.write_text(sql)
           PY
