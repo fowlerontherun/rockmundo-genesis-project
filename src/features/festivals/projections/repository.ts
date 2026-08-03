@@ -19,6 +19,16 @@ import {
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+type ProjectionRpcResult = {
+  data: unknown;
+  error: { message?: string } | null;
+};
+
+const projectionRpc = supabase.rpc as unknown as (
+  functionName: string,
+  args: Record<string, Json>,
+) => Promise<ProjectionRpcResult>;
+
 const assertIdentity = (festivalCompanyId: string, festivalEditionId: string) => {
   if (!UUID.test(festivalCompanyId) || !UUID.test(festivalEditionId)) {
     throw new Error("festival_edition_not_found");
@@ -54,7 +64,7 @@ export async function getFestivalEditionSitePlan(
   festivalEditionId: string,
 ): Promise<FestivalSitePlanResult> {
   assertIdentity(festivalCompanyId, festivalEditionId);
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await projectionRpc(
     "get_festival_edition_site_plan",
     {
       p_festival_company_id: festivalCompanyId,
@@ -76,7 +86,7 @@ export async function getFestivalEditionTicketPlan(
   festivalEditionId: string,
 ): Promise<FestivalTicketPlanResult> {
   assertIdentity(festivalCompanyId, festivalEditionId);
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await projectionRpc(
     "get_festival_edition_ticket_plan",
     {
       p_festival_company_id: festivalCompanyId,
@@ -105,7 +115,7 @@ export async function saveFestivalEditionTicketPlan(input: {
   if (!UUID.test(input.idempotencyKey) || input.expectedVersion < 0) {
     throw new Error("festival_ticket_plan_invalid");
   }
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await projectionRpc(
     "save_festival_edition_ticket_plan",
     {
       p_festival_company_id: input.festivalCompanyId,
@@ -138,7 +148,7 @@ export async function getFestivalEditionArtistProgramme(
   festivalEditionId: string,
 ): Promise<FestivalArtistProgrammeResult> {
   assertIdentity(festivalCompanyId, festivalEditionId);
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await projectionRpc(
     "get_festival_edition_artist_programme",
     {
       p_festival_company_id: festivalCompanyId,
@@ -168,7 +178,7 @@ export async function saveFestivalEditionArtistProgramme(input: {
   if (!UUID.test(input.idempotencyKey) || input.expectedVersion < 0) {
     throw new Error("festival_artist_programme_invalid");
   }
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await projectionRpc(
     "save_festival_edition_artist_programme",
     {
       p_festival_company_id: input.festivalCompanyId,
