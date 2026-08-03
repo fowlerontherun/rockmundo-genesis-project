@@ -29,6 +29,15 @@ const validResult = {
       lockedAt: null,
       creationSource: "next_annual",
       editable: true,
+      planBindings: {
+        configuration: true,
+        site: true,
+        tickets: true,
+        artists: true,
+        operations: true,
+        sponsorship: true,
+        timetable: true,
+      },
     },
   ],
 };
@@ -46,7 +55,7 @@ describe("festivalCompanyEditionsSchema", () => {
     expect(festivalCompanyEditionsSchema.safeParse(malformed).success).toBe(false);
   });
 
-  it("allows incomplete planning dates and capacity", () => {
+  it("allows incomplete planning dates, capacity and unbound compatibility plans", () => {
     const incomplete = {
       ...validResult,
       editions: [{
@@ -55,9 +64,28 @@ describe("festivalCompanyEditionsSchema", () => {
         endsOn: null,
         expectedCapacity: null,
         festivalScale: null,
+        planBindings: {
+          ...validResult.editions[0].planBindings,
+          site: false,
+          tickets: false,
+          artists: false,
+          operations: false,
+          sponsorship: false,
+        },
       }],
     };
     expect(festivalCompanyEditionsSchema.safeParse(incomplete).success).toBe(true);
+  });
+
+  it("rejects incomplete plan-binding evidence", () => {
+    const incompleteBindings = {
+      ...validResult,
+      editions: [{
+        ...validResult.editions[0],
+        planBindings: { configuration: true },
+      }],
+    };
+    expect(festivalCompanyEditionsSchema.safeParse(incompleteBindings).success).toBe(false);
   });
 });
 
@@ -71,6 +99,21 @@ describe("festival edition directory SQL boundary", () => {
     expect(migration).toMatch(/FROM public\.festival_companies/i);
     expect(migration).toMatch(/FROM public\.festival_editions_v2/i);
     expect(migration).not.toMatch(/FROM public\.(?:festivals|festival_editions|game_events)\b/i);
+  });
+
+  it("reports every edition-addressable compatibility-plan binding", () => {
+    for (const table of [
+      "festival_configurations",
+      "festival_site_plans",
+      "festival_ticket_plans",
+      "festival_artist_programmes",
+      "festival_operations_plans",
+      "festival_sponsorship_plans",
+      "festival_timetable_plans",
+    ]) {
+      expect(migration).toContain(`FROM public.${table} plan`);
+      expect(migration).toMatch(new RegExp(`${table}[\\s\\S]*plan\\.festival_edition_id = edition\\.id`, "i"));
+    }
   });
 
   it("requires an authenticated owner or administrator", () => {
