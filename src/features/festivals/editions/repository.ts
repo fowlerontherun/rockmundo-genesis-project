@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 const nullableString = z.string().nullable();
 const nullableNumber = z.number().nullable();
 
+export const festivalEditionPlanBindingsSchema = z.object({
+  configuration: z.boolean(),
+  site: z.boolean(),
+  tickets: z.boolean(),
+  artists: z.boolean(),
+  operations: z.boolean(),
+  sponsorship: z.boolean(),
+  timetable: z.boolean(),
+});
+
 export const festivalCompanyEditionSchema = z.object({
   festivalEditionId: z.string().uuid(),
   editionYear: z.number().int().positive(),
@@ -23,6 +33,7 @@ export const festivalCompanyEditionSchema = z.object({
   lockedAt: nullableString,
   creationSource: z.string().min(1),
   editable: z.boolean(),
+  planBindings: festivalEditionPlanBindingsSchema,
 });
 
 export const festivalCompanyEditionsSchema = z.object({
@@ -35,6 +46,8 @@ export const festivalCompanyEditionsSchema = z.object({
   editions: z.array(festivalCompanyEditionSchema),
 });
 
+export type FestivalEditionPlanBindings = z.infer<typeof festivalEditionPlanBindingsSchema>;
+export type FestivalEditionPlanBindingKey = keyof FestivalEditionPlanBindings;
 export type FestivalCompanyEdition = z.infer<typeof festivalCompanyEditionSchema>;
 export type FestivalCompanyEditions = z.infer<typeof festivalCompanyEditionsSchema>;
 
