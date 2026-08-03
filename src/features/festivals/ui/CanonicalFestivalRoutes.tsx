@@ -31,9 +31,25 @@ export function FestivalEditionShell() {
   if (query.isLoading) return <main className="p-6" role="status">Resolving annual edition…</main>;
   if (query.error) return <RouteState title="Festival edition access denied" body="Your active character does not have authority to manage this edition." />;
   if (!query.data || query.data.status !== "resolved") return <ResolutionState status={query.data?.status ?? "not_found"}/>;
-  return <main className="mx-auto max-w-7xl space-y-5 p-4 md:p-6"><nav aria-label="Breadcrumb"><Link to={festivalRoutes.company(festivalCompanyId!)}>Festival company</Link> / <span>Annual edition {query.data.editionYear ?? ""}</span></nav><h1 className="text-3xl font-bold">Annual edition</h1><nav className="flex flex-wrap gap-3" aria-label="Edition navigation">{editionNavigation.map(item=><Link className="underline" key={item} to={item === "overview" ? festivalRoutes.edition(festivalCompanyId!, editionId!) : festivalRoutes[item](festivalCompanyId!, editionId!)}>{item}</Link>)}</nav><Outlet context={query.data}/></main>;
+  return <main className="mx-auto max-w-7xl space-y-5 p-4 md:p-6"><nav aria-label="Breadcrumb" className="text-sm text-muted-foreground"><Link className="underline" to={festivalRoutes.company(festivalCompanyId!)}>Festival company</Link> / <span>Annual edition {query.data.editionYear ?? ""}</span></nav><h1 className="text-3xl font-bold">Annual edition {query.data.editionYear ?? ""}</h1><nav className="-mx-1 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Edition navigation">{editionNavigation.map(item=>{const to=item === "overview" ? festivalRoutes.edition(festivalCompanyId!, editionId!) : festivalRoutes[item](festivalCompanyId!, editionId!);const active=pathname===to;return <Link className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${active?"bg-primary text-primary-foreground":"bg-muted text-muted-foreground hover:text-foreground"}`} key={item} to={to}>{item}</Link>;})}</nav><Outlet context={query.data}/></main>;
 }
-export function FestivalEditionWorkspace({section}:{section:string}) { const { festivalCompanyId, editionId }=useParams(); if(section==="schedule") return <FestivalScheduleWorkspace editionId={editionId!}/>; if(section==="live") return <FestivalLiveControlRoom companyId={festivalCompanyId!} editionId={editionId!}/>; if(section==="settlement") return <EditionSettlementWorkspace companyId={festivalCompanyId!} editionId={editionId!}/>; return <Card><CardHeader><CardTitle className="capitalize">{section}</CardTitle></CardHeader><CardContent>This canonical annual-edition workspace is server-authoritative.</CardContent></Card>; }
+export function FestivalEditionWorkspace({section}:{section:string}) {
+  const { festivalCompanyId, editionId }=useParams();
+  if(!festivalCompanyId||!editionId) return <RouteState title="Festival edition not found" body="This edition route is missing its identifiers."/>;
+  switch(section){
+    case "overview": return <FestivalEditionOverview festivalCompanyId={festivalCompanyId}/>;
+    case "schedule": return <div className="space-y-6"><FestivalScheduleWorkspace editionId={editionId}/><FestivalEditionSchedule festivalCompanyId={festivalCompanyId}/></div>;
+    case "applications": return <FestivalEditionApplications festivalCompanyId={festivalCompanyId}/>;
+    case "contracts": return <FestivalEditionContracts festivalCompanyId={festivalCompanyId}/>;
+    case "operations": return <FestivalEditionOperations festivalCompanyId={festivalCompanyId}/>;
+    case "finance": return <FestivalEditionFinance festivalCompanyId={festivalCompanyId}/>;
+    case "live": return <FestivalLiveControlRoom companyId={festivalCompanyId} editionId={editionId}/>;
+    case "settlement": return <EditionSettlementWorkspace companyId={festivalCompanyId} editionId={editionId}/>;
+    case "history": return <FestivalEditionHistory editionId={editionId}/>;
+    default: return <Card><CardHeader><CardTitle className="capitalize">{section}</CardTitle></CardHeader><CardContent>This canonical annual-edition workspace is server-authoritative.</CardContent></Card>;
+  }
+}
+
 
 export function PublicFestivalEditionPage() {
   const { festivalCompanyIdentifier, editionIdentifier }=useParams();
