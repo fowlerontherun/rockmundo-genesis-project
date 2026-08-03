@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 const nullableString = z.string().nullable();
 const nullableNumber = z.number().nullable();
 
+type FestivalRpc = (
+  functionName: string,
+  args: Record<string, unknown>,
+) => Promise<{ data: unknown; error: { message?: string } | null }>;
+
+const festivalRpc = supabase.rpc.bind(supabase) as unknown as FestivalRpc;
+
+export const festivalCompanyEditionsQueryKey = (festivalCompanyId: string) =>
+  ["festival-company-editions", festivalCompanyId] as const;
+
 export const festivalEditionPlanBindingsSchema = z.object({
   configuration: z.boolean(),
   site: z.boolean(),
@@ -54,7 +64,7 @@ export type FestivalCompanyEditions = z.infer<typeof festivalCompanyEditionsSche
 export async function getFestivalCompanyEditions(
   festivalCompanyId: string,
 ): Promise<FestivalCompanyEditions> {
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await festivalRpc(
     "get_festival_company_editions",
     { p_festival_company_id: festivalCompanyId },
   );
