@@ -23,6 +23,7 @@ jobs:
           npx eslint
           src/features/festivals/scheduling/model.ts
           src/features/festivals/scheduling/service.ts
+          src/features/festivals/scheduling/service.test.ts
           src/features/festivals/scheduling/time.ts
           src/features/festivals/scheduling/time.test.ts
           src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx
@@ -32,6 +33,7 @@ jobs:
       - name: Run focused Festival scheduling tests
         run: >-
           npx vitest run
+          src/features/festivals/scheduling/service.test.ts
           src/features/festivals/scheduling/time.test.ts
           src/features/festivals/scheduling/components/FestivalScheduleWorkspace.test.tsx
           --pool=forks --maxWorkers=1 --minWorkers=1
@@ -39,5 +41,7 @@ jobs:
         run: npm run test:festivals:routes && npm run test:festivals:route-components
       - name: Verify Festival active-system inventory
         run: npm run test:festivals:active-callers
+      - name: Verify migration ordering
+        run: npm run verify:migration-timestamps
       - name: Build
         run: npm run build
