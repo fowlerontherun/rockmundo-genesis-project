@@ -65,17 +65,11 @@ export async function calculateBandSkillRating(
       if (member.is_touring_member && member.touring_member_tier) {
         // Touring members use tier-based random skill
         relevantSkillLevel = getRandomSkillForTier(member.touring_member_tier);
-      } else if (member.user_id) {
-        // Player members: look up profile_id then use skill_progress via calculatePerformanceModifiers
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', member.user_id)
-          .single();
-
-        if (profile) {
+      } else if (member.profile_id) {
+        // Player members are character-scoped, including additional characters.
+        if (member.profile_id) {
           const modifiers = await calculatePerformanceModifiers(
-            profile.id,
+            member.profile_id,
             member.instrument_role || 'Vocals'
           );
           // effectiveLevel already includes gear bonus

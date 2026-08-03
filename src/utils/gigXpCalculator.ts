@@ -68,7 +68,7 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
   // Fetch band members (non-touring)
   const { data: members, error: membersError } = await supabase
     .from('band_members')
-    .select('user_id, instrument_role')
+    .select('user_id, profile_id, instrument_role')
     .eq('band_id', bandId)
     .eq('is_touring_member', false);
 
@@ -77,16 +77,7 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
     return { totalXpAwarded: 0, playerResults: [], xpBreakdown: { baseXp: 0, performanceBonus: 0, crowdBonus: 0, milestoneBonus: 0 } };
   }
 
-  // Fetch profiles for members
   const userIds = members.map(m => m.user_id).filter(Boolean) as string[];
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, user_id')
-    .in('user_id', userIds);
-
-  const profileMap = new Map<string, string>(
-    ((profiles || []) as { user_id: string; id: string }[]).map(p => [p.user_id, p.id])
-  );
 
   // Fetch existing gig count for each member (for milestone checks)
   const { data: existingGigXp } = await supabase
@@ -199,7 +190,7 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
 
     const result: PlayerGigXpResult = {
       userId: member.user_id,
-      profileId: profileMap.get(member.user_id) || null,
+      profileId: member.profile_id || null,
       baseXp,
       performanceBonusXp,
       crowdBonusXp,
@@ -250,20 +241,13 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
     }
 
     // Update skill progress if earned improvement
-    if (skillImprovementAmount > 0 && member.user_id && skillTypeImproved) {
-      // Look up profile_id for skill_progress
-      const { data: memberProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', member.user_id)
-        .maybeSingle();
-
-      if (memberProfile?.id) {
+    if (skillImprovementAmount > 0 && result.profileId && skillTypeImproved) {
+      {
         // Fetch player attributes for learning multiplier
         const { data: attrs } = await supabase
           .from('player_attributes')
           .select('*')
-          .eq('profile_id', memberProfile.id)
+          .eq('profile_id', result.profileId)
           .maybeSingle();
 
         const baseSkillXp = skillImprovementAmount * 10;
@@ -272,7 +256,7 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
         const { data: existingSkill } = await supabase
           .from('skill_progress')
           .select('id, current_level, current_xp, required_xp')
-          .eq('profile_id', memberProfile.id)
+          .eq('profile_id', result.profileId)
           .eq('skill_slug', skillTypeImproved)
           .maybeSingle();
 
@@ -285,7 +269,7 @@ export async function calculateGigXp(input: GigXpCalculationInput): Promise<GigX
           await supabase
             .from('skill_progress')
             .insert({
-              profile_id: memberProfile.id,
+              profile_id: result.profileId,
               skill_slug: skillTypeImproved,
               current_level: 0,
               current_xp: boostedXp,

@@ -29,7 +29,8 @@ export default function Characters() {
 
   const activeCharacter = characters.find((character) => character.is_active);
   const maxSlots = slots?.maxSlots ?? 2;
-  const emptySlotCount = Math.max(maxSlots - characters.length, 0);
+  const livingCharacters = characters.filter((character) => !character.died_at);
+  const emptySlotCount = Math.max(maxSlots - livingCharacters.length, 0);
 
   const handleSwitch = async (profileId: string) => {
     if (profileId === activeCharacter?.id) return;
@@ -114,10 +115,12 @@ export default function Characters() {
             <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
               <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] py-0">Active</Badge>
               <Badge variant="outline" className="text-[10px] py-0">Inactive — switchable</Badge>
+              <Badge variant="outline" className="text-[10px] py-0 border-emerald-500/40 text-emerald-500">Coma — revivable</Badge>
               <Badge variant="outline" className="text-[10px] py-0 border-dashed">Empty slot</Badge>
             </div>
             {characters.map((character) => {
               const isActive = character.is_active;
+              const isComatose = Boolean(character.died_at);
               const isSwitching = switchingToId === character.id;
               const charName = character.display_name || character.username || "Unnamed";
 
@@ -151,7 +154,7 @@ export default function Characters() {
                         onClick={() => handleSwitch(character.id)}
                         disabled={isSwitching || switchCharacter.isPending}
                       >
-                        {isSwitching ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Switch</>}
+                        {isSwitching ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="mr-1 h-3.5 w-3.5" /> {isComatose ? "Revive" : "Switch"}</>}
                       </Button>
                       <Button
                         size="sm"
@@ -201,7 +204,7 @@ export default function Characters() {
               );
             })}
 
-            {emptySlotCount === 0 && characters.length >= maxSlots && (
+            {emptySlotCount === 0 && livingCharacters.length >= maxSlots && (
               <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
                 All {maxSlots} slots are occupied. Delete a character or buy an additional slot to free space.
               </div>

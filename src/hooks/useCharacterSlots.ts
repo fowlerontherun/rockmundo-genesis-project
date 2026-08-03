@@ -219,7 +219,6 @@ export function useCharacterSlots() {
         .from("profiles")
         .select("id, user_id, display_name, username, avatar_url, is_active, died_at, slot_number, generation_number, fame, level, health")
         .eq("user_id", user.id)
-        .is("died_at", null)
         .order("slot_number", { ascending: true });
 
       if (error) throw error;
@@ -231,10 +230,23 @@ export function useCharacterSlots() {
   const switchCharacter = useMutation({
     mutationFn: async (profileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
+
+      const target = charactersQuery.data?.find((character) => character.id === profileId);
+      if (target?.died_at) {
+        const { error } = await supabase.rpc("resurrect_character" as any, {
+          p_profile_id: profileId,
+        });
+        if (error) throw error;
+        return;
+      }
+
       await switchActiveCharacter(user.id, profileId);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["dead-characters"] });
+      queryClient.invalidateQueries({ queryKey: ["has-living-character"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
@@ -262,6 +274,7 @@ export function useCharacterSlots() {
       return createCharacterProfileFallback(user.id);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-slots"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
@@ -295,6 +308,7 @@ export function useCharacterSlots() {
       if (deleteError) throw deleteError;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-slots"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });

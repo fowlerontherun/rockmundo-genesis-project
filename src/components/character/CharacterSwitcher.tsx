@@ -82,12 +82,17 @@ export function CharacterSwitcher() {
                 {char.display_name || char.username || "Unnamed"}
               </div>
               <div className="text-xs text-muted-foreground">
-                Lv.{char.level} • {(char.fame || 0).toLocaleString()} fame
+                {char.died_at ? "In a coma — select to revive" : `Lv.${char.level} • ${(char.fame || 0).toLocaleString()} fame`}
               </div>
             </div>
             {char.is_active && (
               <Badge className="text-[10px] px-1.5 bg-primary/20 text-primary border-primary/30">
                 Active
+              </Badge>
+            )}
+            {char.died_at && (
+              <Badge variant="outline" className="text-[10px] px-1 border-emerald-500/40 text-emerald-500">
+                Revive
               </Badge>
             )}
             {char.generation_number > 1 && (

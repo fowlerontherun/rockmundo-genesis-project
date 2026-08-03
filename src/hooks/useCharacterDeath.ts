@@ -67,12 +67,8 @@ export function useCharacterDeath() {
     enabled: !!user?.id,
   });
 
-  // A "living" character for wizard purposes is one that is BOTH alive
-  // (died_at IS NULL) AND currently active. Returning players may have an
-  // old inactive-but-alive profile lying around — we want them to see the
-  // returning-player wizard rather than silently getting re-activated into
-  // a stale character. `getOrActivatePlayableProfile` still handles the
-  // normal "single alive profile" auto-activation for continuing players.
+  // Any living slot keeps the account in the normal playable flow. The game
+  // data loader activates a living fallback when no current row is active.
   const hasLivingCharacter = useQuery({
     queryKey: ["has-living-character", user?.id],
     queryFn: async (): Promise<boolean> => {
@@ -82,7 +78,6 @@ export function useCharacterDeath() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("is_active", true)
         .is("died_at", null);
 
       if (error) throw error;
@@ -167,6 +162,7 @@ export function useCharacterDeath() {
       return newProfile.id;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["has-living-character"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
@@ -185,6 +181,7 @@ export function useCharacterDeath() {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["has-living-character"] });
       queryClient.invalidateQueries({ queryKey: ["dead-characters"] });
@@ -255,6 +252,7 @@ export function useCharacterDeath() {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["has-living-character"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });

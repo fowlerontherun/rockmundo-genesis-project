@@ -79,7 +79,7 @@ export async function executeGigPerformance(data: GigExecutionData) {
     supabase.from('band_crew_members').select('*').eq('band_id', bandId),
     supabase.from('song_rehearsals').select('*').eq('band_id', bandId).in('song_id', setlistSongs.map(s => s.song_id)),
     supabase.from('bands').select('chemistry_level, fame, performance_count, band_balance, primary_genre, leader_id').eq('id', bandId).single(),
-    supabase.from('band_members').select('user_id, skill_contribution, instrument_role').eq('band_id', bandId).eq('is_touring_member', false),
+    supabase.from('band_members').select('user_id, profile_id, skill_contribution, instrument_role').eq('band_id', bandId).eq('is_touring_member', false),
     supabase.from('player_merchandise').select('*').eq('band_id', bandId).gt('stock_quantity', 0),
     // Fetch leader character's stage behavior setting
     supabase.from('bands').select('leader_id').eq('id', bandId).single().then(async (r) => {
@@ -609,17 +609,18 @@ export async function executeGigPerformance(data: GigExecutionData) {
   // Distribute fame to band members
   const famePerMember = Math.floor(fameGained / Math.max(1, members.length));
   for (const member of members) {
+    if (!member.profile_id) continue;
     const { data: profile } = await supabase
       .from('profiles')
       .select('fame')
-      .eq('user_id', member.user_id)
+      .eq('id', member.profile_id)
       .single();
 
     if (profile) {
       await supabase
         .from('profiles')
         .update({ fame: (profile.fame || 0) + famePerMember })
-        .eq('user_id', member.user_id);
+        .eq('id', member.profile_id);
     }
   }
 
@@ -791,20 +792,12 @@ export async function executeGigPerformance(data: GigExecutionData) {
     const venueId = (await supabase.from('gigs').select('venue_id').eq('id', gigId).single()).data?.venue_id;
     if (venueId) {
       // Get a profile ID from band members to check discovery
-      const memberUserId = members[0]?.user_id;
-      if (memberUserId) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', memberUserId)
-          .single();
-        
-        if (profileData?.id) {
-          mentorDiscovery = await checkVenueGigDiscovery(profileData.id, venueId);
+      const memberProfileId = members[0]?.profile_id;
+      if (memberProfileId) {
+          mentorDiscovery = await checkVenueGigDiscovery(memberProfileId, venueId);
           if (mentorDiscovery?.success) {
             console.log(`[GigExecution] Mentor discovered: ${mentorDiscovery.mentor?.name}`);
           }
-        }
       }
     }
   } catch (discoveryError) {

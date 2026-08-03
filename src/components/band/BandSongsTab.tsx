@@ -51,10 +51,10 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
       // Secondary: Get songs from band members (for solo songs they may have brought)
       const { data: members } = await supabase
         .from('band_members')
-        .select('user_id')
+        .select('profile_id')
         .eq('band_id', bandId);
 
-      const memberIds = (members || []).map(m => m.user_id).filter((id): id is string => id !== null);
+      const memberIds = (members || []).map(m => m.profile_id).filter((id): id is string => id !== null);
 
       // Get familiarity data for rehearsed songs
       const { data: familiarityData } = await supabase
@@ -85,7 +85,7 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
         const { data: memberSongsData } = await supabase
           .from('songs')
           .select('*')
-          .in('user_id', memberIds)
+          .in('profile_id', memberIds)
           .is('band_id', null)
           .order('created_at', { ascending: false });
         memberSongs = memberSongsData || [];

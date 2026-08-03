@@ -18,18 +18,19 @@ import { getRehearsalLevel, formatRehearsalTime, REHEARSAL_LEVELS } from "@/util
 
 interface SongSelectorProps {
   userId: string;
+  profileId?: string | null;
   bandId?: string;
   selectedSong: any;
   onSelect: (song: any) => void;
 }
 
-export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSelectorProps) => {
+export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect }: SongSelectorProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [recordedFilter, setRecordedFilter] = useState<string>("all");
   const [rehearsalFilter, setRehearsalFilter] = useState<string>("all");
 
   const { data: songs, isLoading, error } = useQuery({
-    queryKey: ['recordable-songs', userId, bandId],
+    queryKey: ['recordable-songs', userId, profileId, bandId],
     queryFn: async () => {
       // Get songs with their recording history
       let songsQuery = supabase
@@ -49,7 +50,9 @@ export const SongSelector = ({ userId, bandId, selectedSong, onSelect }: SongSel
 
       songsQuery = bandId
         ? songsQuery.eq('band_id', bandId)
-        : songsQuery.eq('user_id', userId);
+        : profileId
+          ? songsQuery.eq('profile_id', profileId).is('band_id', null)
+          : songsQuery.eq('user_id', userId).is('profile_id', null).is('band_id', null);
 
       const { data, error } = await songsQuery;
       
