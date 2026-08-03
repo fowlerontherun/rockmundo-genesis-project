@@ -10,6 +10,7 @@ import { FestivalUpgradeWorkspace } from "@/features/festival-company/upgrades/F
 import { FestivalLiveControlRoom } from "@/features/festivals/runtime/FestivalLiveControlRoom";
 import { EditionSettlementWorkspace } from "@/features/festivals/settlement/EditionSettlementWorkspace";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
+import { FestivalEditionOverview, FestivalEditionSchedule, FestivalEditionApplications, FestivalEditionContracts, FestivalEditionOperations, FestivalEditionFinance, FestivalEditionHistory } from "./FestivalEditionSections";
 
 export function FestivalFoundingPage() { return <main className="mx-auto max-w-3xl space-y-5 p-6"><h1 className="text-3xl font-bold">Found a Festival company</h1><p>Start an annual Festival brand. Eligibility, limits, authority, funds and price are verified by the server.</p><FestivalCompanyEligibilityCard /></main>; }
 
@@ -27,6 +28,7 @@ const Summary=({title,value}:{title:string;value:string})=><Card><CardHeader><Ca
 export const editionNavigation = ["overview", "schedule", "applications", "contracts", "operations", "finance", "live", "settlement", "history"] as const;
 export function FestivalEditionShell() {
   const { festivalCompanyId, editionId } = useParams();
+  const { pathname } = useLocation();
   const query = useQuery({ queryKey: ["festival-owner-resolution", festivalCompanyId, editionId], enabled: Boolean(festivalCompanyId && editionId), queryFn: () => resolveOwnerFestivalIdentifier(festivalCompanyId!, editionId) });
   if (query.isLoading) return <main className="p-6" role="status">Resolving annual edition…</main>;
   if (query.error) return <RouteState title="Festival edition access denied" body="Your active character does not have authority to manage this edition." />;
