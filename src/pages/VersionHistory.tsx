@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.619",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Switching characters now works reliably through a new server-side switch action, including switching to a comatose character without forcing a revival." },
+      { type: 'fix', description: "Deleting an old character now works: characters are permanently removed from your roster via a dedicated delete action and their slot is freed." },
+      { type: 'fix', description: "Deleted characters no longer appear in the coma/revival list or count toward your character slot usage." },
+    ],
+  },
+  {
     version: "1.1.618",
     date: "2026-08-03",
     changes: [
