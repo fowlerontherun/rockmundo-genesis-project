@@ -912,6 +912,7 @@ function App() {
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
                     <Route path="admin/world-reset" element={<AdminWorldReset />} />
                     <Route path="admin/debug-panel" element={<AdminDebugPanel />} />
+                    <Route path="admin/finance-diagnostics" element={<AdminFinanceDiagnostics />} />
                     <Route path="admin/death-system" element={<AdminDeathSystem />} />
                     <Route path="admin/offer-automation" element={<AdminOfferAutomation />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
