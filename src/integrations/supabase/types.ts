@@ -46091,6 +46091,10 @@ export type Database = {
           provider_name: string
         }[]
       }
+      get_my_finance_command_center: {
+        Args: { p_transaction_limit?: number }
+        Returns: Json
+      }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_recent_twaat_count: { Args: never; Returns: number }
       get_release_sale_dates: {
