@@ -32,6 +32,7 @@ export function useCharacterDeath() {
         .select("id, username, display_name, avatar_url, died_at, fame, cash, level, generation_number, resurrection_lives")
         .eq("user_id", user.id)
         .not("died_at", "is", null)
+        .is("deleted_at", null)
         .order("died_at", { ascending: false }) as any;
 
       if (profileError) throw profileError;
@@ -78,6 +79,7 @@ export function useCharacterDeath() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
+        .is("deleted_at", null)
         .is("died_at", null);
 
       if (error) throw error;

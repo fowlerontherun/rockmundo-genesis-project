@@ -43,7 +43,6 @@ async function switchActiveCharacterFallback(userId: string, profileId: string):
     .select("id")
     .eq("id", profileId)
     .eq("user_id", userId)
-    .is("died_at", null)
     .maybeSingle();
 
   if (targetError) throw targetError;
@@ -51,25 +50,24 @@ async function switchActiveCharacterFallback(userId: string, profileId: string):
     throw new Error("Character not found or unavailable");
   }
 
-  const { error: activateTargetError } = await supabase
-    .from("profiles")
-    .update({ is_active: true })
-    .eq("id", profileId)
-    .eq("user_id", userId)
-    .is("died_at", null);
-
-  if (activateTargetError) throw activateTargetError;
-
   const { error: deactivateOthersError } = await supabase
     .from("profiles")
     .update({ is_active: false })
     .eq("user_id", userId)
     .neq("id", profileId)
-    .eq("is_active", true)
-    .is("died_at", null);
+    .eq("is_active", true);
 
   if (deactivateOthersError) throw deactivateOthersError;
+
+  const { error: activateTargetError } = await supabase
+    .from("profiles")
+    .update({ is_active: true })
+    .eq("id", profileId)
+    .eq("user_id", userId);
+
+  if (activateTargetError) throw activateTargetError;
 }
+
 
 async function switchActiveCharacter(userId: string, profileId: string): Promise<void> {
   const { error } = await supabase.rpc("switch_active_character" as any, {
@@ -196,7 +194,8 @@ export function useCharacterSlots() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .is("died_at", null);
+        .is("deleted_at", null);
+
 
       const usedSlots = count ?? 1;
 
@@ -219,6 +218,7 @@ export function useCharacterSlots() {
         .from("profiles")
         .select("id, user_id, display_name, username, avatar_url, is_active, died_at, slot_number, generation_number, fame, level, health")
         .eq("user_id", user.id)
+        .is("deleted_at", null)
         .order("slot_number", { ascending: true });
 
       if (error) throw error;
@@ -230,27 +230,19 @@ export function useCharacterSlots() {
   const switchCharacter = useMutation({
     mutationFn: async (profileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
-
-      const target = charactersQuery.data?.find((character) => character.id === profileId);
-      if (target?.died_at) {
-        const { error } = await supabase.rpc("resurrect_character" as any, {
-          p_profile_id: profileId,
-        });
-        if (error) throw error;
-        return;
-      }
-
       await switchActiveCharacter(user.id, profileId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["character-slots"] });
       queryClient.invalidateQueries({ queryKey: ["dead-characters"] });
       queryClient.invalidateQueries({ queryKey: ["has-living-character"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
+
 
   const createCharacter = useMutation({
     mutationFn: async () => {
@@ -286,24 +278,22 @@ export function useCharacterSlots() {
     mutationFn: async (profileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Verify the profile belongs to this user and is not active
-      const { data: profile, error: fetchError } = await supabase
-        .from("profiles")
-        .select("id, is_active, user_id")
-        .eq("id", profileId)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { error } = await supabase.rpc("delete_character_profile" as any, {
+        p_profile_id: profileId,
+      });
 
-      if (fetchError) throw fetchError;
-      if (!profile) throw new Error("Character not found");
-      if (profile.is_active) throw new Error("Cannot delete your active character. Switch to another character first.");
+      if (!error) return;
 
-      // Soft-delete by setting died_at
+      if (!isMissingRpcError(error)) throw error;
+
+      // Fallback: soft-delete directly
       const { error: deleteError } = await supabase
         .from("profiles")
-        .update({ died_at: new Date().toISOString(), is_active: false })
+        .update({ deleted_at: new Date().toISOString(), is_active: false } as any)
         .eq("id", profileId)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("is_active", false);
+
 
       if (deleteError) throw deleteError;
     },
