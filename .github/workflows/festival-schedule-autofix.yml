@@ -15,16 +15,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-      - name: Replace unsupported Array toSorted usage
+      - name: Apply schedule compatibility edits
         run: |
-          file="src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx"
-          if ! grep -q '\.toSorted(' "$file"; then
-            echo "Compatibility edit already applied."
+          workspace="src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx"
+          service="src/features/festivals/scheduling/service.ts"
+          service_test="src/features/festivals/scheduling/service.test.ts"
+          sed -i 's/\.toSorted(/.sort(/g' "$workspace"
+          sed -i 's/ensure_festival_v2_schedule_bridge/ensure_festival_v2_schedule_workspace/g' "$service" "$service_test"
+          if git diff --quiet -- "$workspace" "$service" "$service_test"; then
+            echo "Compatibility edits already applied."
             exit 0
           fi
-          sed -i 's/\.toSorted(/.sort(/' "$file"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$file"
-          git commit -m "Use ES2022-compatible schedule sorting"
+          git add "$workspace" "$service" "$service_test"
+          git commit -m "Resolve canonical festival schedule workspace"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
