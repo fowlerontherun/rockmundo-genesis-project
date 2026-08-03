@@ -25,6 +25,8 @@ describe("simplified annual Festival SQL boundary", () => {
     expect(migration).toMatch(/edition\.version <> p_expected_version/i);
     expect(migration).toContain("festival_annual_plan_requests");
     expect(migration).toContain("festival_annual_plan_idempotency_conflict");
+    expect(migration).toContain("result = response");
+    expect(migration).not.toContain("result = result");
   });
 
   it("stores only high-level owner choices and server-derived projections", () => {
