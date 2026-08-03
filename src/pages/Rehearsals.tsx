@@ -312,6 +312,7 @@ const Rehearsals = () => {
     songId: string | null,
     setlistId: string | null,
     scheduledStart: Date,
+    paymentSource: "band" | "personal" = "band",
   ) => {
     if (!selectedBand) return;
 
@@ -321,7 +322,9 @@ const Rehearsals = () => {
     const totalCost = room.hourly_rate * duration;
     const currentBalance = selectedBand.band_balance || 0;
 
-    if (currentBalance < totalCost) {
+    // Personal funds are transferred into the treasury by the dialog before this
+    // point, so the cached band balance is intentionally not enforced there.
+    if (paymentSource === "band" && currentBalance < totalCost) {
       toast({
         title: t("rehearsals.insufficientFunds"),
         description: `${t("rehearsals.rehearsalCost")} $${totalCost.toFixed(2)} ${t("rehearsals.bandBalance")} $${currentBalance.toFixed(2)}.`,
@@ -329,6 +332,7 @@ const Rehearsals = () => {
       });
       return;
     }
+
 
     const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
     const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
