@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.636",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festivals: deployed the artist programme layer of the new festival system, so festival owners can configure how artists join a festival — application mode, open/close dates, fame limits, preferred and excluded genres, artist and contingency budgets and a minimum share reserved for player artists." },
+      { type: 'feature', description: "Added application windows plus the records behind artist applications, invitations, offers, offer counter-revisions, confirmed bookings and reserved budget commitments." },
+      { type: 'improvement', description: "Artist planning requires a completed ticket plan, only the festival owner or an admin can read or change it, application windows lock once artists have applied, duplicate saves are ignored safely and every change is audit-logged." },
+      { type: 'improvement', description: "Bookings only reserve budget: no money moves and no schedule slots or public announcements are created at this stage." },
+    ],
+  },
+  {
+
     version: "1.1.635",
     date: "2026-08-03",
     changes: [
