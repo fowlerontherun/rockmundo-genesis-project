@@ -27,6 +27,7 @@ jobs:
           src/features/festivals/scheduling/time.ts
           src/features/festivals/scheduling/time.test.ts
           src/features/festivals/scheduling/scheduleBridgeMigration.test.ts
+          src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts
           src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx
           src/features/festivals/scheduling/components/FestivalScheduleWorkspace.test.tsx
       - name: Typecheck
@@ -37,6 +38,7 @@ jobs:
           src/features/festivals/scheduling/service.test.ts
           src/features/festivals/scheduling/time.test.ts
           src/features/festivals/scheduling/scheduleBridgeMigration.test.ts
+          src/features/festivals/scheduling/scheduleStageSyncMigration.test.ts
           src/features/festivals/scheduling/components/FestivalScheduleWorkspace.test.tsx
           --pool=forks --maxWorkers=1 --minWorkers=1
       - name: Verify Festival routes
