@@ -1,29 +1,48 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+
+const flags = vi.hoisted(() => ({
+  current: {
+    legacyFestivalSystemEnabled: true,
+    legacyFestivalReadEnabled: true,
+    legacyFestivalWriteEnabled: false,
+    newFestivalSystemEnabled: true,
+    festivalCreationEnabled: true,
+    festivalApplicationsEnabled: true,
+    festivalLivePerformanceEnabled: true,
+  },
+}));
+
+vi.mock("../config/featureFlags", () => ({
+  useFestivalFeatureFlags: () => flags.current,
+}));
+
 import { LegacyFestivalGate } from "../ui/LegacyFestivalGate";
 
-const withEnv = (values: Record<string, string>, fn: () => void) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const env = (import.meta as any).env;
-  const previous = Object.fromEntries(Object.keys(values).map((key) => [key, env[key]]));
-  Object.assign(env, values);
-  try {
-    fn();
-  } finally {
-    Object.assign(env, previous);
-  }
-};
+const renderGate = (area?: string) => render(
+  <MemoryRouter>
+    <LegacyFestivalGate area={area}>
+      <div>legacy-content</div>
+    </LegacyFestivalGate>
+  </MemoryRouter>,
+);
 
 describe("LegacyFestivalGate", () => {
+  beforeEach(() => {
+    flags.current = {
+      legacyFestivalSystemEnabled: true,
+      legacyFestivalReadEnabled: true,
+      legacyFestivalWriteEnabled: false,
+      newFestivalSystemEnabled: true,
+      festivalCreationEnabled: true,
+      festivalApplicationsEnabled: true,
+      festivalLivePerformanceEnabled: true,
+    };
+  });
+
   it("does not mount legacy gameplay while legacy writes are disabled by default", () => {
-    render(
-      <MemoryRouter>
-        <LegacyFestivalGate area="Festival performance">
-          <div>legacy-content</div>
-        </LegacyFestivalGate>
-      </MemoryRouter>,
-    );
+    renderGate("Festival performance");
 
     expect(screen.queryByText("legacy-content")).not.toBeInTheDocument();
     expect(screen.getByText(/Legacy Festival actions are read-only/i)).toBeInTheDocument();
@@ -31,33 +50,25 @@ describe("LegacyFestivalGate", () => {
   });
 
   it("renders children only when legacy reads and writes are explicitly enabled", () => {
-    withEnv({
-      VITE_FEATURE_LEGACY_FESTIVAL_SYSTEM: "true",
-      VITE_FEATURE_LEGACY_FESTIVAL_READ: "true",
-      VITE_FEATURE_LEGACY_FESTIVAL_WRITE: "true",
-    }, () => {
-      render(
-        <MemoryRouter>
-          <LegacyFestivalGate>
-            <div>legacy-content</div>
-          </LegacyFestivalGate>
-        </MemoryRouter>,
-      );
-      expect(screen.getByText("legacy-content")).toBeInTheDocument();
-    });
+    flags.current = {
+      ...flags.current,
+      legacyFestivalWriteEnabled: true,
+    };
+
+    renderGate();
+
+    expect(screen.getByText("legacy-content")).toBeInTheDocument();
   });
 
   it("renders the rebuilding screen when legacy reads are disabled", () => {
-    withEnv({ VITE_FEATURE_LEGACY_FESTIVAL_READ: "false" }, () => {
-      render(
-        <MemoryRouter>
-          <LegacyFestivalGate area="Browser">
-            <div>legacy-content</div>
-          </LegacyFestivalGate>
-        </MemoryRouter>,
-      );
-      expect(screen.queryByText("legacy-content")).not.toBeInTheDocument();
-      expect(screen.getByText(/Festivals are being rebuilt/i)).toBeInTheDocument();
-    });
+    flags.current = {
+      ...flags.current,
+      legacyFestivalReadEnabled: false,
+    };
+
+    renderGate("Browser");
+
+    expect(screen.queryByText("legacy-content")).not.toBeInTheDocument();
+    expect(screen.getByText(/Festivals are being rebuilt/i)).toBeInTheDocument();
   });
 });
