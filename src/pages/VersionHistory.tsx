@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.637",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Anyone who signs in without a living character is now immediately offered the choice to revive their comatose character, continue as their child, or start a brand-new character — on every page, not just the landing screen." },
+      { type: 'improvement', description: "Accounts with no characters at all still get the first-character welcome screen, and the choice screen appears on both desktop and mobile." },
+    ],
+  },
+  {
     version: "1.1.636",
     date: "2026-08-03",
     changes: [
