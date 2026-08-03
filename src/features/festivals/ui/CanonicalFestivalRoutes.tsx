@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
-import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
 import { FestivalCompanyEligibilityCard } from "@/features/festival-company/ui/FestivalCompanyEligibilityCard";
 import { resolveOwnerFestivalIdentifier, resolvePublicFestivalIdentifier } from "../resolver";
 import { festivalRoutes } from "../routes";
@@ -11,7 +10,7 @@ import { FestivalLiveControlRoom } from "@/features/festivals/runtime/FestivalLi
 import { EditionSettlementWorkspace } from "@/features/festivals/settlement/EditionSettlementWorkspace";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
 import { FestivalCompanyEditionsPage } from "@/features/festivals/editions/FestivalCompanyEditionsPage";
-import { FestivalEditionOverview, FestivalEditionApplications, FestivalEditionContracts, FestivalEditionOperations, FestivalEditionFinance, FestivalEditionHistory } from "./FestivalEditionSections";
+import { FestivalEditionOverview, FestivalEditionSchedule, FestivalEditionApplications, FestivalEditionContracts, FestivalEditionOperations, FestivalEditionFinance, FestivalEditionHistory } from "./FestivalEditionSections";
 
 export function FestivalFoundingPage() { return <main className="mx-auto max-w-3xl space-y-5 p-6"><h1 className="text-3xl font-bold">Found a Festival company</h1><p>Start an annual Festival brand. Eligibility, limits, authority, funds and price are verified by the server.</p><FestivalCompanyEligibilityCard /></main>; }
 
@@ -19,7 +18,8 @@ export function FestivalCompanyHome() {
   const { festivalCompanyId } = useParams();
   const { pathname } = useLocation();
   if (!festivalCompanyId) return <RouteState title="Festival company unavailable" body="The company route is missing its identifier." />;
-  if (pathname === festivalRoutes.editions(festivalCompanyId)) return <FestivalCompanyEditionsPage festivalCompanyId={festivalCompanyId} />;
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+  if (normalizedPath === festivalRoutes.editions(festivalCompanyId)) return <FestivalCompanyEditionsPage festivalCompanyId={festivalCompanyId} />;
   return <FestivalCompanySummaryHome festivalCompanyId={festivalCompanyId} />;
 }
 
@@ -48,7 +48,7 @@ export function FestivalEditionWorkspace({section}:{section:string}) {
   if(!festivalCompanyId||!editionId) return <RouteState title="Festival edition not found" body="This edition route is missing its identifiers."/>;
   switch(section){
     case "overview": return <FestivalEditionOverview festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
-    case "schedule": return <FestivalScheduleWorkspace editionId={editionId}/>;
+    case "schedule": return <FestivalEditionSchedule festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
     case "applications": return <FestivalEditionApplications festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
     case "contracts": return <FestivalEditionContracts festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
     case "operations": return <FestivalEditionOperations festivalCompanyId={festivalCompanyId} editionId={editionId}/>;
