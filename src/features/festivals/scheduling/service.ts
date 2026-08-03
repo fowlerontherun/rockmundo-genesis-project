@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import {
   workspaceSchema,
@@ -11,6 +12,15 @@ type RpcClient = {
   ) => Promise<{ data: unknown; error: unknown }>;
 };
 
+const scheduleBridgeSchema = z.object({
+  festivalCompanyId: z.string().uuid(),
+  festivalEditionId: z.string().uuid(),
+  scheduleFestivalId: z.string().uuid(),
+  scheduleEditionId: z.string().uuid(),
+  timeZone: z.string(),
+  created: z.boolean(),
+});
+
 const rpcClient = supabase as unknown as RpcClient;
 
 const rpc = async <T>(functionName: string, args: Record<string, unknown>) => {
@@ -21,17 +31,29 @@ const rpc = async <T>(functionName: string, args: Record<string, unknown>) => {
 
 const operationKey = (prefix: string) => `${prefix}:${crypto.randomUUID()}`;
 
+async function resolveScheduleEditionId(
+  festivalEditionId: string,
+): Promise<string> {
+  const bridge = scheduleBridgeSchema.parse(
+    await rpc("ensure_festival_v2_schedule_bridge", {
+      p_festival_edition_id: festivalEditionId,
+    }),
+  );
+  return bridge.scheduleEditionId;
+}
+
 export async function fetchFestivalScheduleWorkspace(
-  editionId: string,
+  festivalEditionId: string,
 ): Promise<FestivalScheduleWorkspaceData> {
+  const scheduleEditionId = await resolveScheduleEditionId(festivalEditionId);
   return workspaceSchema.parse(
     await rpc("festival_edition_schedule_workspace", {
-      p_edition_id: editionId,
+      p_edition_id: scheduleEditionId,
     }),
   );
 }
 
-export const configureStageHours = (input: {
+export const configureStageHours = async (input: {
   editionId: string;
   stageId: string;
   date: string;
@@ -39,9 +61,10 @@ export const configureStageHours = (input: {
   curfew: string;
   shutdownBufferMinutes?: number;
   changeoverMinutes?: number;
-}) =>
-  rpc("festival_schedule_configure_stage_hours", {
-    p_edition_id: input.editionId,
+}) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
+  return rpc("festival_schedule_configure_stage_hours", {
+    p_edition_id: scheduleEditionId,
     p_stage_id: input.stageId,
     p_festival_date: input.date,
     p_opening_time: input.openingTime,
@@ -50,14 +73,16 @@ export const configureStageHours = (input: {
     p_changeover_minutes: input.changeoverMinutes ?? 30,
     p_idempotency_key: operationKey(`hours:${input.stageId}:${input.date}`),
   });
+};
 
-export const upsertScheduleItem = (input: {
+export const upsertScheduleItem = async (input: {
   editionId: string;
   revisionId: string;
   item: Record<string, unknown>;
   expectedVersion?: number;
   idempotencyKey?: string;
 }) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
   const rawDuration = Number(input.item.durationMinutes);
   const item = Number.isFinite(rawDuration)
     ? {
@@ -67,7 +92,7 @@ export const upsertScheduleItem = (input: {
     : input.item;
 
   return rpc("festival_schedule_upsert_item", {
-    p_edition_id: input.editionId,
+    p_edition_id: scheduleEditionId,
     p_revision_id: input.revisionId,
     p_item: item,
     p_expected_version: input.expectedVersion ?? null,
@@ -76,24 +101,26 @@ export const upsertScheduleItem = (input: {
   });
 };
 
-export const previewScheduleTemplate = (input: {
+export const previewScheduleTemplate = async (input: {
   editionId: string;
   stageId: string;
   date: string;
   template: string;
   openingTime: string;
   curfew: string;
-}) =>
-  rpc<Record<string, unknown>>("festival_schedule_preview_template", {
-    p_edition_id: input.editionId,
+}) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
+  return rpc<Record<string, unknown>>("festival_schedule_preview_template", {
+    p_edition_id: scheduleEditionId,
     p_stage_id: input.stageId,
     p_festival_date: input.date,
     p_template: input.template,
     p_opening_time: input.openingTime,
     p_curfew: input.curfew,
   });
+};
 
-export const applyScheduleTemplate = (input: {
+export const applyScheduleTemplate = async (input: {
   editionId: string;
   revisionId: string;
   stageId: string;
@@ -102,9 +129,10 @@ export const applyScheduleTemplate = (input: {
   openingTime: string;
   curfew: string;
   confirmOverwrite?: boolean;
-}) =>
-  rpc("festival_schedule_apply_template", {
-    p_edition_id: input.editionId,
+}) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
+  return rpc("festival_schedule_apply_template", {
+    p_edition_id: scheduleEditionId,
     p_revision_id: input.revisionId,
     p_stage_id: input.stageId,
     p_festival_date: input.date,
@@ -116,51 +144,60 @@ export const applyScheduleTemplate = (input: {
       `template:${input.revisionId}:${input.stageId}:${input.date}:${input.template}`,
     ),
   });
+};
 
-export const publishSchedule = (input: {
+export const publishSchedule = async (input: {
   editionId: string;
   revisionId: string;
   acknowledgeWarnings?: boolean;
-}) =>
-  rpc("festival_schedule_publish", {
-    p_edition_id: input.editionId,
+}) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
+  return rpc("festival_schedule_publish", {
+    p_edition_id: scheduleEditionId,
     p_revision_id: input.revisionId,
     p_acknowledge_warnings: input.acknowledgeWarnings ?? false,
     p_idempotency_key: operationKey(`publish:${input.revisionId}`),
   });
+};
 
-export const lockSchedule = (input: {
+export const lockSchedule = async (input: {
   editionId: string;
   revisionId: string;
   reason: string;
-}) =>
-  rpc("festival_schedule_lock", {
-    p_edition_id: input.editionId,
+}) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
+  return rpc("festival_schedule_lock", {
+    p_edition_id: scheduleEditionId,
     p_revision_id: input.revisionId,
     p_reason: input.reason,
     p_idempotency_key: operationKey(`lock:${input.revisionId}`),
   });
+};
 
-export const reopenSchedule = (input: {
+export const reopenSchedule = async (input: {
   editionId: string;
   revisionId: string;
   reason: string;
-}) =>
-  rpc("festival_schedule_reopen", {
-    p_edition_id: input.editionId,
+}) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
+  return rpc("festival_schedule_reopen", {
+    p_edition_id: scheduleEditionId,
     p_revision_id: input.revisionId,
     p_reason: input.reason,
     p_idempotency_key: operationKey(`reopen:${input.revisionId}`),
   });
+};
 
-export const discardDraftSchedule = (input: {
+export const discardDraftSchedule = async (input: {
   editionId: string;
   revisionId: string;
   reason?: string;
-}) =>
-  rpc("festival_schedule_discard_draft", {
-    p_edition_id: input.editionId,
+}) => {
+  const scheduleEditionId = await resolveScheduleEditionId(input.editionId);
+  return rpc("festival_schedule_discard_draft", {
+    p_edition_id: scheduleEditionId,
     p_revision_id: input.revisionId,
     p_reason: input.reason ?? null,
     p_idempotency_key: operationKey(`discard:${input.revisionId}`),
   });
+};
