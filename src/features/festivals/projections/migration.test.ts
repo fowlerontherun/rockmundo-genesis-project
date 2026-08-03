@@ -70,6 +70,17 @@ describe("annual Festival internal projection SQL", () => {
     );
   });
 
+  it("uses one stable non-reserved application-window alias", () => {
+    expect(migration).toContain(
+      "festival_artist_application_windows application_window",
+    );
+    expect(migration).toContain("application_window_payload");
+    expect(migration).not.toContain("application_application");
+    expect(migration).not.toMatch(
+      /festival_artist_application_windows\s+window\b/i,
+    );
+  });
+
   it("generates the hidden site, stages, standard ticket and forecast", () => {
     for (const table of [
       "festival_site_plans",
