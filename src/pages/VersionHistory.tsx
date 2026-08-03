@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.642",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival edition workspace sections are now live: Overview shows company setup plus the configuration wizard, Operations opens site/stage planning with staffing and suppliers, Finance opens ticket, capacity and revenue planning, Applications opens the artist programme, Contracts opens sponsorship packages and the launch/ticket-sales manager, and Schedule now includes the timetable and readiness planner." },
+      { type: 'feature', description: "Edition History now shows the immutable post-settlement record (dates, attendance, audience rating, result band, headliners and reputation change) instead of a placeholder." },
+      { type: 'improvement', description: "Edition navigation is now a mobile-friendly horizontal tab strip with a clear active state instead of a row of plain links, and the page heading shows the edition year." },
+    ],
+  },
+  {
     version: "1.1.641",
     date: "2026-08-03",
     changes: [
