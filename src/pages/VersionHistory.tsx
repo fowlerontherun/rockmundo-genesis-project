@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.630",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Added an admin-only Finance Diagnostics view (Admin → Finance Diagnostics) listing every finance table the finance dashboard reads, with row counts and status badges." },
+      { type: 'improvement', description: "Diagnostics highlights unreachable tables, empty tables and blank dashboard sections so missing finance data is easy to spot." },
+    ],
+  },
+  {
+
     version: "1.1.629",
     date: "2026-08-03",
     changes: [
