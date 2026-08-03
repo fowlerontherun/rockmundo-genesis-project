@@ -76,14 +76,15 @@ export async function checkHealthForActivity(
 
   let healthPenalty = 0;
   if (health <= 30) {
-    healthPenalty = 50;
+    healthPenalty = 15;
   } else if (health <= 50) {
-    healthPenalty = 25;
+    healthPenalty = 7;
   } else if (health <= 70) {
-    healthPenalty = 10;
+    healthPenalty = 3;
   }
 
-  healthPenalty = Math.min(75, healthPenalty + (conditionEffects.xp_penalty || 0));
+  healthPenalty = Math.min(25, healthPenalty + (conditionEffects.xp_penalty || 0));
+
 
   return { canPerform: true, message: null, healthPenalty };
 }
