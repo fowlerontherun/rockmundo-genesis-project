@@ -1,16 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getFestivalCompanySetup } from "@/features/festival-company/data/festivalCompanyRepository";
-import { FestivalSetupSummary } from "@/features/festival-company/ui/FestivalSetupSummary";
-import { FestivalConfigurationWizard } from "@/features/festival-company/ui/FestivalConfigurationWizard";
 import { FestivalSitePlanner } from "@/features/festival-company/ui/FestivalSitePlanner";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
 import { FestivalOperationsPlanner } from "@/features/festival-company/ui/FestivalOperationsPlanner";
 import { FestivalSponsorshipPlanner } from "@/features/festival-company/ui/FestivalSponsorshipPlanner";
-import { FestivalTimetablePlanner } from "@/features/festival-company/ui/FestivalTimetablePlanner";
 import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
+import { getFestivalCompanyEditions } from "@/features/festivals/editions/repository";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
 
 const SectionShell = ({
@@ -31,83 +28,122 @@ const SectionShell = ({
   </section>
 );
 
-export function FestivalEditionOverview({ festivalCompanyId }: { festivalCompanyId: string }) {
+function EditionScope({
+  festivalCompanyId,
+  editionId,
+  children,
+  requireEditable = false,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+  children?: React.ReactNode;
+  requireEditable?: boolean;
+}) {
   const query = useQuery({
-    queryKey: ["festival-company-setup", festivalCompanyId],
-    queryFn: () => getFestivalCompanySetup(festivalCompanyId),
+    queryKey: ["festival-company-editions", festivalCompanyId],
+    queryFn: () => getFestivalCompanyEditions(festivalCompanyId),
   });
+
+  if (query.isLoading) return <p role="status">Loading edition scope…</p>;
+  const edition = query.data?.editions.find((item) => item.festivalEditionId === editionId);
+  if (query.error || !edition) {
+    return <Card><CardContent className="pt-6">This annual edition could not be loaded.</CardContent></Card>;
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>{edition.name}</CardTitle>
+              <CardDescription>Game year {edition.editionYear}</CardDescription>
+            </div>
+            <Badge variant={edition.editable ? "secondary" : "outline"} className="capitalize">
+              {edition.status.replaceAll("_", " ")}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <p>Dates: <strong>{edition.startsOn ?? "Not set"} – {edition.endsOn ?? "Not set"}</strong></p>
+          <p>Scale: <strong className="capitalize">{edition.festivalScale ?? "Not set"}</strong></p>
+          <p>Duration: <strong>{edition.durationDays ? `${edition.durationDays} day(s)` : "Not set"}</strong></p>
+          <p>Capacity: <strong>{edition.expectedCapacity?.toLocaleString("en-GB") ?? "Not set"}</strong></p>
+        </CardContent>
+      </Card>
+      {requireEditable && !edition.editable ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Edition is read-only</CardTitle>
+            <CardDescription>Completed, cancelled or locked editions cannot change planning data.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : children}
+    </>
+  );
+}
+
+export function FestivalEditionOverview({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
   return (
     <SectionShell
       title="Edition overview"
-      description="Identity, location, scale and dates for this annual edition. All values are validated by the server."
+      description="Identity, location, scale and dates for this exact annual edition. Permanent company defaults are managed from the Festival company page."
     >
-      {query.isLoading ? (
-        <p role="status">Loading company setup…</p>
-      ) : query.data ? (
-        <FestivalSetupSummary setup={query.data} />
-      ) : (
-        <Card>
-          <CardContent className="pt-6">Company setup could not be loaded.</CardContent>
-        </Card>
-      )}
-      <FestivalConfigurationWizard festivalCompanyId={festivalCompanyId} />
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} />
     </SectionShell>
   );
 }
 
-export function FestivalEditionSchedule({ festivalCompanyId }: { festivalCompanyId: string }) {
-  return (
-    <SectionShell
-      title="Timetable and readiness"
-      description="Build stage-by-stage running orders, then recalculate final readiness before launch."
-    >
-      <FestivalTimetablePlanner festivalCompanyId={festivalCompanyId} />
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionApplications({ festivalCompanyId }: { festivalCompanyId: string }) {
+export function FestivalEditionApplications({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
   return (
     <SectionShell
       title="Artist programme"
-      description="Application windows, candidate discovery, invitations, offers and confirmed bookings."
+      description="Application windows, candidate discovery, invitations, offers and confirmed bookings for this edition."
     >
-      <FestivalArtistPlanner festivalCompanyId={festivalCompanyId} />
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+        <FestivalArtistPlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
     </SectionShell>
   );
 }
 
-export function FestivalEditionContracts({ festivalCompanyId }: { festivalCompanyId: string }) {
+export function FestivalEditionContracts({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
   return (
     <SectionShell
       title="Commercial partnerships and launch"
-      description="Sponsorship packages and commercial agreements, followed by the atomic launch and ticket-sales controls."
+      description="Sponsorship packages and commercial agreements, followed by the atomic launch and ticket-sales controls for this edition."
     >
-      <FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} />
-      <FestivalLaunchManager festivalCompanyId={festivalCompanyId} />
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+        <FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} />
+        <FestivalLaunchManager festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
     </SectionShell>
   );
 }
 
-export function FestivalEditionOperations({ festivalCompanyId }: { festivalCompanyId: string }) {
+export function FestivalEditionOperations({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
   return (
     <SectionShell
       title="Site, staffing and suppliers"
-      description="Site layout and stages, then departments, staffing coverage and supplier contracts."
+      description="Site layout and stages, then departments, staffing coverage and supplier contracts for this edition."
     >
-      <FestivalSitePlanner festivalCompanyId={festivalCompanyId} />
-      <FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} />
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+        <FestivalSitePlanner festivalCompanyId={festivalCompanyId} />
+        <FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
     </SectionShell>
   );
 }
 
-export function FestivalEditionFinance({ festivalCompanyId }: { festivalCompanyId: string }) {
+export function FestivalEditionFinance({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
   return (
     <SectionShell
       title="Ticketing and revenue planning"
-      description="Ticket products, daily capacity allocation, release phases and deterministic revenue forecasts. Planning only — nothing is sold here."
+      description="Ticket products, daily capacity allocation, release phases and deterministic revenue forecasts for this edition. Planning only — nothing is sold here."
     >
-      <FestivalTicketPlanner festivalCompanyId={festivalCompanyId} />
+      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
+        <FestivalTicketPlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
     </SectionShell>
   );
 }
