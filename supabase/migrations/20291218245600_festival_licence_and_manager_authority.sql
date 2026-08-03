@@ -7,6 +7,8 @@ ALTER TABLE public.festival_companies
 
 ALTER TABLE public.festival_company_licences
   DROP CONSTRAINT IF EXISTS festival_company_licences_festival_company_id_tier_key_status_key;
+ALTER TABLE public.festival_company_licences
+  DROP CONSTRAINT IF EXISTS festival_company_licences_festival_company_id_tier_key_status_k;
 
 CREATE UNIQUE INDEX IF NOT EXISTS festival_company_one_active_licence
   ON public.festival_company_licences(festival_company_id)
@@ -469,11 +471,11 @@ BEGIN
     RAISE EXCEPTION 'FESTIVAL_LICENCE_ACCESS_DENIED' USING ERRCODE = 'P0001';
   END IF;
 
-  payload_hash := encode(digest(jsonb_build_object(
+  payload_hash := md5(jsonb_build_object(
     'festivalCompanyId', company.id,
     'tierKey', p_requested_tier_key,
     'expectedLicenceVersion', p_expected_licence_version
-  )::text, 'sha256'), 'hex');
+  )::text);
 
   SELECT * INTO request
   FROM public.festival_licence_requests
