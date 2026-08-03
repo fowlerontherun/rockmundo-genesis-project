@@ -40,7 +40,7 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
 
-const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Heart }) => (
+const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Bell }) => (
   <div className="rounded-lg border bg-card/50 p-3">
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <Icon className="h-3.5 w-3.5 text-primary" />
@@ -50,44 +50,6 @@ const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: stri
   </div>
 );
 
-const KeyStatusPanel = ({ profile, currentCity }: { profile: any; currentCity: any }) => (
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="flex items-center gap-2 text-base">
-        <ActivityIcon className="h-4 w-4 text-primary" />
-        Key Character/Band Status
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      {!profile ? (
-        <PageLoadingState title="Loading character status" description="Fetching your active character snapshot..." />
-      ) : (
-        <>
-          <div className="flex items-start gap-4">
-            <Avatar className="h-16 w-16 border-2 border-primary/30 flex-shrink-0">
-              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || profile?.username || "Character"} />
-              <AvatarFallback className="text-xl"><User className="h-8 w-8" /></AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-lg font-bold text-foreground">{profile?.display_name || profile?.username || "Unknown"}</h2>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                {profile?.age && <span>Age {profile.age}</span>}
-                {profile?.gender && <span className="capitalize">{profile.gender}</span>}
-                {currentCity ? <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{currentCity.name}, {currentCity.country}</span> : null}
-              </div>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatusMetric label="Health" value={`${profile?.health ?? 100}%`} icon={Heart} />
-            <StatusMetric label="Energy" value={`${profile?.energy ?? 100}%`} icon={Zap} />
-            <StatusMetric label="Fame" value={profile?.fame ?? 0} icon={Star} />
-            <StatusMetric label="Level" value={profile?.level ?? 1} icon={Trophy} />
-          </div>
-        </>
-      )}
-    </CardContent>
-  </Card>
-);
 
 
 const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string }) => {
