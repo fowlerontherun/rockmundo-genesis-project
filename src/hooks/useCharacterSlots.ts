@@ -279,24 +279,22 @@ export function useCharacterSlots() {
     mutationFn: async (profileId: string) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Verify the profile belongs to this user and is not active
-      const { data: profile, error: fetchError } = await supabase
-        .from("profiles")
-        .select("id, is_active, user_id")
-        .eq("id", profileId)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { error } = await supabase.rpc("delete_character_profile" as any, {
+        p_profile_id: profileId,
+      });
 
-      if (fetchError) throw fetchError;
-      if (!profile) throw new Error("Character not found");
-      if (profile.is_active) throw new Error("Cannot delete your active character. Switch to another character first.");
+      if (!error) return;
 
-      // Soft-delete by setting died_at
+      if (!isMissingRpcError(error)) throw error;
+
+      // Fallback: soft-delete directly
       const { error: deleteError } = await supabase
         .from("profiles")
-        .update({ died_at: new Date().toISOString(), is_active: false })
+        .update({ deleted_at: new Date().toISOString(), is_active: false } as any)
         .eq("id", profileId)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("is_active", false);
+
 
       if (deleteError) throw deleteError;
     },
