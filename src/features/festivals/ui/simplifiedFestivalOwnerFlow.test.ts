@@ -67,6 +67,34 @@ describe("simplified company-owned Festival owner flow", () => {
     expect(contract).toContain("compare supplier tenders");
   });
 
+  it("mounts one exact-edition high-level annual planning form", () => {
+    const sections = source(
+      "src/features/festivals/ui/FestivalEditionSections.tsx",
+    );
+    const annualPlan = source(
+      "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+    );
+
+    expect(sections).toContain(
+      'import { FestivalAnnualPlan } from "@/features/festivals/annual-plan/FestivalAnnualPlan"',
+    );
+    expect(sections).toMatch(
+      /<FestivalAnnualPlan[\s\S]*festivalCompanyId=\{festivalCompanyId\}[\s\S]*editionId=\{editionId\}/,
+    );
+    expect(annualPlan).toContain("Annual Festival choices");
+    expect(annualPlan).toContain("Festival month");
+    expect(annualPlan).toContain("Start date");
+    expect(annualPlan).toContain("City");
+    expect(annualPlan).toContain("Site style");
+    expect(annualPlan).toContain("Festival size");
+    expect(annualPlan).toContain("Duration");
+    expect(annualPlan).toContain("Festival vibe");
+    expect(annualPlan).toContain("Marketing emphasis");
+    expect(annualPlan).not.toContain("Staff shift");
+    expect(annualPlan).not.toContain("Supplier tender");
+    expect(annualPlan).not.toContain("Permit");
+  });
+
   it("unlocks each simplified planner from the prior high-level choice", () => {
     const sections = source(
       "src/features/festivals/ui/FestivalEditionSections.tsx",
