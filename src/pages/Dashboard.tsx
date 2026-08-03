@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -11,8 +10,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Calendar, Heart, Zap, MapPin, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, ChevronDown, Shield, Sparkles, Bell, Target } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
@@ -22,7 +20,6 @@ import { DaySchedule } from "@/components/schedule/DaySchedule";
 import { DebtWarningBanner } from "@/components/prison/DebtWarningBanner";
 import { CharacterFameOverview } from "@/components/fame/CharacterFameOverview";
 import { LocationHeader } from "@/components/location/LocationHeader";
-import { LocationFlavorCard } from "@/components/location/LocationFlavorCard";
 import { GigLocationWarning } from "@/components/notifications/GigLocationWarning";
 import { DashboardOverviewTabs } from "@/components/dashboard/DashboardOverviewTabs";
 import { VipStatusCard } from "@/components/VipStatusCard";

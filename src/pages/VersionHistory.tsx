@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.633",
+    date: "2026-08-03",
+    changes: [
+      { type: 'improvement', description: "Reorganised the dashboard into nine focused tabs (Today, Goals, Profile, Stats, Fame, Lifestyle, Schedule, Alerts, Activity) so each screen has a single purpose." },
+      { type: 'improvement', description: "Removed the duplicated character status panel and replaced hidden collapsible sections with proper tabs, so identity, reputation, VIP status, notifications, world news and achievements are visible without extra clicks." },
+    ],
+  },
+  {
     version: "1.1.632",
     date: "2026-08-03",
     changes: [
