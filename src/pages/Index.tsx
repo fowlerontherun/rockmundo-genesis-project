@@ -20,13 +20,9 @@ const Index = () => {
   
   const { data: characterIdentity, isLoading: identityLoading } = usePlayerCharacterIdentity();
   const {
-    deadCharacters,
     deadCharactersLoading,
     hasLivingCharacter,
     hasLivingCharacterLoading,
-    resurrectCharacter,
-    createChildCharacter,
-    createFreshCharacter,
     updateLastLogin,
   } = useCharacterDeath();
 
