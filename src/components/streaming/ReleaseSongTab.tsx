@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+
 import { Music, Sparkles, DollarSign, AlertCircle } from "lucide-react";
 
 interface ReleaseSongTabProps {
@@ -21,17 +23,23 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [releaseType, setReleaseType] = useState<string>("single");
 
+  const { profileId } = useActiveProfile();
+
   const { data: unreleasedSongs } = useQuery({
-    queryKey: ["unreleased-songs", userId],
+    queryKey: ["unreleased-songs", userId, profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("songs")
-        .select("*")
-        .eq("user_id", userId)
+      let query = supabase.from("songs").select("*");
+      // Scope to the active character; legacy rows without a character fall back to the account.
+      if (profileId && userId) query = query.or(`profile_id.eq.${profileId},and(profile_id.is.null,user_id.eq.${userId})`);
+      else if (profileId) query = query.eq("profile_id", profileId);
+      else query = query.eq("user_id", userId);
+
+      const { data, error } = await query
         .in("status", ["draft", "recorded"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
 
       // Filter out songs already released
       const { data: releases } = await supabase
