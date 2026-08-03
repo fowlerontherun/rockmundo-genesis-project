@@ -59,6 +59,26 @@ jobs:
                   sql = sql.replace(old, new)
               elif new not in sql:
                   raise SystemExit(f"annual SQL marker missing: {old}")
+
+          save_start = sql.index("CREATE OR REPLACE FUNCTION public.save_festival_edition_annual_plan(")
+          save_end = sql.index("\n$$;", save_start) + len("\n$$;")
+          save = sql[save_start:save_end]
+          if "  result jsonb;" in save:
+              save = save.replace("  result jsonb;", "  response jsonb;", 1)
+              save = save.replace(
+                  "  result := public._festival_annual_plan_result(company.id, edition.id);",
+                  "  response := public._festival_annual_plan_result(company.id, edition.id);",
+                  1,
+              )
+              save = save.replace(
+                  "  SET status = 'succeeded', result = result, completed_at = now()",
+                  "  SET status = 'succeeded', result = response, completed_at = now()",
+                  1,
+              )
+              save = save.replace("  RETURN result;", "  RETURN response;", 1)
+              sql = sql[:save_start] + save + sql[save_end:]
+          elif "  response jsonb;" not in save:
+              raise SystemExit("annual save response variable missing")
           migration.write_text(sql)
           PY
           if git diff --quiet -- src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql; then
@@ -68,5 +88,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql
-          git commit -m "Fix annual Festival form hooks and month persistence"
+          git commit -m "Fix annual Festival SQL receipt persistence"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
