@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { festivalCompanyEditionsSchema } from "./repository";
 
@@ -57,5 +58,29 @@ describe("festivalCompanyEditionsSchema", () => {
       }],
     };
     expect(festivalCompanyEditionsSchema.safeParse(incomplete).success).toBe(true);
+  });
+});
+
+describe("festival edition directory SQL boundary", () => {
+  const migration = readFileSync(
+    "supabase/migrations/20291218245000_festival_owner_edition_directory.sql",
+    "utf8",
+  );
+
+  it("reads only the canonical Festival company and annual-edition aggregates", () => {
+    expect(migration).toMatch(/FROM public\.festival_companies/i);
+    expect(migration).toMatch(/FROM public\.festival_editions_v2/i);
+    expect(migration).not.toMatch(/FROM public\.(?:festivals|festival_editions|game_events)\b/i);
+  });
+
+  it("requires an authenticated owner or administrator", () => {
+    expect(migration).toMatch(/auth\.uid\(\) IS NULL OR v_actor IS NULL/i);
+    expect(migration).toMatch(/v_company\.owner_profile_id <> v_actor/i);
+    expect(migration).toMatch(/has_role\(auth\.uid\(\), 'admin'::public\.app_role\)/i);
+  });
+
+  it("keeps execution unavailable to public and anonymous roles", () => {
+    expect(migration).toMatch(/REVOKE ALL ON FUNCTION public\.get_festival_company_editions\(uuid\) FROM PUBLIC, anon/i);
+    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\.get_festival_company_editions\(uuid\) TO authenticated/i);
   });
 });
