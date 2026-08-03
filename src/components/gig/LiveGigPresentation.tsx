@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import type { GigLiveSegment, LiveGigSessionState, LiveIncident, LiveSongResult, TacticalDecision } from '@/utils/gigLive';
 import { StageSceneryLayers } from './StageSceneryLayers';
+import { LivePyroEffectsLayer } from './LivePyroEffectsLayer';
 import { buildLiveGigPresentationState, type LiveGigPerformerInput, type LiveGigProductionInput, type LiveGigSongPresentationInput, type LiveGigVenueInput } from '@/utils/gigLivePresentation';
 
 interface Props {
@@ -44,6 +45,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
         {quality !== 'data' ? (
           <div className="relative min-h-[330px] overflow-hidden rounded-2xl border bg-slate-950 text-white shadow-inner" data-scene={presentation.scene}>
             <StageSceneryLayers scenery={presentation.scenery} animate={quality === 'full'} />
+            <LivePyroEffectsLayer effects={presentation.activeEffects} animate={quality === 'full'} intensity={presentation.intensity} outdoor={presentation.scenery.environment !== 'indoor'} />
             <div className={`absolute inset-0 opacity-70 ${presentation.lightingState === 'warm_wash' ? 'bg-amber-500/20' : presentation.lightingState === 'cool_wash' ? 'bg-cyan-500/20' : presentation.lightingState === 'failure_state' ? 'bg-red-950/40' : presentation.lightingState.includes('spot') ? 'bg-yellow-200/10' : 'bg-purple-500/10'}`} aria-hidden="true" />
             <div className="absolute left-4 right-4 top-4 flex flex-wrap items-center justify-between gap-2">
               <Badge>{presentation.scene}</Badge>
@@ -51,7 +53,7 @@ export function LiveGigPresentation({ session, segments, songResults, incidents 
             </div>
             <div className={`absolute left-[8%] right-[8%] top-[24%] h-[44%] border shadow-2xl ${presentation.scenery.stageClass} ${presentation.scenery.stageShape === 'arch' ? 'rounded-t-[48%]' : presentation.scenery.stageShape === 'tent' ? 'rounded-t-[70%]' : presentation.scenery.stageShape === 'truss' ? 'rounded-t-lg' : 'rounded-t-sm'}`}>
               <div className="absolute inset-x-[12%] top-3 h-10 rounded-full bg-white/10 blur-lg" />
-              {presentation.activeEffects.map((effect, index) => <span key={effect} className="absolute rounded-full border border-white/20 bg-white/10 px-2 py-1 text-xs" style={{ left: `${16 + index * 15}%`, top: `${18 + (index % 2) * 44}%` }}>{effect}</span>)}
+
               {presentation.performerStates.map((performer) => (
                 <div key={performer.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: `${performer.x}%`, top: `${performer.y}%` }}>
                   <div className={`mx-auto flex h-14 w-10 items-center justify-center rounded-t-full border text-xl shadow-lg ${performer.visualState === 'incident_affected' ? 'border-red-300 bg-red-600/70' : performer.visualState === 'standout_performance' ? 'border-yellow-200 bg-yellow-500/60' : 'border-white/30 bg-slate-700/80'}`} aria-hidden="true">{performer.instrumentLabel.includes('Drum') ? '🥁' : performer.instrumentLabel.includes('Bass') ? '🎸' : performer.instrumentLabel.includes('guitar') ? '🎸' : performer.instrumentLabel.includes('Keyboard') ? '🎹' : performer.instrumentLabel.includes('Microphone') ? '🎤' : '🎵'}</div>
