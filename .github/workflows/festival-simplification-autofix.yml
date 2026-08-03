@@ -1,0 +1,43 @@
+name: Festival simplification edit
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Correct simplified planner prerequisites
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/features/festivals/ui/FestivalEditionSections.tsx")
+          source = path.read_text()
+          source = source.replace(
+              'requiredBindings={["artists"]}',
+              'requiredBindings={["tickets"]}',
+          )
+          source = source.replace(
+              'requiredBindings={["site", "tickets"]}',
+              'requiredBindings={["site"]}',
+          )
+          path.write_text(source)
+          PY
+          if git diff --quiet -- src/features/festivals/ui/FestivalEditionSections.tsx; then
+            echo "Planner prerequisites are already correct."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/festivals/ui/FestivalEditionSections.tsx
+          git commit -m "Unlock simplified Festival planners in order"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
