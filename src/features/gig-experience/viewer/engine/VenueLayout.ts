@@ -199,15 +199,16 @@ export const VENUE_PRESETS: Record<VenuePresetName, VenuePreset> = {
 };
 
 export function selectStageType(input?: { venueName?: string | null; venueType?: string | null; capacity?: number | null }): StageType {
-  const hay = `${input?.venueName ?? ""} ${input?.venueType ?? ""}`.toLowerCase();
+  const hay = `${input?.venueName ?? ""} ${input?.venueType ?? ""}`.toLowerCase().replace(/_/g, " ");
   const cap = input?.capacity ?? NaN;
   if (/tent|marquee|big ?top|cabaret|gospel tent|dance tent|silent disco/.test(hay)) return "tent";
   if (/bowl|amphitheat/.test(hay)) return "stadium_bowl";
-  if (/festival|open ?air|fields?|park|outdoor/.test(hay)) return "festival";
+  if (/festival|open ?air|fields?|park|outdoor|beach|seafront|bandstand|city square|vineyard|airfield|mountain stage|desert stage/.test(hay)) return "festival";
   if (/stadium|olympic|megadome|dome/.test(hay)) return "stadium_bowl";
+  if (/ice arena|ice rink/.test(hay)) return "arena_bowl";
   if (/arena|coliseum|colise|forum|garden/.test(hay)) return "arena_bowl";
-  if (/theat(re|er)|opera|hall|auditorium|ballroom|playhouse/.test(hay)) return "theater";
-  if (/club|bar|pub|lounge|basement|cellar|cafe|tavern/.test(hay)) return "club";
+  if (/theat(re|er)|opera|hall|auditorium|ballroom|playhouse|casino|cruise|church|chapel|cathedral|conservat/.test(hay)) return "theater";
+  if (/club|bar|pub|lounge|basement|cellar|cafe|tavern|live ?house|indie|warehouse|rooftop|terrace|speakeasy|union|social/.test(hay)) return "club";
   if (Number.isFinite(cap)) {
     if (cap >= 25000) return "stadium_bowl";
     if (cap >= 5000) return "arena_bowl";
@@ -218,14 +219,69 @@ export function selectStageType(input?: { venueName?: string | null; venueType?:
   return "theater";
 }
 
-export function selectVenuePreset(input?: { venueType?: string | null; venueName?: string | null; capacity?: number | null }): VenuePreset {
+/** Deterministic 0-1 hash so each venue keeps a stable, slightly different look. */
+function variantHash(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 100000) / 100000;
+}
+
+function shiftHex(hex: string, amount: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const clampByte = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  const r = clampByte(((n >> 16) & 255) + amount);
+  const g = clampByte(((n >> 8) & 255) + amount * 0.7);
+  const b = clampByte((n & 255) + amount * 1.2);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
+/** Cosmetic-only variation: palette shading and decorative counts. Geometry stays identical so entity layouts still line up. */
+function applyVenueVariation(preset: VenuePreset, seed: string): VenuePreset {
+  const r = variantHash(seed);
+  const tint = Math.round((r - 0.5) * 26);
+  const d = preset.decorations;
+  const extraLights = Math.round((r * 5) % 3) - 1;
+  const lightFixtures = extraLights >= 0
+    ? d.lightFixtures
+    : d.lightFixtures.slice(0, Math.max(2, d.lightFixtures.length - 1));
+  const bannerRect = d.bannerRect
+    ? { ...d.bannerRect, width: d.bannerRect.width * (0.9 + r * 0.2), height: d.bannerRect.height * (0.92 + r * 0.16) }
+    : null;
+  return {
+    ...preset,
+    decorations: {
+      ...d,
+      lightFixtures,
+      bannerRect,
+      tentStripes: d.tentStripes > 0 ? Math.max(9, d.tentStripes + Math.round((r - 0.5) * 6)) : 0,
+      palette: {
+        ...d.palette,
+        skyTop: shiftHex(d.palette.skyTop, tint),
+        skyBottom: shiftHex(d.palette.skyBottom, -tint),
+        stageDeck: shiftHex(d.palette.stageDeck, Math.round(tint * 0.6)),
+        audienceFloor: shiftHex(d.palette.audienceFloor, Math.round(tint * 0.4)),
+        accent: shiftHex(d.palette.accent, Math.round((r - 0.5) * 34)),
+      },
+    },
+  };
+}
+
+export function selectVenuePreset(input?: { venueType?: string | null; venueName?: string | null; capacity?: number | null; variantSeed?: string | null }): VenuePreset {
   const stageType = selectStageType(input);
   const capacity = input?.capacity ?? NaN;
   let sizeName: VenuePresetName = "medium";
   if (stageType === "club" || (Number.isFinite(capacity) && capacity > 0 && capacity <= 250)) sizeName = "small";
   else if (stageType === "stadium" || stageType === "arena" || stageType === "festival" || (Number.isFinite(capacity) && capacity >= 1200)) sizeName = "large";
-  return buildPreset(sizeName, stageType);
+  const preset = buildPreset(sizeName, stageType);
+  const seed = input?.variantSeed ?? input?.venueName ?? null;
+  return seed ? applyVenueVariation(preset, `${seed}|${stageType}|${sizeName}`) : preset;
 }
+
 
 export function scaleVenuePreset(preset: VenuePreset, size: Size): VenuePreset {
   const scaledStage = scaleRect(preset.stage, size);
