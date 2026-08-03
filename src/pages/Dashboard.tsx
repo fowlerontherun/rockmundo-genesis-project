@@ -317,8 +317,16 @@ const Dashboard = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-max sm:grid sm:w-full sm:grid-cols-6 gap-1">
+          <TabsList className="inline-flex w-max lg:grid lg:w-full lg:grid-cols-9 gap-1">
             <TabsTrigger value="profile" className="flex-shrink-0">
+              <Sparkles className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Today</span>
+            </TabsTrigger>
+            <TabsTrigger value="goals" className="flex-shrink-0">
+              <Target className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Goals</span>
+            </TabsTrigger>
+            <TabsTrigger value="character" className="flex-shrink-0">
               <User className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('common.profile')}</span>
             </TabsTrigger>
@@ -338,6 +346,10 @@ const Dashboard = () => {
               <Calendar className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">{t('nav.schedule')}</span>
             </TabsTrigger>
+            <TabsTrigger value="alerts" className="flex-shrink-0">
+              <Bell className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Alerts</span>
+            </TabsTrigger>
             <TabsTrigger value="activity" className="flex-shrink-0">
               <ActivityIcon className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Activity</span>
@@ -345,56 +357,32 @@ const Dashboard = () => {
           </TabsList>
         </div>
 
-        {/* Profile Tab — identity only */}
+        {/* Today — snapshot, briefing and what to do next */}
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
           <GettingStartedPanel profile={profile} userId={user?.id} />
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
-            <div className="space-y-4">
-              <TodaysBriefing profile={profile} userId={user?.id} />
-              <GoalsProgressPanel profile={profile} userId={user?.id} />
-              <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
-              <UpcomingSchedulePanel currentDate={currentDate} userId={user?.id} />
-            </div>
-            <div className="space-y-4">
-              <NotificationsPanel userId={user?.id} profileId={profile?.id} />
-              <WorldNewsList limit={4} showViewAllLink />
-              <KeyStatusPanel profile={profile} currentCity={currentCity} />
-            </div>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+            <TodaysBriefing profile={profile} userId={user?.id} />
+            <UpcomingSchedulePanel currentDate={currentDate} userId={user?.id} />
           </div>
-
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Character Identity
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <CharacterIdentityCard />
-            </CollapsibleContent>
-          </Collapsible>
-
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Reputation
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <ReputationCard />
-            </CollapsibleContent>
-          </Collapsible>
         </TabsContent>
 
-        {/* Stats Tab — detailed overview, location, VIP */}
+        {/* Goals — objectives and manager advice */}
+        <TabsContent value="goals" className="space-y-4">
+          <GoalsProgressPanel profile={profile} userId={user?.id} />
+          <ManagerRecommendationsPanel profile={profile} userId={user?.id} />
+        </TabsContent>
+
+        {/* Character — identity, reputation and membership */}
+        <TabsContent value="character" className="space-y-4">
+          <CharacterIdentityCard />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <ReputationCard />
+            <VipStatusCard />
+          </div>
+        </TabsContent>
+
+        {/* Stats Tab — detailed overview and location */}
         <TabsContent value="stats" className="space-y-4">
           {currentCity && (
             <LocationHeader
@@ -406,21 +394,8 @@ const Dashboard = () => {
             />
           )}
           <DashboardOverviewTabs profile={profile} currentCity={currentCity} />
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-between group">
-                <span className="flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  VIP Status
-                </span>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <VipStatusCard />
-            </CollapsibleContent>
-          </Collapsible>
         </TabsContent>
+
 
 
 
