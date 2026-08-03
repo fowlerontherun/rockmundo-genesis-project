@@ -42664,6 +42664,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      check_character_health_decay: { Args: never; Returns: Json }
       check_greatest_hits_eligibility: {
         Args: { p_band_id: string; p_user_id: string }
         Returns: Json
