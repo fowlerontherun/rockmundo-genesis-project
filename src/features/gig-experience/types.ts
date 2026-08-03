@@ -16,7 +16,7 @@ export interface GigExperienceGigDTO {
   startedAt: string | null;
   completedAt: string | null;
   ticketPrice: ReportMetric<number>;
-  venue: { id: string | null; name: string; location: string | null; capacity: number; type: string | null };
+  venue: { id: string | null; name: string; location: string | null; capacity: number; type?: string | null };
 }
 
 export interface GigExperienceHeadlineDTO {
