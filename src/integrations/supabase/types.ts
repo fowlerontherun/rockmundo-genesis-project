@@ -17416,6 +17416,441 @@ export type Database = {
           },
         ]
       }
+      festival_ticket_capacity_allocations: {
+        Row: {
+          capacity_allocated: number
+          capacity_complimentary: number
+          capacity_reserved: number
+          created_at: string
+          festival_date: string
+          festival_ticket_plan_id: string
+          festival_ticket_product_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          capacity_allocated: number
+          capacity_complimentary?: number
+          capacity_reserved?: number
+          created_at?: string
+          festival_date: string
+          festival_ticket_plan_id: string
+          festival_ticket_product_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          capacity_allocated?: number
+          capacity_complimentary?: number
+          capacity_reserved?: number
+          created_at?: string
+          festival_date?: string
+          festival_ticket_plan_id?: string
+          festival_ticket_product_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_ticket_capacity_alloca_festival_ticket_product_id_fkey"
+            columns: ["festival_ticket_product_id"]
+            isOneToOne: false
+            referencedRelation: "festival_ticket_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_capacity_allocatio_festival_ticket_plan_id_fkey"
+            columns: ["festival_ticket_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_ticket_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_ticket_plan_audit: {
+        Row: {
+          actor_profile_id: string | null
+          created_at: string
+          event_type: string
+          festival_company_id: string
+          id: string
+          metadata: Json
+          new_version: number
+          previous_version: number
+          ticket_plan_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type: string
+          festival_company_id: string
+          id?: string
+          metadata?: Json
+          new_version: number
+          previous_version: number
+          ticket_plan_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type?: string
+          festival_company_id?: string
+          id?: string
+          metadata?: Json
+          new_version?: number
+          previous_version?: number
+          ticket_plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_ticket_plan_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_plan_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_plan_audit_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_plan_audit_ticket_plan_id_fkey"
+            columns: ["ticket_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_ticket_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_ticket_plan_requests: {
+        Row: {
+          caller_profile_id: string
+          completed_at: string | null
+          created_at: string
+          festival_company_id: string
+          id: string
+          idempotency_key: string
+          payload_hash: string
+          result: Json | null
+          status: string
+        }
+        Insert: {
+          caller_profile_id: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          idempotency_key: string
+          payload_hash: string
+          result?: Json | null
+          status?: string
+        }
+        Update: {
+          caller_profile_id?: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          idempotency_key?: string
+          payload_hash?: string
+          result?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_ticket_plan_requests_caller_profile_id_fkey"
+            columns: ["caller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_plan_requests_caller_profile_id_fkey"
+            columns: ["caller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_plan_requests_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_ticket_plans: {
+        Row: {
+          booking_fee_basis_points: number
+          booking_fee_minor: number
+          booking_fee_mode: string
+          booking_fee_payer: string
+          completed_at: string | null
+          created_at: string
+          currency_code: string
+          expected_complimentary_use_basis_points: number
+          expected_no_show_basis_points: number
+          expected_refund_basis_points: number
+          expected_sell_through_basis_points: number
+          festival_company_id: string
+          festival_site_plan_id: string
+          forecast: Json
+          id: string
+          maximum_purchase_quantity: number
+          minimum_purchase_quantity: number
+          planning_version: number
+          refund_policy: string | null
+          sales_tax_rate_basis_points: number
+          status: string
+          transfer_policy: string | null
+          updated_at: string
+          validation_issues: Json
+        }
+        Insert: {
+          booking_fee_basis_points?: number
+          booking_fee_minor?: number
+          booking_fee_mode: string
+          booking_fee_payer: string
+          completed_at?: string | null
+          created_at?: string
+          currency_code: string
+          expected_complimentary_use_basis_points?: number
+          expected_no_show_basis_points?: number
+          expected_refund_basis_points?: number
+          expected_sell_through_basis_points?: number
+          festival_company_id: string
+          festival_site_plan_id: string
+          forecast?: Json
+          id?: string
+          maximum_purchase_quantity: number
+          minimum_purchase_quantity?: number
+          planning_version?: number
+          refund_policy?: string | null
+          sales_tax_rate_basis_points: number
+          status?: string
+          transfer_policy?: string | null
+          updated_at?: string
+          validation_issues?: Json
+        }
+        Update: {
+          booking_fee_basis_points?: number
+          booking_fee_minor?: number
+          booking_fee_mode?: string
+          booking_fee_payer?: string
+          completed_at?: string | null
+          created_at?: string
+          currency_code?: string
+          expected_complimentary_use_basis_points?: number
+          expected_no_show_basis_points?: number
+          expected_refund_basis_points?: number
+          expected_sell_through_basis_points?: number
+          festival_company_id?: string
+          festival_site_plan_id?: string
+          forecast?: Json
+          id?: string
+          maximum_purchase_quantity?: number
+          minimum_purchase_quantity?: number
+          planning_version?: number
+          refund_policy?: string | null
+          sales_tax_rate_basis_points?: number
+          status?: string
+          transfer_policy?: string | null
+          updated_at?: string
+          validation_issues?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_ticket_plans_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: true
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_plans_festival_site_plan_id_fkey"
+            columns: ["festival_site_plan_id"]
+            isOneToOne: true
+            referencedRelation: "festival_site_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_ticket_products: {
+        Row: {
+          access_scope: string
+          active: boolean
+          capacity_limit: number
+          created_at: string
+          face_value_minor: number
+          festival_company_id: string
+          festival_ticket_plan_id: string
+          id: string
+          includes_backstage: boolean
+          includes_camping: boolean
+          includes_parking: boolean
+          includes_vip_area: boolean
+          minimum_age: number | null
+          name: string
+          price_minor: number
+          product_class: string
+          refundable: boolean
+          sale_priority: number
+          slug: string
+          ticket_type: string
+          transferable: boolean
+          updated_at: string
+          valid_from_date: string
+          valid_to_date: string
+        }
+        Insert: {
+          access_scope: string
+          active?: boolean
+          capacity_limit: number
+          created_at?: string
+          face_value_minor: number
+          festival_company_id: string
+          festival_ticket_plan_id: string
+          id?: string
+          includes_backstage?: boolean
+          includes_camping?: boolean
+          includes_parking?: boolean
+          includes_vip_area?: boolean
+          minimum_age?: number | null
+          name: string
+          price_minor: number
+          product_class: string
+          refundable?: boolean
+          sale_priority: number
+          slug: string
+          ticket_type: string
+          transferable?: boolean
+          updated_at?: string
+          valid_from_date: string
+          valid_to_date: string
+        }
+        Update: {
+          access_scope?: string
+          active?: boolean
+          capacity_limit?: number
+          created_at?: string
+          face_value_minor?: number
+          festival_company_id?: string
+          festival_ticket_plan_id?: string
+          id?: string
+          includes_backstage?: boolean
+          includes_camping?: boolean
+          includes_parking?: boolean
+          includes_vip_area?: boolean
+          minimum_age?: number | null
+          name?: string
+          price_minor?: number
+          product_class?: string
+          refundable?: boolean
+          sale_priority?: number
+          slug?: string
+          ticket_type?: string
+          transferable?: boolean
+          updated_at?: string
+          valid_from_date?: string
+          valid_to_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_ticket_products_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_products_festival_ticket_plan_id_fkey"
+            columns: ["festival_ticket_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_ticket_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_ticket_release_phases: {
+        Row: {
+          allocation_limit: number
+          created_at: string
+          discount_basis_points: number
+          eligibility_rule: string | null
+          ends_at: string | null
+          festival_ticket_plan_id: string
+          festival_ticket_product_id: string
+          id: string
+          name: string
+          price_override_minor: number | null
+          release_type: string
+          sort_order: number
+          starts_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocation_limit: number
+          created_at?: string
+          discount_basis_points?: number
+          eligibility_rule?: string | null
+          ends_at?: string | null
+          festival_ticket_plan_id: string
+          festival_ticket_product_id: string
+          id?: string
+          name: string
+          price_override_minor?: number | null
+          release_type: string
+          sort_order: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocation_limit?: number
+          created_at?: string
+          discount_basis_points?: number
+          eligibility_rule?: string | null
+          ends_at?: string | null
+          festival_ticket_plan_id?: string
+          festival_ticket_product_id?: string
+          id?: string
+          name?: string
+          price_override_minor?: number | null
+          release_type?: string
+          sort_order?: number
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_ticket_release_phases_festival_ticket_plan_id_fkey"
+            columns: ["festival_ticket_plan_id"]
+            isOneToOne: false
+            referencedRelation: "festival_ticket_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_ticket_release_phases_festival_ticket_product_id_fkey"
+            columns: ["festival_ticket_product_id"]
+            isOneToOne: false
+            referencedRelation: "festival_ticket_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_tickets: {
         Row: {
           day_number: number | null
@@ -43525,6 +43960,10 @@ export type Database = {
       }
       _festival_site_plan_result: { Args: { p_company: string }; Returns: Json }
       _festival_slug: { Args: { p_name: string }; Returns: string }
+      _festival_ticket_plan_result: {
+        Args: { p_company: string }
+        Returns: Json
+      }
       _has_active_vip_entitlement: {
         Args: { p_user_id: string }
         Returns: boolean
@@ -45629,6 +46068,10 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_ticket_plan: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
       get_friendship_lifetime_xp: {
         Args: { profile_a: string; profile_b: string }
         Returns: number
@@ -46463,6 +46906,19 @@ export type Database = {
           p_idempotency_key: string
           p_site_plan: Json
           p_stages: Json
+        }
+        Returns: Json
+      }
+      save_festival_ticket_plan: {
+        Args: {
+          p_capacity_allocations: Json
+          p_complete?: boolean
+          p_expected_version: number
+          p_festival_company_id: string
+          p_idempotency_key: string
+          p_products: Json
+          p_release_phases: Json
+          p_ticket_plan: Json
         }
         Returns: Json
       }
