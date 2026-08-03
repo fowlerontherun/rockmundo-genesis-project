@@ -32,6 +32,14 @@ jobs:
               "  SET forecast = forecast,",
               "  SET forecast = projection_forecast,",
           )
+          sql = sql.replace(
+              "planning_version = public.festival_site_plans.planning_version + 1,",
+              "planning_version = public.festival_site_plans.planning_version,",
+          )
+          sql = sql.replace(
+              "planning_version = public.festival_ticket_plans.planning_version + 1,",
+              "planning_version = public.festival_ticket_plans.planning_version,",
+          )
           sql = re.sub(
               r"  SELECT coalesce\(planning_version, 0\) INTO old_version\n"
               r"  FROM public\.festival_artist_programmes\n"
@@ -103,6 +111,10 @@ jobs:
               raise SystemExit("ambiguous forecast assignment remains")
           if re.search(r"^\s*forecast := public\._festival_projection_forecast", sql, re.MULTILINE):
               raise SystemExit("ambiguous forecast variable remains")
+          if "planning_version = public.festival_site_plans.planning_version + 1" in sql:
+              raise SystemExit("site projection refresh still advances player version")
+          if "planning_version = public.festival_ticket_plans.planning_version + 1" in sql:
+              raise SystemExit("ticket projection refresh still advances player version")
           migration.write_text(sql)
           PY
           if git diff --quiet -- supabase/migrations/20291218245500_festival_edition_internal_projections.sql; then
@@ -112,5 +124,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add supabase/migrations/20291218245500_festival_edition_internal_projections.sql
-          git commit -m "Make edition projection retries idempotent"
+          git commit -m "Keep hidden projection versions stable"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
