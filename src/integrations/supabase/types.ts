@@ -11957,6 +11957,106 @@ export type Database = {
           },
         ]
       }
+      festival_contract_settlement_instructions: {
+        Row: {
+          accommodation_reimbursement_cents: number
+          band_breach_adjustment_cents: number
+          calculation_version: string
+          cancellation_payment_cents: number
+          contract_id: string
+          contract_version: number
+          contract_version_id: string | null
+          created_at: string
+          currency_code: string
+          deposit_already_paid_cents: number
+          explanation: Json
+          guarantee_due_cents: number
+          id: string
+          merch_share_cents: number | null
+          no_show_penalty_cents: number
+          organiser_breach_adjustment_cents: number
+          performance_bonus_cents: number
+          performance_status: string
+          remaining_guarantee_cents: number
+          settlement_id: string
+          status: Database["public"]["Enums"]["festival_settlement_application_status"]
+          ticket_bonus_cents: number
+          travel_reimbursement_cents: number
+        }
+        Insert: {
+          accommodation_reimbursement_cents?: number
+          band_breach_adjustment_cents?: number
+          calculation_version: string
+          cancellation_payment_cents?: number
+          contract_id: string
+          contract_version: number
+          contract_version_id?: string | null
+          created_at?: string
+          currency_code: string
+          deposit_already_paid_cents?: number
+          explanation?: Json
+          guarantee_due_cents?: number
+          id?: string
+          merch_share_cents?: number | null
+          no_show_penalty_cents?: number
+          organiser_breach_adjustment_cents?: number
+          performance_bonus_cents?: number
+          performance_status: string
+          remaining_guarantee_cents?: number
+          settlement_id: string
+          status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+          ticket_bonus_cents?: number
+          travel_reimbursement_cents?: number
+        }
+        Update: {
+          accommodation_reimbursement_cents?: number
+          band_breach_adjustment_cents?: number
+          calculation_version?: string
+          cancellation_payment_cents?: number
+          contract_id?: string
+          contract_version?: number
+          contract_version_id?: string | null
+          created_at?: string
+          currency_code?: string
+          deposit_already_paid_cents?: number
+          explanation?: Json
+          guarantee_due_cents?: number
+          id?: string
+          merch_share_cents?: number | null
+          no_show_penalty_cents?: number
+          organiser_breach_adjustment_cents?: number
+          performance_bonus_cents?: number
+          performance_status?: string
+          remaining_guarantee_cents?: number
+          settlement_id?: string
+          status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+          ticket_bonus_cents?: number
+          travel_reimbursement_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contract_settlement_instructi_contract_version_id_fkey"
+            columns: ["contract_version_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contract_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_settlement_instructions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_contract_settlement_instructions_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_contract_signatures: {
         Row: {
           acknowledgement_snapshot: Json
@@ -12343,6 +12443,106 @@ export type Database = {
           },
         ]
       }
+      festival_edition_financial_results: {
+        Row: {
+          calculation_snapshot: Json
+          cash_result_cents: number
+          currency_code: string
+          edition_id: string
+          finalised_at: string
+          gross_profit_cents: number
+          id: string
+          insurance_cents: number
+          marketing_cents: number
+          merch_revenue_cents: number
+          net_profit_cents: number
+          operations_costs_cents: number
+          other_revenue_cents: number
+          performer_costs_cents: number
+          permits_cents: number
+          refunds_cents: number
+          settlement_id: string
+          sponsorship_revenue_cents: number
+          staff_costs_cents: number
+          tax_cents: number
+          total_ticket_revenue_cents: number
+          unpaid_obligations_cents: number
+          vendor_revenue_cents: number
+        }
+        Insert: {
+          calculation_snapshot?: Json
+          cash_result_cents?: number
+          currency_code: string
+          edition_id: string
+          finalised_at?: string
+          gross_profit_cents?: number
+          id?: string
+          insurance_cents?: number
+          marketing_cents?: number
+          merch_revenue_cents?: number
+          net_profit_cents?: number
+          operations_costs_cents?: number
+          other_revenue_cents?: number
+          performer_costs_cents?: number
+          permits_cents?: number
+          refunds_cents?: number
+          settlement_id: string
+          sponsorship_revenue_cents?: number
+          staff_costs_cents?: number
+          tax_cents?: number
+          total_ticket_revenue_cents?: number
+          unpaid_obligations_cents?: number
+          vendor_revenue_cents?: number
+        }
+        Update: {
+          calculation_snapshot?: Json
+          cash_result_cents?: number
+          currency_code?: string
+          edition_id?: string
+          finalised_at?: string
+          gross_profit_cents?: number
+          id?: string
+          insurance_cents?: number
+          marketing_cents?: number
+          merch_revenue_cents?: number
+          net_profit_cents?: number
+          operations_costs_cents?: number
+          other_revenue_cents?: number
+          performer_costs_cents?: number
+          permits_cents?: number
+          refunds_cents?: number
+          settlement_id?: string
+          sponsorship_revenue_cents?: number
+          staff_costs_cents?: number
+          tax_cents?: number
+          total_ticket_revenue_cents?: number
+          unpaid_obligations_cents?: number
+          vendor_revenue_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_financial_results_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_financial_results_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_financial_results_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: true
+            referencedRelation: "festival_edition_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_edition_lifecycle_events: {
         Row: {
           actor_profile_id: string | null
@@ -12492,6 +12692,181 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_edition_settlements: {
+        Row: {
+          calculation_config_version: string
+          completed_at: string | null
+          contracts_settled_at: string | null
+          created_at: string
+          currency_code: string
+          edition_id: string
+          effects_applied_at: string | null
+          failed_at: string | null
+          failed_phase: string | null
+          failure_code: string | null
+          failure_details: Json
+          festival_id: string
+          id: string
+          idempotency_key: string
+          input_hash: string
+          input_snapshot: Json
+          invalidated_at: string | null
+          invalidated_by_profile_id: string | null
+          invalidation_reason: string | null
+          last_completed_phase: string | null
+          locked_at: string | null
+          next_retry_at: string | null
+          operator_note: string | null
+          readiness_snapshot: Json
+          reconciled_at: string | null
+          retry_count: number
+          retryable: boolean
+          revenue_settled_at: string | null
+          settlement_version: number
+          started_at: string
+          started_by_profile_id: string | null
+          status: Database["public"]["Enums"]["festival_settlement_status"]
+          supersedes_settlement_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          calculation_config_version: string
+          completed_at?: string | null
+          contracts_settled_at?: string | null
+          created_at?: string
+          currency_code: string
+          edition_id: string
+          effects_applied_at?: string | null
+          failed_at?: string | null
+          failed_phase?: string | null
+          failure_code?: string | null
+          failure_details?: Json
+          festival_id: string
+          id?: string
+          idempotency_key: string
+          input_hash: string
+          input_snapshot?: Json
+          invalidated_at?: string | null
+          invalidated_by_profile_id?: string | null
+          invalidation_reason?: string | null
+          last_completed_phase?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          operator_note?: string | null
+          readiness_snapshot?: Json
+          reconciled_at?: string | null
+          retry_count?: number
+          retryable?: boolean
+          revenue_settled_at?: string | null
+          settlement_version: number
+          started_at?: string
+          started_by_profile_id?: string | null
+          status?: Database["public"]["Enums"]["festival_settlement_status"]
+          supersedes_settlement_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          calculation_config_version?: string
+          completed_at?: string | null
+          contracts_settled_at?: string | null
+          created_at?: string
+          currency_code?: string
+          edition_id?: string
+          effects_applied_at?: string | null
+          failed_at?: string | null
+          failed_phase?: string | null
+          failure_code?: string | null
+          failure_details?: Json
+          festival_id?: string
+          id?: string
+          idempotency_key?: string
+          input_hash?: string
+          input_snapshot?: Json
+          invalidated_at?: string | null
+          invalidated_by_profile_id?: string | null
+          invalidation_reason?: string | null
+          last_completed_phase?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          operator_note?: string | null
+          readiness_snapshot?: Json
+          reconciled_at?: string | null
+          retry_count?: number
+          retryable?: boolean
+          revenue_settled_at?: string | null
+          settlement_version?: number
+          started_at?: string
+          started_by_profile_id?: string | null
+          status?: Database["public"]["Enums"]["festival_settlement_status"]
+          supersedes_settlement_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_settlements_calculation_config_version_fkey"
+            columns: ["calculation_config_version"]
+            isOneToOne: false
+            referencedRelation: "festival_settlement_effect_configs"
+            referencedColumns: ["version"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_invalidated_by_profile_id_fkey"
+            columns: ["invalidated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_invalidated_by_profile_id_fkey"
+            columns: ["invalidated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_started_by_profile_id_fkey"
+            columns: ["started_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_started_by_profile_id_fkey"
+            columns: ["started_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_settlements_supersedes_settlement_id_fkey"
+            columns: ["supersedes_settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
             referencedColumns: ["id"]
           },
         ]
@@ -12712,6 +13087,97 @@ export type Database = {
           },
         ]
       }
+      festival_effect_applications: {
+        Row: {
+          after_value: number | null
+          application_status: Database["public"]["Enums"]["festival_settlement_application_status"]
+          applied_at: string | null
+          approved_value: number | null
+          before_value: number | null
+          cap_applied: number | null
+          created_at: string
+          effect_id: string
+          effect_type: string
+          entity_id: string | null
+          entity_type: string
+          failure_code: string | null
+          failure_reason: string | null
+          floor_applied: number | null
+          id: string
+          idempotency_key: string
+          modifier_applied: number | null
+          proposed_value: number
+          settlement_id: string
+          source_outcome_id: string | null
+        }
+        Insert: {
+          after_value?: number | null
+          application_status: Database["public"]["Enums"]["festival_settlement_application_status"]
+          applied_at?: string | null
+          approved_value?: number | null
+          before_value?: number | null
+          cap_applied?: number | null
+          created_at?: string
+          effect_id: string
+          effect_type: string
+          entity_id?: string | null
+          entity_type: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          floor_applied?: number | null
+          id?: string
+          idempotency_key: string
+          modifier_applied?: number | null
+          proposed_value: number
+          settlement_id: string
+          source_outcome_id?: string | null
+        }
+        Update: {
+          after_value?: number | null
+          application_status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+          applied_at?: string | null
+          approved_value?: number | null
+          before_value?: number | null
+          cap_applied?: number | null
+          created_at?: string
+          effect_id?: string
+          effect_type?: string
+          entity_id?: string | null
+          entity_type?: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          floor_applied?: number | null
+          id?: string
+          idempotency_key?: string
+          modifier_applied?: number | null
+          proposed_value?: number
+          settlement_id?: string
+          source_outcome_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_effect_applications_effect_id_fkey"
+            columns: ["effect_id"]
+            isOneToOne: false
+            referencedRelation: "festival_performance_effects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_effect_applications_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_effect_applications_source_outcome_id_fkey"
+            columns: ["source_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "festival_performance_outcomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_expense_ledger: {
         Row: {
           amount_cents: number
@@ -12719,6 +13185,7 @@ export type Database = {
           counterparty_id: string | null
           counterparty_type: string | null
           created_at: string
+          currency_code: string | null
           description: string | null
           direction: string
           edition_id: string | null
@@ -12733,6 +13200,7 @@ export type Database = {
           counterparty_id?: string | null
           counterparty_type?: string | null
           created_at?: string
+          currency_code?: string | null
           description?: string | null
           direction: string
           edition_id?: string | null
@@ -12747,6 +13215,7 @@ export type Database = {
           counterparty_id?: string | null
           counterparty_type?: string | null
           created_at?: string
+          currency_code?: string | null
           description?: string | null
           direction?: string
           edition_id?: string | null
@@ -12775,6 +13244,85 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_fan_conversion_applications: {
+        Row: {
+          applied_at: string | null
+          band_id: string
+          casual_fans_gained: number
+          created_at: string
+          dedicated_fans_gained: number
+          engaged_fans_gained: number
+          explanation: string
+          fan_conversion_outcome_id: string
+          fans_lost: number
+          genre_distribution: Json
+          geographic_distribution: Json
+          id: string
+          idempotency_key: string
+          settlement_id: string
+          source_cohort: Json
+          status: Database["public"]["Enums"]["festival_settlement_application_status"]
+        }
+        Insert: {
+          applied_at?: string | null
+          band_id: string
+          casual_fans_gained?: number
+          created_at?: string
+          dedicated_fans_gained?: number
+          engaged_fans_gained?: number
+          explanation: string
+          fan_conversion_outcome_id: string
+          fans_lost?: number
+          genre_distribution?: Json
+          geographic_distribution?: Json
+          id?: string
+          idempotency_key: string
+          settlement_id: string
+          source_cohort?: Json
+          status: Database["public"]["Enums"]["festival_settlement_application_status"]
+        }
+        Update: {
+          applied_at?: string | null
+          band_id?: string
+          casual_fans_gained?: number
+          created_at?: string
+          dedicated_fans_gained?: number
+          engaged_fans_gained?: number
+          explanation?: string
+          fan_conversion_outcome_id?: string
+          fans_lost?: number
+          genre_distribution?: Json
+          geographic_distribution?: Json
+          id?: string
+          idempotency_key?: string
+          settlement_id?: string
+          source_cohort?: Json
+          status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_fan_conversion_applicat_fan_conversion_outcome_id_fkey"
+            columns: ["fan_conversion_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "festival_fan_conversion_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_fan_conversion_applications_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_fan_conversion_applications_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
             referencedColumns: ["id"]
           },
         ]
@@ -13294,6 +13842,83 @@ export type Database = {
           {
             foreignKeyName: "festival_offer_revisions_proposed_by_profile_id_fkey"
             columns: ["proposed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_operation_migration_issues: {
+        Row: {
+          created_at: string
+          evidence: Json
+          festival_id: string | null
+          id: string
+          issue_type: string
+          metadata: Json
+          proposed_edition_id: string | null
+          resolution_status: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          source_id: string
+          source_table: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json
+          festival_id?: string | null
+          id?: string
+          issue_type: string
+          metadata?: Json
+          proposed_edition_id?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_id: string
+          source_table: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json
+          festival_id?: string | null
+          id?: string
+          issue_type?: string
+          metadata?: Json
+          proposed_edition_id?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          source_id?: string
+          source_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_operation_migration_issues_proposed_edition_id_fkey"
+            columns: ["proposed_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operation_migration_issues_proposed_edition_id_fkey"
+            columns: ["proposed_edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operation_migration_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_operation_migration_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
@@ -14883,6 +15508,245 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "festival_performance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_settlement_effect_configs: {
+        Row: {
+          created_at: string
+          fame_cap: number
+          fan_cap: number
+          negative_effect_floor: number
+          popularity_cap: number
+          rounding_policy: Json
+          streaming_uplift_cap: number
+          tax_policy: Json
+          version: string
+          xp_cap: number
+        }
+        Insert: {
+          created_at?: string
+          fame_cap?: number
+          fan_cap?: number
+          negative_effect_floor?: number
+          popularity_cap?: number
+          rounding_policy?: Json
+          streaming_uplift_cap?: number
+          tax_policy?: Json
+          version: string
+          xp_cap?: number
+        }
+        Update: {
+          created_at?: string
+          fame_cap?: number
+          fan_cap?: number
+          negative_effect_floor?: number
+          popularity_cap?: number
+          rounding_policy?: Json
+          streaming_uplift_cap?: number
+          tax_policy?: Json
+          version?: string
+          xp_cap?: number
+        }
+        Relationships: []
+      }
+      festival_settlement_events: {
+        Row: {
+          actor_profile_id: string | null
+          authority: string
+          created_at: string
+          edition_id: string
+          event_type: string
+          from_status:
+            | Database["public"]["Enums"]["festival_settlement_status"]
+            | null
+          id: string
+          idempotency_key: string | null
+          metadata: Json
+          reason: string | null
+          settlement_id: string
+          source_id: string | null
+          source_type: string | null
+          to_status:
+            | Database["public"]["Enums"]["festival_settlement_status"]
+            | null
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          authority?: string
+          created_at?: string
+          edition_id: string
+          event_type: string
+          from_status?:
+            | Database["public"]["Enums"]["festival_settlement_status"]
+            | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          reason?: string | null
+          settlement_id: string
+          source_id?: string | null
+          source_type?: string | null
+          to_status?:
+            | Database["public"]["Enums"]["festival_settlement_status"]
+            | null
+        }
+        Update: {
+          actor_profile_id?: string | null
+          authority?: string
+          created_at?: string
+          edition_id?: string
+          event_type?: string
+          from_status?:
+            | Database["public"]["Enums"]["festival_settlement_status"]
+            | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          reason?: string | null
+          settlement_id?: string
+          source_id?: string | null
+          source_type?: string | null
+          to_status?:
+            | Database["public"]["Enums"]["festival_settlement_status"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_settlement_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_settlement_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_settlement_events_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_settlement_events_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_settlement_events_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_settlement_transactions: {
+        Row: {
+          category: string
+          completed_at: string | null
+          contract_id: string | null
+          counterparty_id: string | null
+          counterparty_type: string | null
+          created_at: string
+          currency_code: string
+          deductions_cents: number
+          direction: string
+          edition_id: string
+          entity_id: string | null
+          entity_type: string
+          external_transaction_id: string | null
+          failure_details: Json
+          gross_amount_cents: number
+          id: string
+          idempotency_key: string
+          ledger_entry_id: string | null
+          net_amount_cents: number
+          settlement_id: string
+          status: Database["public"]["Enums"]["festival_settlement_application_status"]
+        }
+        Insert: {
+          category: string
+          completed_at?: string | null
+          contract_id?: string | null
+          counterparty_id?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          currency_code: string
+          deductions_cents?: number
+          direction: string
+          edition_id: string
+          entity_id?: string | null
+          entity_type: string
+          external_transaction_id?: string | null
+          failure_details?: Json
+          gross_amount_cents?: number
+          id?: string
+          idempotency_key: string
+          ledger_entry_id?: string | null
+          net_amount_cents?: number
+          settlement_id: string
+          status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+        }
+        Update: {
+          category?: string
+          completed_at?: string | null
+          contract_id?: string | null
+          counterparty_id?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          currency_code?: string
+          deductions_cents?: number
+          direction?: string
+          edition_id?: string
+          entity_id?: string | null
+          entity_type?: string
+          external_transaction_id?: string | null
+          failure_details?: Json
+          gross_amount_cents?: number
+          id?: string
+          idempotency_key?: string
+          ledger_entry_id?: string | null
+          net_amount_cents?: number
+          settlement_id?: string
+          status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_settlement_transactions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_settlement_transactions_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_settlement_transactions_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_settlement_transactions_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
             referencedColumns: ["id"]
           },
         ]
@@ -37743,6 +38607,75 @@ export type Database = {
         }
         Relationships: []
       }
+      streaming_uplift_campaigns: {
+        Row: {
+          application_status: Database["public"]["Enums"]["festival_settlement_application_status"]
+          created_at: string
+          decay_curve: string
+          duration_days: number
+          id: string
+          idempotency_key: string
+          initial_uplift: number
+          model_version: string
+          release_id: string | null
+          song_id: string | null
+          source_effect_id: string | null
+          source_outcome_id: string
+          source_type: string
+          start_date: string
+          territories: Json
+        }
+        Insert: {
+          application_status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+          created_at?: string
+          decay_curve?: string
+          duration_days: number
+          id?: string
+          idempotency_key: string
+          initial_uplift: number
+          model_version: string
+          release_id?: string | null
+          song_id?: string | null
+          source_effect_id?: string | null
+          source_outcome_id: string
+          source_type?: string
+          start_date?: string
+          territories?: Json
+        }
+        Update: {
+          application_status?: Database["public"]["Enums"]["festival_settlement_application_status"]
+          created_at?: string
+          decay_curve?: string
+          duration_days?: number
+          id?: string
+          idempotency_key?: string
+          initial_uplift?: number
+          model_version?: string
+          release_id?: string | null
+          song_id?: string | null
+          source_effect_id?: string | null
+          source_outcome_id?: string
+          source_type?: string
+          start_date?: string
+          territories?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_uplift_campaigns_source_effect_id_fkey"
+            columns: ["source_effect_id"]
+            isOneToOne: true
+            referencedRelation: "festival_performance_effects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaming_uplift_campaigns_source_outcome_id_fkey"
+            columns: ["source_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "festival_performance_outcomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           description: string | null
@@ -42211,6 +43144,51 @@ export type Database = {
         Args: { p_idempotency_key?: string; p_mapping_id: string }
         Returns: Json
       }
+      apply_festival_settlement_batch: {
+        Args: { p_idempotency_key?: string; p_settlement_id: string }
+        Returns: {
+          calculation_config_version: string
+          completed_at: string | null
+          contracts_settled_at: string | null
+          created_at: string
+          currency_code: string
+          edition_id: string
+          effects_applied_at: string | null
+          failed_at: string | null
+          failed_phase: string | null
+          failure_code: string | null
+          failure_details: Json
+          festival_id: string
+          id: string
+          idempotency_key: string
+          input_hash: string
+          input_snapshot: Json
+          invalidated_at: string | null
+          invalidated_by_profile_id: string | null
+          invalidation_reason: string | null
+          last_completed_phase: string | null
+          locked_at: string | null
+          next_retry_at: string | null
+          operator_note: string | null
+          readiness_snapshot: Json
+          reconciled_at: string | null
+          retry_count: number
+          retryable: boolean
+          revenue_settled_at: string | null
+          settlement_version: number
+          started_at: string
+          started_by_profile_id: string | null
+          status: Database["public"]["Enums"]["festival_settlement_status"]
+          supersedes_settlement_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_edition_settlements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_for_festival_edition_permit: {
         Args: {
           p_edition_id: string
@@ -43395,6 +44373,10 @@ export type Database = {
         Returns: string
       }
       festival_crew_preflight: { Args: { p_session_id: string }; Returns: Json }
+      festival_current_settlement_blocks_mutation: {
+        Args: { p_edition_id: string }
+        Returns: boolean
+      }
       festival_current_user_is_admin: { Args: never; Returns: boolean }
       festival_edition_finance_summary: {
         Args: { p_edition_id: string }
@@ -43575,6 +44557,10 @@ export type Database = {
       festival_setlist_snapshot: {
         Args: { p_setlist_id: string }
         Returns: Json
+      }
+      festival_settlement_input_hash: {
+        Args: { p_snapshot: Json }
+        Returns: string
       }
       festival_snapshot_expected_performers: {
         Args: { p_session_id: string }
@@ -44099,6 +45085,56 @@ export type Database = {
         }
         Returns: Json
       }
+      prepare_festival_edition_settlement: {
+        Args: {
+          p_admin_override_reason?: string
+          p_edition_id: string
+          p_expected_readiness_hash: string
+          p_idempotency_key: string
+        }
+        Returns: {
+          calculation_config_version: string
+          completed_at: string | null
+          contracts_settled_at: string | null
+          created_at: string
+          currency_code: string
+          edition_id: string
+          effects_applied_at: string | null
+          failed_at: string | null
+          failed_phase: string | null
+          failure_code: string | null
+          failure_details: Json
+          festival_id: string
+          id: string
+          idempotency_key: string
+          input_hash: string
+          input_snapshot: Json
+          invalidated_at: string | null
+          invalidated_by_profile_id: string | null
+          invalidation_reason: string | null
+          last_completed_phase: string | null
+          locked_at: string | null
+          next_retry_at: string | null
+          operator_note: string | null
+          readiness_snapshot: Json
+          reconciled_at: string | null
+          retry_count: number
+          retryable: boolean
+          revenue_settled_at: string | null
+          settlement_version: number
+          started_at: string
+          started_by_profile_id: string | null
+          status: Database["public"]["Enums"]["festival_settlement_status"]
+          supersedes_settlement_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_edition_settlements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       preview_copy_festival_edition: {
         Args: { p_source_edition_id: string; p_target_edition_id?: string }
         Returns: Json
@@ -44239,6 +45275,10 @@ export type Database = {
         Args: { p_candidate_id: string }
         Returns: undefined
       }
+      reconcile_festival_edition_settlement: {
+        Args: { p_settlement_id: string }
+        Returns: Json
+      }
       record_festival_soundcheck_issue: {
         Args: {
           p_category: string
@@ -44330,6 +45370,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      resolve_festival_stage_legacy_domain: {
+        Args: { p_stage_id: string }
+        Returns: Json
       }
       respond_band_application: {
         Args: { application_id: string; decision: string }
@@ -45196,6 +46240,28 @@ export type Database = {
         | "locked"
         | "performed"
         | "cancelled"
+      festival_settlement_application_status:
+        | "pending"
+        | "applied"
+        | "blocked"
+        | "rejected"
+        | "adjusted"
+        | "superseded"
+        | "failed"
+      festival_settlement_status:
+        | "not_ready"
+        | "ready"
+        | "preparing"
+        | "locked"
+        | "applying_effects"
+        | "settling_contracts"
+        | "settling_revenue"
+        | "reconciling"
+        | "completed"
+        | "failed"
+        | "partially_failed"
+        | "cancelled"
+        | "superseded"
       festival_stage_slot_reservation_status:
         | "provisional"
         | "confirmed"
@@ -45514,6 +46580,30 @@ export const Constants = {
         "locked",
         "performed",
         "cancelled",
+      ],
+      festival_settlement_application_status: [
+        "pending",
+        "applied",
+        "blocked",
+        "rejected",
+        "adjusted",
+        "superseded",
+        "failed",
+      ],
+      festival_settlement_status: [
+        "not_ready",
+        "ready",
+        "preparing",
+        "locked",
+        "applying_effects",
+        "settling_contracts",
+        "settling_revenue",
+        "reconciling",
+        "completed",
+        "failed",
+        "partially_failed",
+        "cancelled",
+        "superseded",
       ],
       festival_stage_slot_reservation_status: [
         "provisional",

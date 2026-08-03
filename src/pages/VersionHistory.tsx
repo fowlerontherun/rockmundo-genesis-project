@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.626",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Deployed the festival settlement pipeline: editions can now be locked, settled once, reconciled and given a final financial result." },
+      { type: 'feature', description: "Festival career effects, fan conversions and contract payment instructions are now recorded server-side with exactly-once protection." },
+      { type: 'improvement', description: "Festival stage slots are now validated on save: they must sit inside their edition dates, match their stage's festival and never overlap another active slot." },
+      { type: 'improvement', description: "Added an admin festival data-health log that records historical records which can't be safely classified instead of guessing." },
+      { type: 'fix', description: "Festival expense records now require an explicit currency rather than assuming one." },
+    ],
+  },
+  {
     version: "1.1.625",
     date: "2026-08-03",
     changes: [
