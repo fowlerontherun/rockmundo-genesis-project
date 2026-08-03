@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.629",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Fixed the Financial Command Center failing to load: the finance dashboard data source was missing and has been rebuilt against your live bank accounts, cash, investments, loans and band balances." },
+      { type: 'improvement', description: "Finance overview now shows recent bank activity, earnings by source and a rolling six-month income/expense view." },
+    ],
+  },
+  {
+
     version: "1.1.628",
     date: "2026-08-03",
     changes: [
