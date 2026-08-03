@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { useGigViewerReplay } from "../hooks";
 import type { GigExperienceDTO } from "../types";
 import { GigCanvas } from "./GigCanvas";
@@ -60,6 +62,12 @@ function ReadyReplay({ replay, experience, open, prefs, onViewResult, onClose }:
     window.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("fullscreenchange", onChange); window.removeEventListener("keydown", onKey); };
   }, []);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [fullscreen]);
   if (!state || !snapshot) return null; const empty = playback.events.length === 0;
   const nextSong = story.songs.find((s: any) => s.startMs > state.positionMs); const prevSong = [...story.songs].reverse().find((s: any) => s.startMs < state.positionMs - 1000); const nextHighlight = story.highlights.find((h: any) => h.offsetMs > state.positionMs);
   const controls = <GigViewerControls playing={state.isPlaying} complete={state.isComplete} speed={playback.speed} reducedMotion={reducedMotion} pyrotechnics={pyrotechnics} fullscreen={fullscreen} canPreviousSong={!!prevSong} canNextSong={!!nextSong} canNextHighlight={!!nextHighlight} canResult={story.resultOffsetMs !== null && state.positionMs < story.resultOffsetMs} onPlay={playback.play} onPause={playback.pause} onRestart={playback.restart} onSpeed={playback.setSpeed} onPrevious={playback.previousEvent} onNext={playback.nextEvent} onPreviousSong={() => prevSong && playback.seekMs(prevSong.startMs)} onNextSong={() => nextSong && playback.seekMs(nextSong.startMs)} onNextHighlight={() => nextHighlight && playback.seekMs(nextHighlight.offsetMs)} onSkipResult={() => story.resultOffsetMs !== null && playback.seekMs(story.resultOffsetMs)} onResult={onViewResult} onClose={onClose} onReducedMotion={setReducedMotion} onPyrotechnics={setPyrotechnics} onFullscreen={toggleFullscreen} />;
