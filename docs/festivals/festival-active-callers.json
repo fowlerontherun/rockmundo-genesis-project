@@ -24204,7 +24204,8 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
-        "supabase/tests/festival_company_financial_correctness_harness.sql"
+        "supabase/tests/festival_company_financial_correctness_harness.sql",
+        "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -24274,7 +24275,8 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
-        "supabase/tests/festival_company_financial_correctness_harness.sql"
+        "supabase/tests/festival_company_financial_correctness_harness.sql",
+        "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -25512,7 +25514,8 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
-        "supabase/tests/festival_company_financial_correctness_harness.sql"
+        "supabase/tests/festival_company_financial_correctness_harness.sql",
+        "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -46976,17 +46979,21 @@
     {
       "name": "festival_company_capabilities",
       "typescriptCallers": [
-        "src/features/festival-company/data/festivalCompanyRepository.ts"
+        "src/features/festival-company/data/festivalCompanyRepository.ts",
+        "src/features/festival-company/upgrades/licenceCompletion.test.ts"
       ],
       "sqlCallers": [
         "supabase/migrations/20260723170000_fix_festival_single_charge_rollout.sql",
         "supabase/migrations/20260723193000_festival_runtime_gate_capabilities.sql",
         "supabase/migrations/20260723210000_secure_festival_runtime_gate.sql",
-        "supabase/migrations/20260803141930_af983cc9-dab5-4011-b154-045bbfe47b6c.sql"
+        "supabase/migrations/20260803141930_af983cc9-dab5-4011-b154-045bbfe47b6c.sql",
+        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql"
       ],
       "workerCallers": [],
       "testCallers": [
-        "supabase/tests/festival_company_financial_correctness_harness.sql"
+        "src/features/festival-company/upgrades/licenceCompletion.test.ts",
+        "supabase/tests/festival_company_financial_correctness_harness.sql",
+        "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
