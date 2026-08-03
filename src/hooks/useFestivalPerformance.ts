@@ -337,64 +337,43 @@ export function useFestivalPerformance(participationId: string, bandId?: string)
       const crowdEnergyPeak = Math.max(...crowdEnergyHistory);
       const crowdEnergyAvg = Math.round(crowdEnergyHistory.reduce((a, b) => a + b, 0) / crowdEnergyHistory.length);
 
-      // Calculate rewards based on performance
-      const basePayment = 5000;
-      const baseFame = 500;
-      const paymentMultiplier = 1 + (performanceScore / 100);
-      const fameMultiplier = 1 + (performanceScore / 50);
+      // Settlement (score, payment, fame, history row, status) is server-authoritative.
+      const { data: settlement, error: settlementError } = await (supabase as any).rpc(
+        "settle_legacy_festival_participation",
+        {
+          p_participation_id: participationId,
+          p_crowd_energy_avg: crowdEnergyAvg,
+          p_crowd_energy_peak: crowdEnergyPeak,
+          p_songs_performed: 8,
+        },
+      );
+
+      if (settlementError) throw settlementError;
 
       const result: PerformanceResult = {
-        performanceScore,
-        crowdEnergyPeak,
-        crowdEnergyAvg,
-        paymentEarned: Math.round(basePayment * paymentMultiplier),
-        fameEarned: Math.round(baseFame * fameMultiplier),
-        merchRevenue: Math.round(1000 * (performanceScore / 50) * (crowdEnergyAvg / 50)),
-        newFansGained: Math.round(100 * fameMultiplier),
-        criticScore: review.criticScore,
-        fanScore: review.fanScore,
-        reviewHeadline: review.headline,
+        performanceScore: settlement?.performance_score ?? performanceScore,
+        crowdEnergyPeak: settlement?.crowd_energy_peak ?? crowdEnergyPeak,
+        crowdEnergyAvg: settlement?.crowd_energy_avg ?? crowdEnergyAvg,
+        paymentEarned: settlement?.payment_earned ?? 0,
+        fameEarned: settlement?.fame_earned ?? 0,
+        merchRevenue: settlement?.merch_revenue ?? 0,
+        newFansGained: settlement?.new_fans_gained ?? 0,
+        criticScore: settlement?.critic_score ?? review.criticScore,
+        fanScore: settlement?.fan_score ?? review.fanScore,
+        reviewHeadline: settlement?.review_headline ?? review.headline,
         reviewSummary: review.summary,
         highlights: eventResponses.filter((s) => s >= 80).map(() => "Great crowd interaction!"),
       };
 
-      // Save to festival_performance_history
       const { data: participation } = await (supabase as any)
         .from("festival_participants")
-        .select("event_id, user_id, slot_type")
+        .select("event_id, slot_type")
         .eq("id", participationId)
-        .single();
+        .maybeSingle();
 
       let careerImpact: FestivalCareerImpactResult | undefined;
 
       if (participation) {
-        await (supabase as any).from("festival_performance_history").insert({
-          participation_id: participationId,
-          band_id: bandId,
-          festival_id: participation.event_id,
-          user_id: participation.user_id,
-          performance_score: result.performanceScore,
-          crowd_energy_peak: result.crowdEnergyPeak,
-          crowd_energy_avg: result.crowdEnergyAvg,
-          songs_performed: 8,
-          payment_earned: result.paymentEarned,
-          fame_earned: result.fameEarned,
-          merch_revenue: result.merchRevenue,
-          new_fans_gained: result.newFansGained,
-          critic_score: result.criticScore,
-          fan_score: result.fanScore,
-          review_headline: result.reviewHeadline,
-          review_summary: result.reviewSummary,
-          highlight_moments: result.highlights,
-          slot_type: participation.slot_type,
-          performance_date: new Date().toISOString(),
-        });
-
-        // Update participant status to performed
-        await (supabase as any)
-          .from("festival_participants")
-          .update({ status: "performed" })
-          .eq("id", participationId);
 
         // Apply full career impact (fame, fans, chart boosts, streaming multipliers)
         if (bandId) {

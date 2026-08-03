@@ -44489,6 +44489,15 @@ export type Database = {
         Returns: Json
       }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
+      settle_legacy_festival_participation: {
+        Args: {
+          p_crowd_energy_avg?: number
+          p_crowd_energy_peak?: number
+          p_participation_id: string
+          p_songs_performed?: number
+        }
+        Returns: Json
+      }
       sign_festival_contract: {
         Args: {
           p_acknowledgement?: Json

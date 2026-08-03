@@ -248,54 +248,24 @@ export const useFestivals = (userId?: string, bandId?: string) => {
     mutationFn: async (participationId: string) => {
       const { data: participation } = await (supabase as any)
         .from("festival_participants")
-        .select("*, festivals:game_events!event_id(rewards)")
+        .select("event_id")
         .eq("id", participationId)
-        .single();
+        .maybeSingle();
 
-      if (!participation) {
-        throw new Error("Participation not found");
-      }
-
-      if (participation.status !== "confirmed" && participation.status !== "pending" && participation.status !== "invited") {
-        throw new Error("Cannot perform with current status");
-      }
-
-      // Simulate performance score
-      const performanceScore = Math.floor(Math.random() * 30) + 70; // 70-100
-      const festivalId = participation.event_id as string;
-
-      const { error } = await (supabase as any)
-        .from("festival_participants")
-        .update({ status: "performed" })
-        .eq("id", participationId);
+      // Scoring and payouts are calculated and awarded server-side.
+      const { data, error } = await (supabase as any).rpc(
+        "settle_legacy_festival_participation",
+        { p_participation_id: participationId },
+      );
 
       if (error) throw error;
 
-      // Award payment and fame
-      const rewards = participation.festivals?.rewards || {};
-      const fame = rewards.fame || 100;
-      const payment = participation.payout_amount || 5000;
-
-      // Update band balance and fame
-      if (participation.band_id) {
-        const { data: bandData } = await (supabase as any)
-          .from("bands")
-          .select("band_balance, fame")
-          .eq("id", participation.band_id)
-          .single();
-
-        if (bandData) {
-          await (supabase as any)
-            .from("bands")
-            .update({ 
-              band_balance: (bandData.band_balance || 0) + payment,
-              fame: (bandData.fame || 0) + fame
-            })
-            .eq("id", participation.band_id);
-        }
-      }
-
-      return { performanceScore, payment, fame, festivalId };
+      return {
+        performanceScore: data?.performance_score ?? 0,
+        payment: (data?.payment_earned ?? 0) + (data?.merch_revenue ?? 0),
+        fame: data?.fame_earned ?? 0,
+        festivalId: participation?.event_id as string | undefined,
+      };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: PARTICIPATIONS_QUERY_KEY(userId, bandId) });

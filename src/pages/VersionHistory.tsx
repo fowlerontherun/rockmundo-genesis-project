@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.625",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Festival performance scores, payments, fame, merch and new fans are now calculated and awarded by the server, not the browser." },
+      { type: 'fix', description: "Settling the same festival performance twice no longer pays out again — repeat attempts return the original recorded result." },
+      { type: 'fix', description: "Fixed a broken query that read a non-existent user_id column on festival participants when saving performance history." },
+    ],
+  },
+  {
     version: "1.1.624",
     date: "2026-08-03",
     changes: [

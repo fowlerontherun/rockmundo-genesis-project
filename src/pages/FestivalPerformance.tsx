@@ -86,43 +86,23 @@ export default function FestivalPerformance() {
     mutationFn: async (results: { score: number; crowdEnergy: number }) => {
       if (!participationId || !primaryBand?.id) throw new Error("Missing data");
 
-      // Calculate rewards based on performance
-      const basePayment = participation?.payout_amount || 5000;
-      const baseFame = participation?.festival?.rewards?.fame || 100;
-      
-      const scoreMultiplier = results.score / 100;
-      const energyMultiplier = results.crowdEnergy / 100;
-      const finalMultiplier = (scoreMultiplier + energyMultiplier) / 2;
+      // The server calculates the score, payment and fame and awards them once.
+      const { data, error } = await (supabase as any).rpc(
+        "settle_legacy_festival_participation",
+        {
+          p_participation_id: participationId,
+          p_crowd_energy_avg: Math.round(results.crowdEnergy),
+          p_crowd_energy_peak: Math.round(results.crowdEnergy),
+        },
+      );
 
-      const earnedPayment = Math.round(basePayment * finalMultiplier);
-      const earnedFame = Math.round(baseFame * finalMultiplier);
+      if (error) throw error;
 
-      // Update participation status
-      const { error: updateError } = await (supabase as any)
-        .from("festival_participants")
-        .update({ status: "performed" })
-        .eq("id", participationId);
-
-      if (updateError) throw updateError;
-
-      // Update band balance and fame
-      const { data: bandData } = await (supabase as any)
-        .from("bands")
-        .select("band_balance, fame")
-        .eq("id", primaryBand.id)
-        .single();
-
-      if (bandData) {
-        await (supabase as any)
-          .from("bands")
-          .update({
-            band_balance: (bandData.band_balance || 0) + earnedPayment,
-            fame: (bandData.fame || 0) + earnedFame,
-          })
-          .eq("id", primaryBand.id);
-      }
-
-      return { earnedPayment, earnedFame, score: results.score };
+      return {
+        earnedPayment: (data?.payment_earned ?? 0) + (data?.merch_revenue ?? 0),
+        earnedFame: data?.fame_earned ?? 0,
+        score: data?.performance_score ?? results.score,
+      };
     },
     onSuccess: (results) => {
       queryClient.invalidateQueries({ queryKey: ["festival-participation"] });
