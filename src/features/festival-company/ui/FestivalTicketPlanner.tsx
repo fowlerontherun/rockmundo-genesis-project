@@ -127,12 +127,15 @@ function simpleDraftFromResult(
 
 export function FestivalTicketPlanner({
   festivalCompanyId,
+  festivalEditionId,
 }: {
   festivalCompanyId: string;
+  festivalEditionId?: string;
 }) {
-  const site = useFestivalSitePlan(festivalCompanyId);
+  const site = useFestivalSitePlan(festivalCompanyId, festivalEditionId);
   const query = useFestivalTicketPlan(
     festivalCompanyId,
+    festivalEditionId,
     site.data?.ready === true,
   );
   const save = useSaveFestivalTicketPlan();
@@ -236,6 +239,7 @@ export function FestivalTicketPlanner({
     save.mutate(
       {
         festivalCompanyId,
+        festivalEditionId,
         expectedVersion: data.planningVersion,
         draft,
         idempotencyKey: retry.current.key,

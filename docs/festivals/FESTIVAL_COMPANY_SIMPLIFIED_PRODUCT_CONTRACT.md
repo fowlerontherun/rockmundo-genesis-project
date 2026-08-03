@@ -72,6 +72,22 @@ The server derives and stores:
 
 Licence blockers prevent launch readiness but do not force the owner into a detailed permit or operations workflow. The owner can change the annual choices or improve the permanent company licence and upgrades.
 
+## Edition-bound internal foundations
+
+Once an annual plan has dates, city, site style, scale and expected capacity, the server materialises the hidden foundations required by the next player choices. Each annual edition receives its own:
+
+- broad site record and generated facility requirements;
+- generated stages and stage capacities;
+- standard Festival ticket foundation;
+- daily capacity allocations;
+- ticket-demand and revenue forecast.
+
+These records are implementation machinery, not additional player workspaces. Players do not choose stage specifications, facility quantities, release phases or daily allocation rows.
+
+**Tickets & budget** and **Line-up** must read and save using both the Festival company ID and the selected annual edition ID. A choice made for one year must not update another year.
+
+Generated rows are explicitly identified as annual-plan projections. Existing manually owned compatibility plans are retained and must never be overwritten by automatic projection. The game may refresh generated foundations when the high-level annual plan changes, but it preserves player-selected ticket price, ticket availability and line-up strategy through their exact-edition save boundaries.
+
 ## Eleven upgrade categories
 
 The existing categories remain the long-term company progression system:

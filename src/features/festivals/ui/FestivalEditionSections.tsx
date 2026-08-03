@@ -288,7 +288,10 @@ export function FestivalEditionApplications({
         requireEditable
         requiredBindings={["tickets"]}
       >
-        <FestivalArtistPlanner festivalCompanyId={festivalCompanyId} />
+        <FestivalArtistPlanner
+        festivalCompanyId={festivalCompanyId}
+        festivalEditionId={editionId}
+      />
       </EditionScope>
     </SectionShell>
   );
@@ -312,7 +315,10 @@ export function FestivalEditionFinance({
         requireEditable
         requiredBindings={["site"]}
       >
-        <FestivalTicketPlanner festivalCompanyId={festivalCompanyId} />
+        <FestivalTicketPlanner
+        festivalCompanyId={festivalCompanyId}
+        festivalEditionId={editionId}
+      />
       </EditionScope>
     </SectionShell>
   );
