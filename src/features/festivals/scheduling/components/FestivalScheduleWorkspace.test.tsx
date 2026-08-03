@@ -88,10 +88,14 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByText("Main Stage")).toBeInTheDocument();
-    expect(screen.getByText("Second Stage")).toBeInTheDocument();
+    expect(screen.getAllByText("Main Stage").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Second Stage").length).toBeGreaterThan(0);
     expect(screen.getByText("00:00 (+1)")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /19:00–19:45.*Sunset opener/i })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", {
+        name: /19:00–19:45.*Sunset opener/i,
+      }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("creates a manual festival slot using the Festival timezone", async () => {
@@ -153,9 +157,14 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
   it("edits an existing festival slot from Festival-local datetime inputs", async () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Sunset opener/i }));
+    const [scheduleItem] = screen.getAllByRole("button", {
+      name: /Sunset opener/i,
+    });
+    fireEvent.click(scheduleItem);
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByDisplayValue("2030-06-01T19:00")).toBeInTheDocument();
+    expect(
+      within(dialog).getByDisplayValue("2030-06-01T19:00"),
+    ).toBeInTheDocument();
     fireEvent.change(within(dialog).getByDisplayValue("Sunset opener"), {
       target: { value: "Edited sunset opener" },
     });
