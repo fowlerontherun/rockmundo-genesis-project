@@ -17,6 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.614",
+    date: "2026-07-31",
+    changes: [
+      { type: 'fix', description: "Random events now appear correctly again: the event pop-up and the news panel were reading the wrong fields, so pending events could never be seen or answered." },
+      { type: 'fix', description: "Choosing an option now goes through the proper event handler, so your decision is recorded, logged to your inbox and resolved the next day." },
+      { type: 'improvement', description: "Events are now filtered to the character you are currently playing, with older untagged events still shown." },
+      { type: 'improvement', description: "Event cards and pop-ups show the event category (career, health, financial, social, industry, craving) with clearer colour coding, and the news panel has a Respond shortcut." },
+      { type: 'feature', description: "Seeded 100 new random events across career, health, money, social and industry storylines, each with two choices and different outcomes." },
+    ],
+  },
+  {
+
     version: "1.1.613",
     date: "2026-07-31",
     changes: [
