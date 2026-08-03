@@ -15,25 +15,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-      - name: Keep annual plan component hook-safe
+      - name: Apply focused annual plan fixes
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path("src/features/festivals/annual-plan/FestivalAnnualPlan.tsx")
-          source = path.read_text()
+          component = Path("src/features/festivals/annual-plan/FestivalAnnualPlan.tsx")
+          source = component.read_text()
           source = source.replace(
               'import { useEffect, useMemo, useRef, useState } from "react";',
               'import { useEffect, useRef, useState } from "react";',
           )
           start_marker = "  const localPreview = useMemo(() => {"
           end_marker = "  }, [selectedMarketing, selectedScale]);"
-          start = source.find(start_marker)
-          end = source.find(end_marker, start)
-          if start < 0 or end < 0:
-              raise SystemExit(f"annual preview markers missing: start={start}, end={end}")
-          end += len(end_marker)
-          replacement = '''  const localPreview = selectedScale
+          if start_marker in source:
+              start = source.index(start_marker)
+              end = source.index(end_marker, start) + len(end_marker)
+              replacement = '''  const localPreview = selectedScale
             ? {
                 capacityRange: `${selectedScale.minimumCapacity.toLocaleString("en-GB")}–${selectedScale.maximumCapacity.toLocaleString("en-GB")}`,
                 demandEffect: selectedMarketing
@@ -41,10 +39,34 @@ jobs:
                   : 0,
               }
             : null;'''
-          path.write_text(source[:start] + replacement + source[end:])
+              source = source[:start] + replacement + source[end:]
+          elif "  const localPreview = selectedScale" not in source:
+              raise SystemExit("annual plan preview block missing")
+          component.write_text(source)
+
+          migration = Path("supabase/migrations/20291218245300_festival_simplified_annual_plan.sql")
+          sql = migration.read_text()
+          replacements = {
+              "  preferred_month integer;": "  selected_month integer;",
+              "  preferred_month := nullif(p_plan->>'preferredMonth', '')::integer;": "  selected_month := nullif(p_plan->>'preferredMonth', '')::integer;",
+              "  IF start_date IS NULL OR duration IS NULL OR preferred_month IS NULL": "  IF start_date IS NULL OR duration IS NULL OR selected_month IS NULL",
+              "     OR preferred_month NOT BETWEEN 1 AND 12": "     OR selected_month NOT BETWEEN 1 AND 12",
+              "     OR extract(month FROM start_date)::integer <> preferred_month THEN": "     OR extract(month FROM start_date)::integer <> selected_month THEN",
+              "      preferred_month = preferred_month,": "      preferred_month = selected_month,",
+          }
+          for old, new in replacements.items():
+              if old in sql:
+                  sql = sql.replace(old, new)
+              elif new not in sql:
+                  raise SystemExit(f"annual SQL marker missing: {old}")
+          migration.write_text(sql)
           PY
+          if git diff --quiet -- src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql; then
+            echo "Focused annual plan fixes already applied."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/features/festivals/annual-plan/FestivalAnnualPlan.tsx
-          git commit -m "Keep annual Festival plan component hook-safe"
+          git add src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql
+          git commit -m "Fix annual Festival form hooks and month persistence"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
