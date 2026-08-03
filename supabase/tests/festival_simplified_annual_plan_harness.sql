@@ -451,15 +451,15 @@ BEGIN
 END
 $$;
 
-SELECT CASE
-  WHEN has_function_privilege('anon', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE')
-    THEN 1 / 0
-  ELSE 1
-END AS anon_denied;
-SELECT CASE
-  WHEN has_function_privilege('authenticated', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE')
-    THEN 1
-  ELSE 1 / 0
-END AS authenticated_granted;
+DO $$
+BEGIN
+  IF has_function_privilege('anon', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon unexpectedly has annual plan execute privilege';
+  END IF;
+  IF NOT has_function_privilege('authenticated', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'authenticated role is missing annual plan execute privilege';
+  END IF;
+END
+$$;
 
 SELECT 'festival simplified annual plan harness passed' AS result;
