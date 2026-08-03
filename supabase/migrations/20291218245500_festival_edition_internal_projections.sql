@@ -296,7 +296,7 @@ BEGIN
     facility_recommendations = EXCLUDED.facility_recommendations,
     validation_issues = '[]'::jsonb,
     status = 'ready_for_ticketing',
-    planning_version = public.festival_site_plans.planning_version + 1,
+    planning_version = public.festival_site_plans.planning_version,
     updated_at = now(),
     completed_at = now()
   WHERE public.festival_site_plans.projection_source = 'annual_plan'
@@ -468,7 +468,7 @@ BEGIN
     expected_sell_through_basis_points = EXCLUDED.expected_sell_through_basis_points,
     validation_issues = '[]'::jsonb,
     status = 'ready_for_artist_planning',
-    planning_version = public.festival_ticket_plans.planning_version + 1,
+    planning_version = public.festival_ticket_plans.planning_version,
     updated_at = now(),
     completed_at = now()
   WHERE public.festival_ticket_plans.projection_source = 'annual_plan'
