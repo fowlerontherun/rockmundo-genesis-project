@@ -16,6 +16,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+      - name: Bootstrap parser dependency without project install
+        run: |
+          archive="$(npm pack typescript@5.8.3 --silent)"
+          mkdir -p node_modules
+          tar -xzf "$archive" -C node_modules
+          mv node_modules/package node_modules/typescript
       - name: Generate Festival inventory
         run: node scripts/festivals/certify-active-system.mjs
       - name: Upload Festival inventory
