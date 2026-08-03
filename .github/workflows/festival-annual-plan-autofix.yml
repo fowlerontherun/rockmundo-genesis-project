@@ -80,13 +80,41 @@ jobs:
           elif "  response jsonb;" not in save:
               raise SystemExit("annual save response variable missing")
           migration.write_text(sql)
+
+          harness = Path("supabase/tests/festival_simplified_annual_plan_harness.sql")
+          test_sql = harness.read_text()
+          old_privileges = '''SELECT CASE
+            WHEN has_function_privilege('anon', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE')
+              THEN 1 / 0
+            ELSE 1
+          END AS anon_denied;
+          SELECT CASE
+            WHEN has_function_privilege('authenticated', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE')
+              THEN 1
+            ELSE 1 / 0
+          END AS authenticated_granted;'''
+          new_privileges = '''DO $$
+          BEGIN
+            IF has_function_privilege('anon', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE') THEN
+              RAISE EXCEPTION 'anon unexpectedly has annual plan execute privilege';
+            END IF;
+            IF NOT has_function_privilege('authenticated', 'public.get_festival_edition_annual_plan(uuid,uuid)', 'EXECUTE') THEN
+              RAISE EXCEPTION 'authenticated role is missing annual plan execute privilege';
+            END IF;
+          END
+          $$;'''
+          if old_privileges in test_sql:
+              test_sql = test_sql.replace(old_privileges, new_privileges)
+          elif new_privileges not in test_sql:
+              raise SystemExit("annual privilege assertion block missing")
+          harness.write_text(test_sql)
           PY
-          if git diff --quiet -- src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql; then
+          if git diff --quiet -- src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql supabase/tests/festival_simplified_annual_plan_harness.sql; then
             echo "Focused annual plan fixes already applied."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql
-          git commit -m "Fix annual Festival SQL receipt persistence"
+          git add src/features/festivals/annual-plan/FestivalAnnualPlan.tsx supabase/migrations/20291218245300_festival_simplified_annual_plan.sql supabase/tests/festival_simplified_annual_plan_harness.sql
+          git commit -m "Fix annual Festival database privilege assertions"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
