@@ -154,7 +154,7 @@ DECLARE
   currency text;
   demand_basis_points integer;
   facilities jsonb;
-  forecast jsonb;
+  projection_forecast jsonb;
 BEGIN
   SELECT * INTO edition
   FROM public.festival_editions_v2
@@ -592,7 +592,7 @@ BEGIN
       capacity_complimentary = EXCLUDED.capacity_complimentary,
       updated_at = now();
 
-    forecast := public._festival_projection_forecast(
+    projection_forecast := public._festival_projection_forecast(
       edition.starts_on,
       edition.ends_on,
       edition.expected_capacity,
@@ -602,7 +602,7 @@ BEGIN
       ticket.expected_refund_basis_points
     );
     UPDATE public.festival_ticket_plans
-    SET forecast = forecast,
+    SET forecast = projection_forecast,
         updated_at = now()
     WHERE id = ticket.id
     RETURNING * INTO ticket;
@@ -960,7 +960,7 @@ DECLARE
   price_minor bigint;
   capacity integer;
   sell_through integer;
-  forecast jsonb;
+  projection_forecast jsonb;
 BEGIN
   IF auth.uid() IS NULL
      OR actor IS NULL
@@ -1142,7 +1142,7 @@ BEGIN
   SELECT ticket.id, product_id, day::date, capacity, 0, 0
   FROM generate_series(edition.starts_on, edition.ends_on, interval '1 day') day;
 
-  forecast := public._festival_projection_forecast(
+  projection_forecast := public._festival_projection_forecast(
     edition.starts_on,
     edition.ends_on,
     capacity,
@@ -1152,7 +1152,7 @@ BEGIN
     ticket.expected_refund_basis_points
   );
   UPDATE public.festival_ticket_plans
-  SET forecast = forecast,
+  SET forecast = projection_forecast,
       updated_at = now()
   WHERE id = ticket.id;
 
@@ -1370,10 +1370,9 @@ BEGIN
     RAISE EXCEPTION 'festival_artist_programme_invalid' USING ERRCODE = 'P0001';
   END IF;
 
-  SELECT coalesce(planning_version, 0) INTO old_version
+  SELECT coalesce(max(planning_version), 0) INTO old_version
   FROM public.festival_artist_programmes
-  WHERE festival_edition_id = edition.id
-  FOR UPDATE;
+  WHERE festival_edition_id = edition.id;
   IF old_version <> p_expected_version THEN
     RAISE EXCEPTION 'festival_artist_programme_stale' USING ERRCODE = 'P0001';
   END IF;
