@@ -1,14 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import {
+  Banknote,
+  BarChart3,
+  Building2,
+  Music2,
+  PlayCircle,
+  Ticket,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { FestivalSitePlanner } from "@/features/festival-company/ui/FestivalSitePlanner";
-import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
-import { FestivalOperationsPlanner } from "@/features/festival-company/ui/FestivalOperationsPlanner";
-import { FestivalSponsorshipPlanner } from "@/features/festival-company/ui/FestivalSponsorshipPlanner";
-import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
-import { getFestivalCompanyEditions, type FestivalEditionPlanBindingKey } from "@/features/festivals/editions/repository";
-import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
+import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import {
+  getFestivalCompanyEditions,
+  type FestivalEditionPlanBindingKey,
+} from "@/features/festivals/editions/repository";
+import { festivalRoutes } from "@/features/festivals/routes";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
 
 const SectionShell = ({
@@ -30,13 +45,13 @@ const SectionShell = ({
 );
 
 const bindingLabels: Record<FestivalEditionPlanBindingKey, string> = {
-  configuration: "configuration",
-  site: "site",
+  configuration: "company setup",
+  site: "Festival site",
   tickets: "ticket",
-  artists: "artist programme",
-  operations: "operations",
-  sponsorship: "sponsorship",
-  timetable: "legacy timetable",
+  artists: "line-up",
+  operations: "automatic operations",
+  sponsorship: "commercial",
+  timetable: "running order",
 };
 
 function EditionScope({
@@ -57,13 +72,27 @@ function EditionScope({
     queryFn: () => getFestivalCompanyEditions(festivalCompanyId),
   });
 
-  if (query.isLoading) return <p role="status">Loading edition scope…</p>;
-  const edition = query.data?.editions.find((item) => item.festivalEditionId === editionId);
-  if (query.error || !edition) {
-    return <Card><CardContent className="pt-6">This annual edition could not be loaded.</CardContent></Card>;
+  if (query.isLoading) {
+    return <p role="status">Loading annual Festival…</p>;
   }
 
-  const missingBindings = requiredBindings.filter((binding) => !edition.planBindings[binding]);
+  const edition = query.data?.editions.find(
+    (item) => item.festivalEditionId === editionId,
+  );
+
+  if (query.error || !edition) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          This annual Festival could not be loaded.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const missingBindings = requiredBindings.filter(
+    (binding) => !edition.planBindings[binding],
+  );
 
   return (
     <>
@@ -72,121 +101,213 @@ function EditionScope({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle>{edition.name}</CardTitle>
-              <CardDescription>Game year {edition.editionYear}</CardDescription>
+              <CardDescription>
+                Annual company event · game year {edition.editionYear}
+              </CardDescription>
             </div>
-            <Badge variant={edition.editable ? "secondary" : "outline"} className="capitalize">
+            <Badge
+              variant={edition.editable ? "secondary" : "outline"}
+              className="capitalize"
+            >
               {edition.status.replaceAll("_", " ")}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <p>Dates: <strong>{edition.startsOn ?? "Not set"} – {edition.endsOn ?? "Not set"}</strong></p>
-          <p>Scale: <strong className="capitalize">{edition.festivalScale ?? "Not set"}</strong></p>
-          <p>Duration: <strong>{edition.durationDays ? `${edition.durationDays} day(s)` : "Not set"}</strong></p>
-          <p>Capacity: <strong>{edition.expectedCapacity?.toLocaleString("en-GB") ?? "Not set"}</strong></p>
+          <p>
+            Dates:{" "}
+            <strong>
+              {edition.startsOn ?? "Not set"} – {edition.endsOn ?? "Not set"}
+            </strong>
+          </p>
+          <p>
+            Scale:{" "}
+            <strong className="capitalize">
+              {edition.festivalScale ?? "Not set"}
+            </strong>
+          </p>
+          <p>
+            Duration:{" "}
+            <strong>
+              {edition.durationDays
+                ? `${edition.durationDays} day(s)`
+                : "Not set"}
+            </strong>
+          </p>
+          <p>
+            Target capacity:{" "}
+            <strong>
+              {edition.expectedCapacity?.toLocaleString("en-GB") ?? "Not set"}
+            </strong>
+          </p>
         </CardContent>
       </Card>
+
       {requireEditable && !edition.editable ? (
         <Card>
           <CardHeader>
-            <CardTitle>Edition is read-only</CardTitle>
-            <CardDescription>Completed, cancelled or locked editions cannot change planning data.</CardDescription>
+            <CardTitle>Festival is read-only</CardTitle>
+            <CardDescription>
+              Completed, cancelled or locked annual Festivals cannot be changed.
+            </CardDescription>
           </CardHeader>
         </Card>
       ) : missingBindings.length ? (
         <Card className="border-amber-500/40 bg-amber-500/5">
           <CardHeader>
-            <CardTitle>Planning controls safely blocked</CardTitle>
+            <CardTitle>Finish the earlier Festival choices first</CardTitle>
             <CardDescription>
-              This edition is not bound to its {missingBindings.map((binding) => bindingLabels[binding]).join(", ")} plan.
+              This annual Festival is not yet connected to its{" "}
+              {missingBindings
+                .map((binding) => bindingLabels[binding])
+                .join(", ")}{" "}
+              settings.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            The existing compatibility planner is company-scoped. It has not been mounted because doing so could modify another annual edition. Complete the edition-native planner migration before enabling these controls.
+            Return to the Plan screen. The game will generate detailed operations
+            and the running order automatically once the high-level choices are
+            complete.
           </CardContent>
         </Card>
-      ) : children}
+      ) : (
+        children
+      )}
     </>
   );
 }
 
-export function FestivalEditionOverview({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
+export function FestivalEditionOverview({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
   return (
     <SectionShell
-      title="Edition overview"
-      description="Identity, location, scale and dates for this exact annual edition. Permanent company defaults are managed from the Festival company page."
+      title="Plan the annual Festival"
+      description="Make the important music-business choices. The game handles detailed event operations automatically."
     >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} />
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" /> Company strength drives the event
+          </CardTitle>
+          <CardDescription>
+            Licence, reputation and the eleven permanent company upgrades decide
+            how large, safe, attractive and profitable this Festival can become.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button asChild variant="outline">
+            <Link to={festivalRoutes.company(festivalCompanyId)}>
+              Festival company
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link to={festivalRoutes.upgrades(festivalCompanyId)}>
+              View eleven upgrades
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <ActionCard
+          icon={<Music2 className="h-5 w-5" />}
+          title="Choose the line-up"
+          description="Set the artist budget and decide whether to use applications, invitations or a mixture. Empty spaces can be filled automatically."
+          label="Manage line-up"
+          to={festivalRoutes.applications(festivalCompanyId, editionId)}
+        />
+        <ActionCard
+          icon={<Ticket className="h-5 w-5" />}
+          title="Set tickets and budget"
+          description="Choose one standard ticket price and how many tickets to make available. The game produces the forecast."
+          label="Set tickets"
+          to={festivalRoutes.finance(festivalCompanyId, editionId)}
+        />
+        <ActionCard
+          icon={<PlayCircle className="h-5 w-5" />}
+          title="Run the Festival"
+          description="Review simple blockers and warnings, then launch. Staffing, suppliers, running order and settlement are automatic."
+          label="Run Festival"
+          to={festivalRoutes.live(festivalCompanyId, editionId)}
+        />
+        <ActionCard
+          icon={<BarChart3 className="h-5 w-5" />}
+          title="See the result"
+          description="Completed Festivals retain attendance, rating, headliners, profit band and reputation change as permanent company history."
+          label="View results"
+          to={festivalRoutes.history(festivalCompanyId, editionId)}
+        />
+      </div>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle>Generated automatically by the game</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
+          <p>• Stage count and running order</p>
+          <p>• Security, medical and welfare requirements</p>
+          <p>• Staff, supplier and operating costs</p>
+          <p>• Weather, transport and technical risks</p>
+          <p>• NPC acts for remaining line-up spaces</p>
+          <p>• Final attendance, revenue and settlement</p>
+        </CardContent>
+      </Card>
     </SectionShell>
   );
 }
 
-export function FestivalEditionSchedule({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
+export function FestivalEditionApplications({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
   return (
     <SectionShell
-      title="Timetable and readiness"
-      description="Build the stage-by-stage running order for this edition using the canonical revisioned schedule."
+      title="Line-up"
+      description="Set the overall approach and budget, then review applications, offers and confirmed acts in one place."
     >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable>
-        <FestivalScheduleWorkspace editionId={editionId} />
-      </EditionScope>
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionApplications({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
-  return (
-    <SectionShell
-      title="Artist programme"
-      description="Application windows, candidate discovery, invitations, offers and confirmed bookings for this edition."
-    >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable requiredBindings={["artists"]}>
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+        requiredBindings={["artists"]}
+      >
         <FestivalArtistPlanner festivalCompanyId={festivalCompanyId} />
       </EditionScope>
     </SectionShell>
   );
 }
 
-export function FestivalEditionContracts({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
+export function FestivalEditionFinance({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
   return (
     <SectionShell
-      title="Commercial partnerships and launch"
-      description="Sponsorship packages and commercial agreements, followed by the atomic launch and ticket-sales controls for this edition."
+      title="Tickets and budget"
+      description="Set a standard ticket price, tickets available and expected demand. Detailed products and release phases are not required."
     >
       <EditionScope
         festivalCompanyId={festivalCompanyId}
         editionId={editionId}
         requireEditable
-        requiredBindings={["configuration", "site", "tickets", "artists", "operations", "sponsorship"]}
+        requiredBindings={["site", "tickets"]}
       >
-        <FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} />
-        <FestivalLaunchManager festivalCompanyId={festivalCompanyId} />
-      </EditionScope>
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionOperations({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
-  return (
-    <SectionShell
-      title="Site, staffing and suppliers"
-      description="Site layout and stages, then departments, staffing coverage and supplier contracts for this edition."
-    >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable requiredBindings={["site", "operations"]}>
-        <FestivalSitePlanner festivalCompanyId={festivalCompanyId} />
-        <FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} />
-      </EditionScope>
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionFinance({ festivalCompanyId, editionId }: { festivalCompanyId: string; editionId: string }) {
-  return (
-    <SectionShell
-      title="Ticketing and revenue planning"
-      description="Ticket products, daily capacity allocation, release phases and deterministic revenue forecasts for this edition. Planning only — nothing is sold here."
-    >
-      <EditionScope festivalCompanyId={festivalCompanyId} editionId={editionId} requireEditable requiredBindings={["site", "tickets"]}>
         <FestivalTicketPlanner festivalCompanyId={festivalCompanyId} />
       </EditionScope>
     </SectionShell>
@@ -198,30 +319,53 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
     queryKey: ["festival-edition-history", editionId],
     queryFn: () => settlementRepository.history(editionId),
   });
+
   return (
     <SectionShell
-      title="Immutable edition history"
-      description="Frozen at settlement completion. Private contracts and exact financial totals are never published."
+      title="Annual Festival results"
+      description="The game freezes these results after automatic settlement."
     >
       {query.isLoading ? (
-        <p role="status">Loading edition history…</p>
+        <p role="status">Loading Festival results…</p>
       ) : !query.data ? (
         <Card>
           <CardHeader>
-            <CardTitle>No history yet</CardTitle>
-            <CardDescription>This edition has not completed settlement, so no permanent record exists.</CardDescription>
+            <CardTitle>No result yet</CardTitle>
+            <CardDescription>
+              This annual Festival has not finished, so no permanent company
+              result exists yet.
+            </CardDescription>
           </CardHeader>
         </Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <HistoryStat label="Dates" value={`${query.data.dates?.startsOn ?? "—"} – ${query.data.dates?.endsOn ?? "—"}`} />
-          <HistoryStat label="Attendance" value={(query.data.attendance ?? 0).toLocaleString("en-GB")} />
-          <HistoryStat label="Audience rating" value={`${query.data.audienceScore ?? "—"}/100`} />
-          <HistoryStat label="Result" value={query.data.profitabilityBand.replaceAll("_", " ")} />
-          <HistoryStat label="Headliners" value={query.data.headliners.map(String).join(", ") || "—"} />
+          <HistoryStat
+            label="Dates"
+            value={`${query.data.dates?.startsOn ?? "—"} – ${
+              query.data.dates?.endsOn ?? "—"
+            }`}
+          />
+          <HistoryStat
+            label="Attendance"
+            value={(query.data.attendance ?? 0).toLocaleString("en-GB")}
+          />
+          <HistoryStat
+            label="Audience rating"
+            value={`${query.data.audienceScore ?? "—"}/100`}
+          />
+          <HistoryStat
+            label="Company result"
+            value={query.data.profitabilityBand.replaceAll("_", " ")}
+          />
+          <HistoryStat
+            label="Headliners"
+            value={query.data.headliners.map(String).join(", ") || "—"}
+          />
           <HistoryStat
             label="Reputation change"
-            value={`${query.data.reputationChange >= 0 ? "+" : ""}${query.data.reputationChange}`}
+            value={`${query.data.reputationChange >= 0 ? "+" : ""}${
+              query.data.reputationChange
+            }`}
           />
         </div>
       )}
@@ -229,10 +373,44 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
   );
 }
 
+function ActionCard({
+  icon,
+  title,
+  description,
+  label,
+  to,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  label: string;
+  to: string;
+}) {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {icon}
+          {title}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button asChild variant="outline">
+          <Link to={to}>{label}</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 const HistoryStat = ({ label, value }: { label: string; value: string }) => (
   <Card>
     <CardHeader className="pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+      <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        {label === "Company result" ? <Banknote className="h-4 w-4" /> : null}
+        {label}
+      </CardTitle>
     </CardHeader>
     <CardContent>
       <Badge variant="secondary" className="whitespace-normal text-left text-sm">
