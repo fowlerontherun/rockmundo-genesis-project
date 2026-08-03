@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.622",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "New venue types for the gig viewer and viewer demo: arena bowls with seated tiers, wide bowl stadiums, amphitheatre bowls, and festival tents (big top, dance, cabaret, gospel, comedy and world music)." },
+      { type: 'feature', description: "Bowl venues now render tiered seating rings and upper-tier labels around the floor, and tent venues render striped canopies, poles and pennants." },
+      { type: 'feature', description: "Audience activities added to both the live view and replay canvas: pit security line in front of the stage, mosh/pit circles, crowd surfers, fan flags and hand-painted banners, all scaled by attendance and crowd energy." },
+      { type: 'improvement', description: "Gig Viewer Demo venue dropdown expanded to 18 stage types with realistic capacities so every new environment can be previewed." },
+    ],
+  },
+  {
     version: "1.1.621",
     date: "2026-08-03",
     changes: [
