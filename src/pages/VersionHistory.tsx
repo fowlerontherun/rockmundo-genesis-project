@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.631",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Fixed the Financial Command Center error reported by Finance Diagnostics: the monthly income/expense ledger had a naming clash that made the whole finance dashboard call fail." },
+      { type: 'improvement', description: "Finance Diagnostics now reports the dashboard sections as populated; remaining empty tables simply mean you have no bank accounts, investments or loans yet." },
+    ],
+  },
+  {
     version: "1.1.630",
     date: "2026-08-03",
     changes: [
