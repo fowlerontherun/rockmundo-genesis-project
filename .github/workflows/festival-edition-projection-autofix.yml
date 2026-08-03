@@ -18,6 +18,7 @@ jobs:
       - name: Wire exact annual edition into simplified screens
         run: |
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
           ticket = Path("src/features/festival-company/ui/FestivalTicketPlanner.tsx")
@@ -49,17 +50,15 @@ jobs:
               source = source.replace(old, new)
           elif new not in source:
               raise SystemExit("FestivalTicketPlanner signature marker missing")
-          old_mutation = '''      {
-                festivalCompanyId,
-                expectedVersion: data.planningVersion,'''
-          new_mutation = '''      {
-                festivalCompanyId,
-                festivalEditionId,
-                expectedVersion: data.planningVersion,'''
-          if old_mutation in source:
-              source = source.replace(old_mutation, new_mutation, 1)
-          elif new_mutation not in source:
-              raise SystemExit("FestivalTicketPlanner mutation marker missing")
+          if "festivalEditionId,\n        expectedVersion:" not in source:
+              source, count = re.subn(
+                  r'(save\.mutate\(\s*\{\s*festivalCompanyId,\s*)(expectedVersion:)',
+                  r'\1festivalEditionId,\n        \2',
+                  source,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit("FestivalTicketPlanner mutation marker missing")
           ticket.write_text(source)
 
           artist = Path("src/features/festival-company/ui/FestivalArtistPlanner.tsx")
@@ -85,17 +84,15 @@ jobs:
               source = source.replace(old, new)
           elif new not in source:
               raise SystemExit("FestivalArtistPlanner signature marker missing")
-          old_mutation = '''    save.mutate({
-              festivalCompanyId,
-              expectedVersion: data.planningVersion,'''
-          new_mutation = '''    save.mutate({
-              festivalCompanyId,
-              festivalEditionId,
-              expectedVersion: data.planningVersion,'''
-          if old_mutation in source:
-              source = source.replace(old_mutation, new_mutation, 1)
-          elif new_mutation not in source:
-              raise SystemExit("FestivalArtistPlanner mutation marker missing")
+          if "festivalEditionId,\n      expectedVersion:" not in source:
+              source, count = re.subn(
+                  r'(save\.mutate\(\{\s*festivalCompanyId,\s*)(expectedVersion:)',
+                  r'\1festivalEditionId,\n      \2',
+                  source,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit("FestivalArtistPlanner mutation marker missing")
           artist.write_text(source)
 
           sections = Path("src/features/festivals/ui/FestivalEditionSections.tsx")
