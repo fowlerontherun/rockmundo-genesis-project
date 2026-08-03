@@ -17,6 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.646",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Festival launch layer is live: Festival owners can now write a public Festival profile (name, tagline, description, travel, camping, accessibility, age guidance, terms and refunds), send it to launch review and publish the Festival to the world." },
+      { type: 'feature', description: "Festival ticket sales now work end to end — owners open, pause, resume and close sales, and players can buy tickets which are paid for from their cash and issued as individually referenced tickets in their collection." },
+      { type: 'feature', description: "Public Festival directory and Festival pages now load real data, showing dates, city, stages, the full line-up timetable and live ticket prices with booking fees, tax and remaining availability." },
+      { type: 'improvement', description: "Owners get a launch readiness check that lists exactly what is blocking publication (missing public profile, no ticket products, no stages) plus a sales summary of tickets sold and gross revenue." },
+      { type: 'fix', description: "Fixed the Festivals directory hanging on \"Loading launched Festivals\" and the Festival opportunity pages failing to load, both caused by missing backend support." },
+    ],
+  },
+  {
+
     version: "1.1.645",
     date: "2026-08-03",
     changes: [
