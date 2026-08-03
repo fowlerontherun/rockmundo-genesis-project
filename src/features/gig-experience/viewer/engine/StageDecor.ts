@@ -405,7 +405,7 @@ export function drawFollowSpots(ctx: CanvasRenderingContext2D, preset: VenuePres
 
 export function drawAtmosphere(ctx: CanvasRenderingContext2D, preset: VenuePreset, size: Size, stageEnergy: number, positionMs: number, reducedMotion: boolean) {
   const p = preset.decorations.palette;
-  if (preset.stageType === "arena" || preset.stageType === "stadium" || preset.stageType === "festival") {
+  if (preset.stageType !== "club" && preset.stageType !== "theater") {
     const gr = ctx.createRadialGradient(size.width / 2, preset.stage.y + preset.stage.height, 40, size.width / 2, preset.stage.y + preset.stage.height, size.width * 0.6);
     gr.addColorStop(0, withAlpha(p.accent, 0.12));
     gr.addColorStop(1, withAlpha(p.accent, 0));
@@ -419,4 +419,80 @@ export function drawAtmosphere(ctx: CanvasRenderingContext2D, preset: VenuePrese
   }
 }
 
-export const StageTypeLabels: Record<StageType, string> = { club: "Club", theater: "Theater", arena: "Arena", stadium: "Stadium", festival: "Festival" };
+export const StageTypeLabels: Record<StageType, string> = { club: "Club", theater: "Theater", arena: "Arena", stadium: "Stadium", festival: "Festival", tent: "Festival tent", arena_bowl: "Arena bowl", stadium_bowl: "Stadium bowl" };
+
+/** Seating bowl rings and festival tent canopy drawn behind everything else. */
+export function drawVenueShell(ctx: CanvasRenderingContext2D, preset: VenuePreset, size: Size) {
+  const d = preset.decorations;
+  const p = d.palette;
+  d.seatingTiers.forEach((tier, i) => {
+    const radius = Math.min(tier.width, tier.height) * 0.42;
+    ctx.save();
+    ctx.beginPath();
+    roundedRect(ctx, tier.x, tier.y, tier.width, tier.height, radius);
+    ctx.fillStyle = withAlpha(i % 2 === 0 ? "#1e293b" : "#111827", 0.95 - i * 0.08);
+    ctx.fill();
+    ctx.strokeStyle = withAlpha(p.accent, 0.35);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+    // seat rows along the ring
+    ctx.save();
+    ctx.beginPath();
+    roundedRect(ctx, tier.x, tier.y, tier.width, tier.height, radius);
+    ctx.clip();
+    ctx.fillStyle = withAlpha(i % 3 === 0 ? "#38bdf8" : i % 3 === 1 ? "#f472b6" : "#fbbf24", 0.35);
+    const step = 7;
+    for (let x = tier.x + 4; x < tier.x + tier.width - 4; x += step) {
+      ctx.fillRect(x, tier.y + 4, 3, 3);
+      ctx.fillRect(x, tier.y + tier.height - 8, 3, 3);
+    }
+    for (let y = tier.y + 4; y < tier.y + tier.height - 4; y += step) {
+      ctx.fillRect(tier.x + 4, y, 3, 3);
+      ctx.fillRect(tier.x + tier.width - 8, y, 3, 3);
+    }
+    ctx.restore();
+  });
+  if (d.seatingTiers.length) {
+    ctx.fillStyle = withAlpha("#ffffff", 0.4);
+    ctx.font = "bold 8px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(preset.stageType === "stadium_bowl" ? "UPPER TIER" : "BALCONY", size.width / 2, 14);
+  }
+  const canopy = d.tentCanopy;
+  if (canopy) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(canopy.x, canopy.y + canopy.height);
+    ctx.quadraticCurveTo(canopy.x + canopy.width / 2, canopy.y - canopy.height * 0.55, canopy.x + canopy.width, canopy.y + canopy.height);
+    ctx.closePath();
+    ctx.clip();
+    for (let i = 0; i < d.tentStripes; i++) {
+      ctx.fillStyle = withAlpha(i % 2 === 0 ? "#f5f5f4" : p.accent, 0.28);
+      ctx.fillRect(canopy.x + (canopy.width / d.tentStripes) * i, canopy.y - canopy.height, canopy.width / d.tentStripes, canopy.height * 2.2);
+    }
+    ctx.restore();
+    ctx.strokeStyle = withAlpha("#ffffff", 0.4);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(canopy.x, canopy.y + canopy.height);
+    ctx.quadraticCurveTo(canopy.x + canopy.width / 2, canopy.y - canopy.height * 0.55, canopy.x + canopy.width, canopy.y + canopy.height);
+    ctx.stroke();
+    // tent poles
+    ctx.fillStyle = withAlpha("#e7e5e4", 0.5);
+    [canopy.x + 8, canopy.x + canopy.width - 12].forEach((x) => ctx.fillRect(x, canopy.y + canopy.height, 4, size.height * 0.6));
+  }
+}
+
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+}
