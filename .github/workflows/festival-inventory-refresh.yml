@@ -1,0 +1,27 @@
+name: Festival inventory refresh
+
+on:
+  push:
+    branches:
+      - agent/festival-edition-stabilisation
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Generate Festival inventory
+        run: node scripts/festivals/certify-active-system.mjs
+      - name: Upload Festival inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: festival-active-callers
+          path: docs/festivals/festival-active-callers.json
+          if-no-files-found: error
+          retention-days: 1
