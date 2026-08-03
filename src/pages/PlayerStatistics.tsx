@@ -183,7 +183,7 @@ export default function PlayerStatistics() {
         </TabsContent>
 
         <TabsContent value="achievements" className="space-y-6">
-          <PlayerAchievements userId={profileId ?? undefined} />
+          <PlayerAchievements profileId={profileId ?? undefined} />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">

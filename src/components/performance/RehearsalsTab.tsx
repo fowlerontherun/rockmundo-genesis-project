@@ -117,12 +117,12 @@ export function RehearsalsTab() {
         // Also get songs owned by band members
         const { data: members, error: membersError } = await supabase
           .from('band_members')
-          .select('user_id')
+          .select('profile_id')
           .eq('band_id', bandData.id);
 
         if (membersError) throw membersError;
 
-        const memberUserIds = members?.map(m => m.user_id) || [];
+        const memberProfileIds = members?.map(m => m.profile_id).filter((id): id is string => id !== null) || [];
         
         // Combine song IDs from setlists and load all songs
         let allSongs: any[] = [];
@@ -142,11 +142,11 @@ export function RehearsalsTab() {
         }
         
         // Also get member songs
-        if (memberUserIds.length > 0) {
+        if (memberProfileIds.length > 0) {
           const { data: memberSongs, error: memberSongsError } = await supabase
             .from('songs')
             .select('*')
-            .in('user_id', memberUserIds)
+            .in('profile_id', memberProfileIds)
             .in('status', ['draft', 'recorded'])
             .order('title');
 

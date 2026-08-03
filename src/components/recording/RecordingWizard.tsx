@@ -146,6 +146,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, profileId, current
             <TabsContent value="song" className="mt-0">
               <SongSelector
                 userId={userId}
+                profileId={profileId}
                 bandId={bandId || undefined}
                 selectedSong={selectedSong}
                 onSelect={handleSongSelect}

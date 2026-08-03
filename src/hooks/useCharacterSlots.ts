@@ -243,6 +243,7 @@ export function useCharacterSlots() {
       await switchActiveCharacter(user.id, profileId);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["dead-characters"] });
       queryClient.invalidateQueries({ queryKey: ["has-living-character"] });
@@ -273,6 +274,7 @@ export function useCharacterSlots() {
       return createCharacterProfileFallback(user.id);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-slots"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
@@ -306,6 +308,7 @@ export function useCharacterSlots() {
       if (deleteError) throw deleteError;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["character-slots"] });
       queryClient.invalidateQueries({ queryKey: ["character-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });

@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.617",
+    date: "2026-08-03",
+    changes: [
+      { type: 'fix', description: "Band song and rehearsal lists now resolve songs through each member's character profile, preventing songs from another character on the same account appearing in band activities." },
+      { type: 'fix', description: "Solo recording and achievement views now use the currently selected character instead of pooling account-level data." },
+      { type: 'fix', description: "Character switching, revival and creation now refresh the active-character cache immediately, keeping band membership and other character-scoped systems in sync." },
+      { type: 'fix', description: "Returning players with a living but inactive character are routed back into that playable character instead of being shown a new-character or coma flow." },
+    ],
+  },
+  {
     version: "1.1.616",
     date: "2026-08-03",
     changes: [

@@ -6,22 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { Award, Trophy, Star } from "lucide-react";
 
 interface PlayerAchievementsProps {
-  userId?: string;
+  profileId?: string;
 }
 
-export function PlayerAchievements({ userId }: PlayerAchievementsProps) {
+export function PlayerAchievements({ profileId }: PlayerAchievementsProps) {
   const { data: achievements, isLoading } = useQuery({
-    queryKey: ["player-achievements", userId],
+    queryKey: ["player-achievements", profileId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("player_achievements")
         .select("*, achievement:achievements(*)")
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const { data: allAchievements } = useQuery({
