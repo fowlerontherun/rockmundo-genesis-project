@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, Navigate } from "react-router-dom";
 import CharacterGate from "@/components/CharacterGate";
+import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
