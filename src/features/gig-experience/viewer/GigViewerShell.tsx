@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { useGigViewerReplay } from "../hooks";
 import type { GigExperienceDTO } from "../types";
 import { GigCanvas } from "./GigCanvas";
@@ -60,22 +62,37 @@ function ReadyReplay({ replay, experience, open, prefs, onViewResult, onClose }:
     window.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("fullscreenchange", onChange); window.removeEventListener("keydown", onKey); };
   }, []);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [fullscreen]);
   if (!state || !snapshot) return null; const empty = playback.events.length === 0;
   const nextSong = story.songs.find((s: any) => s.startMs > state.positionMs); const prevSong = [...story.songs].reverse().find((s: any) => s.startMs < state.positionMs - 1000); const nextHighlight = story.highlights.find((h: any) => h.offsetMs > state.positionMs);
   const controls = <GigViewerControls playing={state.isPlaying} complete={state.isComplete} speed={playback.speed} reducedMotion={reducedMotion} pyrotechnics={pyrotechnics} fullscreen={fullscreen} canPreviousSong={!!prevSong} canNextSong={!!nextSong} canNextHighlight={!!nextHighlight} canResult={story.resultOffsetMs !== null && state.positionMs < story.resultOffsetMs} onPlay={playback.play} onPause={playback.pause} onRestart={playback.restart} onSpeed={playback.setSpeed} onPrevious={playback.previousEvent} onNext={playback.nextEvent} onPreviousSong={() => prevSong && playback.seekMs(prevSong.startMs)} onNextSong={() => nextSong && playback.seekMs(nextSong.startMs)} onNextHighlight={() => nextHighlight && playback.seekMs(nextHighlight.offsetMs)} onSkipResult={() => story.resultOffsetMs !== null && playback.seekMs(story.resultOffsetMs)} onResult={onViewResult} onClose={onClose} onReducedMotion={setReducedMotion} onPyrotechnics={setPyrotechnics} onFullscreen={toggleFullscreen} />;
+  const compactControls = <GigViewerControls compact playing={state.isPlaying} complete={state.isComplete} speed={playback.speed} reducedMotion={reducedMotion} pyrotechnics={pyrotechnics} fullscreen={fullscreen} canPreviousSong={!!prevSong} canNextSong={!!nextSong} canNextHighlight={!!nextHighlight} canResult={story.resultOffsetMs !== null && state.positionMs < story.resultOffsetMs} onPlay={playback.play} onPause={playback.pause} onRestart={playback.restart} onSpeed={playback.setSpeed} onPrevious={playback.previousEvent} onNext={playback.nextEvent} onPreviousSong={() => prevSong && playback.seekMs(prevSong.startMs)} onNextSong={() => nextSong && playback.seekMs(nextSong.startMs)} onNextHighlight={() => nextHighlight && playback.seekMs(nextHighlight.offsetMs)} onSkipResult={() => story.resultOffsetMs !== null && playback.seekMs(story.resultOffsetMs)} onResult={onViewResult} onClose={onClose} onReducedMotion={setReducedMotion} onPyrotechnics={setPyrotechnics} onFullscreen={toggleFullscreen} />;
   const canvas = <GigCanvas replay={replay} experience={experience} playbackState={state} reducedMotion={reducedMotion} pyrotechnics={pyrotechnics} fill={fullscreen} className={fullscreen ? "h-full min-h-0 w-full" : "w-full"} />;
 
   if (fullscreen) {
     return (
       <GigViewerErrorBoundary onResult={onViewResult} onClose={onClose}>
-        <div ref={popoutRef} className="fixed inset-0 z-[70] flex flex-col gap-2 bg-background p-3" role="dialog" aria-modal="true" aria-label="Full screen gig stage view">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">{experience?.gig?.venue?.name ?? "Gig replay"} · {StageTypeLabels[stageType]}</h2>
-            <span className="text-xs text-muted-foreground">{snapshot.crowdMoodLabel} · energy {Math.round(snapshot.crowdEnergy)}</span>
+        <div ref={popoutRef} className="fixed inset-0 z-[70] flex h-[100dvh] w-screen flex-col gap-2 overflow-hidden bg-background p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:p-3" role="dialog" aria-modal="true" aria-label="Full screen gig stage view">
+          <div className="flex shrink-0 items-center justify-between gap-2 pr-12 sm:pr-0">
+            <h2 className="truncate text-sm font-semibold sm:text-lg">{experience?.gig?.venue?.name ?? "Gig replay"} · {StageTypeLabels[stageType]}</h2>
+            <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{snapshot.crowdMoodLabel} · energy {Math.round(snapshot.crowdEnergy)}</span>
           </div>
+          {/* Always-visible exit affordance: mobile browsers often refuse the Fullscreen API, so the overlay needs its own close button. */}
+          <Button variant="secondary" size="icon" onClick={toggleFullscreen} aria-label="Exit full screen stage view" className="absolute right-2 top-[max(0.5rem,env(safe-area-inset-top))] z-10 h-11 w-11 rounded-full shadow-lg">
+            <X className="h-5 w-5" />
+          </Button>
           <div className="min-h-0 flex-1">{canvas}</div>
-          <GigCurrentSongPanel snapshot={snapshot} />
-          {controls}
+          <div className="shrink-0 space-y-2">
+            <div className="sm:hidden"><span className="text-xs text-muted-foreground">{snapshot.crowdMoodLabel} · energy {Math.round(snapshot.crowdEnergy)}</span></div>
+            <GigCurrentSongPanel snapshot={snapshot} />
+            <div className="sm:hidden">{compactControls}</div>
+            <div className="hidden sm:block">{controls}</div>
+          </div>
         </div>
       </GigViewerErrorBoundary>
     );

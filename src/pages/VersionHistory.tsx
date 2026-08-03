@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.623",
+    date: "2026-08-03",
+    changes: [
+      { type: 'feature', description: "Full-screen gig view now has a permanent on-screen exit button (top-right), so it can always be closed even when a mobile browser blocks the Fullscreen API." },
+      { type: 'improvement', description: "Mobile full-screen popout uses a compact horizontally scrolling control bar with large 44px tap targets for play, restart, song skips, speed, motion, pyro and result." },
+      { type: 'improvement', description: "Full-screen layout now respects device safe areas and dynamic viewport height, keeps the header truncated on narrow screens, and locks background scrolling while open." },
+    ],
+  },
+  {
     version: "1.1.622",
     date: "2026-08-03",
     changes: [
