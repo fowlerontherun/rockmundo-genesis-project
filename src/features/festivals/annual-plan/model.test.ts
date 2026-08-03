@@ -111,6 +111,7 @@ describe("festivalAnnualPlanSchema", () => {
 describe("simplified annual plan draft", () => {
   it("derives the exact Festival end date from start and duration", () => {
     expect(calculateAnnualPlanEndDate("2026-08-14", 3)).toBe("2026-08-16");
+    expect(calculateAnnualPlanEndDate("2026-08-14", 0)).toBeNull();
   });
 
   it("requires the selected month to match the exact start date", () => {
@@ -119,6 +120,7 @@ describe("simplified annual plan draft", () => {
     expect(
       annualPlanDraftIsComplete({ ...draft, preferredMonth: 9 }),
     ).toBe(false);
+    expect(annualPlanDraftIsComplete({ ...draft, durationDays: 0 })).toBe(false);
   });
 
   it("uses company-derived catalogue defaults for a new annual Festival", () => {
