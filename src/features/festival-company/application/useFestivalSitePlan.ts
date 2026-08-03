@@ -3,16 +3,39 @@ import {
   getFestivalSitePlan,
   saveFestivalSitePlan,
 } from "../data/festivalCompanyRepository";
+import { getFestivalEditionSitePlan } from "@/features/festivals/projections/repository";
 import type { FestivalSitePlanDraft } from "../domain/festivalSitePlan";
-export const festivalSitePlanQueryKey = (id?: string) =>
-  ["festival-site-plan", id] as const;
-export const useFestivalSitePlan = (id?: string, enabled = true) =>
-  useQuery({
-    queryKey: festivalSitePlanQueryKey(id),
-    enabled: enabled && Boolean(id),
+
+export const festivalSitePlanQueryKey = (
+  festivalCompanyId?: string,
+  festivalEditionId?: string,
+) => ["festival-site-plan", festivalCompanyId, festivalEditionId ?? "company"] as const;
+
+export const useFestivalSitePlan = (
+  festivalCompanyId?: string,
+  festivalEditionIdOrEnabled?: string | boolean,
+  enabled = true,
+) => {
+  const festivalEditionId =
+    typeof festivalEditionIdOrEnabled === "string"
+      ? festivalEditionIdOrEnabled
+      : undefined;
+  const queryEnabled =
+    typeof festivalEditionIdOrEnabled === "boolean"
+      ? festivalEditionIdOrEnabled
+      : enabled;
+
+  return useQuery({
+    queryKey: festivalSitePlanQueryKey(festivalCompanyId, festivalEditionId),
+    enabled: queryEnabled && Boolean(festivalCompanyId),
     retry: false,
-    queryFn: () => getFestivalSitePlan(id!),
+    queryFn: () =>
+      festivalEditionId
+        ? getFestivalEditionSitePlan(festivalCompanyId!, festivalEditionId)
+        : getFestivalSitePlan(festivalCompanyId!),
   });
+};
+
 export const useSaveFestivalSitePlan = () => {
   const client = useQueryClient();
   return useMutation({
@@ -33,6 +56,7 @@ export const useSaveFestivalSitePlan = () => {
           ["festival-company-setup"],
           ["owned-festival-companies"],
           ["festival-configuration", data.festivalCompanyId],
+          ["festival-company-editions", data.festivalCompanyId],
         ].map((queryKey) => client.invalidateQueries({ queryKey })),
       );
     },
