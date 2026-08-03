@@ -5,10 +5,25 @@ ALTER TABLE public.festival_companies
   ADD COLUMN IF NOT EXISTS licence_version integer NOT NULL DEFAULT 0
     CHECK (licence_version >= 0);
 
-ALTER TABLE public.festival_company_licences
-  DROP CONSTRAINT IF EXISTS festival_company_licences_festival_company_id_tier_key_status_key;
-ALTER TABLE public.festival_company_licences
-  DROP CONSTRAINT IF EXISTS festival_company_licences_festival_company_id_tier_key_status_k;
+DO $$
+DECLARE
+  legacy_constraint record;
+BEGIN
+  FOR legacy_constraint IN
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid = 'public.festival_company_licences'::regclass
+      AND contype = 'u'
+      AND pg_get_constraintdef(oid) =
+        'UNIQUE (festival_company_id, tier_key, status)'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.festival_company_licences DROP CONSTRAINT %I',
+      legacy_constraint.conname
+    );
+  END LOOP;
+END;
+$$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS festival_company_one_active_licence
   ON public.festival_company_licences(festival_company_id)
