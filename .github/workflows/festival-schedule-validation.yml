@@ -22,6 +22,7 @@ jobs:
         run: >-
           npx eslint
           src/features/festivals/scheduling/model.ts
+          src/features/festivals/scheduling/service.ts
           src/features/festivals/scheduling/time.ts
           src/features/festivals/scheduling/time.test.ts
           src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx
