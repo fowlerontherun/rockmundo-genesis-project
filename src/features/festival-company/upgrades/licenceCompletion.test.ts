@@ -121,4 +121,13 @@ describe("simplified Festival licence completion", () => {
       "PERFORM public._refresh_festival_company_edition_readiness(company.id)",
     );
   });
+
+  it("tracks the licence RPC in generated Festival active-system evidence", () => {
+    const inventory = source("docs/festivals/festival-active-callers.json");
+
+    expect(inventory).toContain("apply_festival_company_licence");
+    expect(inventory).toContain(
+      "src/features/festival-company/upgrades/repository.ts",
+    );
+  });
 });
