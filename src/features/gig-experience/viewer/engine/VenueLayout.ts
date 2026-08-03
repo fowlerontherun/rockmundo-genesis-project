@@ -2,7 +2,7 @@ import type { Rect, Point, Size } from "./Viewport";
 import { scaleRect, scalePoint } from "./Viewport";
 
 export type VenuePresetName = "small" | "medium" | "large";
-export type StageType = "club" | "theater" | "arena" | "stadium" | "festival";
+export type StageType = "club" | "theater" | "arena" | "stadium" | "festival" | "tent" | "arena_bowl" | "stadium_bowl";
 export type FloorPattern = "checker" | "concrete" | "wood" | "grass" | "asphalt";
 export type ScaledVenuePreset = VenuePreset;
 
@@ -27,6 +27,9 @@ export interface StageDecorations {
   securityPosts: Point[];
   ledLipStrip: Rect | null;
   floorTapeMarks: Point[];
+  seatingTiers: Rect[];
+  tentCanopy: Rect | null;
+  tentStripes: number;
   floorPattern: FloorPattern;
   palette: { skyTop: string; skyBottom: string; audienceFloor: string; stageDeck: string; stageEdge: string; barrier: string; ampBody: string; speakerBody: string; accent: string };
 }
@@ -51,10 +54,13 @@ const PALETTES: Record<StageType, StageDecorations["palette"]> = {
   theater: { skyTop: "#2a0a12", skyBottom: "#3d0f1a", audienceFloor: "#3b1216", stageDeck: "#4a2a1a", stageEdge: "#2a1508", barrier: "#8b6b2a", ampBody: "#161616", speakerBody: "#0e0e0e", accent: "#f59e0b" },
   arena: { skyTop: "#050914", skyBottom: "#0b1226", audienceFloor: "#111827", stageDeck: "#1f2937", stageEdge: "#0b0f17", barrier: "#4b5563", ampBody: "#0f0f10", speakerBody: "#050505", accent: "#38bdf8" },
   stadium: { skyTop: "#0a1a2e", skyBottom: "#173958", audienceFloor: "#1a2b3d", stageDeck: "#22303f", stageEdge: "#0a1220", barrier: "#5b6472", ampBody: "#0d0d0f", speakerBody: "#050505", accent: "#22d3ee" },
+  tent: { skyTop: "#2b0f36", skyBottom: "#7c2d12", audienceFloor: "#2f2412", stageDeck: "#2a1e12", stageEdge: "#4a2f14", barrier: "#78716c", ampBody: "#131313", speakerBody: "#080808", accent: "#f0abfc" },
+  arena_bowl: { skyTop: "#03060f", skyBottom: "#0a1020", audienceFloor: "#0f172a", stageDeck: "#1f2937", stageEdge: "#0b0f17", barrier: "#4b5563", ampBody: "#0f0f10", speakerBody: "#050505", accent: "#818cf8" },
+  stadium_bowl: { skyTop: "#061426", skyBottom: "#123049", audienceFloor: "#14532d", stageDeck: "#22303f", stageEdge: "#0a1220", barrier: "#5b6472", ampBody: "#0d0d0f", speakerBody: "#050505", accent: "#34d399" },
   festival: { skyTop: "#3d1a4a", skyBottom: "#c2410c", audienceFloor: "#3b2f14", stageDeck: "#2a1e12", stageEdge: "#4a2f14", barrier: "#78716c", ampBody: "#131313", speakerBody: "#080808", accent: "#facc15" },
 };
 
-const FLOOR_BY_TYPE: Record<StageType, FloorPattern> = { club: "checker", theater: "wood", arena: "concrete", stadium: "concrete", festival: "grass" };
+const FLOOR_BY_TYPE: Record<StageType, FloorPattern> = { club: "checker", theater: "wood", arena: "concrete", stadium: "concrete", festival: "grass", tent: "grass", arena_bowl: "concrete", stadium_bowl: "grass" };
 
 function baseBounds(name: VenuePresetName) {
   if (name === "small") return { stage: { x: .18, y: .1, width: .64, height: .22 }, audience: { x: .08, y: .38, width: .84, height: .5 }, entrances: [{ x: .5, y: .95 }], backstage: { x: .88, y: .18 }, crowdZones: [{ x: .1, y: .4, width: .8, height: .46 }], barriers: [{ x: .16, y: .34, width: .68, height: .018 }] };
@@ -62,7 +68,15 @@ function baseBounds(name: VenuePresetName) {
   return { stage: { x: .12, y: .09, width: .76, height: .24 }, audience: { x: .06, y: .39, width: .88, height: .5 }, entrances: [{ x: .35, y: .96 }, { x: .65, y: .96 }], backstage: { x: .92, y: .2 }, crowdZones: [{ x: .07, y: .41, width: .86, height: .32 }, { x: .14, y: .74, width: .72, height: .13 }], barriers: [{ x: .1, y: .36, width: .8, height: .02 }] };
 }
 
-function buildDecorations(name: VenuePresetName, stageType: StageType, stage: Rect, barriers: Rect[], audience: Rect): StageDecorations {
+function collapseStageType(stageType: StageType): StageType {
+  if (stageType === "arena_bowl") return "arena";
+  if (stageType === "stadium_bowl") return "stadium";
+  if (stageType === "tent") return "festival";
+  return stageType;
+}
+
+function buildDecorations(name: VenuePresetName, rawStageType: StageType, stage: Rect, barriers: Rect[], audience: Rect): StageDecorations {
+  const stageType = collapseStageType(rawStageType);
   const sx = stage.x, sy = stage.y, sw = stage.width, sh = stage.height;
   const rightEdge = sx + sw;
   const stackWidth = stageType === "stadium" || stageType === "festival" ? 0.045 : stageType === "arena" ? 0.04 : 0.03;
@@ -138,7 +152,19 @@ function buildDecorations(name: VenuePresetName, stageType: StageType, stage: Re
     x: audience.x + audience.width * ((i + 0.5) / 8),
     y: audience.y + audience.height * 0.9,
   }));
+  // Bowl seating tiers wrapping the audience floor (zoomed-out arena / stadium view)
+  const bowl = rawStageType === "arena_bowl" || rawStageType === "stadium_bowl";
+  const tierCount = rawStageType === "stadium_bowl" ? 4 : 3;
+  const seatingTiers: Rect[] = bowl
+    ? Array.from({ length: tierCount }).map((_, i) => {
+        const inset = 0.012 + i * 0.026;
+        return { x: 0.012 + inset * 0.6, y: 0.03 + inset * 0.5, width: 0.976 - inset * 1.2, height: 0.94 - inset };
+      })
+    : [];
+  const tentCanopy: Rect | null = rawStageType === "tent" ? { x: 0.02, y: 0.01, width: 0.96, height: 0.34 } : null;
+  const tentStripes = rawStageType === "tent" ? 14 : 0;
   return {
+    seatingTiers, tentCanopy, tentStripes,
     ampsLeft: buildAmps("l"), ampsRight: buildAmps("r"), monitors, speakerStacks, subwoofers,
     drumRiser, lightingTruss, lightFixtures, followSpots, backdrop, bannerRect, bigScreens, barrierPosts,
     micStands, cableRuns, guitarRack, fohTower, securityPosts, ledLipStrip, floorTapeMarks,
@@ -175,14 +201,16 @@ export const VENUE_PRESETS: Record<VenuePresetName, VenuePreset> = {
 export function selectStageType(input?: { venueName?: string | null; venueType?: string | null; capacity?: number | null }): StageType {
   const hay = `${input?.venueName ?? ""} ${input?.venueType ?? ""}`.toLowerCase();
   const cap = input?.capacity ?? NaN;
+  if (/tent|marquee|big ?top|cabaret|gospel tent|dance tent|silent disco/.test(hay)) return "tent";
+  if (/bowl|amphitheat/.test(hay)) return "stadium_bowl";
   if (/festival|open ?air|fields?|park|outdoor/.test(hay)) return "festival";
-  if (/stadium|olympic|megadome|dome/.test(hay)) return "stadium";
-  if (/arena|coliseum|colise|forum|garden/.test(hay)) return "arena";
+  if (/stadium|olympic|megadome|dome/.test(hay)) return "stadium_bowl";
+  if (/arena|coliseum|colise|forum|garden/.test(hay)) return "arena_bowl";
   if (/theat(re|er)|opera|hall|auditorium|ballroom|playhouse/.test(hay)) return "theater";
   if (/club|bar|pub|lounge|basement|cellar|cafe|tavern/.test(hay)) return "club";
   if (Number.isFinite(cap)) {
-    if (cap >= 25000) return "stadium";
-    if (cap >= 5000) return "arena";
+    if (cap >= 25000) return "stadium_bowl";
+    if (cap >= 5000) return "arena_bowl";
     if (cap >= 1000) return "arena";
     if (cap >= 300) return "theater";
     return "club";
@@ -224,6 +252,9 @@ export function scaleVenuePreset(preset: VenuePreset, size: Size): VenuePreset {
     securityPosts: d.securityPosts.map((p) => scalePoint(p, size)),
     ledLipStrip: d.ledLipStrip ? scaleRect(d.ledLipStrip, size) : null,
     floorTapeMarks: d.floorTapeMarks.map((p) => scalePoint(p, size)),
+    seatingTiers: d.seatingTiers.map((r) => scaleRect(r, size)),
+    tentCanopy: d.tentCanopy ? scaleRect(d.tentCanopy, size) : null,
+    tentStripes: d.tentStripes,
     floorPattern: d.floorPattern,
     palette: d.palette,
   };
