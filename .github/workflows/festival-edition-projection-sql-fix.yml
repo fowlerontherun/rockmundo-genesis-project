@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-      - name: Harden projection SQL variables
+      - name: Harden projection SQL contracts
         run: |
           python3 - <<'PY'
           import re
@@ -32,7 +32,7 @@ jobs:
               "  SET forecast = forecast,",
               "  SET forecast = projection_forecast,",
           )
-          sql, count = re.subn(
+          sql = re.sub(
               r"  SELECT coalesce\(planning_version, 0\) INTO old_version\n"
               r"  FROM public\.festival_artist_programmes\n"
               r"  WHERE festival_edition_id = edition\.id\n"
@@ -42,20 +42,79 @@ jobs:
               "  WHERE festival_edition_id = edition.id;",
               sql,
           )
-          if count == 0 and "SELECT coalesce(max(planning_version), 0) INTO old_version" not in sql:
-              raise SystemExit("artist programme version marker missing")
+
+          ticket_stale = '''  IF ticket.planning_version <> p_expected_version THEN
+            RAISE EXCEPTION 'festival_ticket_plan_stale' USING ERRCODE = 'P0001';
+          END IF;
+
+          '''
+          if ticket_stale in sql:
+              sql = sql.replace(ticket_stale, "", 1)
+          ticket_anchor = '''    ) RETURNING * INTO request;
+          END IF;
+
+          UPDATE public.festival_ticket_plans'''
+          ticket_replacement = '''    ) RETURNING * INTO request;
+          END IF;
+
+          IF ticket.planning_version <> p_expected_version THEN
+            RAISE EXCEPTION 'festival_ticket_plan_stale' USING ERRCODE = 'P0001';
+          END IF;
+
+          UPDATE public.festival_ticket_plans'''
+          if ticket_anchor in sql and ticket_replacement not in sql:
+              sql = sql.replace(ticket_anchor, ticket_replacement, 1)
+          elif ticket_replacement not in sql:
+              raise SystemExit("ticket idempotency/version anchor missing")
+
+          artist_version = '''  SELECT coalesce(max(planning_version), 0) INTO old_version
+          FROM public.festival_artist_programmes
+          WHERE festival_edition_id = edition.id;
+          IF old_version <> p_expected_version THEN
+            RAISE EXCEPTION 'festival_artist_programme_stale' USING ERRCODE = 'P0001';
+          END IF;
+
+          '''
+          if artist_version in sql:
+              sql = sql.replace(artist_version, "", 1)
+          artist_anchor = '''    ) RETURNING * INTO request;
+          END IF;
+
+          INSERT INTO public.festival_artist_programmes'''
+          artist_replacement = '''    ) RETURNING * INTO request;
+          END IF;
+
+          SELECT coalesce(max(planning_version), 0) INTO old_version
+          FROM public.festival_artist_programmes
+          WHERE festival_edition_id = edition.id;
+          IF old_version <> p_expected_version THEN
+            RAISE EXCEPTION 'festival_artist_programme_stale' USING ERRCODE = 'P0001';
+          END IF;
+
+          INSERT INTO public.festival_artist_programmes'''
+          if artist_anchor in sql and artist_replacement not in sql:
+              sql = sql.replace(artist_anchor, artist_replacement, 1)
+          elif artist_replacement not in sql:
+              raise SystemExit("artist idempotency/version anchor missing")
+
           if re.search(r"^\s*SET forecast = forecast,", sql, re.MULTILINE):
               raise SystemExit("ambiguous forecast assignment remains")
           if re.search(r"^\s*forecast := public\._festival_projection_forecast", sql, re.MULTILINE):
               raise SystemExit("ambiguous forecast variable remains")
+          if sql.index("request.status = 'succeeded'") > sql.index("festival_ticket_plan_stale"):
+              raise SystemExit("ticket stale check still precedes replay")
+          artist_start = sql.index("CREATE OR REPLACE FUNCTION public.save_festival_edition_artist_programme")
+          artist_sql = sql[artist_start:]
+          if artist_sql.index("request.status = 'succeeded'") > artist_sql.index("festival_artist_programme_stale"):
+              raise SystemExit("artist stale check still precedes replay")
           migration.write_text(sql)
           PY
           if git diff --quiet -- supabase/migrations/20291218245500_festival_edition_internal_projections.sql; then
-            echo "Projection SQL variables already hardened."
+            echo "Projection SQL contracts already hardened."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add supabase/migrations/20291218245500_festival_edition_internal_projections.sql
-          git commit -m "Harden edition projection SQL variables"
+          git commit -m "Make edition projection retries idempotent"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
