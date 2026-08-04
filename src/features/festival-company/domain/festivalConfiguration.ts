@@ -43,6 +43,63 @@ export interface FestivalCatalogueOption {
   displayName: string;
   description: string;
 }
+
+const fallbackVibes: FestivalCatalogueOption[] = [
+  {
+    key: "community",
+    displayName: "Community",
+    description: "Welcoming and locally rooted.",
+  },
+  {
+    key: "alternative",
+    displayName: "Alternative",
+    description: "Independent and discovery-led.",
+  },
+  {
+    key: "mainstream",
+    displayName: "Mainstream",
+    description: "Broad, high-energy appeal.",
+  },
+  {
+    key: "premium",
+    displayName: "Premium",
+    description: "Curated hospitality-led experience.",
+  },
+];
+const fallbackSiteTypes: FestivalCatalogueOption[] = [
+  {
+    key: "indoor",
+    displayName: "Indoor",
+    description: "Weather-protected venue approach.",
+  },
+  {
+    key: "outdoor",
+    displayName: "Outdoor",
+    description: "Open-air festival site.",
+  },
+  {
+    key: "mixed",
+    displayName: "Mixed",
+    description: "Combined indoor and outdoor site.",
+  },
+];
+const fallbackEnvironmentalPolicies: FestivalCatalogueOption[] = [
+  {
+    key: "standard",
+    displayName: "Standard",
+    description: "Meet baseline environmental requirements.",
+  },
+  {
+    key: "responsible",
+    displayName: "Responsible",
+    description: "Reduce waste and travel impact.",
+  },
+  {
+    key: "regenerative",
+    displayName: "Regenerative",
+    description: "Invest in measurable positive impact.",
+  },
+];
 export interface FestivalConfiguration {
   festivalCompanyId: string;
   legalCompanyName: string;
@@ -147,6 +204,21 @@ const parseScale = (value: unknown): FestivalScaleOption | null => {
     return null;
   return value as unknown as FestivalScaleOption;
 };
+const parseCatalogue = (entry: unknown): FestivalCatalogueOption | null =>
+  object(entry) &&
+  nonEmpty(entry.key) &&
+  nonEmpty(entry.displayName) &&
+  nonEmpty(entry.description)
+    ? (entry as unknown as FestivalCatalogueOption)
+    : null;
+const parseCatalogueList = (
+  value: unknown,
+  fallback: FestivalCatalogueOption[],
+): FestivalCatalogueOption[] => {
+  if (!Array.isArray(value)) return fallback;
+  const parsed = value.map(parseCatalogue).filter((entry) => entry !== null);
+  return parsed.length > 0 ? parsed : fallback;
+};
 const malformed = (): never => {
   throw new Error("malformed_festival_configuration_result");
 };
@@ -186,23 +258,17 @@ export function parseFestivalConfiguration(
     (value.configurationVersion as number) < 1 ||
     typeof value.canWrite !== "boolean" ||
     !Array.isArray(value.scales) ||
-    !Array.isArray(value.cities) ||
-    !Array.isArray(value.vibes) ||
-    !Array.isArray(value.siteTypes) ||
-    !Array.isArray(value.environmentalPolicies)
+    !Array.isArray(value.cities)
   )
     return malformed();
-  const scales = value.scales.map(parseScale);
-  const cities = value.cities.map(parseCity);
-  const parseCatalogue = (entry: unknown): FestivalCatalogueOption | null =>
-    object(entry) && nonEmpty(entry.key) && nonEmpty(entry.displayName) && nonEmpty(entry.description)
-      ? entry as unknown as FestivalCatalogueOption
-      : null;
-  const vibes = value.vibes.map(parseCatalogue);
-  const siteTypes = value.siteTypes.map(parseCatalogue);
-  const environmentalPolicies = value.environmentalPolicies.map(parseCatalogue);
-  if (scales.some((entry) => !entry) || cities.some((entry) => !entry) || vibes.some((entry) => !entry) || siteTypes.some((entry) => !entry) || environmentalPolicies.some((entry) => !entry))
-    return malformed();
+  const scales = value.scales.map(parseScale).filter((entry) => entry !== null);
+  const cities = value.cities.map(parseCity).filter((entry) => entry !== null);
+  const vibes = parseCatalogueList(value.vibes, fallbackVibes);
+  const siteTypes = parseCatalogueList(value.siteTypes, fallbackSiteTypes);
+  const environmentalPolicies = parseCatalogueList(
+    value.environmentalPolicies,
+    fallbackEnvironmentalPolicies,
+  );
   const homeCity = value.homeCity === null ? null : parseCity(value.homeCity);
   const festivalScale = value.festivalScale;
   const start = value.plannedStartDate;
