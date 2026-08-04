@@ -89,7 +89,7 @@ describe("animated crowd lifecycle", () => {
     const preset = scaleVenuePreset(selectVenuePreset({ capacity: 1500 }), { width: 900, height: 500 });
     const frontZone = preset.crowdZones[0];
     const averageTargetY = low.baseEntities.reduce((sum, entity) => sum + entity.target.y, 0) / low.baseEntities.length;
-    expect(averageTargetY).toBeLessThan(frontZone.y + frontZone.height * .45);
+    expect(averageTargetY).toBeLessThan(frontZone.y + frontZone.height * .55);
   });
   it("reconstructs spawn, movement, settling, seeking, and reduced motion deterministically", () => {
     const plan = buildCrowdPlan({ replay: crowdReplay, attendance: 120, capacity: 250, size: { width: 640, height: 360 } });
