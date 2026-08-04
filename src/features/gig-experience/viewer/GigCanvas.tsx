@@ -2,11 +2,13 @@ import { useEffect, useRef } from "react";
 import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
 import { CrowdTuningPanel, useDemoCrowdTuning } from "./CrowdTuningPanel";
+import { GlobalCrowdDefaultsControls } from "./GlobalCrowdDefaultsControls";
 import type { DerivedPlaybackState } from "./engine/PlaybackController";
 import { CanvasRenderer } from "./engine/CanvasRenderer";
 import type { CrowdTuningOptions } from "./engine/CrowdTuning";
 import { crowdTuningSignature } from "./engine/CrowdTuning";
 import { useCanvasSize } from "./hooks/useCanvasSize";
+import { useGlobalCrowdTuning } from "./hooks/useGlobalCrowdTuning";
 
 export function GigCanvas({
   replay,
@@ -34,7 +36,15 @@ export function GigCanvas({
   const rendererRef = useRef<CanvasRenderer | null>(null);
   const size = useCanvasSize(wrapRef, { fill });
   const demoTuning = useDemoCrowdTuning();
-  const resolvedCrowdTuning = crowdTuning ?? (demoTuning.demoMode ? demoTuning.value : null);
+  const replayTuning = replay.crowdTuning ?? null;
+  const shouldLoadGlobal = !crowdTuning && !demoTuning.demoMode && !replayTuning;
+  const globalTuning = useGlobalCrowdTuning(shouldLoadGlobal);
+  const resolvedCrowdTuning =
+    crowdTuning ??
+    (demoTuning.demoMode ? demoTuning.value : null) ??
+    replayTuning ??
+    globalTuning.data?.settings ??
+    null;
   const tuningKey = crowdTuningSignature(resolvedCrowdTuning);
 
   useEffect(() => {
@@ -59,12 +69,15 @@ export function GigCanvas({
   return (
     <div className={className ?? (fill ? "h-full w-full" : "w-full")}>
       {demoTuning.demoMode && !fill ? (
-        <CrowdTuningPanel
-          value={demoTuning.value}
-          onChange={demoTuning.setValue}
-          attendance={attendance}
-          capacity={capacity}
-        />
+        <>
+          <GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} />
+          <CrowdTuningPanel
+            value={demoTuning.value}
+            onChange={demoTuning.setValue}
+            attendance={attendance}
+            capacity={capacity}
+          />
+        </>
       ) : null}
       <div ref={wrapRef} className={fill ? "h-full w-full" : "w-full"}>
         <canvas
