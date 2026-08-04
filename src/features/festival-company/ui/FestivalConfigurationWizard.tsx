@@ -85,9 +85,17 @@ export function FestivalConfigurationWizard({
   if (query.isError || !query.data || !draft)
     return (
       <Alert variant="destructive">
-        <AlertDescription>
-          Festival configuration could not be loaded. Check that you own this
-          company and try again.
+        <AlertDescription className="space-y-3">
+          <p>{festivalConfigurationErrorMessage(query.error)}</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            {query.isFetching ? "Retrying…" : "Try again"}
+          </Button>
         </AlertDescription>
       </Alert>
     );
