@@ -17,7 +17,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.647",
+    date: "2026-08-04",
+    changes: [
+      { type: 'feature', description: "Festival setup can now be completed: the Festival upgrades workspace is fully working, with 11 investment areas (site, stages, security, medical, sanitation, backstage, audience facilities, camping, transport, marketing and sustainability) each progressing across 50 levels through Basic, Established, Professional, Major and World Class bands." },
+      { type: 'feature', description: "Festival licensing is live — owners can apply for, upgrade and renew Community, Local, Regional, National and International licences, each setting the permitted attendance, days, stages, acts per day and whether camping is allowed." },
+      { type: 'feature', description: "Upgrade purchases now cost money, take build time before they activate, show the exact effect gain (capacity, quality, safety, revenue) and are limited to two purchases per 30 days, with every purchase recorded in the company ledger and audit trail." },
+      { type: 'improvement', description: "Upgrade cards now explain precisely why a purchase is blocked, listing licence tier, reputation and funding shortfalls instead of failing silently." },
+      { type: 'fix', description: "Fixed the Festival upgrades and licence screens failing to load because their backend was missing." },
+    ],
+  },
+  {
     version: "1.1.646",
+
     date: "2026-08-03",
     changes: [
       { type: 'feature', description: "Festival launch layer is live: Festival owners can now write a public Festival profile (name, tagline, description, travel, camping, accessibility, age guidance, terms and refunds), send it to launch review and publish the Festival to the world." },
