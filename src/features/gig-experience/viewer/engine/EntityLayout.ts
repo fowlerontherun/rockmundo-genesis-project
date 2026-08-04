@@ -44,6 +44,7 @@ export function buildEntityLayout({ replay, experience, size, reducedMotion = fa
 }
 
 function randomPointIn(rect: Rect, rand: () => number): Point { return { x: rect.x + rand() * rect.width, y: rect.y + rand() * rect.height }; }
+function frontBiasedPointIn(rect: Rect, rand: () => number): Point { return { x: rect.x + rand() * rect.width, y: rect.y + Math.pow(rand(), 1.6) * rect.height }; }
 function pointInAny(point: Point, rects: Rect[]) { return rects.some((r) => pointInRect(point, r)); }
 function metricNumber(metric: any): number | null { return metric?.status === "available" && typeof metric.value === "number" ? metric.value : null; }
 function crowdAttendanceFromReplay(replay: GigViewerReplay) { const reveal = replay.events.find((e) => e.visualPayload.type === "result_reveal"); return reveal?.visualPayload.type === "result_reveal" ? reveal.visualPayload.attendance ?? 0 : 0; }
