@@ -65,9 +65,9 @@ describe("animated crowd lifecycle", () => {
   });
   it("centralizes caps by device mode", () => {
     expect(selectCrowdEntityCap({ reducedMotion: true, width: 1400 })).toBeLessThanOrEqual(150);
-    expect(selectCrowdEntityCap({ reducedMotion: false, width: 390 })).toBe(420);
-    expect(selectCrowdEntityCap({ reducedMotion: false, width: 800 })).toBe(900);
-    expect(selectCrowdEntityCap({ reducedMotion: false, width: 1300 })).toBe(1400);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 390 })).toBe(900);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 800 })).toBe(1900);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 1300 })).toBe(2900);
   });
   it("assigns entrances and target positions deterministically inside audience bounds", () => {
     const plan = buildCrowdPlan({ replay: crowdReplay, attendance: 503, capacity: 1500, size: { width: 900, height: 500 } });
