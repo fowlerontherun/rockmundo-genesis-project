@@ -10,7 +10,7 @@ export interface CrowdMilestone { key: string; label: string; progress: number; 
 export interface CrowdState { entities: CrowdEntity[]; attendance: number; capacity: number; cap: number; fillProgress: number; phaseLabel: string; occupiedZones: string[]; milestones: CrowdMilestone[]; diagnostics: { entityCount: number; movingCount: number; settledCount: number } }
 export interface CrowdLayoutPlan { baseEntities: CrowdEntity[]; attendance: number; capacity: number; cap: number; entryStartMs: number; entryEndMs: number; milestones: CrowdMilestone[] }
 
-export const CROWD_ENTITY_CAPS = { reducedMotion: 150, mobileLow: 420, mobileDefault: 650, tablet: 900, desktopDefault: 1400, desktopHigh: 2200 } as const;
+export const CROWD_ENTITY_CAPS = { reducedMotion: 150, mobileLow: 900, mobileDefault: 1400, tablet: 1900, desktopDefault: 2900, desktopHigh: 4600 } as const;
 
 export function selectCrowdEntityCap({ reducedMotion, width, devicePixelRatio = 1, attendanceRatio = 0, highPerformance = false }: { reducedMotion: boolean; width: number; devicePixelRatio?: number; attendanceRatio?: number; highPerformance?: boolean }) {
   if (reducedMotion) return CROWD_ENTITY_CAPS.reducedMotion;
