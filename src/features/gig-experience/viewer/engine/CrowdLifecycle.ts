@@ -31,7 +31,7 @@ export function buildCrowdPlan({ replay, attendance, capacity, size, reducedMoti
   const safeAttendance = Math.max(0, Math.floor(Number.isFinite(attendance) ? attendance : 0));
   const safeCapacity = Math.max(0, Math.floor(Number.isFinite(capacity) ? capacity : 0));
   const ratio = safeCapacity > 0 ? Math.min(1, safeAttendance / safeCapacity) : 0;
-  const cap = selectCrowdEntityCap({ reducedMotion, width: size.width, devicePixelRatio, attendanceRatio: ratio, highPerformance: false });
+  const cap = selectCrowdEntityCap({ reducedMotion, width: size.width, devicePixelRatio, attendanceRatio: ratio, highPerformance: ratio > .85 });
   const preset = scaleVenuePreset(selectVenuePreset({ capacity: safeCapacity }), size);
   const weights = representedWeights(safeAttendance, cap);
   const entryStartMs = findEventOffset(replay, "venue_open", 0);
