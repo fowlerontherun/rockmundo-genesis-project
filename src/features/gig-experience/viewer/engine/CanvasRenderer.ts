@@ -1,7 +1,8 @@
 import type { GigViewerReplay } from "../../events/types";
 import type { GigExperienceDTO } from "../../types";
 import type { DerivedPlaybackState } from "./PlaybackController";
-import { buildCrowdPlan, reconstructCrowdState, type CrowdLayoutPlan } from "./CrowdLifecycle";
+import { reconstructCrowdState, type CrowdLayoutPlan } from "./CrowdLifecycle";
+import { buildTunedCrowdPlan, type CrowdTuningOptions } from "./CrowdTuning";
 import { buildEntityLayout, type EntityLayout } from "./EntityLayout";
 import { buildPerformerPlan, reconstructPerformerState, type PerformerPlan } from "./PerformerLifecycle";
 import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEngine";
@@ -23,7 +24,17 @@ export class CanvasRenderer {
   private pyroPlan: PyroPlan | null = null;
   private audiencePlan: AudienceActivityPlan | null = null;
 
-  constructor(private canvas: HTMLCanvasElement, private replay: GigViewerReplay, private experience: GigExperienceDTO | null, private reducedMotion: boolean, private options: { pyrotechnics?: boolean; pyroIntensity?: number } = {}) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private replay: GigViewerReplay,
+    private experience: GigExperienceDTO | null,
+    private reducedMotion: boolean,
+    private options: {
+      pyrotechnics?: boolean;
+      pyroIntensity?: number;
+      crowdTuning?: Partial<CrowdTuningOptions> | null;
+    } = {},
+  ) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas is unavailable");
     this.ctx = ctx;
@@ -44,10 +55,24 @@ export class CanvasRenderer {
     this.canvas.style.width = `${this.size.width}px`;
     this.canvas.style.height = `${this.size.height}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const scaledPreset = scaleVenuePreset(selectVenuePreset({
+      capacity: this.experience?.gig?.venue?.capacity,
+      venueName: this.experience?.gig?.venue?.name,
+      venueType: (this.experience?.gig?.venue as any)?.type ?? null,
+      variantSeed: this.experience?.gig?.venue?.id ?? this.experience?.gig?.venue?.name ?? null,
+    }), this.size);
     this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion });
-    this.crowdPlan = buildCrowdPlan({ replay: this.replay, attendance: this.layout.attendance, capacity: this.layout.capacity, size: this.size, reducedMotion: this.reducedMotion, devicePixelRatio: this.dpr });
+    this.crowdPlan = buildTunedCrowdPlan({
+      replay: this.replay,
+      attendance: this.layout.attendance,
+      capacity: this.layout.capacity,
+      size: this.size,
+      preset: scaledPreset,
+      reducedMotion: this.reducedMotion,
+      devicePixelRatio: this.dpr,
+      tuning: this.options.crowdTuning,
+    });
     this.performerPlan = buildPerformerPlan({ replay: this.replay, experience: this.experience, size: this.size });
-    const scaledPreset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig?.venue?.capacity, venueName: this.experience?.gig?.venue?.name, venueType: (this.experience?.gig?.venue as any)?.type ?? null, variantSeed: this.experience?.gig?.venue?.id ?? this.experience?.gig?.venue?.name ?? null }), this.size);
     this.audiencePlan = buildAudienceActivityPlan({ preset: scaledPreset, seed: (this.replay as any).simulationSeed ?? this.replay.id, attendanceRatio: this.layout.capacity > 0 ? this.layout.attendance / this.layout.capacity : 0.6, reducedMotion: this.reducedMotion });
   }
 
@@ -62,32 +87,22 @@ export class CanvasRenderer {
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
 
     ctx.clearRect(0, 0, size.width, size.height);
-    // Themed background + audience floor
     drawBackground(ctx, preset, size);
     drawVenueShell(ctx, preset, size);
     drawFloor(ctx, preset);
-    // Occupied audience zone tint
     if (crowd && preset.crowdZones.length > 1) {
       ctx.globalAlpha = .14 + crowd.fillProgress * .14;
       ctx.fillStyle = preset.decorations.palette.accent;
       preset.crowdZones.forEach((z, i) => { if (crowd.occupiedZones.some((id) => id.startsWith(i === 0 ? "front" : "middle"))) ctx.fillRect(z.x, z.y, z.width, z.height); });
       ctx.globalAlpha = 1;
     }
-    // Entrances
     ctx.fillStyle = "#111827";
     preset.entrances.forEach((p) => { ctx.fillRect(p.x - 12, p.y - 8, 24, 16); });
-    // Stage, decor, lights
-    // FOH tower + security + tape marks in audience area
     drawFOHAndSecurity(ctx, preset);
-    // Stage, decor, lights
     drawStage(ctx, preset, state.positionMs, this.reducedMotion, storySnapshot.crowdEnergy);
-    // Extra stage decor (subwoofers, cables, mic stands, guitar rack, LED lip, banner)
     drawStageExtras(ctx, preset, state.positionMs, this.reducedMotion, storySnapshot.crowdEnergy);
-    // Follow spots from FOH to stage
     drawFollowSpots(ctx, preset, state.positionMs, this.reducedMotion, storySnapshot.crowdEnergy);
-    // Crash barrier at stage edge
     drawBarrier(ctx, preset);
-    // Backstage marker
     ctx.fillStyle = "#9ca3af";
     ctx.beginPath(); ctx.arc(preset.backstage.x, preset.backstage.y, 10, 0, Math.PI * 2); ctx.fill();
 
@@ -118,11 +133,8 @@ export class CanvasRenderer {
       ctx.font = "bold 8px sans-serif"; ctx.fillText(p.label, p.currentPosition.x, p.currentPosition.y + 8);
     });
 
-    // Security line + crowd activity (pit circles, surfers, flags, banners) above the crowd
     if (this.audiencePlan) drawAudienceActivity(ctx, this.audiencePlan, { positionMs: state.positionMs, energy: storySnapshot.crowdEnergy, reducedMotion: this.reducedMotion });
-    // Atmosphere overlay (haze/strobe) above the crowd but below overlays
     drawAtmosphere(ctx, preset, size, storySnapshot.crowdEnergy, state.positionMs, this.reducedMotion);
-    // Pyrotechnics / fireworks cue sheet (presentation only)
     drawPyrotechnics(ctx, preset, size, { plan: this.pyroPlan, positionMs: state.positionMs, reducedMotion: this.reducedMotion, crowdEnergy: storySnapshot.crowdEnergy });
 
     if (state.activeEvent?.visualPayload.type === "spotlight" || state.activeEvent?.visualPayload.type === "moment_effect") {
@@ -136,9 +148,11 @@ export class CanvasRenderer {
     }
     if (storySnapshot.finaleActive && !this.reducedMotion && storySnapshot.crowdEnergy >= 85) { ctx.globalAlpha = .75; ctx.fillStyle = "#facc15"; for (let i = 0; i < 20; i++) ctx.fillRect((i * 37 + state.positionMs / 20) % size.width, 30 + (i % 5) * 20, 3, 8); ctx.globalAlpha = 1; }
     if (state.activeEvent?.visualPayload.type === "result_reveal") {
-      ctx.fillStyle = "rgba(22, 163, 74, .86)"; ctx.fillRect(size.width * .25, size.height * .42, size.width * .5, 52); ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 18px sans-serif"; ctx.fillText("Result ready", size.width / 2, size.height * .42 + 31);
+      ctx.fillStyle = "rgba(22, 163, 74,.86)"; ctx.fillRect(size.width * .25, size.height * .42, size.width * .5, 52); ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 18px sans-serif"; ctx.fillText("Result ready", size.width / 2, size.height * .42 + 31);
     }
   }
+
   destroy() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
 }
+
 function label(phase: string) { return phase.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
