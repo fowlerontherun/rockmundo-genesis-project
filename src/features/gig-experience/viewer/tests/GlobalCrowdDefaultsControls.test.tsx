@@ -3,16 +3,23 @@ import { describe, expect, it, vi } from "vitest";
 import { GlobalCrowdDefaultsControls } from "../GlobalCrowdDefaultsControls";
 import { DEFAULT_CROWD_TUNING } from "../engine/CrowdTuning";
 
-const globalSettings = {
-  ...DEFAULT_CROWD_TUNING,
-  densityMultiplier: 2,
-};
+const mockState = vi.hoisted(() => ({
+  globalSettings: {
+    densityMultiplier: 2,
+    depthSpread: 1,
+    lateralSpread: 1,
+    stagePull: 0,
+    randomness: 0,
+    fanScale: 1,
+    arrivalSpeed: 1,
+  },
+}));
 
 vi.mock("../hooks/useGlobalCrowdTuning", () => ({
   useGlobalCrowdTuning: () => ({
     data: {
       revision: 4,
-      settings: globalSettings,
+      settings: mockState.globalSettings,
       updatedAt: "2026-08-04T12:00:00Z",
       updatedBy: "admin-user",
       reason: "Previous crowd balance",
@@ -49,6 +56,6 @@ describe("global crowd defaults controls", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Load global into demo" }));
-    expect(onLoad).toHaveBeenCalledWith(globalSettings);
+    expect(onLoad).toHaveBeenCalledWith(mockState.globalSettings);
   });
 });
