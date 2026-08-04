@@ -10,7 +10,7 @@ export interface CrowdMilestone { key: string; label: string; progress: number; 
 export interface CrowdState { entities: CrowdEntity[]; attendance: number; capacity: number; cap: number; fillProgress: number; phaseLabel: string; occupiedZones: string[]; milestones: CrowdMilestone[]; diagnostics: { entityCount: number; movingCount: number; settledCount: number } }
 export interface CrowdLayoutPlan { baseEntities: CrowdEntity[]; attendance: number; capacity: number; cap: number; entryStartMs: number; entryEndMs: number; milestones: CrowdMilestone[] }
 
-export const CROWD_ENTITY_CAPS = { reducedMotion: 150, mobileLow: 420, mobileDefault: 650, tablet: 900, desktopDefault: 1400, desktopHigh: 2200 } as const;
+export const CROWD_ENTITY_CAPS = { reducedMotion: 150, mobileLow: 900, mobileDefault: 1400, tablet: 1900, desktopDefault: 2900, desktopHigh: 4600 } as const;
 
 export function selectCrowdEntityCap({ reducedMotion, width, devicePixelRatio = 1, attendanceRatio = 0, highPerformance = false }: { reducedMotion: boolean; width: number; devicePixelRatio?: number; attendanceRatio?: number; highPerformance?: boolean }) {
   if (reducedMotion) return CROWD_ENTITY_CAPS.reducedMotion;
@@ -31,7 +31,7 @@ export function buildCrowdPlan({ replay, attendance, capacity, size, reducedMoti
   const safeAttendance = Math.max(0, Math.floor(Number.isFinite(attendance) ? attendance : 0));
   const safeCapacity = Math.max(0, Math.floor(Number.isFinite(capacity) ? capacity : 0));
   const ratio = safeCapacity > 0 ? Math.min(1, safeAttendance / safeCapacity) : 0;
-  const cap = selectCrowdEntityCap({ reducedMotion, width: size.width, devicePixelRatio, attendanceRatio: ratio, highPerformance: false });
+  const cap = selectCrowdEntityCap({ reducedMotion, width: size.width, devicePixelRatio, attendanceRatio: ratio, highPerformance: ratio > .85 });
   const preset = scaleVenuePreset(selectVenuePreset({ capacity: safeCapacity }), size);
   const weights = representedWeights(safeAttendance, cap);
   const entryStartMs = findEventOffset(replay, "venue_open", 0);
@@ -45,7 +45,8 @@ export function buildCrowdPlan({ replay, attendance, capacity, size, reducedMoti
     const entranceIndex = weightedIndex(i, preset.entrances.length || 1, replay.simulationSeed);
     const entrance = preset.entrances[entranceIndex] ?? fallbackEntrance(preset.audience);
     const start = boundedEntrancePoint(entrance, preset.audience, rand, i);
-    const zone = zones[Math.min(zones.length - 1, Math.floor((i / Math.max(1, weights.length)) * zones.length))] ?? { id: "front-centre", rect: preset.audience };
+    const frontBias = Math.pow(i / Math.max(1, weights.length), 2.1);
+    const zone = zones[Math.min(zones.length - 1, Math.floor(frontBias * zones.length))] ?? { id: "front-centre", rect: preset.audience };
     const target = deterministicPointIn(zone.rect, rand, i);
     const waypoint = { x: start.x + (target.x - start.x) * .45, y: Math.max(preset.audience.y + 8, start.y + (target.y - start.y) * .35) };
     const stagger = weights.length <= 1 ? 0 : i / (weights.length - 1);
@@ -72,7 +73,7 @@ function deterministicRandom(seed: string) { let s = hashSeed(seed); return () =
 function projectEntity(e: CrowdEntity, pos: number, reducedMotion: boolean): CrowdEntity { if (reducedMotion) { const visible = pos >= e.spawnOffsetMs; return { ...e, x: e.target.x, y: e.target.y, state: visible ? "waiting" : "queued", visible }; } if (pos < e.spawnOffsetMs) return { ...e, x: e.start.x, y: e.start.y, state: "queued", visible: false }; const t = Math.min(1, (pos - e.spawnOffsetMs) / Math.max(1, e.travelMs)); const p = t < .35 ? lerp(e.start, e.waypoint, ease(t / .35)) : lerp(e.waypoint, e.target, ease((t - .35) / .65)); const state = t < .18 ? "entering" : t < .92 ? "moving_to_zone" : t < 1 ? "settling" : "waiting"; const idle = state === "waiting" ? Math.sin(pos / 950 + e.idlePhase) * 1.2 : 0; return { ...e, x: p.x + idle, y: p.y, state, visible: true }; }
 function splitZones(zones: Rect[], ratio: number) { const source = zones.length ? zones : [{ x: 0, y: 0, width: 1, height: 1 }]; const parts = source.flatMap((z, zi) => ["centre", "left", "right"].map((part, pi) => ({ id: `${zi === 0 ? "front" : zi === 1 ? "middle" : "rear"}-${part}`, rect: thirdRect(z, pi) }))); const count = ratio < .25 ? Math.min(3, parts.length) : ratio < .65 ? Math.min(5, parts.length) : parts.length; return parts.slice(0, Math.max(1, count)); }
 function thirdRect(r: Rect, part: number): Rect { if (part === 0) return { x: r.x + r.width * .25, y: r.y, width: r.width * .5, height: r.height }; if (part === 1) return { x: r.x, y: r.y, width: r.width * .28, height: r.height }; return { x: r.x + r.width * .72, y: r.y, width: r.width * .28, height: r.height }; }
-function deterministicPointIn(rect: Rect, rand: () => number, i: number): Point { const cols = Math.max(3, Math.ceil(Math.sqrt(i + 7))); const rows = cols; const col = i % cols; const row = Math.floor(i / cols) % rows; return { x: rect.x + ((col + .35 + rand() * .3) / cols) * rect.width, y: rect.y + ((row + .35 + rand() * .3) / rows) * rect.height }; }
+function deterministicPointIn(rect: Rect, rand: () => number, i: number): Point { const cols = Math.max(3, Math.ceil(Math.sqrt(i + 7))); const rows = cols; const col = i % cols; const row = Math.floor(i / cols) % rows; const rowFrac = (row + .35 + rand() * .3) / rows; return { x: rect.x + ((col + .35 + rand() * .3) / cols) * rect.width, y: rect.y + Math.pow(rowFrac, 1.45) * rect.height }; }
 function boundedEntrancePoint(entrance: Point, audience: Rect, rand: () => number, i: number): Point { const spread = 18; const p = { x: entrance.x + (rand() - .5) * spread + ((i % 5) - 2) * 2, y: entrance.y + (rand() - .5) * 10 }; return pointInRect(p, audience) ? p : { x: Math.min(audience.x + audience.width - 8, Math.max(audience.x + 8, p.x)), y: Math.min(audience.y + audience.height - 8, Math.max(audience.y + 8, p.y)) }; }
 function fallbackEntrance(audience: Rect): Point { return { x: audience.x + audience.width / 2, y: audience.y + audience.height - 8 }; }
 function weightedIndex(i: number, count: number, seed: string) { return Math.abs((i * 1103515245 + seed.length * 97) % Math.max(1, count)); }

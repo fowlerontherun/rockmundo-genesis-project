@@ -21,12 +21,14 @@ export function buildEntityLayout({ replay, experience, size, reducedMotion = fa
   const preset = scaleVenuePreset(selectVenuePreset({ capacity }), size);
   const rand = deterministicRandom(`${replay.simulationSeed}:${preset.name}:${Math.round(size.width)}x${Math.round(size.height)}`);
   const fillRatio = capacity > 0 ? Math.min(1, attendance / capacity) : 0;
-  const cap = selectCrowdEntityCap({ reducedMotion, width: size.width, attendanceRatio: fillRatio, highPerformance: fillRatio > .9 && capacity > 2000 });
-  const visualCount = attendance <= 0 ? 0 : Math.max(1, Math.min(cap, Math.round(Math.sqrt(attendance) * fillRatio * 7 + cap * fillRatio * .45)));
+  const cap = selectCrowdEntityCap({ reducedMotion, width: size.width, attendanceRatio: fillRatio, highPerformance: fillRatio > .85 });
+  const visualCount = attendance <= 0 ? 0 : Math.max(1, Math.min(cap, Math.round(Math.sqrt(attendance) * fillRatio * 14 + cap * fillRatio * .8)));
   const crowd: CrowdEntity[] = [];
   for (let i = 0; i < visualCount; i++) {
-    const zone = preset.crowdZones[i % preset.crowdZones.length];
-    const point = randomPointIn(zone, rand);
+    // Front zones are listed first, so bias placement towards the stage like a real crowd.
+    const zoneIndex = Math.min(preset.crowdZones.length - 1, Math.floor(Math.pow(i / Math.max(1, visualCount), 2.1) * preset.crowdZones.length));
+    const zone = preset.crowdZones[zoneIndex] ?? preset.crowdZones[0];
+    const point = frontBiasedPointIn(zone, rand);
     if (!pointInAny(point, [preset.stage])) crowd.push({ id: `crowd-${i}`, x: point.x, y: point.y, weight: Math.max(1, Math.round(attendance / Math.max(1, visualCount))) });
   }
   const performers = performerInputs(replay, experience).map((p, index, arr) => {
@@ -42,6 +44,7 @@ export function buildEntityLayout({ replay, experience, size, reducedMotion = fa
 }
 
 function randomPointIn(rect: Rect, rand: () => number): Point { return { x: rect.x + rand() * rect.width, y: rect.y + rand() * rect.height }; }
+function frontBiasedPointIn(rect: Rect, rand: () => number): Point { return { x: rect.x + rand() * rect.width, y: rect.y + Math.pow(rand(), 1.6) * rect.height }; }
 function pointInAny(point: Point, rects: Rect[]) { return rects.some((r) => pointInRect(point, r)); }
 function metricNumber(metric: any): number | null { return metric?.status === "available" && typeof metric.value === "number" ? metric.value : null; }
 function crowdAttendanceFromReplay(replay: GigViewerReplay) { const reveal = replay.events.find((e) => e.visualPayload.type === "result_reveal"); return reveal?.visualPayload.type === "result_reveal" ? reveal.visualPayload.attendance ?? 0 : 0; }

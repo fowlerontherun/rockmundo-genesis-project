@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.648",
+    date: "2026-08-04",
+    changes: [
+      { type: 'improvement', description: "Gig viewer crowds are roughly twice as dense, so sold-out shows now look genuinely packed on mobile, tablet and desktop." },
+      { type: 'improvement', description: "Fans now pack the front of the venue closest to the stage first, spilling back and out to the sides only as the crowd grows — matching real shows instead of clustering at the back." },
+      { type: 'fix', description: "Applied the same crowd density and stage-front placement to the Gig Viewer Demo so it matches live gigs." },
+    ],
+  },
+  {
     version: "1.1.647",
     date: "2026-08-04",
     changes: [
