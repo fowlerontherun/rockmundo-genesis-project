@@ -56,7 +56,7 @@ export function CrowdTuningPanel({
   const visualFans = Math.max(0, Math.ceil(attendance * value.densityMultiplier));
   const fillPercent = capacity > 0 ? Math.round((attendance / capacity) * 100) : 0;
 
-  const update = <Key extends keyof CrowdTuningOptions>(key: Key, next: CrowdTuningOptions[Key]) => {
+  const update = <Key extends keyof CrowdTuningOptions,>(key: Key, next: CrowdTuningOptions[Key]) => {
     onChange(normalizeCrowdTuning({ ...value, [key]: next }));
   };
 
