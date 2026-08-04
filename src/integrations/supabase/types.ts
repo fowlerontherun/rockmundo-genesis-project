@@ -12493,6 +12493,7 @@ export type Database = {
           description: string | null
           environmental_policy: string | null
           id: string
+          licence_version: number
           owner_profile_id: string
           public_name: string
           setup_completed: boolean
@@ -12500,6 +12501,7 @@ export type Database = {
           status: string
           tagline: string | null
           updated_at: string
+          upgrade_version: number
         }
         Insert: {
           annual_month?: number | null
@@ -12513,6 +12515,7 @@ export type Database = {
           description?: string | null
           environmental_policy?: string | null
           id?: string
+          licence_version?: number
           owner_profile_id: string
           public_name: string
           setup_completed?: boolean
@@ -12520,6 +12523,7 @@ export type Database = {
           status?: string
           tagline?: string | null
           updated_at?: string
+          upgrade_version?: number
         }
         Update: {
           annual_month?: number | null
@@ -12533,6 +12537,7 @@ export type Database = {
           description?: string | null
           environmental_policy?: string | null
           id?: string
+          licence_version?: number
           owner_profile_id?: string
           public_name?: string
           setup_completed?: boolean
@@ -12540,6 +12545,7 @@ export type Database = {
           status?: string
           tagline?: string | null
           updated_at?: string
+          upgrade_version?: number
         }
         Relationships: [
           {
@@ -12687,6 +12693,117 @@ export type Database = {
             columns: ["actor_profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_company_licences: {
+        Row: {
+          created_at: string
+          festival_company_id: string
+          id: string
+          status: string
+          tier_key: string
+          updated_at: string
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          status: string
+          tier_key: string
+          updated_at?: string
+          valid_from?: string
+          valid_until: string
+        }
+        Update: {
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          status?: string
+          tier_key?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_company_licences_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_company_licences_tier_key_fkey"
+            columns: ["tier_key"]
+            isOneToOne: false
+            referencedRelation: "festival_licence_tiers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      festival_company_upgrades: {
+        Row: {
+          activated_at: string | null
+          active_level: number
+          build_completes_at: string | null
+          build_started_at: string | null
+          catalogue_version: number
+          category_key: string
+          created_at: string
+          festival_company_id: string
+          id: string
+          missed_upkeep_weeks: number
+          owned_level: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          active_level: number
+          build_completes_at?: string | null
+          build_started_at?: string | null
+          catalogue_version: number
+          category_key: string
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          missed_upkeep_weeks?: number
+          owned_level: number
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          active_level?: number
+          build_completes_at?: string | null
+          build_started_at?: string | null
+          catalogue_version?: number
+          category_key?: string
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          missed_upkeep_weeks?: number
+          owned_level?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_company_upgrades_category_key_fkey"
+            columns: ["category_key"]
+            isOneToOne: false
+            referencedRelation: "festival_upgrade_categories"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "festival_company_upgrades_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
             referencedColumns: ["id"]
           },
         ]
@@ -15323,6 +15440,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      festival_licence_tiers: {
+        Row: {
+          active: boolean
+          camping_allowed: boolean
+          display_name: string
+          fee_minor: number
+          key: string
+          max_acts_per_day: number
+          max_attendance: number
+          max_days: number
+          max_stages: number
+          minimum_reputation: number
+          rank: number
+          requirements: Json
+          validity_days: number
+        }
+        Insert: {
+          active?: boolean
+          camping_allowed: boolean
+          display_name: string
+          fee_minor: number
+          key: string
+          max_acts_per_day: number
+          max_attendance: number
+          max_days: number
+          max_stages: number
+          minimum_reputation: number
+          rank: number
+          requirements?: Json
+          validity_days: number
+        }
+        Update: {
+          active?: boolean
+          camping_allowed?: boolean
+          display_name?: string
+          fee_minor?: number
+          key?: string
+          max_acts_per_day?: number
+          max_attendance?: number
+          max_days?: number
+          max_stages?: number
+          minimum_reputation?: number
+          rank?: number
+          requirements?: Json
+          validity_days?: number
+        }
+        Relationships: []
       }
       festival_media_outcomes: {
         Row: {
@@ -20384,6 +20549,188 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_upgrade_audit: {
+        Row: {
+          actor_profile_id: string | null
+          after_value: Json | null
+          created_at: string
+          event_type: string
+          festival_company_id: string | null
+          id: number
+          reason: string | null
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          after_value?: Json | null
+          created_at?: string
+          event_type: string
+          festival_company_id?: string | null
+          id?: never
+          reason?: string | null
+        }
+        Update: {
+          actor_profile_id?: string | null
+          after_value?: Json | null
+          created_at?: string
+          event_type?: string
+          festival_company_id?: string | null
+          id?: never
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      festival_upgrade_catalogue_versions: {
+        Row: {
+          created_at: string
+          published_at: string | null
+          retired_at: string | null
+          status: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          published_at?: string | null
+          retired_at?: string | null
+          status: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          published_at?: string | null
+          retired_at?: string | null
+          status?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      festival_upgrade_categories: {
+        Row: {
+          active: boolean
+          description: string
+          display_name: string
+          display_order: number
+          key: string
+        }
+        Insert: {
+          active?: boolean
+          description: string
+          display_name: string
+          display_order: number
+          key: string
+        }
+        Update: {
+          active?: boolean
+          description?: string
+          display_name?: string
+          display_order?: number
+          key?: string
+        }
+        Relationships: []
+      }
+      festival_upgrade_levels: {
+        Row: {
+          active: boolean
+          build_duration: string
+          catalogue_version: number
+          category_key: string
+          effects: Json
+          level: number
+          level_name: string
+          minimum_company_reputation: number
+          minimum_licence_rank: number
+          purchase_cost_minor: number
+          weekly_upkeep_minor: number
+        }
+        Insert: {
+          active?: boolean
+          build_duration: string
+          catalogue_version: number
+          category_key: string
+          effects: Json
+          level: number
+          level_name: string
+          minimum_company_reputation?: number
+          minimum_licence_rank?: number
+          purchase_cost_minor: number
+          weekly_upkeep_minor: number
+        }
+        Update: {
+          active?: boolean
+          build_duration?: string
+          catalogue_version?: number
+          category_key?: string
+          effects?: Json
+          level?: number
+          level_name?: string
+          minimum_company_reputation?: number
+          minimum_licence_rank?: number
+          purchase_cost_minor?: number
+          weekly_upkeep_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_upgrade_levels_catalogue_version_fkey"
+            columns: ["catalogue_version"]
+            isOneToOne: false
+            referencedRelation: "festival_upgrade_catalogue_versions"
+            referencedColumns: ["version"]
+          },
+          {
+            foreignKeyName: "festival_upgrade_levels_category_key_fkey"
+            columns: ["category_key"]
+            isOneToOne: false
+            referencedRelation: "festival_upgrade_categories"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      festival_upgrade_purchase_operations: {
+        Row: {
+          actor_profile_id: string
+          amount_minor: number
+          category_key: string
+          completed_at: string | null
+          created_at: string
+          festival_company_id: string
+          id: string
+          idempotency_key: string
+          requested_level: number
+          status: string
+        }
+        Insert: {
+          actor_profile_id: string
+          amount_minor: number
+          category_key: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          idempotency_key: string
+          requested_level: number
+          status: string
+        }
+        Update: {
+          actor_profile_id?: string
+          amount_minor?: number
+          category_key?: string
+          completed_at?: string | null
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          idempotency_key?: string
+          requested_level?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_upgrade_purchase_operations_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
             referencedColumns: ["id"]
           },
         ]
@@ -46500,6 +46847,10 @@ export type Database = {
     }
     Functions: {
       _caller_profile_id: { Args: never; Returns: string }
+      _festival_activate_due_upgrades: {
+        Args: { p_festival_company_id: string }
+        Returns: undefined
+      }
       _festival_artist_audit: {
         Args: {
           p_artist_id?: string
@@ -46539,10 +46890,15 @@ export type Database = {
         Args: { p_company: string }
         Returns: Json
       }
+      _festival_company_balance_minor: {
+        Args: { p_festival_company_id: string }
+        Returns: number
+      }
       _festival_configuration_result: {
         Args: { p_company_id: string }
         Returns: Json
       }
+      _festival_effect_delta: { Args: { cur: Json; nxt: Json }; Returns: Json }
       _festival_operations_result: {
         Args: { p_company: string }
         Returns: Json
@@ -46559,6 +46915,22 @@ export type Database = {
       _festival_slug: { Args: { p_name: string }; Returns: string }
       _festival_ticket_plan_result: {
         Args: { p_company: string }
+        Returns: Json
+      }
+      _festival_upgrade_authorised: {
+        Args: { p_festival_company_id: string }
+        Returns: boolean
+      }
+      _festival_upgrade_category_json: {
+        Args: { p_festival_company_id: string; p_key: string }
+        Returns: Json
+      }
+      _festival_upgrade_state: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
+      _festival_upgrade_window: {
+        Args: { p_festival_company_id: string }
         Returns: Json
       }
       _has_active_vip_entitlement: {
@@ -47116,6 +47488,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      apply_festival_company_licence: {
+        Args: {
+          p_expected_licence_version: number
+          p_festival_company_id: string
+          p_idempotency_key: string
+          p_requested_tier_key: string
+        }
+        Returns: Json
       }
       apply_festival_legacy_migration: {
         Args: { p_idempotency_key?: string; p_mapping_id: string }
@@ -48866,6 +49247,10 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_company_upgrades: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
       get_festival_configuration: {
         Args: { p_festival_company_id: string }
         Returns: Json
@@ -48884,6 +49269,10 @@ export type Database = {
         Returns: Json
       }
       get_festival_launch_plan: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
+      get_festival_licence_progress: {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
@@ -48931,6 +49320,10 @@ export type Database = {
       }
       get_festival_ticket_sales_summary: {
         Args: { p_festival_company_id: string }
+        Returns: Json
+      }
+      get_festival_upgrade_purchase_preview: {
+        Args: { p_category_key: string; p_festival_company_id: string }
         Returns: Json
       }
       get_friendship_lifetime_xp: {
@@ -49524,6 +49917,17 @@ export type Database = {
           p_buyer_profile_id: string
           p_festival_id: string
           p_price_cents: number
+        }
+        Returns: Json
+      }
+      purchase_festival_company_upgrade: {
+        Args: {
+          p_category_key: string
+          p_expected_catalogue_version: number
+          p_expected_company_version: number
+          p_festival_company_id: string
+          p_idempotency_key: string
+          p_requested_level: number
         }
         Returns: Json
       }
