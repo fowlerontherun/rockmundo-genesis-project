@@ -49,17 +49,25 @@ export function GlobalCrowdDefaultsControls({
 
   const save = async () => {
     if (saveReason.trim().length < 8) return;
-    await saveMutation.mutateAsync({ settings: value, reason: saveReason.trim() });
-    setSaveOpen(false);
-    setSaveReason("");
+    try {
+      await saveMutation.mutateAsync({ settings: value, reason: saveReason.trim() });
+      setSaveOpen(false);
+      setSaveReason("");
+    } catch {
+      // Mutation feedback is shown by the hook; keep the dialog open for retry.
+    }
   };
 
   const restore = async () => {
     if (restoreReason.trim().length < 8) return;
-    const result = await restoreMutation.mutateAsync({ reason: restoreReason.trim() });
-    onLoad(result.settings);
-    setRestoreOpen(false);
-    setRestoreReason("");
+    try {
+      const result = await restoreMutation.mutateAsync({ reason: restoreReason.trim() });
+      onLoad(result.settings);
+      setRestoreOpen(false);
+      setRestoreReason("");
+    } catch {
+      // Mutation feedback is shown by the hook; keep the dialog open for retry.
+    }
   };
 
   return (
