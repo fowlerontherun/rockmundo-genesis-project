@@ -62,26 +62,34 @@ describe("animated crowd lifecycle", () => {
     expect(odd.reduce((a, b) => a + b, 0)).toBe(503);
     expect(Math.max(...odd)).toBe(6);
     expect(representedWeights(10_001, 300).reduce((a, b) => a + b, 0)).toBe(10_001);
+    const doubled = representedWeights(503, 2000, 2);
+    expect(doubled).toHaveLength(1006);
+    expect(doubled.reduce((a, b) => a + b, 0)).toBeCloseTo(503, 8);
   });
-  it("centralizes caps by device mode", () => {
-    expect(selectCrowdEntityCap({ reducedMotion: true, width: 1400 })).toBeLessThanOrEqual(150);
-    expect(selectCrowdEntityCap({ reducedMotion: false, width: 390 })).toBe(900);
-    expect(selectCrowdEntityCap({ reducedMotion: false, width: 800 })).toBe(1900);
-    expect(selectCrowdEntityCap({ reducedMotion: false, width: 1300 })).toBe(2900);
+  it("centralizes doubled caps by device mode", () => {
+    expect(selectCrowdEntityCap({ reducedMotion: true, width: 1400 })).toBeLessThanOrEqual(300);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 390 })).toBe(1800);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 800 })).toBe(3800);
+    expect(selectCrowdEntityCap({ reducedMotion: false, width: 1300 })).toBe(5800);
   });
-  it("assigns entrances and target positions deterministically inside audience bounds", () => {
+  it("assigns entrances and denser target positions deterministically inside audience bounds", () => {
     const plan = buildCrowdPlan({ replay: crowdReplay, attendance: 503, capacity: 1500, size: { width: 900, height: 500 } });
     const again = buildCrowdPlan({ replay: crowdReplay, attendance: 503, capacity: 1500, size: { width: 900, height: 500 } });
     expect(plan.baseEntities).toEqual(again.baseEntities);
+    expect(plan.baseEntities).toHaveLength(1006);
     expect(new Set(plan.baseEntities.map((e) => e.entranceId)).size).toBeGreaterThan(1);
     const preset = scaleVenuePreset(selectVenuePreset({ capacity: 1500 }), { width: 900, height: 500 });
     plan.baseEntities.forEach((e) => { expect(pointInRect(e.target, preset.audience)).toBe(true); expect(pointInRect(e.target, preset.stage)).toBe(false); });
   });
-  it("clusters low attendance toward front before sold-out plans use more zones", () => {
+  it("clusters low attendance toward the stage before sold-out plans use more zones", () => {
     const low = buildCrowdPlan({ replay: crowdReplay, attendance: 50, capacity: 1500, size: { width: 900, height: 500 } });
     const full = buildCrowdPlan({ replay: crowdReplay, attendance: 1500, capacity: 1500, size: { width: 900, height: 500 } });
     expect(new Set(low.baseEntities.map((e) => e.targetZoneId)).size).toBeLessThan(new Set(full.baseEntities.map((e) => e.targetZoneId)).size);
     expect(low.baseEntities.every((e) => e.targetZoneId.startsWith("front"))).toBe(true);
+    const preset = scaleVenuePreset(selectVenuePreset({ capacity: 1500 }), { width: 900, height: 500 });
+    const frontZone = preset.crowdZones[0];
+    const averageTargetY = low.baseEntities.reduce((sum, entity) => sum + entity.target.y, 0) / low.baseEntities.length;
+    expect(averageTargetY).toBeLessThan(frontZone.y + frontZone.height * .55);
   });
   it("reconstructs spawn, movement, settling, seeking, and reduced motion deterministically", () => {
     const plan = buildCrowdPlan({ replay: crowdReplay, attendance: 120, capacity: 250, size: { width: 640, height: 360 } });
