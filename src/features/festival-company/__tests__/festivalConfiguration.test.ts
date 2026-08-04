@@ -9,6 +9,45 @@ const canonical = { festivalCompanyId: id, legalCompanyName: "Company Ltd", publ
 describe("festival configuration boundary", () => {
   it("calculates inclusive UTC dates and rejects impossible input", () => { expect(inclusiveDuration("2030-06-01", "2030-06-03")).toBe(3); expect(inclusiveDuration("2030-06-03", "2030-06-01")).toBeNull(); expect(inclusiveDuration("2030-02-30", "2030-03-01")).toBeNull(); });
   it("strictly parses every canonical field", () => expect(parseFestivalConfiguration(canonical)).toEqual(canonical));
+  it("loads the deployed legacy setup payload while catalogue rollout catches up", () => {
+    const legacy = { ...canonical } as Record<string, unknown>;
+    delete legacy.annualMonth;
+    delete legacy.countryCode;
+    delete legacy.vibe;
+    delete legacy.siteType;
+    delete legacy.environmentalPolicy;
+    delete legacy.festivalEditionId;
+    delete legacy.editionYear;
+    delete legacy.vibes;
+    delete legacy.siteTypes;
+    delete legacy.environmentalPolicies;
+
+    const parsed = parseFestivalConfiguration({
+      ...legacy,
+      homeCity: null,
+      festivalScale: null,
+      plannedStartDate: null,
+      plannedEndDate: null,
+      durationDays: null,
+      setupStatus: "not_started",
+      currentStep: 1,
+    });
+
+    expect(parsed.annualMonth).toBeNull();
+    expect(parsed.vibes).toHaveLength(4);
+    expect(parsed.siteTypes).toHaveLength(3);
+    expect(parsed.environmentalPolicies).toHaveLength(3);
+  });
+  it("ignores unrelated malformed catalogue rows", () => {
+    const parsed = parseFestivalConfiguration({
+      ...canonical,
+      cities: [...canonical.cities, { id: "bad", name: "Broken" }],
+      vibes: [...canonical.vibes, { key: "broken" }],
+    });
+
+    expect(parsed.cities).toEqual(canonical.cities);
+    expect(parsed.vibes).toEqual(canonical.vibes);
+  });
   it.each([
     ["nullable type", { homeCity: "London" }], ["status", { setupStatus: "complete" }], ["version", { configurationVersion: 0 }],
     ["step", { currentStep: 7 }], ["scale catalogue", { scales: [{ ...scale, maximumCapacity: 1 }] }],
