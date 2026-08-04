@@ -7,6 +7,7 @@ import type { DerivedPlaybackState } from "./engine/PlaybackController";
 import { CanvasRenderer } from "./engine/CanvasRenderer";
 import type { CrowdTuningOptions } from "./engine/CrowdTuning";
 import { crowdTuningSignature } from "./engine/CrowdTuning";
+import { resolveCrowdTuning } from "./engine/CrowdTuningResolution";
 import { useCanvasSize } from "./hooks/useCanvasSize";
 import { useGlobalCrowdTuning } from "./hooks/useGlobalCrowdTuning";
 
@@ -39,13 +40,14 @@ export function GigCanvas({
   const replayTuning = replay.crowdTuning ?? null;
   const shouldLoadGlobal = !crowdTuning && !demoTuning.demoMode && !replayTuning;
   const globalTuning = useGlobalCrowdTuning(shouldLoadGlobal);
-  const resolvedCrowdTuning =
-    crowdTuning ??
-    (demoTuning.demoMode ? demoTuning.value : null) ??
-    replayTuning ??
-    globalTuning.data?.settings ??
-    null;
-  const tuningKey = crowdTuningSignature(resolvedCrowdTuning);
+  const resolved = resolveCrowdTuning({
+    explicit: crowdTuning,
+    demoMode: demoTuning.demoMode,
+    demo: demoTuning.value,
+    replay: replayTuning,
+    global: globalTuning.data?.settings,
+  });
+  const tuningKey = crowdTuningSignature(resolved.tuning);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,7 +55,7 @@ export function GigCanvas({
     const renderer = new CanvasRenderer(canvas, replay, experience, reducedMotion, {
       pyrotechnics,
       pyroIntensity,
-      crowdTuning: resolvedCrowdTuning,
+      crowdTuning: resolved.tuning,
     });
     rendererRef.current = renderer;
     renderer.resize(size);
@@ -67,7 +69,7 @@ export function GigCanvas({
   const capacity = experience?.gig?.venue?.capacity ?? 0;
 
   return (
-    <div className={className ?? (fill ? "h-full w-full" : "w-full")}>
+    <div className={className ?? (fill ? "h-full w-full" : "w-full")} data-crowd-tuning-source={resolved.source}>
       {demoTuning.demoMode && !fill ? (
         <>
           <GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} />
