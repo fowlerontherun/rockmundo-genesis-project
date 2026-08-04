@@ -7,6 +7,16 @@ export type GigEventImportance = "ambient" | "normal" | "important" | "critical"
 
 export interface StagePosition { x: number; y: number; zone: "front_left" | "front_center" | "front_right" | "mid_left" | "mid_center" | "mid_right" | "back_left" | "back_center" | "back_right" }
 
+export interface GigReplayCrowdTuning {
+  densityMultiplier: number;
+  depthSpread: number;
+  lateralSpread: number;
+  stagePull: number;
+  randomness: number;
+  fanScale: number;
+  arrivalSpeed: number;
+}
+
 export type GigVisualPayload =
   | { type: "venue_open"; entranceIds: string[]; lightLevel: number }
   | { type: "crowd_fill"; targetDensity: number; zoneIds: string[]; enteringCount: number }
@@ -50,6 +60,8 @@ export interface GigViewerReplay {
   events: GigViewerEvent[];
   checksum: string | null;
   status: GigReplayStatus;
+  crowdTuning?: GigReplayCrowdTuning | null;
+  crowdTuningRevision?: number | null;
 }
 
 export type GigViewerReplayLoadState = "loading" | "ready" | "unavailable" | "generating" | "failed" | "unsupported_version";

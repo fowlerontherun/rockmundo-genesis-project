@@ -2,8 +2,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { GIG_EVENT_SCHEMA_VERSION, GIG_VIEWER_VERSION } from "../events/constants";
 import { isSupportedReplayVersion, validateGigViewerReplay } from "../events/schema";
 import type { GigReplayStatus, GigViewerReplay, GigViewerReplayLoadState } from "../events/types";
+import { normalizeCrowdTuning } from "../viewer/engine/CrowdTuning";
 
-type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: { events?: unknown[] } | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
+type ReplayPayload = {
+  events?: unknown[];
+  crowdTuning?: unknown;
+  crowdTuningRevision?: unknown;
+};
+type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: ReplayPayload | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
 export interface GigViewerReplayResult { state: GigViewerReplayLoadState; replay: GigViewerReplay | null; reason?: string }
 
 export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplayResult> {
@@ -21,11 +27,28 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
   if (row.generation_status === "failed") return { state: "failed", replay: null };
   if (row.generation_status === "legacy_unavailable") return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
   if (!isSupportedReplayVersion(row.viewer_version, row.event_schema_version)) return { state: "unsupported_version", replay: null };
-  const events = Array.isArray(row.event_payload) ? row.event_payload : (row.event_payload as { events?: unknown[] })?.events;
-  const replay: GigViewerReplay = { id: row.id, gigId: row.gig_id, gigOutcomeId: row.gig_outcome_id, viewerVersion: row.viewer_version, eventSchemaVersion: row.event_schema_version, simulationSeed: row.simulation_seed, durationMs: row.duration_ms, generatedAt: row.generated_at, events: (events ?? []) as GigViewerReplay["events"], checksum: row.checksum, status: row.generation_status };
+
+  const payload = Array.isArray(row.event_payload) ? null : row.event_payload as ReplayPayload;
+  const events = Array.isArray(row.event_payload) ? row.event_payload : payload?.events;
+  const revision = Number(payload?.crowdTuningRevision);
+  const replay: GigViewerReplay = {
+    id: row.id,
+    gigId: row.gig_id,
+    gigOutcomeId: row.gig_outcome_id,
+    viewerVersion: row.viewer_version,
+    eventSchemaVersion: row.event_schema_version,
+    simulationSeed: row.simulation_seed,
+    durationMs: row.duration_ms,
+    generatedAt: row.generated_at,
+    events: (events ?? []) as GigViewerReplay["events"],
+    checksum: row.checksum,
+    status: row.generation_status,
+    crowdTuning: payload?.crowdTuning ? normalizeCrowdTuning(payload.crowdTuning as any) : null,
+    crowdTuningRevision: Number.isFinite(revision) && revision > 0 ? revision : null,
+  };
   if (replay.eventSchemaVersion !== GIG_EVENT_SCHEMA_VERSION) return { state: "unsupported_version", replay: null };
   const validation = validateGigViewerReplay(replay);
   if (!validation.valid) return { state: "failed", replay: null, reason: "malformed_replay" };
-  console.info("[gig-viewer-replay] loaded", { gigId, replayId: row.id, eventCount: replay.events.length, durationMs: replay.durationMs });
+  console.info("[gig-viewer-replay] loaded", { gigId, replayId: row.id, eventCount: replay.events.length, durationMs: replay.durationMs, crowdTuningRevision: replay.crowdTuningRevision });
   return { state: "ready", replay };
 }
