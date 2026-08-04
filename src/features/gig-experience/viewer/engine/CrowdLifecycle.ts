@@ -45,7 +45,8 @@ export function buildCrowdPlan({ replay, attendance, capacity, size, reducedMoti
     const entranceIndex = weightedIndex(i, preset.entrances.length || 1, replay.simulationSeed);
     const entrance = preset.entrances[entranceIndex] ?? fallbackEntrance(preset.audience);
     const start = boundedEntrancePoint(entrance, preset.audience, rand, i);
-    const zone = zones[Math.min(zones.length - 1, Math.floor((i / Math.max(1, weights.length)) * zones.length))] ?? { id: "front-centre", rect: preset.audience };
+    const frontBias = Math.pow(i / Math.max(1, weights.length), 2.1);
+    const zone = zones[Math.min(zones.length - 1, Math.floor(frontBias * zones.length))] ?? { id: "front-centre", rect: preset.audience };
     const target = deterministicPointIn(zone.rect, rand, i);
     const waypoint = { x: start.x + (target.x - start.x) * .45, y: Math.max(preset.audience.y + 8, start.y + (target.y - start.y) * .35) };
     const stagger = weights.length <= 1 ? 0 : i / (weights.length - 1);
