@@ -15,10 +15,10 @@ export default function MobileCareer() {
   const currentActivity = activityStatus ? String((activityStatus as any).activity_type ?? (activityStatus as any).status ?? "Activity").replace(/_/g, " ") : null;
 
   const actions = [
-    ["Practice", <Zap className="h-5 w-5" />, "/stage-practice"], ["Write Song", <PenLine className="h-5 w-5" />, "/songwriting"],
-    [activeWriting ? "Continue Writing" : "View Songs", <Music className="h-5 w-5" />, activeWriting ? "/songwriting" : "/song-manager"], ["Book Rehearsal", <Users className="h-5 w-5" />, "/rehearsals"],
-    ["Setlist", <Guitar className="h-5 w-5" />, "/setlists"], ["Book Studio", <Mic2 className="h-5 w-5" />, "/recording-studio"],
-    ["Skills", <Sparkles className="h-5 w-5" />, "/skills"], ["Band", <Users className="h-5 w-5" />, "/band"],
+    ["Practice", <Zap className="h-5 w-5" />, "/mobile/career/practice"], ["Write Song", <PenLine className="h-5 w-5" />, "/mobile/career/songwriting"],
+    [activeWriting ? "Continue Writing" : "View Songs", <Music className="h-5 w-5" />, activeWriting ? "/mobile/career/songwriting" : "/mobile/career/songs"], ["Book Rehearsal", <Users className="h-5 w-5" />, "/mobile/career/rehearsals"],
+    ["Setlist", <Guitar className="h-5 w-5" />, "/mobile/career/setlists"], ["Book Studio", <Mic2 className="h-5 w-5" />, "/mobile/career/recording"],
+    ["Skills", <Sparkles className="h-5 w-5" />, "/mobile/me/skills"], ["Band", <Users className="h-5 w-5" />, "/mobile/career/band"],
   ] as const;
 
   return <MobilePageShell>
@@ -33,9 +33,9 @@ export default function MobileCareer() {
     <section><h2 className="mb-2 px-1 text-[15px] font-bold">Quick actions</h2><div className="grid grid-cols-4 gap-2">{actions.map(([label, icon, to]) => <QuickActionCard key={label} label={label} icon={icon} to={to} />)}</div></section>
     <MobileSectionCard title="Career snapshot" subtitle="Live summaries from your profile, XP and activity feed.">
       <div className="space-y-2">
-        <MobileEntityCard title="Latest songwriting" subtitle={activeWriting ? `${activeWriting.skill_slug}: ${activeWriting.current_xp ?? 0} XP` : "No active songwriting progress found"} icon={<PenLine className="h-5 w-5" />} onPress={() => navigate("/songwriting")} />
-        <MobileEntityCard title="Practice activity" subtitle={currentActivity?.includes("practice") ? currentActivity : "No practice in progress"} icon={<Zap className="h-5 w-5" />} onPress={() => navigate("/stage-practice")} />
-        <MobileEntityCard title="Upcoming gig / rehearsal / recording" subtitle="Open schedule for booked sessions" icon={<CalendarDays className="h-5 w-5" />} onPress={() => navigate("/schedule/upcoming")} />
+        <MobileEntityCard title="Latest songwriting" subtitle={activeWriting ? `${activeWriting.skill_slug}: ${activeWriting.current_xp ?? 0} XP` : "No active songwriting progress found"} icon={<PenLine className="h-5 w-5" />} onPress={() => navigate("/mobile/career/songwriting")} />
+        <MobileEntityCard title="Practice activity" subtitle={currentActivity?.includes("practice") ? currentActivity : "No practice in progress"} icon={<Zap className="h-5 w-5" />} onPress={() => navigate("/mobile/career/practice")} />
+        <MobileEntityCard title="Upcoming gig / rehearsal / recording" subtitle="Open schedule for booked sessions" icon={<CalendarDays className="h-5 w-5" />} onPress={() => navigate("/mobile/career/gigs")} />
       </div>
     </MobileSectionCard>
     <MobileSectionCard title="Skills progression">{topSkills.length ? <div className="space-y-2">{topSkills.map(([k, v]) => <MobileProgressCard key={k} label={k} value={Math.min(100, Number(v) * 10)} detail={`Level ${v}`} />)}</div> : <EmptyState title="No skills yet" message="Practice to start building your career." />}</MobileSectionCard>

@@ -34,16 +34,16 @@ export default function MobileHome() {
   const shown = filter === "notifications" ? notifications : notifications.slice(0, 5);
 
   const quickActions = [
-    { label: "Practice", icon: <Zap className="h-5 w-5" />, to: "/skills" },
-    { label: "Write Song", icon: <PenLine className="h-5 w-5" />, to: "/songwriting" },
-    { label: "Travel", icon: <Plane className="h-5 w-5" />, to: "/travel" },
+    { label: "Practice", icon: <Zap className="h-5 w-5" />, to: "/mobile/me/skills" },
+    { label: "Write Song", icon: <PenLine className="h-5 w-5" />, to: "/mobile/career/songwriting" },
+    { label: "Travel", icon: <Plane className="h-5 w-5" />, to: "/mobile/world/travel" },
     { label: "Jam", icon: <Music4 className="h-5 w-5" />, to: "/jams" },
-    { label: "Message", icon: <MessageSquare className="h-5 w-5" />, to: "/social/messages" },
-    { label: "Twaater", icon: <Twitter className="h-5 w-5" />, to: "/twaater" },
-    { label: "Sleep", icon: <Moon className="h-5 w-5" />, to: "/wellness" },
-    { label: "Eat", icon: <Utensils className="h-5 w-5" />, to: "/wellness" },
-    { label: "Work", icon: <Briefcase className="h-5 w-5" />, to: "/employment" },
-    { label: "Shop", icon: <ShoppingBag className="h-5 w-5" />, to: "/gear-shop" },
+    { label: "Message", icon: <MessageSquare className="h-5 w-5" />, to: "/mobile/social/messages" },
+    { label: "Twaater", icon: <Twitter className="h-5 w-5" />, to: "/mobile/social/twaater" },
+    { label: "Sleep", icon: <Moon className="h-5 w-5" />, to: "/mobile/me/wellness" },
+    { label: "Eat", icon: <Utensils className="h-5 w-5" />, to: "/mobile/me/wellness" },
+    { label: "Work", icon: <Briefcase className="h-5 w-5" />, to: "/mobile/world/jobs" },
+    { label: "Shop", icon: <ShoppingBag className="h-5 w-5" />, to: "/mobile/world/shops" },
   ];
 
   const refresh = () => {
