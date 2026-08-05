@@ -13908,6 +13908,57 @@ export type Database = {
           },
         ]
       }
+      festival_edition_audit: {
+        Row: {
+          actor_profile_id: string | null
+          created_at: string
+          event_type: string
+          festival_company_id: string
+          festival_edition_id: string | null
+          id: string
+          metadata: Json
+          new_version: number | null
+          previous_version: number | null
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type: string
+          festival_company_id: string
+          festival_edition_id?: string | null
+          id?: string
+          metadata?: Json
+          new_version?: number | null
+          previous_version?: number | null
+        }
+        Update: {
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type?: string
+          festival_company_id?: string
+          festival_edition_id?: string | null
+          id?: string
+          metadata?: Json
+          new_version?: number | null
+          previous_version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_audit_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_audit_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_edition_creation_requests: {
         Row: {
           action: string | null
