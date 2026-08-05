@@ -111,8 +111,14 @@ const Layout = () => {
   }
 
   if (isMobile) {
-    const path = typeof window !== "undefined" ? window.location.pathname : "/";
+    const path = location.pathname;
     const routeMeta = getMobileRouteMeta(path);
+    const bridgeTarget = getMobileBridgeTarget(path);
+
+    // Forward mobile users from desktop paths to the dedicated mobile screen.
+    if (bridgeTarget && bridgeTarget !== path) {
+      return <Navigate to={`${bridgeTarget}${location.search}`} replace />;
+    }
 
     if (import.meta.env.DEV && routeMeta?.fallbackStatus === "wrapped-desktop") {
       console.warn(`[RockMundo mobile] Contained desktop fallback rendered in MobileShell: ${path}`);
@@ -126,6 +132,7 @@ const Layout = () => {
       if (path === "/me" || path === "/character" || path === "/character/overview") return <MobileMe />;
       return null;
     })();
+
 
     return (
       <MobileShell>
