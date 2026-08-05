@@ -12936,13 +12936,17 @@ export type Database = {
       }
       festival_configurations: {
         Row: {
+          annual_month: number | null
           completed_at: string | null
           configuration_version: number
+          country_code: string | null
           created_at: string
           current_step: number
           description: string | null
           duration_days: number | null
+          environmental_policy: string | null
           festival_company_id: string
+          festival_edition_id: string | null
           festival_scale: string | null
           home_city_id: string | null
           id: string
@@ -12951,17 +12955,23 @@ export type Database = {
           public_name: string
           setup_status: string
           short_name: string | null
+          site_type: string | null
           tagline: string | null
           updated_at: string
+          vibe: string | null
         }
         Insert: {
+          annual_month?: number | null
           completed_at?: string | null
           configuration_version?: number
+          country_code?: string | null
           created_at?: string
           current_step?: number
           description?: string | null
           duration_days?: number | null
+          environmental_policy?: string | null
           festival_company_id: string
+          festival_edition_id?: string | null
           festival_scale?: string | null
           home_city_id?: string | null
           id?: string
@@ -12970,17 +12980,23 @@ export type Database = {
           public_name: string
           setup_status?: string
           short_name?: string | null
+          site_type?: string | null
           tagline?: string | null
           updated_at?: string
+          vibe?: string | null
         }
         Update: {
+          annual_month?: number | null
           completed_at?: string | null
           configuration_version?: number
+          country_code?: string | null
           created_at?: string
           current_step?: number
           description?: string | null
           duration_days?: number | null
+          environmental_policy?: string | null
           festival_company_id?: string
+          festival_edition_id?: string | null
           festival_scale?: string | null
           home_city_id?: string | null
           id?: string
@@ -12989,15 +13005,31 @@ export type Database = {
           public_name?: string
           setup_status?: string
           short_name?: string | null
+          site_type?: string | null
           tagline?: string | null
           updated_at?: string
+          vibe?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_configurations_environmental_policy_fkey"
+            columns: ["environmental_policy"]
+            isOneToOne: false
+            referencedRelation: "festival_environmental_policy_catalogue"
+            referencedColumns: ["key"]
+          },
           {
             foreignKeyName: "festival_configurations_festival_company_id_fkey"
             columns: ["festival_company_id"]
             isOneToOne: true
             referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_configurations_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
             referencedColumns: ["id"]
           },
           {
@@ -13013,6 +13045,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cities"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_configurations_site_type_fkey"
+            columns: ["site_type"]
+            isOneToOne: false
+            referencedRelation: "festival_site_type_catalogue"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "festival_configurations_vibe_fkey"
+            columns: ["vibe"]
+            isOneToOne: false
+            referencedRelation: "festival_vibe_catalogue"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -13864,31 +13910,52 @@ export type Database = {
       }
       festival_edition_creation_requests: {
         Row: {
+          action: string | null
           actor_profile_id: string | null
+          completed_at: string | null
           created_at: string
-          edition_id: string
-          festival_id: string
+          edition_id: string | null
+          festival_company_id: string | null
+          festival_edition_id: string | null
+          festival_id: string | null
           id: string
           idempotency_key: string
-          request_hash: string
+          payload_hash: string | null
+          request_hash: string | null
+          result: Json | null
+          status: string
         }
         Insert: {
+          action?: string | null
           actor_profile_id?: string | null
+          completed_at?: string | null
           created_at?: string
-          edition_id: string
-          festival_id: string
+          edition_id?: string | null
+          festival_company_id?: string | null
+          festival_edition_id?: string | null
+          festival_id?: string | null
           id?: string
           idempotency_key: string
-          request_hash: string
+          payload_hash?: string | null
+          request_hash?: string | null
+          result?: Json | null
+          status?: string
         }
         Update: {
+          action?: string | null
           actor_profile_id?: string | null
+          completed_at?: string | null
           created_at?: string
-          edition_id?: string
-          festival_id?: string
+          edition_id?: string | null
+          festival_company_id?: string | null
+          festival_edition_id?: string | null
+          festival_id?: string | null
           id?: string
           idempotency_key?: string
-          request_hash?: string
+          payload_hash?: string | null
+          request_hash?: string | null
+          result?: Json | null
+          status?: string
         }
         Relationships: [
           {
@@ -13917,6 +13984,20 @@ export type Database = {
             columns: ["edition_id"]
             isOneToOne: false
             referencedRelation: "public_festival_editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_creation_requests_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_creation_requests_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
             referencedColumns: ["id"]
           },
           {
@@ -14623,17 +14704,22 @@ export type Database = {
           configuration_locked_at: string | null
           country_code: string | null
           created_at: string
+          creation_source: string
           duration_days: number | null
           edition_year: number
           ends_on: string | null
           environmental_policy: string | null
+          expected_capacity: number | null
           festival_company_id: string
+          festival_scale: string | null
           id: string
+          locked_at: string | null
           name: string
           site_type: string | null
           starts_on: string | null
           status: string
           updated_at: string
+          version: number
           vibe: string | null
         }
         Insert: {
@@ -14642,17 +14728,22 @@ export type Database = {
           configuration_locked_at?: string | null
           country_code?: string | null
           created_at?: string
+          creation_source?: string
           duration_days?: number | null
           edition_year: number
           ends_on?: string | null
           environmental_policy?: string | null
+          expected_capacity?: number | null
           festival_company_id: string
+          festival_scale?: string | null
           id?: string
+          locked_at?: string | null
           name: string
           site_type?: string | null
           starts_on?: string | null
           status?: string
           updated_at?: string
+          version?: number
           vibe?: string | null
         }
         Update: {
@@ -14661,17 +14752,22 @@ export type Database = {
           configuration_locked_at?: string | null
           country_code?: string | null
           created_at?: string
+          creation_source?: string
           duration_days?: number | null
           edition_year?: number
           ends_on?: string | null
           environmental_policy?: string | null
+          expected_capacity?: number | null
           festival_company_id?: string
+          festival_scale?: string | null
           id?: string
+          locked_at?: string | null
           name?: string
           site_type?: string | null
           starts_on?: string | null
           status?: string
           updated_at?: string
+          version?: number
           vibe?: string | null
         }
         Relationships: [
@@ -14688,6 +14784,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "festival_companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_editions_v2_festival_scale_fkey"
+            columns: ["festival_scale"]
+            isOneToOne: false
+            referencedRelation: "festival_scale_catalogue"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -14781,6 +14884,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      festival_environmental_policy_catalogue: {
+        Row: {
+          active: boolean
+          description: string
+          display_name: string
+          key: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          description: string
+          display_name: string
+          key: string
+          sort_order: number
+        }
+        Update: {
+          active?: boolean
+          description?: string
+          display_name?: string
+          key?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       festival_expense_ledger: {
         Row: {
@@ -18553,6 +18680,30 @@ export type Database = {
           },
         ]
       }
+      festival_site_type_catalogue: {
+        Row: {
+          active: boolean
+          description: string
+          display_name: string
+          key: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          description: string
+          display_name: string
+          key: string
+          sort_order: number
+        }
+        Update: {
+          active?: boolean
+          description?: string
+          display_name?: string
+          key?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       festival_slot_offers: {
         Row: {
           additional_perks: string[] | null
@@ -20735,6 +20886,30 @@ export type Database = {
           },
         ]
       }
+      festival_vibe_catalogue: {
+        Row: {
+          active: boolean
+          description: string
+          display_name: string
+          key: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          description: string
+          display_name: string
+          key: string
+          sort_order: number
+        }
+        Update: {
+          active?: boolean
+          description?: string
+          display_name?: string
+          key?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       festival_watch_rewards: {
         Row: {
           band_id: string | null
@@ -22815,6 +22990,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gig_viewer_crowd_settings: {
+        Row: {
+          id: boolean
+          reason: string | null
+          revision: number
+          settings: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          reason?: string | null
+          revision?: number
+          settings: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          reason?: string | null
+          revision?: number
+          settings?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       gigs: {
         Row: {
@@ -46894,6 +47096,10 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: number
       }
+      _festival_company_manager_authorized: {
+        Args: { p_actor_profile_id: string; p_festival_company_id: string }
+        Returns: boolean
+      }
       _festival_configuration_result: {
         Args: { p_company_id: string }
         Returns: Json
@@ -47254,6 +47460,10 @@ export type Database = {
         Args: { p_game_event_id: string }
         Returns: Json
       }
+      admin_restore_gig_viewer_crowd_settings: {
+        Args: { p_reason: string }
+        Returns: Json
+      }
       admin_review_festival_edition_permit: {
         Args: {
           p_action: string
@@ -47295,6 +47505,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      admin_set_gig_viewer_crowd_settings: {
+        Args: { p_reason: string; p_settings: Json }
+        Returns: Json
       }
       admin_transition_festival_edition: {
         Args: {
@@ -49711,6 +49925,10 @@ export type Database = {
         Returns: string
       }
       mayor_company_modifier: { Args: { p_city_id: string }; Returns: number }
+      normalize_gig_viewer_crowd_settings: {
+        Args: { p_settings: Json }
+        Returns: Json
+      }
       notify_blind_box_live: { Args: never; Returns: number }
       open_festival_ticket_sales: {
         Args: {
@@ -50213,6 +50431,7 @@ export type Database = {
         Args: { p_election_id: string; p_party_id: string }
         Returns: undefined
       }
+      rockmundo_game_year: { Args: { p_at?: string }; Returns: number }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
       run_botb_cycle: { Args: never; Returns: Json }
       save_festival_artist_programme: {
