@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate, Navigate } from "react-router-dom";
+import { Outlet, useNavigate, Navigate, useLocation } from "react-router-dom";
 import CharacterGate from "@/components/CharacterGate";
 import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
@@ -32,6 +32,7 @@ import MobileSocial from "@/mobile/pages/MobileSocial";
 import MobileWorld from "@/mobile/pages/MobileWorld";
 import MobileMe from "@/mobile/pages/MobileMe";
 import { getMobileRouteMeta } from "@/mobile/routeRegistry";
+import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
@@ -42,6 +43,7 @@ const Layout = () => {
   const { profile, loading: dataLoading, error: profileError } = useGameData();
   const { profileId } = useActiveProfile();
   const isMobile = useIsMobileDevice();
+  const location = useLocation();
 
 
 
@@ -111,8 +113,14 @@ const Layout = () => {
   }
 
   if (isMobile) {
-    const path = typeof window !== "undefined" ? window.location.pathname : "/";
+    const path = location.pathname;
     const routeMeta = getMobileRouteMeta(path);
+    const bridgeTarget = getMobileBridgeTarget(path);
+
+    // Forward mobile users from desktop paths to the dedicated mobile screen.
+    if (bridgeTarget && bridgeTarget !== path) {
+      return <Navigate to={`${bridgeTarget}${location.search}`} replace />;
+    }
 
     if (import.meta.env.DEV && routeMeta?.fallbackStatus === "wrapped-desktop") {
       console.warn(`[RockMundo mobile] Contained desktop fallback rendered in MobileShell: ${path}`);
@@ -126,6 +134,7 @@ const Layout = () => {
       if (path === "/me" || path === "/character" || path === "/character/overview") return <MobileMe />;
       return null;
     })();
+
 
     return (
       <MobileShell>

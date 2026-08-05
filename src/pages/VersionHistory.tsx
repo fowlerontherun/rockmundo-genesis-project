@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.650",
+    date: "2026-08-05",
+    changes: [
+      { type: 'feature', description: "Mobile UI: desktop deep links now forward to the dedicated mobile screens (practice, songwriting, songs, rehearsals, recording, gigs, tours, releases, charts, travel, venues, shops, jobs, events, mail, Twaater, friends, wellness, inventory, skills) instead of showing a squeezed desktop page." },
+      { type: 'improvement', description: "Mobile Home, Career and World quick actions plus the floating action menu now open native mobile routes." },
+      { type: 'fix', description: "Mobile shell now reacts to route changes correctly instead of reading the URL once on render." },
+    ],
+  },
+  {
     version: "1.1.649",
     date: "2026-08-05",
     changes: [
