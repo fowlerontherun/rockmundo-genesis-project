@@ -17,7 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.649",
+    date: "2026-08-05",
+    changes: [
+      { type: 'fix', description: "Fixed festival setup failing on the final step: the festival edition audit log was missing from the database, so completing setup silently rolled back. Setup can now be finished and the first annual edition is created." },
+    ],
+  },
+  {
     version: "1.1.648",
+
     date: "2026-08-04",
     changes: [
       { type: 'improvement', description: "Gig viewer crowds are roughly twice as dense, so sold-out shows now look genuinely packed on mobile, tablet and desktop." },
