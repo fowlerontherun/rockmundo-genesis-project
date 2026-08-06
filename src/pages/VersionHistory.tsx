@@ -17,7 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.651",
+    date: "2026-08-06",
+    changes: [
+      { type: 'fix', description: "Songs finished by band members are now attached to the band of the character who wrote them, instead of another character on the same account — so bandmates' songs appear for rehearsal." },
+      { type: 'feature', description: "Any band member (not only leaders) can now contribute their finished songs to the band repertoire from the Song Manager." },
+      { type: 'improvement', description: "Rehearsal booking now lists the full band repertoire from every member, plus your own unassigned songs, with correct character isolation." },
+      { type: 'fix', description: "Backfilled existing songs that were linked to the wrong band." },
+    ],
+  },
+  {
     version: "1.1.650",
+
     date: "2026-08-05",
     changes: [
       { type: 'feature', description: "Mobile UI: desktop deep links now forward to the dedicated mobile screens (practice, songwriting, songs, rehearsals, recording, gigs, tours, releases, charts, travel, venues, shops, jobs, events, mail, Twaater, friends, wellness, inventory, skills) instead of showing a squeezed desktop page." },
