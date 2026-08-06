@@ -48450,6 +48450,10 @@ export type Database = {
         Returns: Json
       }
       complete_wellness_habit: { Args: { _habit_id: string }; Returns: Json }
+      contribute_song_to_band: {
+        Args: { p_band_id: string; p_profile_id?: string; p_song_id: string }
+        Returns: Json
+      }
       contribute_to_savings_goal: {
         Args: {
           p_amount_cents: number
