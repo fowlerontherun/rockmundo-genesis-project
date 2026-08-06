@@ -13,6 +13,8 @@ import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones, Flame } 
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { SongArchiveButton } from "@/components/song/SongArchiveButton";
+import { ContributeSongToBandButton } from "@/components/song/ContributeSongToBandButton";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
