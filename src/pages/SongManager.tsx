@@ -318,8 +318,13 @@ const SongManager = () => {
                     </Badge>
                   )}
 
-                  {/* Archive/Delete Button */}
-                  <div className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                  {/* Band contribution + Archive/Delete */}
+                  <div className="pt-2 border-t flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <ContributeSongToBandButton
+                      songId={song.id}
+                      songTitle={song.title}
+                      songBandId={song.band_id}
+                    />
                     <SongArchiveButton 
                       songId={song.id}
                       songTitle={song.title}
@@ -329,6 +334,7 @@ const SongManager = () => {
                       showDelete={!song.archived}
                     />
                   </div>
+
                 </div>
               </Card>
             );
