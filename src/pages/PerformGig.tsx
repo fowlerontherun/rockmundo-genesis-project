@@ -353,15 +353,9 @@ export default function PerformGig() {
       backLabel="Back to Gig Booking"
     >
 
-      {/* Gig Info Header */}
+      {/* Gig Info Header — venue name/location already shown in the page header */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl flex items-center gap-3">
-            <Music className="h-8 w-8" />
-            {venueName}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
