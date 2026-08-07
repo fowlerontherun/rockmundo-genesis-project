@@ -105,48 +105,65 @@ export default function PerformGig() {
       
       setBandSetlists(setlistsWithCounts);
 
-      if (gigData.setlist_id) {
-        const [songsRes, rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
-          supabase
-            .from('setlist_songs')
-            .select('*, songs!inner(id, title, genre, quality_score)')
-            .eq('setlist_id', gigData.setlist_id)
-            .order('position'),
-          supabase
-            .from('song_rehearsals')
-            .select('song_id, rehearsal_level')
-            .eq('band_id', gigData.band_id),
-          supabase
-            .from('band_stage_equipment')
-            .select('id')
-            .eq('band_id', gigData.band_id),
-          supabase
-            .from('band_crew_members')
-            .select('id')
-            .eq('band_id', gigData.band_id),
-          supabase
-            .from('bands')
-            .select('chemistry_level, fame, total_fans')
-            .eq('id', gigData.band_id)
-            .single()
-        ]);
+      // Band-wide readiness data is independent of whether a setlist is chosen
+      const [rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
+        supabase
+          .from('song_rehearsals')
+          .select('song_id, rehearsal_level')
+          .eq('band_id', gigData.band_id),
+        supabase
+          .from('band_stage_equipment')
+          .select('id')
+          .eq('band_id', gigData.band_id),
+        supabase
+          .from('band_crew_members')
+          .select('id')
+          .eq('band_id', gigData.band_id),
+        supabase
+          .from('bands')
+          .select('chemistry_level, fame, total_fans')
+          .eq('id', gigData.band_id)
+          .single()
+      ]);
 
-        if (songsRes.error) throw songsRes.error;
-        setSetlistSongs(songsRes.data || []);
-        setRehearsals(rehearsalsRes.data || []);
-        setEquipmentCount(equipmentRes.data?.length || 0);
-        setCrewCount(crewRes.data?.length || 0);
-        setBandChemistry(bandRes.data?.chemistry_level || 0);
-        setBandFame(bandRes.data?.fame || 0);
-        setBandTotalFans(bandRes.data?.total_fans || 0);
+      setRehearsals(rehearsalsRes.data || []);
+      setEquipmentCount(equipmentRes.data?.length || 0);
+      setCrewCount(crewRes.data?.length || 0);
+      setBandChemistry(bandRes.data?.chemistry_level || 0);
+      setBandFame(bandRes.data?.fame || 0);
+      setBandTotalFans(bandRes.data?.total_fans || 0);
+
+      // Authoritative performance setlist is the gig preparation setlist.
+      // Only fall back to the legacy band setlist when no prep setlist exists.
+      const { data: prepSetlist } = await (supabase as any)
+        .from('gig_setlists')
+        .select('id, gig_setlist_items(song_id, position, is_encore, songs(id, title, genre, quality_score))')
+        .eq('gig_id', gigId)
+        .maybeSingle();
+
+      const prepItems = (prepSetlist?.gig_setlist_items || []) as any[];
+
+      if (prepItems.length > 0) {
+        setSetlistSongs(
+          [...prepItems]
+            .sort((a, b) => (a.position || 0) - (b.position || 0))
+            .map((item) => ({
+              song_id: item.song_id,
+              position: item.position,
+              is_encore: item.is_encore,
+              songs: item.songs,
+            })),
+        );
+      } else if (gigData.setlist_id) {
+        const { data: legacySongs, error: legacySongsError } = await supabase
+          .from('setlist_songs')
+          .select('*, songs!inner(id, title, genre, quality_score)')
+          .eq('setlist_id', gigData.setlist_id)
+          .order('position');
+        if (legacySongsError) throw legacySongsError;
+        setSetlistSongs(legacySongs || []);
       } else {
         setSetlistSongs([]);
-        setRehearsals([]);
-        setEquipmentCount(0);
-        setCrewCount(0);
-        setBandChemistry(0);
-        setBandFame(0);
-        setBandTotalFans(0);
       }
 
       if (existingOutcome && (gigData as any).result_ready_at) {
