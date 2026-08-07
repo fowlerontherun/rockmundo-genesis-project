@@ -66,7 +66,7 @@ function HeadlineResult({ experience, onClose, processing, cancelled }: { experi
       <div><p className="text-sm text-muted-foreground">Headline result</p><h1 id="headline-result-heading" className="text-5xl font-black tracking-tight sm:text-7xl">{h.grade}</h1><p className="text-lg font-semibold">{verdict}</p><p className="text-sm text-muted-foreground">{experience.gig.venue.name}</p></div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Metric icon={<Users />} label="Attendance" value={`${numberFormat.format(h.attendance)} / ${numberFormat.format(h.capacity)}`} detail={pct(h.attendancePercent)} />
-        <Metric icon={<CircleDot />} label="Crowd verdict" value={crowdLabel(best)} detail={best ? `Best: ${best.title}` : "No song data"} />
+        <Metric icon={<CircleDot />} label="Crowd verdict" value={crowdLabel(best)} detail={experience.songs.length ? `${experience.songs.length} songs performed` : "No song data"} />
         <Metric icon={<DollarSign />} label="Profit" value={money(metricValue(experience.headline.netProfit, 0))} detail="Net result" good={metricValue(experience.headline.netProfit, 0) >= 0} />
         <Metric icon={<TrendingUp />} label="Growth" value={`+${numberFormat.format(metricValue(experience.headline.fansGained, 0))} fans`} detail={`+${numberFormat.format(metricValue(experience.headline.fameGained, 0))} fame`} />
         <Metric icon={<Music />} label="Best song" value={best?.title ?? metricValue(experience.headline.bestSongTitle, "Unknown")} detail={best ? score(songScore(best)) : "Missing songs"} />
