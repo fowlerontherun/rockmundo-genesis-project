@@ -70,7 +70,7 @@ function HeadlineResult({ experience, onClose, processing, cancelled }: { experi
         <Metric icon={<DollarSign />} label="Profit" value={money(metricValue(experience.headline.netProfit, 0))} detail="Net result" good={metricValue(experience.headline.netProfit, 0) >= 0} />
         <Metric icon={<TrendingUp />} label="Growth" value={`+${numberFormat.format(metricValue(experience.headline.fansGained, 0))} fans`} detail={`+${numberFormat.format(metricValue(experience.headline.fameGained, 0))} fame`} />
         <Metric icon={<Music />} label="Best song" value={best?.title ?? metricValue(experience.headline.bestSongTitle, "Unknown")} detail={best ? score(songScore(best)) : "Missing songs"} />
-        <Metric icon={<Sparkles />} label="Largest highlight" value={best ? `${best.title} peaked` : weak ? `${weak.title} struggled` : "Unavailable"} detail="Evidence from setlist scores" />
+        <Metric icon={<Sparkles />} label="Weakest moment" value={weak ? `${weak.title} struggled` : "None recorded"} detail={weak ? score(songScore(weak)) : "Evidence from setlist scores"} />
         <div className="col-span-2 flex flex-wrap gap-2 md:col-span-2"><Button onClick={onClose}>Continue</Button><Button variant="secondary" asChild><a href="#performance-story">Performance Story</a></Button><Button variant="outline" asChild><a href="#detailed-analysis">Detailed Analysis</a></Button><Button variant="outline" disabled={!experience.viewer.replayAvailable}>Replay (placeholder)</Button></div>
       </div>
     </div>
