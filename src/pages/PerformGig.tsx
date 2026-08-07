@@ -26,6 +26,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { GigPerformersSection } from "@/components/social/ParticipantStatusList";
 import { useGigExperience } from "@/features/gig-experience/hooks";
 import { GigViewerShell } from "@/features/gig-experience/viewer/GigViewerShell";
+import { LiveGigStageView } from "@/features/gig-experience/viewer/LiveGigStageView";
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -104,48 +105,65 @@ export default function PerformGig() {
       
       setBandSetlists(setlistsWithCounts);
 
-      if (gigData.setlist_id) {
-        const [songsRes, rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
-          supabase
-            .from('setlist_songs')
-            .select('*, songs!inner(id, title, genre, quality_score)')
-            .eq('setlist_id', gigData.setlist_id)
-            .order('position'),
-          supabase
-            .from('song_rehearsals')
-            .select('song_id, rehearsal_level')
-            .eq('band_id', gigData.band_id),
-          supabase
-            .from('band_stage_equipment')
-            .select('id')
-            .eq('band_id', gigData.band_id),
-          supabase
-            .from('band_crew_members')
-            .select('id')
-            .eq('band_id', gigData.band_id),
-          supabase
-            .from('bands')
-            .select('chemistry_level, fame, total_fans')
-            .eq('id', gigData.band_id)
-            .single()
-        ]);
+      // Band-wide readiness data is independent of whether a setlist is chosen
+      const [rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
+        supabase
+          .from('song_rehearsals')
+          .select('song_id, rehearsal_level')
+          .eq('band_id', gigData.band_id),
+        supabase
+          .from('band_stage_equipment')
+          .select('id')
+          .eq('band_id', gigData.band_id),
+        supabase
+          .from('band_crew_members')
+          .select('id')
+          .eq('band_id', gigData.band_id),
+        supabase
+          .from('bands')
+          .select('chemistry_level, fame, total_fans')
+          .eq('id', gigData.band_id)
+          .single()
+      ]);
 
-        if (songsRes.error) throw songsRes.error;
-        setSetlistSongs(songsRes.data || []);
-        setRehearsals(rehearsalsRes.data || []);
-        setEquipmentCount(equipmentRes.data?.length || 0);
-        setCrewCount(crewRes.data?.length || 0);
-        setBandChemistry(bandRes.data?.chemistry_level || 0);
-        setBandFame(bandRes.data?.fame || 0);
-        setBandTotalFans(bandRes.data?.total_fans || 0);
+      setRehearsals(rehearsalsRes.data || []);
+      setEquipmentCount(equipmentRes.data?.length || 0);
+      setCrewCount(crewRes.data?.length || 0);
+      setBandChemistry(bandRes.data?.chemistry_level || 0);
+      setBandFame(bandRes.data?.fame || 0);
+      setBandTotalFans(bandRes.data?.total_fans || 0);
+
+      // Authoritative performance setlist is the gig preparation setlist.
+      // Only fall back to the legacy band setlist when no prep setlist exists.
+      const { data: prepSetlist } = await (supabase as any)
+        .from('gig_setlists')
+        .select('id, gig_setlist_items(song_id, position, is_encore, songs(id, title, genre, quality_score))')
+        .eq('gig_id', gigId)
+        .maybeSingle();
+
+      const prepItems = (prepSetlist?.gig_setlist_items || []) as any[];
+
+      if (prepItems.length > 0) {
+        setSetlistSongs(
+          [...prepItems]
+            .sort((a, b) => (a.position || 0) - (b.position || 0))
+            .map((item) => ({
+              song_id: item.song_id,
+              position: item.position,
+              is_encore: item.is_encore,
+              songs: item.songs,
+            })),
+        );
+      } else if (gigData.setlist_id) {
+        const { data: legacySongs, error: legacySongsError } = await supabase
+          .from('setlist_songs')
+          .select('*, songs!inner(id, title, genre, quality_score)')
+          .eq('setlist_id', gigData.setlist_id)
+          .order('position');
+        if (legacySongsError) throw legacySongsError;
+        setSetlistSongs(legacySongs || []);
       } else {
         setSetlistSongs([]);
-        setRehearsals([]);
-        setEquipmentCount(0);
-        setCrewCount(0);
-        setBandChemistry(0);
-        setBandFame(0);
-        setBandTotalFans(0);
       }
 
       if (existingOutcome && (gigData as any).result_ready_at) {
@@ -335,15 +353,9 @@ export default function PerformGig() {
       backLabel="Back to Gig Booking"
     >
 
-      {/* Gig Info Header */}
+      {/* Gig Info Header — venue name/location already shown in the page header */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl flex items-center gap-3">
-            <Music className="h-8 w-8" />
-            {venueName}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -405,8 +417,9 @@ export default function PerformGig() {
         </CardContent>
       </Card>
 
-      {/* Setlist Display with change option - locked 1 hour before gig */}
-      {bandSetlists.length > 0 && (
+      {/* Band setlist selector — hidden for scheduled gigs, where the Gig
+          Preparation panel manages the authoritative gig setlist */}
+      {bandSetlists.length > 0 && gig.status !== 'scheduled' && (
         <Card>
           <CardContent className="pt-6">
             <GigSetlistDisplay
@@ -470,13 +483,14 @@ export default function PerformGig() {
         completedOrCancelled={gig.status === 'completed' || gig.status === 'cancelled'}
       />
 
-      {/* Preparation Checklist */}
-      {setlistSongs.length > 0 && (
+      {/* Readiness summary — only for non-scheduled gigs; scheduled gigs use the
+          authoritative Gig Preparation panel above instead of duplicating it */}
+      {gig.status !== 'scheduled' && setlistSongs.length > 0 && (
         <GigPreparationChecklist
           setlistSongs={setlistSongs}
           rehearsals={rehearsals.map(r => ({
             song_id: r.song_id,
-            song_title: r.songs?.title || 'Unknown',
+            song_title: setlistSongs.find(s => s.song_id === r.song_id)?.songs?.title || 'Unknown',
             rehearsal_level: r.rehearsal_level || 0
           }))}
           equipmentCount={equipmentCount}
@@ -534,14 +548,23 @@ export default function PerformGig() {
         </Card>
       )}
 
-      {/* Real-time Performance Viewer - shown when within 10 min of start, during gig, or up to 10 min after */}
+      {/* Live stage view — uses the same updated viewer engine as the demo */}
       {shouldShowLiveViewer && setlistSongs.length > 0 && !showOutcome && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Watch Performance</h3>
-          <TopDownGigViewer
-            gigId={gig.id}
-            onComplete={handleGigComplete}
-          />
+          {gigExperience && gigExperience.songs.length > 0 ? (
+            <LiveGigStageView
+              gigId={gig.id}
+              experience={gigExperience}
+              onViewResult={() => setShowOutcome(true)}
+              onClose={handleGigComplete}
+            />
+          ) : (
+            <TopDownGigViewer
+              gigId={gig.id}
+              onComplete={handleGigComplete}
+            />
+          )}
         </div>
       )}
 
@@ -593,7 +616,7 @@ export default function PerformGig() {
               <Button variant="outline" onClick={() => navigate('/gig-booking')}>
                 Back to Schedule
               </Button>
-              {gigExperience?.viewer.replayAvailable ? (
+              {gigExperience?.viewer.replayAvailable || (gigExperience?.songs.length ?? 0) > 0 ? (
                 <Button variant="secondary" onClick={() => setShowReplay(true)}>Replay Gig</Button>
               ) : gigExperience?.viewer.replay?.generationStatus === "generating" ? (
                 <Button variant="outline" disabled>Replay Processing</Button>
@@ -604,7 +627,11 @@ export default function PerformGig() {
                 View Report
               </Button>
             </div>
-            <GigViewerShell gigId={gig.id} experience={gigExperience} open={showReplay} onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
+            {showReplay && (gigExperience?.viewer.replayAvailable ? (
+              <GigViewerShell gigId={gig.id} experience={gigExperience} open onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
+            ) : gigExperience ? (
+              <LiveGigStageView gigId={gig.id} experience={gigExperience} onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
+            ) : null)}
           </CardContent>
         </Card>
       )}
