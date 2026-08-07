@@ -616,7 +616,7 @@ export default function PerformGig() {
               <Button variant="outline" onClick={() => navigate('/gig-booking')}>
                 Back to Schedule
               </Button>
-              {gigExperience?.viewer.replayAvailable ? (
+              {gigExperience?.viewer.replayAvailable || (gigExperience?.songs.length ?? 0) > 0 ? (
                 <Button variant="secondary" onClick={() => setShowReplay(true)}>Replay Gig</Button>
               ) : gigExperience?.viewer.replay?.generationStatus === "generating" ? (
                 <Button variant="outline" disabled>Replay Processing</Button>
@@ -627,7 +627,11 @@ export default function PerformGig() {
                 View Report
               </Button>
             </div>
-            <GigViewerShell gigId={gig.id} experience={gigExperience} open={showReplay} onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
+            {showReplay && (gigExperience?.viewer.replayAvailable ? (
+              <GigViewerShell gigId={gig.id} experience={gigExperience} open onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
+            ) : gigExperience ? (
+              <LiveGigStageView gigId={gig.id} experience={gigExperience} onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
+            ) : null)}
           </CardContent>
         </Card>
       )}
