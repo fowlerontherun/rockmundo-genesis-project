@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.652",
+    date: "2026-08-07",
+    changes: [
+      { type: 'fix', description: "Live gigs now render with the updated gig viewer engine (new stage types, crowd density and pyrotechnics) instead of the legacy top-down viewer." },
+      { type: 'improvement', description: "Completed gigs without a stored replay can now be rewatched using a locally generated replay instead of showing 'Replay Unavailable'." },
+      { type: 'fix', description: "Pre-gig details no longer duplicate the venue name, the setlist selector or the preparation card — scheduled gigs show a single authoritative Gig Preparation panel." },
+      { type: 'fix', description: "Pre-gig song list, rehearsal readiness, equipment, crew and chemistry now read from the gig preparation setlist actually used for the performance, so counts and readiness are correct." },
+      { type: 'improvement', description: "Gig outcome report no longer repeats the best song, venue and setlist across multiple tiles; the headline now shows the weakest moment and the story shows lineup and opener detail." },
+    ],
+  },
+  {
     version: "1.1.651",
     date: "2026-08-06",
     changes: [
