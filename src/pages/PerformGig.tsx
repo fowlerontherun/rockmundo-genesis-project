@@ -423,8 +423,9 @@ export default function PerformGig() {
         </CardContent>
       </Card>
 
-      {/* Setlist Display with change option - locked 1 hour before gig */}
-      {bandSetlists.length > 0 && (
+      {/* Band setlist selector — hidden for scheduled gigs, where the Gig
+          Preparation panel manages the authoritative gig setlist */}
+      {bandSetlists.length > 0 && gig.status !== 'scheduled' && (
         <Card>
           <CardContent className="pt-6">
             <GigSetlistDisplay
