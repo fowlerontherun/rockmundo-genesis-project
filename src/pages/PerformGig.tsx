@@ -26,6 +26,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { GigPerformersSection } from "@/components/social/ParticipantStatusList";
 import { useGigExperience } from "@/features/gig-experience/hooks";
 import { GigViewerShell } from "@/features/gig-experience/viewer/GigViewerShell";
+import { LiveGigStageView } from "@/features/gig-experience/viewer/LiveGigStageView";
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
