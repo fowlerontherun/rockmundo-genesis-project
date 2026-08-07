@@ -548,14 +548,23 @@ export default function PerformGig() {
         </Card>
       )}
 
-      {/* Real-time Performance Viewer - shown when within 10 min of start, during gig, or up to 10 min after */}
+      {/* Live stage view — uses the same updated viewer engine as the demo */}
       {shouldShowLiveViewer && setlistSongs.length > 0 && !showOutcome && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Watch Performance</h3>
-          <TopDownGigViewer
-            gigId={gig.id}
-            onComplete={handleGigComplete}
-          />
+          {gigExperience && gigExperience.songs.length > 0 ? (
+            <LiveGigStageView
+              gigId={gig.id}
+              experience={gigExperience}
+              onViewResult={() => setShowOutcome(true)}
+              onClose={handleGigComplete}
+            />
+          ) : (
+            <TopDownGigViewer
+              gigId={gig.id}
+              onComplete={handleGigComplete}
+            />
+          )}
         </div>
       )}
 
