@@ -488,13 +488,14 @@ export default function PerformGig() {
         completedOrCancelled={gig.status === 'completed' || gig.status === 'cancelled'}
       />
 
-      {/* Preparation Checklist */}
-      {setlistSongs.length > 0 && (
+      {/* Readiness summary — only for non-scheduled gigs; scheduled gigs use the
+          authoritative Gig Preparation panel above instead of duplicating it */}
+      {gig.status !== 'scheduled' && setlistSongs.length > 0 && (
         <GigPreparationChecklist
           setlistSongs={setlistSongs}
           rehearsals={rehearsals.map(r => ({
             song_id: r.song_id,
-            song_title: r.songs?.title || 'Unknown',
+            song_title: setlistSongs.find(s => s.song_id === r.song_id)?.songs?.title || 'Unknown',
             rehearsal_level: r.rehearsal_level || 0
           }))}
           equipmentCount={equipmentCount}
