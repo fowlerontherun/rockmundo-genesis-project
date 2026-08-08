@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
 import { TopDownGigViewer } from "@/components/gig-viewer/TopDownGigViewer";
+import { CompletedGigStageViewer } from "@/features/gig-experience/viewer/CompletedGigStageViewer";
 import { useBandGearEffects } from "@/hooks/useBandGearEffects";
 import type { Database } from "@/lib/supabase-types";
 import { buildGearOutcomeNarrative } from "@/utils/gigNarrative";
@@ -64,6 +65,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [showReviewChoice, setShowReviewChoice] = useState(false);
   const [pendingOutcome, setPendingOutcome] = useState<GigHistoryOutcome | null>(null);
   const [showTopDownViewer, setShowTopDownViewer] = useState(false);
+  const [showStageViewer, setShowStageViewer] = useState(false);
   const { data: selectedGearData } = useBandGearEffects(selectedOutcome?.gigs?.band_id ?? bandId, {
     enabled: showReport && Boolean(selectedOutcome?.gigs?.band_id ?? bandId),
   });
@@ -145,6 +147,13 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
     setReviewGigId(pendingOutcome.gigs.id);
     setShowReviewChoice(false);
     setShowTopDownViewer(true);
+  };
+
+  const handleWatchStageView = () => {
+    if (!pendingOutcome?.gigs?.id) return;
+    setReviewGigId(pendingOutcome.gigs.id);
+    setShowReviewChoice(false);
+    setShowStageViewer(true);
   };
 
   const handleInstantOutcome = async () => {
@@ -357,6 +366,15 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                 <span className="text-xs opacity-80">Merged live + detailed commentary in a single playback mode</span>
               </Button>
               <Button
+                onClick={handleWatchStageView}
+                size="lg"
+                className="h-auto flex-col gap-2 py-4"
+              >
+                <Play className="h-6 w-6" />
+                <span className="font-semibold">Stage View</span>
+                <span className="text-xs opacity-80">Rewatch the performance in the full gig viewer</span>
+              </Button>
+              <Button
                 onClick={handleInstantOutcome}
                 variant="outline"
                 size="lg"
@@ -375,6 +393,26 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           <Dialog open={showTopDownViewer} onOpenChange={setShowTopDownViewer}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <TopDownGigViewer gigId={reviewGigId} />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Stage View Viewer */}
+        {showStageViewer && reviewGigId && (
+          <Dialog open={showStageViewer} onOpenChange={setShowStageViewer}>
+            <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Stage View</DialogTitle>
+                <DialogDescription>Rewatch this completed performance.</DialogDescription>
+              </DialogHeader>
+              <CompletedGigStageViewer
+                gigId={reviewGigId}
+                onViewResult={() => {
+                  setShowStageViewer(false);
+                  if (pendingOutcome) void handleViewDetails(pendingOutcome);
+                }}
+                onClose={() => setShowStageViewer(false)}
+              />
             </DialogContent>
           </Dialog>
         )}

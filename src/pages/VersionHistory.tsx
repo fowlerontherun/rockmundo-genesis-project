@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.654",
+    date: "2026-08-08",
+    changes: [
+      { type: 'feature', description: "Completed gigs can now be rewatched in the full gig viewer: pick 'Stage View' when reviewing a gig from your band's gig history." },
+      { type: 'improvement', description: "Stage View uses the stored replay when one exists and rebuilds a deterministic performance from the gig result when it doesn't, with clear messaging if no setlist data was stored." },
+    ],
+  },
+  {
+
     version: "1.1.653",
     date: "2026-08-08",
     changes: [
