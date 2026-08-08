@@ -3003,6 +3003,124 @@ export type Database = {
           },
         ]
       }
+      band_treasuries: {
+        Row: {
+          balance_minor: number
+          band_id: string
+          created_at: string
+          currency_code: string
+          id: string
+          is_primary: boolean
+          reserved_balance_minor: number
+          updated_at: string
+        }
+        Insert: {
+          balance_minor?: number
+          band_id: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_primary?: boolean
+          reserved_balance_minor?: number
+          updated_at?: string
+        }
+        Update: {
+          balance_minor?: number
+          band_id?: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_primary?: boolean
+          reserved_balance_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_treasuries_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_treasury_transactions: {
+        Row: {
+          amount_minor: number
+          balance_after_minor: number
+          band_id: string
+          category: string
+          created_at: string
+          currency_code: string
+          direction: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          profile_id: string | null
+          source_kind: string | null
+          treasury_id: string
+        }
+        Insert: {
+          amount_minor: number
+          balance_after_minor: number
+          band_id: string
+          category?: string
+          created_at?: string
+          currency_code: string
+          direction: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          profile_id?: string | null
+          source_kind?: string | null
+          treasury_id: string
+        }
+        Update: {
+          amount_minor?: number
+          balance_after_minor?: number
+          band_id?: string
+          category?: string
+          created_at?: string
+          currency_code?: string
+          direction?: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          profile_id?: string | null
+          source_kind?: string | null
+          treasury_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_treasury_transactions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_treasury_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_treasury_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_treasury_transactions_treasury_id_fkey"
+            columns: ["treasury_id"]
+            isOneToOne: false
+            referencedRelation: "band_treasuries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_vehicles: {
         Row: {
           band_id: string
@@ -47099,6 +47217,10 @@ export type Database = {
       }
     }
     Functions: {
+      _band_active_member: {
+        Args: { p_band_id: string; p_profile_id: string }
+        Returns: boolean
+      }
       _caller_profile_id: { Args: never; Returns: string }
       _festival_activate_due_upgrades: {
         Args: { p_festival_company_id: string }
@@ -47189,6 +47311,25 @@ export type Database = {
       _festival_upgrade_window: {
         Args: { p_festival_company_id: string }
         Returns: Json
+      }
+      _get_or_create_band_treasury: {
+        Args: { p_band_id: string; p_currency_code: string }
+        Returns: {
+          balance_minor: number
+          band_id: string
+          created_at: string
+          currency_code: string
+          id: string
+          is_primary: boolean
+          reserved_balance_minor: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_treasuries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       _has_active_vip_entitlement: {
         Args: { p_user_id: string }
@@ -48450,6 +48591,16 @@ export type Database = {
         Returns: Json
       }
       complete_wellness_habit: { Args: { _habit_id: string }; Returns: Json }
+      contribute_my_personal_funds_to_band: {
+        Args: {
+          p_amount_minor: number
+          p_band_id: string
+          p_bank_account_id: string
+          p_idempotency_key?: string
+          p_note?: string
+        }
+        Returns: Json
+      }
       contribute_song_to_band: {
         Args: { p_band_id: string; p_profile_id?: string; p_song_id: string }
         Returns: Json
@@ -49410,6 +49561,17 @@ export type Database = {
         }
         Returns: Json
       }
+      fund_my_band: {
+        Args: {
+          p_amount_minor: number
+          p_band_id: string
+          p_idempotency_key?: string
+          p_note?: string
+          p_source_account_id: string
+          p_source_kind: string
+        }
+        Returns: Json
+      }
       generate_botb_events: {
         Args: { p_horizon_events?: number }
         Returns: number
@@ -49602,6 +49764,10 @@ export type Database = {
       get_friendship_tier: {
         Args: { profile_a: string; profile_b: string }
         Returns: string
+      }
+      get_my_band_funding_sources: {
+        Args: { p_band_id: string }
+        Returns: Json
       }
       get_my_eligible_band_contribution_accounts: {
         Args: { p_band_id: string; p_currency_code?: string }
@@ -50083,6 +50249,23 @@ export type Database = {
       }
       preview_festival_legacy_migration: {
         Args: { p_mapping_id: string }
+        Returns: Json
+      }
+      preview_my_band_contribution: {
+        Args: {
+          p_amount_minor: number
+          p_band_id: string
+          p_bank_account_id: string
+        }
+        Returns: Json
+      }
+      preview_my_band_funding: {
+        Args: {
+          p_amount_minor: number
+          p_band_id: string
+          p_source_account_id: string
+          p_source_kind: string
+        }
         Returns: Json
       }
       process_gear_sale: {
