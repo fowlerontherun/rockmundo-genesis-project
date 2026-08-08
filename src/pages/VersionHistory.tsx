@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.653",
+    date: "2026-08-08",
+    changes: [
+      { type: 'fix', description: "Band accounts are real again: every band now has a treasury with a proper balance per currency, backfilled from its existing balance." },
+      { type: 'fix', description: "Depositing money into your band works from either your character wallet or an eligible bank account — the funding source list, preview and confirm steps all use live data instead of stubbed responses." },
+      { type: 'fix', description: "Band Finances no longer falls back to a 'treasury missing' placeholder; balances, contributions and transaction history now load from the band treasury ledger." },
+      { type: 'improvement', description: "Deposits are idempotent, member-checked and balance-checked, and keep the legacy band balance in sync so rehearsals, ads and label fees still read the right figure." },
+    ],
+  },
+  {
+
     version: "1.1.652",
     date: "2026-08-07",
     changes: [
