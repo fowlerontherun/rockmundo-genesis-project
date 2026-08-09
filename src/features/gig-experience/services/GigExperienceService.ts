@@ -83,7 +83,9 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
 export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null; postProcessing?: { status: string; processing_version: string | null; completed_at: string | null } | null; consequences?: any[] }): GigExperienceDTO {
   const { gig, outcome } = input;
   const venue = gig.venues;
-  const capacity = venue?.capacity ?? outcome?.venue_capacity ?? 0;
+  // Capacity must never be lower than recorded attendance, otherwise the DTO
+  // validator rejects otherwise-valid historic outcomes.
+  const capacity = Math.max(venue?.capacity ?? 0, outcome?.venue_capacity ?? 0, outcome?.actual_attendance ?? 0);
   const setlistTitles = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, row.songs?.title ?? "Unknown Song"]));
   const setlistAudio = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, resolveSongAudioDescriptor(row.songs, "allowed")]));
   const songPerformances = [...(input.songPerformances ?? [])].sort((a, b) => a.position - b.position);
