@@ -144,6 +144,7 @@ const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const AdminGigViewerDemo = lazyWithRetry(() => import("./pages/admin/GigViewerDemo"));
+const AdminGigViewerReplayAudit = lazyWithRetry(() => import("./pages/admin/GigViewerReplayAudit"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const TwaaterProfileView = lazyWithRetry(() => import("./pages/TwaaterProfileView"));
 const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagView"));
@@ -927,6 +928,7 @@ function App() {
                     <Route path="admin/ai-song-generation" element={<AISongGeneration />} />
                     <Route path="admin/gigs" element={<GigsAdmin />} />
                     <Route path="admin/gig-viewer-demo" element={<AdminGigViewerDemo />} />
+                    <Route path="admin/gig-viewer-replays" element={<AdminGigViewerReplayAudit />} />
                     
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />
