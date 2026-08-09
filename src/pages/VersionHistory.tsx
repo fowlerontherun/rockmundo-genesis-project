@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.656",
+    date: "2026-08-09",
+    changes: [
+      { type: 'feature', description: "New admin page 'Gig Viewer Replay Audit' (Bands & Performance) lists every completed gig with its replay status, attendance, rating and stored song count." },
+      { type: 'feature', description: "Each gig can be validated or regenerated on demand, reporting event count, replay length and any schema problems, plus a bulk 'Validate visible' sweep." },
+      { type: 'improvement', description: "The audit flags gigs with no stored song data and clearly states when canonical replay storage isn't provisioned and on-demand replays are used instead." },
+    ],
+  },
+  {
     version: "1.1.655",
     date: "2026-08-09",
     changes: [
