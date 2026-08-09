@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.655",
+    date: "2026-08-09",
+    changes: [
+      { type: 'fix', description: "Gig viewer now loads for real gigs: optional lineup, replay and post-gig tables that don't exist yet no longer break the whole gig experience load." },
+      { type: 'fix', description: "Attendance and capacity are read from the real booking and outcome data, and capacity can never fall below recorded attendance (which previously rejected valid historic gigs)." },
+      { type: 'improvement', description: "When a gig has no stored performer rows, the viewer falls back to the band's active line-up so the stage still shows who played." },
+    ],
+  },
+  {
     version: "1.1.654",
     date: "2026-08-08",
     changes: [

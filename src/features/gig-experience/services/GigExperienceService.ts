@@ -44,17 +44,36 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
   ]);
   if (songPerfsRes.error) throw songPerfsRes.error;
   if (setlistSongsRes.error) throw setlistSongsRes.error;
-  if (performersRes.error) throw performersRes.error;
+  if (performersRes.error && performersRes.error.code !== "42P01") throw performersRes.error;
   if (replayDescriptorRes.error && replayDescriptorRes.error.code !== "42P01") throw replayDescriptorRes.error;
   if (processingRes.error && processingRes.error.code !== "42P01") throw processingRes.error;
   if (consequenceRes.error && consequenceRes.error.code !== "42P01") throw consequenceRes.error;
+
+  // Lineup fallback: many gigs have no dedicated performer rows, so use the
+  // band's active members so the viewer still shows who was on stage.
+  let performers = (performersRes.data ?? []) as PerformerRow[];
+  if (performers.length === 0 && gig?.band_id) {
+    const { data: members } = await (supabase as any)
+      .from("band_members")
+      .select("id,profile_id,instrument_role,role,member_status,profiles:profiles!band_members_profile_id_fkey(display_name,username)")
+      .eq("band_id", gig.band_id);
+    performers = ((members ?? []) as any[])
+      .filter((row) => !row.member_status || row.member_status === "active")
+      .map((row) => ({
+        id: row.id,
+        profile_id: row.profile_id,
+        role_or_instrument: row.instrument_role ?? row.role ?? null,
+        lineup_status: "confirmed",
+        profiles: row.profiles ?? null,
+      }));
+  }
 
   return mapGigExperience({
     gig: gig as unknown as GigRow,
     outcome: outcome as OutcomeRow | null,
     songPerformances: (songPerfsRes.data ?? []) as SongPerfRow[],
     setlistSongs: (setlistSongsRes.data ?? []) as unknown as SetlistSongRow[],
-    performers: (performersRes.data ?? []) as PerformerRow[],
+    performers,
     replayDescriptor: replayDescriptorRes.data ?? null,
     postProcessing: processingRes.data ?? null,
     consequences: consequenceRes.data ?? [],
@@ -64,7 +83,9 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
 export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null; postProcessing?: { status: string; processing_version: string | null; completed_at: string | null } | null; consequences?: any[] }): GigExperienceDTO {
   const { gig, outcome } = input;
   const venue = gig.venues;
-  const capacity = venue?.capacity ?? outcome?.venue_capacity ?? 0;
+  // Capacity must never be lower than recorded attendance, otherwise the DTO
+  // validator rejects otherwise-valid historic outcomes.
+  const capacity = Math.max(venue?.capacity ?? 0, outcome?.venue_capacity ?? 0, outcome?.actual_attendance ?? 0);
   const setlistTitles = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, row.songs?.title ?? "Unknown Song"]));
   const setlistAudio = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, resolveSongAudioDescriptor(row.songs, "allowed")]));
   const songPerformances = [...(input.songPerformances ?? [])].sort((a, b) => a.position - b.position);
