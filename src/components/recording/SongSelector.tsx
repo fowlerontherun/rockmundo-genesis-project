@@ -220,7 +220,7 @@ export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect
         </div>
 
         <div className="flex flex-wrap justify-center gap-2">
-          <Button size="sm" variant="default" onClick={() => window.location.hash = '#/songwriting'}>
+          <Button size="sm" variant="default" onClick={() => navigate('/songwriting')}>
             <Music className="h-4 w-4" />
             Go to Songwriting
           </Button>
