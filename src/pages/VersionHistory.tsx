@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.658",
+    date: "2026-08-10",
+    changes: [
+      { type: 'improvement', description: "Recording session song selector now shows a clear empty-state message with troubleshooting steps and a 'Go to Songwriting' shortcut when no band or personal songs are available, distinguishing solo vs. band scenarios." },
+    ],
+  },
+  {
     version: "1.1.657",
     date: "2026-08-10",
     changes: [

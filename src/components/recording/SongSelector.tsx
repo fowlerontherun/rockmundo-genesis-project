@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ interface SongSelectorProps {
 }
 
 export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect }: SongSelectorProps) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [recordedFilter, setRecordedFilter] = useState<string>("all");
   const [rehearsalFilter, setRehearsalFilter] = useState<string>("all");
@@ -174,11 +176,64 @@ export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect
   }
 
   if (!songs || songs.length === 0) {
+    const isSolo = !bandId;
     return (
-      <div className="text-center py-12">
-        <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">No songs available to record.</p>
-        <p className="text-sm text-muted-foreground mt-2">Complete a songwriting project first!</p>
+      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 space-y-4">
+        <div className="text-center space-y-2">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <Music className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <p className="font-medium">No songs available to record</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            {isSolo
+              ? "Your character hasn't written any songs yet, and you're not in a band with a shared repertoire. Songs must be created in the Songwriting hub before they can be recorded here."
+              : "Neither you nor your band has any recordable songs right now. Complete a songwriting project first, or ask bandmates to contribute their songs to the band repertoire."}
+          </p>
+        </div>
+
+        <div className="rounded-md border border-border/70 bg-background/60 p-4 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Troubleshooting
+          </p>
+          <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside marker:text-primary">
+            <li>
+              Open the <span className="font-medium text-foreground">Songwriting</span> hub and finish a project — a song needs a status of <span className="font-medium text-foreground">draft</span>, <span className="font-medium text-foreground">written</span>, <span className="font-medium text-foreground">completed</span>, or <span className="font-medium text-foreground">recorded</span> to show up here.
+            </li>
+            <li>
+              Archived songs are hidden. In Songwriting, switch the filter to <span className="font-medium text-foreground">Archived</span> and restore any song you want to record.
+            </li>
+            {!isSolo && (
+              <li>
+                If a bandmate wrote the song, they need to use <span className="font-medium text-foreground">Contribute to Band</span> in Song Manager so it enters the band repertoire.
+              </li>
+            )}
+            {isSolo && (
+              <li>
+                Join or form a band — band members share their repertoire, so a bandmate's songs become available to record.
+              </li>
+            )}
+            <li>
+              Still nothing? This can happen if your character isn't fully linked to your account. Try reselecting your character from the dashboard, then reopen this page.
+            </li>
+          </ol>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button size="sm" variant="default" onClick={() => navigate('/songwriting')}>
+            <Music className="h-4 w-4" />
+            Go to Songwriting
+          </Button>
+          {!isSolo && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.location.reload()}
+            >
+              Reload page
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
