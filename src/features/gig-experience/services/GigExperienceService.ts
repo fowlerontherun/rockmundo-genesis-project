@@ -88,7 +88,25 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
   const capacity = Math.max(venue?.capacity ?? 0, outcome?.venue_capacity ?? 0, outcome?.actual_attendance ?? 0);
   const setlistTitles = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, row.songs?.title ?? "Unknown Song"]));
   const setlistAudio = new Map((input.setlistSongs ?? []).map((row) => [row.song_id, resolveSongAudioDescriptor(row.songs, "allowed")]));
-  const songPerformances = [...(input.songPerformances ?? [])].sort((a, b) => a.position - b.position);
+  // Some historic gigs stored each setlist slot twice (a double-insert during
+  // simulation). Collapse duplicates by slot so the viewer shows one entry per
+  // song instead of failing DTO validation with "duplicate position".
+  const performanceBySlot = new Map<string, SongPerfRow>();
+  for (const row of input.songPerformances ?? []) {
+    const key = `${row.position}::${row.song_id ?? row.performance_item_name ?? ""}`;
+    const existing = performanceBySlot.get(key);
+    if (!existing) {
+      performanceBySlot.set(key, row);
+      continue;
+    }
+    const existingScore = Number(existing.performance_score ?? -Infinity);
+    const candidateScore = Number(row.performance_score ?? -Infinity);
+    if (candidateScore > existingScore) performanceBySlot.set(key, row);
+  }
+  const seenPositions = new Set<number>();
+  const songPerformances = [...performanceBySlot.values()]
+    .sort((a, b) => a.position - b.position)
+    .filter((row) => (seenPositions.has(row.position) ? false : (seenPositions.add(row.position), true)));
   const songs: GigExperienceDTO["songs"] = songPerformances.map((row) => ({
     id: row.id,
     songId: row.song_id ?? null,

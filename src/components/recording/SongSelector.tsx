@@ -32,10 +32,8 @@ export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect
   const { data: songs, isLoading, error } = useQuery({
     queryKey: ['recordable-songs', userId, profileId, bandId],
     queryFn: async () => {
-      // Get songs with their recording history
-      let songsQuery = supabase
-        .from('songs')
-        .select(`
+      const RECORDABLE_STATUSES = ['draft', 'completed', 'written', 'recorded'];
+      const selectClause = `
           *,
           band_song_familiarity!song_id (
             familiarity_minutes,
@@ -43,20 +41,52 @@ export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect
             rehearsal_stage,
             band_id
           )
-        `)
-        .in('status', ['draft', 'recorded'])
-        .neq('archived', true)
+        `;
+
+      const baseQuery = () => supabase
+        .from('songs')
+        .select(selectClause)
+        .in('status', RECORDABLE_STATUSES)
+        .or('archived.is.null,archived.eq.false')
         .order('created_at', { ascending: false });
 
-      songsQuery = bandId
-        ? songsQuery.eq('band_id', bandId)
-        : profileId
-          ? songsQuery.eq('profile_id', profileId).is('band_id', null)
-          : songsQuery.eq('user_id', userId).is('profile_id', null).is('band_id', null);
+      const requests: Array<PromiseLike<any>> = [];
 
-      const { data, error } = await songsQuery;
-      
-      if (error) throw error;
+      // Band repertoire (songs written by any member for this band)
+      if (bandId) requests.push(baseQuery().eq('band_id', bandId));
+
+      // Songs this band owns even if the song row isn't stamped with band_id
+      if (bandId) {
+        requests.push(
+          (async () => {
+            const { data: owned, error: ownedError } = await (supabase as any)
+              .from('band_song_ownership')
+              .select('song_id')
+              .eq('band_id', bandId);
+            if (ownedError || !owned?.length) return { data: [], error: null };
+            return baseQuery().in('id', owned.map((row: any) => row.song_id));
+          })()
+        );
+      }
+
+      // The active character's own songs (personal catalogue)
+      if (profileId) requests.push(baseQuery().eq('profile_id', profileId));
+      else if (userId) requests.push(baseQuery().eq('user_id', userId));
+
+      const results = await Promise.all(requests);
+      const firstError = results.find((res) => res?.error)?.error;
+      if (firstError) throw firstError;
+
+      const deduped = new Map<string, any>();
+      for (const res of results) {
+        for (const song of (res?.data ?? [])) {
+          if (!deduped.has(song.id)) deduped.set(song.id, song);
+        }
+      }
+      const data = [...deduped.values()].sort(
+        (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
+      );
+
 
       // Get recording history for these songs
       const songIds = data?.map(s => s.id) || [];

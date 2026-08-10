@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.657",
+    date: "2026-08-10",
+    changes: [
+      { type: 'fix', description: "Booking a recording session now shows the full band repertoire (including songs written by other members and songs the band owns) plus your own personal songs, instead of an empty list." },
+      { type: 'fix', description: "Recordable songs no longer disappear when a song's status is 'completed'/'written' or its archived flag was never set." },
+      { type: 'fix', description: "Gig viewer loads again for completed gigs: duplicated song performance rows from older simulations are collapsed to one entry per setlist slot rather than failing validation." },
+    ],
+  },
+  {
     version: "1.1.656",
     date: "2026-08-09",
     changes: [
