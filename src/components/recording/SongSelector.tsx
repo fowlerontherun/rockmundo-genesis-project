@@ -26,6 +26,7 @@ interface SongSelectorProps {
 }
 
 export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect }: SongSelectorProps) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [recordedFilter, setRecordedFilter] = useState<string>("all");
   const [rehearsalFilter, setRehearsalFilter] = useState<string>("all");
