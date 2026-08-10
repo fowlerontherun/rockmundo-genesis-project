@@ -50,7 +50,7 @@ export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect
         .or('archived.is.null,archived.eq.false')
         .order('created_at', { ascending: false });
 
-      const requests: Array<Promise<any>> = [];
+      const requests: Array<PromiseLike<any>> = [];
 
       // Band repertoire (songs written by any member for this band)
       if (bandId) requests.push(baseQuery().eq('band_id', bandId));
