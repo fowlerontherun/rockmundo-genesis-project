@@ -37,7 +37,7 @@ export function GigCanvas({
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasRenderer | null>(null);
-  const size = useCanvasSize(wrapRef, { fill });
+  const { container, fit, logical } = useCanvasSize(wrapRef, { fill });
   const demoTuning = useDemoCrowdTuning();
   const replayTuning = replay.crowdTuning ?? null;
   const shouldLoadGlobal = !crowdTuning && !demoTuning.demoMode && !replayTuning;
@@ -60,12 +60,11 @@ export function GigCanvas({
       crowdTuning: resolved.tuning,
     });
     rendererRef.current = renderer;
-    renderer.resize(size);
+    renderer.resize(logical);
     return () => { renderer.destroy(); rendererRef.current = null; };
   }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey]);
 
-  useEffect(() => { rendererRef.current?.resize(size); }, [size]);
-  useEffect(() => { rendererRef.current?.render(playbackState); }, [playbackState, size]);
+  useEffect(() => { rendererRef.current?.render(playbackState); }, [playbackState]);
 
   const attendance = metricNumber(experience?.headline?.attendance);
   const capacity = experience?.gig?.venue?.capacity ?? 0;
@@ -83,12 +82,21 @@ export function GigCanvas({
           />
         </>
       ) : null}
-      <div ref={wrapRef} className={fill ? "h-full w-full" : "w-full"}>
+      <div
+        ref={wrapRef}
+        className={`${fill ? "h-full" : ""} relative flex w-full items-center justify-center overflow-hidden bg-slate-950`}
+        style={{ minHeight: fill ? 0 : container.height, height: fill ? undefined : container.height }}
+        data-scene-viewport
+        data-scene-scale={fit.scale.toFixed(4)}
+      >
         <canvas
           ref={canvasRef}
           role="img"
           aria-label={immersive ? "Song performance stage showing the band and crowd." : "Top-down replay canvas. Use the text timeline for a full accessible description."}
-          className={immersive ? "block h-full w-full bg-slate-950" : "w-full rounded-xl border bg-slate-950"}
+          className={immersive ? "block bg-slate-950" : "block rounded-xl border bg-slate-950"}
+          style={{ width: fit.width, height: fit.height, maxWidth: "100%", maxHeight: "100%" }}
+          data-logical-width={logical.width}
+          data-logical-height={logical.height}
         />
       </div>
     </div>
