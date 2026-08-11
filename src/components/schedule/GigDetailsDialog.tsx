@@ -1,17 +1,12 @@
-import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { format, differenceInDays, differenceInHours } from "date-fns";
-import { MapPin, Clock, Users, Ticket, Music, DollarSign, Calendar, TrendingDown, AlertCircle } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
+import { MapPin, Clock, Music, DollarSign, Calendar, AlertCircle, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { GigSetlistDisplay } from "@/components/gig/GigSetlistDisplay";
-import { GigPreparationPanel } from "@/components/gig/GigPreparationPanel";
-import { TicketPriceAdjuster } from "@/components/gig/TicketPriceAdjuster";
 import { TicketSalesDisplay } from "@/components/gig/TicketSalesDisplay";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { calculateDailySalesRate } from "@/utils/ticketSalesSimulation";
 import { useNavigate } from "react-router-dom";
 
@@ -22,12 +17,11 @@ interface GigDetailsDialogProps {
   bandId?: string; // Optional - will be fetched from gig if not provided
 }
 
-export function GigDetailsDialog({ open, onOpenChange, gigId, bandId: propBandId }: GigDetailsDialogProps) {
+export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialogProps) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   // Fetch gig details
-  const { data: gig, isLoading: gigLoading, refetch: refetchGig } = useQuery({
+  const { data: gig, isLoading: gigLoading } = useQuery({
     queryKey: ['gig-details', gigId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -46,60 +40,12 @@ export function GigDetailsDialog({ open, onOpenChange, gigId, bandId: propBandId
     enabled: open && !!gigId,
   });
 
-  // Use the prop bandId or derive from gig
-  const bandId = propBandId || gig?.band_id;
-
-  // Fetch band setlists with song count
-  const { data: setlists = [] } = useQuery({
-    queryKey: ['band-setlists-for-gig', bandId],
-    queryFn: async () => {
-      if (!bandId) return [];
-      const { data, error } = await supabase
-        .from('setlists')
-        .select('id, name')
-        .eq('band_id', bandId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Get song counts for each setlist
-      const setlistsWithCounts = await Promise.all((data || []).map(async (setlist) => {
-        const { count } = await supabase
-          .from('setlist_songs')
-          .select('*', { count: 'exact', head: true })
-          .eq('setlist_id', setlist.id);
-        return { ...setlist, song_count: count || 0 };
-      }));
-      
-      return setlistsWithCounts;
-    },
-    enabled: open && !!bandId,
-  });
-
-  // Fetch current setlist name
-  const { data: currentSetlist } = useQuery({
-    queryKey: ['setlist-name', gig?.setlist_id],
-    queryFn: async () => {
-      if (!gig?.setlist_id) return null;
-      const { data, error } = await supabase
-        .from('setlists')
-        .select('name')
-        .eq('id', gig.setlist_id)
-        .single();
-      
-      if (error) return null;
-      return data;
-    },
-    enabled: !!gig?.setlist_id,
-  });
-
   if (!open) return null;
 
   const venue = gig?.venues;
   const band = gig?.bands;
   const scheduledDate = gig?.scheduled_date ? new Date(gig.scheduled_date) : new Date();
   const daysUntilGig = differenceInDays(scheduledDate, new Date());
-  const hoursUntilGig = differenceInHours(scheduledDate, new Date());
   const ticketsSold = gig?.tickets_sold || 0;
   const venueCapacity = venue?.capacity || 100;
 
@@ -117,27 +63,20 @@ export function GigDetailsDialog({ open, onOpenChange, gigId, bandId: propBandId
     predictedSales = salesResult.expectedTotalSales;
   }
 
-  // Check if price adjustment is available
-  const salesPercentage = predictedSales > 0 ? (ticketsSold / predictedSales) * 100 : 0;
-  const canAdjustPrice = daysUntilGig >= 7 && salesPercentage < 50 && !gig?.price_adjusted_at;
-
-  const handleSetlistChanged = () => {
-    refetchGig();
-    queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
-  };
-
-  const handlePriceAdjusted = () => {
-    refetchGig();
-  };
-
   const handleGoToPerform = () => {
     onOpenChange(false);
-    navigate(`/perform/${gigId}`);
+    navigate(`/gigs/perform/${gigId}`);
   };
+
+  const actionLabel = gig?.status === 'completed'
+    ? 'View Performance'
+    : gig?.status === 'in_progress' || gig?.status === 'ready_for_completion'
+      ? 'Open Gig Viewer'
+      : 'Open Gig Preparation';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Music className="h-5 w-5" />
@@ -154,123 +93,47 @@ export function GigDetailsDialog({ open, onOpenChange, gigId, bandId: propBandId
           </div>
         ) : gig ? (
           <div className="space-y-4">
-            {/* Venue & Date Info */}
             <Card>
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{venue?.name}</span>
-                  {venue?.location && (
-                    <span className="text-muted-foreground">• {venue.location}</span>
-                  )}
+              <CardContent className="grid gap-3 pt-4 sm:grid-cols-2">
+                <div className="flex items-start gap-2 text-sm sm:col-span-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <span className="font-medium">{venue?.name}</span>
+                    {venue?.location ? <span className="text-muted-foreground"> · {venue.location}</span> : null}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{format(scheduledDate, 'EEEE, MMMM d, yyyy')}</span>
+                <div className="flex items-start gap-2 text-sm">
+                  <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span>{format(scheduledDate, 'EEE, MMM d, yyyy')}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-start gap-2 text-sm">
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <span>{format(scheduledDate, 'h:mm a')}</span>
-                  {daysUntilGig > 0 && (
-                    <Badge variant="outline" className="ml-2">
-                      {daysUntilGig} days away
-                    </Badge>
-                  )}
-                  {daysUntilGig === 0 && hoursUntilGig > 0 && (
-                    <Badge variant="default" className="ml-2">
-                      {hoursUntilGig} hours away
-                    </Badge>
-                  )}
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>Capacity: {venueCapacity?.toLocaleString()}</span>
+                <div className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <Badge variant="outline">{gig.status.replace(/_/g, ' ')}</Badge>
+                  {daysUntilGig > 0 ? <span className="text-muted-foreground">{daysUntilGig} days away</span> : null}
+                  <span className="ml-auto flex items-center gap-1 text-muted-foreground">
+                    <DollarSign className="h-4 w-4" />
+                    {gig.ticket_price || 0} per ticket
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
-            <Separator />
-
-            {/* Ticket Sales */}
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Ticket className="h-4 w-4" />
-                Ticket Sales
-              </h4>
+            {gig.status === 'scheduled' ? (
               <TicketSalesDisplay
                 ticketsSold={ticketsSold}
                 predictedTickets={predictedSales}
                 venueCapacity={venueCapacity}
               />
-              <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                <DollarSign className="h-4 w-4" />
-                <span>Ticket Price: ${gig.ticket_price || 0}</span>
-                {gig.original_ticket_price && gig.original_ticket_price !== gig.ticket_price && (
-                  <Badge variant="outline" className="text-xs">
-                    <TrendingDown className="h-3 w-3 mr-1" />
-                    Reduced from ${gig.original_ticket_price}
-                  </Badge>
-                )}
-              </div>
-            </div>
+            ) : null}
 
-            {/* Price Adjustment (if eligible) */}
-            {canAdjustPrice && (
-              <>
-                <Separator />
-                <TicketPriceAdjuster
-                  gigId={gigId}
-                  currentPrice={gig.ticket_price || 20}
-                  ticketsSold={ticketsSold}
-                  predictedSales={predictedSales}
-                  onPriceAdjusted={handlePriceAdjusted}
-                />
-              </>
-            )}
-
-            <Separator />
-
-            {/* Setlist */}
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Music className="h-4 w-4" />
-                Setlist
-              </h4>
-              {bandId ? (
-                <GigSetlistDisplay
-                  gigId={gigId}
-                  bandId={bandId}
-                  currentSetlistId={gig.setlist_id}
-                  currentSetlistName={currentSetlist?.name}
-                  scheduledDate={gig.scheduled_date}
-                  setlists={setlists}
-                  onSetlistChanged={handleSetlistChanged}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">Loading setlist information...</p>
-              )}
-            </div>
-
-            <Separator />
-            {bandId && (
-              <GigPreparationPanel
-                gigId={gigId}
-                bandId={bandId}
-                status={gig.status}
-                scheduledDate={gig.scheduled_date}
-              />
-            )}
-
-            {/* Action Button */}
-            {hoursUntilGig <= 1 && hoursUntilGig > 0 && (
-              <>
-                <Separator />
-                <Button className="w-full" onClick={handleGoToPerform}>
-                  <Music className="h-4 w-4 mr-2" />
-                  Go to Performance
-                </Button>
-              </>
-            )}
+            <Button className="w-full" onClick={handleGoToPerform}>
+              <Music className="mr-2 h-4 w-4" />
+              {actionLabel}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">

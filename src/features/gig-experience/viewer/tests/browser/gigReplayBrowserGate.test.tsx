@@ -1,7 +1,9 @@
 import React from "react";
+import "@testing-library/jest-dom/vitest";
 import { render, screen, within, fireEvent, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GigViewerShell } from "../../GigViewerShell";
 import type { GigViewerReplayResult } from "../../../services/GigViewerReplayService";
 import type { GigViewerReplay } from "../../../events/types";
@@ -14,9 +16,24 @@ vi.mock("../../../hooks", () => ({
   useGigViewerReplay: () => ({ data: replayResult, isLoading: false, isError: false, error: null, refetch }),
 }));
 
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+Object.defineProperty(globalThis, "ResizeObserver", { configurable: true, value: ResizeObserverMock });
+Object.defineProperty(window, "ResizeObserver", { configurable: true, value: ResizeObserverMock });
+Object.defineProperty(window, "matchMedia", {
+  configurable: true,
+  value: vi.fn((query: string) => ({ matches: false, media: query, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() })),
+});
+
 HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
-  clearRect: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), rect: vi.fn(),
-  setTransform: vi.fn(), fillText: vi.fn(),
+  clearRect: vi.fn(), fillRect: vi.fn(), strokeRect: vi.fn(), beginPath: vi.fn(), closePath: vi.fn(), clip: vi.fn(), arc: vi.fn(), ellipse: vi.fn(), fill: vi.fn(), stroke: vi.fn(), rect: vi.fn(),
+  moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn(), rotate: vi.fn(),
+  setTransform: vi.fn(), setLineDash: vi.fn(), fillText: vi.fn(), measureText: vi.fn(() => ({ width: 20 })),
+  createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+  createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
   set fillStyle(_v: string) {}, set strokeStyle(_v: string) {}, set lineWidth(_v: number) {}, set globalAlpha(_v: number) {},
   set font(_v: string) {}, set textAlign(_v: string) {}, set textBaseline(_v: string) {},
 })) as any;
@@ -29,10 +46,11 @@ const mkEvent = (sequence: number, offset: number, eventType: string, phase: str
 const readyReplay: GigViewerReplay = {
   id: "replay-release", gigId: "gig-release", gigOutcomeId: "outcome-release", viewerVersion: 1, eventSchemaVersion: 1,
   simulationSeed: "release-seed", durationMs: 9000, generatedAt: "2026-07-11T12:00:00.000Z", checksum: null, status: "ready",
+  crowdTuning: { densityMultiplier: 1, depthSpread: 1, lateralSpread: 1, stagePull: 0.5, randomness: 0.5, fanScale: 1, arrivalSpeed: 1 },
   events: [
     mkEvent(0, 0, "venue_opened", "venue_opening", { type: "venue_open", entranceIds: ["main"], lightLevel: 0.4 }),
     mkEvent(1, 1000, "performer_entered", "band_entrance", { type: "performer_enter", performerId: "p1", displayName: "Ari", roleOrInstrument: "vocals", startPosition: { x: 0.5, y: 0.5, zone: "front_center" } }, "gig.viewer.performer_entered"),
-    mkEvent(2, 2000, "song_started", "song_performance", { type: "song_start", songId: "song-1", title: "Beta Anthem", position: 1, montage: false }, "gig.viewer.song_started"),
+    mkEvent(2, 2000, "song_started", "song_performance", { type: "song_start", songId: "song-1", title: "Beta Anthem", position: 0, montage: false }, "gig.viewer.song_started"),
     mkEvent(3, 4000, "song_highlight", "song_performance", { type: "spotlight", performerId: "p1", intensity: 0.9 }, "gig.viewer.song_highlight"),
     mkEvent(4, 7000, "result_revealed", "result_reveal", { type: "result_reveal", overallRating: 20, attendance: 120, netProfit: 400, verdictKey: "great" }, "gig.viewer.result_reveal"),
     mkEvent(5, 8500, "replay_completed", "completed", { type: "crowd_reaction", reaction: "disperse", intensity: 0.1 }, "gig.viewer.completed"),
@@ -48,10 +66,16 @@ const experience: GigExperienceDTO = {
   story: { summary: "Great beta show", highlights: ["Encore"], factors: [] }, songs: [], viewer: { ready: true, outcomeId: "outcome-release", resultReadyAt: "2026-07-11T12:00:00Z", replayAvailable: true, replay: { viewerVersion: 1, durationMs: 9000, generationStatus: "ready" } },
 } as any;
 
-afterEach(() => { cleanup(); refetch.mockClear(); replayResult = { state: "ready", replay: readyReplay }; });
+afterEach(() => { cleanup(); localStorage.clear(); refetch.mockClear(); replayResult = { state: "ready", replay: readyReplay }; });
 
 function renderViewer(props: Partial<React.ComponentProps<typeof GigViewerShell>> = {}) {
-  return render(<GigViewerShell gigId="gig-release" experience={experience} open onViewResult={vi.fn()} onClose={vi.fn()} {...props} />);
+  localStorage.clear();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <GigViewerShell gigId="gig-release" experience={experience} open onViewResult={vi.fn()} onClose={vi.fn()} {...props} />
+    </QueryClientProvider>,
+  );
 }
 
 describe("Phase 5 browser release gate surrogate", () => {
@@ -67,7 +91,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/song timeline/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /performers/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /current song/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /waiting for the first song|beta anthem/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /crowd mood/i })).toBeInTheDocument();
   });
 
@@ -80,14 +104,15 @@ describe("Phase 5 browser release gate surrogate", () => {
     await user.keyboard("{Enter}");
     expect(screen.getByRole("button", { name: /^pause$/i })).toBeInTheDocument();
     await user.keyboard("{Enter}");
-    await user.tab(); await user.tab(); await user.tab(); await user.tab(); await user.tab(); await user.tab();
+    const doubleSpeed = screen.getByRole("button", { name: "2×" });
+    doubleSpeed.focus();
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("button", { name: "2×" })).toHaveAttribute("aria-pressed", "true");
+    expect(doubleSpeed).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: /skip to next song/i }));
     fireEvent.click(screen.getByRole("button", { name: /skip to next highlight/i }));
     fireEvent.click(screen.getByRole("button", { name: /skip to result reveal/i }));
     fireEvent.click(screen.getByRole("button", { name: /view result/i }));
-    fireEvent.click(screen.getByRole("button", { name: /close viewer/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /close viewer/i })[0]);
     expect(onResult).toHaveBeenCalled(); expect(onClose).toHaveBeenCalled();
   });
 
@@ -97,7 +122,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     replayResult = { state, replay: null } as GigViewerReplayResult;
     renderViewer();
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /view report/i })).toBeInTheDocument();
   });
 
   it("validates mobile viewport controls, touch target classes, reduced motion, and lifecycle open/close stability", () => {
@@ -124,6 +149,32 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(within(timeline).getByRole("button", { name: /1\. beta anthem/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /playback speed/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1×" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(/top-down replay canvas/i)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /top-down replay canvas/i })).toBeInTheDocument();
+  });
+
+  it("renders live presentation playback without result events or result controls", () => {
+    const events = readyReplay.events
+      .filter((event) => event.eventType !== "result_revealed")
+      .map((event, sequence) => ({ ...event, sequence, id: `live-${sequence}` }));
+    const presentationReplay: GigViewerReplay = {
+      ...readyReplay,
+      id: "presentation-release",
+      gigOutcomeId: "presentation-gig-release",
+      resultAvailable: false,
+      durationMs: 9000,
+      events,
+    };
+    const liveExperience = {
+      ...experience,
+      gig: { ...experience.gig, status: "in_progress", completedAt: null },
+      viewer: { ...experience.viewer, ready: false, outcomeId: null, resultReadyAt: null, replayAvailable: false },
+    } as GigExperienceDTO;
+
+    renderViewer({ experience: liveExperience, replayOverride: presentationReplay });
+
+    expect(screen.getByRole("heading", { name: /gig viewer/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /top-down replay canvas/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /result/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/result revealed/i)).not.toBeInTheDocument();
   });
 });

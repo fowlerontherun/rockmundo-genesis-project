@@ -6,21 +6,30 @@ import type { GigExperienceDTO, GigExperienceValidationError, GigPostConsequence
 import { resolveSongAudioDescriptor } from "../viewer/audio/audioSourceResolver";
 import { metricAvailable, metricLegacyMissing, metricNotApplicable, nullableNumberMetric, metricValue } from "../reportMetric";
 
-type GigRow = Database["public"]["Tables"]["gigs"]["Row"] & { venues?: Database["public"]["Tables"]["venues"]["Row"] | null };
+type GigRow = Database["public"]["Tables"]["gigs"]["Row"] & {
+  result_ready_at?: string | null;
+  venues?: Database["public"]["Tables"]["venues"]["Row"] | null;
+};
 type OutcomeRow = Database["public"]["Tables"]["gig_outcomes"]["Row"];
 type SongPerfRow = Database["public"]["Tables"]["gig_song_performances"]["Row"];
 type SetlistSongRow = { song_id: string; position: number; songs?: { id: string; title: string | null; genre?: string | null; quality_score?: number | null; audio_url?: string | null; extended_audio_url?: string | null; audio_generation_status?: string | null; duration_seconds?: number | null } | null };
+type GigSetlistRow = { gig_setlist_items?: SetlistSongRow[] | null };
 type PerformerRow = { id: string; profile_id: string; role_or_instrument: string | null; lineup_status: string | null; profiles?: { display_name?: string | null; username?: string | null } | null };
 
 const outcomeSelect = "id,gig_id,band_id,venue_id,venue_name,venue_capacity,completed_at,created_at,overall_rating,performance_grade,actual_attendance,attendance_percentage,ticket_revenue,merch_revenue,total_revenue,crew_cost,equipment_cost,venue_cost,total_costs,net_profit,fame_gained,new_followers,casual_fans_gained,dedicated_fans_gained,superfans_gained,fan_conversions,chemistry_change,total_xp_awarded,equipment_quality_avg,crew_skill_avg,band_chemistry_level,member_skill_avg,merch_items_sold,crowd_energy_peak,stage_behavior_used,band_synergy_modifier,social_buzz_impact,audience_memory_impact,promoter_modifier,venue_loyalty_bonus,highlight_moments,xp_breakdown";
 
 export async function getGigExperience(gigId: string): Promise<GigExperienceDTO | null> {
-  const { data: gig, error: gigError } = await supabase
+  // result_ready_at exists in the deployed schema, but the checked-in generated
+  // database types have not caught up yet. Keep the escape hatch at this query
+  // boundary so the rest of the experience mapper remains strongly typed.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deployed column is absent from generated types
+  const { data: gigData, error: gigError } = await (supabase as any)
     .from("gigs")
-    .select("id,band_id,venue_id,setlist_id,status,scheduled_date,started_at,completed_at,ticket_price,venues!gigs_venue_id_fkey(id,name,location,capacity,venue_type,city_id)")
+    .select("id,band_id,venue_id,setlist_id,status,scheduled_date,started_at,completed_at,result_ready_at,ticket_price,venues!gigs_venue_id_fkey(id,name,location,capacity,venue_type,city_id)")
     .eq("id", gigId)
     .single();
   if (gigError) throw gigError;
+  const gig = gigData as GigRow;
 
   const { data: outcome, error: outcomeError } = await supabase
     .from("gig_outcomes")
@@ -30,10 +39,16 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
   if (outcomeError) throw outcomeError;
 
   const outcomeId = outcome?.id ?? null;
-  const [songPerfsRes, setlistSongsRes, performersRes, replayDescriptorRes, processingRes, consequenceRes] = await Promise.all([
+  const [songPerfsRes, gigSetlistRes, legacySetlistSongsRes, performersRes, replayDescriptorRes, processingRes, consequenceRes] = await Promise.all([
     outcomeId
       ? supabase.from("gig_song_performances").select("id,song_id,position,performance_score,crowd_response,song_quality_contrib,rehearsal_contrib,chemistry_contrib,equipment_contrib,crew_contrib,member_skill_contrib,song_title,performance_item_name,item_type").eq("gig_outcome_id", outcomeId).order("position")
       : Promise.resolve({ data: [] as SongPerfRow[], error: null }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deployed table is absent from generated types
+    (supabase as any)
+      .from("gig_setlists")
+      .select("id,gig_setlist_items(song_id,position,songs(id,title,genre,quality_score,audio_url,extended_audio_url,audio_generation_status,duration_seconds))")
+      .eq("gig_id", gigId)
+      .maybeSingle(),
     gig?.setlist_id
       ? supabase.from("setlist_songs").select("song_id,position,songs(id,title,genre,quality_score,audio_url,extended_audio_url,audio_generation_status,duration_seconds)").eq("setlist_id", gig.setlist_id).order("position")
       : Promise.resolve({ data: [] as SetlistSongRow[], error: null }),
@@ -43,7 +58,8 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
     (supabase as any).from("gig_consequence_snapshots").select("category,target_type,target_id,consequence_key,previous_value,delta_value,new_value,status,explanation,source_factors,metadata,created_at").eq("gig_id", gigId).order("created_at", { ascending: true }),
   ]);
   if (songPerfsRes.error) throw songPerfsRes.error;
-  if (setlistSongsRes.error) throw setlistSongsRes.error;
+  if (gigSetlistRes.error && gigSetlistRes.error.code !== "42P01") throw gigSetlistRes.error;
+  if (legacySetlistSongsRes.error) throw legacySetlistSongsRes.error;
   if (performersRes.error && performersRes.error.code !== "42P01") throw performersRes.error;
   if (replayDescriptorRes.error && replayDescriptorRes.error.code !== "42P01") throw replayDescriptorRes.error;
   if (processingRes.error && processingRes.error.code !== "42P01") throw processingRes.error;
@@ -68,11 +84,16 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
       }));
   }
 
+  const savedGigSetlist = ((gigSetlistRes.data as GigSetlistRow | null)?.gig_setlist_items ?? []) as SetlistSongRow[];
+  const setlistSongs = savedGigSetlist.length > 0
+    ? [...savedGigSetlist].sort((a, b) => a.position - b.position)
+    : ((legacySetlistSongsRes.data ?? []) as unknown as SetlistSongRow[]);
+
   return mapGigExperience({
-    gig: gig as unknown as GigRow,
+    gig,
     outcome: outcome as OutcomeRow | null,
     songPerformances: (songPerfsRes.data ?? []) as SongPerfRow[],
-    setlistSongs: (setlistSongsRes.data ?? []) as unknown as SetlistSongRow[],
+    setlistSongs,
     performers,
     replayDescriptor: replayDescriptorRes.data ?? null,
     postProcessing: processingRes.data ?? null,
@@ -107,24 +128,53 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
   const songPerformances = [...performanceBySlot.values()]
     .sort((a, b) => a.position - b.position)
     .filter((row) => (seenPositions.has(row.position) ? false : (seenPositions.add(row.position), true)));
-  const songs: GigExperienceDTO["songs"] = songPerformances.map((row) => ({
-    id: row.id,
-    songId: row.song_id ?? null,
-    position: row.position,
-    title: row.song_title ?? (row.song_id ? setlistTitles.get(row.song_id) : undefined) ?? row.performance_item_name ?? "Unknown Song",
-    audio: row.song_id ? setlistAudio.get(row.song_id) : resolveSongAudioDescriptor(null, "allowed"),
-    performanceScore: nullableNumberMetric(row.performance_score, "Song score missing from legacy performance row"),
-    crowdResponse: row.crowd_response ? metricAvailable<string>(String(row.crowd_response)) : metricLegacyMissing<string>("Crowd response missing from legacy performance row"),
-    contributions: {
-      songQuality: nullableNumberMetric(row.song_quality_contrib, "Song quality contribution missing from legacy row"),
-      rehearsal: nullableNumberMetric(row.rehearsal_contrib, "Rehearsal contribution missing from legacy row"),
-      chemistry: nullableNumberMetric(row.chemistry_contrib, "Chemistry contribution missing from legacy row"),
-      equipment: nullableNumberMetric(row.equipment_contrib, "Equipment contribution missing from legacy row"),
-      crew: nullableNumberMetric(row.crew_contrib, "Crew contribution missing from legacy row"),
-      memberSkill: nullableNumberMetric(row.member_skill_contrib, "Member skill contribution missing from legacy row"),
-    },
-  }));
-  const bestSong = songs.reduce<typeof songs[number] | null>((best, song) => !best || metricValue(song.performanceScore, -Infinity) > metricValue(best.performanceScore, -Infinity) ? song : best, null);
+  const positionOffset = songPerformances.some((row) => row.position === 0) ? 1 : 0;
+  const unmatchedPerformances = new Set(songPerformances);
+  const songSources = (input.setlistSongs ?? []).map((setlistRow) => {
+    const performance = songPerformances.find((row) => row.song_id === setlistRow.song_id)
+      ?? songPerformances.find((row) => row.position + positionOffset === setlistRow.position)
+      ?? null;
+    if (performance) unmatchedPerformances.delete(performance);
+    return { position: setlistRow.position, setlistRow, performance };
+  });
+  unmatchedPerformances.forEach((performance) => {
+    songSources.push({ position: performance.position + positionOffset, setlistRow: null, performance });
+  });
+
+  const songs: GigExperienceDTO["songs"] = songSources
+    .sort((a, b) => a.position - b.position)
+    .map(({ position, setlistRow, performance }) => ({
+      id: performance?.id ?? `gig-setlist-${setlistRow?.song_id ?? position}`,
+      songId: performance?.song_id ?? setlistRow?.song_id ?? null,
+      position,
+      title: performance?.song_title
+        ?? (performance?.song_id ? setlistTitles.get(performance.song_id) : undefined)
+        ?? setlistRow?.songs?.title
+        ?? performance?.performance_item_name
+        ?? "Unknown Song",
+      audio: performance?.song_id
+        ? setlistAudio.get(performance.song_id)
+        : setlistRow?.song_id
+          ? setlistAudio.get(setlistRow.song_id)
+          : resolveSongAudioDescriptor(null, "allowed"),
+      performanceScore: performance
+        ? nullableNumberMetric(performance.performance_score, "Song score missing from legacy performance row")
+        : metricLegacyMissing<number>("Performance result is not ready"),
+      crowdResponse: performance?.crowd_response
+        ? metricAvailable<string>(String(performance.crowd_response))
+        : metricLegacyMissing<string>(performance ? "Crowd response missing from legacy performance row" : "Performance result is not ready"),
+      contributions: {
+        songQuality: performance ? nullableNumberMetric(performance.song_quality_contrib, "Song quality contribution missing from legacy row") : metricLegacyMissing<number>("Performance result is not ready"),
+        rehearsal: performance ? nullableNumberMetric(performance.rehearsal_contrib, "Rehearsal contribution missing from legacy row") : metricLegacyMissing<number>("Performance result is not ready"),
+        chemistry: performance ? nullableNumberMetric(performance.chemistry_contrib, "Chemistry contribution missing from legacy row") : metricLegacyMissing<number>("Performance result is not ready"),
+        equipment: performance ? nullableNumberMetric(performance.equipment_contrib, "Equipment contribution missing from legacy row") : metricLegacyMissing<number>("Performance result is not ready"),
+        crew: performance ? nullableNumberMetric(performance.crew_contrib, "Crew contribution missing from legacy row") : metricLegacyMissing<number>("Performance result is not ready"),
+        memberSkill: performance ? nullableNumberMetric(performance.member_skill_contrib, "Member skill contribution missing from legacy row") : metricLegacyMissing<number>("Performance result is not ready"),
+      },
+    }));
+  const bestSong = songs
+    .filter((song) => song.performanceScore.status === "available")
+    .reduce<typeof songs[number] | null>((best, song) => !best || metricValue(song.performanceScore, -Infinity) > metricValue(best.performanceScore, -Infinity) ? song : best, null);
   const fans = (outcome?.new_followers ?? outcome?.casual_fans_gained ?? null) !== null
     ? metricAvailable((outcome?.new_followers ?? 0) + (outcome?.casual_fans_gained ?? 0) + (outcome?.dedicated_fans_gained ?? 0) + (outcome?.superfans_gained ?? 0))
     : metricLegacyMissing<number>("Fan-gain columns are absent on this legacy outcome");
@@ -140,7 +190,13 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
     analysis: { equipmentQuality: outcome ? nullableNumberMetric(outcome.equipment_quality_avg, "Equipment breakdown missing") : metricLegacyMissing("Outcome is not ready"), crewSkill: outcome ? nullableNumberMetric(outcome.crew_skill_avg, "Crew breakdown missing") : metricLegacyMissing("Outcome is not ready"), bandChemistry: outcome ? nullableNumberMetric(outcome.band_chemistry_level, "Band chemistry breakdown missing") : metricLegacyMissing("Outcome is not ready"), memberSkills: outcome ? nullableNumberMetric(outcome.member_skill_avg, "Member skills breakdown missing") : metricLegacyMissing("Outcome is not ready"), crowdEnergyPeak: outcome ? nullableNumberMetric(outcome.crowd_energy_peak, "Crowd energy peak missing") : metricLegacyMissing("Outcome is not ready"), stageBehaviorUsed: outcome?.stage_behavior_used ? metricAvailable(outcome.stage_behavior_used) : metricNotApplicable("No stage behaviour was recorded"), gearEffects: outcome ? mapGearEffects(outcome) : null, warnings: buildWarnings(outcome, songs.length, input.performers?.length ?? 0) },
     postConsequences: mapPostConsequences(input.postProcessing ?? null, input.consequences ?? []),
     lessons: buildLessons(metricValue(rating, 0), metricValue(outcome ? nullableNumberMetric(outcome.actual_attendance, "") : metricAvailable(0), 0), capacity, metricValue(outcome ? nullableNumberMetric(outcome.net_profit, "") : metricAvailable(0), 0)),
-    viewer: { ready: !!outcome, outcomeId: outcome?.id ?? null, resultReadyAt: outcome?.completed_at ?? gig.completed_at ?? null, replayAvailable: input.replayDescriptor?.generation_status === "ready", replay: input.replayDescriptor ? { viewerVersion: input.replayDescriptor.viewer_version, durationMs: input.replayDescriptor.duration_ms, generationStatus: input.replayDescriptor.generation_status } : { viewerVersion: null, durationMs: null, generationStatus: outcome ? "legacy_unavailable" : null } },
+    viewer: {
+      ready: !!outcome && !!(gig.result_ready_at ?? (gig.status === "completed" ? outcome.completed_at ?? gig.completed_at : null)),
+      outcomeId: outcome?.id ?? null,
+      resultReadyAt: gig.result_ready_at ?? (gig.status === "completed" ? outcome?.completed_at ?? gig.completed_at : null),
+      replayAvailable: input.replayDescriptor?.generation_status === "ready",
+      replay: input.replayDescriptor ? { viewerVersion: input.replayDescriptor.viewer_version, durationMs: input.replayDescriptor.duration_ms, generationStatus: input.replayDescriptor.generation_status } : { viewerVersion: null, durationMs: null, generationStatus: outcome ? "legacy_unavailable" : null },
+    },
   };
   const validationErrors = validateGigExperience(dto);
   if (validationErrors.length > 0) throw new Error(`Invalid gig experience DTO: ${validationErrors.map((e) => `${e.field} ${e.message}`).join(", ")}`);

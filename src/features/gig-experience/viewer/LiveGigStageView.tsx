@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { buildGigViewerReplay } from "../events/generator";
-import { metricValue } from "../reportMetric";
 import type { GigExperienceDTO } from "../types";
 import type { GigViewerReplay } from "../events/types";
 import { GigViewerShell } from "./GigViewerShell";
+import { GigViewerFallback } from "./GigViewerFallback";
 
 /**
  * Presentation-only bridge so live and freshly completed gigs render with the
@@ -25,6 +24,8 @@ export function LiveGigStageView({
 }) {
   const [replay, setReplay] = useState<GigViewerReplay | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const resultAvailable = experience.viewer.ready && !!experience.viewer.resultReadyAt;
 
   useEffect(() => {
     let alive = true;
@@ -32,22 +33,24 @@ export function LiveGigStageView({
     setFailed(false);
     buildGigViewerReplay({
       replayId: `local-${gigId}`,
-      outcomeId: experience.viewer.outcomeId ?? `local-${gigId}`,
-      generatedAt: new Date().toISOString(),
+      outcomeId: experience.viewer.outcomeId ?? `presentation-${gigId}`,
+      generatedAt: experience.viewer.resultReadyAt ?? experience.gig.startedAt ?? experience.gig.scheduledDate,
+      includeResultReveal: resultAvailable,
       gig: {
         id: gigId,
-        completedAt: experience.gig.completedAt ?? new Date().toISOString(),
-        actualAttendance: metricValue(experience.headline.attendance, 0),
+        completedAt: resultAvailable ? experience.gig.completedAt : null,
+        resultReadyAt: resultAvailable ? experience.viewer.resultReadyAt : null,
+        actualAttendance: availableNumber(experience.headline.attendance),
         venueCapacity: experience.gig.venue.capacity,
-        overallRating: metricValue(experience.headline.overallRating, 0),
-        netProfit: metricValue(experience.finances.netProfit, 0),
+        overallRating: availableNumber(experience.headline.overallRating),
+        netProfit: availableNumber(experience.finances.netProfit),
       },
       songs: experience.songs.map((song) => ({
         id: song.id,
         songId: song.songId,
         title: song.title,
         position: song.position - 1,
-        performanceScore: metricValue(song.performanceScore, 0),
+        performanceScore: availableNumber(song.performanceScore),
       })),
       performers: experience.performers.map((performer) => ({
         profileId: performer.profileId,
@@ -64,25 +67,27 @@ export function LiveGigStageView({
     return () => {
       alive = false;
     };
-  }, [gigId, experience]);
+  }, [attempt, gigId, experience, resultAvailable]);
 
   if (failed) {
     return (
-      <Card>
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          The stage view could not be prepared for this performance.
-        </CardContent>
-      </Card>
+      <GigViewerFallback
+        title="Stage view unavailable"
+        body="The presentation sequence could not be prepared. Your saved setlist and authoritative gig data are unchanged."
+        onRetry={() => setAttempt((value) => value + 1)}
+        onResult={resultAvailable ? onViewResult : undefined}
+        onClose={onClose}
+      />
     );
   }
 
   if (!replay) {
     return (
-      <Card>
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          Preparing stage view…
-        </CardContent>
-      </Card>
+      <GigViewerFallback
+        title="Preparing stage view"
+        body="Building a read-only presentation from the saved gig setlist."
+        onClose={onClose}
+      />
     );
   }
 
@@ -96,4 +101,10 @@ export function LiveGigStageView({
       onClose={onClose}
     />
   );
+}
+
+function availableNumber(metric: { status: string; value?: unknown }): number | null {
+  return metric.status === "available" && typeof metric.value === "number" && Number.isFinite(metric.value)
+    ? metric.value
+    : null;
 }

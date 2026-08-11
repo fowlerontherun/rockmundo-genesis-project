@@ -55,7 +55,9 @@ export function validateGigViewerReplay(replay: GigViewerReplay): GigReplayValid
     if (event.eventType === "result_revealed") hasResultReveal = true;
   });
   const last = replay.events.at(-1);
-  if (!hasResultReveal) errors.push("result reveal event is required");
+  const resultAvailable = replay.resultAvailable !== false;
+  if (resultAvailable && !hasResultReveal) errors.push("result reveal event is required");
+  if (!resultAvailable && hasResultReveal) errors.push("result reveal event is not allowed without an authoritative result");
   if (last?.eventType !== "replay_completed" || last.phase !== "completed") errors.push("completed event must be last");
   return { valid: errors.length === 0, errors };
 }
