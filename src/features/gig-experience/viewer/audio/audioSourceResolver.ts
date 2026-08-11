@@ -19,10 +19,24 @@ export function resolveSongAudioDescriptor(song: { audio_url?: string | null; ex
   return unavailable(status ? `status_${status}` : "no_audio", status, permission);
 }
 
-export function resolveGigSongAudio(song: GigExperienceSongDTO | undefined | null, segment: SongSegment | null | undefined, replaySeed: string): ResolvedGigAudioSource {
+export function resolveGigSongAudio(
+  song: GigExperienceSongDTO | undefined | null,
+  segment: SongSegment | null | undefined,
+  replaySeed: string,
+  options?: { fullSong?: boolean },
+): ResolvedGigAudioSource {
   const descriptor = song?.audio ?? unavailable("no_audio_descriptor", null, "allowed");
   const duration = Math.max(0, descriptor.durationSeconds ?? 0);
   const segmentSeconds = Math.max(1, ((segment?.endMs ?? 0) - (segment?.startMs ?? 0)) / 1000 || 20);
+  if (options?.fullSong) {
+    return {
+      ...descriptor,
+      songId: song?.songId ?? segment?.id ?? null,
+      title: song?.title ?? segment?.title ?? "Unknown song",
+      excerptStartSeconds: 0,
+      excerptDurationSeconds: duration || segmentSeconds,
+    };
+  }
   const excerptDurationSeconds = Math.min(segmentSeconds, duration || segmentSeconds);
   return { ...descriptor, songId: song?.songId ?? segment?.id ?? null, title: song?.title ?? segment?.title ?? "Unknown song", excerptStartSeconds: deterministicExcerptStart(song?.songId ?? segment?.id ?? "unknown", replaySeed, duration, excerptDurationSeconds), excerptDurationSeconds };
 }

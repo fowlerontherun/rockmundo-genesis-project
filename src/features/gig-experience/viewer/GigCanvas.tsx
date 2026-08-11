@@ -20,6 +20,7 @@ export function GigCanvas({
   pyroIntensity = 1,
   crowdTuning,
   fill = false,
+  immersive = false,
   className,
 }: {
   replay: GigViewerReplay;
@@ -30,6 +31,7 @@ export function GigCanvas({
   pyroIntensity?: number;
   crowdTuning?: Partial<CrowdTuningOptions> | null;
   fill?: boolean;
+  immersive?: boolean;
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -85,8 +87,8 @@ export function GigCanvas({
         <canvas
           ref={canvasRef}
           role="img"
-          aria-label="Top-down replay canvas. Use the text timeline for a full accessible description."
-          className="w-full rounded-xl border bg-slate-950"
+          aria-label={immersive ? "Song performance stage showing the band and crowd." : "Top-down replay canvas. Use the text timeline for a full accessible description."}
+          className={immersive ? "block h-full w-full bg-slate-950" : "w-full rounded-xl border bg-slate-950"}
         />
       </div>
     </div>

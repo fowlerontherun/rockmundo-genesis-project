@@ -73,12 +73,48 @@ function renderViewer(props: Partial<React.ComponentProps<typeof GigViewerShell>
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <GigViewerShell gigId="gig-release" experience={experience} open onViewResult={vi.fn()} onClose={vi.fn()} {...props} />
+      <GigViewerShell gigId="gig-release" experience={experience} open mode="analysis" onViewResult={vi.fn()} onClose={vi.fn()} {...props} />
     </QueryClientProvider>,
   );
 }
 
 describe("Phase 5 browser release gate surrogate", () => {
+  it("keeps the player stage focused on the animated song performance", () => {
+    replayResult = { state: "ready", replay: readyReplay };
+    const onClose = vi.fn();
+
+    renderViewer({ mode: "player", onClose });
+
+    const stage = screen.getByRole("dialog", { name: /player gig stage view/i });
+    expect(stage).toBeInTheDocument();
+    expect(stage.className).toContain("h-[100dvh]");
+    expect(screen.getByRole("img", { name: /song performance stage showing the band and crowd/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/replay controls/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^play$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^restart$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /previous event/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next event/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /previous song/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next song/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next highlight/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /skip to result/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /playback speed/i })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /reduced motion/i })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /pyrotechnics/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /pop out full screen stage view/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/song timeline/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /performers/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /crowd mood/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/setlist audio controls/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Beta Anthem")).toBeInTheDocument();
+    expect(screen.getByText("Song 1 of 1")).toBeInTheDocument();
+    expect(screen.getByText("0:00 / 0:05")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /close viewer/i }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("loads a completed replay lazily and exposes canvas, panels, timeline, graph, controls, and result access", () => {
     replayResult = { state: "ready", replay: readyReplay };
     renderViewer();

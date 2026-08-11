@@ -521,7 +521,7 @@ export default function PerformGig() {
               </Button>
             </div>
             {showReplay && (gigExperience?.viewer.replayAvailable ? (
-              <GigViewerShell gigId={gig.id} experience={gigExperience} open onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
+              <GigViewerShell gigId={gig.id} experience={gigExperience} open mode="player" onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
             ) : gigExperience ? (
               <LiveGigStageView gigId={gig.id} experience={gigExperience} onViewResult={() => setShowOutcome(true)} onClose={() => setShowReplay(false)} />
             ) : null)}
