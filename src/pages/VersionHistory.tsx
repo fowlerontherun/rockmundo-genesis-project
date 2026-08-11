@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.660",
+    date: "2026-08-11",
+    changes: [
+      { type: 'fix', description: "Claiming the daily stipend now immediately refreshes the XP wallet, attributes and skill data (previously the page kept showing stale balances until a manual reload)." },
+    ],
+  },
+  {
     version: "1.1.659",
     date: "2026-08-11",
     changes: [
