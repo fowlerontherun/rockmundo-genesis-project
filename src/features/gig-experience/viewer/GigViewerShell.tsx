@@ -17,7 +17,7 @@ import { GigViewerStatus } from "./GigViewerStatus";
 import { GigViewerTimeline } from "./GigViewerTimeline";
 import { GigPerformerPanel } from "./GigPerformerPanel";
 import { PlayerGigStageSurface } from "./PlayerGigStageSurface";
-import { expandReplayToFullSongDurations } from "./playerReplayTimeline";
+import { fitReplayToPlayerSongExcerpts, PLAYER_SONG_EXCERPT_DURATION_MS } from "./playerReplayTimeline";
 import { buildStoryModel, deriveStorySnapshot } from "./engine/StoryEngine";
 import { useGigReplayPlayback } from "./hooks/useGigReplayPlayback";
 import { useGigViewerPreferences } from "./hooks/useGigViewerPreferences";
@@ -200,7 +200,7 @@ interface ReadyReplayProps {
 function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onClose }: ReadyReplayProps) {
   const { reducedMotion, setReducedMotion, pyrotechnics, setPyrotechnics } = prefs;
   const playbackReplay = useMemo(
-    () => mode === "player" ? expandReplayToFullSongDurations(replay, experience) : replay,
+    () => mode === "player" ? fitReplayToPlayerSongExcerpts(replay, experience) : replay,
     [mode, replay, experience],
   );
   const playback = useGigReplayPlayback(playbackReplay);
@@ -218,7 +218,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     isPlaying: !!state?.isPlaying,
     speed: playback.speed,
     open,
-    fullSong: mode === "player",
+    excerptDurationSeconds: mode === "player" ? PLAYER_SONG_EXCERPT_DURATION_MS / 1000 : undefined,
   });
   const stageType = useMemo(
     () => selectStageType({
@@ -283,13 +283,13 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   }, [mode, onClose]);
 
   useEffect(() => {
-    if (mode !== "player" && !fullscreen) return;
+    if (!fullscreen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [fullscreen, mode]);
+  }, [fullscreen]);
 
   if (!state || !snapshot) return null;
 
@@ -426,12 +426,16 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
 
     return (
       <GigViewerErrorBoundary onClose={onClose} resetKey={`${playbackReplay.id}:player-stage`}>
-        <div ref={popoutRef}>
+        <div
+          ref={popoutRef}
+          className={fullscreen ? "h-[100dvh] w-screen overflow-hidden bg-slate-950" : "w-full"}
+        >
           <PlayerGigStageSurface
             canvas={playerCanvas}
             controls={playerControls}
             snapshot={snapshot}
             songCount={story.songs.length}
+            fullscreen={fullscreen}
           />
         </div>
       </GigViewerErrorBoundary>

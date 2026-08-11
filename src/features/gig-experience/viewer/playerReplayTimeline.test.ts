@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
-import { expandReplayToFullSongDurations } from "./playerReplayTimeline";
+import { fitReplayToPlayerSongExcerpts } from "./playerReplayTimeline";
 
 const replay = {
   id: "replay-1",
@@ -43,31 +43,41 @@ function event(sequence: number, scheduledOffsetMs: number, durationMs: number, 
   };
 }
 
-function experience(sourceType: "generated_full" | "preview") {
+function experience(durationSeconds = 180) {
   return {
     songs: [
-      { id: "performance-1", songId: "song-1", audio: { available: true, sourceType, durationSeconds: 180 } },
-      { id: "performance-2", songId: "song-2", audio: { available: true, sourceType, durationSeconds: 240 } },
+      { id: "performance-1", songId: "song-1", audio: { available: true, sourceType: "generated_full", durationSeconds } },
+      { id: "performance-2", songId: "song-2", audio: { available: true, sourceType: "preview", durationSeconds: 240 } },
     ],
   } as GigExperienceDTO;
 }
 
-describe("player full-song replay timeline", () => {
-  it("expands each generated full track while leaving the finale intact", () => {
-    const expanded = expandReplayToFullSongDurations(replay, experience("generated_full"));
+describe("player 20-second song replay timeline", () => {
+  it("fits every song to 20 seconds while leaving the finale intact", () => {
+    const expanded = fitReplayToPlayerSongExcerpts(replay, experience());
 
     expect(expanded).not.toBe(replay);
-    expect(expanded.events[0].durationMs).toBe(180_000);
-    expect(expanded.events[1].scheduledOffsetMs).toBe(180_000);
-    expect(expanded.events[1].durationMs).toBe(240_000);
-    expect(expanded.events[2].scheduledOffsetMs).toBe(420_000);
+    expect(expanded.events[0].durationMs).toBe(20_000);
+    expect(expanded.events[1].scheduledOffsetMs).toBe(20_000);
+    expect(expanded.events[1].durationMs).toBe(20_000);
+    expect(expanded.events[2].scheduledOffsetMs).toBe(40_000);
     expect(expanded.events[2].durationMs).toBe(20_000);
-    expect(expanded.durationMs).toBe(440_000);
+    expect(expanded.durationMs).toBe(60_000);
     expect(expanded.checksum).toBeNull();
   });
 
-  it("does not stretch preview-only or unavailable audio", () => {
-    expect(expandReplayToFullSongDurations(replay, experience("preview"))).toBe(replay);
-    expect(expandReplayToFullSongDurations(replay, null)).toBe(replay);
+  it("caps an excerpt when the known track is shorter than 20 seconds", () => {
+    const expanded = fitReplayToPlayerSongExcerpts(replay, experience(12));
+
+    expect(expanded.events[0].durationMs).toBe(12_000);
+    expect(expanded.events[1].scheduledOffsetMs).toBe(12_000);
+    expect(expanded.events[1].durationMs).toBe(20_000);
+  });
+
+  it("uses 20-second visual excerpts when audio metadata is unavailable", () => {
+    const expanded = fitReplayToPlayerSongExcerpts(replay, null);
+
+    expect(expanded.events[0].durationMs).toBe(20_000);
+    expect(expanded.events[1].durationMs).toBe(20_000);
   });
 });

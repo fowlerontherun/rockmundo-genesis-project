@@ -85,9 +85,12 @@ describe("Phase 5 browser release gate surrogate", () => {
 
     renderViewer({ mode: "player", onClose });
 
-    const stage = screen.getByRole("dialog", { name: /player gig stage view/i });
+    const stage = screen.getByRole("region", { name: /player gig stage view/i });
     expect(stage).toBeInTheDocument();
-    expect(stage.className).toContain("h-[100dvh]");
+    expect(stage.className).not.toContain("fixed");
+    expect(stage).toHaveAttribute("data-fullscreen", "false");
+    expect(stage.querySelector("[data-player-stage-viewport]")).toBeInTheDocument();
+    expect(document.body.style.overflow).not.toBe("hidden");
     expect(screen.getByRole("img", { name: /song performance stage showing the band and crowd/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/replay controls/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^play$/i })).toBeInTheDocument();
@@ -109,7 +112,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.queryByLabelText(/setlist audio controls/i)).not.toBeInTheDocument();
     expect(screen.getByText("Beta Anthem")).toBeInTheDocument();
     expect(screen.getByText("Song 1 of 1")).toBeInTheDocument();
-    expect(screen.getByText("0:00 / 0:05")).toBeInTheDocument();
+    expect(screen.getByText("0:00 / 0:20")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /close viewer/i }));
     expect(onClose).toHaveBeenCalledOnce();

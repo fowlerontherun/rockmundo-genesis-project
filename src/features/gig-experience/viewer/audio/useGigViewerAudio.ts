@@ -6,11 +6,11 @@ import { GigAudioController } from "./GigAudioController";
 import { loadGigAudioPreferences, saveGigAudioPreferences } from "./audioPreferences";
 import { resolveGigSongAudio } from "./audioSourceResolver";
 
-export function useGigViewerAudio({ experience, snapshot, replaySeed, isPlaying, speed, open, fullSong = false }: { experience?: GigExperienceDTO | null; snapshot: StorySnapshot | null; replaySeed: string; isPlaying: boolean; speed: PlaybackSpeed; open: boolean; fullSong?: boolean }) {
+export function useGigViewerAudio({ experience, snapshot, replaySeed, isPlaying, speed, open, excerptDurationSeconds }: { experience?: GigExperienceDTO | null; snapshot: StorySnapshot | null; replaySeed: string; isPlaying: boolean; speed: PlaybackSpeed; open: boolean; excerptDurationSeconds?: number }) {
   const controller = useRef<GigAudioController | null>(null); if (!controller.current) controller.current = new GigAudioController();
   const [prefs, setPrefs] = useState(loadGigAudioPreferences); const [activated, setActivated] = useState(false); const [, rerender] = useState(0);
   const songDto = useMemo(() => experience?.songs.find((s) => (s.songId ?? s.id) === snapshot?.song?.id) ?? null, [experience, snapshot?.song?.id]);
-  const source = useMemo(() => resolveGigSongAudio(songDto, snapshot?.song, replaySeed, { fullSong }), [songDto, snapshot?.song, replaySeed, fullSong]);
+  const source = useMemo(() => resolveGigSongAudio(songDto, snapshot?.song, replaySeed, { excerptDurationSeconds }), [songDto, snapshot?.song, replaySeed, excerptDurationSeconds]);
   const silentForSpeed = false;
   useEffect(() => { saveGigAudioPreferences(prefs); controller.current?.setVolume(prefs.volume, prefs.muted); }, [prefs]);
   useEffect(() => { controller.current?.setPlaybackRate(speed); }, [speed]);
