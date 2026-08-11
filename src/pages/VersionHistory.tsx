@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.659",
+    date: "2026-08-11",
+    changes: [
+      { type: 'feature', description: "Releases stuck in manufacturing now show a 'Release Now' button that clears any pending manufacturing/scheduled date and pushes the release live immediately." },
+    ],
+  },
+  {
     version: "1.1.658",
     date: "2026-08-10",
     changes: [
