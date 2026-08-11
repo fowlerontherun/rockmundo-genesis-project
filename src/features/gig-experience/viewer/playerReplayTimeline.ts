@@ -1,36 +1,33 @@
 import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
 
-const FULL_TRACK_SOURCE_TYPES = new Set(["generated_full", "fixture"]);
 const AFTER_SET_PHASES = new Set(["encore_decision", "finale", "band_exit", "result_reveal", "completed"]);
+export const PLAYER_SONG_EXCERPT_DURATION_MS = 20_000;
 
 /**
- * Stored replays use a compact presentation timeline. Player stage mode needs
- * each song segment to last for the full playable track, so this creates an
- * in-memory presentation copy with expanded song durations. No canonical
- * replay data is changed or written back.
+ * Stored replays can contain shorter or variable song segments. Player stage
+ * mode presents a consistent 20-second excerpt of each song, capped only when
+ * a playable track is known to be shorter. This in-memory copy never changes
+ * or writes back the canonical replay.
  */
-export function expandReplayToFullSongDurations(
+export function fitReplayToPlayerSongExcerpts(
   replay: GigViewerReplay,
   experience: GigExperienceDTO | null,
 ): GigViewerReplay {
-  const durationBySongId = new Map<string, number>();
+  const maximumDurationBySongId = new Map<string, number>();
 
   for (const song of experience?.songs ?? []) {
     const audio = song.audio;
     const songId = song.songId ?? song.id;
     if (
       audio?.available
-      && FULL_TRACK_SOURCE_TYPES.has(audio.sourceType)
       && typeof audio.durationSeconds === "number"
       && Number.isFinite(audio.durationSeconds)
       && audio.durationSeconds > 0
     ) {
-      durationBySongId.set(songId, Math.round(audio.durationSeconds * 1000));
+      maximumDurationBySongId.set(songId, Math.round(audio.durationSeconds * 1000));
     }
   }
-
-  if (durationBySongId.size === 0) return replay;
 
   const events = [...replay.events]
     .sort((left, right) => left.scheduledOffsetMs - right.scheduledOffsetMs || left.sequence - right.sequence)
@@ -45,8 +42,11 @@ export function expandReplayToFullSongDurations(
     if (startEvent.visualPayload.type !== "song_start") return;
 
     const songId = startEvent.visualPayload.songId ?? startEvent.songId;
-    const targetDurationMs = songId ? durationBySongId.get(songId) : undefined;
-    if (!targetDurationMs) return;
+    const knownTrackDurationMs = songId ? maximumDurationBySongId.get(songId) : undefined;
+    const targetDurationMs = Math.min(
+      PLAYER_SONG_EXCERPT_DURATION_MS,
+      knownTrackDurationMs ?? PLAYER_SONG_EXCERPT_DURATION_MS,
+    );
 
     const nextSongStart = songStartIndexes[songIndex + 1];
     const afterSetIndex = events.findIndex(
@@ -80,7 +80,7 @@ export function expandReplayToFullSongDurations(
 
   return {
     ...replay,
-    id: `${replay.id}:player-full-songs`,
+    id: `${replay.id}:player-20-second-excerpts`,
     durationMs: offsetMs,
     checksum: null,
     events,

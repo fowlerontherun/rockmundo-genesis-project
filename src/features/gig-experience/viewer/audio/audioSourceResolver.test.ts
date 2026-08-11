@@ -30,7 +30,7 @@ describe("deterministic gig audio excerpts", () => {
     expect(deterministicExcerptStart("song", "seed", 0, 25)).toBe(0);
   });
 
-  it("uses the complete track from the beginning in player stage mode", () => {
+  it("uses a 20-second excerpt in player stage mode", () => {
     const source = resolveGigSongAudio(
       {
         id: "performance-1",
@@ -48,10 +48,11 @@ describe("deterministic gig audio excerpts", () => {
       } as GigExperienceSongDTO,
       { id: "song-1", title: "Full Song", startMs: 0, endMs: 20_000 } as SongSegment,
       "seed",
-      { fullSong: true },
+      { excerptDurationSeconds: 20 },
     );
 
-    expect(source.excerptStartSeconds).toBe(0);
-    expect(source.excerptDurationSeconds).toBe(213);
+    expect(source.excerptStartSeconds).toBeGreaterThanOrEqual(0);
+    expect(source.excerptStartSeconds).toBeLessThanOrEqual(191);
+    expect(source.excerptDurationSeconds).toBe(20);
   });
 });
