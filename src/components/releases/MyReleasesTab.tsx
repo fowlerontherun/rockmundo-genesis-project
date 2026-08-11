@@ -680,9 +680,6 @@ function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, o
               {isReleasing ? "Releasing..." : "Release Now"}
             </Button>
           )}
-          {false && (
-            <span />
-          )}
           <div className="flex flex-wrap gap-1 pt-1">
             <Button variant="default" size="sm" className="text-[10px] px-2 h-6" onClick={onViewDetails}>Details</Button>
             {release.release_status !== "cancelled" && (
