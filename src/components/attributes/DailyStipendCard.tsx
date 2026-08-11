@@ -14,7 +14,7 @@ interface DailyStipendCardProps {
   lastClaimDate?: string | null;
   streak?: number;
   lifetimeSxp?: number;
-  onClaimed?: () => void;
+  onClaimed?: () => void | Promise<void>;
 }
 
 export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, onClaimed }: DailyStipendCardProps) => {
