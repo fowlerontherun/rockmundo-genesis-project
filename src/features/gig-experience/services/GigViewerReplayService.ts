@@ -3,6 +3,12 @@ import { GIG_EVENT_SCHEMA_VERSION, GIG_VIEWER_VERSION } from "../events/constant
 import { isSupportedReplayVersion, validateGigViewerReplay } from "../events/schema";
 import type { GigReplayStatus, GigViewerReplay, GigViewerReplayLoadState } from "../events/types";
 import { normalizeCrowdTuning } from "../viewer/engine/CrowdTuning";
+import logger from "@/lib/logger";
+import {
+  createGigExperienceLoadError,
+  isGigSchemaCompatibilityError,
+  logGigExperienceFallback,
+} from "../diagnostics";
 
 type ReplayPayload = {
   events?: unknown[];
@@ -19,14 +25,33 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     .eq("gig_id", gigId)
     .order("generated_at", { ascending: false })
     .limit(5);
-  if (error) throw error;
+  if (error && isGigSchemaCompatibilityError(error)) {
+    logGigExperienceFallback(
+      gigId,
+      "replay",
+      "gig_viewer_replays",
+      error,
+      "treat the stored replay as unavailable and preserve report access",
+    );
+    return { state: "unavailable", replay: null, reason: "schema_unavailable" };
+  }
+  if (error) throw createGigExperienceLoadError(gigId, "replay", "gig_viewer_replays", error);
   const rows = (data ?? []) as ReplayRow[];
   if (!rows.length) return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
   const row = rows.find((candidate) => candidate.viewer_version === GIG_VIEWER_VERSION) ?? rows[0];
   if (row.generation_status === "generating") return { state: "generating", replay: null };
   if (row.generation_status === "failed") return { state: "failed", replay: null };
   if (row.generation_status === "legacy_unavailable") return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
-  if (!isSupportedReplayVersion(row.viewer_version, row.event_schema_version)) return { state: "unsupported_version", replay: null };
+  if (!isSupportedReplayVersion(row.viewer_version, row.event_schema_version)) {
+    logGigExperienceFallback(
+      gigId,
+      "replay",
+      "gig_viewer_replays",
+      { code: "UNSUPPORTED_REPLAY_VERSION", message: `Viewer ${row.viewer_version}, event schema ${row.event_schema_version}` },
+      "use the authoritative result report",
+    );
+    return { state: "unsupported_version", replay: null };
+  }
 
   const payload = Array.isArray(row.event_payload) ? null : row.event_payload as ReplayPayload;
   const events = Array.isArray(row.event_payload) ? row.event_payload : payload?.events;
@@ -48,7 +73,16 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
   };
   if (replay.eventSchemaVersion !== GIG_EVENT_SCHEMA_VERSION) return { state: "unsupported_version", replay: null };
   const validation = validateGigViewerReplay(replay);
-  if (!validation.valid) return { state: "failed", replay: null, reason: "malformed_replay" };
-  console.info("[gig-viewer-replay] loaded", { gigId, replayId: row.id, eventCount: replay.events.length, durationMs: replay.durationMs, crowdTuningRevision: replay.crowdTuningRevision });
+  if (!validation.valid) {
+    logGigExperienceFallback(
+      gigId,
+      "replay",
+      "gig_viewer_replays.event_payload",
+      { code: "MALFORMED_REPLAY", message: validation.errors.join("; ") },
+      "use the authoritative result report",
+    );
+    return { state: "failed", replay: null, reason: "malformed_replay" };
+  }
+  logger.info("Gig viewer replay loaded", { scope: "gig-experience", gigId, replayId: row.id, eventCount: replay.events.length, durationMs: replay.durationMs, crowdTuningRevision: replay.crowdTuningRevision });
   return { state: "ready", replay };
 }

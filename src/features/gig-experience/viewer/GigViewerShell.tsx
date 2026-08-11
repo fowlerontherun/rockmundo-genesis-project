@@ -23,6 +23,7 @@ import { useCrowdAmbience } from "./audio/useCrowdAmbience";
 import { selectStageType } from "./engine/VenueLayout";
 import { StageTypeLabels } from "./engine/StageDecor";
 import { GigViewerAudioControls } from "./audio/GigViewerAudioControls";
+import { getGigExperienceErrorDisplay } from "../diagnostics";
 
 interface GigViewerShellProps {
   gigId: string;
@@ -53,7 +54,15 @@ function GigViewerShellContent({ gigId, experience, open, onViewResult, onClose,
   const cancelled = experience && ["cancelled", "canceled", "abandoned"].includes(experience.gig.status);
   if (cancelled) return <GigViewerFallback title="Gig cancelled" body="This gig did not complete, so no canonical replay can be shown." onClose={onClose} />;
   if (!replayOverride && query.isLoading) return <GigViewerFallback title="Loading replay" body="Opening the stored read-only replay payload." onResult={resultAction} onClose={onClose} />;
-  if (!replayOverride && query.isError) { const message = String((query.error as any)?.message ?? "Network error"); const accessDenied = /permission|rls|denied|jwt|auth/i.test(message); return <GigViewerFallback title={accessDenied ? "Access denied" : "Network error"} body={accessDenied ? "Your account cannot read this replay. Report access is unchanged if available." : "The replay could not be loaded from storage."} onRetry={() => query.refetch()} onResult={resultAction} onClose={onClose} />; }
+  if (!replayOverride && query.isError) {
+    const queryError = query.error && typeof query.error === "object"
+      ? query.error as { message?: unknown }
+      : null;
+    const message = typeof queryError?.message === "string" ? queryError.message : "Network error";
+    const accessDenied = /permission|rls|denied|jwt|auth/i.test(message);
+    const diagnostic = getGigExperienceErrorDisplay(query.error, gigId);
+    return <GigViewerFallback title={accessDenied ? "Access denied" : "Replay unavailable"} body={accessDenied ? "Your account cannot read this replay. Report access is unchanged if available." : diagnostic.body} diagnosticReference={diagnostic.reference} onRetry={() => query.refetch()} onResult={resultAction} onClose={onClose} />;
+  }
   const result = replayOverride ? { state: "ready" as const, replay: replayOverride } : query.data;
   if (!result || result.state === "unavailable") return <GigViewerFallback title="Replay unavailable" body="No stored canonical replay exists for this legacy or incomplete gig. The result report remains available when processing finishes." onRetry={() => query.refetch()} onResult={resultAction} onClose={onClose} />;
   if (result.state === "generating") return <GigViewerFallback title="Replay processing" body="The replay row exists but is still generating. Try again shortly; the report remains available when processing finishes." onRetry={() => query.refetch()} onResult={resultAction} onClose={onClose} />;

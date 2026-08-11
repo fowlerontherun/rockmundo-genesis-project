@@ -4,6 +4,7 @@ import type { GigExperienceDTO } from "../types";
 import type { GigViewerReplay } from "../events/types";
 import { GigViewerShell } from "./GigViewerShell";
 import { GigViewerFallback } from "./GigViewerFallback";
+import { createGigExperienceLoadError, getGigExperienceErrorDisplay } from "../diagnostics";
 
 /**
  * Presentation-only bridge so live and freshly completed gigs render with the
@@ -23,14 +24,14 @@ export function LiveGigStageView({
   onClose: () => void;
 }) {
   const [replay, setReplay] = useState<GigViewerReplay | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<unknown>(null);
   const [attempt, setAttempt] = useState(0);
   const resultAvailable = experience.viewer.ready && !!experience.viewer.resultReadyAt;
 
   useEffect(() => {
     let alive = true;
     setReplay(null);
-    setFailed(false);
+    setFailure(null);
     buildGigViewerReplay({
       replayId: `local-${gigId}`,
       outcomeId: experience.viewer.outcomeId ?? `presentation-${gigId}`,
@@ -61,19 +62,23 @@ export function LiveGigStageView({
       .then((built) => {
         if (alive) setReplay(built as GigViewerReplay);
       })
-      .catch(() => {
-        if (alive) setFailed(true);
+      .catch((error) => {
+        if (alive) {
+          setFailure(createGigExperienceLoadError(gigId, "presentation", "buildGigViewerReplay", error));
+        }
       });
     return () => {
       alive = false;
     };
   }, [attempt, gigId, experience, resultAvailable]);
 
-  if (failed) {
+  if (failure) {
+    const diagnostic = getGigExperienceErrorDisplay(failure, gigId);
     return (
       <GigViewerFallback
         title="Stage view unavailable"
         body="The presentation sequence could not be prepared. Your saved setlist and authoritative gig data are unchanged."
+        diagnosticReference={diagnostic.reference}
         onRetry={() => setAttempt((value) => value + 1)}
         onResult={resultAvailable ? onViewResult : undefined}
         onClose={onClose}

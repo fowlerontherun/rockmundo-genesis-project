@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getGigExperience } from "./services/GigExperienceService";
 import { getGigViewerReplay } from "./services/GigViewerReplayService";
+import { shouldRetryGigExperienceLoad } from "./diagnostics";
 
 export function useGigExperience(gigId: string | null, enabled = true) {
   return useQuery({
@@ -8,6 +9,7 @@ export function useGigExperience(gigId: string | null, enabled = true) {
     enabled: enabled && !!gigId,
     queryFn: () => getGigExperience(gigId as string),
     staleTime: 30_000,
+    retry: shouldRetryGigExperienceLoad,
   });
 }
 
@@ -18,5 +20,6 @@ export function useGigViewerReplay(gigId: string | null, enabled = true) {
     enabled: enabled && !!gigId,
     queryFn: () => getGigViewerReplay(gigId as string),
     staleTime: 30_000,
+    retry: shouldRetryGigExperienceLoad,
   });
 }

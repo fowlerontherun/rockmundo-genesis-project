@@ -5,6 +5,14 @@ import type { Database } from "@/lib/supabase-types";
 import type { GigExperienceDTO, GigExperienceValidationError, GigPostConsequencesDTO } from "../types";
 import { resolveSongAudioDescriptor } from "../viewer/audio/audioSourceResolver";
 import { metricAvailable, metricLegacyMissing, metricNotApplicable, nullableNumberMetric, metricValue } from "../reportMetric";
+import {
+  createGigExperienceLoadError,
+  isMissingResultReadyAtError,
+  logGigExperienceFallback,
+  logGigExperienceSuccess,
+  type GigExperienceDiagnosticStage,
+  type GigExperienceFailure,
+} from "../diagnostics";
 
 type GigRow = Database["public"]["Tables"]["gigs"]["Row"] & {
   result_ready_at?: string | null;
@@ -15,65 +23,198 @@ type SongPerfRow = Database["public"]["Tables"]["gig_song_performances"]["Row"];
 type SetlistSongRow = { song_id: string; position: number; songs?: { id: string; title: string | null; genre?: string | null; quality_score?: number | null; audio_url?: string | null; extended_audio_url?: string | null; audio_generation_status?: string | null; duration_seconds?: number | null } | null };
 type GigSetlistRow = { gig_setlist_items?: SetlistSongRow[] | null };
 type PerformerRow = { id: string; profile_id: string; role_or_instrument: string | null; lineup_status: string | null; profiles?: { display_name?: string | null; username?: string | null } | null };
+type BandMemberRow = { id: string; profile_id: string; instrument_role?: string | null; role?: string | null; member_status?: string | null; profiles?: { display_name?: string | null; username?: string | null } | null };
+type ConsequenceRow = {
+  consequence_key: string;
+  category: string;
+  target_type: string;
+  target_id?: string | null;
+  previous_value?: number | null;
+  delta_value?: number | null;
+  new_value?: number | null;
+  status: GigPostConsequencesDTO["consequences"][number]["status"];
+  explanation: string;
+  source_factors?: string[] | null;
+};
 
 const outcomeSelect = "id,gig_id,band_id,venue_id,venue_name,venue_capacity,completed_at,created_at,overall_rating,performance_grade,actual_attendance,attendance_percentage,ticket_revenue,merch_revenue,total_revenue,crew_cost,equipment_cost,venue_cost,total_costs,net_profit,fame_gained,new_followers,casual_fans_gained,dedicated_fans_gained,superfans_gained,fan_conversions,chemistry_change,total_xp_awarded,equipment_quality_avg,crew_skill_avg,band_chemistry_level,member_skill_avg,merch_items_sold,crowd_energy_peak,stage_behavior_used,band_synergy_modifier,social_buzz_impact,audience_memory_impact,promoter_modifier,venue_loyalty_bonus,highlight_moments,xp_breakdown";
+const gigSelect = "id,band_id,venue_id,setlist_id,status,scheduled_date,started_at,completed_at,result_ready_at,ticket_price,venues!gigs_venue_id_fkey(id,name,location,capacity,venue_type,city_id)";
+const legacyGigSelect = "id,band_id,venue_id,setlist_id,status,scheduled_date,started_at,completed_at,ticket_price,venues!gigs_venue_id_fkey(id,name,location,capacity,venue_type,city_id)";
+const songPerformanceSelect = "id,song_id,position,performance_score,crowd_response,song_quality_contrib,rehearsal_contrib,chemistry_contrib,equipment_contrib,crew_contrib,member_skill_contrib,song_title,performance_item_name,item_type";
 
-export async function getGigExperience(gigId: string): Promise<GigExperienceDTO | null> {
-  // result_ready_at exists in the deployed schema, but the checked-in generated
-  // database types have not caught up yet. Keep the escape hatch at this query
-  // boundary so the rest of the experience mapper remains strongly typed.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deployed column is absent from generated types
-  const { data: gigData, error: gigError } = await (supabase as any)
+type QueryResult<T> = { data: T | null; error: unknown };
+interface GigExperienceQueryBuilder extends PromiseLike<QueryResult<unknown>> {
+  select(columns: string): GigExperienceQueryBuilder;
+  eq(column: string, value: unknown): GigExperienceQueryBuilder;
+  order(column: string, options?: Record<string, unknown>): GigExperienceQueryBuilder;
+  limit(value: number): GigExperienceQueryBuilder;
+  maybeSingle(): Promise<QueryResult<unknown>>;
+}
+type GigExperienceClient = { from(table: string): GigExperienceQueryBuilder };
+
+function compatibilityWarning(failure: GigExperienceFailure) {
+  const code = failure.code ?? "unknown";
+  return `Viewer compatibility fallback used for ${failure.stage.replace(/_/g, " ")} (${code}).`;
+}
+
+export async function getGigExperience(gigId: string, client: unknown = supabase): Promise<GigExperienceDTO | null> {
+  const queryClient = client as GigExperienceClient;
+  const loadWarnings: string[] = [];
+  const compatibilityFailures: GigExperienceFailure[] = [];
+  let usedLegacyGigSchema = false;
+
+  const loadGig = (select: string) => queryClient
     .from("gigs")
-    .select("id,band_id,venue_id,setlist_id,status,scheduled_date,started_at,completed_at,result_ready_at,ticket_price,venues!gigs_venue_id_fkey(id,name,location,capacity,venue_type,city_id)")
+    .select(select)
     .eq("id", gigId)
-    .single();
-  if (gigError) throw gigError;
-  const gig = gigData as GigRow;
+    .maybeSingle();
 
-  const { data: outcome, error: outcomeError } = await supabase
+  let gigResult = await loadGig(gigSelect) as QueryResult<GigRow>;
+  if (gigResult.error && isMissingResultReadyAtError(gigResult.error)) {
+    const failure = logGigExperienceFallback(
+      gigId,
+      "gig",
+      "gigs.result_ready_at",
+      gigResult.error,
+      "retry gigs without result_ready_at and derive readiness only from completed outcome timestamps",
+    );
+    compatibilityFailures.push(failure);
+    loadWarnings.push(compatibilityWarning(failure));
+    usedLegacyGigSchema = true;
+    gigResult = await loadGig(legacyGigSelect) as QueryResult<GigRow>;
+  }
+  if (gigResult.error) throw createGigExperienceLoadError(gigId, "gig", "gigs", gigResult.error);
+  if (!gigResult.data) {
+    throw createGigExperienceLoadError(gigId, "gig", "gigs", {
+      code: "GIG_NOT_FOUND",
+      message: "No readable gig row was returned for the requested identifier.",
+    });
+  }
+  const gig = { ...gigResult.data, result_ready_at: gigResult.data.result_ready_at ?? null } as GigRow;
+
+  // Historical completion paths did not always enforce one outcome per gig.
+  // Read at most two in a deterministic order, use the newest authoritative
+  // row, and log the duplicate instead of letting maybeSingle() fail the viewer.
+  const outcomeResult = await queryClient
     .from("gig_outcomes")
     .select(outcomeSelect)
     .eq("gig_id", gigId)
-    .maybeSingle();
-  if (outcomeError) throw outcomeError;
-
+    .order("completed_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
+    .limit(2) as QueryResult<OutcomeRow[]>;
+  if (outcomeResult.error) throw createGigExperienceLoadError(gigId, "outcome", "gig_outcomes", outcomeResult.error);
+  const outcomeRows = (outcomeResult.data ?? []) as OutcomeRow[];
+  if (outcomeRows.length > 1) {
+    const failure = logGigExperienceFallback(
+      gigId,
+      "outcome",
+      "gig_outcomes",
+      { code: "DUPLICATE_OUTCOME", message: "Multiple outcome rows were returned for one historical gig." },
+      "use the newest completed outcome row",
+    );
+    compatibilityFailures.push(failure);
+    loadWarnings.push(compatibilityWarning(failure));
+  }
+  const outcome = outcomeRows[0] ?? null;
   const outcomeId = outcome?.id ?? null;
   const [songPerfsRes, gigSetlistRes, legacySetlistSongsRes, performersRes, replayDescriptorRes, processingRes, consequenceRes] = await Promise.all([
     outcomeId
-      ? supabase.from("gig_song_performances").select("id,song_id,position,performance_score,crowd_response,song_quality_contrib,rehearsal_contrib,chemistry_contrib,equipment_contrib,crew_contrib,member_skill_contrib,song_title,performance_item_name,item_type").eq("gig_outcome_id", outcomeId).order("position")
+      ? queryClient.from("gig_song_performances").select(songPerformanceSelect).eq("gig_outcome_id", outcomeId).order("position")
       : Promise.resolve({ data: [] as SongPerfRow[], error: null }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deployed table is absent from generated types
-    (supabase as any)
+    queryClient
       .from("gig_setlists")
       .select("id,gig_setlist_items(song_id,position,songs(id,title,genre,quality_score,audio_url,extended_audio_url,audio_generation_status,duration_seconds))")
       .eq("gig_id", gigId)
       .maybeSingle(),
     gig?.setlist_id
-      ? supabase.from("setlist_songs").select("song_id,position,songs(id,title,genre,quality_score,audio_url,extended_audio_url,audio_generation_status,duration_seconds)").eq("setlist_id", gig.setlist_id).order("position")
+      ? queryClient.from("setlist_songs").select("song_id,position,songs(id,title,genre,quality_score,audio_url,extended_audio_url,audio_generation_status,duration_seconds)").eq("setlist_id", gig.setlist_id).order("position")
       : Promise.resolve({ data: [] as SetlistSongRow[], error: null }),
-    (supabase as any).from("gig_performers").select("id,profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
-    (supabase as any).from("gig_viewer_replays").select("viewer_version,duration_ms,generation_status").eq("gig_id", gigId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
-    (supabase as any).from("gig_post_processing").select("status,processing_version,completed_at").eq("gig_id", gigId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    (supabase as any).from("gig_consequence_snapshots").select("category,target_type,target_id,consequence_key,previous_value,delta_value,new_value,status,explanation,source_factors,metadata,created_at").eq("gig_id", gigId).order("created_at", { ascending: true }),
+    queryClient.from("gig_performers").select("id,profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
+    queryClient.from("gig_viewer_replays").select("viewer_version,duration_ms,generation_status").eq("gig_id", gigId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
+    queryClient.from("gig_post_processing").select("status,processing_version,completed_at").eq("gig_id", gigId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    queryClient.from("gig_consequence_snapshots").select("category,target_type,target_id,consequence_key,previous_value,delta_value,new_value,status,explanation,source_factors,metadata,created_at").eq("gig_id", gigId).order("created_at", { ascending: true }),
   ]);
-  if (songPerfsRes.error) throw songPerfsRes.error;
-  if (gigSetlistRes.error && gigSetlistRes.error.code !== "42P01") throw gigSetlistRes.error;
-  if (legacySetlistSongsRes.error) throw legacySetlistSongsRes.error;
-  if (performersRes.error && performersRes.error.code !== "42P01") throw performersRes.error;
-  if (replayDescriptorRes.error && replayDescriptorRes.error.code !== "42P01") throw replayDescriptorRes.error;
-  if (processingRes.error && processingRes.error.code !== "42P01") throw processingRes.error;
-  if (consequenceRes.error && consequenceRes.error.code !== "42P01") throw consequenceRes.error;
+
+  const optionalData = <T,>(
+    stage: GigExperienceDiagnosticStage,
+    source: string,
+    result: QueryResult<T>,
+    fallback: T,
+    fallbackDescription: string,
+  ): T => {
+    if (!result.error) return result.data ?? fallback;
+    const failure = logGigExperienceFallback(gigId, stage, source, result.error, fallbackDescription);
+    compatibilityFailures.push(failure);
+    loadWarnings.push(compatibilityWarning(failure));
+    return fallback;
+  };
+
+  const songPerformances = optionalData(
+    "song_performances",
+    "gig_song_performances",
+    songPerfsRes as QueryResult<SongPerfRow[]>,
+    [] as SongPerfRow[],
+    "rebuild the presentation from a saved setlist without performance scores",
+  );
+  const gigSetlistData = optionalData(
+    "gig_setlist",
+    "gig_setlists/gig_setlist_items",
+    gigSetlistRes as QueryResult<GigSetlistRow>,
+    null as GigSetlistRow | null,
+    "use the legacy band setlist or recorded song performance rows",
+  );
+  const legacySetlistSongs = optionalData(
+    "legacy_setlist",
+    "setlist_songs",
+    legacySetlistSongsRes as QueryResult<SetlistSongRow[]>,
+    [] as SetlistSongRow[],
+    "use recorded song performance rows",
+  );
+  const performerRows = optionalData(
+    "performers",
+    "gig_performers",
+    performersRes as QueryResult<PerformerRow[]>,
+    [] as PerformerRow[],
+    "use active band members for presentation-only performer positions",
+  );
+  const replayDescriptor = optionalData(
+    "replay_descriptor",
+    "gig_viewer_replays",
+    replayDescriptorRes as QueryResult<{ viewer_version: number; duration_ms: number; generation_status: string }>,
+    null as { viewer_version: number; duration_ms: number; generation_status: string } | null,
+    "build a deterministic read-only presentation from canonical gig data",
+  );
+  const postProcessing = optionalData(
+    "post_processing",
+    "gig_post_processing",
+    processingRes as QueryResult<{ status: string; processing_version: string | null; completed_at: string | null }>,
+    null as { status: string; processing_version: string | null; completed_at: string | null } | null,
+    "show legacy post-gig consequence status",
+  );
+  const consequences = optionalData(
+    "consequences",
+    "gig_consequence_snapshots",
+    consequenceRes as QueryResult<ConsequenceRow[]>,
+    [] as ConsequenceRow[],
+    "omit unavailable post-gig consequence details",
+  );
 
   // Lineup fallback: many gigs have no dedicated performer rows, so use the
   // band's active members so the viewer still shows who was on stage.
-  let performers = (performersRes.data ?? []) as PerformerRow[];
+  let performers = performerRows;
   if (performers.length === 0 && gig?.band_id) {
-    const { data: members } = await (supabase as any)
+    const membersResult = await queryClient
       .from("band_members")
       .select("id,profile_id,instrument_role,role,member_status,profiles:profiles!band_members_profile_id_fkey(display_name,username)")
       .eq("band_id", gig.band_id);
-    performers = ((members ?? []) as any[])
+    const members = optionalData(
+      "band_members",
+      "band_members",
+      membersResult as QueryResult<BandMemberRow[]>,
+      [] as BandMemberRow[],
+      "render the stage without performer markers",
+    );
+    performers = members
       .filter((row) => !row.member_status || row.member_status === "active")
       .map((row) => ({
         id: row.id,
@@ -84,24 +225,41 @@ export async function getGigExperience(gigId: string): Promise<GigExperienceDTO 
       }));
   }
 
-  const savedGigSetlist = ((gigSetlistRes.data as GigSetlistRow | null)?.gig_setlist_items ?? []) as SetlistSongRow[];
+  const savedGigSetlist = (gigSetlistData?.gig_setlist_items ?? []) as SetlistSongRow[];
   const setlistSongs = savedGigSetlist.length > 0
     ? [...savedGigSetlist].sort((a, b) => a.position - b.position)
-    : ((legacySetlistSongsRes.data ?? []) as unknown as SetlistSongRow[]);
+    : legacySetlistSongs;
 
-  return mapGigExperience({
-    gig,
-    outcome: outcome as OutcomeRow | null,
-    songPerformances: (songPerfsRes.data ?? []) as SongPerfRow[],
-    setlistSongs,
-    performers,
-    replayDescriptor: replayDescriptorRes.data ?? null,
-    postProcessing: processingRes.data ?? null,
-    consequences: consequenceRes.data ?? [],
-  });
+  try {
+    const experience = mapGigExperience({
+      gig,
+      outcome,
+      songPerformances,
+      setlistSongs,
+      performers,
+      replayDescriptor,
+      postProcessing,
+      consequences,
+      loadWarnings,
+    });
+    logGigExperienceSuccess({
+      gigId,
+      status: gig.status,
+      outcomeId: outcome?.id ?? null,
+      usedLegacyGigSchema,
+      setlistSource: savedGigSetlist.length > 0 ? "gig_setlists" : legacySetlistSongs.length > 0 ? "setlist_songs" : songPerformances.length > 0 ? "song_performances" : "none",
+      songCount: experience.songs.length,
+      performerCount: experience.performers.length,
+      replayAvailable: experience.viewer.replayAvailable,
+      compatibilityReferences: compatibilityFailures.map((failure) => failure.reference),
+    });
+    return experience;
+  } catch (error) {
+    throw createGigExperienceLoadError(gigId, "mapping", "GigExperienceDTO", error);
+  }
 }
 
-export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null; postProcessing?: { status: string; processing_version: string | null; completed_at: string | null } | null; consequences?: any[] }): GigExperienceDTO {
+export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null; postProcessing?: { status: string; processing_version: string | null; completed_at: string | null } | null; consequences?: ConsequenceRow[]; loadWarnings?: string[] }): GigExperienceDTO {
   const { gig, outcome } = input;
   const venue = gig.venues;
   // Capacity must never be lower than recorded attendance, otherwise the DTO
@@ -141,8 +299,19 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
     songSources.push({ position: performance.position + positionOffset, setlistRow: null, performance });
   });
 
-  const songs: GigExperienceDTO["songs"] = songSources
-    .sort((a, b) => a.position - b.position)
+  // Older setlist imports can also contain conflicting positions. Prefer the
+  // row with an authoritative performance result, then keep one stable slot so
+  // a historical data defect does not crash the presentation boundary.
+  const sourcesByPosition = new Map<number, typeof songSources[number]>();
+  for (const source of songSources.sort((a, b) => a.position - b.position)) {
+    const existing = sourcesByPosition.get(source.position);
+    if (!existing || (!existing.performance && source.performance)) {
+      sourcesByPosition.set(source.position, source);
+    }
+  }
+  const duplicateSongPositionCount = songSources.length - sourcesByPosition.size;
+
+  const songs: GigExperienceDTO["songs"] = [...sourcesByPosition.values()]
     .map(({ position, setlistRow, performance }) => ({
       id: performance?.id ?? `gig-setlist-${setlistRow?.song_id ?? position}`,
       songId: performance?.song_id ?? setlistRow?.song_id ?? null,
@@ -172,6 +341,16 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
         memberSkill: performance ? nullableNumberMetric(performance.member_skill_contrib, "Member skill contribution missing from legacy row") : metricLegacyMissing<number>("Performance result is not ready"),
       },
     }));
+  const performerByProfile = new Map<string, PerformerRow>();
+  for (const performer of input.performers ?? []) {
+    if (!performer.profile_id) continue;
+    const existing = performerByProfile.get(performer.profile_id);
+    if (!existing || (existing.lineup_status !== "performed" && performer.lineup_status === "performed")) {
+      performerByProfile.set(performer.profile_id, performer);
+    }
+  }
+  const normalizedPerformers = [...performerByProfile.values()];
+  const duplicatePerformerCount = (input.performers?.length ?? 0) - normalizedPerformers.length;
   const bestSong = songs
     .filter((song) => song.performanceScore.status === "available")
     .reduce<typeof songs[number] | null>((best, song) => !best || metricValue(song.performanceScore, -Infinity) > metricValue(best.performanceScore, -Infinity) ? song : best, null);
@@ -184,10 +363,15 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
     gig: { id: gig.id, bandId: gig.band_id, status: gig.status, scheduledDate: gig.scheduled_date, startedAt: gig.started_at, completedAt: gig.completed_at, ticketPrice: nullableNumberMetric(gig.ticket_price, "Ticket price missing"), venue: { id: venue?.id ?? outcome?.venue_id ?? null, name: venue?.name ?? outcome?.venue_name ?? "Unknown Venue", location: venue?.location ?? null, capacity, type: (venue as any)?.venue_type ?? null } },
     headline: { overallRating: rating, performanceGrade: outcome?.performance_grade ? metricAvailable(outcome.performance_grade) : rating.status === "available" ? metricAvailable(getPerformanceGrade(rating.value).grade, "derived") : metricLegacyMissing("Grade unavailable until rating exists"), verdict: buildVerdict(metricValue(rating, 0)), attendance: outcome ? nullableNumberMetric(outcome.actual_attendance, "Attendance missing from outcome") : metricLegacyMissing("Outcome is not ready"), capacity: capacity > 0 ? metricAvailable(capacity) : metricLegacyMissing("Venue capacity missing"), netProfit: outcome ? nullableNumberMetric(outcome.net_profit, "Net profit missing from outcome") : metricLegacyMissing("Outcome is not ready"), fameGained: outcome ? nullableNumberMetric(outcome.fame_gained, "Fame gain missing from outcome") : metricLegacyMissing("Outcome is not ready"), fansGained: fans, bestSongTitle: bestSong ? metricAvailable(bestSong.title, bestSong.performanceScore.status === "available" ? "authoritative" : "legacy") : metricLegacyMissing("No song performance rows available") },
     songs,
-    performers: (input.performers ?? []).map((row) => ({ id: row.id, profileId: row.profile_id, displayName: row.profiles?.display_name ?? row.profiles?.username ?? "Unknown Performer", roleOrInstrument: row.role_or_instrument, lineupStatus: row.lineup_status ?? "unknown" })),
+    performers: normalizedPerformers.map((row) => ({ id: row.id, profileId: row.profile_id, displayName: row.profiles?.display_name ?? row.profiles?.username ?? "Unknown Performer", roleOrInstrument: row.role_or_instrument, lineupStatus: row.lineup_status ?? "unknown" })),
     finances: { ticketRevenue: outcome ? nullableNumberMetric(outcome.ticket_revenue, "Ticket revenue missing") : metricLegacyMissing("Outcome is not ready"), merchRevenue: outcome ? nullableNumberMetric(outcome.merch_revenue, "Merch revenue missing") : metricLegacyMissing("Outcome is not ready"), totalRevenue: outcome ? nullableNumberMetric(outcome.total_revenue, "Total revenue missing") : metricLegacyMissing("Outcome is not ready"), crewCosts: outcome ? nullableNumberMetric(outcome.crew_cost, "Crew cost missing") : metricLegacyMissing("Outcome is not ready"), equipmentWearCost: outcome ? nullableNumberMetric(outcome.equipment_cost, "Equipment wear cost missing") : metricLegacyMissing("Outcome is not ready"), venueCost: outcome ? nullableNumberMetric(outcome.venue_cost, "Venue cost missing") : metricLegacyMissing("Outcome is not ready"), totalCosts: outcome ? nullableNumberMetric(outcome.total_costs, "Total costs missing") : metricLegacyMissing("Outcome is not ready"), netProfit: outcome ? nullableNumberMetric(outcome.net_profit, "Net profit missing") : metricLegacyMissing("Outcome is not ready"), merchItemsSold: outcome ? nullableNumberMetric(outcome.merch_items_sold, "Merch item count missing") : metricLegacyMissing("Outcome is not ready") },
     progression: { fameGained: outcome ? nullableNumberMetric(outcome.fame_gained, "Fame gain missing") : metricLegacyMissing("Outcome is not ready"), chemistryChange: outcome ? nullableNumberMetric(outcome.chemistry_change, "Chemistry change missing") : metricLegacyMissing("Outcome is not ready"), totalXpAwarded: outcome ? nullableNumberMetric(outcome.total_xp_awarded, "XP summary missing") : metricLegacyMissing("Outcome is not ready"), fansGained: fans, fanConversions: outcome ? nullableNumberMetric(outcome.fan_conversions, "Fan conversion count missing") : metricLegacyMissing("Outcome is not ready") },
-    analysis: { equipmentQuality: outcome ? nullableNumberMetric(outcome.equipment_quality_avg, "Equipment breakdown missing") : metricLegacyMissing("Outcome is not ready"), crewSkill: outcome ? nullableNumberMetric(outcome.crew_skill_avg, "Crew breakdown missing") : metricLegacyMissing("Outcome is not ready"), bandChemistry: outcome ? nullableNumberMetric(outcome.band_chemistry_level, "Band chemistry breakdown missing") : metricLegacyMissing("Outcome is not ready"), memberSkills: outcome ? nullableNumberMetric(outcome.member_skill_avg, "Member skills breakdown missing") : metricLegacyMissing("Outcome is not ready"), crowdEnergyPeak: outcome ? nullableNumberMetric(outcome.crowd_energy_peak, "Crowd energy peak missing") : metricLegacyMissing("Outcome is not ready"), stageBehaviorUsed: outcome?.stage_behavior_used ? metricAvailable(outcome.stage_behavior_used) : metricNotApplicable("No stage behaviour was recorded"), gearEffects: outcome ? mapGearEffects(outcome) : null, warnings: buildWarnings(outcome, songs.length, input.performers?.length ?? 0) },
+    analysis: { equipmentQuality: outcome ? nullableNumberMetric(outcome.equipment_quality_avg, "Equipment breakdown missing") : metricLegacyMissing("Outcome is not ready"), crewSkill: outcome ? nullableNumberMetric(outcome.crew_skill_avg, "Crew breakdown missing") : metricLegacyMissing("Outcome is not ready"), bandChemistry: outcome ? nullableNumberMetric(outcome.band_chemistry_level, "Band chemistry breakdown missing") : metricLegacyMissing("Outcome is not ready"), memberSkills: outcome ? nullableNumberMetric(outcome.member_skill_avg, "Member skills breakdown missing") : metricLegacyMissing("Outcome is not ready"), crowdEnergyPeak: outcome ? nullableNumberMetric(outcome.crowd_energy_peak, "Crowd energy peak missing") : metricLegacyMissing("Outcome is not ready"), stageBehaviorUsed: outcome?.stage_behavior_used ? metricAvailable(outcome.stage_behavior_used) : metricNotApplicable("No stage behaviour was recorded"), gearEffects: outcome ? mapGearEffects(outcome) : null, warnings: Array.from(new Set([
+      ...buildWarnings(outcome, songs.length, normalizedPerformers.length),
+      ...(duplicateSongPositionCount > 0 ? [`${duplicateSongPositionCount} conflicting historical setlist position(s) were collapsed for playback.`] : []),
+      ...(duplicatePerformerCount > 0 ? [`${duplicatePerformerCount} duplicate historical performer row(s) were collapsed for playback.`] : []),
+      ...(input.loadWarnings ?? []),
+    ])) },
     postConsequences: mapPostConsequences(input.postProcessing ?? null, input.consequences ?? []),
     lessons: buildLessons(metricValue(rating, 0), metricValue(outcome ? nullableNumberMetric(outcome.actual_attendance, "") : metricAvailable(0), 0), capacity, metricValue(outcome ? nullableNumberMetric(outcome.net_profit, "") : metricAvailable(0), 0)),
     viewer: {
@@ -230,13 +414,17 @@ function buildVerdict(rating: number) { if (rating >= 22) return "A landmark per
 function buildWarnings(outcome: OutcomeRow | null, songCount: number, performerCount: number) { const warnings: string[] = []; if (!outcome) warnings.push("Outcome is still processing or unavailable."); if (outcome && songCount === 0) warnings.push("No song performance rows were found for this outcome."); if (outcome && performerCount === 0) warnings.push("No performer lineup rows were found; legacy performer details are unavailable."); if (outcome && outcome.merch_items_sold === null) warnings.push("Merch item details are missing on this legacy outcome."); return warnings; }
 function buildLessons(rating: number, attendance: number, capacity: number, profit: number) { return { worked: [rating >= 17 ? "Overall performance quality was strong." : "The outcome was recorded and can be reviewed."], heldBack: [attendance < capacity * 0.5 ? "Attendance was below half capacity." : profit < 0 ? "Costs outweighed revenue." : "No major blocker was identified in the canonical summary."], recommendations: [attendance < capacity * 0.5 ? "Book a smaller venue or build local demand before returning." : profit < 0 ? "Review ticket price, crew costs, and venue fit before the next gig." : "Use the song breakdown to refine the next setlist."] }; }
 
-function mapPostConsequences(processing: { status: string; processing_version: string | null; completed_at: string | null } | null, rows: any[]): GigPostConsequencesDTO {
+function mapPostConsequences(processing: { status: string; processing_version: string | null; completed_at: string | null } | null, rows: ConsequenceRow[]): GigPostConsequencesDTO {
   const consequences = rows.map((row) => ({ key: row.consequence_key, category: row.category, targetType: row.target_type, targetId: row.target_id, previousValue: row.previous_value, deltaValue: row.delta_value, newValue: row.new_value, status: row.status, explanation: row.explanation, sourceFactors: row.source_factors ?? [] }));
   const findDelta = (key: string) => consequences.find((c) => c.key === key)?.deltaValue;
   const media = consequences.find((c) => c.category === "media");
   const timeline = ["Performance completed", "Financial settlement", "Fan response", "Media response", "Reputation changes", "Venue and promoter response", "Performer and crew progression", "Equipment inspection", "Health and recovery", "Future offers"];
+  const allowedStatuses = new Set<GigPostConsequencesDTO["processingStatus"]>(["pending", "processing", "completed", "partially_failed", "retry_required", "skipped", "legacy_missing"]);
+  const processingStatus = processing && allowedStatuses.has(processing.status as GigPostConsequencesDTO["processingStatus"])
+    ? processing.status as GigPostConsequencesDTO["processingStatus"]
+    : "legacy_missing";
   return {
-    processingStatus: (processing?.status as any) ?? "legacy_missing",
+    processingStatus,
     processingVersion: processing?.processing_version ?? null,
     processedAt: processing?.completed_at ?? null,
     liveReputationDelta: findDelta("live_reputation.overall") !== undefined ? metricAvailable(findDelta("live_reputation.overall")!) : metricLegacyMissing("Post-gig consequences have not been processed for this legacy result"),

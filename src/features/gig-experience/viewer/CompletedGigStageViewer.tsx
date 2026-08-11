@@ -2,6 +2,7 @@ import { useGigExperience } from "../hooks";
 import { GigViewerShell } from "./GigViewerShell";
 import { LiveGigStageView } from "./LiveGigStageView";
 import { GigViewerFallback } from "./GigViewerFallback";
+import { getGigExperienceErrorDisplay } from "../diagnostics";
 
 /**
  * Presentation-only entry point for rewatching a completed gig. Loads the gig
@@ -17,9 +18,10 @@ export function CompletedGigStageViewer({
   onViewResult?: () => void;
   onClose?: () => void;
 }) {
-  const { data: experience, isLoading, isError, refetch } = useGigExperience(gigId);
+  const { data: experience, error, isLoading, isError, refetch } = useGigExperience(gigId);
   const noop = () => {};
   const close = onClose ?? noop;
+  const diagnostic = isError ? getGigExperienceErrorDisplay(error, gigId) : null;
 
   if (isLoading) {
     return (
@@ -35,7 +37,8 @@ export function CompletedGigStageViewer({
     return (
       <GigViewerFallback
         title="Stage view unavailable"
-        body="The gig data could not be loaded. Retry without changing the saved performance."
+        body={`${diagnostic?.body ?? "The gig data could not be loaded."} Retry without changing the saved performance.`}
+        diagnosticReference={diagnostic?.reference}
         onRetry={() => void refetch()}
         onClose={onClose}
       />
