@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 // useAuth removed — profileId from useActiveProfile
@@ -7,12 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, AlertCircle } from 'lucide-react';
-import { TopDownGigViewer } from '@/components/gig-viewer/TopDownGigViewer';
+import { Music, Calendar, Users, DollarSign, PlayCircle, Flag, CheckCircle2, AlertCircle, ChevronDown, ListMusic, UserRoundCheck, Tickets, type LucideIcon } from 'lucide-react';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
-import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
-import { GigSetlistDisplay } from '@/components/gig/GigSetlistDisplay';
 import { GigPreparationPanel } from '@/components/gig/GigPreparationPanel';
 import { TicketPriceAdjuster } from '@/components/gig/TicketPriceAdjuster';
 import { useLiveGigState } from '@/hooks/useLiveGigState';
@@ -41,29 +38,25 @@ export default function PerformGig() {
 
   const [gig, setGig] = useState<GigWithVenue | null>(null);
   const [setlistSongs, setSetlistSongs] = useState<any[]>([]);
-  const [rehearsals, setRehearsals] = useState<any[]>([]);
-  const [equipmentCount, setEquipmentCount] = useState(0);
-  const [crewCount, setCrewCount] = useState(0);
   const [bandChemistry, setBandChemistry] = useState(0);
   const [bandFame, setBandFame] = useState(0);
   const [bandTotalFans, setBandTotalFans] = useState(0);
   const [showOutcome, setShowOutcome] = useState(false);
   const [showReplay, setShowReplay] = useState(false);
+  const [viewerDismissed, setViewerDismissed] = useState(false);
   // const [show3DViewer, setShow3DViewer] = useState(false); // Removed - using inline viewer
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [bandSetlists, setBandSetlists] = useState<any[]>([]);
   // Viewer mode removed — single top-down viewer
 
   const gigExperienceQuery = useGigExperience(gigId || null, !!gigId && !!profileId);
   const gigExperience = gigExperienceQuery.data ?? null;
 
-  const { data: bandGearData, isLoading: bandGearLoading } = useBandGearEffects(gig?.band_id ?? null, {
+  const { data: bandGearData } = useBandGearEffects(gig?.band_id ?? null, {
     enabled: !!gig?.band_id,
   });
 
   const gearEffects = bandGearData?.gearEffects;
-  const equippedGearCount = bandGearData?.gearItems.length ?? 0;
 
   const loadGig = useCallback(async () => {
     if (!gigId || !profileId) return;
@@ -87,51 +80,15 @@ export default function PerformGig() {
 
       setGig(gigData as any);
 
-      // Load band setlists for setlist selector with song counts
-      const { data: setlistsData } = await supabase
-        .from('setlists')
-        .select('id, name')
-        .eq('band_id', gigData.band_id)
-        .order('created_at', { ascending: false });
-      
-      // Calculate song counts for each setlist
-      const setlistsWithCounts = await Promise.all((setlistsData || []).map(async (setlist) => {
-        const { count } = await supabase
-          .from('setlist_songs')
-          .select('*', { count: 'exact', head: true })
-          .eq('setlist_id', setlist.id);
-        return { ...setlist, song_count: count || 0 };
-      }));
-      
-      setBandSetlists(setlistsWithCounts);
+      const { data: bandRes } = await supabase
+        .from('bands')
+        .select('chemistry_level, fame, total_fans')
+        .eq('id', gigData.band_id)
+        .single();
 
-      // Band-wide readiness data is independent of whether a setlist is chosen
-      const [rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
-        supabase
-          .from('song_rehearsals')
-          .select('song_id, rehearsal_level')
-          .eq('band_id', gigData.band_id),
-        supabase
-          .from('band_stage_equipment')
-          .select('id')
-          .eq('band_id', gigData.band_id),
-        supabase
-          .from('band_crew_members')
-          .select('id')
-          .eq('band_id', gigData.band_id),
-        supabase
-          .from('bands')
-          .select('chemistry_level, fame, total_fans')
-          .eq('id', gigData.band_id)
-          .single()
-      ]);
-
-      setRehearsals(rehearsalsRes.data || []);
-      setEquipmentCount(equipmentRes.data?.length || 0);
-      setCrewCount(crewRes.data?.length || 0);
-      setBandChemistry(bandRes.data?.chemistry_level || 0);
-      setBandFame(bandRes.data?.fame || 0);
-      setBandTotalFans(bandRes.data?.total_fans || 0);
+      setBandChemistry(bandRes?.chemistry_level || 0);
+      setBandFame(bandRes?.fame || 0);
+      setBandTotalFans(bandRes?.total_fans || 0);
 
       // Authoritative performance setlist is the gig preparation setlist.
       // Only fall back to the legacy band setlist when no prep setlist exists.
@@ -190,6 +147,10 @@ export default function PerformGig() {
     loadGig();
   }, [loadGig]);
 
+  useEffect(() => {
+    setViewerDismissed(false);
+  }, [gigId, gig?.status]);
+
   const startGigMutation = useManualGigStart();
   const fixStuckGigs = useFixStuckGigs();
 
@@ -216,12 +177,6 @@ export default function PerformGig() {
 
   const isLiveStateEnabled = shouldShowLiveViewer && !showOutcome;
   useLiveGigState(gigId || null, isLiveStateEnabled, loadGig);
-
-  const handleGigComplete = async () => {
-    // Reload to show outcome
-    await loadGig();
-  };
-
 
   const handleStartGig = async () => {
     if (!gigId || !profileId) return;
@@ -353,153 +308,76 @@ export default function PerformGig() {
       backLabel="Back to Gig Booking"
     >
 
-      {/* Gig Info Header — venue name/location already shown in the page header */}
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Date</p>
-                <p className="font-semibold">
-                  {format(new Date(gig.scheduled_date), 'PPP p')}
-                </p>
-              </div>
+      {/* Playback is the primary surface once the gig is about to start. */}
+      {shouldShowLiveViewer && !showOutcome && !viewerDismissed && (
+        <section className="space-y-4" aria-labelledby="gig-viewer-heading">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 id="gig-viewer-heading" className="text-xl font-semibold">Gig Viewer</h2>
+              <p className="text-sm text-muted-foreground">Read-only stage presentation using the saved gig setlist.</p>
             </div>
-
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Location</p>
-                <p className="font-semibold">{venueLocation}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Capacity</p>
-                <p className="font-semibold">{capacity}</p>
-              </div>
+              <Badge>{gig.status === 'in_progress' ? 'Live now' : gig.status.replace(/_/g, ' ')}</Badge>
+              {gig.status === 'in_progress' ? (
+                <Button variant="outline" size="sm" onClick={handleFixStuckGig} disabled={fixStuckGigs.isPending}>
+                  <AlertCircle className="mr-1 h-3 w-3" />
+                  {fixStuckGigs.isPending ? 'Fixing…' : 'Fix stuck gig'}
+                </Button>
+              ) : null}
             </div>
           </div>
 
-          <div className="flex items-center gap-4 flex-wrap">
-            <Badge variant="secondary">
-              <DollarSign className="h-3 w-3 mr-1" />
-              ${gig.ticket_price} per ticket
-            </Badge>
-            <Badge variant="outline">
-              {setlistSongs.length} songs in setlist
-            </Badge>
-            <Badge variant={
-              gig.status === 'in_progress' ? 'default' :
-              gig.status === 'completed' ? 'secondary' :
-              gig.status === 'cancelled' ? 'destructive' :
-              'outline'
-            }>
-              {gig.status === 'in_progress' ? '🔴 Live Now' : gig.status}
-            </Badge>
-            
-            {/* Fix Stuck Gig Button */}
-            {gig.status === 'in_progress' && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleFixStuckGig}
-                disabled={fixStuckGigs.isPending}
-              >
-                <AlertCircle className="h-3 w-3 mr-1" />
-                {fixStuckGigs.isPending ? 'Fixing...' : 'Fix Stuck Gig'}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Band setlist selector — hidden for scheduled gigs, where the Gig
-          Preparation panel manages the authoritative gig setlist */}
-      {bandSetlists.length > 0 && gig.status !== 'scheduled' && (
-        <Card>
-          <CardContent className="pt-6">
-            <GigSetlistDisplay
+          {gigExperienceQuery.isLoading ? (
+            <Card><CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground"><div className="h-5 w-5 animate-spin rounded-full border-b-2 border-primary" />Loading the saved setlist and stage view…</CardContent></Card>
+          ) : gigExperienceQuery.isError ? (
+            <Card>
+              <CardContent className="space-y-3 p-6">
+                <p className="text-sm text-muted-foreground">The stage data could not be loaded. The gig itself has not been changed.</p>
+                <Button variant="outline" onClick={() => void gigExperienceQuery.refetch()}>Retry viewer</Button>
+              </CardContent>
+            </Card>
+          ) : gigExperience && gigExperience.songs.length > 0 ? (
+            <LiveGigStageView
               gigId={gig.id}
-              bandId={gig.band_id}
-              currentSetlistId={gig.setlist_id}
-              scheduledDate={gig.scheduled_date}
-              setlists={bandSetlists}
-              onSetlistChanged={loadGig}
+              experience={gigExperience}
+              onViewResult={() => setShowOutcome(true)}
+              onClose={() => setViewerDismissed(true)}
             />
+          ) : (
+            <Card>
+              <CardContent className="space-y-2 p-6">
+                <p className="font-medium">No saved gig setlist</p>
+                <p className="text-sm text-muted-foreground">Add songs in Gig preparation before opening the viewer.</p>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      )}
+
+      {/* A single compact summary replaces the repeated venue/setlist blocks. */}
+      {(!shouldShowLiveViewer || viewerDismissed) && (
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div><p className="text-xs text-muted-foreground">Date</p><p className="font-medium">{format(new Date(gig.scheduled_date), 'PPP p')}</p></div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div><p className="text-xs text-muted-foreground">Capacity</p><p className="font-medium">{capacity.toLocaleString()}</p></div>
+              </div>
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <div><p className="text-xs text-muted-foreground">Ticket</p><p className="font-medium">${gig.ticket_price || 0}</p></div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">{setlistSongs.length} songs</Badge>
+              <Badge variant={gig.status === 'completed' ? 'secondary' : gig.status === 'cancelled' ? 'destructive' : 'outline'}>{gig.status.replace(/_/g, ' ')}</Badge>
+            </div>
           </CardContent>
         </Card>
-      )}
-
-      {gig.status === 'scheduled' && (
-        <GigPreparationPanel
-          gigId={gig.id}
-          bandId={gig.band_id}
-          status={gig.status}
-          scheduledDate={gig.scheduled_date}
-        />
-      )}
-
-      {/* Ticket Price Adjuster - shown for scheduled gigs with poor sales */}
-      {gig.status === 'scheduled' && (() => {
-        const daysUntilGig = differenceInDays(new Date(gig.scheduled_date), new Date());
-        const ticketsSold = gig.tickets_sold || 0;
-        const venueCapacity = gig.venues?.capacity || 100;
-        
-        // Calculate predicted sales
-        const salesResult = calculateDailySalesRate({
-          bandFame: bandFame,
-          bandTotalFans: bandTotalFans,
-          venueCapacity: venueCapacity,
-          daysUntilGig: Math.max(1, daysUntilGig),
-          daysBooked: 14,
-          ticketPrice: gig.ticket_price || 20,
-        });
-        const predictedSales = salesResult.expectedTotalSales;
-        
-        // Check if price adjustment is available
-        const salesPercentage = predictedSales > 0 ? (ticketsSold / predictedSales) * 100 : 0;
-        const canAdjustPrice = daysUntilGig >= 7 && salesPercentage < 50 && !gig.price_adjusted_at;
-        
-        if (canAdjustPrice) {
-          return (
-            <TicketPriceAdjuster
-              gigId={gig.id}
-              currentPrice={gig.ticket_price || 20}
-              ticketsSold={ticketsSold}
-              predictedSales={predictedSales}
-              onPriceAdjusted={loadGig}
-            />
-          );
-        }
-        return null;
-      })()}
-
-      <GigPerformersSection
-        gigId={gig.id}
-        completedOrCancelled={gig.status === 'completed' || gig.status === 'cancelled'}
-      />
-
-      {/* Readiness summary — only for non-scheduled gigs; scheduled gigs use the
-          authoritative Gig Preparation panel above instead of duplicating it */}
-      {gig.status !== 'scheduled' && setlistSongs.length > 0 && (
-        <GigPreparationChecklist
-          setlistSongs={setlistSongs}
-          rehearsals={rehearsals.map(r => ({
-            song_id: r.song_id,
-            song_title: setlistSongs.find(s => s.song_id === r.song_id)?.songs?.title || 'Unknown',
-            rehearsal_level: r.rehearsal_level || 0
-          }))}
-          equipmentCount={equipmentCount}
-          crewCount={crewCount}
-          bandChemistry={bandChemistry}
-          gearEffects={gearEffects}
-          equippedGearCount={equippedGearCount}
-          gearLoading={bandGearLoading}
-        />
       )}
 
       {/* Start Gig Button - shown when gig is scheduled and time has passed */}
@@ -525,6 +403,41 @@ export default function PerformGig() {
         </Card>
       )}
 
+      {/* Upcoming-gig management stays available without duplicating the page. */}
+      {gig.status === 'scheduled' && (
+        <div className="space-y-3">
+          <ManagementSection icon={ListMusic} title="Setlist and readiness" summary={`${setlistSongs.length} saved songs`}>
+            <GigPreparationPanel gigId={gig.id} bandId={gig.band_id} status={gig.status} scheduledDate={gig.scheduled_date} />
+          </ManagementSection>
+
+          <ManagementSection icon={UserRoundCheck} title="Line-up" summary="Performers and attendance">
+            <GigPerformersSection gigId={gig.id} completedOrCancelled={false} />
+          </ManagementSection>
+
+          {(() => {
+            const daysUntilGig = differenceInDays(new Date(gig.scheduled_date), new Date());
+            const ticketsSold = gig.tickets_sold || 0;
+            const venueCapacity = gig.venues?.capacity || 100;
+            const predictedSales = calculateDailySalesRate({
+              bandFame,
+              bandTotalFans,
+              venueCapacity,
+              daysUntilGig: Math.max(1, daysUntilGig),
+              daysBooked: 14,
+              ticketPrice: gig.ticket_price || 20,
+            }).expectedTotalSales;
+            const salesPercentage = predictedSales > 0 ? (ticketsSold / predictedSales) * 100 : 0;
+            const canAdjustPrice = daysUntilGig >= 7 && salesPercentage < 50 && !gig.price_adjusted_at;
+            if (!canAdjustPrice) return null;
+            return (
+              <ManagementSection icon={Tickets} title="Ticket pricing" summary="Price adjustment available">
+                <TicketPriceAdjuster gigId={gig.id} currentPrice={gig.ticket_price || 20} ticketsSold={ticketsSold} predictedSales={predictedSales} onPriceAdjusted={loadGig} />
+              </ManagementSection>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Finalize Gig CTA */}
       {gig.status === 'ready_for_completion' && (
         <Card>
@@ -546,26 +459,6 @@ export default function PerformGig() {
             </Button>
           </CardContent>
         </Card>
-      )}
-
-      {/* Live stage view — uses the same updated viewer engine as the demo */}
-      {shouldShowLiveViewer && setlistSongs.length > 0 && !showOutcome && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Watch Performance</h3>
-          {gigExperience && gigExperience.songs.length > 0 ? (
-            <LiveGigStageView
-              gigId={gig.id}
-              experience={gigExperience}
-              onViewResult={() => setShowOutcome(true)}
-              onClose={handleGigComplete}
-            />
-          ) : (
-            <TopDownGigViewer
-              gigId={gig.id}
-              onComplete={handleGigComplete}
-            />
-          )}
-        </div>
       )}
 
       {/* Processing Message - shown when gig just completed but report not ready yet */}
@@ -656,5 +549,33 @@ export default function PerformGig() {
         gigId={gig.id}
       />
     </FMPageScaffold>
+  );
+}
+
+function ManagementSection({
+  icon: Icon,
+  title,
+  summary,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  summary: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center gap-3 p-4 marker:hidden [&::-webkit-details-marker]:hidden">
+          <Icon className="h-5 w-5 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{title}</p>
+            <p className="truncate text-sm text-muted-foreground">{summary}</p>
+          </div>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+        </summary>
+        <CardContent className="border-t pt-4">{children}</CardContent>
+      </details>
+    </Card>
   );
 }

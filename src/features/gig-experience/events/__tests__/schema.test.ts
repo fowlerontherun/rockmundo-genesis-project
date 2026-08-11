@@ -12,11 +12,30 @@ describe("gig viewer replay schema", () => {
     expect(replay.events.at(-1)?.eventType).toBe("replay_completed");
   });
 
+  it("builds a valid presentation-only sequence without publishing result events", async () => {
+    const canonical = await buildGigViewerReplay(input);
+    const presentation = await buildGigViewerReplay({ ...input, includeResultReveal: false });
+
+    expect(validateGigViewerReplay(presentation)).toEqual({ valid: true, errors: [] });
+    expect(presentation.resultAvailable).toBe(false);
+    expect(presentation.events.some((event) => event.eventType === "result_revealed")).toBe(false);
+    expect(presentation.events.at(-1)?.eventType).toBe("replay_completed");
+    expect(canonical.simulationSeed).toBe(createDeterministicSeed([input.gig.id, input.outcomeId, input.gig.completedAt, 1]));
+    expect(presentation.simulationSeed).not.toBe(canonical.simulationSeed);
+  });
+
   it("rejects invalid payload discriminators, unknown phases, duplicate sequence, out-of-order offsets, invalid energy, missing reveal, and non-last completed", async () => {
     const replay = await buildGigViewerReplay(input);
     replay.events[0] = { ...replay.events[0], visualPayload: { type: "pyrotechnics" } as never, phase: "bad_phase" as never, sequence: 1, crowdEnergyAfter: 101 };
     replay.events[1] = { ...replay.events[1], scheduledOffsetMs: 0 };
-    const withoutReveal = { ...replay, events: replay.events.filter((e) => e.eventType !== "result_revealed") };
+    const eventsWithoutReveal = replay.events.filter((e) => e.eventType !== "result_revealed");
+    const withoutReveal = {
+      ...replay,
+      events: [
+        ...eventsWithoutReveal,
+        { ...eventsWithoutReveal[0], id: "event-after-completed", sequence: eventsWithoutReveal.length, scheduledOffsetMs: replay.durationMs + 1 },
+      ],
+    };
     const result = validateGigViewerReplay(withoutReveal);
     expect(result.valid).toBe(false);
     expect(result.errors.join("|")).toContain("invalid payload");

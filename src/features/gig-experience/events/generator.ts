@@ -5,7 +5,7 @@ import type { GigViewerEvent, GigViewerReplay, StagePosition } from "./types";
 export interface ReplayGigInput { id: string; completedAt: string | null; resultReadyAt?: string | null; venueCapacity?: number | null; actualAttendance?: number | null; overallRating?: number | null; netProfit?: number | null }
 export interface ReplaySongInput { id: string; songId: string | null; position: number; title: string; performanceScore: number | null; crowdResponse?: string | null }
 export interface ReplayPerformerInput { profileId: string; displayName?: string | null; roleOrInstrument?: string | null; lineupStatus?: string | null }
-export interface BuildGigViewerReplayInput { replayId: string; gig: ReplayGigInput; outcomeId: string; songs: ReplaySongInput[]; performers: ReplayPerformerInput[]; generatedAt: string; viewerVersion?: number }
+export interface BuildGigViewerReplayInput { replayId: string; gig: ReplayGigInput; outcomeId: string; songs: ReplaySongInput[]; performers: ReplayPerformerInput[]; generatedAt: string; viewerVersion?: number; includeResultReveal?: boolean }
 
 export function createDeterministicSeed(parts: Array<string | number | null | undefined>): string {
   return fnv1a64(parts.map((p) => String(p ?? "")).join("|"));
@@ -30,9 +30,14 @@ export async function checksumReplayEvents(events: GigViewerEvent[]): Promise<st
 
 export async function buildGigViewerReplay(input: BuildGigViewerReplayInput): Promise<GigViewerReplay> {
   const viewerVersion = input.viewerVersion ?? GIG_VIEWER_VERSION;
+  const resultAvailable = input.includeResultReveal !== false;
   const sortedSongs = [...input.songs].sort((a, b) => a.position - b.position);
   const performed = input.performers.filter((p) => (p.lineupStatus ?? "performed") === "performed");
-  const seed = createDeterministicSeed([input.gig.id, input.outcomeId, input.gig.completedAt, viewerVersion]);
+  const seedParts: Array<string | number | null | undefined> = [input.gig.id, input.outcomeId, input.gig.completedAt, viewerVersion];
+  // Keep canonical completed-replay seeds unchanged while giving the local,
+  // result-free presentation sequence its own deterministic identity.
+  if (!resultAvailable) seedParts.push(0);
+  const seed = createDeterministicSeed(seedParts);
   const random = createDeterministicRandom(seed);
   const durationBySong = allocateSongDurations(sortedSongs);
   const events: GigViewerEvent[] = [];
@@ -66,9 +71,11 @@ export async function buildGigViewerReplay(input: BuildGigViewerReplayInput): Pr
   push({ phase: "encore_decision", eventType: "encore_decided", durationMs: 8_000, importance: "important", crowdEnergyBefore: energy, crowdEnergyAfter: encore ? clamp(energy + 5) : energy, messageKey: encore ? "gig.viewer.encore_requested" : "gig.viewer.encore_declined", messageParams: { narrative: "presentation_only" }, visualPayload: { type: "crowd_reaction", reaction: encore ? "jump" : "wave", intensity: energy / 100 } });
   push({ phase: "finale", eventType: "finale_started", durationMs: 10_000, importance: "critical", crowdEnergyBefore: energy, crowdEnergyAfter: clamp(energy + (encore ? 8 : 2)), messageKey: "gig.viewer.finale", messageParams: {}, visualPayload: { type: "moment_effect", effect: "confetti", intensity: Math.min(1, energy / 90) } });
   push({ phase: "band_exit", eventType: "band_exited", durationMs: 8_000, importance: "normal", messageKey: "gig.viewer.band_exit", messageParams: {}, visualPayload: { type: "band_exit", exitStyle: encore ? "encore_bow" : "wave", performerIds: performed.map((p) => p.profileId) } });
-  push({ phase: "result_reveal", eventType: "result_revealed", durationMs: 8_000, importance: "critical", messageKey: "gig.viewer.result_reveal", messageParams: { rating: input.gig.overallRating ?? 0 }, visualPayload: { type: "result_reveal", overallRating: input.gig.overallRating ?? null, attendance: input.gig.actualAttendance ?? null, netProfit: input.gig.netProfit ?? null, verdictKey: verdictKey(input.gig.overallRating) } });
+  if (resultAvailable) {
+    push({ phase: "result_reveal", eventType: "result_revealed", durationMs: 8_000, importance: "critical", messageKey: "gig.viewer.result_reveal", messageParams: { rating: input.gig.overallRating ?? 0 }, visualPayload: { type: "result_reveal", overallRating: input.gig.overallRating ?? null, attendance: input.gig.actualAttendance ?? null, netProfit: input.gig.netProfit ?? null, verdictKey: verdictKey(input.gig.overallRating) } });
+  }
   push({ phase: "completed", eventType: "replay_completed", durationMs: 1_000, importance: "ambient", messageKey: "gig.viewer.completed", messageParams: {}, visualPayload: { type: "crowd_reaction", reaction: "disperse", intensity: 0.1 } });
-  const replay: GigViewerReplay = { id: input.replayId, gigId: input.gig.id, gigOutcomeId: input.outcomeId, viewerVersion, eventSchemaVersion: GIG_EVENT_SCHEMA_VERSION, simulationSeed: seed, durationMs: offset, generatedAt: input.generatedAt, events, checksum: await checksumReplayEvents(events), status: "ready" };
+  const replay: GigViewerReplay = { id: input.replayId, gigId: input.gig.id, gigOutcomeId: input.outcomeId, viewerVersion, eventSchemaVersion: GIG_EVENT_SCHEMA_VERSION, simulationSeed: seed, durationMs: offset, generatedAt: input.generatedAt, events, checksum: await checksumReplayEvents(events), status: "ready", resultAvailable };
   const validation = validateGigViewerReplay(replay);
   if (!validation.valid) throw new Error(`INVALID_REPLAY:${validation.errors.join(";")}`);
   assertReplayPayloadWithinBudget(replay);

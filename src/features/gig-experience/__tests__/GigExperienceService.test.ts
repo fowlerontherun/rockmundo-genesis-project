@@ -37,8 +37,31 @@ describe("GigExperienceService", () => {
     expect(dto.analysis.warnings).toContain("No performer lineup rows were found; legacy performer details are unavailable.");
   });
 
-  it("rejects impossible attendance over capacity", () => {
-    expect(() => mapGigExperience({ gig, outcome: { ...outcome, actual_attendance: 101 }, songPerformances: [song()], performers: [] })).toThrow(/attendance/);
+  it("uses the saved per-gig setlist before an outcome exists", () => {
+    const dto = mapGigExperience({
+      gig: { ...gig, status: "scheduled", completed_at: null, result_ready_at: null },
+      outcome: null,
+      songPerformances: [],
+      setlistSongs: [
+        { song_id: "song-1", position: 1, songs: { id: "song-1", title: "Opener" } },
+        { song_id: "song-2", position: 2, songs: { id: "song-2", title: "Finale" } },
+      ],
+      performers: [],
+    });
+
+    expect(dto.songs.map(({ songId, position, title }) => ({ songId, position, title }))).toEqual([
+      { songId: "song-1", position: 1, title: "Opener" },
+      { songId: "song-2", position: 2, title: "Finale" },
+    ]);
+    expect(dto.songs.every((item) => item.performanceScore.status === "legacy_missing")).toBe(true);
+    expect(dto.headline.bestSongTitle.status).toBe("legacy_missing");
+    expect(dto.viewer.ready).toBe(false);
+  });
+
+  it("normalizes historic venue capacity when recorded attendance is higher", () => {
+    const dto = mapGigExperience({ gig, outcome: { ...outcome, actual_attendance: 101 }, songPerformances: [song()], performers: [] });
+    expect(dto.gig.venue.capacity).toBe(101);
+    expect(dto.headline.attendance).toEqual(metricAvailable(101));
   });
 
   it("validates rating limits, duplicate performers, and duplicate song positions", () => {

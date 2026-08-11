@@ -60,6 +60,8 @@ export interface GigViewerReplay {
   events: GigViewerEvent[];
   checksum: string | null;
   status: GigReplayStatus;
+  /** False only for a local presentation sequence built before an authoritative result exists. */
+  resultAvailable?: boolean;
   crowdTuning?: GigReplayCrowdTuning | null;
   crowdTuningRevision?: number | null;
 }

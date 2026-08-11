@@ -1,7 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { useGigExperience } from "../hooks";
 import { GigViewerShell } from "./GigViewerShell";
 import { LiveGigStageView } from "./LiveGigStageView";
+import { GigViewerFallback } from "./GigViewerFallback";
 
 /**
  * Presentation-only entry point for rewatching a completed gig. Loads the gig
@@ -17,27 +17,30 @@ export function CompletedGigStageViewer({
   onViewResult?: () => void;
   onClose?: () => void;
 }) {
-  const { data: experience, isLoading, isError } = useGigExperience(gigId);
+  const { data: experience, isLoading, isError, refetch } = useGigExperience(gigId);
+  const noop = () => {};
+  const close = onClose ?? noop;
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-4 text-sm text-muted-foreground">Loading stage view…</CardContent>
-      </Card>
+      <GigViewerFallback
+        title="Loading stage view"
+        body="Loading the saved gig and its presentation data."
+        onClose={onClose}
+      />
     );
   }
 
   if (isError || !experience) {
     return (
-      <Card>
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          The stage view is not available for this performance.
-        </CardContent>
-      </Card>
+      <GigViewerFallback
+        title="Stage view unavailable"
+        body="The gig data could not be loaded. Retry without changing the saved performance."
+        onRetry={() => void refetch()}
+        onClose={onClose}
+      />
     );
   }
-
-  const noop = () => {};
 
   if (experience.viewer.replayAvailable) {
     return (
@@ -46,7 +49,7 @@ export function CompletedGigStageViewer({
         experience={experience}
         open
         onViewResult={onViewResult ?? noop}
-        onClose={onClose ?? noop}
+        onClose={close}
       />
     );
   }
@@ -57,16 +60,17 @@ export function CompletedGigStageViewer({
         gigId={gigId}
         experience={experience}
         onViewResult={onViewResult ?? noop}
-        onClose={onClose ?? noop}
+        onClose={close}
       />
     );
   }
 
   return (
-    <Card>
-      <CardContent className="p-4 text-sm text-muted-foreground">
-        No setlist data was stored for this gig, so the stage view can't be rebuilt.
-      </CardContent>
-    </Card>
+    <GigViewerFallback
+      title="Stage view unavailable"
+      body="No setlist was stored for this gig, so a presentation cannot be rebuilt."
+      onResult={experience.viewer.ready ? onViewResult : undefined}
+      onClose={onClose}
+    />
   );
 }
