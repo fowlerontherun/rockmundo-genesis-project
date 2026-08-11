@@ -53,6 +53,48 @@ const RELEASE_TYPE_CONFIG: Record<string, { label: string; trackRange: string }>
 
 export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const releaseNow = useMutation({
+    mutationFn: async (release: any) => {
+      // Clear any future scheduling/manufacturing gate so the sweep can complete it
+      const nowIso = new Date().toISOString();
+      const updates: Record<string, string> = {};
+      if (!release.manufacturing_complete_at || new Date(release.manufacturing_complete_at) > new Date()) {
+        updates.manufacturing_complete_at = nowIso;
+      }
+      if (release.scheduled_release_date && new Date(release.scheduled_release_date) > new Date()) {
+        updates.scheduled_release_date = nowIso;
+      }
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase.from("releases").update(updates).eq("id", release.id);
+        if (updateError) throw updateError;
+      }
+
+      const { error } = await supabase.functions.invoke("complete-release-manufacturing");
+      if (error) throw error;
+
+      const { data, error: checkError } = await supabase
+        .from("releases")
+        .select("release_status")
+        .eq("id", release.id)
+        .maybeSingle();
+      if (checkError) throw checkError;
+      return data?.release_status;
+    },
+    onSuccess: (status) => {
+      queryClient.invalidateQueries({ queryKey: ["releases"] });
+      if (status === "released") {
+        toast.success("Release is now live!");
+      } else {
+        toast.info("Release queued — it will go live shortly.");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not release: ${error.message}`);
+    },
+  });
+
   const [editingRelease, setEditingRelease] = useState<any>(null);
   const [cancellingRelease, setCancellingRelease] = useState<any>(null);
   const [addPhysicalRelease, setAddPhysicalRelease] = useState<any>(null);
