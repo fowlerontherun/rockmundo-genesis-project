@@ -573,9 +573,11 @@ interface ReleaseCardProps {
   onAnalytics?: () => void;
   onReorder?: (format: any) => void;
   onParty?: () => void;
+  onReleaseNow?: () => void;
+  isReleasing?: boolean;
 }
 
-function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
