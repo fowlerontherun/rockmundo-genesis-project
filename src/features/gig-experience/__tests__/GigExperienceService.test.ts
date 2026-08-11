@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mapGigExperience, validateGigExperience } from "../services/GigExperienceService";
 import { metricAvailable, metricLegacyMissing, renderMetricValue } from "../reportMetric";
+
+vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 
 const gig = { id: "gig-1", band_id: "band-1", status: "completed", scheduled_date: "2026-07-11T20:00:00Z", started_at: null, completed_at: "2026-07-11T22:00:00Z", ticket_price: 20, venues: { id: "venue-1", name: "Club Test", location: "NYC", capacity: 100 } } as any;
 const outcome = { id: "out-1", gig_id: "gig-1", band_id: "band-1", venue_id: "venue-1", venue_name: "Club Test", venue_capacity: 100, completed_at: "2026-07-11T22:00:00Z", created_at: "2026-07-11T22:00:00Z", overall_rating: 20, performance_grade: null, actual_attendance: 100, attendance_percentage: 100, ticket_revenue: 2000, merch_revenue: 100, total_revenue: 2100, crew_cost: 300, equipment_cost: 50, venue_cost: 500, total_costs: 850, net_profit: 1250, fame_gained: 10, new_followers: 5, casual_fans_gained: 1, dedicated_fans_gained: 2, superfans_gained: 3, fan_conversions: 11, chemistry_change: -1, total_xp_awarded: 75, equipment_quality_avg: 13, crew_skill_avg: 12, band_chemistry_level: 14, member_skill_avg: 15, merch_items_sold: 4, crowd_energy_peak: 90, stage_behavior_used: "balanced", band_synergy_modifier: 1, social_buzz_impact: 2, audience_memory_impact: 3, promoter_modifier: 4, venue_loyalty_bonus: 5 } as any;
@@ -62,6 +64,30 @@ describe("GigExperienceService", () => {
     const dto = mapGigExperience({ gig, outcome: { ...outcome, actual_attendance: 101 }, songPerformances: [song()], performers: [] });
     expect(dto.gig.venue.capacity).toBe(101);
     expect(dto.headline.attendance).toEqual(metricAvailable(101));
+  });
+
+  it("collapses duplicate historical setlist positions and performer rows", () => {
+    const dto = mapGigExperience({
+      gig,
+      outcome,
+      songPerformances: [],
+      setlistSongs: [
+        { song_id: "song-1", position: 1, songs: { id: "song-1", title: "First copy" } },
+        { song_id: "song-2", position: 1, songs: { id: "song-2", title: "Conflicting copy" } },
+      ],
+      performers: [
+        { id: "gp-1", profile_id: "p-1", role_or_instrument: "Vocals", lineup_status: "confirmed", profiles: { display_name: "Alex" } },
+        { id: "gp-2", profile_id: "p-1", role_or_instrument: "Vocals", lineup_status: "performed", profiles: { display_name: "Alex" } },
+      ],
+    });
+
+    expect(dto.songs).toHaveLength(1);
+    expect(dto.performers).toHaveLength(1);
+    expect(dto.performers[0].lineupStatus).toBe("performed");
+    expect(dto.analysis.warnings).toEqual(expect.arrayContaining([
+      "1 conflicting historical setlist position(s) were collapsed for playback.",
+      "1 duplicate historical performer row(s) were collapsed for playback.",
+    ]));
   });
 
   it("validates rating limits, duplicate performers, and duplicate song positions", () => {
