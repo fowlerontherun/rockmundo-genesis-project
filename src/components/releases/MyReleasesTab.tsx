@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +53,48 @@ const RELEASE_TYPE_CONFIG: Record<string, { label: string; trackRange: string }>
 
 export function MyReleasesTab({ userId }: MyReleasesTabProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const releaseNow = useMutation({
+    mutationFn: async (release: any) => {
+      // Clear any future scheduling/manufacturing gate so the sweep can complete it
+      const nowIso = new Date().toISOString();
+      const updates: Record<string, string> = {};
+      if (!release.manufacturing_complete_at || new Date(release.manufacturing_complete_at) > new Date()) {
+        updates.manufacturing_complete_at = nowIso;
+      }
+      if (release.scheduled_release_date && new Date(release.scheduled_release_date) > new Date()) {
+        updates.scheduled_release_date = nowIso;
+      }
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase.from("releases").update(updates).eq("id", release.id);
+        if (updateError) throw updateError;
+      }
+
+      const { error } = await supabase.functions.invoke("complete-release-manufacturing");
+      if (error) throw error;
+
+      const { data, error: checkError } = await supabase
+        .from("releases")
+        .select("release_status")
+        .eq("id", release.id)
+        .maybeSingle();
+      if (checkError) throw checkError;
+      return data?.release_status;
+    },
+    onSuccess: (status) => {
+      queryClient.invalidateQueries({ queryKey: ["releases"] });
+      if (status === "released") {
+        toast.success("Release is now live!");
+      } else {
+        toast.info("Release queued — it will go live shortly.");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not release: ${error.message}`);
+    },
+  });
+
   const [editingRelease, setEditingRelease] = useState<any>(null);
   const [cancellingRelease, setCancellingRelease] = useState<any>(null);
   const [addPhysicalRelease, setAddPhysicalRelease] = useState<any>(null);
@@ -459,6 +502,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
               setReorderFormat({ format, release });
             }}
             onParty={() => setPartyRelease(release)}
+            onReleaseNow={() => releaseNow.mutate(release)}
+            isReleasing={releaseNow.isPending && releaseNow.variables?.id === release.id}
           />
         ))}
       </div>
@@ -528,9 +573,11 @@ interface ReleaseCardProps {
   onAnalytics?: () => void;
   onReorder?: (format: any) => void;
   onParty?: () => void;
+  onReleaseNow?: () => void;
+  isReleasing?: boolean;
 }
 
-function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -621,6 +668,17 @@ function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, o
           )}
           {release.release_status === "manufacturing" && (
             <ManufacturingProgress createdAt={release.created_at} manufacturingCompleteAt={release.manufacturing_complete_at} status={release.release_status} />
+          )}
+          {release.release_status === "manufacturing" && onReleaseNow && (
+            <Button
+              size="sm"
+              className="text-[10px] px-2 h-6 w-full"
+              disabled={isReleasing}
+              onClick={(e) => { e.stopPropagation(); onReleaseNow(); }}
+            >
+              <Play className="h-2.5 w-2.5 mr-0.5" />
+              {isReleasing ? "Releasing..." : "Release Now"}
+            </Button>
           )}
           <div className="flex flex-wrap gap-1 pt-1">
             <Button variant="default" size="sm" className="text-[10px] px-2 h-6" onClick={onViewDetails}>Details</Button>
