@@ -29,11 +29,18 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
 
   const claimMutation = useMutation({
     mutationFn: claimDailyXp,
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Daily stipend claimed successfully!");
-      queryClient.invalidateQueries({ queryKey: ["gameData"] });
-      onClaimed?.();
+      // Refresh every cache that reads the XP wallet / attributes / profile
+      await queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = String(query.queryKey?.[0] ?? "");
+          return /gameData|game-data|xp|wallet|profile|attribute|skill|progression/i.test(key);
+        },
+      });
+      await onClaimed?.();
     },
+
     onError: (error: Error) => {
       // Don't show error toast if it's just the "already claimed" validation
       if (error.message?.includes("already claimed")) {
