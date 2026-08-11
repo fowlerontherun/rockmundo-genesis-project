@@ -669,6 +669,20 @@ function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, o
           {release.release_status === "manufacturing" && (
             <ManufacturingProgress createdAt={release.created_at} manufacturingCompleteAt={release.manufacturing_complete_at} status={release.release_status} />
           )}
+          {release.release_status === "manufacturing" && onReleaseNow && (
+            <Button
+              size="sm"
+              className="text-[10px] px-2 h-6 w-full"
+              disabled={isReleasing}
+              onClick={(e) => { e.stopPropagation(); onReleaseNow(); }}
+            >
+              <Play className="h-2.5 w-2.5 mr-0.5" />
+              {isReleasing ? "Releasing..." : "Release Now"}
+            </Button>
+          )}
+          {false && (
+            <span />
+          )}
           <div className="flex flex-wrap gap-1 pt-1">
             <Button variant="default" size="sm" className="text-[10px] px-2 h-6" onClick={onViewDetails}>Details</Button>
             {release.release_status !== "cancelled" && (
