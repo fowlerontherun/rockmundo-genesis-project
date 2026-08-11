@@ -502,6 +502,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
               setReorderFormat({ format, release });
             }}
             onParty={() => setPartyRelease(release)}
+            onReleaseNow={() => releaseNow.mutate(release)}
+            isReleasing={releaseNow.isPending && releaseNow.variables?.id === release.id}
           />
         ))}
       </div>
