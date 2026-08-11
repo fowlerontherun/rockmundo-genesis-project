@@ -101,6 +101,7 @@ export function LiveGigStageView({
       gigId={gigId}
       experience={experience}
       open
+      mode="player"
       replayOverride={replay}
       onViewResult={onViewResult}
       onClose={onClose}

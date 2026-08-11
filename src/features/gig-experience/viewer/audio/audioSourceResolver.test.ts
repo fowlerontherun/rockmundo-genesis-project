@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { deterministicExcerptStart, resolveSongAudioDescriptor } from "./audioSourceResolver";
+import type { GigExperienceSongDTO } from "../../types";
+import type { SongSegment } from "../engine/StoryEngine";
+import { deterministicExcerptStart, resolveGigSongAudio, resolveSongAudioDescriptor } from "./audioSourceResolver";
 
 describe("gig viewer audio source resolution", () => {
   it("selects approved generated full audio before preview", () => {
@@ -26,5 +28,30 @@ describe("deterministic gig audio excerpts", () => {
   it("uses zero for short audio or segment longer than track", () => {
     expect(deterministicExcerptStart("song", "seed", 20, 25)).toBe(0);
     expect(deterministicExcerptStart("song", "seed", 0, 25)).toBe(0);
+  });
+
+  it("uses the complete track from the beginning in player stage mode", () => {
+    const source = resolveGigSongAudio(
+      {
+        id: "performance-1",
+        songId: "song-1",
+        position: 1,
+        title: "Full Song",
+        audio: {
+          available: true,
+          sourceType: "generated_full",
+          url: "full.mp3",
+          durationSeconds: 213,
+          generationStatus: "completed",
+          permissionState: "allowed",
+        },
+      } as GigExperienceSongDTO,
+      { id: "song-1", title: "Full Song", startMs: 0, endMs: 20_000 } as SongSegment,
+      "seed",
+      { fullSong: true },
+    );
+
+    expect(source.excerptStartSeconds).toBe(0);
+    expect(source.excerptDurationSeconds).toBe(213);
   });
 });

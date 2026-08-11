@@ -51,6 +51,7 @@ export function CompletedGigStageViewer({
         gigId={gigId}
         experience={experience}
         open
+        mode="player"
         onViewResult={onViewResult ?? noop}
         onClose={close}
       />
