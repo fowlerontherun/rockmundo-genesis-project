@@ -7,6 +7,7 @@ import { buildEntityLayout, type EntityLayout } from "./EntityLayout";
 import { buildPerformerPlan, reconstructPerformerState, type PerformerPlan } from "./PerformerLifecycle";
 import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEngine";
 import type { Size } from "./Viewport";
+import { VENUE_SCENE_ZONES } from "./SceneLayout";
 import { selectVenuePreset, scaleVenuePreset, selectStageType } from "./VenueLayout";
 import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
@@ -90,6 +91,8 @@ export class CanvasRenderer {
     drawBackground(ctx, preset, size);
     drawVenueShell(ctx, preset, size);
     drawFloor(ctx, preset);
+    // Future concessions and navigation live on their own layer, behind active entities.
+    drawExpansionFoundation(ctx, size);
     if (crowd && preset.crowdZones.length > 1) {
       ctx.globalAlpha = .14 + crowd.fillProgress * .14;
       ctx.fillStyle = preset.decorations.palette.accent;
@@ -156,3 +159,28 @@ export class CanvasRenderer {
 }
 
 function label(phase: string) { return phase.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
+
+function drawExpansionFoundation(ctx: CanvasRenderingContext2D, size: Size) {
+  const rect = (zone: { x: number; y: number; width: number; height: number }) => ({ x: zone.x * size.width, y: zone.y * size.height, width: zone.width * size.width, height: zone.height * size.height });
+  ctx.save();
+  ctx.setLineDash([8, 8]);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(148,163,184,.28)";
+  ctx.fillStyle = "rgba(15,23,42,.34)";
+  for (const name of ["bar", "merchandise"] as const) {
+    const zone = rect(VENUE_SCENE_ZONES[name] as { x: number; y: number; width: number; height: number });
+    ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+    ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+    ctx.fillStyle = "rgba(226,232,240,.7)";
+    ctx.font = "600 13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(name === "bar" ? "CONCESSIONS" : "MERCH", zone.x + zone.width / 2, zone.y + 22);
+    ctx.fillStyle = "rgba(15,23,42,.34)";
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(148,163,184,.09)";
+  for (const path of VENUE_SCENE_ZONES.walkingPaths as readonly { x: number; y: number; width: number; height: number }[]) {
+    const zone = rect(path); ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+  }
+  ctx.restore();
+}
