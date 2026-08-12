@@ -14,6 +14,7 @@ type ReplayPayload = {
   events?: unknown[];
   crowdTuning?: unknown;
   crowdTuningRevision?: unknown;
+  commerce?: unknown;
 };
 type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: ReplayPayload | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
 export interface GigViewerReplayResult { state: GigViewerReplayLoadState; replay: GigViewerReplay | null; reason?: string }
@@ -70,6 +71,7 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     status: row.generation_status,
     crowdTuning: payload?.crowdTuning ? normalizeCrowdTuning(payload.crowdTuning as any) : null,
     crowdTuningRevision: Number.isFinite(revision) && revision > 0 ? revision : null,
+    commerce: payload?.commerce as GigViewerReplay["commerce"] ?? null,
   };
   if (replay.eventSchemaVersion !== GIG_EVENT_SCHEMA_VERSION) return { state: "unsupported_version", replay: null };
   const validation = validateGigViewerReplay(replay);

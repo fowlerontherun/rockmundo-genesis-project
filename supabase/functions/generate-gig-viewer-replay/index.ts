@@ -53,6 +53,16 @@ serve(async (req) => {
       .single();
     if (outcomeError || !outcome) return response({ error: "outcome_not_found" }, 409);
 
+    const { data: settlement, error: settlementError } = await supabase
+      .from("gig_commerce_settlements")
+      .select("commerce_snapshot")
+      .eq("gig_id", gigId)
+      .maybeSingle();
+    if (settlementError) throw settlementError;
+    // Historical completed gigs intentionally remain legacy/unavailable rather
+    // than having commerce inferred from today's stock and venue configuration.
+    if (!settlement) return response({ error: "commerce_not_settled" }, 409);
+
     const { data: claim, error: claimError } = await supabase.rpc("claim_gig_viewer_replay_generation", {
       p_gig_id: gigId,
       p_gig_outcome_id: outcome.id,
@@ -118,6 +128,7 @@ serve(async (req) => {
     });
     replay.crowdTuning = crowdTuning;
     replay.crowdTuningRevision = crowdTuningRevision;
+    replay.commerce = settlement.commerce_snapshot;
 
     const { error: updateError } = await supabase
       .from("gig_viewer_replays")
@@ -126,6 +137,7 @@ serve(async (req) => {
           events: replay.events,
           crowdTuning: replay.crowdTuning,
           crowdTuningRevision: replay.crowdTuningRevision,
+          commerce: replay.commerce,
         },
         event_count: replay.events.length,
         duration_ms: replay.durationMs,

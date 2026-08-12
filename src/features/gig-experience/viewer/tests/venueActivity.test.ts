@@ -8,6 +8,24 @@ const replay: GigViewerReplay = { id: "replay-1", gigId: "gig-1", gigOutcomeId: 
 const make = (venueName = "The Stadium") => { const scene = generateVenueScene({ gigId: replay.gigId, venueName, capacity: 30_000 }); return { scene, plan: buildVenueActivityPlan({ replay, story: buildStoryModel(replay, null), scene, displayedCrowd: 16 }) }; };
 
 describe("deterministic venue activity", () => {
+  it("uses settled counts and item mix while preserving the legacy fallback", () => {
+    const commerceReplay: GigViewerReplay = { ...replay, commerce: {
+      formulaVersion: "gig-commerce-v1", settlementId: "settlement-1",
+      merchandise: { itemsSold: 20, grossRevenue: 400, cost: 100, owner: "band", lines: [{ merchandiseId: "m1", itemType: "shirt", name: "Tour tee", quantity: 20, unitPrice: 20, gross: 400 }] },
+      bar: { drinksServed: 0, grossRevenue: 0, venueRevenue: 0, bandEntitlement: 0, owner: "venue", shareSource: "venue_fallback" },
+    } };
+    const scene = generateVenueScene({ gigId: replay.gigId, venueName: "The Stadium", capacity: 30_000 });
+    const first = buildVenueActivityPlan({ replay: commerceReplay, story: buildStoryModel(commerceReplay, null), scene, displayedCrowd: 16 });
+    const resized = buildVenueActivityPlan({ replay: commerceReplay, story: buildStoryModel(commerceReplay, null), scene, displayedCrowd: 16 });
+    expect(first).toEqual(resized);
+    expect(first.visits.every((visit) => visit.service === "merchandise" && visit.carriedItem === "shirt")).toBe(true);
+    expect(first.visits.length).toBeGreaterThan(0);
+
+    const zeroReplay = { ...commerceReplay, commerce: { ...commerceReplay.commerce!, merchandise: { ...commerceReplay.commerce!.merchandise, itemsSold: 0, lines: [] } } };
+    expect(buildVenueActivityPlan({ replay: zeroReplay, story: buildStoryModel(zeroReplay, null), scene, displayedCrowd: 16 }).visits).toEqual([]);
+    expect(make().plan.visits.some((visit) => visit.service === "bar")).toBe(true);
+  });
+
   it("produces stable schedules and actor ids without exceeding queue capacity", () => {
     const first = make(); const second = make(); expect(first.plan).toEqual(second.plan);
     expect(new Set(first.plan.visits.map((v) => v.actorId)).size).toBe(first.plan.visits.length);

@@ -40,18 +40,31 @@ function routePoint(route: Point[], progress: number, reducedMotion: boolean): P
 /** Creates immutable visual-only visits. It has no service, inventory or finance dependencies. */
 export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: StoryModel; scene: VenueSceneLayout; displayedCrowd: number }): VenueActivityPlan {
   const { replay, story, scene } = input; const seed = `${replay.simulationSeed || replay.gigId}:venue-activity-v1`; const random = seededRandom(seed);
+  const settledCounts = replay.commerce ? { bar: Math.max(0, replay.commerce.bar.drinksServed), merchandise: Math.max(0, replay.commerce.merchandise.itemsSold) } : null;
   const services = (["bar", "merchandise"] as const).filter((service) => {
     const out = service === "bar" ? scene.paths.crowdToBar : scene.paths.crowdToMerchandise;
     const back = service === "bar" ? scene.paths.barToCrowd : scene.paths.merchandiseToCrowd;
-    return scene.queuePoints[service].some(validPoint) && validRoute(out, scene.stage) && validRoute(back, scene.stage);
+    return (!settledCounts || settledCounts[service] > 0) && scene.queuePoints[service].some(validPoint) && validRoute(out, scene.stage) && validRoute(back, scene.stage);
   });
   const max = Math.min(CAPS[scene.archetype], Math.max(0, input.displayedCrowd - Math.max(4, Math.ceil(input.displayedCrowd * .55))));
   const slots = services.reduce((sum, service) => sum + scene.queuePoints[service].length, 0);
   const actorCount = Math.min(max, slots); const visits: VenueActivityVisit[] = [];
   const highlights = story.highlights.filter((h) => h.importance === "important" || h.importance === "critical").map((h) => h.offsetMs);
-  for (let index = 0; index < actorCount; index += 1) {
-    const service = services[index % Math.max(1, services.length)]; if (!service) break;
-    const queueSlot = Math.floor(index / services.length) % scene.queuePoints[service].length;
+  const serviceVisits: ServiceKind[] = [];
+  if (settledCounts && services.length) {
+    const total = services.reduce((sum, service) => sum + settledCounts[service], 0);
+    for (const service of services) {
+      const proportional = Math.max(1, Math.round(actorCount * settledCounts[service] / Math.max(1, total)));
+      for (let i = 0; i < Math.min(proportional, scene.queuePoints[service].length); i += 1) serviceVisits.push(service);
+    }
+    while (serviceVisits.length > actorCount) serviceVisits.pop();
+  } else {
+    for (let i = 0; i < actorCount; i += 1) serviceVisits.push(services[i % Math.max(1, services.length)]);
+  }
+  const queueUse = { bar: 0, merchandise: 0 };
+  for (let index = 0; index < serviceVisits.length; index += 1) {
+    const service = serviceVisits[index]; if (!service) break;
+    const queueSlot = queueUse[service]++;
     const routeOut = service === "bar" ? scene.paths.crowdToBar : scene.paths.crowdToMerchandise;
     const routeBack = service === "bar" ? scene.paths.barToCrowd : scene.paths.merchandiseToCrowd;
     const actorId = `${seed}:fan:${index}`; const cycle = 12500 + (index % 3) * 1200;
@@ -63,10 +76,18 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
     for (const highlight of highlights) if (Math.abs(departureMs - highlight) < 3500) departureMs = highlight + 3600;
     if (departureMs + cycle >= replay.durationMs) departureMs = Math.max(0, replay.durationMs - cycle - 250);
     const origin = routeOut[0]; const destination = scene.queuePoints[service][queueSlot];
-    visits.push({ id: `${actorId}:visit:0`, actorId, service, departureMs, walkMs: 3200, browseMs: service === "merchandise" ? 1200 + Math.floor(random() * 800) : 0, queueMs: 1500 + queueSlot * 750, serviceMs: 1400 + Math.floor(random() * 900), returnMs: 3200, queueSlot, origin, destination, routeOut: [...routeOut.slice(0, -1), destination], routeBack: [destination, ...routeBack.slice(1)], appearance: Math.floor(random() * 4), carriedItem: service === "bar" ? "cup" : (["shirt", "poster", "bag"] as const)[Math.floor(random() * 3)] });
+    const mix = replay.commerce?.merchandise.lines ?? [];
+    const mixTotal = mix.reduce((sum, item) => sum + Math.max(0, item.quantity), 0);
+    let merchCarry: VenueActivityVisit["carriedItem"] = "bag";
+    if (service === "merchandise" && mixTotal > 0) {
+      let choice = random() * mixTotal;
+      const chosen = mix.find((item) => (choice -= Math.max(0, item.quantity)) <= 0) ?? mix[mix.length - 1];
+      merchCarry = /shirt|hood|tee/i.test(chosen.itemType) ? "shirt" : /poster|print/i.test(chosen.itemType) ? "poster" : "bag";
+    } else if (service === "merchandise" && !replay.commerce) merchCarry = (["shirt", "poster", "bag"] as const)[Math.floor(random() * 3)];
+    visits.push({ id: `${actorId}:visit:0`, actorId, service, departureMs, walkMs: 3200, browseMs: service === "merchandise" ? 1200 + Math.floor(random() * 800) : 0, queueMs: 1500 + queueSlot * 750, serviceMs: 1400 + Math.floor(random() * 900), returnMs: 3200, queueSlot, origin, destination, routeOut: [...routeOut.slice(0, -1), destination], routeBack: [destination, ...routeBack.slice(1)], appearance: Math.floor(random() * 4), carriedItem: service === "bar" ? "cup" : merchCarry });
   }
   const staff = services.flatMap((service) => Array.from({ length: scene.archetype === "stadium" || scene.archetype === "festival" ? 2 : 1 }, (_, index) => ({ id: `${seed}:staff:${service}:${index}`, service, position: scene.staffPositions[service], appearance: index })));
-  return { seed, visits, staff, minimumWatchingFans: Math.max(4, input.displayedCrowd - actorCount), maximumActiveFans: actorCount };
+  return { seed, visits, staff, minimumWatchingFans: Math.max(4, input.displayedCrowd - visits.length), maximumActiveFans: visits.length };
 }
 
 export function deriveVenueActivity(plan: VenueActivityPlan, positionMs: number, reducedMotion = false): VenueActivityActor[] {
