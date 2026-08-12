@@ -50,6 +50,15 @@ interface GigExecutionData {
 }
 
 export async function executeGigPerformance(data: GigExecutionData) {
+  // Legacy callers must not settle outcomes, merchandise, or venue finance in
+  // the browser. The server completion function is the sole commerce writer.
+  const { data: authoritativeResult, error: completionError } = await supabase.functions.invoke("complete-gig", {
+    body: { gigId: data.gigId },
+  });
+  if (completionError) throw completionError;
+  return authoritativeResult;
+
+  /* c8 ignore start -- retained temporarily as reference for non-commerce scoring extraction */
   const { gigId, bandId, setlistId, venueCapacity, ticketPrice } = data;
 
   // Fetch setlist songs
@@ -919,4 +928,5 @@ export async function executeGigPerformance(data: GigExecutionData) {
     fanSentiment: sentiment,
     mediaCycle,
   };
+  /* c8 ignore stop */
 }
