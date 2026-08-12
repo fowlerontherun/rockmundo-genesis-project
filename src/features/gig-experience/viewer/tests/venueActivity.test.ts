@@ -37,6 +37,13 @@ describe("deterministic venue activity", () => {
     expect(deriveVenueActivity(plan, t, true)[0].id).toBe(deriveVenueActivity(plan, t, false)[0].id);
   });
 
+  it("distributes departures over the complete multi-song playback clock", () => {
+    const { plan } = make();
+    expect(plan.visits.some((visit) => visit.departureMs < replay.durationMs / 2)).toBe(true);
+    expect(plan.visits.some((visit) => visit.departureMs >= replay.durationMs / 2)).toBe(true);
+    expect(plan.visits.every((visit) => visit.departureMs + visit.walkMs + visit.queueMs + visit.serviceMs + visit.returnMs <= replay.durationMs)).toBe(true);
+  });
+
   it("disables invalid or missing service routes safely", () => {
     const { scene } = make(); scene.paths.crowdToBar = []; scene.queuePoints.merchandise = [];
     const plan = buildVenueActivityPlan({ replay, story: buildStoryModel(replay, null), scene, displayedCrowd: 16 });
