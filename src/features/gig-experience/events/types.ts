@@ -24,13 +24,31 @@ export interface GigReplayCommerceSnapshot {
   bar: { drinksServed: number; grossRevenue: number; venueRevenue: number; bandEntitlement: number; owner: "venue" | "shared_by_confirmed_booking"; shareSource: "confirmed_booking" | "venue_fallback" };
 }
 
+export type GigReplaySetlistItemType = "song" | "performance_item";
+export type PerformanceItemVisualAction =
+  | "stage_dive"
+  | "crowd_surf"
+  | "instrument_solo"
+  | "dance"
+  | "mic_trick"
+  | "crowd_wave"
+  | "singalong"
+  | "mosh_pit"
+  | "phone_lights"
+  | "special_effect"
+  | "storytelling"
+  | "improvisation"
+  | "crowd_interaction"
+  | "stage_action";
+
 export type GigVisualPayload =
   | { type: "venue_open"; entranceIds: string[]; lightLevel: number }
   | { type: "crowd_fill"; targetDensity: number; zoneIds: string[]; enteringCount: number }
   | { type: "crowd_reaction"; reaction: "still" | "bounce" | "jump" | "wave" | "disperse"; intensity: number; zoneIds?: string[] }
   | { type: "performer_enter"; performerId: string; displayName: string; roleOrInstrument: string; startPosition: StagePosition }
   | { type: "performer_move"; performerId: string; targetPosition: StagePosition; movementStyle: "walk" | "rush" | "step_forward" | "return_to_position" | "hold" }
-  | { type: "song_start"; songId: string | null; title: string; position: number; montage: boolean }
+  | { type: "song_start"; songId: string | null; title: string; position: number; montage: boolean; itemType?: GigReplaySetlistItemType; performanceItemId?: string | null; performanceItemCategory?: string | null }
+  | { type: "performance_item"; itemId: string; name: string; category: string; action: PerformanceItemVisualAction; performerId?: string | null; intensity: number }
   | { type: "spotlight"; performerId?: string; stageZone?: string; intensity: number }
   | { type: "moment_effect"; effect: "pulse" | "ring" | "trail" | "confetti"; targetId?: string; intensity: number }
   | { type: "band_exit"; exitStyle: "wave" | "quick" | "encore_bow"; performerIds: string[] }
@@ -46,6 +64,7 @@ export interface GigViewerEventBase {
   durationMs: number;
   importance: GigEventImportance;
   songId?: string | null;
+  performanceItemId?: string | null;
   performerProfileId?: string | null;
   crowdEnergyBefore?: number | null;
   crowdEnergyAfter?: number | null;

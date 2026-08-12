@@ -613,6 +613,7 @@ serve(async (req) => {
           gig_outcome_id: outcomeId,
           song_id: null,
           performance_item_id: performanceItemId,
+          performance_item_name: perfItem.name,
           item_type: 'performance_item',
           song_title: perfItem.name,
           position,

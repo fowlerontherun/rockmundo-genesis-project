@@ -13,7 +13,7 @@ const eventPayloadTypes: Record<GigViewerEventType, GigVisualPayload["type"][]> 
   performer_entered: ["performer_enter"],
   performer_moved: ["performer_move"],
   song_started: ["song_start"],
-  song_crowd_reaction: ["crowd_reaction"],
+  song_crowd_reaction: ["crowd_reaction", "performance_item"],
   song_highlight: ["spotlight", "moment_effect", "performer_move"],
   song_montage: ["song_start", "crowd_reaction"],
   between_song_transition: ["crowd_reaction"],
@@ -25,7 +25,8 @@ const eventPayloadTypes: Record<GigViewerEventType, GigVisualPayload["type"][]> 
 };
 
 export function isSupportedReplayVersion(viewerVersion: number, eventSchemaVersion: number) {
-  return viewerVersion === GIG_VIEWER_VERSION && eventSchemaVersion === GIG_EVENT_SCHEMA_VERSION;
+  return (viewerVersion === GIG_VIEWER_VERSION && eventSchemaVersion === GIG_EVENT_SCHEMA_VERSION)
+    || (viewerVersion === 1 && eventSchemaVersion === 1);
 }
 
 export function validateGigViewerReplay(replay: GigViewerReplay): GigReplayValidationResult {
@@ -76,6 +77,15 @@ export function validateEvent(event: GigViewerEvent, errors: string[] = [], inde
   if (!isPayloadValid(event.visualPayload)) errors.push(`event ${index} invalid payload`);
   const allowed = eventTypes.has(event.eventType) ? eventPayloadTypes[event.eventType] : [];
   if (event.visualPayload && allowed && !allowed.includes(event.visualPayload.type)) errors.push(`event ${index} payload ${event.visualPayload.type} not allowed for ${event.eventType}`);
+  if (event.visualPayload?.type === "song_start" && event.visualPayload.itemType === "performance_item") {
+    if (!event.visualPayload.performanceItemId || event.performanceItemId !== event.visualPayload.performanceItemId || event.songId != null || event.visualPayload.songId != null) {
+      errors.push(`event ${index} inconsistent performance item identity`);
+    }
+  }
+  if (event.visualPayload?.type === "performance_item") {
+    if (event.performanceItemId !== event.visualPayload.itemId || event.songId != null) errors.push(`event ${index} inconsistent performance item identity`);
+    if ((event.performerProfileId ?? null) !== (event.visualPayload.performerId ?? null)) errors.push(`event ${index} inconsistent performance item performer`);
+  }
   return { valid: errors.length === 0, errors };
 }
 
@@ -86,8 +96,9 @@ function isPayloadValid(payload: GigVisualPayload | undefined): payload is GigVi
     case "crowd_fill": return payload.targetDensity >= 0 && payload.targetDensity <= 1 && Array.isArray(payload.zoneIds) && payload.enteringCount >= 0;
     case "crowd_reaction": return ["still", "bounce", "jump", "wave", "disperse"].includes(payload.reaction) && payload.intensity >= 0 && payload.intensity <= 1;
     case "performer_enter": return !!payload.performerId && !!payload.displayName && !!payload.startPosition;
-    case "performer_move": return !!payload.performerId && !!payload.targetPosition && ["walk", "rush", "step_forward"].includes(payload.movementStyle);
-    case "song_start": return typeof payload.title === "string" && Number.isInteger(payload.position) && typeof payload.montage === "boolean";
+    case "performer_move": return !!payload.performerId && !!payload.targetPosition && ["walk", "rush", "step_forward", "return_to_position", "hold"].includes(payload.movementStyle);
+    case "song_start": return typeof payload.title === "string" && Number.isInteger(payload.position) && typeof payload.montage === "boolean" && (payload.itemType == null || ["song", "performance_item"].includes(payload.itemType));
+    case "performance_item": return typeof payload.itemId === "string" && !!payload.itemId && typeof payload.name === "string" && !!payload.name && typeof payload.category === "string" && !!payload.category && (payload.performerId == null || typeof payload.performerId === "string") && ["stage_dive", "crowd_surf", "instrument_solo", "dance", "mic_trick", "crowd_wave", "singalong", "mosh_pit", "phone_lights", "special_effect", "storytelling", "improvisation", "crowd_interaction", "stage_action"].includes(payload.action) && Number.isFinite(payload.intensity) && payload.intensity >= 0 && payload.intensity <= 1;
     case "spotlight": return payload.intensity >= 0 && payload.intensity <= 1;
     case "moment_effect": return ["pulse", "ring", "trail", "confetti"].includes(payload.effect) && payload.intensity >= 0 && payload.intensity <= 1;
     case "band_exit": return ["wave", "quick", "encore_bow"].includes(payload.exitStyle) && Array.isArray(payload.performerIds);

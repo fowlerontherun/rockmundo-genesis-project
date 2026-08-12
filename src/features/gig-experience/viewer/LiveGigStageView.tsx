@@ -52,11 +52,16 @@ export function LiveGigStageView({
         title: song.title,
         position: song.position - 1,
         performanceScore: availableNumber(song.performanceScore),
+        itemType: song.itemType,
+        performanceItemId: song.performanceItemId,
+        performanceItemCategory: song.performanceItemCategory,
+        performanceItemRequiredSkill: song.performanceItemRequiredSkill,
       })),
       performers: experience.performers.map((performer) => ({
         profileId: performer.profileId,
         displayName: performer.displayName,
         roleOrInstrument: performer.roleOrInstrument,
+        lineupStatus: performer.lineupStatus,
       })),
     })
       .then((built) => {

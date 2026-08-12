@@ -100,7 +100,7 @@ serve(async (req) => {
     if (gig.setlist_id) {
       const { data: setlistSongs } = await supabaseClient
         .from('setlist_songs')
-        .select('*, songs!inner(id, title, duration_seconds, quality_score)')
+        .select('id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds,quality_score),performance_items_catalog(id,name,duration_seconds)')
         .eq('setlist_id', gig.setlist_id)
         .order('position');
 
@@ -112,13 +112,17 @@ serve(async (req) => {
           
           for (const setlistSong of unplayedSongs) {
             const songPosition = setlistSongs.indexOf(setlistSong);
+            const isPerformanceItem = setlistSong.item_type === 'performance_item' || (!setlistSong.song_id && !!setlistSong.performance_item_id);
             try {
-              // Call process-gig-song for each unplayed song
+              // Process every canonical setlist entry, including stage actions
+              // such as stage dives and crowd interactions.
               const { error: processError } = await supabaseClient.functions.invoke('process-gig-song', {
                 body: {
                   gigId: gig.id,
                   outcomeId: outcome.id,
                   songId: setlistSong.song_id,
+                  performanceItemId: setlistSong.performance_item_id,
+                  itemType: isPerformanceItem ? 'performance_item' : 'song',
                   position: songPosition
                 }
               });
@@ -126,10 +130,10 @@ serve(async (req) => {
               if (processError) {
                 console.error(`[complete-gig] Failed to process song at position ${songPosition}:`, processError);
               } else {
-                console.log(`[complete-gig] Processed song: ${setlistSong.songs?.title} at position ${songPosition}`);
+                console.log(`[complete-gig] Processed setlist item: ${setlistSong.songs?.title ?? setlistSong.performance_items_catalog?.name ?? 'Unknown item'} at position ${songPosition}`);
               }
             } catch (songErr) {
-              console.error(`[complete-gig] Error processing song ${setlistSong.song_id}:`, songErr);
+              console.error(`[complete-gig] Error processing setlist item ${setlistSong.song_id ?? setlistSong.performance_item_id}:`, songErr);
             }
           }
           

@@ -40,6 +40,9 @@ export function fitReplayToPlayerSongExcerpts(
   songStartIndexes.forEach((startIndex, songIndex) => {
     const startEvent = events[startIndex];
     if (startEvent.visualPayload.type !== "song_start") return;
+    // Performance items already have a deliberate replay duration and no song
+    // audio excerpt to fit. Preserve their choreography timing.
+    if (startEvent.visualPayload.itemType === "performance_item" || startEvent.visualPayload.performanceItemId) return;
 
     const songId = startEvent.visualPayload.songId ?? startEvent.songId;
     const knownTrackDurationMs = songId ? maximumDurationBySongId.get(songId) : undefined;

@@ -36,6 +36,11 @@ export interface GigExperienceSongAudioDTO { available: boolean; sourceType: "ge
 export interface GigExperienceSongDTO {
   id: string;
   songId: string | null;
+  /** Additive compatibility fields for non-song entries in the saved setlist. */
+  itemType?: "song" | "performance_item";
+  performanceItemId?: string | null;
+  performanceItemCategory?: string | null;
+  performanceItemRequiredSkill?: string | null;
   position: number;
   title: string;
   performanceScore: ReportMetric<number>;

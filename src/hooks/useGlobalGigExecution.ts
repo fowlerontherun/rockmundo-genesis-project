@@ -67,6 +67,8 @@ export const useGlobalGigExecution = (userId: string | null) => {
             .eq('gig_id', gig.id)
             .maybeSingle();
 
+          let outcomeId = outcome?.id;
+
           if (!outcome) {
             console.log(`[GlobalGigExecution] Creating outcome for gig ${gig.id}`);
             // Outcome should be created by trigger, but create if missing
@@ -93,15 +95,16 @@ export const useGlobalGigExecution = (userId: string | null) => {
               .single();
             
             if (!newOutcome) continue;
+            outcomeId = newOutcome.id;
           }
 
-          const outcomeId = outcome?.id;
           if (!outcomeId) continue;
 
-          // Get setlist songs
+          // Get every setlist entry. Inner-joining songs used to silently drop
+          // performance items such as stage dives from live progression.
           const { data: setlistSongs } = await supabase
             .from('setlist_songs')
-            .select('*, songs!inner(id, title, duration_seconds)')
+            .select('id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds),performance_items_catalog(id,name,duration_seconds)')
             .eq('setlist_id', gig.setlist_id)
             .order('position');
 
@@ -122,11 +125,11 @@ export const useGlobalGigExecution = (userId: string | null) => {
 
           // Calculate which songs should have been performed
           let cumulativeDuration = 0;
-          let songsToPerform: Array<typeof setlistSongs[0] & { position: number }> = [];
+          const songsToPerform: Array<typeof setlistSongs[0] & { position: number }> = [];
 
           for (let i = 0; i < setlistSongs.length; i++) {
             const song = setlistSongs[i];
-            const songDuration = song.songs?.duration_seconds || 180;
+            const songDuration = song.songs?.duration_seconds || song.performance_items_catalog?.duration_seconds || 180;
             
             if (elapsedSeconds >= cumulativeDuration && !performedPositions.has(i)) {
               songsToPerform.push({ ...song, position: i });
@@ -136,7 +139,8 @@ export const useGlobalGigExecution = (userId: string | null) => {
 
           // Process songs that should have been performed
           for (const song of songsToPerform) {
-            console.log(`[GlobalGigExecution] Processing song: ${song.songs?.title} at position ${song.position}`);
+            const isPerformanceItem = song.item_type === 'performance_item' || (!song.song_id && !!song.performance_item_id);
+            console.log(`[GlobalGigExecution] Processing setlist item: ${song.songs?.title ?? song.performance_items_catalog?.name ?? 'Unknown item'} at position ${song.position}`);
             
             // Call edge function to process song
             const { error: processError } = await supabase.functions.invoke('process-gig-song', {
@@ -144,6 +148,8 @@ export const useGlobalGigExecution = (userId: string | null) => {
                 gigId: gig.id,
                 outcomeId: outcomeId,
                 songId: song.song_id,
+                performanceItemId: song.performance_item_id,
+                itemType: isPerformanceItem ? 'performance_item' : 'song',
                 position: song.position
               }
             });
@@ -161,7 +167,7 @@ export const useGlobalGigExecution = (userId: string | null) => {
 
           // Check if gig should complete
           const totalDuration = setlistSongs.reduce((sum, s) => 
-            sum + (s.songs?.duration_seconds || 180), 0
+            sum + (s.songs?.duration_seconds || s.performance_items_catalog?.duration_seconds || 180), 0
           );
 
           if (elapsedSeconds >= totalDuration && performedPositions.size + songsToPerform.length >= setlistSongs.length) {

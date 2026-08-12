@@ -46,7 +46,7 @@ export function PlayerGigStageSurface({
                   {song?.title ?? "The band is taking the stage"}
                 </p>
                 <p className="text-xs text-white/75 sm:text-sm">
-                  {song ? `Song ${song.position} of ${songCount}` : "Live stage performance"}
+                  {song ? `${song.itemType === "performance_item" ? "Performance item" : "Song"} ${song.position} of ${songCount}` : "Live stage performance"}
                 </p>
               </div>
               <p className="shrink-0 text-sm font-medium tabular-nums text-white/85 sm:text-base">
