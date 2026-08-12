@@ -54,8 +54,11 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
     const queueSlot = Math.floor(index / services.length) % scene.queuePoints[service].length;
     const routeOut = service === "bar" ? scene.paths.crowdToBar : scene.paths.crowdToMerchandise;
     const routeBack = service === "bar" ? scene.paths.barToCrowd : scene.paths.merchandiseToCrowd;
-    const actorId = `${seed}:fan:${index}`; const cycle = 12500 + index * 2100;
-    let departureMs = 2500 + index * 1250 + Math.floor(random() * 900);
+    const actorId = `${seed}:fan:${index}`; const cycle = 12500 + (index % 3) * 1200;
+    // Evenly span the authoritative playback clock, rather than exhausting all
+    // visits during the opening song. Jitter is seeded and bounded to its slot.
+    const slotStart = replay.durationMs * ((index + .35) / Math.max(1, actorCount));
+    let departureMs = Math.floor(slotStart + (random() - .5) * Math.min(2400, replay.durationMs / Math.max(2, actorCount * 3)));
     // Important moments keep watching fans in the crowd; departures move just beyond the highlight window.
     for (const highlight of highlights) if (Math.abs(departureMs - highlight) < 3500) departureMs = highlight + 3600;
     if (departureMs + cycle >= replay.durationMs) departureMs = Math.max(0, replay.durationMs - cycle - 250);
