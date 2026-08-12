@@ -55,6 +55,9 @@ export function buildPyroPlan({ story, stageType, seed, intensity = 1 }: { story
   const push = (cue: Omit<PyroCue, "id">) => { cues.push({ ...cue, id: `pyro-${cues.length}` }); };
 
   story.songs.forEach((song, index) => {
+    // Performance-item visuals are driven by the recorded item itself. Avoid
+    // inventing automatic song pyro around stage dives or crowd interactions.
+    if (song.itemType === "performance_item") return;
     const score = song.score ?? 0;
     const energy = song.energyAfter ?? song.energyBefore ?? 50;
     // Opening hit on the downbeat of every song in bigger rooms.
@@ -76,6 +79,7 @@ export function buildPyroPlan({ story, stageType, seed, intensity = 1 }: { story
   });
 
   story.highlights.forEach((highlight) => {
+    if (highlight.performanceItemId && highlight.visualEffect !== "special_effect") return;
     if (outdoor) push({ kind: "firework_shell", atMs: highlight.offsetMs + 200, durationMs: 2200, lane: 0.15 + rng() * 0.7, altitude: 0.2 + rng() * 0.35, hue: Math.floor(rng() * 360), scale: budget });
     else push({ kind: "sparkler_fountain", atMs: highlight.offsetMs + 200, durationMs: 2000, lane: 0.5, altitude: 0, hue: 52, scale: budget });
   });

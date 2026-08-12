@@ -81,13 +81,26 @@ serve(async (req) => {
     console.log("[gig-viewer-replay] generation started", { gigId, outcomeId: outcome.id, replayId });
 
     const [songsRes, performersRes, crowdSettingsRes] = await Promise.all([
-      supabase.from("gig_song_performances").select("id,song_id,position,performance_score,crowd_response,song_title,performance_item_name").eq("gig_outcome_id", outcome.id).order("position"),
+      supabase.from("gig_song_performances").select("id,song_id,performance_item_id,item_type,position,performance_score,crowd_response,song_title,performance_item_name").eq("gig_outcome_id", outcome.id).order("position"),
       supabase.from("gig_performers").select("profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
       supabase.from("gig_viewer_crowd_settings").select("revision,settings").eq("id", true).maybeSingle(),
     ]);
     if (songsRes.error) throw songsRes.error;
     if (performersRes.error) throw performersRes.error;
     if (!songsRes.data?.length) throw new Error("MISSING_SONGS");
+
+    const performanceItemIds = [...new Set(songsRes.data
+      .filter((row: any) => row.performance_item_id)
+      .map((row: any) => row.performance_item_id))];
+    const performanceItemsById = new Map<string, any>();
+    if (performanceItemIds.length > 0) {
+      const { data: items, error: itemsError } = await supabase
+        .from("performance_items_catalog")
+        .select("id,name,item_category,required_skill")
+        .in("id", performanceItemIds);
+      if (itemsError) throw itemsError;
+      for (const item of items ?? []) performanceItemsById.set(item.id, item);
+    }
 
     if (crowdSettingsRes.error) {
       console.warn("[gig-viewer-replay] crowd settings unavailable; using fallback", {
@@ -111,14 +124,21 @@ serve(async (req) => {
       },
       outcomeId: outcome.id,
       generatedAt: new Date().toISOString(),
-      songs: songsRes.data.map((song: any) => ({
-        id: song.id,
-        songId: song.song_id,
-        position: song.position,
-        title: song.song_title ?? song.performance_item_name ?? "Unknown Song",
-        performanceScore: song.performance_score,
-        crowdResponse: song.crowd_response,
-      })),
+      songs: songsRes.data.map((song: any) => {
+        const performanceItem = song.performance_item_id ? performanceItemsById.get(song.performance_item_id) : null;
+        return {
+          id: song.id,
+          songId: song.song_id,
+          position: song.position,
+          title: song.song_title ?? song.performance_item_name ?? performanceItem?.name ?? "Unknown Song",
+          performanceScore: song.performance_score,
+          crowdResponse: song.crowd_response,
+          itemType: song.item_type ?? (song.performance_item_id ? "performance_item" : "song"),
+          performanceItemId: song.performance_item_id,
+          performanceItemCategory: performanceItem?.item_category ?? null,
+          performanceItemRequiredSkill: performanceItem?.required_skill ?? null,
+        };
+      }),
       performers: (performersRes.data ?? []).map((performer: any) => ({
         profileId: performer.profile_id,
         displayName: performer.profiles?.display_name ?? performer.profiles?.username ?? "Unknown Performer",

@@ -1,9 +1,9 @@
 import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_PAYLOAD_BYTES, GIG_REPLAY_TARGET_DURATION_MS, GIG_VIEWER_VERSION } from "./constants";
 import { validateGigViewerReplay } from "./schema";
-import type { GigViewerEvent, GigViewerReplay, StagePosition } from "./types";
+import type { GigViewerEvent, GigViewerReplay, PerformanceItemVisualAction, StagePosition } from "./types";
 
 export interface ReplayGigInput { id: string; completedAt: string | null; resultReadyAt?: string | null; venueCapacity?: number | null; actualAttendance?: number | null; overallRating?: number | null; netProfit?: number | null }
-export interface ReplaySongInput { id: string; songId: string | null; position: number; title: string; performanceScore: number | null; crowdResponse?: string | null }
+export interface ReplaySongInput { id: string; songId: string | null; position: number; title: string; performanceScore: number | null; crowdResponse?: string | null; itemType?: "song" | "performance_item" | null; performanceItemId?: string | null; performanceItemCategory?: string | null; performanceItemRequiredSkill?: string | null }
 export interface ReplayPerformerInput { profileId: string; displayName?: string | null; roleOrInstrument?: string | null; lineupStatus?: string | null }
 export interface BuildGigViewerReplayInput { replayId: string; gig: ReplayGigInput; outcomeId: string; songs: ReplaySongInput[]; performers: ReplayPerformerInput[]; generatedAt: string; viewerVersion?: number }
 
@@ -31,7 +31,10 @@ export async function checksumReplayEvents(events: GigViewerEvent[]): Promise<st
 export async function buildGigViewerReplay(input: BuildGigViewerReplayInput): Promise<GigViewerReplay> {
   const viewerVersion = input.viewerVersion ?? GIG_VIEWER_VERSION;
   const sortedSongs = [...input.songs].sort((a, b) => a.position - b.position);
-  const performed = input.performers.filter((p) => (p.lineupStatus ?? "performed") === "performed");
+  const explicitlyPerformed = input.performers.filter((performer) => performer.lineupStatus === "performed");
+  const performed = explicitlyPerformed.length > 0
+    ? explicitlyPerformed
+    : input.performers.filter((performer) => !["cancelled", "declined", "removed"].includes(performer.lineupStatus ?? "confirmed"));
   const seed = createDeterministicSeed([input.gig.id, input.outcomeId, input.gig.completedAt, viewerVersion]);
   const random = createDeterministicRandom(seed);
   const durationBySong = allocateSongDurations(sortedSongs);
@@ -50,15 +53,30 @@ export async function buildGigViewerReplay(input: BuildGigViewerReplayInput): Pr
     push({ phase: "band_entrance", eventType: "performer_entered", durationMs: index === 0 ? 6_000 : 2_000, importance: "normal", performerProfileId: performer.profileId, messageKey: "gig.viewer.performer_entered", messageParams: { performer: performer.displayName ?? "Performer", role: performer.roleOrInstrument ?? "performer" }, visualPayload: { type: "performer_enter", performerId: performer.profileId, displayName: performer.displayName ?? "Performer", roleOrInstrument: performer.roleOrInstrument ?? "performer", startPosition: positionForRole(performer.roleOrInstrument, index) } });
   }
   if (performed.length === 0) push({ phase: "band_entrance", eventType: "performer_moved", durationMs: 6_000, importance: "ambient", messageKey: "gig.viewer.band_entrance_legacy", messageParams: {}, visualPayload: { type: "performer_move", performerId: "unknown", targetPosition: positionForRole(null, 0), movementStyle: "walk" } });
-  const bestScore = Math.max(...sortedSongs.map((s) => s.performanceScore ?? -1));
-  const worstScore = Math.min(...sortedSongs.map((s) => s.performanceScore ?? 999));
+  const scoredSongs = sortedSongs.filter((song) => !isPerformanceItemInput(song));
+  const bestScore = scoredSongs.length ? Math.max(...scoredSongs.map((song) => song.performanceScore ?? -1)) : null;
+  const worstScore = scoredSongs.length ? Math.min(...scoredSongs.map((song) => song.performanceScore ?? 999)) : null;
   sortedSongs.forEach((song, i) => {
     const songBudget = durationBySong.get(song.position) ?? 16_000;
-    const isEmphasis = i === 0 || i === sortedSongs.length - 1 || song.performanceScore === bestScore || song.performanceScore === worstScore;
+    const isPerformanceItem = isPerformanceItemInput(song);
+    const performanceItemId = isPerformanceItem ? song.performanceItemId ?? song.id : null;
+    const selectedPerformer = isPerformanceItem ? selectPerformanceItemPerformer(song, performed) : null;
+    const action = isPerformanceItem ? resolvePerformanceItemAction(song.title, song.performanceItemCategory) : null;
+    const itemPayload = isPerformanceItem && performanceItemId && action ? {
+      type: "performance_item" as const,
+      itemId: performanceItemId,
+      name: song.title,
+      category: song.performanceItemCategory ?? "stage_action",
+      action,
+      performerId: selectedPerformer?.profileId ?? null,
+      intensity: Math.max(0, Math.min(1, (song.performanceScore ?? 12) / 25)),
+    } : null;
+    const isEmphasis = isPerformanceItem || i === 0 || i === sortedSongs.length - 1 || (bestScore !== null && song.performanceScore === bestScore) || (worstScore !== null && song.performanceScore === worstScore);
     const after = nextEnergy(energy, song, input.gig);
-    push({ phase: "song_intro", eventType: sortedSongs.length > 14 && !isEmphasis ? "song_montage" : "song_started", durationMs: Math.round(songBudget * 0.2), importance: isEmphasis ? "important" : "normal", songId: song.songId, messageKey: "gig.viewer.song_started", messageParams: { title: song.title, position: song.position + 1 }, visualPayload: { type: "song_start", songId: song.songId, title: song.title, position: song.position, montage: sortedSongs.length > 14 && !isEmphasis } });
-    push({ phase: "song_performance", eventType: "song_crowd_reaction", durationMs: Math.round(songBudget * 0.55), importance: isEmphasis ? "important" : "normal", songId: song.songId, crowdEnergyBefore: energy, crowdEnergyAfter: after, messageKey: "gig.viewer.song_reaction", messageParams: { title: song.title, score: song.performanceScore ?? 0 }, visualPayload: { type: "crowd_reaction", reaction: reactionForEnergy(after), intensity: after / 100, zoneIds: ["floor"] } });
-    if (isEmphasis) push({ phase: "highlight_moment", eventType: "song_highlight", durationMs: Math.round(songBudget * 0.15), importance: "important", songId: song.songId, crowdEnergyBefore: energy, crowdEnergyAfter: after, messageKey: "gig.viewer.song_highlight", messageParams: { title: song.title }, visualPayload: { type: "moment_effect", effect: random() > 0.5 ? "pulse" : "ring", targetId: song.songId ?? undefined, intensity: after / 100 } });
+    push({ phase: "song_intro", eventType: sortedSongs.length > 14 && !isEmphasis ? "song_montage" : "song_started", durationMs: Math.round(songBudget * 0.2), importance: isEmphasis ? "important" : "normal", songId: song.songId, performanceItemId, performerProfileId: selectedPerformer?.profileId ?? null, messageKey: isPerformanceItem ? "gig.viewer.performance_item_started" : "gig.viewer.song_started", messageParams: { title: song.title, position: song.position + 1 }, visualPayload: { type: "song_start", songId: song.songId, title: song.title, position: song.position, montage: sortedSongs.length > 14 && !isEmphasis, ...(isPerformanceItem ? { itemType: "performance_item" as const, performanceItemId, performanceItemCategory: song.performanceItemCategory ?? "stage_action" } : {}) } });
+    push({ phase: "song_performance", eventType: "song_crowd_reaction", durationMs: Math.round(songBudget * 0.55), importance: isEmphasis ? "important" : "normal", songId: song.songId, performanceItemId, performerProfileId: selectedPerformer?.profileId ?? null, crowdEnergyBefore: energy, crowdEnergyAfter: after, messageKey: isPerformanceItem ? "gig.viewer.performance_item_reaction" : "gig.viewer.song_reaction", messageParams: { title: song.title, score: song.performanceScore ?? 0 }, visualPayload: itemPayload ?? { type: "crowd_reaction", reaction: reactionForEnergy(after), intensity: after / 100, zoneIds: ["floor"] } });
+    if (itemPayload) push({ phase: "highlight_moment", eventType: "song_highlight", durationMs: Math.round(songBudget * 0.15), importance: "important", songId: null, performanceItemId, performerProfileId: selectedPerformer?.profileId ?? null, crowdEnergyBefore: energy, crowdEnergyAfter: after, messageKey: "gig.viewer.performance_item_highlight", messageParams: { title: song.title }, visualPayload: { type: "moment_effect", effect: random() > 0.5 ? "pulse" : "ring", targetId: performanceItemId ?? undefined, intensity: after / 100 } });
+    else if (isEmphasis) push({ phase: "highlight_moment", eventType: "song_highlight", durationMs: Math.round(songBudget * 0.15), importance: "important", songId: song.songId, crowdEnergyBefore: energy, crowdEnergyAfter: after, messageKey: "gig.viewer.song_highlight", messageParams: { title: song.title }, visualPayload: { type: "moment_effect", effect: random() > 0.5 ? "pulse" : "ring", targetId: song.songId ?? undefined, intensity: after / 100 } });
     energy = after;
     if (i < sortedSongs.length - 1) push({ phase: "between_songs", eventType: "between_song_transition", durationMs: Math.max(2_000, Math.round(songBudget * 0.1)), importance: "ambient", crowdEnergyBefore: energy, crowdEnergyAfter: energy, messageKey: "gig.viewer.between_songs", messageParams: {}, visualPayload: { type: "crowd_reaction", reaction: "wave", intensity: energy / 120 } });
   });
@@ -81,13 +99,16 @@ function assertReplayPayloadWithinBudget(replay: GigViewerReplay) {
   if (bytes > GIG_REPLAY_MAX_PAYLOAD_BYTES) throw new Error("REPLAY_PAYLOAD_LIMIT_EXCEEDED");
 }
 
-function allocateSongDurations(songs: ReplaySongInput[]) { const out = new Map<number, number>(); if (!songs.length) return out; const base = Math.max(8_000, (GIG_REPLAY_TARGET_DURATION_MS - 71_000) / songs.length); const best = songs.reduce((a, b) => (b.performanceScore ?? -1) > (a.performanceScore ?? -1) ? b : a, songs[0]); const worst = songs.reduce((a, b) => (b.performanceScore ?? 999) < (a.performanceScore ?? 999) ? b : a, songs[0]); let totalWeight = 0; const weights = songs.map((s, i) => { let w = 1; if (i === 0 || i === songs.length - 1) w += 0.35; if (s === best || s === worst) w += 0.25; totalWeight += w; return w; }); songs.forEach((s, i) => out.set(s.position, Math.max(6_000, Math.round(base * songs.length * weights[i] / totalWeight)))); return out; }
+function allocateSongDurations(songs: ReplaySongInput[]) { const out = new Map<number, number>(); if (!songs.length) return out; const base = Math.max(8_000, (GIG_REPLAY_TARGET_DURATION_MS - 71_000) / songs.length); const scoreable = songs.filter((song) => !isPerformanceItemInput(song)); const best = scoreable.length ? scoreable.reduce((a, b) => (b.performanceScore ?? -1) > (a.performanceScore ?? -1) ? b : a) : null; const worst = scoreable.length ? scoreable.reduce((a, b) => (b.performanceScore ?? 999) < (a.performanceScore ?? 999) ? b : a) : null; let totalWeight = 0; const weights = songs.map((s, i) => { let w = 1; if (i === 0 || i === songs.length - 1) w += 0.35; if (s === best || s === worst) w += 0.25; totalWeight += w; return w; }); songs.forEach((s, i) => out.set(s.position, Math.max(6_000, Math.round(base * songs.length * weights[i] / totalWeight)))); return out; }
 function attendancePct(gig: ReplayGigInput) { return clamp((gig.actualAttendance ?? 0) / Math.max(1, gig.venueCapacity ?? 1), 0, 1); }
 function initialEnergy(gig: ReplayGigInput) { return clamp(25 + attendancePct(gig) * 35 + ((gig.overallRating ?? 10) / 25) * 15); }
 function nextEnergy(current: number, song: ReplaySongInput, gig: ReplayGigInput) { return clamp(current * 0.65 + ((song.performanceScore ?? gig.overallRating ?? 10) / 25) * 35 + attendancePct(gig) * 10); }
 function reactionForEnergy(e: number) { return e > 80 ? "jump" : e > 60 ? "bounce" : e > 38 ? "wave" : "still"; }
 function deriveEncoreDecision(gig: ReplayGigInput, energy: number) { return (gig.overallRating ?? 0) >= 18 || energy >= 75 || (attendancePct(gig) >= 0.9 && (gig.overallRating ?? 0) >= 15); }
 function verdictKey(r?: number | null) { return (r ?? 0) >= 20 ? "excellent" : (r ?? 0) >= 15 ? "strong" : (r ?? 0) >= 8 ? "mixed" : "rough"; }
+function isPerformanceItemInput(song: ReplaySongInput) { return song.itemType === "performance_item" || (!song.songId && !!song.performanceItemId); }
+function resolvePerformanceItemAction(name: string, category?: string | null): PerformanceItemVisualAction { const normalizedCategory = (category ?? "").toLowerCase(); const value = name.toLowerCase(); if (/stage dive/.test(value)) return "stage_dive"; if (/crowd surf/.test(value) && normalizedCategory === "stage_action") return "crowd_surf"; if (/mosh|circle pit|wall of death/.test(value)) return "mosh_pit"; if (/phone|lighter|flashlight/.test(value)) return "phone_lights"; if (/sing.?along|chorus|call and response|clap along/.test(value)) return "singalong"; if (/wave creation|crowd wave/.test(value)) return "crowd_wave"; if (/mic stand|microphone trick|mic spin/.test(value)) return "mic_trick"; if (/solo|showcase|interlude|instrumental feature|breakdown/.test(value)) return "instrument_solo"; if (/dance|headbang|jump together|footwork|skank|two-step/.test(value)) return "dance"; if (normalizedCategory === "special_effect") return "special_effect"; if (normalizedCategory === "improvisation") return "improvisation"; if (normalizedCategory === "storytelling") return "storytelling"; if (normalizedCategory === "crowd_interaction") return "crowd_interaction"; return "stage_action"; }
+function selectPerformanceItemPerformer(song: ReplaySongInput, performers: ReplayPerformerInput[]) { if (!performers.length) return null; const hint = `${song.performanceItemRequiredSkill ?? ""} ${song.title}`.toLowerCase(); const rolePatterns: RegExp[] = /drum|percussion/.test(hint) ? [/drum|percussion/i] : /bass/.test(hint) ? [/bass/i] : /guitar|banjo|ukulele/.test(hint) ? [/guitar|banjo|ukulele/i] : /piano|keyboard|synth/.test(hint) ? [/piano|keyboard|synth/i] : /sax|trumpet|trombone|brass/.test(hint) ? [/sax|trumpet|trombone|brass/i] : /violin|cello|string/.test(hint) ? [/violin|cello|string/i] : /vocal|rap|beatbox|crowd|stage|showmanship|dance|story/.test(hint) ? [/vocal|singer|front/i] : []; return performers.find((performer) => rolePatterns.some((pattern) => pattern.test(performer.roleOrInstrument ?? ""))) ?? performers.find((performer) => /vocal|singer|front/i.test(performer.roleOrInstrument ?? "")) ?? performers[0]; }
 function positionForRole(role: string | null | undefined, index: number): StagePosition { const r = (role ?? "").toLowerCase(); if (r.includes("drum")) return { x: 0.5, y: 0.8, zone: "back_center" }; if (r.includes("bass")) return { x: 0.25, y: 0.45, zone: "mid_left" }; if (r.includes("guitar")) return { x: 0.75, y: 0.45, zone: "mid_right" }; if (r.includes("vocal")) return { x: 0.5, y: 0.2, zone: "front_center" }; const zones: StagePosition["zone"][] = ["front_left", "front_center", "front_right", "mid_left", "mid_center", "mid_right"]; return { x: 0.15 + (index % 3) * 0.35, y: index < 3 ? 0.25 : 0.55, zone: zones[index % zones.length] }; }
 function clamp(value: number, min = 0, max = 100) { return Math.max(min, Math.min(max, Math.round(value))); }
 function fnv1a64(value: string) { let h = 0xcbf29ce484222325n; for (let i = 0; i < value.length; i++) { h ^= BigInt(value.charCodeAt(i)); h = (h * 0x100000001b3n) & 0xffffffffffffffffn; } return h.toString(16).padStart(16, "0"); }

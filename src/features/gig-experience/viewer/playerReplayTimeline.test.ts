@@ -80,4 +80,35 @@ describe("player 20-second song replay timeline", () => {
     expect(expanded.events[0].durationMs).toBe(20_000);
     expect(expanded.events[1].durationMs).toBe(20_000);
   });
+
+  it("preserves recorded performance-item choreography duration", () => {
+    const itemIntro = {
+      ...event(1, 10_000, 2_000, null, "Stage Dive"),
+      performanceItemId: "item-1",
+      messageKey: "gig.viewer.performance_item_started",
+      visualPayload: { type: "song_start" as const, songId: null, title: "Stage Dive", position: 1, montage: false, itemType: "performance_item" as const, performanceItemId: "item-1" },
+    };
+    const itemAction = {
+      ...event(2, 12_000, 4_000, null, "Stage Dive"),
+      performanceItemId: "item-1",
+      eventType: "song_crowd_reaction" as const,
+      messageKey: "gig.viewer.performance_item_reaction",
+      visualPayload: { type: "performance_item" as const, itemId: "item-1", name: "Stage Dive", category: "stage_action", action: "stage_dive" as const, intensity: 0.8 },
+    };
+    const finale = {
+      ...event(3, 16_000, 20_000, null, ""),
+      phase: "finale" as const,
+      eventType: "finale_started" as const,
+      visualPayload: { type: "moment_effect" as const, effect: "confetti" as const, intensity: 1 },
+    };
+    const withItem = { ...replay, durationMs: 36_000, events: [event(0, 0, 10_000, "song-1", "First song"), itemIntro, itemAction, finale] } satisfies GigViewerReplay;
+
+    const expanded = fitReplayToPlayerSongExcerpts(withItem, experience());
+    expect(expanded.events.map(({ scheduledOffsetMs, durationMs }) => ({ scheduledOffsetMs, durationMs }))).toEqual([
+      { scheduledOffsetMs: 0, durationMs: 20_000 },
+      { scheduledOffsetMs: 20_000, durationMs: 2_000 },
+      { scheduledOffsetMs: 22_000, durationMs: 4_000 },
+      { scheduledOffsetMs: 26_000, durationMs: 20_000 },
+    ]);
+  });
 });

@@ -60,6 +60,33 @@ describe("GigExperienceService", () => {
     expect(dto.viewer.ready).toBe(false);
   });
 
+  it("preserves performance-item identity without treating it as a best song", () => {
+    const dto = mapGigExperience({
+      gig,
+      outcome,
+      setlistSongs: [
+        { song_id: "song-1", item_type: "song", position: 1, songs: { id: "song-1", title: "Opener" } },
+        { song_id: null, performance_item_id: "item-1", item_type: "performance_item", position: 2, performance_items_catalog: { id: "item-1", name: "Stage Dive", item_category: "stage_action", required_skill: "stage_presence", duration_seconds: 30 } },
+      ],
+      songPerformances: [
+        song({ position: 0, performance_score: 20 }),
+        song({ id: "sp-2", song_id: null, performance_item_id: "item-1", item_type: "performance_item", position: 1, performance_score: 25, song_title: "Stage Dive", performance_item_name: "Stage Dive" }),
+      ],
+      performers: [],
+    });
+
+    expect(dto.songs[1]).toMatchObject({
+      songId: null,
+      itemType: "performance_item",
+      performanceItemId: "item-1",
+      performanceItemCategory: "stage_action",
+      performanceItemRequiredSkill: "stage_presence",
+      title: "Stage Dive",
+      audio: { available: false },
+    });
+    expect(dto.headline.bestSongTitle).toEqual(metricAvailable("Opener", "authoritative"));
+  });
+
   it("normalizes historic venue capacity when recorded attendance is higher", () => {
     const dto = mapGigExperience({ gig, outcome: { ...outcome, actual_attendance: 101 }, songPerformances: [song()], performers: [] });
     expect(dto.gig.venue.capacity).toBe(101);

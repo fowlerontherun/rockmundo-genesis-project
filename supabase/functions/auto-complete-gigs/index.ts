@@ -69,7 +69,7 @@ serve(async (req) => {
         // Get setlist songs count and total duration
         const { data: setlistSongs, error: songsError } = await supabaseClient
           .from('setlist_songs')
-          .select('id, song_id, songs!inner(id, duration_seconds)')
+          .select('id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds),performance_items_catalog(id,name,duration_seconds)')
           .eq('setlist_id', gig.setlist_id)
           .order('position');
 
@@ -83,7 +83,7 @@ serve(async (req) => {
 
         // Calculate total duration
         const totalDuration = setlistSongs.reduce((sum, ss) => {
-          return sum + (ss.songs?.duration_seconds || 180);
+          return sum + (ss.songs?.duration_seconds || ss.performance_items_catalog?.duration_seconds || 180);
         }, 0);
 
         // Calculate elapsed time since start
@@ -103,14 +103,22 @@ serve(async (req) => {
               .eq('gig_id', gig.id)
               .single();
             if (outcome?.id) {
+              const isPerformanceItem = song.item_type === 'performance_item' || (!song.song_id && !!song.performance_item_id);
               const { error: processError } = await supabaseClient.functions.invoke('process-gig-song', {
-                body: { gigId: gig.id, outcomeId: outcome.id, songId: song.song_id, position }
+                body: {
+                  gigId: gig.id,
+                  outcomeId: outcome.id,
+                  songId: song.song_id,
+                  performanceItemId: song.performance_item_id,
+                  itemType: isPerformanceItem ? 'performance_item' : 'song',
+                  position,
+                }
               });
-              if (processError) console.error(`[auto-complete-gigs] Error processing song ${position}:`, processError);
+              if (processError) console.error(`[auto-complete-gigs] Error processing setlist item ${position}:`, processError);
               else processedCount++;
             }
           }
-          dueDuration += (song.songs?.duration_seconds || 180);
+          dueDuration += (song.songs?.duration_seconds || song.performance_items_catalog?.duration_seconds || 180);
         }
 
         // Check if all songs should be processed

@@ -20,8 +20,61 @@ describe("gig viewer replay schema", () => {
     expect(presentation.resultAvailable).toBe(false);
     expect(presentation.events.some((event) => event.eventType === "result_revealed")).toBe(false);
     expect(presentation.events.at(-1)?.eventType).toBe("replay_completed");
-    expect(canonical.simulationSeed).toBe(createDeterministicSeed([input.gig.id, input.outcomeId, input.gig.completedAt, 1]));
+    expect(canonical.simulationSeed).toBe(createDeterministicSeed([input.gig.id, input.outcomeId, input.gig.completedAt, canonical.viewerVersion]));
     expect(presentation.simulationSeed).not.toBe(canonical.simulationSeed);
+  });
+
+  it("records selected performance items as deterministic replay facts", async () => {
+    const performanceInput = {
+      ...input,
+      songs: [
+        input.songs[0],
+        {
+          id: "performance-row-1",
+          songId: null,
+          position: 1,
+          title: "Stage Dive",
+          performanceScore: 22,
+          itemType: "performance_item" as const,
+          performanceItemId: "performance-item-1",
+          performanceItemCategory: "stage_action",
+          performanceItemRequiredSkill: "stage_presence",
+        },
+        { ...input.songs[1], position: 2 },
+      ],
+      performers: [
+        ...input.performers,
+        { profileId: "profile-2", displayName: "B", roleOrInstrument: "lead guitar", lineupStatus: "performed" },
+      ],
+    };
+
+    const replay = await buildGigViewerReplay(performanceInput);
+    const itemEvents = replay.events.filter((event) => event.performanceItemId === "performance-item-1");
+    const action = itemEvents.find((event) => event.visualPayload.type === "performance_item");
+
+    expect(validateGigViewerReplay(replay)).toEqual({ valid: true, errors: [] });
+    expect(itemEvents.map((event) => event.messageKey)).toEqual([
+      "gig.viewer.performance_item_started",
+      "gig.viewer.performance_item_reaction",
+      "gig.viewer.performance_item_highlight",
+    ]);
+    expect(action).toMatchObject({
+      performerProfileId: "profile-1",
+      visualPayload: {
+        type: "performance_item",
+        itemId: "performance-item-1",
+        action: "stage_dive",
+        performerId: "profile-1",
+      },
+    });
+    const mismatchedItem = {
+      ...replay,
+      events: replay.events.map((event) => event.id === action?.id
+        ? { ...event, performanceItemId: "different-item" }
+        : event),
+    };
+    expect(validateGigViewerReplay(mismatchedItem).errors).toContain(`event ${action?.sequence} inconsistent performance item identity`);
+    await expect(buildGigViewerReplay(performanceInput)).resolves.toEqual(replay);
   });
 
   it("rejects invalid payload discriminators, unknown phases, duplicate sequence, out-of-order offsets, invalid energy, missing reveal, and non-last completed", async () => {
@@ -52,6 +105,9 @@ describe("gig viewer replay release compatibility", () => {
   it("accepts the current schema and rejects previous, future, and malformed schemas safely", async () => {
     const replay = await buildGigViewerReplay(input);
     expect(isSupportedReplayVersion(replay.viewerVersion, replay.eventSchemaVersion)).toBe(true);
+    expect(isSupportedReplayVersion(1, 1)).toBe(true);
+    expect(validateGigViewerReplay({ ...replay, viewerVersion: 1, eventSchemaVersion: 1 })).toEqual({ valid: true, errors: [] });
+    expect(isSupportedReplayVersion(replay.viewerVersion, 1)).toBe(false);
     expect(validateGigViewerReplay({ ...replay, eventSchemaVersion: 0 }).errors).toContain("unsupported version");
     expect(validateGigViewerReplay({ ...replay, eventSchemaVersion: replay.eventSchemaVersion + 1 }).errors).toContain("unsupported version");
     expect(validateGigViewerReplay({ ...replay, viewerVersion: replay.viewerVersion + 1 }).errors).toContain("unsupported version");

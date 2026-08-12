@@ -17,6 +17,7 @@ import { representativeCrowdCount } from "./RepresentativeCrowd";
 import { resolveEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
+import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -104,6 +105,18 @@ export class CanvasRenderer {
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
+    const activePayload = state.activeEvent?.visualPayload;
+    const itemPerformer = activePayload?.type === "performance_item"
+      ? performers.find((performer) => performer.id === activePayload.performerId)
+      : null;
+    const performanceItemFrame = derivePerformanceItemActivity(
+      state.activeEvent,
+      state.positionMs,
+      preset.stage,
+      preset.audience,
+      this.reducedMotion,
+      itemPerformer?.stageSlot,
+    );
 
     ctx.clearRect(0, 0, size.width, size.height);
     drawBackground(ctx, preset, size);
@@ -148,6 +161,7 @@ export class CanvasRenderer {
 
     performers.forEach((p) => {
       if (!p.visible) return;
+      if (performanceItemFrame?.hideStagePerformer && performanceItemFrame.performerId === p.id) return;
       const focus = state.performerFocusId === p.id || storySnapshot.performerFocusId === p.id || p.activeMoveEventId === state.activeEvent?.id;
       ctx.fillStyle = p.lifecycleState === "waiting_backstage" ? "#cbd5e1" : p.lifecycleState === "exiting" ? "#fca5a5" : "#f8fafc";
       ctx.strokeStyle = focus ? "#fde047" : "#111827";
@@ -158,6 +172,7 @@ export class CanvasRenderer {
     });
 
     if (this.audiencePlan) drawAudienceActivity(ctx, this.audiencePlan, { positionMs: state.positionMs, energy: storySnapshot.crowdEnergy, reducedMotion: this.reducedMotion });
+    drawPerformanceItemActivity(ctx, performanceItemFrame, preset.stage, preset.audience, this.reducedMotion, itemPerformer?.initials ?? "★");
     drawAtmosphere(ctx, preset, size, storySnapshot.crowdEnergy, state.positionMs, this.reducedMotion);
     drawPyrotechnics(ctx, preset, size, { plan: this.pyroPlan, positionMs: state.positionMs, reducedMotion: this.reducedMotion, crowdEnergy: storySnapshot.crowdEnergy });
 

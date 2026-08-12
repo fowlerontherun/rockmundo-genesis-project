@@ -1,5 +1,5 @@
-export const GIG_VIEWER_VERSION = 1;
-export const GIG_EVENT_SCHEMA_VERSION = 1;
+export const GIG_VIEWER_VERSION = 2;
+export const GIG_EVENT_SCHEMA_VERSION = 2;
 export const GIG_REPLAY_TARGET_DURATION_MS = 180_000;
 export const GIG_REPLAY_TARGET_TOLERANCE_MS = 15_000;
 export const GIG_REPLAY_MAX_EVENTS = 240;
