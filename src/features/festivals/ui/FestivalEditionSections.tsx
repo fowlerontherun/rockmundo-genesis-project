@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/card";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
+import { FestivalPublicProfileEditor } from "@/features/festival-company/ui/FestivalPublicProfileEditor";
+import { useFestivalSalesSummary } from "@/features/festival-company/application/useFestivalLaunch";
 import { FestivalAnnualPlan } from "@/features/festivals/annual-plan/FestivalAnnualPlan";
 import {
   getFestivalCompanyEditions,
@@ -323,6 +326,66 @@ export function FestivalEditionFinance({
     </SectionShell>
   );
 }
+
+export function FestivalEditionLaunch({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  const salesSummary = useFestivalSalesSummary(festivalCompanyId);
+  const summary = salesSummary.data as
+    | {
+        currency?: string;
+        ticketsSold?: number;
+        ticketsAvailable?: number;
+        grossSalesMinor?: number;
+      }
+    | undefined;
+
+  return (
+    <SectionShell
+      title="Announce and sell"
+      description="Publish the public festival page, launch the announcement and control ticket sales."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requiredBindings={["site", "tickets"]}
+      >
+        <FestivalPublicProfileEditor festivalCompanyId={festivalCompanyId} />
+        <FestivalLaunchManager festivalCompanyId={festivalCompanyId} />
+        {summary ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Ticket sales</CardTitle>
+              <CardDescription>Live sales for the announced festival.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
+              <p>
+                Sold: <strong>{summary.ticketsSold ?? 0}</strong>
+              </p>
+              <p>
+                Available: <strong>{summary.ticketsAvailable ?? 0}</strong>
+              </p>
+              <p>
+                Gross:{" "}
+                <strong>
+                  {((summary.grossSalesMinor ?? 0) / 100).toLocaleString(undefined, {
+                    style: "currency",
+                    currency: summary.currency ?? "USD",
+                  })}
+                </strong>
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
 
 export function FestivalEditionHistory({ editionId }: { editionId: string }) {
   const query = useQuery({
