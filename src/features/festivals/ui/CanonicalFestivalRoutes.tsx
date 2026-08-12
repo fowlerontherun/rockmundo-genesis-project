@@ -15,6 +15,7 @@ import {
   FestivalEditionApplications,
   FestivalEditionFinance,
   FestivalEditionHistory,
+  FestivalEditionLaunch,
   FestivalEditionOverview,
 } from "./FestivalEditionSections";
 
@@ -198,6 +199,7 @@ export const editionNavigation = [
   { section: "overview", label: "Plan" },
   { section: "applications", label: "Line-up" },
   { section: "finance", label: "Tickets & budget" },
+  { section: "launch", label: "Announce & sell" },
   { section: "live", label: "Run Festival" },
   { section: "history", label: "Results" },
 ] as const;
@@ -216,6 +218,8 @@ function editionSectionRoute(
       return festivalRoutes.applications(festivalCompanyId, editionId);
     case "finance":
       return festivalRoutes.finance(festivalCompanyId, editionId);
+    case "launch":
+      return festivalRoutes.launch(festivalCompanyId, editionId);
     case "live":
       return festivalRoutes.live(festivalCompanyId, editionId);
     case "history":
@@ -337,6 +341,13 @@ export function FestivalEditionWorkspace({ section }: { section: string }) {
     case "finance":
       return (
         <FestivalEditionFinance
+          festivalCompanyId={festivalCompanyId}
+          editionId={editionId}
+        />
+      );
+    case "launch":
+      return (
+        <FestivalEditionLaunch
           festivalCompanyId={festivalCompanyId}
           editionId={editionId}
         />

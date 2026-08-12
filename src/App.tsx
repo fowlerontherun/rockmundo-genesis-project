@@ -716,6 +716,7 @@ function App() {
                       <Route path={festivalRoutePatterns.contracts.split("/").at(-1)} element={<FestivalEditionWorkspace section="contracts" />} />
                       <Route path={festivalRoutePatterns.operations.split("/").at(-1)} element={<FestivalEditionWorkspace section="operations" />} />
                       <Route path={festivalRoutePatterns.finance.split("/").at(-1)} element={<FestivalEditionWorkspace section="finance" />} />
+                      <Route path={festivalRoutePatterns.launch.split("/").at(-1)} element={<FestivalEditionWorkspace section="launch" />} />
                       <Route path={festivalRoutePatterns.live.split("/").at(-1)} element={<FestivalEditionWorkspace section="live" />} />
                       <Route path={festivalRoutePatterns.settlement.split("/").at(-1)} element={<FestivalEditionWorkspace section="settlement" />} />
                       <Route path={festivalRoutePatterns.history.split("/").at(-1)} element={<FestivalEditionWorkspace section="history" />} />
