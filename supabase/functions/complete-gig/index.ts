@@ -196,92 +196,9 @@ serve(async (req) => {
       console.log('Clothing bonus check skipped (table may not exist):', e);
     }
 
-    // === MERCHANDISE SALES FROM ACTUAL INVENTORY ===
-    const { data: merchInventory } = await supabaseClient
-      .from('player_merchandise')
-      .select('id, item_type, design_name, selling_price, cost_to_produce, stock_quantity')
-      .eq('band_id', gig.band_id)
-      .gt('stock_quantity', 0);
-
     let merchRevenue = 0;
     let merchItemsSold = 0;
     let merchCost = 0;
-    const merchSalesDetails: { item_id: string; item_type: string; quantity: number; revenue: number; cost: number }[] = [];
-
-    if (merchInventory && merchInventory.length > 0) {
-      // Purchase rate: 5-25% based on performance rating (0-25 scale)
-      const basePurchaseRate = 0.05 + (Math.min(1, (gig.bands.fame || 0) / 5000) * 0.05);
-      const performanceBonus = Math.min(1.5, avgRating / 18);
-      // === FAN SENTIMENT → MERCH SALES (v1.0.986) ===
-      // Positive sentiment means fans are eager to buy merch; negative means they're disengaged
-      const merchSentiment = (gig.bands as any)?.fan_sentiment_score ?? 0;
-      const merchSentimentT = (Math.max(-100, Math.min(100, merchSentiment)) + 100) / 200;
-      const merchSentimentMod = parseFloat((0.7 + merchSentimentT * 0.6).toFixed(2)); // 0.7x–1.3x
-      const actualPurchaseRate = basePurchaseRate * performanceBonus * clothingMerchBonus * merchSentimentMod;
-      console.log(`Merch sentiment modifier: ${merchSentimentMod}x (sentiment=${merchSentiment})`);
-      
-      const numberOfBuyers = Math.round(outcome.actual_attendance * actualPurchaseRate);
-      
-      // Simulate purchases from actual inventory
-      for (let i = 0; i < numberOfBuyers; i++) {
-        const itemCount = Math.random() < 0.7 ? 1 : 2; // 70% buy 1, 30% buy 2
-        
-        for (let j = 0; j < itemCount; j++) {
-          // Get available items (check stock in real-time from our tracking)
-          const availableItems = merchInventory.filter(item => {
-            const soldSoFar = merchSalesDetails.filter(s => s.item_id === item.id).reduce((sum, s) => sum + s.quantity, 0);
-            return (item.stock_quantity - soldSoFar) > 0;
-          });
-          
-          if (availableItems.length === 0) break;
-          
-          const randomItem = availableItems[Math.floor(Math.random() * availableItems.length)];
-          
-          // Track this sale
-          const existingSale = merchSalesDetails.find(s => s.item_id === randomItem.id);
-          if (existingSale) {
-            existingSale.quantity++;
-            existingSale.revenue += randomItem.selling_price;
-            existingSale.cost += randomItem.cost_to_produce;
-          } else {
-            merchSalesDetails.push({
-              item_id: randomItem.id,
-              item_type: randomItem.item_type,
-              quantity: 1,
-              revenue: randomItem.selling_price,
-              cost: randomItem.cost_to_produce
-            });
-          }
-          
-          merchRevenue += randomItem.selling_price;
-          merchCost += randomItem.cost_to_produce;
-          merchItemsSold++;
-        }
-      }
-      
-      // Update inventory stock quantities
-      for (const sale of merchSalesDetails) {
-        const { error: stockError } = await supabaseClient
-          .from('player_merchandise')
-          .update({ 
-            stock_quantity: supabaseClient.rpc('decrement_stock', { row_id: sale.item_id, amount: sale.quantity })
-          })
-          .eq('id', sale.item_id);
-        
-        // Fallback: direct update if RPC doesn't exist
-        if (stockError) {
-          const item = merchInventory.find(i => i.id === sale.item_id);
-          if (item) {
-            await supabaseClient
-              .from('player_merchandise')
-              .update({ stock_quantity: Math.max(0, item.stock_quantity - sale.quantity) })
-              .eq('id', sale.item_id);
-          }
-        }
-      }
-      
-      console.log(`Merch sales: ${merchItemsSold} items, $${merchRevenue} revenue, $${merchCost} cost`);
-    }
 
     // Calculate production/soundcheck preparation costs exactly once through the shared ledger.
     const { data: prepLedger } = await supabaseClient.rpc('process_gig_preparation_costs_and_rewards', { p_gig_id: gigId });
@@ -308,6 +225,20 @@ serve(async (req) => {
     const incidentRoll = ((gigId || '').split('').reduce((sum: number, ch: string) => sum + ch.charCodeAt(0), 0) % 100);
     const productionIncidents = incidentRoll < productionIncidentRisk ? [{ type: productionComplexity > 70 ? 'delayed_setup' : 'lighting_cue_failure', severity: productionIncidentRisk > 45 ? 'major' : 'minor', impact: Math.round(Math.min(12, productionIncidentRisk / 6)), mitigation: (soundcheckBenefit[soundcheckType] || 0) >= 13 ? 'Caught during soundcheck and partially mitigated.' : 'Crew worked around it during the show.' }] : [];
     avgRating = Math.max(0, Math.min(25, avgRating * (1 + audienceProductionBonus + soundcheckBonus - fatiguePenalty - (productionIncidents[0]?.impact || 0) / 250)));
+
+    // Commerce is a single transactional authority. The RPC serializes on the
+    // gig, returns the immutable existing settlement on retry, locks inventory,
+    // and writes orders, stock, venue finance and outcome aggregates together.
+    const { data: commerce, error: commerceError } = await supabaseClient.rpc('settle_gig_commerce', {
+      p_gig_id: gigId,
+      p_performance_rating: avgRating,
+      p_merch_multiplier: clothingMerchBonus,
+    });
+    if (commerceError) throw commerceError;
+    merchItemsSold = Number(commerce?.merchandise?.itemsSold || 0);
+    merchRevenue = Number(commerce?.merchandise?.grossRevenue || 0);
+    merchCost = Number(commerce?.merchandise?.cost || 0);
+    const contractedBandBarRevenue = Number(commerce?.bar?.bandEntitlement || 0);
 
     // Calculate costs (ensure integers for database)
     const crewCost = Math.floor(avgCrew * 5) + prepCrewCost; // Crew cost based on skill plus prep ledger
@@ -346,7 +277,9 @@ serve(async (req) => {
     // Calculate total revenue and profit (with city economy applied)
     const adjustedTicketRevenue = clampInt4((outcome.ticket_revenue || 0) * economyMultiplier);
     const adjustedMerchRevenue = clampInt4(merchRevenue * economyMultiplier);
-    const totalRevenue = clampInt4(adjustedTicketRevenue + adjustedMerchRevenue);
+    // Bar is venue revenue by default. Only an exact confirmed booking share is
+    // included in band results (and it was already credited atomically by RPC).
+    const totalRevenue = clampInt4(adjustedTicketRevenue + adjustedMerchRevenue + contractedBandBarRevenue);
     const netProfit = clampInt4(totalRevenue - totalCosts);
 
     // === MORALE PERFORMANCE MODIFIER (v1.0.958) ===

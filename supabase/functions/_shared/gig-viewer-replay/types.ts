@@ -17,6 +17,12 @@ export interface GigReplayCrowdTuning {
   arrivalSpeed: number;
 }
 
+export interface GigReplayCommerceSnapshot {
+  formulaVersion: string; settlementId: string;
+  merchandise: { itemsSold: number; grossRevenue: number; cost: number; owner: "band"; lines: Array<{ merchandiseId: string; variantId?: string | null; itemType: string; name: string; quantity: number; unitPrice: number; gross: number }> };
+  bar: { drinksServed: number; grossRevenue: number; venueRevenue: number; bandEntitlement: number; owner: "venue" | "shared_by_confirmed_booking"; shareSource: "confirmed_booking" | "venue_fallback" };
+}
+
 export type GigVisualPayload =
   | { type: "venue_open"; entranceIds: string[]; lightLevel: number }
   | { type: "crowd_fill"; targetDensity: number; zoneIds: string[]; enteringCount: number }
@@ -62,6 +68,7 @@ export interface GigViewerReplay {
   status: GigReplayStatus;
   crowdTuning?: GigReplayCrowdTuning | null;
   crowdTuningRevision?: number | null;
+  commerce?: GigReplayCommerceSnapshot | null;
 }
 
 export type GigViewerReplayLoadState = "loading" | "ready" | "unavailable" | "generating" | "failed" | "unsupported_version";
