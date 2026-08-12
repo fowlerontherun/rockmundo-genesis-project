@@ -13,6 +13,7 @@ import type { VenuePreset } from "./VenueLayout";
 import { generateVenueScene, type DecorationSlot, type VenueSceneLayout } from "./VenueSceneRegistry";
 import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
+import { buildVenueActivityPlan, deriveVenueActivity, type VenueActivityPlan } from "./VenueActivity";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 
 export class CanvasRenderer {
@@ -28,6 +29,7 @@ export class CanvasRenderer {
   private audiencePlan: AudienceActivityPlan | null = null;
   private preset: VenuePreset | null = null;
   private readonly venueScene: VenueSceneLayout;
+  private readonly venueActivityPlan: VenueActivityPlan;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -45,6 +47,7 @@ export class CanvasRenderer {
     this.ctx = ctx;
     this.venueScene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
     this.storyModel = buildStoryModel(replay, experience);
+    this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd: 16 });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
       stageType: selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: (experience?.gig?.venue as any)?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }),
@@ -131,6 +134,8 @@ export class CanvasRenderer {
     });
     ctx.globalAlpha = 1;
 
+    drawVenueActivity(ctx, size, this.venueActivityPlan, state.positionMs, this.reducedMotion);
+
     performers.forEach((p) => {
       if (!p.visible) return;
       const focus = state.performerFocusId === p.id || storySnapshot.performerFocusId === p.id || p.activeMoveEventId === state.activeEvent?.id;
@@ -162,6 +167,25 @@ export class CanvasRenderer {
   }
 
   destroy() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+}
+
+function drawVenueActivity(ctx: CanvasRenderingContext2D, size: Size, plan: VenueActivityPlan, positionMs: number, reducedMotion: boolean) {
+  const scale = (point: { x: number; y: number }) => ({ x: point.x * size.width, y: point.y * size.height });
+  const actors = deriveVenueActivity(plan, positionMs, reducedMotion);
+  ctx.save();
+  plan.staff.forEach((staff) => {
+    const p = scale(staff.position); const serving = actors.some((actor) => actor.service === staff.service && actor.state.startsWith("being_served"));
+    ctx.fillStyle = staff.service === "bar" ? "#22d3ee" : "#fb923c"; ctx.strokeStyle = serving ? "#fef08a" : "#0f172a"; ctx.lineWidth = serving ? 3 : 2;
+    ctx.beginPath(); ctx.arc(p.x + staff.appearance * 10, p.y, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#0f172a"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center"; ctx.fillText(staff.service === "bar" ? "B" : "M", p.x + staff.appearance * 10, p.y + 2);
+  });
+  actors.filter((actor) => actor.state !== "watching_stage").forEach((actor) => {
+    const p = scale(actor.position); ctx.fillStyle = ["#60a5fa", "#a78bfa", "#f472b6", "#34d399"][actor.appearance];
+    ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(15,23,42,.8)"; ctx.lineWidth = 1; ctx.stroke();
+    const handover = actor.state.startsWith("being_served") && actor.progress > .72;
+    if (handover || actor.carriedItem) { ctx.fillStyle = actor.service === "bar" ? "#e0f2fe" : "#fef3c7"; const bob = reducedMotion ? 0 : Math.sin(positionMs / 100) * 1.5; ctx.fillRect(p.x + 5, p.y - 6 + bob, actor.carriedItem === "poster" ? 5 : 4, actor.carriedItem === "shirt" ? 6 : 4); }
+  });
+  ctx.restore();
 }
 
 function label(phase: string) { return phase.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
