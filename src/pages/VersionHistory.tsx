@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.661",
+    date: "2026-08-12",
+    changes: [
+      { type: 'feature', description: "Festival editions now have an 'Announce & sell' tab where owners publish the public festival page (name, web address, tagline, travel/camping/accessibility info), begin launch review, launch the festival and open, pause, resume or close ticket sales." },
+      { type: 'fix', description: "The festival launch and ticket-sales backend was deployed but had no reachable screen, so festivals could never be announced or sell tickets and the public festival directory stayed empty. It is now wired into the edition workspace." },
+      { type: 'improvement', description: "Live ticket-sales totals (sold, available, gross) are shown alongside the launch controls." },
+    ],
+  },
+  {
     version: "1.1.660",
     date: "2026-08-11",
     changes: [

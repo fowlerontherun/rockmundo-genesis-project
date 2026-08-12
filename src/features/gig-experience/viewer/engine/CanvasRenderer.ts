@@ -9,6 +9,8 @@ import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEn
 import type { Size } from "./Viewport";
 import { VENUE_SCENE_ZONES } from "./SceneLayout";
 import { selectVenuePreset, scaleVenuePreset, selectStageType } from "./VenueLayout";
+import type { VenuePreset } from "./VenueLayout";
+import { generateVenueScene, type DecorationSlot, type VenueSceneLayout } from "./VenueSceneRegistry";
 import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
@@ -24,6 +26,8 @@ export class CanvasRenderer {
   private lastFrameMs = 0;
   private pyroPlan: PyroPlan | null = null;
   private audiencePlan: AudienceActivityPlan | null = null;
+  private preset: VenuePreset | null = null;
+  private readonly venueScene: VenueSceneLayout;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -39,6 +43,7 @@ export class CanvasRenderer {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas is unavailable");
     this.ctx = ctx;
+    this.venueScene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
     this.storyModel = buildStoryModel(replay, experience);
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
@@ -60,8 +65,9 @@ export class CanvasRenderer {
       capacity: this.experience?.gig?.venue?.capacity,
       venueName: this.experience?.gig?.venue?.name,
       venueType: (this.experience?.gig?.venue as any)?.type ?? null,
-      variantSeed: this.experience?.gig?.venue?.id ?? this.experience?.gig?.venue?.name ?? null,
+      variantSeed: this.venueScene.seed,
     }), this.size);
+    this.preset = scaledPreset;
     this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion });
     this.crowdPlan = buildTunedCrowdPlan({
       replay: this.replay,
@@ -82,7 +88,7 @@ export class CanvasRenderer {
     const ctx = this.ctx;
     const size = this.size;
     if (!this.layout || !this.crowdPlan || !this.performerPlan) this.resize(size);
-    const preset = scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity, venueName: this.experience?.gig.venue.name, venueType: (this.experience?.gig.venue as any)?.type ?? null, variantSeed: this.experience?.gig.venue.id ?? this.experience?.gig.venue.name ?? null }), size);
+    const preset = this.preset ?? scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity }), size);
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
