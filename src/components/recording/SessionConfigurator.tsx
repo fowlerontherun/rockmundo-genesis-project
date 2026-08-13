@@ -247,7 +247,8 @@ export const SessionConfigurator = ({
     (qualityImprovement / (songQualityScore || 1)) * 100,
   );
 
-  const availableBalance = bandId ? bandBalance : personalCash;
+  const payer: "band" | "personal" = bandId ? paymentSource : "personal";
+  const availableBalance = payer === "band" ? bandBalance : personalCash;
   const canAfford = availableBalance >= totalCost;
   const balanceShortfall = totalCost - availableBalance;
 
