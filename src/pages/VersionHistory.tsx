@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.663",
+    date: "2026-08-13",
+    changes: [
+      { type: 'fix', description: "The 'Who pays?' choice on recording bookings was hidden for players whose band could not be detected by the Recording Studio page. The booking screen now resolves your active band itself, so band funds vs personal funds is always offered." },
+    ],
+  },
+  {
     version: "1.1.662",
     date: "2026-08-13",
     changes: [
