@@ -104,6 +104,36 @@ export const SessionConfigurator = ({
   const [playerLevel, setPlayerLevel] = useState(1);
   const [formError, setFormError] = useState("");
   const createSession = useCreateRecordingSession();
+  const [fallbackBandId, setFallbackBandId] = useState<string | null>(null);
+
+  // The parent page may fail to resolve the player's band (stricter filters or
+  // legacy rows). Resolve it here as a fallback so the payer choice always shows.
+  useEffect(() => {
+    let cancelled = false;
+    const resolveBand = async () => {
+      if (bandId || (!profileId && !userId)) {
+        setFallbackBandId(null);
+        return;
+      }
+      let query = supabase
+        .from("band_members")
+        .select("band_id, bands!inner(id, status)")
+        .eq("member_status", "active")
+        .eq("bands.status", "active")
+        .limit(1);
+      query = profileId
+        ? query.eq("profile_id", profileId)
+        : query.eq("user_id", userId);
+      const { data } = await query.maybeSingle();
+      if (!cancelled) setFallbackBandId((data as any)?.band_id ?? null);
+    };
+    resolveBand();
+    return () => {
+      cancelled = true;
+    };
+  }, [bandId, profileId, userId]);
+
+  const effectiveBandId = bandId || fallbackBandId;
 
   // Fetch slot availability
   const { data: slotAvailability, isLoading: loadingSlots } =
