@@ -137,7 +137,7 @@ export const SessionConfigurator = ({
 
   // Fetch slot availability
   const { data: slotAvailability, isLoading: loadingSlots } =
-    useStudioAvailability(studio.id, selectedDate, bandId, true);
+    useStudioAvailability(studio.id, selectedDate, effectiveBandId, true);
 
   // Duration depends on recording type
   const durationHours = recordingType === "demo" ? 4 : 8;
@@ -145,11 +145,11 @@ export const SessionConfigurator = ({
   // Fetch band balance, personal cash, label status, and rehearsal data
   useEffect(() => {
     const fetchData = async () => {
-      if (bandId) {
+      if (effectiveBandId) {
         const { data: band } = await supabase
           .from("bands")
           .select("band_balance, name")
-          .eq("id", bandId)
+          .eq("id", effectiveBandId)
           .single();
 
         setBandBalance(band?.band_balance || 0);
@@ -158,7 +158,7 @@ export const SessionConfigurator = ({
         const { data: familiarity } = await supabase
           .from("band_song_familiarity")
           .select("familiarity_minutes, rehearsal_stage")
-          .eq("band_id", bandId)
+          .eq("band_id", effectiveBandId)
           .eq("song_id", song.id)
           .single();
 
@@ -179,7 +179,7 @@ export const SessionConfigurator = ({
         const { data: contract } = await supabase
           .from("artist_label_contracts")
           .select("id")
-          .eq("band_id", bandId)
+          .eq("band_id", effectiveBandId)
           .eq("status", "active")
           .limit(1)
           .maybeSingle();
@@ -219,7 +219,7 @@ export const SessionConfigurator = ({
       }
     };
     fetchData();
-  }, [bandId, userId, profileId, song.id]);
+  }, [effectiveBandId, userId, profileId, song.id]);
 
   const orchestraOption = orchestraSize
     ? ORCHESTRA_OPTIONS.find((o) => o.size === orchestraSize)
@@ -231,7 +231,7 @@ export const SessionConfigurator = ({
   const producerQualityBonus = Number((producer as any)?.quality_bonus ?? 0);
   const producerCostPerHour = Number((producer as any)?.cost_per_hour ?? 0);
 
-  const rehearsalBonus = bandId && rehearsalData ? rehearsalData.penalty : 0;
+  const rehearsalBonus = effectiveBandId && rehearsalData ? rehearsalData.penalty : 0;
 
   // Recording type multipliers
   const isDemo = recordingType === "demo";
@@ -278,7 +278,7 @@ export const SessionConfigurator = ({
     (qualityImprovement / (songQualityScore || 1)) * 100,
   );
 
-  const payer: "band" | "personal" = bandId ? paymentSource : "personal";
+  const payer: "band" | "personal" = effectiveBandId ? paymentSource : "personal";
   const availableBalance = payer === "band" ? bandBalance : personalCash;
   const canAfford = availableBalance >= totalCost;
   const balanceShortfall = totalCost - availableBalance;
@@ -309,7 +309,7 @@ export const SessionConfigurator = ({
     setFormError(validationMessage);
     if (validationMessage) return;
 
-    if (bandId && rehearsalData) {
+    if (effectiveBandId && rehearsalData) {
       setShowRehearsalWarning(true);
     } else {
       proceedWithRecording();
@@ -329,7 +329,7 @@ export const SessionConfigurator = ({
       await createSession.mutateAsync({
         user_id: userId,
         profile_id: profileId || null,
-        band_id: bandId || null,
+        band_id: effectiveBandId || null,
         studio_id: studio.id,
         producer_id: producer.id,
         song_id: song.id,
@@ -576,7 +576,7 @@ export const SessionConfigurator = ({
             <span>Total Cost</span>
             <span className="text-primary">${totalCost.toLocaleString()}</span>
           </div>
-          {bandId ? (
+          {effectiveBandId ? (
             <div className="space-y-2 pt-2 border-t">
               <Label className="text-sm">Who pays?</Label>
               <RadioGroup
