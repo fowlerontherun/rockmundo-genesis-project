@@ -2,6 +2,7 @@ import logger from "@/lib/logger";
 
 export type GigExperienceDiagnosticStage =
   | "gig"
+  | "venue_city"
   | "outcome"
   | "song_performances"
   | "gig_setlist"

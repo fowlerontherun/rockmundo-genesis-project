@@ -18,6 +18,10 @@ type GigRow = Database["public"]["Tables"]["gigs"]["Row"] & {
   result_ready_at?: string | null;
   venues?: Database["public"]["Tables"]["venues"]["Row"] | null;
 };
+type CityRow = Pick<
+  Database["public"]["Tables"]["cities"]["Row"],
+  "id" | "name" | "country" | "region" | "climate_type" | "is_coastal" | "timezone"
+>;
 type OutcomeRow = Database["public"]["Tables"]["gig_outcomes"]["Row"];
 type SongPerfDatabaseRow = Database["public"]["Tables"]["gig_song_performances"]["Row"];
 type SongPerfRow = Omit<SongPerfDatabaseRow, "song_id"> & { song_id: string | null };
@@ -139,7 +143,10 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
   }
   const outcome = outcomeRows[0] ?? null;
   const outcomeId = outcome?.id ?? null;
-  const [songPerfsRes, gigSetlistRes, legacySetlistSongsRes, performersRes, replayDescriptorRes, processingRes, consequenceRes] = await Promise.all([
+  const [venueCityRes, songPerfsRes, gigSetlistRes, legacySetlistSongsRes, performersRes, replayDescriptorRes, processingRes, consequenceRes] = await Promise.all([
+    gig.venues?.city_id
+      ? queryClient.from("cities").select("id,name,country,region,climate_type,is_coastal,timezone").eq("id", gig.venues.city_id).maybeSingle()
+      : Promise.resolve({ data: null as CityRow | null, error: null }),
     outcomeId
       ? queryClient.from("gig_song_performances").select(songPerformanceSelect).eq("gig_outcome_id", outcomeId).order("position")
       : Promise.resolve({ data: [] as SongPerfRow[], error: null }),
@@ -171,6 +178,13 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
     return fallback;
   };
 
+  const venueCity = optionalData(
+    "venue_city",
+    "cities",
+    venueCityRes as QueryResult<CityRow | null>,
+    null,
+    "resolve the presentation from the venue location and deterministic generic environment",
+  );
   const songPerformances = optionalData(
     "song_performances",
     "gig_song_performances",
@@ -262,6 +276,7 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
     const experience = mapGigExperience({
       gig,
       outcome,
+      venueCity,
       songPerformances,
       setlistSongs,
       performers,
@@ -287,9 +302,10 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
   }
 }
 
-export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null; postProcessing?: { status: string; processing_version: string | null; completed_at: string | null } | null; consequences?: ConsequenceRow[]; loadWarnings?: string[] }): GigExperienceDTO {
+export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | null; venueCity?: CityRow | null; songPerformances?: SongPerfRow[]; setlistSongs?: SetlistSongRow[]; performers?: PerformerRow[]; replayDescriptor?: { viewer_version: number; duration_ms: number; generation_status: string } | null; postProcessing?: { status: string; processing_version: string | null; completed_at: string | null } | null; consequences?: ConsequenceRow[]; loadWarnings?: string[] }): GigExperienceDTO {
   const { gig, outcome } = input;
   const venue = gig.venues;
+  const venueCity = venue?.city_id && input.venueCity?.id === venue.city_id ? input.venueCity : null;
   // Capacity must never be lower than recorded attendance, otherwise the DTO
   // validator rejects otherwise-valid historic outcomes.
   const capacity = Math.max(venue?.capacity ?? 0, outcome?.venue_capacity ?? 0, outcome?.actual_attendance ?? 0);
@@ -402,7 +418,33 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
   const rating = outcome ? nullableNumberMetric(outcome.overall_rating, "Overall rating is still processing") : metricLegacyMissing<number>("No outcome row exists yet");
   const dto: GigExperienceDTO = {
     schemaVersion: 1,
-    gig: { id: gig.id, bandId: gig.band_id, status: gig.status, scheduledDate: gig.scheduled_date, startedAt: gig.started_at, completedAt: gig.completed_at, ticketPrice: nullableNumberMetric(gig.ticket_price, "Ticket price missing"), venue: { id: venue?.id ?? outcome?.venue_id ?? null, name: venue?.name ?? outcome?.venue_name ?? "Unknown Venue", location: venue?.location ?? null, capacity, type: (venue as any)?.venue_type ?? null } },
+    gig: {
+      id: gig.id,
+      bandId: gig.band_id,
+      status: gig.status,
+      scheduledDate: gig.scheduled_date,
+      startedAt: gig.started_at,
+      completedAt: gig.completed_at,
+      ticketPrice: nullableNumberMetric(gig.ticket_price, "Ticket price missing"),
+      venue: {
+        id: venue?.id ?? outcome?.venue_id ?? null,
+        name: venue?.name ?? outcome?.venue_name ?? "Unknown Venue",
+        location: venue?.location ?? venueCity?.name ?? null,
+        capacity,
+        type: venue?.venue_type ?? null,
+        city: venue?.city_id
+          ? {
+              id: venue.city_id,
+              name: venueCity?.name ?? null,
+              country: venueCity?.country ?? null,
+              region: venueCity?.region ?? null,
+              climateType: venueCity?.climate_type ?? null,
+              isCoastal: venueCity?.is_coastal ?? null,
+              timezone: venueCity?.timezone ?? null,
+            }
+          : null,
+      },
+    },
     headline: { overallRating: rating, performanceGrade: outcome?.performance_grade ? metricAvailable(outcome.performance_grade) : rating.status === "available" ? metricAvailable(getPerformanceGrade(rating.value).grade, "derived") : metricLegacyMissing("Grade unavailable until rating exists"), verdict: buildVerdict(metricValue(rating, 0)), attendance: outcome ? nullableNumberMetric(outcome.actual_attendance, "Attendance missing from outcome") : metricLegacyMissing("Outcome is not ready"), capacity: capacity > 0 ? metricAvailable(capacity) : metricLegacyMissing("Venue capacity missing"), netProfit: outcome ? nullableNumberMetric(outcome.net_profit, "Net profit missing from outcome") : metricLegacyMissing("Outcome is not ready"), fameGained: outcome ? nullableNumberMetric(outcome.fame_gained, "Fame gain missing from outcome") : metricLegacyMissing("Outcome is not ready"), fansGained: fans, bestSongTitle: bestSong ? metricAvailable(bestSong.title, bestSong.performanceScore.status === "available" ? "authoritative" : "legacy") : metricLegacyMissing("No song performance rows available") },
     songs,
     performers: normalizedPerformers.map((row) => ({ id: row.id, profileId: row.profile_id, displayName: row.profiles?.display_name ?? row.profiles?.username ?? "Unknown Performer", roleOrInstrument: row.role_or_instrument, lineupStatus: row.lineup_status ?? "unknown" })),
