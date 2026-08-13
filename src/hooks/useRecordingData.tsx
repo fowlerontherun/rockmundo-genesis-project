@@ -359,8 +359,10 @@ export const useCreateRecordingSession = () => {
 
       const sessionScheduledEnd = sessionEnd;
 
-      // If band_id is provided, check band balance and insert earnings (trigger handles balance)
-      if (input.band_id) {
+      // Band pays by default when a band is attached; the player can opt to pay personally
+      const paysFromBand = !!input.band_id && (input.payment_source ?? 'band') === 'band';
+
+      if (paysFromBand) {
         const { data: band } = await supabase
           .from('bands')
           .select('band_balance')
