@@ -33,6 +33,10 @@ export function containScene(container: Size, scene: Size = VENUE_SCENE_SIZE): S
 export interface SceneCamera { x: number; y: number; zoom: number }
 export const WIDE_VENUE_CAMERA: Readonly<SceneCamera> = Object.freeze({ x: VENUE_SCENE_SIZE.width / 2, y: VENUE_SCENE_SIZE.height / 2, zoom: 1 });
 
+export function wideVenueCamera(scene: Size = VENUE_SCENE_SIZE): SceneCamera {
+  return { x: scene.width / 2, y: scene.height / 2, zoom: 1 };
+}
+
 export function clampCamera(camera: SceneCamera, scene: Size = VENUE_SCENE_SIZE): SceneCamera {
   const zoom = Math.max(1, Math.min(1.2, Number.isFinite(camera.zoom) ? camera.zoom : 1));
   const visibleWidth = scene.width / zoom;
@@ -44,7 +48,7 @@ export function clampCamera(camera: SceneCamera, scene: Size = VENUE_SCENE_SIZE)
   };
 }
 
-export function cameraForPlayback(options: { reducedMotion: boolean; songBoundary: boolean; requested?: SceneCamera }): SceneCamera {
-  if (options.reducedMotion || options.songBoundary || !options.requested) return { ...WIDE_VENUE_CAMERA };
-  return clampCamera(options.requested);
+export function cameraForPlayback(options: { reducedMotion: boolean; songBoundary: boolean; requested?: SceneCamera; scene?: Size }): SceneCamera {
+  if (options.reducedMotion || options.songBoundary || !options.requested) return wideVenueCamera(options.scene);
+  return clampCamera(options.requested, options.scene);
 }

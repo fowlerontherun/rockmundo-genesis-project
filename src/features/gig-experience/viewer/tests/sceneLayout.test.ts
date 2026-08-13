@@ -26,4 +26,8 @@ describe("responsive wide venue scene", () => {
   it("uses the stable wide camera when reduced motion is enabled", () => {
     expect(cameraForPlayback({ reducedMotion: true, songBoundary: false, requested: { x: 900, y: 400, zoom: 1.15 } })).toEqual(WIDE_VENUE_CAMERA);
   });
+
+  it("centres the wide camera in a resized render space", () => {
+    expect(cameraForPlayback({ reducedMotion: false, songBoundary: true, scene: { width: 800, height: 450 } })).toEqual({ x: 400, y: 225, zoom: 1 });
+  });
 });
