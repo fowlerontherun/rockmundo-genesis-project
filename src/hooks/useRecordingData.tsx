@@ -212,6 +212,7 @@ interface CreateRecordingSessionInput {
   parent_recording_id?: string;
   scheduled_start?: string;
   scheduled_end?: string;
+  payment_source?: 'band' | 'personal';
 }
 
 export const calculateRecordingQuality = (
