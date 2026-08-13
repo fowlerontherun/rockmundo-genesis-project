@@ -80,6 +80,7 @@ export const SessionConfigurator = ({
   >(null);
   const [bandBalance, setBandBalance] = useState<number>(0);
   const [personalCash, setPersonalCash] = useState<number>(0);
+  const [paymentSource, setPaymentSource] = useState<"band" | "personal">("band");
   const [bandName, setBandName] = useState<string>("");
   const [rehearsalData, setRehearsalData] = useState<{
     minutes: number;
