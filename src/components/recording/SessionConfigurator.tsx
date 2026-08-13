@@ -310,6 +310,7 @@ export const SessionConfigurator = ({
         rehearsal_bonus: rehearsalBonus,
         scheduled_start: start.toISOString(),
         scheduled_end: end.toISOString(),
+        payment_source: payer,
       });
       onComplete();
     } catch (error: unknown) {
