@@ -18,6 +18,7 @@ import { resolveEnvironment, type ResolvedEnvironment } from "./EnvironmentRegis
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
+import { applyCameraTransform, deriveCameraFrame } from "./CameraDirector";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -58,8 +59,8 @@ export class CanvasRenderer {
     this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
-      stageType: selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: (experience?.gig?.venue as any)?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }),
-      seed: (replay as any).simulationSeed ?? replay.id,
+      stageType: selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: experience?.gig?.venue?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }),
+      seed: replay.simulationSeed ?? replay.id,
       intensity: this.options.pyroIntensity ?? 1,
     });
   }
@@ -75,7 +76,7 @@ export class CanvasRenderer {
     const selectedPreset = selectVenuePreset({
       capacity: this.experience?.gig?.venue?.capacity,
       venueName: this.experience?.gig?.venue?.name,
-      venueType: (this.experience?.gig?.venue as any)?.type ?? null,
+      venueType: this.experience?.gig?.venue?.type ?? null,
       variantSeed: this.venueScene.seed,
     });
     const crowdBounds = unionRects(this.venueScene.crowdZones);
@@ -93,7 +94,7 @@ export class CanvasRenderer {
       tuning: this.options.crowdTuning,
     });
     this.performerPlan = buildPerformerPlan({ replay: this.replay, experience: this.experience, size: this.size });
-    this.audiencePlan = buildAudienceActivityPlan({ preset: scaledPreset, seed: (this.replay as any).simulationSeed ?? this.replay.id, attendanceRatio: this.layout.capacity > 0 ? this.layout.attendance / this.layout.capacity : 0.6, reducedMotion: this.reducedMotion });
+    this.audiencePlan = buildAudienceActivityPlan({ preset: scaledPreset, seed: this.replay.simulationSeed ?? this.replay.id, attendanceRatio: this.layout.capacity > 0 ? this.layout.attendance / this.layout.capacity : 0.6, reducedMotion: this.reducedMotion });
   }
 
   render(state: DerivedPlaybackState) {
@@ -117,8 +118,26 @@ export class CanvasRenderer {
       this.reducedMotion,
       itemPerformer?.stageSlot,
     );
+    const cameraFrame = deriveCameraFrame({
+      event: state.activeEvent,
+      positionMs: state.positionMs,
+      viewport: size,
+      stage: preset.stage,
+      audience: preset.audience,
+      performers: performers.map((performer) => ({
+        id: performer.id,
+        profileId: performer.profileId,
+        position: performer.currentPosition,
+        visible: performer.visible,
+      })),
+      performanceItemFocus:
+        performanceItemFrame?.performerPosition ?? performanceItemFrame?.focus,
+      reducedMotion: this.reducedMotion,
+    });
 
     ctx.clearRect(0, 0, size.width, size.height);
+    ctx.save();
+    applyCameraTransform(ctx, cameraFrame.camera, size);
     drawBackground(ctx, preset, size);
     drawExteriorEnvironment(ctx, size, this.environment, this.reducedMotion);
     drawVenueArchitecture(ctx, size, this.venueScene);
@@ -179,13 +198,15 @@ export class CanvasRenderer {
     if (state.activeEvent?.visualPayload.type === "spotlight" || state.activeEvent?.visualPayload.type === "moment_effect") {
       ctx.strokeStyle = "rgba(250, 204, 21, .75)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(size.width / 2, preset.stage.y + preset.stage.height / 2, 48 + (this.reducedMotion ? 0 : Math.sin(state.positionMs / 180) * 8), 0, Math.PI * 2); ctx.stroke();
     }
+    if (storySnapshot.finaleActive && !this.reducedMotion && storySnapshot.crowdEnergy >= 85) { ctx.globalAlpha = .75; ctx.fillStyle = "#facc15"; for (let i = 0; i < 20; i++) ctx.fillRect((i * 37 + state.positionMs / 20) % size.width, 30 + (i % 5) * 20, 3, 8); ctx.globalAlpha = 1; }
+    ctx.restore();
+
     ctx.fillStyle = "rgba(15,23,42,.78)"; ctx.fillRect(preset.labelSafe.x, preset.labelSafe.y, preset.labelSafe.width, preset.labelSafe.height);
     ctx.fillStyle = "#f8fafc"; ctx.font = "bold 14px sans-serif"; ctx.textAlign = "left"; ctx.fillText(`${label(state.activePhase)}${state.currentSongTitle ? ` · ${state.currentSongTitle}` : ""}`, preset.labelSafe.x + 10, preset.labelSafe.y + 20);
     if (crowd) {
       ctx.font = "12px sans-serif"; ctx.fillText(`${crowd.phaseLabel} ${Math.round(crowd.fillProgress * 100)}%`, preset.labelSafe.x + 10, preset.labelSafe.y + 42);
       if (import.meta.env.DEV) { this.lastFrameMs = performance.now() - start; ctx.textAlign = "right"; ctx.fillText(`${crowd.diagnostics.entityCount} crowd · ${performers.filter((p) => p.visible).length} performers · ${this.lastFrameMs.toFixed(1)}ms`, preset.labelSafe.x + preset.labelSafe.width - 10, preset.labelSafe.y + 42); }
     }
-    if (storySnapshot.finaleActive && !this.reducedMotion && storySnapshot.crowdEnergy >= 85) { ctx.globalAlpha = .75; ctx.fillStyle = "#facc15"; for (let i = 0; i < 20; i++) ctx.fillRect((i * 37 + state.positionMs / 20) % size.width, 30 + (i % 5) * 20, 3, 8); ctx.globalAlpha = 1; }
     if (state.activeEvent?.visualPayload.type === "result_reveal") {
       ctx.fillStyle = "rgba(22, 163, 74,.86)"; ctx.fillRect(size.width * .25, size.height * .42, size.width * .5, 52); ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 18px sans-serif"; ctx.fillText("Result ready", size.width / 2, size.height * .42 + 31);
     }
