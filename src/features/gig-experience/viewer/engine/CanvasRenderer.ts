@@ -20,6 +20,7 @@ import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArch
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
 import { applyCameraTransform, deriveCameraFrame } from "./CameraDirector";
+import { buildPerformerTrail, drawPerformerCounter, performerIsMoving } from "./PerformerCounterRenderer";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -116,6 +117,14 @@ export class CanvasRenderer {
     const preset = this.preset ?? scaleVenuePreset(this.basePreset, size);
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
+    const performerTrailHistory = !this.reducedMotion && this.performerPlan && performers.some(performerIsMoving)
+      ? [600, 400, 200].map((offsetMs) => reconstructPerformerState(
+          this.performerPlan!,
+          this.replay,
+          Math.max(0, state.positionMs - offsetMs),
+          { reducedMotion: false },
+        ))
+      : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
     const activePayload = state.activeEvent?.visualPayload;
     const itemPerformer = activePayload?.type === "performance_item"
@@ -192,13 +201,20 @@ export class CanvasRenderer {
     performers.forEach((p) => {
       if (!p.visible) return;
       if (performanceItemFrame?.hideStagePerformer && performanceItemFrame.performerId === p.id) return;
-      const focus = state.performerFocusId === p.id || storySnapshot.performerFocusId === p.id || p.activeMoveEventId === state.activeEvent?.id;
-      ctx.fillStyle = p.lifecycleState === "waiting_backstage" ? "#cbd5e1" : p.lifecycleState === "exiting" ? "#fca5a5" : "#f8fafc";
-      ctx.strokeStyle = focus ? "#fde047" : "#111827";
-      ctx.lineWidth = focus ? 4 : 2;
-      ctx.beginPath(); ctx.arc(p.currentPosition.x, p.currentPosition.y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#111827"; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(p.initials, p.currentPosition.x, p.currentPosition.y - 3);
-      ctx.font = "bold 8px sans-serif"; ctx.fillText(p.label, p.currentPosition.x, p.currentPosition.y + 8);
+      const focusIds = [state.performerFocusId, storySnapshot.performerFocusId];
+      const focus = focusIds.some((id) => id === p.id || id === p.profileId)
+        || p.activeMoveEventId === state.activeEvent?.id;
+      drawPerformerCounter(ctx, {
+        performer: p,
+        focused: focus,
+        positionMs: state.positionMs,
+        reducedMotion: this.reducedMotion,
+        trail: buildPerformerTrail({
+          performer: p,
+          history: performerTrailHistory,
+          reducedMotion: this.reducedMotion,
+        }),
+      });
     });
 
     if (this.audiencePlan) drawAudienceActivity(ctx, this.audiencePlan, { positionMs: state.positionMs, energy: storySnapshot.crowdEnergy, reducedMotion: this.reducedMotion });
