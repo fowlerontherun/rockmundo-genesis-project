@@ -26,6 +26,7 @@ function performer(
     stageSlot: { x: 100, y: 100 },
     stageZone: "front_center",
     stageDescription: "front centre",
+    counterRadius: 19,
     movementZone: { x: 80, y: 80, width: 40, height: 40, radius: 20 },
     movementSpeed: 1,
     idlePhase: 0,
@@ -87,6 +88,7 @@ describe("performer counter presentation", () => {
   it("derives deterministic pulses and freezes them for reduced motion", () => {
     expect(derivePerformerFocusPulse(1000, false, false)).toBeNull();
     expect(derivePerformerFocusPulse(1000, true, true)).toEqual({ radius: 24, alpha: 0.5 });
+    expect(derivePerformerFocusPulse(1000, true, true, 12)).toEqual({ radius: 17, alpha: 0.5 });
     expect(derivePerformerFocusPulse(1000, true, false)).toEqual(
       derivePerformerFocusPulse(1000, true, false),
     );

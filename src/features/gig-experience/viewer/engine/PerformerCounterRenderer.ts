@@ -91,11 +91,13 @@ export function derivePerformerFocusPulse(
   positionMs: number,
   focused: boolean,
   reducedMotion: boolean,
+  counterRadius = 19,
 ): PerformerFocusPulse | null {
   if (!focused) return null;
-  if (reducedMotion) return { radius: 24, alpha: 0.5 };
+  const baseRadius = counterRadius + 5;
+  if (reducedMotion) return { radius: baseRadius, alpha: 0.5 };
   const wave = (Math.sin(positionMs / 180) + 1) / 2;
-  return { radius: 24 + wave * 4, alpha: 0.54 - wave * 0.22 };
+  return { radius: baseRadius + wave * Math.max(2, counterRadius * .21), alpha: 0.54 - wave * 0.22 };
 }
 
 export function drawPerformerCounter(
@@ -115,11 +117,13 @@ export function drawPerformerCounter(
   },
 ) {
   const { x, y } = performer.currentPosition;
+  const radius = performer.counterRadius;
+  const counterScale = radius / 19;
   ctx.save();
 
   if (trail.length > 1) {
     ctx.strokeStyle = focused ? "rgba(250, 204, 21, .58)" : "rgba(148, 163, 184, .52)";
-    ctx.lineWidth = focused ? 3 : 2;
+    ctx.lineWidth = Math.max(1.25, (focused ? 3 : 2) * counterScale);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -133,13 +137,13 @@ export function drawPerformerCounter(
       ctx.globalAlpha = 0.18 + ((index + 1) / Math.max(1, samples.length)) * 0.24;
       ctx.fillStyle = focused ? "#fde047" : "#cbd5e1";
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 2 + index * 0.45, 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, Math.max(1.25, (2 + index * .45) * counterScale), 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
   }
 
-  const pulse = derivePerformerFocusPulse(positionMs, focused, reducedMotion);
+  const pulse = derivePerformerFocusPulse(positionMs, focused, reducedMotion, radius);
   if (pulse) {
     ctx.globalAlpha = pulse.alpha;
     ctx.strokeStyle = "#fde047";
@@ -156,21 +160,23 @@ export function drawPerformerCounter(
       ? "#fca5a5"
       : "#f8fafc";
   ctx.strokeStyle = focused ? "#fde047" : "#111827";
-  ctx.lineWidth = focused ? 4 : 2;
+  ctx.lineWidth = Math.max(1.5, (focused ? 4 : 2) * counterScale);
   ctx.beginPath();
-  ctx.arc(x, y, 19, 0, Math.PI * 2);
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "#111827";
-  ctx.font = "bold 10px sans-serif";
+  ctx.font = `bold ${Math.max(6, Math.min(10, radius * .53))}px sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(performer.initials, x, y - 4);
-  ctx.font = "bold 8px sans-serif";
-  ctx.fillText(performer.label, x, y + 8);
+  ctx.fillText(performer.initials, x, y - radius * .21);
+  ctx.font = `bold ${Math.max(5, Math.min(8, radius * .42))}px sans-serif`;
+  ctx.fillText(performer.label, x, y + radius * .42);
 
-  drawInstrumentBadge(ctx, instrumentGlyphForRole(performer.role), x + 14, y - 14);
+  const badgeRadius = Math.max(3.5, 7 * counterScale);
+  const badgeOffset = radius * .74;
+  drawInstrumentBadge(ctx, instrumentGlyphForRole(performer.role), x + badgeOffset, y - badgeOffset, badgeRadius);
   ctx.restore();
 }
 
@@ -179,9 +185,11 @@ function drawInstrumentBadge(
   glyph: PerformerInstrumentGlyph,
   x: number,
   y: number,
+  radius: number,
 ) {
   ctx.save();
   ctx.translate(x, y);
+  ctx.scale(radius / 7, radius / 7);
   ctx.fillStyle = "#0f172a";
   ctx.strokeStyle = "#f8fafc";
   ctx.lineWidth = 1.25;
