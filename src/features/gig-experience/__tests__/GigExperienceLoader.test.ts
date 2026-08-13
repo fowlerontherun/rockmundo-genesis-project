@@ -27,6 +27,16 @@ const gig = {
   venues: { id: "venue-1", name: "Legacy Hall", location: "London", capacity: 100, venue_type: "club", city_id: "city-1" },
 };
 
+const venueCity = {
+  id: "city-1",
+  name: "London",
+  country: "United Kingdom",
+  region: "England",
+  climate_type: "oceanic",
+  is_coastal: true,
+  timezone: "Europe/London",
+};
+
 const outcome = {
   id: outcomeId,
   gig_id: gigId,
@@ -118,6 +128,7 @@ function legacyCompatibilityClient(overrides: Record<string, Route> = {}) {
     gigs: (state) => state.select.includes("result_ready_at")
       ? response(null, { status: 400, code: "42703", message: "column gigs.result_ready_at does not exist" })
       : response(gig),
+    cities: () => response(venueCity),
     gig_outcomes: () => response([outcome]),
     gig_song_performances: () => response([]),
     gig_setlists: () => response(null, { status: 404, code: "PGRST205", message: "Could not find public.gig_setlists in the schema cache" }),
@@ -140,6 +151,15 @@ describe("gig experience resilient loader", () => {
 
     expect(experience?.songs.map((song) => song.title)).toEqual(["Legacy Opener", "Legacy Finale"]);
     expect(experience?.performers.map((performer) => performer.displayName)).toEqual(["Alex"]);
+    expect(experience?.gig.venue.city).toEqual({
+      id: "city-1",
+      name: "London",
+      country: "United Kingdom",
+      region: "England",
+      climateType: "oceanic",
+      isCoastal: true,
+      timezone: "Europe/London",
+    });
     expect(experience?.viewer.ready).toBe(true);
     expect(experience?.viewer.replayAvailable).toBe(false);
     expect(experience?.analysis.warnings).toEqual(expect.arrayContaining([
@@ -147,6 +167,16 @@ describe("gig experience resilient loader", () => {
       expect.stringContaining("gig setlist (PGRST205)"),
       expect.stringContaining("replay descriptor (PGRST205)"),
     ]));
+  });
+
+  it("keeps legacy gigs viewable when linked city metadata cannot be read", async () => {
+    const experience = await getGigExperience(gigId, legacyCompatibilityClient({
+      cities: () => response(null, { status: 404, code: "PGRST205", message: "Could not find public.cities in the schema cache" }),
+    }));
+
+    expect(experience?.gig.venue.location).toBe("London");
+    expect(experience?.gig.venue.city).toMatchObject({ id: "city-1", name: null });
+    expect(experience?.analysis.warnings).toContain("Viewer compatibility fallback used for venue city (PGRST205).");
   });
 
   it("uses the newest outcome when historical duplicates exist", async () => {

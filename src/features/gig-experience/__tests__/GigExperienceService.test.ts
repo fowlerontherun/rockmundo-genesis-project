@@ -4,9 +4,14 @@ import { metricAvailable, metricLegacyMissing, renderMetricValue } from "../repo
 
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 
-const gig = { id: "gig-1", band_id: "band-1", status: "completed", scheduled_date: "2026-07-11T20:00:00Z", started_at: null, completed_at: "2026-07-11T22:00:00Z", ticket_price: 20, venues: { id: "venue-1", name: "Club Test", location: "NYC", capacity: 100 } } as any;
-const outcome = { id: "out-1", gig_id: "gig-1", band_id: "band-1", venue_id: "venue-1", venue_name: "Club Test", venue_capacity: 100, completed_at: "2026-07-11T22:00:00Z", created_at: "2026-07-11T22:00:00Z", overall_rating: 20, performance_grade: null, actual_attendance: 100, attendance_percentage: 100, ticket_revenue: 2000, merch_revenue: 100, total_revenue: 2100, crew_cost: 300, equipment_cost: 50, venue_cost: 500, total_costs: 850, net_profit: 1250, fame_gained: 10, new_followers: 5, casual_fans_gained: 1, dedicated_fans_gained: 2, superfans_gained: 3, fan_conversions: 11, chemistry_change: -1, total_xp_awarded: 75, equipment_quality_avg: 13, crew_skill_avg: 12, band_chemistry_level: 14, member_skill_avg: 15, merch_items_sold: 4, crowd_energy_peak: 90, stage_behavior_used: "balanced", band_synergy_modifier: 1, social_buzz_impact: 2, audience_memory_impact: 3, promoter_modifier: 4, venue_loyalty_bonus: 5 } as any;
-const song = (overrides = {}) => ({ id: "sp-1", song_id: "song-1", position: 1, performance_score: 23, crowd_response: "ecstatic", song_quality_contrib: 20, rehearsal_contrib: 18, chemistry_contrib: 15, equipment_contrib: 12, crew_contrib: 11, member_skill_contrib: 19, song_title: "Opener", performance_item_name: null, ...overrides } as any);
+type MapGigExperienceInput = Parameters<typeof mapGigExperience>[0];
+type GigFixture = MapGigExperienceInput["gig"];
+type OutcomeFixture = NonNullable<MapGigExperienceInput["outcome"]>;
+type SongPerformanceFixture = NonNullable<MapGigExperienceInput["songPerformances"]>[number];
+
+const gig = { id: "gig-1", band_id: "band-1", status: "completed", scheduled_date: "2026-07-11T20:00:00Z", started_at: null, completed_at: "2026-07-11T22:00:00Z", ticket_price: 20, venues: { id: "venue-1", name: "Club Test", location: "NYC", capacity: 100 } } as GigFixture;
+const outcome = { id: "out-1", gig_id: "gig-1", band_id: "band-1", venue_id: "venue-1", venue_name: "Club Test", venue_capacity: 100, completed_at: "2026-07-11T22:00:00Z", created_at: "2026-07-11T22:00:00Z", overall_rating: 20, performance_grade: null, actual_attendance: 100, attendance_percentage: 100, ticket_revenue: 2000, merch_revenue: 100, total_revenue: 2100, crew_cost: 300, equipment_cost: 50, venue_cost: 500, total_costs: 850, net_profit: 1250, fame_gained: 10, new_followers: 5, casual_fans_gained: 1, dedicated_fans_gained: 2, superfans_gained: 3, fan_conversions: 11, chemistry_change: -1, total_xp_awarded: 75, equipment_quality_avg: 13, crew_skill_avg: 12, band_chemistry_level: 14, member_skill_avg: 15, merch_items_sold: 4, crowd_energy_peak: 90, stage_behavior_used: "balanced", band_synergy_modifier: 1, social_buzz_impact: 2, audience_memory_impact: 3, promoter_modifier: 4, venue_loyalty_bonus: 5 } as OutcomeFixture;
+const song = (overrides = {}) => ({ id: "sp-1", song_id: "song-1", position: 1, performance_score: 23, crowd_response: "ecstatic", song_quality_contrib: 20, rehearsal_contrib: 18, chemistry_contrib: 15, equipment_contrib: 12, crew_contrib: 11, member_skill_contrib: 19, song_title: "Opener", performance_item_name: null, ...overrides } as SongPerformanceFixture);
 
 describe("GigExperienceService", () => {
   it("maps current gig outcomes into one canonical DTO", () => {
@@ -15,6 +20,35 @@ describe("GigExperienceService", () => {
     expect(dto.headline.bestSongTitle).toEqual(metricAvailable("Opener", "authoritative"));
     expect(dto.finances.netProfit).toEqual(metricAvailable(1250));
     expect(dto.performers).toHaveLength(1);
+  });
+
+  it("maps linked city metadata for deterministic venue environments", () => {
+    const dto = mapGigExperience({
+      gig: { ...gig, venues: { ...gig.venues, city_id: "city-1", location: null } },
+      outcome,
+      venueCity: {
+        id: "city-1",
+        name: "Manchester",
+        country: "United Kingdom",
+        region: "England",
+        climate_type: "oceanic",
+        is_coastal: false,
+        timezone: "Europe/London",
+      } as NonNullable<MapGigExperienceInput["venueCity"]>,
+      songPerformances: [song()],
+      performers: [],
+    });
+
+    expect(dto.gig.venue.location).toBe("Manchester");
+    expect(dto.gig.venue.city).toEqual({
+      id: "city-1",
+      name: "Manchester",
+      country: "United Kingdom",
+      region: "England",
+      climateType: "oceanic",
+      isCoastal: false,
+      timezone: "Europe/London",
+    });
   });
 
   it("preserves zero attendance as available rather than missing", () => {

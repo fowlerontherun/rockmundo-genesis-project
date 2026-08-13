@@ -14,7 +14,7 @@ import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
 import { buildVenueActivityPlan, deriveVenueActivity, type VenueActivityPlan } from "./VenueActivity";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
-import { resolveEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
+import { resolveGigEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
@@ -51,8 +51,12 @@ export class CanvasRenderer {
     if (!ctx) throw new Error("Canvas is unavailable");
     this.ctx = ctx;
     this.venueScene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
-    const venue = experience?.gig.venue as (GigExperienceDTO["gig"]["venue"] & { environment?: string | null; city?: string | null; country?: string | null }) | undefined;
-    this.environment = resolveEnvironment({ gigId: experience?.gig.id ?? replay.gigId, environment: venue?.environment, eventType: venue?.type, venueArchetype: this.venueScene.archetype, city: venue?.city ?? venue?.location, country: venue?.country, scheduledDate: experience?.gig.scheduledDate });
+    this.environment = resolveGigEnvironment({
+      gigId: experience?.gig.id ?? replay.gigId,
+      scheduledDate: experience?.gig.scheduledDate,
+      venueArchetype: this.venueScene.archetype,
+      venue: experience?.gig.venue,
+    });
     this.storyModel = buildStoryModel(replay, experience);
     const attendance = metricNumber(experience?.headline.attendance) || metricNumber(experience?.headline.capacity);
     const displayedCrowd = representativeCrowdCount({ attendance, capacity: experience?.gig.venue.capacity, archetype: this.venueScene.archetype });

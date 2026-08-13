@@ -16,7 +16,23 @@ export interface GigExperienceGigDTO {
   startedAt: string | null;
   completedAt: string | null;
   ticketPrice: ReportMetric<number>;
-  venue: { id: string | null; name: string; location: string | null; capacity: number; type?: string | null };
+  venue: {
+    id: string | null;
+    name: string;
+    location: string | null;
+    capacity: number;
+    type?: string | null;
+    /** Existing city metadata used only to select a stable visual environment. */
+    city?: {
+      id: string;
+      name: string | null;
+      country: string | null;
+      region: string | null;
+      climateType: string | null;
+      isCoastal: boolean | null;
+      timezone: string | null;
+    } | null;
+  };
 }
 
 export interface GigExperienceHeadlineDTO {
