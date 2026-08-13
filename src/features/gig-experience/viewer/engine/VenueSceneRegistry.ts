@@ -26,6 +26,15 @@ const DECOR: Record<VenueArchetype, DecorationKind[]> = {
   beach: ["palm", "promenade", "water", "tent"],
 };
 
+const DECORATION_SIZE: Readonly<Record<DecorationKind, { width: number; height: number }>> = Object.freeze({
+  table: { width: .07, height: .055 }, poster: { width: .05, height: .075 }, booth: { width: .08, height: .06 },
+  seat: { width: .085, height: .05 }, balcony: { width: .13, height: .06 }, screen: { width: .1, height: .075 },
+  tier: { width: .13, height: .065 }, tunnel: { width: .085, height: .085 }, tent: { width: .11, height: .085 },
+  fence: { width: .11, height: .055 }, generator: { width: .08, height: .065 }, palm: { width: .07, height: .1 },
+  promenade: { width: .11, height: .055 }, water: { width: .11, height: .055 }, speaker: { width: .055, height: .075 },
+  light: { width: .06, height: .065 },
+});
+
 const ALIASES: Array<[VenueArchetype, RegExp]> = [
   ["beach", /beach|seafront|seaside|shore|coastal|oceanfront/],
   ["festival", /festival|open\s*air|outdoor|field|park|airfield|big\s*top|marquee/],
@@ -68,9 +77,10 @@ function buildVariation(archetype: VenueArchetype, variation: number, seed: stri
   const barPoint = point(bar, .5, .55); const merchPoint = point(merchandise, .5, .55);
   const route = (destination: Point): Point[] => [crowdHub, { x: crowdHub.x, y: .88 }, { x: destination.x, y: .88 }, destination];
   const random = seededRandom(`${seed}:decorations`);
-  const decorations = DECOR[archetype].slice(0, archetype === "stadium" || archetype === "arena" ? 4 : 3).map((kind, index): DecorationSlot => {
+  const decorations = DECOR[archetype].map((kind, index): DecorationSlot => {
     const left = index % 2 === 0;
-    return { id: `${kind}-${index}`, kind, bounds: { x: left ? .025 + index * .018 : .86 - index * .012, y: .18 + index * .075, width: kind === "tier" || kind === "balcony" ? .13 : .07, height: .045 }, style: Math.floor(random() * 4) };
+    const size = DECORATION_SIZE[kind];
+    return { id: `${kind}-${index}`, kind, bounds: { x: left ? .02 : .98 - size.width, y: .18 + index * .075, ...size }, style: Math.floor(random() * 4) };
   });
   const entrancePath = [entrances[0], { x: entrances[0].x, y: .88 }, crowdHub];
   return {

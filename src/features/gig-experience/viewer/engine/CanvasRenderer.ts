@@ -12,9 +12,10 @@ import type { VenuePreset } from "./VenueLayout";
 import { generateVenueScene, type VenueSceneLayout } from "./VenueSceneRegistry";
 import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
-import { buildVenueActivityPlan, deriveVenueActivity, type VenueActivityPlan } from "./VenueActivity";
+import { buildVenueActivityPlan, deriveVenueActivity, deriveVenueStaffActivity, type VenueActivityPlan } from "./VenueActivity";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
 import { resolveGigEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
+import { buildVenueDetailPlan, type VenueDetailPlan } from "./VenueDetailPlan";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
@@ -32,7 +33,9 @@ export class CanvasRenderer {
   private pyroPlan: PyroPlan | null = null;
   private audiencePlan: AudienceActivityPlan | null = null;
   private preset: VenuePreset | null = null;
+  private readonly basePreset: VenuePreset;
   private readonly venueScene: VenueSceneLayout;
+  private readonly venueDetailPlan: VenueDetailPlan;
   private readonly venueActivityPlan: VenueActivityPlan;
   private readonly environment: ResolvedEnvironment;
 
@@ -51,6 +54,16 @@ export class CanvasRenderer {
     if (!ctx) throw new Error("Canvas is unavailable");
     this.ctx = ctx;
     this.venueScene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
+    this.basePreset = selectVenuePreset({
+      capacity: experience?.gig?.venue?.capacity,
+      venueName: experience?.gig?.venue?.name,
+      venueType: experience?.gig?.venue?.type ?? null,
+      variantSeed: this.venueScene.seed,
+    });
+    this.venueDetailPlan = buildVenueDetailPlan({
+      scene: this.venueScene,
+      floorPattern: this.basePreset.decorations.floorPattern,
+    });
     this.environment = resolveGigEnvironment({
       gigId: experience?.gig.id ?? replay.gigId,
       scheduledDate: experience?.gig.scheduledDate,
@@ -77,14 +90,8 @@ export class CanvasRenderer {
     this.canvas.style.width = `${this.size.width}px`;
     this.canvas.style.height = `${this.size.height}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const selectedPreset = selectVenuePreset({
-      capacity: this.experience?.gig?.venue?.capacity,
-      venueName: this.experience?.gig?.venue?.name,
-      venueType: this.experience?.gig?.venue?.type ?? null,
-      variantSeed: this.venueScene.seed,
-    });
     const crowdBounds = unionRects(this.venueScene.crowdZones);
-    const scaledPreset = scaleVenuePreset({ ...selectedPreset, stage: this.venueScene.stage, audience: crowdBounds, crowdZones: this.venueScene.crowdZones, entrances: this.venueScene.entrances, performerSlots: this.venueScene.bandPositions, barriers: [{ x: this.venueScene.stage.x, y: this.venueScene.stage.y + this.venueScene.stage.height + .012, width: this.venueScene.stage.width, height: .018 }] }, this.size);
+    const scaledPreset = scaleVenuePreset({ ...this.basePreset, stage: this.venueScene.stage, audience: crowdBounds, crowdZones: this.venueScene.crowdZones, entrances: this.venueScene.entrances, performerSlots: this.venueScene.bandPositions, barriers: [{ x: this.venueScene.stage.x, y: this.venueScene.stage.y + this.venueScene.stage.height + .012, width: this.venueScene.stage.width, height: .018 }] }, this.size);
     this.preset = scaledPreset;
     this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion });
     this.crowdPlan = buildTunedCrowdPlan({
@@ -106,7 +113,7 @@ export class CanvasRenderer {
     const ctx = this.ctx;
     const size = this.size;
     if (!this.layout || !this.crowdPlan || !this.performerPlan) this.resize(size);
-    const preset = this.preset ?? scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity }), size);
+    const preset = this.preset ?? scaleVenuePreset(this.basePreset, size);
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
@@ -146,8 +153,8 @@ export class CanvasRenderer {
     drawExteriorEnvironment(ctx, size, this.environment, this.reducedMotion);
     drawVenueArchitecture(ctx, size, this.venueScene);
     drawVenueShell(ctx, preset, size);
-    drawFloor(ctx, preset);
-    drawSceneDecorationsAndServices(ctx, size, this.venueScene);
+    drawFloor(ctx, preset, this.venueDetailPlan.floorMarks);
+    drawSceneDecorationsAndServices(ctx, size, this.venueScene, this.venueDetailPlan);
     if (crowd && preset.crowdZones.length > 1) {
       ctx.globalAlpha = .14 + crowd.fillProgress * .14;
       ctx.fillStyle = preset.decorations.palette.accent;
@@ -222,12 +229,20 @@ export class CanvasRenderer {
 function drawVenueActivity(ctx: CanvasRenderingContext2D, size: Size, plan: VenueActivityPlan, positionMs: number, reducedMotion: boolean) {
   const scale = (point: { x: number; y: number }) => ({ x: point.x * size.width, y: point.y * size.height });
   const actors = deriveVenueActivity(plan, positionMs, reducedMotion);
+  const staffActors = deriveVenueStaffActivity(plan, positionMs, reducedMotion);
   ctx.save();
-  plan.staff.forEach((staff) => {
-    const p = scale(staff.position); const serving = actors.some((actor) => actor.service === staff.service && actor.state.startsWith("being_served"));
+  staffActors.forEach((staff) => {
+    const p = scale(staff.position); const serving = staff.state === "serving" || staff.state === "walking_to_customer";
+    const moving = staff.state.startsWith("walking") || staff.state === "returning_to_station";
+    const bob = reducedMotion || !moving ? 0 : Math.sin(positionMs / 110 + staff.appearance) * 1.2;
     ctx.fillStyle = staff.service === "bar" ? "#22d3ee" : "#fb923c"; ctx.strokeStyle = serving ? "#fef08a" : "#0f172a"; ctx.lineWidth = serving ? 3 : 2;
-    ctx.beginPath(); ctx.arc(p.x + staff.appearance * 10, p.y, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#0f172a"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center"; ctx.fillText(staff.service === "bar" ? "B" : "M", p.x + staff.appearance * 10, p.y + 2);
+    ctx.beginPath(); ctx.arc(p.x, p.y + bob, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#0f172a"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center"; ctx.fillText(staff.service === "bar" ? "B" : "M", p.x, p.y + bob + 2);
+    if (staff.state === "restocking" || staff.state === "walking_to_stock") {
+      ctx.fillStyle = staff.service === "bar" ? "#bae6fd" : "#fed7aa"; ctx.fillRect(p.x + 6, p.y + bob - 5, 5, 6); ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 1; ctx.strokeRect(p.x + 6, p.y + bob - 5, 5, 6);
+    } else if (serving) {
+      ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x + 5, p.y + bob - 1); ctx.lineTo(p.x + 11, p.y + bob - 1); ctx.stroke();
+    }
   });
   actors.filter((actor) => actor.state !== "watching_stage").forEach((actor) => {
     const p = scale(actor.position); ctx.fillStyle = ["#60a5fa", "#a78bfa", "#f472b6", "#34d399"][actor.appearance];

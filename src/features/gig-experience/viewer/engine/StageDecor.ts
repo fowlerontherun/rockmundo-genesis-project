@@ -1,4 +1,5 @@
 import type { StageDecorations, StageType, VenuePreset } from "./VenueLayout";
+import type { FloorTextureMark } from "./VenueDetailPlan";
 import type { Size } from "./Viewport";
 
 function withAlpha(hex: string, a: number) {
@@ -18,7 +19,7 @@ export function drawBackground(ctx: CanvasRenderingContext2D, preset: VenuePrese
   ctx.fillRect(0, 0, size.width, size.height);
 }
 
-export function drawFloor(ctx: CanvasRenderingContext2D, preset: VenuePreset) {
+export function drawFloor(ctx: CanvasRenderingContext2D, preset: VenuePreset, floorMarks: readonly FloorTextureMark[] = []) {
   const a = preset.audience;
   const p = preset.decorations.palette;
   const pat = preset.decorations.floorPattern;
@@ -44,18 +45,27 @@ export function drawFloor(ctx: CanvasRenderingContext2D, preset: VenuePreset) {
     for (let x = 0; x < a.width; x += 46) { ctx.beginPath(); ctx.moveTo(a.x + x, a.y); ctx.lineTo(a.x + x, a.y + a.height); ctx.stroke(); }
     for (let y = 0; y < a.height; y += 68) { ctx.strokeStyle = withAlpha("#000000", 0.2); ctx.beginPath(); ctx.moveTo(a.x, a.y + y); ctx.lineTo(a.x + a.width, a.y + y); ctx.stroke(); }
   } else if (pat === "concrete") {
-    ctx.fillStyle = withAlpha("#ffffff", 0.02);
-    for (let i = 0; i < 90; i++) ctx.fillRect(a.x + Math.random() * a.width, a.y + Math.random() * a.height, 1.2, 1.2);
+    floorMarks.forEach((mark) => {
+      ctx.fillStyle = withAlpha(mark.variant % 2 === 0 ? "#ffffff" : "#000000", mark.opacity);
+      ctx.fillRect(a.x + mark.x * a.width, a.y + mark.y * a.height, Math.max(.7, mark.width * a.width), Math.max(.7, mark.height * a.height));
+    });
     ctx.strokeStyle = withAlpha("#000000", 0.25);
     for (let x = 0; x < a.width; x += 120) { ctx.beginPath(); ctx.moveTo(a.x + x, a.y); ctx.lineTo(a.x + x, a.y + a.height); ctx.stroke(); }
   } else if (pat === "grass") {
     ctx.fillStyle = withAlpha("#052e0d", 0.55);
     ctx.fillRect(a.x, a.y, a.width, a.height);
-    ctx.fillStyle = withAlpha("#22c55e", 0.06);
-    for (let i = 0; i < 260; i++) ctx.fillRect(a.x + Math.random() * a.width, a.y + Math.random() * a.height, 2, 1);
+    const grassTones = ["#22c55e", "#84cc16", "#166534", "#4d7c0f"] as const;
+    floorMarks.forEach((mark) => {
+      ctx.fillStyle = withAlpha(grassTones[mark.variant % grassTones.length], mark.opacity + .025);
+      ctx.fillRect(a.x + mark.x * a.width, a.y + mark.y * a.height, Math.max(.8, mark.width * a.width), Math.max(.8, mark.height * a.height));
+    });
   } else if (pat === "asphalt") {
     ctx.fillStyle = withAlpha("#000000", 0.4);
     ctx.fillRect(a.x, a.y, a.width, a.height);
+    floorMarks.forEach((mark) => {
+      ctx.fillStyle = withAlpha(mark.variant % 2 === 0 ? "#94a3b8" : "#020617", mark.opacity);
+      ctx.fillRect(a.x + mark.x * a.width, a.y + mark.y * a.height, Math.max(.7, mark.width * a.width), Math.max(.7, mark.height * a.height));
+    });
   }
   ctx.restore();
 }
