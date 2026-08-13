@@ -23020,7 +23020,7 @@ export type Database = {
           performance_score: number
           position: number
           rehearsal_contrib: number | null
-          song_id: string | null
+          song_id: string
           song_quality_contrib: number | null
           song_title: string | null
           started_at: string | null
@@ -23041,7 +23041,7 @@ export type Database = {
           performance_score: number
           position: number
           rehearsal_contrib?: number | null
-          song_id?: string | null
+          song_id: string
           song_quality_contrib?: number | null
           song_title?: string | null
           started_at?: string | null
@@ -23062,7 +23062,7 @@ export type Database = {
           performance_score?: number
           position?: number
           rehearsal_contrib?: number | null
-          song_id?: string | null
+          song_id?: string
           song_quality_contrib?: number | null
           song_title?: string | null
           started_at?: string | null
@@ -23079,7 +23079,7 @@ export type Database = {
             foreignKeyName: "gig_song_performances_performance_item_id_fkey"
             columns: ["performance_item_id"]
             isOneToOne: false
-            referencedRelation: "performance_items_catalog"
+            referencedRelation: "performance_items"
             referencedColumns: ["id"]
           },
           {
