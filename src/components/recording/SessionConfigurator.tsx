@@ -632,9 +632,14 @@ export const SessionConfigurator = ({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <div className="font-semibold mb-1">Insufficient funds!</div>
+            <div className="font-semibold mb-1">
+              Insufficient {payer === "band" ? "band" : "personal"} funds!
+            </div>
             <div className="text-sm">
               Shortfall: ${balanceShortfall.toLocaleString()}
+              {payer === "band" && personalCash >= totalCost
+                ? " — switch to personal funds to cover this session."
+                : ""}
             </div>
           </AlertDescription>
         </Alert>
