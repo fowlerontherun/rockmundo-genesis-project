@@ -29,6 +29,7 @@ describe("performer stage lifecycle", () => {
   it("keeps slots bounded and uses deterministic role placement", () => {
     const plan = buildPerformerPlan({ replay: replay(), size: { width: 900, height: 500 } });
     expect(plan.entities).toHaveLength(4);
+    expect(plan.entities.every((performer) => performer.counterRadius === 19)).toBe(true);
     expect(plan.entities.find((p) => p.role === "drums")?.stageZone).toBe("back_center");
     for (const p of plan.entities) expect(p.stageSlot.x).toBeGreaterThanOrEqual(plan.stage.x);
     expect(buildPerformerPlan({ replay: replay(), size: { width: 900, height: 500 } }).entities).toEqual(plan.entities);
@@ -40,6 +41,29 @@ describe("performer stage lifecycle", () => {
     const large = buildPerformerPlan({ replay: replay(Array.from({ length: 14 }, (_, i) => i % 2 ? "Guitar" : "Mystery")), size: { width: 900, height: 500 } });
     expect(large.entities).toHaveLength(14);
     expect(new Set(large.entities.map((p) => `${Math.round(p.stageSlot.x)}:${Math.round(p.stageSlot.y)}`)).size).toBeGreaterThan(6);
+    expectSeparated(large);
+  });
+
+  it("compacts large ensembles without overlap on the minimum viewer size", () => {
+    const roles = Array.from({ length: 14 }, (_, i) => ["Vocals", "Lead Guitar", "Bass", "Drums", "Keyboard", "Backing Vocals", "Brass"][i % 7]);
+    const compact = buildPerformerPlan({ replay: replay(roles), size: { width: 280, height: 220 } });
+    expect(compact.entities[0].counterRadius).toBeLessThan(19);
+    expect(compact.entities[0].counterRadius).toBeGreaterThan(4);
+    expect(new Set(compact.entities.map((performer) => performer.counterRadius))).toHaveLength(1);
+    expect(compact.entities.find((performer) => performer.role === "vocalist")!.stageSlot.y).toBeGreaterThan(
+      compact.entities.find((performer) => performer.role === "drums")!.stageSlot.y,
+    );
+    expectSeparated(compact);
+    for (const performer of compact.entities) {
+      expect(performer.stageSlot.x - performer.counterRadius).toBeGreaterThanOrEqual(compact.stage.x);
+      expect(performer.stageSlot.x + performer.counterRadius).toBeLessThanOrEqual(compact.stage.x + compact.stage.width);
+      expect(performer.stageSlot.y - performer.counterRadius).toBeGreaterThanOrEqual(compact.stage.y);
+      expect(performer.stageSlot.y + performer.counterRadius).toBeLessThanOrEqual(compact.stage.y + compact.stage.height);
+    }
+    expect(buildPerformerPlan({ replay: replay(roles), size: { width: 280, height: 220 } }).entities).toEqual(compact.entities);
+
+    const settled = reconstructPerformerState(compact, replay(roles), 12_000);
+    expectSeparated({ ...compact, entities: settled }, 0);
   });
 
   it("reconstructs entrance, performance, move override, exit, seeking, and reduced motion", () => {
@@ -65,3 +89,16 @@ describe("performer stage lifecycle", () => {
     expect(Math.abs(normal.currentPosition.x - vocalist.stageSlot.x)).toBeLessThanOrEqual(vocalist.movementZone.radius);
   });
 });
+
+function expectSeparated(plan: { entities: Array<{ stageSlot: { x: number; y: number }; currentPosition?: { x: number; y: number }; counterRadius: number }> }, gap = 4.9) {
+  for (let i = 0; i < plan.entities.length; i += 1) {
+    for (let j = i + 1; j < plan.entities.length; j += 1) {
+      const a = plan.entities[i];
+      const b = plan.entities[j];
+      const pointA = a.currentPosition ?? a.stageSlot;
+      const pointB = b.currentPosition ?? b.stageSlot;
+      const distance = Math.hypot(pointA.x - pointB.x, pointA.y - pointB.y);
+      expect(distance).toBeGreaterThanOrEqual(a.counterRadius + b.counterRadius + gap);
+    }
+  }
+}

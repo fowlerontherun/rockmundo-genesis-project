@@ -159,7 +159,7 @@ Inputs may include current song score, previous momentum, attendance density, ba
 
 ## Band entities and stage positions
 
-Band members are now rendered as larger Canvas counters with initials and short role labels, backed by a presentation-only performer lifecycle. The viewer uses authoritative replay performer data and `gig_performers` experience data when available, normalizes role/instrument strings centrally, stages performers backstage, animates deterministic entrance/exit paths, applies bounded idle movement, and exposes a semantic performer companion list. It does not infer absent performers from current band membership.
+Band members are now rendered as larger Canvas counters with initials, short role labels, and compact role-family instrument badges, backed by a presentation-only performer lifecycle. Selected or featured performers retain a high-contrast outline and restrained highlight pulse, while entrances, exits, and recorded move events receive short deterministic movement trails. Reduced-motion mode removes trails and holds the focus ring static. Collision-safe role-aware rows keep large ensembles separated; narrow stages scale all band counters together while keeping them larger than crowd entities and fully inside the stage. The viewer uses authoritative replay performer data and `gig_performers` experience data when available, normalizes role/instrument strings centrally, stages performers backstage, animates deterministic entrance/exit paths, applies bounded idle movement, and exposes a semantic performer companion list. It does not infer absent performers from current band membership.
 
 Predictable positions:
 
