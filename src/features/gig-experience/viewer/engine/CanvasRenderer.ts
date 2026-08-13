@@ -15,6 +15,7 @@ import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityP
 import { buildVenueActivityPlan, deriveVenueActivity, type VenueActivityPlan } from "./VenueActivity";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
 import { resolveGigEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
+import { buildVenueDetailPlan, type VenueDetailPlan } from "./VenueDetailPlan";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
@@ -32,7 +33,9 @@ export class CanvasRenderer {
   private pyroPlan: PyroPlan | null = null;
   private audiencePlan: AudienceActivityPlan | null = null;
   private preset: VenuePreset | null = null;
+  private readonly basePreset: VenuePreset;
   private readonly venueScene: VenueSceneLayout;
+  private readonly venueDetailPlan: VenueDetailPlan;
   private readonly venueActivityPlan: VenueActivityPlan;
   private readonly environment: ResolvedEnvironment;
 
@@ -51,6 +54,16 @@ export class CanvasRenderer {
     if (!ctx) throw new Error("Canvas is unavailable");
     this.ctx = ctx;
     this.venueScene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
+    this.basePreset = selectVenuePreset({
+      capacity: experience?.gig?.venue?.capacity,
+      venueName: experience?.gig?.venue?.name,
+      venueType: experience?.gig?.venue?.type ?? null,
+      variantSeed: this.venueScene.seed,
+    });
+    this.venueDetailPlan = buildVenueDetailPlan({
+      scene: this.venueScene,
+      floorPattern: this.basePreset.decorations.floorPattern,
+    });
     this.environment = resolveGigEnvironment({
       gigId: experience?.gig.id ?? replay.gigId,
       scheduledDate: experience?.gig.scheduledDate,
@@ -77,14 +90,8 @@ export class CanvasRenderer {
     this.canvas.style.width = `${this.size.width}px`;
     this.canvas.style.height = `${this.size.height}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const selectedPreset = selectVenuePreset({
-      capacity: this.experience?.gig?.venue?.capacity,
-      venueName: this.experience?.gig?.venue?.name,
-      venueType: this.experience?.gig?.venue?.type ?? null,
-      variantSeed: this.venueScene.seed,
-    });
     const crowdBounds = unionRects(this.venueScene.crowdZones);
-    const scaledPreset = scaleVenuePreset({ ...selectedPreset, stage: this.venueScene.stage, audience: crowdBounds, crowdZones: this.venueScene.crowdZones, entrances: this.venueScene.entrances, performerSlots: this.venueScene.bandPositions, barriers: [{ x: this.venueScene.stage.x, y: this.venueScene.stage.y + this.venueScene.stage.height + .012, width: this.venueScene.stage.width, height: .018 }] }, this.size);
+    const scaledPreset = scaleVenuePreset({ ...this.basePreset, stage: this.venueScene.stage, audience: crowdBounds, crowdZones: this.venueScene.crowdZones, entrances: this.venueScene.entrances, performerSlots: this.venueScene.bandPositions, barriers: [{ x: this.venueScene.stage.x, y: this.venueScene.stage.y + this.venueScene.stage.height + .012, width: this.venueScene.stage.width, height: .018 }] }, this.size);
     this.preset = scaledPreset;
     this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion });
     this.crowdPlan = buildTunedCrowdPlan({
@@ -106,7 +113,7 @@ export class CanvasRenderer {
     const ctx = this.ctx;
     const size = this.size;
     if (!this.layout || !this.crowdPlan || !this.performerPlan) this.resize(size);
-    const preset = this.preset ?? scaleVenuePreset(selectVenuePreset({ capacity: this.experience?.gig.venue.capacity }), size);
+    const preset = this.preset ?? scaleVenuePreset(this.basePreset, size);
     const crowd = this.crowdPlan ? reconstructCrowdState(this.crowdPlan, state.positionMs, this.reducedMotion) : null;
     const performers = this.performerPlan ? reconstructPerformerState(this.performerPlan, this.replay, state.positionMs, { reducedMotion: this.reducedMotion }) : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
@@ -146,8 +153,8 @@ export class CanvasRenderer {
     drawExteriorEnvironment(ctx, size, this.environment, this.reducedMotion);
     drawVenueArchitecture(ctx, size, this.venueScene);
     drawVenueShell(ctx, preset, size);
-    drawFloor(ctx, preset);
-    drawSceneDecorationsAndServices(ctx, size, this.venueScene);
+    drawFloor(ctx, preset, this.venueDetailPlan.floorMarks);
+    drawSceneDecorationsAndServices(ctx, size, this.venueScene, this.venueDetailPlan);
     if (crowd && preset.crowdZones.length > 1) {
       ctx.globalAlpha = .14 + crowd.fillProgress * .14;
       ctx.fillStyle = preset.decorations.palette.accent;

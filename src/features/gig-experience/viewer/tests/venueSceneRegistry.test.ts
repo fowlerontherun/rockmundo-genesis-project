@@ -6,6 +6,7 @@ const inside = (point: { x: number; y: number }) => point.x >= 0 && point.x <= 1
 
 function verifyLayout(layout: VenueSceneLayout) {
   expect(layout.stage.width).toBeGreaterThanOrEqual(.45);
+  expect(layout.decorations).toHaveLength(4);
   expect(intersects(layout.stage, layout.bar)).toBe(false);
   expect(intersects(layout.stage, layout.merchandise)).toBe(false);
   expect(Object.keys(layout.bandPositions)).toEqual(expect.arrayContaining(["vocalist", "guitar", "bass", "drums"]));
@@ -15,6 +16,8 @@ function verifyLayout(layout: VenueSceneLayout) {
     expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.y).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(1); expect(bounds.y + bounds.height).toBeLessThanOrEqual(1);
     expect(intersects(bounds, layout.stage)).toBe(false);
+    expect(intersects(bounds, layout.bar)).toBe(false);
+    expect(intersects(bounds, layout.merchandise)).toBe(false);
   });
 }
 
