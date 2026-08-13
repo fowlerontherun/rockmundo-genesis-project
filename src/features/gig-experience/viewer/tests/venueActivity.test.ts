@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GigViewerReplay } from "../../events/types";
 import { buildStoryModel } from "../engine/StoryEngine";
-import { buildVenueActivityPlan, deriveVenueActivity } from "../engine/VenueActivity";
+import { buildVenueActivityPlan, deriveVenueActivity, deriveVenueStaffActivity } from "../engine/VenueActivity";
 import { generateVenueScene } from "../engine/VenueSceneRegistry";
 
 const replay: GigViewerReplay = { id: "replay-1", gigId: "gig-1", gigOutcomeId: "outcome", viewerVersion: 1, eventSchemaVersion: 1, simulationSeed: "stable-seed", durationMs: 60_000, generatedAt: "2026-01-01T00:00:00Z", checksum: null, status: "ready", events: [{ id: "song", gigId: "gig-1", sequence: 1, phase: "song_performance", eventType: "song_started", scheduledOffsetMs: 5_000, durationMs: 20_000, importance: "normal", crowdEnergyBefore: 45, crowdEnergyAfter: 65, messageKey: "gig.viewer.song_started", messageParams: {}, visualPayload: { type: "song_start", songId: "s1", title: "Test", position: 0, montage: false } }] };
@@ -62,9 +62,39 @@ describe("deterministic venue activity", () => {
     expect(plan.visits.every((visit) => visit.departureMs + visit.walkMs + visit.queueMs + visit.serviceMs + visit.returnMs <= replay.durationMs)).toBe(true);
   });
 
+  it("moves staff through deterministic service and restocking duties inside their fixtures", () => {
+    const { scene, plan } = make();
+    expect(plan.staff.length).toBeGreaterThan(0);
+    const samples = Array.from({ length: 121 }, (_, index) => index * 500);
+    for (const time of samples) {
+      for (const staff of deriveVenueStaffActivity(plan, time)) {
+        const bounds = staff.service === "bar" ? scene.bar : scene.merchandise;
+        expect(staff.position.x).toBeGreaterThanOrEqual(bounds.x);
+        expect(staff.position.x).toBeLessThanOrEqual(bounds.x + bounds.width);
+        expect(staff.position.y).toBeGreaterThanOrEqual(bounds.y);
+        expect(staff.position.y).toBeLessThanOrEqual(bounds.y + bounds.height);
+      }
+    }
+    const firstStaffPositions = samples.map((time) => deriveVenueStaffActivity(plan, time).find((staff) => staff.id === plan.staff[0].id)!.position);
+    expect(new Set(firstStaffPositions.map((position) => `${position.x.toFixed(4)}:${position.y.toFixed(4)}`)).size).toBeGreaterThan(2);
+    expect(samples.some((time) => deriveVenueStaffActivity(plan, time).some((staff) => staff.state === "restocking"))).toBe(true);
+  });
+
+  it("assigns each customer handover to one reconstructable staff station", () => {
+    const { plan } = make(); const visit = plan.visits[0];
+    const serviceStart = visit.departureMs + visit.walkMs + visit.browseMs + visit.queueMs;
+    const handoverTime = serviceStart + visit.serviceMs * .5;
+    const serviceStaff = plan.staff.filter((staff) => staff.service === visit.service);
+    const expected = serviceStaff.find((staff) => staff.stationIndex === visit.queueSlot % serviceStaff.length)!;
+    const serving = deriveVenueStaffActivity(plan, handoverTime).find((staff) => staff.id === expected.id)!;
+    expect(serving).toMatchObject({ state: "serving", servingActorId: visit.actorId, service: visit.service });
+    expect(deriveVenueStaffActivity(plan, handoverTime)).toEqual(deriveVenueStaffActivity(plan, handoverTime));
+    expect(deriveVenueStaffActivity(plan, handoverTime, true).find((staff) => staff.id === expected.id)).toMatchObject({ state: "serving", position: expected.servicePosition });
+  });
+
   it("disables invalid or missing service routes safely", () => {
     const { scene } = make(); scene.paths.crowdToBar = []; scene.queuePoints.merchandise = [];
     const plan = buildVenueActivityPlan({ replay, story: buildStoryModel(replay, null), scene, displayedCrowd: 16 });
-    expect(plan.visits).toEqual([]); expect(deriveVenueActivity(plan, 10_000)).toEqual([]);
+    expect(plan.visits).toEqual([]); expect(plan.staff).toEqual([]); expect(deriveVenueActivity(plan, 10_000)).toEqual([]); expect(deriveVenueStaffActivity(plan, 10_000)).toEqual([]);
   });
 });

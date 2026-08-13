@@ -12,7 +12,7 @@ import type { VenuePreset } from "./VenueLayout";
 import { generateVenueScene, type VenueSceneLayout } from "./VenueSceneRegistry";
 import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
-import { buildVenueActivityPlan, deriveVenueActivity, type VenueActivityPlan } from "./VenueActivity";
+import { buildVenueActivityPlan, deriveVenueActivity, deriveVenueStaffActivity, type VenueActivityPlan } from "./VenueActivity";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
 import { resolveGigEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
 import { buildVenueDetailPlan, type VenueDetailPlan } from "./VenueDetailPlan";
@@ -229,12 +229,20 @@ export class CanvasRenderer {
 function drawVenueActivity(ctx: CanvasRenderingContext2D, size: Size, plan: VenueActivityPlan, positionMs: number, reducedMotion: boolean) {
   const scale = (point: { x: number; y: number }) => ({ x: point.x * size.width, y: point.y * size.height });
   const actors = deriveVenueActivity(plan, positionMs, reducedMotion);
+  const staffActors = deriveVenueStaffActivity(plan, positionMs, reducedMotion);
   ctx.save();
-  plan.staff.forEach((staff) => {
-    const p = scale(staff.position); const serving = actors.some((actor) => actor.service === staff.service && actor.state.startsWith("being_served"));
+  staffActors.forEach((staff) => {
+    const p = scale(staff.position); const serving = staff.state === "serving" || staff.state === "walking_to_customer";
+    const moving = staff.state.startsWith("walking") || staff.state === "returning_to_station";
+    const bob = reducedMotion || !moving ? 0 : Math.sin(positionMs / 110 + staff.appearance) * 1.2;
     ctx.fillStyle = staff.service === "bar" ? "#22d3ee" : "#fb923c"; ctx.strokeStyle = serving ? "#fef08a" : "#0f172a"; ctx.lineWidth = serving ? 3 : 2;
-    ctx.beginPath(); ctx.arc(p.x + staff.appearance * 10, p.y, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#0f172a"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center"; ctx.fillText(staff.service === "bar" ? "B" : "M", p.x + staff.appearance * 10, p.y + 2);
+    ctx.beginPath(); ctx.arc(p.x, p.y + bob, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#0f172a"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center"; ctx.fillText(staff.service === "bar" ? "B" : "M", p.x, p.y + bob + 2);
+    if (staff.state === "restocking" || staff.state === "walking_to_stock") {
+      ctx.fillStyle = staff.service === "bar" ? "#bae6fd" : "#fed7aa"; ctx.fillRect(p.x + 6, p.y + bob - 5, 5, 6); ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 1; ctx.strokeRect(p.x + 6, p.y + bob - 5, 5, 6);
+    } else if (serving) {
+      ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x + 5, p.y + bob - 1); ctx.lineTo(p.x + 11, p.y + bob - 1); ctx.stroke();
+    }
   });
   actors.filter((actor) => actor.state !== "watching_stage").forEach((actor) => {
     const p = scale(actor.position); ctx.fillStyle = ["#60a5fa", "#a78bfa", "#f472b6", "#34d399"][actor.appearance];

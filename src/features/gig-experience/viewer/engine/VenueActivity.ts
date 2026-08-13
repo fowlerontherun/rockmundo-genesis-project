@@ -9,19 +9,28 @@ export type FanActivityState =
   | "walking_to_merchandise" | "browsing_merchandise" | "queueing_for_merchandise"
   | "being_served_at_merchandise" | "returning_from_merchandise";
 export type ServiceKind = "bar" | "merchandise";
+export type VenueStaffState = "idle" | "walking_to_customer" | "serving" | "walking_to_stock" | "restocking" | "returning_to_station";
 
 export interface VenueActivityVisit {
   id: string; actorId: string; service: ServiceKind; departureMs: number; walkMs: number; browseMs: number;
   queueMs: number; serviceMs: number; returnMs: number; queueSlot: number; origin: Point; destination: Point;
   routeOut: Point[]; routeBack: Point[]; appearance: number; carriedItem: "cup" | "shirt" | "poster" | "bag";
 }
+export interface VenueStaffPlan {
+  id: string; service: ServiceKind; stationIndex: number; appearance: number; cycleOffsetMs: number;
+  homePosition: Point; servicePosition: Point; stockPosition: Point;
+}
 export interface VenueActivityPlan {
-  seed: string; visits: VenueActivityVisit[]; staff: Array<{ id: string; service: ServiceKind; position: Point; appearance: number }>;
+  seed: string; visits: VenueActivityVisit[]; staff: VenueStaffPlan[];
   minimumWatchingFans: number; maximumActiveFans: number;
 }
 export interface VenueActivityActor {
   id: string; state: FanActivityState; position: Point; queueSlot: number | null; service: ServiceKind | null;
   progress: number; appearance: number; carriedItem: VenueActivityVisit["carriedItem"] | null;
+}
+export interface VenueStaffActor {
+  id: string; service: ServiceKind; stationIndex: number; state: VenueStaffState; position: Point;
+  progress: number; appearance: number; servingActorId: string | null;
 }
 
 const CAPS = { pub: 2, club: 4, theatre: 5, arena: 6, stadium: 8, festival: 8, beach: 4 } as const;
@@ -30,6 +39,7 @@ const inside = (p: Point, r: Rect) => p.x >= r.x && p.x <= r.x + r.width && p.y 
 const validPoint = (p: Point) => Number.isFinite(p.x) && Number.isFinite(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
 const validRoute = (route: Point[] | undefined, stage: Rect) => !!route && route.length >= 2 && route.every((p) => validPoint(p) && !inside(p, stage));
 const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+const STAFF_IDLE_CYCLE_MS = 9_000;
 
 function routePoint(route: Point[], progress: number, reducedMotion: boolean): Point {
   if (reducedMotion) return route[Math.min(route.length - 1, Math.floor(clamp01(progress) * route.length))];
@@ -86,7 +96,25 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
     } else if (service === "merchandise" && !replay.commerce) merchCarry = (["shirt", "poster", "bag"] as const)[Math.floor(random() * 3)];
     visits.push({ id: `${actorId}:visit:0`, actorId, service, departureMs, walkMs: 3200, browseMs: service === "merchandise" ? 1200 + Math.floor(random() * 800) : 0, queueMs: 1500 + queueSlot * 750, serviceMs: 1400 + Math.floor(random() * 900), returnMs: 3200, queueSlot, origin, destination, routeOut: [...routeOut.slice(0, -1), destination], routeBack: [destination, ...routeBack.slice(1)], appearance: Math.floor(random() * 4), carriedItem: service === "bar" ? "cup" : merchCarry });
   }
-  const staff = services.flatMap((service) => Array.from({ length: scene.archetype === "stadium" || scene.archetype === "festival" ? 2 : 1 }, (_, index) => ({ id: `${seed}:staff:${service}:${index}`, service, position: scene.staffPositions[service], appearance: index })));
+  const staff = services.flatMap((service): VenueStaffPlan[] => {
+    const bounds = service === "bar" ? scene.bar : scene.merchandise;
+    const count = scene.archetype === "stadium" || scene.archetype === "festival" ? 2 : 1;
+    return Array.from({ length: count }, (_, index) => {
+      const stationX = count === 1 ? .5 : .36 + index * .28;
+      const stockX = index % 2 === 0 ? .18 : .82;
+      const staffRandom = seededRandom(`${seed}:staff:${service}:${index}`);
+      return {
+        id: `${seed}:staff:${service}:${index}`,
+        service,
+        stationIndex: index,
+        appearance: Math.floor(staffRandom() * 4),
+        cycleOffsetMs: Math.floor(staffRandom() * STAFF_IDLE_CYCLE_MS),
+        homePosition: pointIn(bounds, stationX, .62),
+        servicePosition: pointIn(bounds, stationX, .68),
+        stockPosition: pointIn(bounds, stockX, .42),
+      };
+    });
+  });
   return { seed, visits, staff, minimumWatchingFans: Math.max(4, input.displayedCrowd - visits.length), maximumActiveFans: visits.length };
 }
 
@@ -101,4 +129,65 @@ export function deriveVenueActivity(plan: VenueActivityPlan, positionMs: number,
     else if (elapsed >= serviceEnd && elapsed < end) { state = visit.service === "bar" ? "returning_from_bar" : "returning_from_merchandise"; progress = (elapsed - serviceEnd) / visit.returnMs; position = routePoint(visit.routeBack, progress, reducedMotion); carriedItem = visit.carriedItem; }
     return { id: visit.actorId, state, position, queueSlot: state.includes("queueing") || state.includes("served") ? visit.queueSlot : null, service: state === "watching_stage" ? null : visit.service, progress: clamp01(progress), appearance: visit.appearance, carriedItem };
   });
+}
+
+/** Reconstructs service-staff movement directly from playback time and visit facts. */
+export function deriveVenueStaffActivity(plan: VenueActivityPlan, positionMs: number, reducedMotion = false): VenueStaffActor[] {
+  return plan.staff.map((staff) => {
+    const serviceStaffCount = plan.staff.filter((candidate) => candidate.service === staff.service).length;
+    const visit = plan.visits.find((candidate) => {
+      if (candidate.service !== staff.service || candidate.queueSlot % Math.max(1, serviceStaffCount) !== staff.stationIndex) return false;
+      const serviceStart = candidate.departureMs + candidate.walkMs + candidate.browseMs + candidate.queueMs;
+      return positionMs >= serviceStart && positionMs < serviceStart + candidate.serviceMs;
+    });
+
+    if (visit) return deriveServingStaff(staff, visit, positionMs, reducedMotion);
+    return deriveIdleStaff(staff, positionMs, reducedMotion);
+  });
+}
+
+function deriveServingStaff(staff: VenueStaffPlan, visit: VenueActivityVisit, positionMs: number, reducedMotion: boolean): VenueStaffActor {
+  const serviceStart = visit.departureMs + visit.walkMs + visit.browseMs + visit.queueMs;
+  const serviceProgress = clamp01((positionMs - serviceStart) / Math.max(1, visit.serviceMs));
+  if (serviceProgress < .22) {
+    const progress = serviceProgress / .22;
+    return staffActor(staff, "walking_to_customer", staffPosition(staff.homePosition, staff.servicePosition, progress, reducedMotion), progress, visit.actorId);
+  }
+  if (serviceProgress < .82) {
+    const progress = (serviceProgress - .22) / .6;
+    return staffActor(staff, "serving", staff.servicePosition, progress, visit.actorId);
+  }
+  const progress = (serviceProgress - .82) / .18;
+  return staffActor(staff, "returning_to_station", staffPosition(staff.servicePosition, staff.homePosition, progress, reducedMotion), progress, visit.actorId);
+}
+
+function deriveIdleStaff(staff: VenueStaffPlan, positionMs: number, reducedMotion: boolean): VenueStaffActor {
+  const phase = ((Math.max(0, positionMs) + staff.cycleOffsetMs) % STAFF_IDLE_CYCLE_MS) / STAFF_IDLE_CYCLE_MS;
+  if (phase < .32 || phase >= .82) return staffActor(staff, "idle", staff.homePosition, phase < .32 ? phase / .32 : (phase - .82) / .18);
+  if (phase < .46) {
+    const progress = (phase - .32) / .14;
+    return staffActor(staff, "walking_to_stock", staffPosition(staff.homePosition, staff.stockPosition, progress, reducedMotion), progress);
+  }
+  if (phase < .68) return staffActor(staff, "restocking", staff.stockPosition, (phase - .46) / .22);
+  const progress = (phase - .68) / .14;
+  return staffActor(staff, "returning_to_station", staffPosition(staff.stockPosition, staff.homePosition, progress, reducedMotion), progress);
+}
+
+function staffActor(
+  staff: VenueStaffPlan,
+  state: VenueStaffState,
+  position: Point,
+  progress: number,
+  servingActorId: string | null = null,
+): VenueStaffActor {
+  return { id: staff.id, service: staff.service, stationIndex: staff.stationIndex, state, position, progress: clamp01(progress), appearance: staff.appearance, servingActorId };
+}
+
+function staffPosition(from: Point, to: Point, progress: number, reducedMotion: boolean): Point {
+  if (!reducedMotion) return lerp(from, to, clamp01(progress));
+  return progress < .5 ? from : to;
+}
+
+function pointIn(bounds: Rect, x: number, y: number): Point {
+  return { x: bounds.x + bounds.width * x, y: bounds.y + bounds.height * y };
 }
