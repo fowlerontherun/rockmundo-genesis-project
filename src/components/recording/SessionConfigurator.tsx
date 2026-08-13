@@ -80,6 +80,7 @@ export const SessionConfigurator = ({
   >(null);
   const [bandBalance, setBandBalance] = useState<number>(0);
   const [personalCash, setPersonalCash] = useState<number>(0);
+  const [paymentSource, setPaymentSource] = useState<"band" | "personal">("band");
   const [bandName, setBandName] = useState<string>("");
   const [rehearsalData, setRehearsalData] = useState<{
     minutes: number;
@@ -247,7 +248,8 @@ export const SessionConfigurator = ({
     (qualityImprovement / (songQualityScore || 1)) * 100,
   );
 
-  const availableBalance = bandId ? bandBalance : personalCash;
+  const payer: "band" | "personal" = bandId ? paymentSource : "personal";
+  const availableBalance = payer === "band" ? bandBalance : personalCash;
   const canAfford = availableBalance >= totalCost;
   const balanceShortfall = totalCost - availableBalance;
 
@@ -308,6 +310,7 @@ export const SessionConfigurator = ({
         rehearsal_bonus: rehearsalBonus,
         scheduled_start: start.toISOString(),
         scheduled_end: end.toISOString(),
+        payment_source: payer,
       });
       onComplete();
     } catch (error: unknown) {
@@ -543,19 +546,85 @@ export const SessionConfigurator = ({
             <span>Total Cost</span>
             <span className="text-primary">${totalCost.toLocaleString()}</span>
           </div>
-          <div className="space-y-1 pt-2 border-t">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                {bandId ? `Band Balance (${bandName})` : "Your Cash"}
-              </span>
-              <span
-                className={`font-semibold ${canAfford ? "text-green-600" : "text-red-600"}`}
+          {bandId ? (
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="text-sm">Who pays?</Label>
+              <RadioGroup
+                value={paymentSource}
+                onValueChange={(v) =>
+                  setPaymentSource(v as "band" | "personal")
+                }
+                className="space-y-2"
               >
-                ${availableBalance.toLocaleString()}
-              </span>
+                <label
+                  htmlFor="pay-band"
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer",
+                    paymentSource === "band" && "border-primary bg-primary/5",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="band" id="pay-band" />
+                    <div>
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <Users className="h-4 w-4" /> Band funds ({bandName})
+                        <Badge variant="secondary" className="text-[10px]">
+                          Default
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Charged to the band treasury
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-sm font-semibold ${bandBalance >= totalCost ? "text-green-600" : "text-red-600"}`}
+                  >
+                    ${bandBalance.toLocaleString()}
+                  </span>
+                </label>
+                <label
+                  htmlFor="pay-personal"
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer",
+                    paymentSource === "personal" &&
+                      "border-primary bg-primary/5",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="personal" id="pay-personal" />
+                    <div>
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <Wallet className="h-4 w-4" /> Your personal funds
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Charged to your own cash
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-sm font-semibold ${personalCash >= totalCost ? "text-green-600" : "text-red-600"}`}
+                  >
+                    ${personalCash.toLocaleString()}
+                  </span>
+                </label>
+              </RadioGroup>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-1 pt-2 border-t">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Wallet className="h-4 w-4" />
+                  Your Cash
+                </span>
+                <span
+                  className={`font-semibold ${canAfford ? "text-green-600" : "text-red-600"}`}
+                >
+                  ${availableBalance.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -563,9 +632,14 @@ export const SessionConfigurator = ({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <div className="font-semibold mb-1">Insufficient funds!</div>
+            <div className="font-semibold mb-1">
+              Insufficient {payer === "band" ? "band" : "personal"} funds!
+            </div>
             <div className="text-sm">
               Shortfall: ${balanceShortfall.toLocaleString()}
+              {payer === "band" && personalCash >= totalCost
+                ? " — switch to personal funds to cover this session."
+                : ""}
             </div>
           </AlertDescription>
         </Alert>

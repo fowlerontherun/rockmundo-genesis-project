@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.662",
+    date: "2026-08-13",
+    changes: [
+      { type: 'feature', description: "Recording session booking now shows a clear 'Who pays?' choice: band funds are selected by default (with the band name and treasury balance shown) and you can switch to paying from your own personal cash." },
+      { type: 'improvement', description: "The affordability check and insufficient-funds warning now follow the selected payer, and suggest switching to personal funds when the band cannot cover the session." },
+    ],
+  },
+  {
     version: "1.1.661",
     date: "2026-08-12",
     changes: [
