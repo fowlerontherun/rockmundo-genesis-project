@@ -606,28 +606,34 @@ export const SessionConfigurator = ({
                     />
                     <div>
                       <div className="text-sm font-medium flex items-center gap-2">
-                        <Users className="h-4 w-4" /> Band funds ({bandName})
-                        <Badge variant="secondary" className="text-[10px]">
-                          Default
-                        </Badge>
+                        <Users className="h-4 w-4" /> Band funds
+                        {effectiveBandId ? ` (${bandName})` : ""}
+                        {effectiveBandId && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Default
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Charged to the band treasury
+                        {effectiveBandId
+                          ? "Charged to the band treasury"
+                          : "No active band found for this character"}
                       </div>
                     </div>
                   </div>
                   <span
-                    className={`text-sm font-semibold ${bandBalance >= totalCost ? "text-green-600" : "text-red-600"}`}
+                    className={`text-sm font-semibold ${!effectiveBandId ? "text-muted-foreground" : bandBalance >= totalCost ? "text-green-600" : "text-red-600"}`}
                   >
-                    ${bandBalance.toLocaleString()}
+                    {effectiveBandId
+                      ? `$${bandBalance.toLocaleString()}`
+                      : "—"}
                   </span>
                 </label>
                 <label
                   htmlFor="pay-personal"
                   className={cn(
                     "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer",
-                    paymentSource === "personal" &&
-                      "border-primary bg-primary/5",
+                    payer === "personal" && "border-primary bg-primary/5",
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -647,23 +653,8 @@ export const SessionConfigurator = ({
                     ${personalCash.toLocaleString()}
                   </span>
                 </label>
-              </RadioGroup>
-            </div>
-          ) : (
-            <div className="space-y-1 pt-2 border-t">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-2">
-                  <Wallet className="h-4 w-4" />
-                  Your Cash
-                </span>
-                <span
-                  className={`font-semibold ${canAfford ? "text-green-600" : "text-red-600"}`}
-                >
-                  ${availableBalance.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          )}
+            </RadioGroup>
+          </div>
         </CardContent>
       </Card>
 
