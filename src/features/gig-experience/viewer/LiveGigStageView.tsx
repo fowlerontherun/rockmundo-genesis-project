@@ -5,6 +5,7 @@ import type { GigViewerReplay } from "../events/types";
 import { GigViewerShell } from "./GigViewerShell";
 import { GigViewerFallback } from "./GigViewerFallback";
 import { createGigExperienceLoadError, getGigExperienceErrorDisplay } from "../diagnostics";
+import { buildLocalPresentationInput } from "./buildLocalPresentationInput";
 
 /**
  * Presentation-only bridge so live and freshly completed gigs render with the
@@ -32,38 +33,7 @@ export function LiveGigStageView({
     let alive = true;
     setReplay(null);
     setFailure(null);
-    buildGigViewerReplay({
-      replayId: `local-${gigId}`,
-      outcomeId: experience.viewer.outcomeId ?? `presentation-${gigId}`,
-      generatedAt: experience.viewer.resultReadyAt ?? experience.gig.startedAt ?? experience.gig.scheduledDate,
-      includeResultReveal: resultAvailable,
-      gig: {
-        id: gigId,
-        completedAt: resultAvailable ? experience.gig.completedAt : null,
-        resultReadyAt: resultAvailable ? experience.viewer.resultReadyAt : null,
-        actualAttendance: availableNumber(experience.headline.attendance),
-        venueCapacity: experience.gig.venue.capacity,
-        overallRating: availableNumber(experience.headline.overallRating),
-        netProfit: availableNumber(experience.finances.netProfit),
-      },
-      songs: experience.songs.map((song) => ({
-        id: song.id,
-        songId: song.songId,
-        title: song.title,
-        position: song.position - 1,
-        performanceScore: availableNumber(song.performanceScore),
-        itemType: song.itemType,
-        performanceItemId: song.performanceItemId,
-        performanceItemCategory: song.performanceItemCategory,
-        performanceItemRequiredSkill: song.performanceItemRequiredSkill,
-      })),
-      performers: experience.performers.map((performer) => ({
-        profileId: performer.profileId,
-        displayName: performer.displayName,
-        roleOrInstrument: performer.roleOrInstrument,
-        lineupStatus: performer.lineupStatus,
-      })),
-    })
+    buildGigViewerReplay(buildLocalPresentationInput(gigId, experience))
       .then((built) => {
         if (alive) setReplay(built as GigViewerReplay);
       })
@@ -112,10 +82,4 @@ export function LiveGigStageView({
       onClose={onClose}
     />
   );
-}
-
-function availableNumber(metric: { status: string; value?: unknown }): number | null {
-  return metric.status === "available" && typeof metric.value === "number" && Number.isFinite(metric.value)
-    ? metric.value
-    : null;
 }
