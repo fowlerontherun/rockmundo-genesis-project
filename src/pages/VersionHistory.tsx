@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.664",
+    date: "2026-08-14",
+    changes: [
+      { type: 'fix', description: "The 'Who pays?' toggle now always appears on the recording booking screen, including brand-new sessions. If no active band is detected the band option is shown disabled with an explanation, and band lookup is more tolerant of legacy membership rows." },
+    ],
+  },
+  {
     version: "1.1.663",
     date: "2026-08-13",
     changes: [
