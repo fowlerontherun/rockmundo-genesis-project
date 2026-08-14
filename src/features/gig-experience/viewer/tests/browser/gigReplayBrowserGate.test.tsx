@@ -149,7 +149,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("switch", { name: /pyrotechnics/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /pop out full screen stage view/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /setlist timeline/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: /setlist timeline/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /performers/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /crowd mood/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/setlist audio controls/i)).not.toBeInTheDocument();
@@ -171,7 +171,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("button", { name: /skip to next highlight/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /skip to result reveal/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /setlist timeline/i })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: /setlist timeline/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /performers/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /waiting for the first song|beta anthem/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /crowd mood/i })).toBeInTheDocument();
@@ -227,7 +227,7 @@ describe("Phase 5 browser release gate surrogate", () => {
   it("exposes semantic timeline state and graph seek targets for automated accessibility checks", () => {
     replayResult = { state: "ready", replay: readyReplay };
     renderViewer();
-    const timeline = screen.getByRole("region", { name: /setlist timeline/i });
+    const timeline = screen.getByRole("list", { name: /setlist timeline/i });
     expect(within(timeline).getByRole("button", { name: /1\. beta anthem/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /playback speed/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1×" })).toHaveAttribute("aria-pressed", "true");

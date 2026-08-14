@@ -1,7 +1,7 @@
 import type { GigViewerReplay } from "../../events/types";
 import { seededRandom } from "./SeededRandom";
 import type { StoryModel } from "./StoryEngine";
-import type { VenueSceneLayout } from "./VenueSceneRegistry";
+import type { VenueSceneDescriptor } from "./VenueSceneRegistry";
 import type { Point, Rect } from "./Viewport";
 
 export type FanActivityState =
@@ -48,7 +48,7 @@ function routePoint(route: Point[], progress: number, reducedMotion: boolean): P
 }
 
 /** Creates immutable visual-only visits. It has no service, inventory or finance dependencies. */
-export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: StoryModel; scene: VenueSceneLayout; displayedCrowd: number }): VenueActivityPlan {
+export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: StoryModel; scene: VenueSceneDescriptor; displayedCrowd: number }): VenueActivityPlan {
   const { replay, story, scene } = input; const seed = `${replay.simulationSeed || replay.gigId}:venue-activity-v1`; const random = seededRandom(seed);
   const settledCounts = replay.commerce ? { bar: Math.max(0, replay.commerce.bar.drinksServed), merchandise: Math.max(0, replay.commerce.merchandise.itemsSold) } : null;
   const services = (["bar", "merchandise"] as const).filter((service) => {
