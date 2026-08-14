@@ -117,15 +117,18 @@ export const SessionConfigurator = ({
       }
       let query = supabase
         .from("band_members")
-        .select("band_id, bands!inner(id, status)")
-        .eq("member_status", "active")
+        .select("band_id, member_status, bands!inner(id, status)")
         .eq("bands.status", "active")
-        .limit(1);
+        .limit(10);
       query = profileId
         ? query.eq("profile_id", profileId)
         : query.eq("user_id", userId);
-      const { data } = await query.maybeSingle();
-      if (!cancelled) setFallbackBandId((data as any)?.band_id ?? null);
+      const { data } = await query;
+      const rows = (data as any[]) ?? [];
+      const match =
+        rows.find((r) => !r.member_status || r.member_status === "active") ??
+        rows[0];
+      if (!cancelled) setFallbackBandId(match?.band_id ?? null);
     };
     resolveBand();
     return () => {
@@ -576,49 +579,61 @@ export const SessionConfigurator = ({
             <span>Total Cost</span>
             <span className="text-primary">${totalCost.toLocaleString()}</span>
           </div>
-          {effectiveBandId ? (
-            <div className="space-y-2 pt-2 border-t">
-              <Label className="text-sm">Who pays?</Label>
-              <RadioGroup
-                value={paymentSource}
-                onValueChange={(v) =>
-                  setPaymentSource(v as "band" | "personal")
-                }
-                className="space-y-2"
-              >
+          <div className="space-y-2 pt-2 border-t">
+            <Label className="text-sm">Who pays?</Label>
+            <RadioGroup
+              value={payer}
+              onValueChange={(v) =>
+                setPaymentSource(v as "band" | "personal")
+              }
+              className="space-y-2"
+            >
                 <label
                   htmlFor="pay-band"
                   className={cn(
-                    "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer",
-                    paymentSource === "band" && "border-primary bg-primary/5",
+                    "flex items-center justify-between gap-3 rounded-md border p-3",
+                    effectiveBandId
+                      ? "cursor-pointer"
+                      : "opacity-60 cursor-not-allowed",
+                    payer === "band" && "border-primary bg-primary/5",
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="band" id="pay-band" />
+                    <RadioGroupItem
+                      value="band"
+                      id="pay-band"
+                      disabled={!effectiveBandId}
+                    />
                     <div>
                       <div className="text-sm font-medium flex items-center gap-2">
-                        <Users className="h-4 w-4" /> Band funds ({bandName})
-                        <Badge variant="secondary" className="text-[10px]">
-                          Default
-                        </Badge>
+                        <Users className="h-4 w-4" /> Band funds
+                        {effectiveBandId ? ` (${bandName})` : ""}
+                        {effectiveBandId && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Default
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Charged to the band treasury
+                        {effectiveBandId
+                          ? "Charged to the band treasury"
+                          : "No active band found for this character"}
                       </div>
                     </div>
                   </div>
                   <span
-                    className={`text-sm font-semibold ${bandBalance >= totalCost ? "text-green-600" : "text-red-600"}`}
+                    className={`text-sm font-semibold ${!effectiveBandId ? "text-muted-foreground" : bandBalance >= totalCost ? "text-green-600" : "text-red-600"}`}
                   >
-                    ${bandBalance.toLocaleString()}
+                    {effectiveBandId
+                      ? `$${bandBalance.toLocaleString()}`
+                      : "—"}
                   </span>
                 </label>
                 <label
                   htmlFor="pay-personal"
                   className={cn(
                     "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer",
-                    paymentSource === "personal" &&
-                      "border-primary bg-primary/5",
+                    payer === "personal" && "border-primary bg-primary/5",
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -638,23 +653,8 @@ export const SessionConfigurator = ({
                     ${personalCash.toLocaleString()}
                   </span>
                 </label>
-              </RadioGroup>
-            </div>
-          ) : (
-            <div className="space-y-1 pt-2 border-t">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-2">
-                  <Wallet className="h-4 w-4" />
-                  Your Cash
-                </span>
-                <span
-                  className={`font-semibold ${canAfford ? "text-green-600" : "text-red-600"}`}
-                >
-                  ${availableBalance.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          )}
+            </RadioGroup>
+          </div>
         </CardContent>
       </Card>
 
