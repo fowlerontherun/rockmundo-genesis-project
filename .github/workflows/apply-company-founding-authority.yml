@@ -20,6 +20,7 @@ jobs:
           node-version: 20
           cache: npm
 
+      - run: npm run verify:dependency-lock
       - run: npm ci
       - run: node scripts/migrate-company-founding-authority.mjs src/hooks/useCompanies.ts
       - run: npm test -- src/hooks/__tests__/useCompanies.founding-authority.test.ts src/lib/api/__tests__/companyFounding.database.test.ts
