@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { hasGigViewerDemoTestAccess } from '@/lib/gigViewerDemoTestAccess';
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -9,11 +10,10 @@ interface AdminRouteProps {
 }
 
 export const AdminRoute = ({ children, requiredRole = 'admin' }: AdminRouteProps) => {
-  if (import.meta.env.VITE_GIG_VIEWER_DEMO_TEST_ADMIN === 'true' && window.location.pathname === '/admin/gig-viewer-demo') {
-    return <>{children}</>;
-  }
-
   const { hasRole, loading } = useUserRole();
+  const hasTestAccess = hasGigViewerDemoTestAccess(window.location);
+
+  if (hasTestAccess) return <>{children}</>;
 
   if (loading) {
     return (

@@ -27,12 +27,14 @@ jobs:
         run: |
           node --version
           npm --version
+      - name: Verify dependency lock
+        run: npm run verify:dependency-lock
       - name: Install dependencies
         run: npm ci
       - name: Verify dependency tree
         run: npm run verify:dependencies
       - run: npm run typecheck
-      - run: npm run lint
+      - run: npm run lint:ci
       - run: npm run build
       - run: npm run test:gig-experience:unit
       - run: npm run test:gig-experience:replay
@@ -57,6 +59,8 @@ jobs:
         run: |
           node --version
           npm --version
+      - name: Verify dependency lock
+        run: npm run verify:dependency-lock
       - name: Install dependencies
         run: npm ci
       - name: Verify dependency tree
@@ -94,6 +98,8 @@ jobs:
         run: |
           node --version
           npm --version
+      - name: Verify dependency lock
+        run: npm run verify:dependency-lock
       - name: Install dependencies
         run: npm ci
       - name: Verify dependency tree

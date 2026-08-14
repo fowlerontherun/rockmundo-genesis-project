@@ -243,14 +243,22 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   const popoutRef = useRef<HTMLDivElement>(null);
   const ownedNativeFullscreenElementRef = useRef<HTMLElement | null>(null);
   const nativeRequestPendingRef = useRef(false);
+  const nativeRequestGenerationRef = useRef(0);
+  const fullscreenMountedRef = useRef(true);
   const initializedPlayerReplayRef = useRef<string | null>(null);
   const seekMs = playback.seekMs;
 
   const exitViewerFullscreen = useCallback(() => {
+    nativeRequestGenerationRef.current += 1;
+    nativeRequestPendingRef.current = false;
     setFullscreen(false);
+    setNativeFullscreen(false);
     const owned = ownedNativeFullscreenElementRef.current;
+    ownedNativeFullscreenElementRef.current = null;
     if (owned && document.fullscreenElement === owned) {
-      void document.exitFullscreen?.().catch(() => undefined);
+      try {
+        void Promise.resolve(document.exitFullscreen?.()).catch(() => undefined);
+      } catch { /* The overlay has still been closed deterministically. */ }
     }
   }, []);
 
@@ -263,19 +271,31 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     if (!fullscreen || document.fullscreenElement || nativeRequestPendingRef.current) return;
     const host = popoutRef.current;
     if (!host?.requestFullscreen) return;
+    const generation = ++nativeRequestGenerationRef.current;
     nativeRequestPendingRef.current = true;
+    let request: Promise<void>;
     try {
-      void host.requestFullscreen()
-        .then(() => {
-          if (document.fullscreenElement === host) {
-            ownedNativeFullscreenElementRef.current = host;
-            setNativeFullscreen(true);
-          }
-        })
-        .catch(() => undefined)
-        .finally(() => { nativeRequestPendingRef.current = false; });
+      request = host.requestFullscreen();
     }
-    catch { /* Fixed overlay remains active. */ }
+    catch {
+      nativeRequestPendingRef.current = false;
+      return;
+    }
+    void Promise.resolve(request).then(() => {
+      const currentRequest = fullscreenMountedRef.current && nativeRequestGenerationRef.current === generation;
+      if (!currentRequest) {
+        if (document.fullscreenElement === host) {
+          try { void Promise.resolve(document.exitFullscreen?.()).catch(() => undefined); } catch { /* no-op */ }
+        }
+        return;
+      }
+      if (document.fullscreenElement === host) {
+        ownedNativeFullscreenElementRef.current = host;
+        setNativeFullscreen(true);
+      }
+    }).catch(() => undefined).finally(() => {
+      if (nativeRequestGenerationRef.current === generation) nativeRequestPendingRef.current = false;
+    });
   }, [fullscreen]);
 
   useEffect(() => {
@@ -290,6 +310,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   }, [mode, playbackReplay.id, seekMs, story.songs]);
 
   useEffect(() => {
+    fullscreenMountedRef.current = true;
     const onChange = () => {
       const current = document.fullscreenElement;
       const requested = popoutRef.current;
@@ -311,10 +332,15 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     document.addEventListener("fullscreenchange", onChange);
     window.addEventListener("keydown", onKey);
     return () => {
+      fullscreenMountedRef.current = false;
+      nativeRequestGenerationRef.current += 1;
+      nativeRequestPendingRef.current = false;
       document.removeEventListener("fullscreenchange", onChange);
       window.removeEventListener("keydown", onKey);
       const owned = ownedNativeFullscreenElementRef.current;
-      if (owned && document.fullscreenElement === owned) void document.exitFullscreen?.().catch(() => undefined);
+      if (owned && document.fullscreenElement === owned) {
+        try { void Promise.resolve(document.exitFullscreen?.()).catch(() => undefined); } catch { /* no-op */ }
+      }
       ownedNativeFullscreenElementRef.current = null;
     };
   }, [exitViewerFullscreen]);

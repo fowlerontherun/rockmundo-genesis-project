@@ -36,6 +36,7 @@ import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
+import { hasGigViewerDemoTestAccess } from "@/lib/gigViewerDemoTestAccess";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -87,12 +88,13 @@ const Layout = () => {
   // unauthenticated null-render so pages can be inspected without logging in.
   // Production builds keep the original behavior.
   const devGuestBypass = import.meta.env.DEV;
+  const gigViewerDemoTestAccess = hasGigViewerDemoTestAccess(location);
 
   useEffect(() => {
-    if (!authLoading && !user && !devGuestBypass) {
+    if (!authLoading && !user && !devGuestBypass && !gigViewerDemoTestAccess) {
       navigate("/auth");
     }
-  }, [user, authLoading, navigate, devGuestBypass]);
+  }, [user, authLoading, navigate, devGuestBypass, gigViewerDemoTestAccess]);
 
   // Removed automatic redirect to /my-character
   // Users can access character creation page directly if needed
@@ -108,7 +110,7 @@ const Layout = () => {
     );
   }
 
-  if (!user && !devGuestBypass) {
+  if (!user && !devGuestBypass && !gigViewerDemoTestAccess) {
     return null;
   }
 
@@ -192,4 +194,3 @@ const ConditionalDesktopGate = ({ bypass, children }: { bypass: boolean; childre
   bypass ? <>{children}</> : <DesktopOnlyGate>{children}</DesktopOnlyGate>;
 
 export default Layout;
-
