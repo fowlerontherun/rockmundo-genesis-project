@@ -10,6 +10,7 @@ import { crowdTuningSignature } from "./engine/CrowdTuning";
 import { resolveCrowdTuning } from "./engine/CrowdTuningResolution";
 import { useCanvasSize } from "./hooks/useCanvasSize";
 import { useGlobalCrowdTuning } from "./hooks/useGlobalCrowdTuning";
+import type { GigViewerCameraMode } from "./engine/CameraDirector";
 
 export function GigCanvas({
   replay,
@@ -21,6 +22,7 @@ export function GigCanvas({
   crowdTuning,
   fill = false,
   immersive = false,
+  cameraMode = "venue_wide",
   className,
 }: {
   replay: GigViewerReplay;
@@ -32,6 +34,7 @@ export function GigCanvas({
   crowdTuning?: Partial<CrowdTuningOptions> | null;
   fill?: boolean;
   immersive?: boolean;
+  cameraMode?: GigViewerCameraMode;
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -58,13 +61,16 @@ export function GigCanvas({
       pyrotechnics,
       pyroIntensity,
       crowdTuning: resolved.tuning,
+      cameraMode,
     });
     rendererRef.current = renderer;
     renderer.resize(logical);
     return () => { renderer.destroy(); rendererRef.current = null; };
-  }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey]);
+  }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey, cameraMode]);
 
-  useEffect(() => { rendererRef.current?.render(playbackState); }, [playbackState]);
+  // Preference changes recreate the renderer; include them here so a paused
+  // replay paints its new camera/effects immediately rather than waiting for a tick.
+  useEffect(() => { rendererRef.current?.render(playbackState); }, [playbackState, cameraMode, reducedMotion, pyrotechnics, pyroIntensity, tuningKey]);
 
   const attendance = metricNumber(experience?.headline?.attendance);
   const capacity = experience?.gig?.venue?.capacity ?? 0;

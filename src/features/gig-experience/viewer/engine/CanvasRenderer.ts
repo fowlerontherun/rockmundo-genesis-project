@@ -19,7 +19,7 @@ import { buildVenueDetailPlan, type VenueDetailPlan } from "./VenueDetailPlan";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
-import { applyCameraTransform, deriveCameraFrame } from "./CameraDirector";
+import { applyCameraTransform, deriveCameraForMode, type GigViewerCameraMode } from "./CameraDirector";
 import { buildPerformerTrail, drawPerformerCounter, performerIsMoving } from "./PerformerCounterRenderer";
 
 export class CanvasRenderer {
@@ -49,6 +49,7 @@ export class CanvasRenderer {
       pyrotechnics?: boolean;
       pyroIntensity?: number;
       crowdTuning?: Partial<CrowdTuningOptions> | null;
+      cameraMode?: GigViewerCameraMode;
     } = {},
   ) {
     const ctx = canvas.getContext("2d");
@@ -138,7 +139,8 @@ export class CanvasRenderer {
       this.reducedMotion,
       itemPerformer?.stageSlot,
     );
-    const cameraFrame = deriveCameraFrame({
+    const cameraFrame = deriveCameraForMode({
+      mode: this.options.cameraMode ?? "venue_wide",
       event: state.activeEvent,
       positionMs: state.positionMs,
       viewport: size,

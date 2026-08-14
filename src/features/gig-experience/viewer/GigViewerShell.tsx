@@ -198,7 +198,7 @@ interface ReadyReplayProps {
 }
 
 function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onClose }: ReadyReplayProps) {
-  const { reducedMotion, setReducedMotion, pyrotechnics, setPyrotechnics } = prefs;
+  const { reducedMotion, setReducedMotion, pyrotechnics, setPyrotechnics, cameraMode, setCameraMode } = prefs;
   const playbackReplay = useMemo(
     () => mode === "player" ? fitReplayToPlayerSongExcerpts(replay, experience) : replay,
     [mode, replay, experience],
@@ -327,6 +327,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       speed={playback.speed}
       reducedMotion={reducedMotion}
       pyrotechnics={pyrotechnics}
+      cameraMode={cameraMode}
       fullscreen={fullscreen}
       canPreviousSong={!!previousSong}
       canNextSong={!!nextSong}
@@ -346,6 +347,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onClose={onClose}
       onReducedMotion={setReducedMotion}
       onPyrotechnics={setPyrotechnics}
+      onCameraMode={setCameraMode}
       onFullscreen={toggleFullscreen}
     />
   );
@@ -357,6 +359,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       speed={playback.speed}
       reducedMotion={reducedMotion}
       pyrotechnics={pyrotechnics}
+      cameraMode={cameraMode}
       fullscreen={fullscreen}
       canPreviousSong={!!previousSong}
       canNextSong={!!nextSong}
@@ -376,6 +379,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onClose={onClose}
       onReducedMotion={setReducedMotion}
       onPyrotechnics={setPyrotechnics}
+      onCameraMode={setCameraMode}
       onFullscreen={toggleFullscreen}
     />
   );
@@ -387,6 +391,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       speed={playback.speed}
       reducedMotion={reducedMotion}
       pyrotechnics={pyrotechnics}
+      cameraMode={cameraMode}
       fullscreen={fullscreen}
       canPreviousSong={!!previousSong}
       canNextSong={!!nextSong}
@@ -406,6 +411,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onClose={onClose}
       onReducedMotion={setReducedMotion}
       onPyrotechnics={setPyrotechnics}
+      onCameraMode={setCameraMode}
       onFullscreen={toggleFullscreen}
     />
   );
@@ -418,6 +424,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
         playbackState={state}
         reducedMotion={reducedMotion}
         pyrotechnics={pyrotechnics}
+        cameraMode={cameraMode}
         fill
         immersive
         className="h-full w-full"
@@ -449,6 +456,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       playbackState={state}
       reducedMotion={reducedMotion}
       pyrotechnics={pyrotechnics}
+      cameraMode={cameraMode}
       fill={fullscreen}
       className={fullscreen ? "h-full min-h-0 w-full" : "w-full"}
     />
