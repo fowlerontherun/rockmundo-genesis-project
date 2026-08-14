@@ -1,6 +1,6 @@
 import React from "react";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, within, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, within, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { GigViewerShell } from "../../GigViewerShell";
 import type { GigViewerReplayResult } from "../../../services/GigViewerReplayService";
 import type { GigViewerReplay } from "../../../events/types";
 import type { GigExperienceDTO } from "../../../types";
+import { LiveGigStageView } from "../../LiveGigStageView";
 
 let replayResult: GigViewerReplayResult = { state: "ready", replay: null };
 const refetch = vi.fn();
@@ -79,6 +80,39 @@ function renderViewer(props: Partial<React.ComponentProps<typeof GigViewerShell>
 }
 
 describe("Phase 5 browser release gate surrogate", () => {
+  it("builds a mixed legacy live presentation through the real builder without authoritative mutation", async () => {
+    const onResult = vi.fn(); const onClose = vi.fn();
+    const liveExperience = {
+      ...experience,
+      gig: { ...experience.gig, status: "in_progress", completedAt: null },
+      viewer: { ready: false, resultReadyAt: null, outcomeId: null, replayAvailable: false },
+      headline: { ...experience.headline, overallRating: { status: "legacy_missing" }, attendance: { status: "available", value: 120 } },
+      finances: { netProfit: { status: "legacy_missing" } },
+      performers: [{ id: "gp", profileId: "p1", displayName: "Ari", roleOrInstrument: "vocals", lineupStatus: "performed" }],
+      songs: [
+        { id: "song-entry", songId: "song-1", itemType: "song", performanceItemId: null, title: "Beta Anthem", position: 1, performanceScore: { status: "available", value: 20 }, performanceItemCategory: null, performanceItemRequiredSkill: null },
+        { id: "item-entry", songId: null, itemType: "performance_item", performanceItemId: "item-1", title: "Stage Dive", position: 2, performanceScore: { status: "legacy_missing" }, performanceItemCategory: "stage_action", performanceItemRequiredSkill: "stage_presence" },
+      ],
+    } as unknown as GigExperienceDTO;
+    const before = JSON.stringify(liveExperience);
+    render(<LiveGigStageView gigId="gig-live" experience={liveExperience} onViewResult={onResult} onClose={onClose} />);
+    await waitFor(() => expect(screen.getByRole("region", { name: /player gig stage view/i })).toBeInTheDocument());
+    expect(screen.queryByText("Stage view unavailable")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /result/i })).not.toBeInTheDocument();
+    expect(onResult).not.toHaveBeenCalled(); expect(onClose).not.toHaveBeenCalled();
+    expect(JSON.stringify(liveExperience)).toBe(before);
+    expect(localStorage.getItem("gig-viewer-replay")).toBeNull();
+  });
+
+  it("shows the typed diagnostic reference when local presentation exceeds its event budget", async () => {
+    const songs = Array.from({ length: 100 }, (_, index) => ({ id: `entry-${index}`, songId: `song-${index}`, itemType: "song" as const, performanceItemId: null, title: `Song ${index}`, position: index + 1, performanceScore: { status: "available" as const, value: 12 }, performanceItemCategory: null, performanceItemRequiredSkill: null }));
+    const broken = { ...experience, gig: { ...experience.gig, id: "gig-overflow", status: "in_progress", completedAt: null }, viewer: { ready: false, resultReadyAt: null, outcomeId: null, replayAvailable: false }, headline: { ...experience.headline, overallRating: { status: "legacy_missing" } }, finances: { netProfit: { status: "legacy_missing" } }, performers: [], songs } as unknown as GigExperienceDTO;
+    render(<LiveGigStageView gigId="gig-overflow" experience={broken} onViewResult={vi.fn()} onClose={vi.fn()} />);
+    expect(await screen.findByText("Stage view unavailable")).toBeInTheDocument();
+    expect(screen.getByText(/GIGVIEW-PRESENTATION-INVALID_REPLAY-OVERFLOW/)).toBeInTheDocument();
+    expect(screen.queryByText(/PRESENTATION-UNKNOWN/)).not.toBeInTheDocument();
+  });
+
   it("keeps the player stage focused on the animated song performance", () => {
     replayResult = { state: "ready", replay: readyReplay };
     const onClose = vi.fn();
@@ -115,7 +149,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("switch", { name: /pyrotechnics/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /pop out full screen stage view/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/song timeline/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /setlist timeline/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /performers/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /crowd mood/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/setlist audio controls/i)).not.toBeInTheDocument();
@@ -137,7 +171,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("button", { name: /skip to next highlight/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /skip to result reveal/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/song timeline/i)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /setlist timeline/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /performers/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /waiting for the first song|beta anthem/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /crowd mood/i })).toBeInTheDocument();
@@ -193,7 +227,7 @@ describe("Phase 5 browser release gate surrogate", () => {
   it("exposes semantic timeline state and graph seek targets for automated accessibility checks", () => {
     replayResult = { state: "ready", replay: readyReplay };
     renderViewer();
-    const timeline = screen.getByLabelText(/song timeline/i);
+    const timeline = screen.getByRole("region", { name: /setlist timeline/i });
     expect(within(timeline).getByRole("button", { name: /1\. beta anthem/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /playback speed/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1×" })).toHaveAttribute("aria-pressed", "true");

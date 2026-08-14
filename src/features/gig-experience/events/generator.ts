@@ -1,4 +1,4 @@
-import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_PAYLOAD_BYTES, GIG_REPLAY_TARGET_DURATION_MS, GIG_VIEWER_VERSION } from "./constants";
+import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH, GIG_REPLAY_MAX_PAYLOAD_BYTES, GIG_REPLAY_TARGET_DURATION_MS, GIG_VIEWER_VERSION } from "./constants";
 import { validateGigViewerReplay } from "./schema";
 import type { GigViewerEvent, GigViewerReplay, PerformanceItemVisualAction, StagePosition } from "./types";
 
@@ -54,7 +54,8 @@ export async function buildGigViewerReplay(input: BuildGigViewerReplayInput): Pr
   let offset = 0;
   let energy = initialEnergy(input.gig);
   const push = (event: Omit<GigViewerEvent, "id" | "gigId" | "sequence" | "scheduledOffsetMs">) => {
-    events.push({ ...event, id: `${input.gig.id}:viewer:${events.length}`, gigId: input.gig.id, sequence: events.length, scheduledOffsetMs: offset });
+    const messageParams = Object.fromEntries(Object.entries(event.messageParams).map(([key, value]) => [key, typeof value === "string" ? truncateMessageParam(value) : value]));
+    events.push({ ...event, messageParams, id: `${input.gig.id}:viewer:${events.length}`, gigId: input.gig.id, sequence: events.length, scheduledOffsetMs: offset });
     offset += event.durationMs;
   };
   push({ phase: "venue_opening", eventType: "venue_opened", durationMs: 8_000, importance: "normal", messageKey: "gig.viewer.venue_opened", messageParams: {}, visualPayload: { type: "venue_open", entranceIds: ["main"], lightLevel: 0.35 } });
@@ -107,6 +108,16 @@ export async function buildGigViewerReplay(input: BuildGigViewerReplayInput): Pr
   if (!validation.valid) throw new GigReplayBuildError("INVALID_REPLAY", validation.errors);
   assertReplayPayloadWithinBudget(replay);
   return replay;
+}
+
+/** Bounds presentation-only copy without splitting a Unicode code point. */
+function truncateMessageParam(value: string): string {
+  let bounded = "";
+  for (const character of value) {
+    if (bounded.length + character.length > GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH) break;
+    bounded += character;
+  }
+  return bounded;
 }
 
 function assertReplayPayloadWithinBudget(replay: GigViewerReplay) {

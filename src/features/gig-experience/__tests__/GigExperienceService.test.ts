@@ -143,6 +143,35 @@ describe("GigExperienceService", () => {
     expect(dto.songs[2].performanceScore.status).toBe("available");
   });
 
+  it("reserves every saved slot before omitting an unmatched colliding song result", () => {
+    const dto = mapGigExperience({ gig, outcome, setlistSongs: [
+      { song_id: "song-1", item_type: "song", position: 1, songs: { id: "song-1", title: "Opener" } },
+      { song_id: null, performance_item_id: "item-1", item_type: "performance_item", position: 2, performance_items_catalog: { id: "item-1", name: "Stage Dive", item_category: "stage_action", required_skill: "stage_presence", duration_seconds: 30 } },
+    ], songPerformances: [
+      song({ id: "sp-1", song_id: "song-1", position: 0 }),
+      song({ id: "sp-unmatched", song_id: "song-unmatched", song_title: "Unmatched", position: 1 }),
+    ], performers: [] });
+
+    expect(dto.songs.map(({ itemType, songId, performanceItemId }) => ({ itemType, songId, performanceItemId }))).toEqual([
+      { itemType: "song", songId: "song-1", performanceItemId: null },
+      { itemType: "performance_item", songId: null, performanceItemId: "item-1" },
+    ]);
+    expect(dto.songs[1].performanceScore.status).toBe("legacy_missing");
+    expect(dto.analysis.warnings).toContain("Unmatched historical song result at saved position 2 was omitted from presentation.");
+  });
+
+  it("assigns deterministic unique identities to unknown legacy performance items", () => {
+    const input = { gig, outcome, songPerformances: [
+      song({ id: "legacy-a", song_id: null, performance_item_id: null, performance_item_name: null, item_type: "performance_item", position: 0 }),
+      song({ id: "legacy-b", song_id: null, performance_item_id: null, performance_item_name: null, item_type: "performance_item", position: 1 }),
+    ], performers: [] };
+    const first = mapGigExperience(input); const second = mapGigExperience(input);
+    expect(new Set(first.songs.map((entry) => entry.performanceItemId)).size).toBe(2);
+    expect(new Set(first.songs.map((entry) => entry.id)).size).toBe(2);
+    expect(first.songs).toEqual(second.songs);
+    expect(first.songs.every((entry) => entry.songId === null && entry.performanceItemId != null)).toBe(true);
+  });
+
   it("normalizes historic venue capacity when recorded attendance is higher", () => {
     const dto = mapGigExperience({ gig, outcome: { ...outcome, actual_attendance: 101 }, songPerformances: [song()], performers: [] });
     expect(dto.gig.venue.capacity).toBe(101);

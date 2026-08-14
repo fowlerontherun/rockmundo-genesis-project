@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PERFORMANCE_BUDGETS, buildViewerDiagnostics, resolvePerformanceTier } from "../engine/ViewerDiagnostics";
+import { normalizeGigExperienceFailure } from "../../diagnostics";
+import { GigReplayBuildError } from "../../events/generator";
 
 const replay = (id: string) => ({ id: `replay-${id}`, gigId: id, simulationSeed: `seed-${id}`, events: [] }) as any;
 const experience = (id: string) => ({
@@ -32,5 +34,14 @@ describe("viewer baseline diagnostics", () => {
     const empty = experience("gig-empty");
     empty.headline.attendance.value = 0;
     expect(buildViewerDiagnostics({ replay: replay("gig-empty"), experience: empty, cameraMode: "venue_wide", reducedMotion: false }).representativeCrowdCount).toBe(0);
+  });
+
+  it("preserves typed replay build diagnostics with bounded issue details", () => {
+    const failure = normalizeGigExperienceFailure("gig-sensitive", "presentation", "buildGigViewerReplay", new GigReplayBuildError("INVALID_REPLAY", ["event 2 invalid payload", "x".repeat(500)]));
+    expect(failure.reference).toBe("GIGVIEW-PRESENTATION-INVALID_REPLAY-ENSITIVE");
+    expect(failure.code).toBe("INVALID_REPLAY");
+    expect(failure.details).toContain("event 2 invalid payload");
+    expect(failure.details!.length).toBeLessThanOrEqual(322);
+    expect(failure.reference).not.toContain("UNKNOWN");
   });
 });

@@ -468,7 +468,14 @@ function fallbackEntrance(audience: Rect): Point {
 }
 
 function weightedIndex(i: number, count: number, seed: string) {
-  return Math.abs((i * 1103515245 + seed.length * 97) % Math.max(1, count));
+  const safeCount = Math.max(1, count);
+  return (i + stableSeedOffset(seed, safeCount)) % safeCount;
+}
+
+function stableSeedOffset(seed: string, count: number) {
+  let hash = 2166136261;
+  for (const character of seed) hash = Math.imul(hash ^ character.codePointAt(0)!, 16777619);
+  return (hash >>> 0) % count;
 }
 
 function findEventOffset(replay: GigViewerReplay, type: string, fallback: number) {

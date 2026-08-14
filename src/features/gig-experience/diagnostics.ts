@@ -37,6 +37,7 @@ type ErrorLike = {
   message?: unknown;
   details?: unknown;
   hint?: unknown;
+  issues?: unknown;
   gigExperienceFailure?: GigExperienceFailure;
 };
 
@@ -64,6 +65,11 @@ const cleanCode = (value: string | null) =>
 const cleanIdentifier = (value: string) =>
   value.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase() || "UNKNOWN";
 
+const boundedIssues = (issues: unknown) => Array.isArray(issues)
+  ? issues.filter((issue): issue is string => typeof issue === "string").slice(0, 5)
+    .map((issue) => issue.replace(/[\r\n]+/g, " ").slice(0, 160)).join("; ") || null
+  : null;
+
 export function createGigExperienceReference(
   gigId: string,
   stage: GigExperienceDiagnosticStage,
@@ -81,7 +87,10 @@ export function normalizeGigExperienceFailure(
 ): GigExperienceFailure {
   const candidate = error && typeof error === "object" ? (error as ErrorLike) : null;
   const code = typeof candidate?.code === "string" ? candidate.code : null;
-  const message = typeof candidate?.message === "string"
+  const issueSummary = boundedIssues(candidate?.issues);
+  const message = issueSummary && code
+    ? code
+    : typeof candidate?.message === "string"
     ? candidate.message
     : error instanceof Error
       ? error.message
@@ -98,7 +107,7 @@ export function normalizeGigExperienceFailure(
     httpStatus: typeof candidate?.status === "number" ? candidate.status : null,
     code,
     message,
-    details: typeof candidate?.details === "string" ? candidate.details : null,
+    details: typeof candidate?.details === "string" ? candidate.details.slice(0, 800) : issueSummary,
     hint: typeof candidate?.hint === "string" ? candidate.hint : null,
     fallback,
   };
