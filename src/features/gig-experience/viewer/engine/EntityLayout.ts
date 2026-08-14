@@ -1,5 +1,6 @@
 import type { GigViewerReplay } from "../../events/types";
 import type { GigExperienceDTO } from "../../types";
+import type { ReportMetric } from "../../types";
 import type { Point, Rect, Size } from "./Viewport";
 import { pointInRect } from "./Viewport";
 import { selectVenuePreset, scaleVenuePreset } from "./VenueLayout";
@@ -46,7 +47,7 @@ export function buildEntityLayout({ replay, experience, size, reducedMotion = fa
 function randomPointIn(rect: Rect, rand: () => number): Point { return { x: rect.x + rand() * rect.width, y: rect.y + rand() * rect.height }; }
 function frontBiasedPointIn(rect: Rect, rand: () => number): Point { return { x: rect.x + rand() * rect.width, y: rect.y + Math.pow(rand(), 1.6) * rect.height }; }
 function pointInAny(point: Point, rects: Rect[]) { return rects.some((r) => pointInRect(point, r)); }
-function metricNumber(metric: any): number | null { return metric?.status === "available" && typeof metric.value === "number" ? metric.value : null; }
+function metricNumber(metric: ReportMetric<number> | undefined): number | null { return metric?.status === "available" && typeof metric.value === "number" ? metric.value : null; }
 function crowdAttendanceFromReplay(replay: GigViewerReplay) { const reveal = replay.events.find((e) => e.visualPayload.type === "result_reveal"); return reveal?.visualPayload.type === "result_reveal" ? reveal.visualPayload.attendance ?? 0 : 0; }
 function performerInputs(replay: GigViewerReplay, experience?: GigExperienceDTO | null) { const fromExperience = experience?.performers?.map((p, i) => ({ id: p.profileId || p.id || `member-${i}`, name: p.displayName || `Member ${i + 1}`, role: p.roleOrInstrument || "Performer" })) ?? []; if (fromExperience.length) return fromExperience; const seen = new Map<string, { id: string; name: string; role: string }>(); replay.events.forEach((e, i) => { if (e.visualPayload.type === "performer_enter") seen.set(e.visualPayload.performerId, { id: e.visualPayload.performerId, name: e.visualPayload.displayName || `Member ${i + 1}`, role: e.visualPayload.roleOrInstrument || "Performer" }); }); return seen.size ? [...seen.values()] : [{ id: "performer-1", name: "Performer", role: "Performer" }]; }
 function roleKey(role?: string | null) { const r = role?.toLowerCase() ?? ""; if (r.includes("vocal") || r.includes("front")) return "vocalist"; if (r.includes("lead") || r.includes("guitar")) return "guitar"; if (r.includes("bass")) return "bass"; if (r.includes("drum")) return "drums"; if (r.includes("key")) return "keyboard"; if (r.includes("dj") || r.includes("electronic")) return "dj"; if (r.includes("back")) return "backing"; return "unknown"; }

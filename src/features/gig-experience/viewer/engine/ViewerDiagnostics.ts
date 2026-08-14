@@ -61,7 +61,8 @@ export function buildViewerDiagnostics(input: {
   const scene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
   const environment = resolveGigEnvironment({ gigId: experience?.gig.id ?? replay.gigId, scheduledDate: experience?.gig.scheduledDate, venueArchetype: scene.archetype, venue: experience?.gig.venue });
   const attendance = resolvePresentationAttendance(experience?.headline.attendance, replayResultAttendance(replay), experience?.headline.capacity);
-  const navigatorCapabilities = typeof navigator === "undefined" ? {} : navigator as Navigator & { deviceMemory?: number };
+  const navigatorCapabilities: { hardwareConcurrency?: number; deviceMemory?: number } =
+    typeof navigator === "undefined" ? {} : navigator as Navigator & { deviceMemory?: number };
   const performanceTier = resolvePerformanceTier({ preference: input.performancePreference, reducedMotion: input.reducedMotion, hardwareConcurrency: navigatorCapabilities.hardwareConcurrency, deviceMemoryGb: navigatorCapabilities.deviceMemory });
   return {
     cameraMode: input.cameraMode,

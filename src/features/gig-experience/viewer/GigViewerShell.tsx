@@ -241,27 +241,46 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   const [fullscreen, setFullscreen] = useState(false);
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
   const popoutRef = useRef<HTMLDivElement>(null);
-  const ownedNativeFullscreenRef = useRef(false);
+  const ownedNativeFullscreenElementRef = useRef<HTMLElement | null>(null);
   const nativeRequestPendingRef = useRef(false);
   const initializedPlayerReplayRef = useRef<string | null>(null);
   const seekMs = playback.seekMs;
 
+  const exitViewerFullscreen = useCallback(() => {
+    setFullscreen(false);
+    const owned = ownedNativeFullscreenElementRef.current;
+    if (owned && document.fullscreenElement === owned) {
+      void document.exitFullscreen?.().catch(() => undefined);
+    }
+  }, []);
+
   const toggleFullscreen = useCallback(() => {
-    const next = !fullscreen;
-    setFullscreen(next);
-    try {
-      if (!next && ownedNativeFullscreenRef.current && document.fullscreenElement === popoutRef.current) void document.exitFullscreen?.().catch(() => undefined);
-    } catch { /* The fixed inset overlay is the reliable fallback. */ }
-  }, [fullscreen]);
+    if (fullscreen) exitViewerFullscreen();
+    else setFullscreen(true);
+  }, [exitViewerFullscreen, fullscreen]);
 
   useEffect(() => {
     if (!fullscreen || document.fullscreenElement || nativeRequestPendingRef.current) return;
     const host = popoutRef.current;
     if (!host?.requestFullscreen) return;
     nativeRequestPendingRef.current = true;
-    try { void host.requestFullscreen().catch(() => undefined).finally(() => { nativeRequestPendingRef.current = false; }); }
+    try {
+      void host.requestFullscreen()
+        .then(() => {
+          if (document.fullscreenElement === host) {
+            ownedNativeFullscreenElementRef.current = host;
+            setNativeFullscreen(true);
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => { nativeRequestPendingRef.current = false; });
+    }
     catch { /* Fixed overlay remains active. */ }
   }, [fullscreen]);
+
+  useEffect(() => {
+    exitViewerFullscreen();
+  }, [playbackReplay.id, exitViewerFullscreen]);
 
   useEffect(() => {
     if (mode !== "player" || initializedPlayerReplayRef.current === playbackReplay.id) return;
@@ -272,15 +291,20 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
 
   useEffect(() => {
     const onChange = () => {
-      const active = document.fullscreenElement === popoutRef.current;
-      const wasOwned = ownedNativeFullscreenRef.current;
-      ownedNativeFullscreenRef.current = active;
+      const current = document.fullscreenElement;
+      const requested = popoutRef.current;
+      if (current && current === requested) ownedNativeFullscreenElementRef.current = current as HTMLElement;
+      const owned = ownedNativeFullscreenElementRef.current;
+      const active = !!owned && current === owned;
       setNativeFullscreen(active);
-      if (wasOwned && !active) setFullscreen(false);
+      if (owned && !active) {
+        ownedNativeFullscreenElementRef.current = null;
+        setFullscreen(false);
+      }
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setFullscreen(false);
+        exitViewerFullscreen();
       }
     };
 
@@ -289,10 +313,11 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     return () => {
       document.removeEventListener("fullscreenchange", onChange);
       window.removeEventListener("keydown", onKey);
-      if (ownedNativeFullscreenRef.current && document.fullscreenElement === popoutRef.current) void document.exitFullscreen?.().catch(() => undefined);
-      ownedNativeFullscreenRef.current = false;
+      const owned = ownedNativeFullscreenElementRef.current;
+      if (owned && document.fullscreenElement === owned) void document.exitFullscreen?.().catch(() => undefined);
+      ownedNativeFullscreenElementRef.current = null;
     };
-  }, []);
+  }, [exitViewerFullscreen]);
 
   useEffect(() => {
     if (!fullscreen) return;
