@@ -41,6 +41,8 @@ export interface ViewerDiagnostics {
   cameraMode: GigViewerCameraMode;
   venueArchetype: string;
   venueVariation: number;
+  descriptorVersion: number;
+  structuralFingerprint: string;
   environmentKind: string;
   seedFingerprint: string;
   representativeCrowdCount: number;
@@ -68,8 +70,12 @@ export function buildViewerDiagnostics(input: {
     cameraMode: input.cameraMode,
     venueArchetype: scene.archetype,
     venueVariation: scene.variation,
+    descriptorVersion: scene.descriptorVersion,
+    structuralFingerprint: scene.structuralFingerprint,
     environmentKind: environment.profile.kind,
-    seedFingerprint: fingerprint(`${scene.seed}:layout|${environment.seed}`),
+    // Retain the scene-v1 diagnostic for environment/scene compatibility;
+    // structuralFingerprint is the identifier-free descriptor-only contract.
+    seedFingerprint: fingerprint(`${scene.structuralFingerprint}|${environment.seed}`),
     representativeCrowdCount: representativeCrowdCount({ attendance: attendance.value, capacity: null, archetype: scene.archetype }),
     attendanceState: attendance.state,
     attendanceSource: attendance.source,

@@ -82,6 +82,7 @@ export function GigCanvas({
     <div className={className ?? (fill ? "h-full w-full" : "w-full")} data-crowd-tuning-source={resolved.source}
       data-viewer-camera={diagnostics.cameraMode} data-venue-archetype={diagnostics.venueArchetype}
       data-venue-variation={diagnostics.venueVariation} data-environment-kind={diagnostics.environmentKind}
+      data-venue-descriptor-version={diagnostics.descriptorVersion} data-venue-structural-fingerprint={diagnostics.structuralFingerprint}
       data-seed-fingerprint={diagnostics.seedFingerprint} data-representative-crowd-count={diagnostics.representativeCrowdCount}
       data-attendance-state={diagnostics.attendanceState} data-attendance-source={diagnostics.attendanceSource}
       data-activity-evidence-mode={diagnostics.activityEvidenceMode} data-performance-tier={diagnostics.performanceTier}>
