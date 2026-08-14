@@ -16,6 +16,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
 
 export default function RecordingStudio() {
   const { session } = useAuth();
@@ -36,38 +37,10 @@ export default function RecordingStudio() {
     const loadUserBand = async () => {
       if (!session?.user?.id) return;
 
-      const profileMembership = profileId
-        ? await supabase
-            .from('band_members')
-            .select('band_id, bands!inner(id, name, status, band_balance)')
-            .eq('profile_id', profileId)
-            .eq('member_status', 'active')
-            .eq('is_touring_member', false)
-            .eq('bands.status', 'active')
-            .limit(1)
-            .maybeSingle()
-        : { data: null, error: null } as any;
-
-      const legacyMembership = !profileMembership.data
-        ? await supabase
-            .from('band_members')
-            .select('band_id, bands!inner(id, name, status, band_balance)')
-            .eq('user_id', session.user.id)
-            .eq('member_status', 'active')
-            .eq('is_touring_member', false)
-            .eq('bands.status', 'active')
-            .limit(1)
-            .maybeSingle()
-        : { data: null, error: null } as any;
-
-      const bandMemberships = profileMembership.data || legacyMembership.data;
-      const error = profileMembership.error || legacyMembership.error;
-
-      if (error) {
-        setUserBandId(null);
-        setLabelCompanyId(null);
-        return;
-      }
+      const bandMemberships = await resolveActiveBandMembership(
+        profileId,
+        session.user.id,
+      );
 
       if (bandMemberships?.band_id) {
         setUserBandId(bandMemberships.band_id);
