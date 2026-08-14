@@ -47,6 +47,8 @@ describe("venue layout", () => {
     expect(selectVenuePreset({ capacity: 700 }).name).toBe("medium");
     expect(selectVenuePreset({ capacity: 2000 }).name).toBe("large");
     expect(selectVenuePreset({ capacity: 0 }).name).toBe("medium");
+    expect(selectVenuePreset({}).name).toBe("medium");
+    expect(selectVenuePreset({ venueType: "pub", capacity: 0 }).name).toBe("small");
     const scaled = scaleVenuePreset(selectVenuePreset({ capacity: 100 }), { width: 320, height: 240 });
     expect(scaled.stage.width).toBeGreaterThan(0);
     expect(scaled.audience.y).toBeGreaterThan(scaled.stage.y);
@@ -172,6 +174,16 @@ describe("animated crowd lifecycle", () => {
       expect(pointInRect(entity.target, preset.audience)).toBe(true);
       expect(pointInRect(entity.target, preset.stage)).toBe(false);
     });
+  });
+
+  it("distributes deterministically across two- and three-entrance layouts", () => {
+    for (const capacity of [700, 2000]) {
+      const input = { replay: crowdReplay, attendance: 50, capacity, size: { width: 900, height: 500 } };
+      const first = buildCrowdPlan(input); const second = buildCrowdPlan(input);
+      const entranceCount = selectVenuePreset({ capacity }).entrances.length;
+      expect(new Set(first.baseEntities.map((entity) => entity.entranceId)).size).toBe(entranceCount);
+      expect(first.baseEntities).toEqual(second.baseEntities);
+    }
   });
 
   it("orders packing cells from the stage edge outward and centre-first", () => {

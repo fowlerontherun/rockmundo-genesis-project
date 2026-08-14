@@ -335,6 +335,8 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
   const performanceType = (row: SongPerfRow) => row.item_type === "performance_item" || !!row.performance_item_id ? "performance_item" : "song";
   const savedType = (row: SetlistSongRow) => row.item_type === "performance_item" || !!row.performance_item_id ? "performance_item" : "song";
   const identityConflictWarnings: string[] = [];
+  const compatibilityWarnings: string[] = [];
+  const savedPositions = new Set((input.setlistSongs ?? []).map((row) => row.position));
   const songSources = (input.setlistSongs ?? []).map((setlistRow) => {
     const expectedType = savedType(setlistRow);
     const performance = songPerformances.find((row) => unmatchedPerformances.has(row) && performanceIdentity(row) === setlistItemIdentity(setlistRow))
@@ -344,7 +346,12 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
     return { position: setlistRow.position, setlistRow, performance };
   });
   unmatchedPerformances.forEach((performance) => {
-    songSources.push({ position: performance.position + positionOffset, setlistRow: null, performance });
+    const position = performance.position + positionOffset;
+    if (savedPositions.has(position)) {
+      compatibilityWarnings.push(`Unmatched historical ${performanceType(performance).replace("_", " ")} result at saved position ${position} was omitted from presentation.`);
+      return;
+    }
+    songSources.push({ position, setlistRow: null, performance });
   });
 
   // Older setlist imports can also contain conflicting positions. Prefer the
@@ -364,10 +371,11 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
       const itemType = setlistRow ? savedType(setlistRow) : performance ? performanceType(performance) : "song";
       const rawPerformanceItemId = setlistRow?.performance_item_id ?? performance?.performance_item_id ?? null;
       const identity = performance ? performanceIdentity(performance) : setlistRow ? setlistItemIdentity(setlistRow) : `position:${position}`;
+      const stableFallbackIdentity = `${identity}:row:${performance?.id ?? "unknown"}:position:${position}`;
       if (!!(performance?.song_id ?? setlistRow?.song_id) && !!rawPerformanceItemId) identityConflictWarnings.push(`Historical setlist item at position ${position} contained conflicting identities; its declared ${itemType} identity was used for presentation.`);
-      const performanceItemId = itemType === "performance_item" ? (rawPerformanceItemId || `legacy-performance-item-${identity}`) : null;
+      const performanceItemId = itemType === "performance_item" ? (rawPerformanceItemId || `legacy-performance-item-${stableFallbackIdentity}`) : null;
       return {
-        id: performance?.id ?? `gig-setlist-${identity}`,
+        id: performance?.id ?? `gig-setlist-${stableFallbackIdentity}`,
         songId: itemType === "performance_item" ? null : (setlistRow?.song_id ?? performance?.song_id ?? null),
         itemType,
         performanceItemId,
@@ -459,6 +467,7 @@ export function mapGigExperience(input: { gig: GigRow; outcome: OutcomeRow | nul
       ...(duplicateSongPositionCount > 0 ? [`${duplicateSongPositionCount} conflicting historical setlist position(s) were collapsed for playback.`] : []),
       ...(duplicatePerformerCount > 0 ? [`${duplicatePerformerCount} duplicate historical performer row(s) were collapsed for playback.`] : []),
       ...identityConflictWarnings,
+      ...compatibilityWarnings,
       ...(input.loadWarnings ?? []),
     ])) },
     postConsequences: mapPostConsequences(input.postProcessing ?? null, input.consequences ?? []),

@@ -89,6 +89,33 @@ Only after this verification PR is green, Phase 2A should add versioned descript
 validation plus materially distinct pub, club, and theatre layouts. It must remain
 separate from replay-schema, commerce-authority, and renderer-clock changes.
 
+## Stage View closure (2026-08-14)
+
+The local presentation compatibility boundary now reserves the complete saved
+setlist before considering unmatched performance rows, gives unknown legacy
+performance items stable row-and-position identities, bounds presentation-only
+message parameters, and retains typed replay-build diagnostics. Viewer contract
+repairs cover the medium fallback for missing capacity, deterministic distribution
+across two and three entrances, the representative-crowd minimum, the calculated
+Story Engine peak boundary, and the current **Setlist timeline** accessible name.
+The component gate also exercises the real local builder through
+`LiveGigStageView` and proves its input remains unchanged.
+
+No canonical gig, outcome, scoring, settlement, reward, finance, commerce,
+inventory, or replay-storage mutation path changed. No database data is rewritten.
+This slice does not introduce or redesign venue descriptors.
+
+The existing dependency tree is unavailable in this checkout (`vitest: not found`),
+and dependency installation/lock work was explicitly out of scope. Consequently,
+the four targeted Vitest commands and focused ESLint could not execute. The
+TypeScript command was attempted and stopped before application checking with
+`TS2688: Cannot find type definition file for 'vitest/globals'`; it therefore did
+not reach the known unrelated `src/components/releases/MyReleasesTab.tsx:70:79`
+`TS2345` baseline. `git diff --check` passed.
+
+The next PR is **Phase 2A: versioned descriptor validation plus materially distinct
+pub, club, and theatre layouts**.
+
 ## Final gate-closure attempt (2026-08-14)
 
 The dependency lock was regenerated as a complete npm resolution (not by adding

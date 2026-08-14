@@ -11,6 +11,7 @@ export function representativeCrowdCount(input: { attendance?: number | null; ca
   const capacity = Number.isFinite(input.capacity) && (input.capacity ?? 0) > 0 ? input.capacity! : null;
   if (attendance == null && capacity == null) return FALLBACK[input.archetype];
   const reference = attendance ?? capacity! * .65;
+  if (reference <= 1) return REPRESENTATIVE_CROWD_MIN;
   const density = capacity ? Math.max(.15, Math.min(1, reference / capacity)) : .65;
   const apparent = Math.round(10 + Math.sqrt(Math.max(1, reference)) * .36 + density * 18);
   return Math.max(REPRESENTATIVE_CROWD_MIN, Math.min(REPRESENTATIVE_CROWD_MAX, apparent));

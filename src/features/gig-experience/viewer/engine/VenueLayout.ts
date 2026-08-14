@@ -209,7 +209,7 @@ export function selectStageType(input?: { venueName?: string | null; venueType?:
   if (/arena|coliseum|colise|forum|garden/.test(hay)) return "arena_bowl";
   if (/theat(re|er)|opera|hall|auditorium|ballroom|playhouse|casino|cruise|church|chapel|cathedral|conservat/.test(hay)) return "theater";
   if (/club|bar|pub|lounge|basement|cellar|cafe|tavern|live ?house|indie|warehouse|rooftop|terrace|speakeasy|union|social/.test(hay)) return "club";
-  if (Number.isFinite(cap)) {
+  if (Number.isFinite(cap) && cap > 0) {
     if (cap >= 25000) return "stadium_bowl";
     if (cap >= 5000) return "arena_bowl";
     if (cap >= 1000) return "arena";

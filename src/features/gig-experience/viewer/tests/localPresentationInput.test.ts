@@ -29,4 +29,26 @@ describe("local presentation input", () => {
     expect(validateGigViewerReplay(first).valid).toBe(true);
     expect(second.events).toEqual(first.events); expect(second.checksum).toBe(first.checksum);
   });
+
+  it("bounds Unicode message parameters while preserving full visual labels deterministically", async () => {
+    const long = "🎸".repeat(120) + " full canonical title";
+    const experience = {
+      gig: { scheduledDate: "2026-01-01T00:00:00Z", startedAt: null, completedAt: null, venue: { capacity: 100 } },
+      viewer: { ready: false, resultReadyAt: null, outcomeId: null },
+      headline: { attendance: { status: "available", value: 90 }, overallRating: { status: "legacy_missing" } },
+      finances: { netProfit: { status: "legacy_missing" } },
+      songs: [
+        { id: "song", songId: "song-1", itemType: "song", performanceItemId: null, title: long, position: 1, performanceScore: { status: "available", value: 19 }, performanceItemCategory: null, performanceItemRequiredSkill: null },
+        { id: "item", songId: null, itemType: "performance_item", performanceItemId: "item-1", title: long + " item", position: 2, performanceScore: { status: "legacy_missing" }, performanceItemCategory: "stage_action", performanceItemRequiredSkill: long + " role" },
+      ],
+      performers: [{ profileId: "performer", displayName: long + " performer", roleOrInstrument: long + " role", lineupStatus: "performed" }],
+    } as unknown as GigExperienceDTO;
+    const input = buildLocalPresentationInput("gig-long", experience);
+    const first = await buildGigViewerReplay(input); const second = await buildGigViewerReplay(input);
+    expect(validateGigViewerReplay(first).valid).toBe(true);
+    expect(first.events.flatMap((event) => Object.values(event.messageParams)).every((value) => String(value).length <= 96)).toBe(true);
+    expect(first.events.find((event) => event.visualPayload.type === "song_start")?.visualPayload).toMatchObject({ title: long });
+    expect(first.events.some((event) => event.visualPayload.type === "performance_item" && event.visualPayload.name === long + " item")).toBe(true);
+    expect(first.events).toEqual(second.events); expect(first.checksum).toBe(second.checksum);
+  });
 });
