@@ -39,11 +39,12 @@ export function deriveCameraForMode(options: {
 }): CameraFrame {
   if (options.mode === "venue_wide") return wideFrame(wideVenueCamera(options.viewport));
   if (options.mode === "stage_focus") {
-    const stageAndFrontCrowd = {
-      x: options.stage.x + options.stage.width / 2,
-      y: options.stage.y + options.stage.height * .72 + options.audience.height * .08,
-      zoom: 1.2,
-    };
+    const compositionTop = options.stage.y;
+    const compositionBottom = Math.min(options.viewport.height, options.audience.y + options.audience.height * .42);
+    const compositionWidth = Math.max(options.stage.width, options.audience.width);
+    const compositionHeight = Math.max(1, compositionBottom - compositionTop);
+    const safeZoom = Math.min(1.2, options.viewport.width / compositionWidth, options.viewport.height / compositionHeight);
+    const stageAndFrontCrowd = { x: options.stage.x + options.stage.width / 2, y: (compositionTop + compositionBottom) / 2, zoom: safeZoom };
     return { camera: clampCamera(stageAndFrontCrowd, options.viewport), shot: "wide", subjectId: null, strength: 1 };
   }
   return deriveCameraFrame(options);

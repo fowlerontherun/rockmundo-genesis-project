@@ -12,8 +12,8 @@ export function useCanvasSize(ref: React.RefObject<HTMLElement>, opts?: { fill?:
     const update = () => {
       if (!alive) return;
       const rect = el.getBoundingClientRect();
-      const width = Math.max(1, rect.width);
-      const height = fill ? Math.max(1, rect.height) : Math.max(220, Math.min(maxHeight, width * 9 / 16));
+      const width = Math.max(0, rect.width);
+      const height = fill ? Math.max(0, rect.height) : Math.max(220, Math.min(maxHeight, width * 9 / 16));
       setContainer((current) => current.width === width && current.height === height ? current : { width, height });
     };
     update();

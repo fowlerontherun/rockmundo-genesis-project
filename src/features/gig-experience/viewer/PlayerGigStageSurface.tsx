@@ -25,7 +25,7 @@ export function PlayerGigStageSurface({
   return (
     <div
       className={fullscreen
-        ? "flex h-full w-full flex-col overflow-hidden bg-slate-950 text-white"
+        ? "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-slate-950 text-white"
         : "flex h-[min(48rem,80dvh)] min-h-[28rem] w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-950 text-white shadow-2xl"}
       role={fullscreen ? "dialog" : "region"}
       aria-modal={fullscreen || undefined}
@@ -37,7 +37,7 @@ export function PlayerGigStageSurface({
         {canvas}
       </div>
 
-      <div className="shrink-0 border-t border-white/10 bg-slate-950/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4">
+      <div className="max-h-[45dvh] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/95 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))] sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-4">
         <div className="mx-auto max-w-7xl">
           <div className="min-w-0" aria-live="polite">
             <div className="flex items-end justify-between gap-3">
@@ -60,7 +60,7 @@ export function PlayerGigStageSurface({
             />
           </div>
 
-          <div className="mt-3 max-h-[32dvh] overflow-y-auto rounded-lg bg-background text-foreground">
+          <div className="mt-3 overflow-x-auto rounded-lg bg-background text-foreground">
             {controls}
           </div>
         </div>
