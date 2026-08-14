@@ -13,10 +13,30 @@ export function resolveNumericMetric(metric: unknown): NumericMetricResolution {
     : { state: "invalid" };
 }
 
-export function attendanceForPresentation(attendance: unknown, capacity: unknown): number | undefined {
+export type PresentationAttendanceResolution =
+  | { state: "valid"; source: "headline" | "replay" | "capacity"; value: number }
+  | { state: "missing" | "invalid"; source: "none"; value: 0 };
+
+/** Resolve one shared, non-sensitive presentation fact. Invalid authoritative data fails closed. */
+export function resolvePresentationAttendance(attendance: unknown, replayAttendance: unknown, capacity: unknown): PresentationAttendanceResolution {
   const resolvedAttendance = resolveNumericMetric(attendance);
-  if (resolvedAttendance.state === "available") return resolvedAttendance.value;
-  if (resolvedAttendance.state === "invalid") return undefined;
+  if (resolvedAttendance.state === "available") return { state: "valid", source: "headline", value: resolvedAttendance.value };
+  const replay = resolveRawNumber(replayAttendance);
+  if (replay.state === "available") return { state: "valid", source: "replay", value: replay.value };
+  if (resolvedAttendance.state === "invalid" || replay.state === "invalid") return { state: "invalid", source: "none", value: 0 };
   const resolvedCapacity = resolveNumericMetric(capacity);
-  return resolvedCapacity.state === "available" ? resolvedCapacity.value : undefined;
+  if (resolvedCapacity.state === "available") return { state: "valid", source: "capacity", value: resolvedCapacity.value };
+  return { state: resolvedCapacity.state === "invalid" ? "invalid" : "missing", source: "none", value: 0 };
+}
+
+function resolveRawNumber(value: unknown): NumericMetricResolution {
+  if (value == null) return { state: "missing" };
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? { state: "available", value }
+    : { state: "invalid" };
+}
+
+export function replayResultAttendance(replay: { events?: Array<{ visualPayload?: unknown }> }): unknown {
+  const result = replay.events?.find((event) => (event.visualPayload as { type?: unknown })?.type === "result_reveal")?.visualPayload;
+  return (result as { attendance?: unknown } | undefined)?.attendance;
 }

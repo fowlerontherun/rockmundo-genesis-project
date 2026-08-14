@@ -1,25 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { attendanceForPresentation, resolveNumericMetric } from "../engine/AuthoritativeMetric";
+import { resolveNumericMetric, resolvePresentationAttendance } from "../engine/AuthoritativeMetric";
 import { representativeCrowdCount } from "../engine/RepresentativeCrowd";
 
+const metric = (value: unknown) => ({ status: "available", value });
+
 describe("authoritative attendance presentation", () => {
-  it("distinguishes zero, missing, and invalid metrics", () => {
-    expect(resolveNumericMetric({ status: "available", value: 0 })).toEqual({ state: "available", value: 0 });
+  it("classifies numeric metrics without losing zero", () => {
+    expect(resolveNumericMetric(metric(0))).toEqual({ state: "available", value: 0 });
     expect(resolveNumericMetric(undefined)).toEqual({ state: "missing" });
-    expect(resolveNumericMetric({ status: "available", value: "0" })).toEqual({ state: "invalid" });
+    expect(resolveNumericMetric(metric("bad"))).toEqual({ state: "invalid" });
   });
 
-  it("preserves zero and only falls back when attendance is unavailable", () => {
-    const capacity = { status: "available", value: 1_000 };
-    expect(attendanceForPresentation({ status: "available", value: 0 }, capacity)).toBe(0);
-    expect(attendanceForPresentation(undefined, capacity)).toBe(1_000);
-    expect(attendanceForPresentation({ status: "available", value: "bad" }, capacity)).toBeUndefined();
-    expect(attendanceForPresentation({ status: "available", value: 400 }, capacity)).toBe(400);
-    expect(attendanceForPresentation(undefined, { status: "available", value: 0 })).toBe(0);
+  it.each([
+    ["zero", metric(0), undefined, metric(1000), { state: "valid", source: "headline", value: 0 }],
+    ["positive", metric(400), 900, metric(1000), { state: "valid", source: "headline", value: 400 }],
+    ["replay fallback", undefined, 350, metric(1000), { state: "valid", source: "replay", value: 350 }],
+    ["capacity fallback", undefined, undefined, metric(1000), { state: "valid", source: "capacity", value: 1000 }],
+    ["missing", undefined, undefined, undefined, { state: "missing", source: "none", value: 0 }],
+    ["invalid string", metric("bad"), undefined, metric(1000), { state: "invalid", source: "none", value: 0 }],
+    ["negative", metric(-1), undefined, metric(1000), { state: "invalid", source: "none", value: 0 }],
+    ["NaN", metric(Number.NaN), undefined, metric(1000), { state: "invalid", source: "none", value: 0 }],
+  ])("resolves %s", (_name, headline, replay, capacity, expected) => {
+    expect(resolvePresentationAttendance(headline, replay, capacity)).toEqual(expected);
   });
 
-  it("renders no representative fans for an authoritative empty gig", () => {
-    expect(representativeCrowdCount({ attendance: 0, capacity: 1_000, archetype: "club" })).toBe(0);
-    expect(representativeCrowdCount({ attendance: 400, capacity: 1_000, archetype: "club" })).toBeGreaterThan(0);
+  it("invalid-with-capacity fails closed to zero representative fans", () => {
+    const resolution = resolvePresentationAttendance(metric("bad"), undefined, metric(1000));
+    expect(representativeCrowdCount({ attendance: resolution.value, capacity: null, archetype: "club" })).toBe(0);
   });
 });
