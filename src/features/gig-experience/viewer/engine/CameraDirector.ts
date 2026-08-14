@@ -3,6 +3,7 @@ import { cameraForPlayback, clampCamera, wideVenueCamera, type SceneCamera } fro
 import type { Point, Rect, Size } from "./Viewport";
 
 export type CameraShot = "wide" | "performer" | "crowd" | "highlight" | "performance_item";
+export type GigViewerCameraMode = "venue_wide" | "stage_focus" | "auto";
 
 export interface CameraPerformer {
   id: string;
@@ -22,6 +23,30 @@ export interface CameraTransform {
   scale: number;
   translateX: number;
   translateY: number;
+}
+
+/** Resolve the user-selected camera without introducing a second playback clock. */
+export function deriveCameraForMode(options: {
+  mode: GigViewerCameraMode;
+  event: GigViewerEvent | null | undefined;
+  positionMs: number;
+  viewport: Size;
+  stage: Rect;
+  audience: Rect;
+  performers?: CameraPerformer[];
+  performanceItemFocus?: Point | null;
+  reducedMotion: boolean;
+}): CameraFrame {
+  if (options.mode === "venue_wide") return wideFrame(wideVenueCamera(options.viewport));
+  if (options.mode === "stage_focus") {
+    const stageAndFrontCrowd = {
+      x: options.stage.x + options.stage.width / 2,
+      y: options.stage.y + options.stage.height * .72 + options.audience.height * .08,
+      zoom: 1.2,
+    };
+    return { camera: clampCamera(stageAndFrontCrowd, options.viewport), shot: "wide", subjectId: null, strength: 1 };
+  }
+  return deriveCameraFrame(options);
 }
 
 /**

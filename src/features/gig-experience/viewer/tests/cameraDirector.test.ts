@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GigViewerEvent } from "../../events/types";
-import { cameraShotStrength, cameraTransform, deriveCameraFrame } from "../engine/CameraDirector";
+import { cameraShotStrength, cameraTransform, deriveCameraForMode, deriveCameraFrame } from "../engine/CameraDirector";
 
 const viewport = { width: 1280, height: 720 };
 const stage = { x: 250, y: 90, width: 780, height: 245 };
@@ -31,6 +31,19 @@ function event(overrides: Partial<GigViewerEvent> = {}): GigViewerEvent {
 }
 
 describe("gig viewer camera direction", () => {
+  it("defaults selectable coverage to a complete venue and offers a stable stage focus", () => {
+    const common = { event: event(), positionMs: 2_000, viewport, stage, audience, performers, reducedMotion: false };
+    const wide = deriveCameraForMode({ ...common, mode: "venue_wide" });
+    const focus = deriveCameraForMode({ ...common, mode: "stage_focus" });
+    const auto = deriveCameraForMode({ ...common, mode: "auto" });
+
+    expect(wide).toMatchObject({ camera: { x: 640, y: 360, zoom: 1 }, shot: "wide", strength: 0 });
+    expect(focus.camera.zoom).toBe(1.2);
+    expect(focus.shot).toBe("wide");
+    expect(deriveCameraForMode({ ...common, mode: "stage_focus", reducedMotion: true })).toEqual(focus);
+    expect(auto.shot).toBe("performer");
+  });
+
   it("keeps reduced-motion and song-boundary frames on the complete venue", () => {
     const reduced = deriveCameraFrame({ event: event(), positionMs: 2_000, viewport, stage, audience, performers, reducedMotion: true });
     const boundary = deriveCameraFrame({

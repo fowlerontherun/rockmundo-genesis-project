@@ -2,8 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Maximize2, Minimize2, Pause, Play, RotateCcw, SkipBack, SkipForward, X } from "lucide-react";
 import type { PlaybackSpeed } from "./engine/PlaybackController";
+import type { GigViewerCameraMode } from "./engine/CameraDirector";
 
-export function GigViewerControls({ playing, complete, speed, reducedMotion, pyrotechnics, fullscreen, compact = false, canPreviousSong, canNextSong, canNextHighlight, canResult, onPlay, onPause, onRestart, onSpeed, onPrevious, onNext, onPreviousSong, onNextSong, onNextHighlight, onSkipResult, onResult, onClose, onReducedMotion, onPyrotechnics, onFullscreen }: { playing: boolean; complete: boolean; speed: PlaybackSpeed; reducedMotion: boolean; pyrotechnics?: boolean; fullscreen?: boolean; canPreviousSong?: boolean; canNextSong?: boolean; canNextHighlight?: boolean; canResult?: boolean; onPlay: () => void; onPause: () => void; onRestart: () => void; onSpeed: (speed: PlaybackSpeed) => void; onPrevious: () => void; onNext: () => void; onPreviousSong?: () => void; onNextSong?: () => void; onNextHighlight?: () => void; onSkipResult?: () => void; onResult?: () => void; onClose: () => void; onReducedMotion: (v: boolean) => void; onPyrotechnics?: (v: boolean) => void; onFullscreen?: () => void; compact?: boolean }) {
+const CAMERA_LABELS: Record<GigViewerCameraMode, string> = {
+  venue_wide: "Venue Wide",
+  stage_focus: "Stage Focus",
+  auto: "Auto",
+};
+
+export function GigViewerControls({ playing, complete, speed, reducedMotion, pyrotechnics, cameraMode, fullscreen, compact = false, canPreviousSong, canNextSong, canNextHighlight, canResult, onPlay, onPause, onRestart, onSpeed, onPrevious, onNext, onPreviousSong, onNextSong, onNextHighlight, onSkipResult, onResult, onClose, onReducedMotion, onPyrotechnics, onCameraMode, onFullscreen }: { playing: boolean; complete: boolean; speed: PlaybackSpeed; reducedMotion: boolean; pyrotechnics?: boolean; cameraMode: GigViewerCameraMode; fullscreen?: boolean; canPreviousSong?: boolean; canNextSong?: boolean; canNextHighlight?: boolean; canResult?: boolean; onPlay: () => void; onPause: () => void; onRestart: () => void; onSpeed: (speed: PlaybackSpeed) => void; onPrevious: () => void; onNext: () => void; onPreviousSong?: () => void; onNextSong?: () => void; onNextHighlight?: () => void; onSkipResult?: () => void; onResult?: () => void; onClose: () => void; onReducedMotion: (v: boolean) => void; onPyrotechnics?: (v: boolean) => void; onCameraMode: (mode: GigViewerCameraMode) => void; onFullscreen?: () => void; compact?: boolean }) {
   if (compact) {
     return (
       <div className="flex items-center gap-2 overflow-x-auto rounded-lg border bg-card/95 p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Replay controls">
@@ -14,6 +21,7 @@ export function GigViewerControls({ playing, complete, speed, reducedMotion, pyr
         <div className="flex shrink-0 rounded-md border p-1" role="group" aria-label="Playback speed">
           {([1, 2, 4] as PlaybackSpeed[]).map((s) => <Button key={s} size="sm" className="h-9 px-2" variant={speed === s ? "default" : "ghost"} aria-pressed={speed === s} onClick={() => onSpeed(s)}>{s === 4 ? "Fast" : `${s}×`}</Button>)}
         </div>
+        <CameraModeControls value={cameraMode} onChange={onCameraMode} compact />
         <Button variant="outline" className="h-11 shrink-0" disabled={!canNextHighlight} onClick={onNextHighlight} aria-label="Skip to next highlight">Highlight</Button>
         {onResult ? <Button variant="outline" className="h-11 shrink-0" disabled={!canResult} onClick={onSkipResult} aria-label="Skip to result reveal">Result</Button> : null}
         <label className="flex h-11 shrink-0 items-center gap-2 rounded-md border px-3 text-xs"><Switch checked={reducedMotion} onCheckedChange={onReducedMotion} aria-label="Reduced motion" />Motion</label>
@@ -37,11 +45,31 @@ export function GigViewerControls({ playing, complete, speed, reducedMotion, pyr
       <div className="flex rounded-md border p-1" role="group" aria-label="Playback speed">
         {([1, 2, 4] as PlaybackSpeed[]).map((s) => <Button key={s} size="sm" variant={speed === s ? "default" : "ghost"} aria-pressed={speed === s} onClick={() => onSpeed(s)}>{s === 4 ? "Fast" : `${s}×`}</Button>)}
       </div>
+      <CameraModeControls value={cameraMode} onChange={onCameraMode} />
       <label className="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm"><Switch checked={reducedMotion} onCheckedChange={onReducedMotion} aria-label="Reduced motion" />Reduced motion</label>
       {onPyrotechnics ? <label className="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm"><Switch checked={!!pyrotechnics} onCheckedChange={onPyrotechnics} aria-label="Pyrotechnics and fireworks" />Pyrotechnics</label> : null}
       {onFullscreen ? <Button variant="outline" onClick={onFullscreen} aria-pressed={!!fullscreen} aria-label={fullscreen ? "Exit full screen stage view" : "Pop out full screen stage view"}>{fullscreen ? <Minimize2 className="mr-1 h-4 w-4" /> : <Maximize2 className="mr-1 h-4 w-4" />}{fullscreen ? "Exit full screen" : "Pop out"}</Button> : null}
       {onResult ? <Button variant="secondary" onClick={onResult}>View Result</Button> : null}
       <Button variant="ghost" onClick={onClose}>Close Viewer</Button>
+    </div>
+  );
+}
+
+function CameraModeControls({ value, onChange, compact = false }: { value: GigViewerCameraMode; onChange: (mode: GigViewerCameraMode) => void; compact?: boolean }) {
+  return (
+    <div className="flex shrink-0 rounded-md border p-1" role="group" aria-label="Camera mode">
+      {(Object.keys(CAMERA_LABELS) as GigViewerCameraMode[]).map((mode) => (
+        <Button
+          key={mode}
+          size="sm"
+          className={compact ? "h-9 px-2" : undefined}
+          variant={value === mode ? "default" : "ghost"}
+          aria-pressed={value === mode}
+          onClick={() => onChange(mode)}
+        >
+          {CAMERA_LABELS[mode]}
+        </Button>
+      ))}
     </div>
   );
 }
