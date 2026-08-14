@@ -9,7 +9,7 @@ import { buildStoryModel, deriveStorySnapshot, type StoryModel } from "./StoryEn
 import type { Size } from "./Viewport";
 import { selectVenuePreset, scaleVenuePreset, selectStageType } from "./VenueLayout";
 import type { VenuePreset } from "./VenueLayout";
-import { generateVenueScene, type VenueSceneLayout } from "./VenueSceneRegistry";
+import { generateVenueScene, type VenueSceneDescriptor } from "./VenueSceneRegistry";
 import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
 import { buildVenueActivityPlan, deriveVenueActivity, deriveVenueStaffActivity, type VenueActivityPlan } from "./VenueActivity";
@@ -36,7 +36,7 @@ export class CanvasRenderer {
   private audiencePlan: AudienceActivityPlan | null = null;
   private preset: VenuePreset | null = null;
   private readonly basePreset: VenuePreset;
-  private readonly venueScene: VenueSceneLayout;
+  private readonly venueScene: VenueSceneDescriptor;
   private readonly venueDetailPlan: VenueDetailPlan;
   private readonly venueActivityPlan: VenueActivityPlan;
   private readonly environment: ResolvedEnvironment;

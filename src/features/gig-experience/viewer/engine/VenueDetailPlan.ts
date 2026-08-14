@@ -1,5 +1,5 @@
 import type { FloorPattern } from "./VenueLayout";
-import type { VenueArchetype, VenueSceneLayout } from "./VenueSceneRegistry";
+import type { VenueArchetype, VenueSceneDescriptor } from "./VenueSceneRegistry";
 import { seededIndex, seededRandom } from "./SeededRandom";
 
 export type VenueServiceTheme = "wood" | "neon" | "heritage" | "concourse" | "outdoor";
@@ -65,10 +65,10 @@ const SERVICE_ACCENTS = ["#22d3ee", "#f472b6", "#f59e0b", "#a3e635"] as const;
  * the venue.
  */
 export function buildVenueDetailPlan(input: {
-  scene: VenueSceneLayout;
+  scene: VenueSceneDescriptor;
   floorPattern: FloorPattern;
 }): VenueDetailPlan {
-  const seed = `${input.scene.seed}:venue-detail-v1`;
+  const seed = `${input.scene.structuralFingerprint}:${input.scene.decorationNamespace}`;
   const floorMarks = buildFloorMarks(seed, input.floorPattern);
   const theme = SERVICE_THEMES[input.scene.archetype];
   const stockCount = SERVICE_STOCK_COUNTS[input.scene.archetype];

@@ -1,6 +1,6 @@
 import type { ResolvedEnvironment } from "./EnvironmentRegistry";
 import type { VenueDetailPlan, VenueServiceDetail } from "./VenueDetailPlan";
-import type { DecorationSlot, VenueSceneLayout } from "./VenueSceneRegistry";
+import type { DecorationSlot, VenueSceneDescriptor } from "./VenueSceneRegistry";
 import type { Size } from "./Viewport";
 
 export const SCENE_LAYER_ORDER = ["environment", "architecture", "background-decorations", "stage-band", "crowd", "venue-activity", "foreground-effects", "viewer-interface"] as const;
@@ -20,7 +20,7 @@ export function drawExteriorEnvironment(ctx: CanvasRenderingContext2D, size: Siz
   ctx.restore();
 }
 
-export function drawVenueArchitecture(ctx: CanvasRenderingContext2D, size: Size, scene: VenueSceneLayout) {
+export function drawVenueArchitecture(ctx: CanvasRenderingContext2D, size: Size, scene: VenueSceneDescriptor) {
   ctx.save(); const indoor = !["festival-field", "beachfront"].includes(scene.architecture);
   if (indoor) { ctx.fillStyle = scene.architecture === "brick-room" ? "rgba(69,26,3,.82)" : scene.architecture === "nightclub" ? "rgba(24,8,38,.86)" : "rgba(15,23,42,.84)"; ctx.fillRect(0, size.height * .09, size.width, size.height * .86); }
   if (scene.architecture === "proscenium") { ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 18; const s = rect(scene.stage, size); ctx.strokeRect(s.x - 8, s.y - 8, s.width + 16, s.height + 16); }
@@ -31,7 +31,7 @@ export function drawVenueArchitecture(ctx: CanvasRenderingContext2D, size: Size,
 export function drawSceneDecorationsAndServices(
   ctx: CanvasRenderingContext2D,
   size: Size,
-  scene: VenueSceneLayout,
+  scene: VenueSceneDescriptor,
   detailPlan: VenueDetailPlan,
 ) {
   ctx.save();
@@ -60,6 +60,11 @@ function drawDecoration(ctx: CanvasRenderingContext2D, size: Size, slot: Decorat
   ctx.lineWidth = Math.max(1, Math.min(2, r.width / 28));
 
   switch (slot.kind) {
+    case "window": { ctx.fillStyle = "#bae6fd"; ctx.globalAlpha = .7; ctx.fillRect(r.x, r.y, r.width, r.height); ctx.globalAlpha = 1; ctx.strokeStyle = "#e2e8f0"; ctx.strokeRect(r.x, r.y, r.width, r.height); ctx.beginPath(); ctx.moveTo(cx, r.y); ctx.lineTo(cx, r.y + r.height); ctx.moveTo(r.x, cy); ctx.lineTo(r.x + r.width, cy); ctx.stroke(); break; }
+    case "toilet": { ctx.fillStyle = "#334155"; ctx.fillRect(r.x, r.y, r.width, r.height); ctx.fillStyle = "#f8fafc"; ctx.font = `bold ${Math.max(7,r.width*.2)}px sans-serif`; ctx.textAlign = "center"; ctx.fillText("WC", cx, cy); break; }
+    case "security": { ctx.fillStyle = "#eab308"; ctx.fillRect(r.x, r.y, r.width, r.height); ctx.fillStyle = "#111827"; ctx.fillRect(r.x+r.width*.15,r.y+r.height*.2,r.width*.7,r.height*.2); break; }
+    case "curtain": { ctx.fillStyle = "#7f1d1d"; ctx.fillRect(r.x,r.y,r.width,r.height); ctx.strokeStyle="#f59e0b"; for(let i=1;i<8;i++){ctx.beginPath();ctx.moveTo(r.x+r.width*i/8,r.y);ctx.lineTo(r.x+r.width*i/8,r.y+r.height);ctx.stroke();} break; }
+    case "aisle": { ctx.fillStyle = "rgba(245,158,11,.32)"; ctx.fillRect(r.x,r.y,r.width,r.height); ctx.strokeStyle="#fbbf24"; ctx.setLineDash([4,4]); ctx.strokeRect(r.x,r.y,r.width,r.height); break; }
     case "table": {
       ctx.fillStyle = "#78350f"; ctx.beginPath(); ctx.ellipse(cx, r.y + r.height * .38, r.width * .34, r.height * .2, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#451a03"; ctx.beginPath(); ctx.moveTo(cx, r.y + r.height * .48); ctx.lineTo(cx, r.y + r.height * .93); ctx.stroke();
@@ -144,7 +149,7 @@ function drawDecoration(ctx: CanvasRenderingContext2D, size: Size, slot: Decorat
 function drawServiceFixture(
   ctx: CanvasRenderingContext2D,
   size: Size,
-  bounds: VenueSceneLayout["bar"],
+  bounds: VenueSceneDescriptor["bar"],
   label: "BAR" | "MERCH",
   detail: VenueServiceDetail,
 ) {

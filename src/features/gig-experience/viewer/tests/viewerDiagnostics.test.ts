@@ -15,6 +15,8 @@ describe("viewer baseline diagnostics", () => {
     expect(buildViewerDiagnostics(input)).toEqual(buildViewerDiagnostics(input));
     expect(buildViewerDiagnostics(input)).toMatchObject({ cameraMode: "venue_wide", venueArchetype: "festival", environmentKind: "countryside", activityEvidenceMode: "ambient" });
     expect(buildViewerDiagnostics(input).seedFingerprint).toMatch(/^scene-v1-[0-9a-f]{8}$/);
+    expect(buildViewerDiagnostics(input).structuralFingerprint).toMatch(/^venue-v2-[0-9a-f]{8}$/);
+    expect(buildViewerDiagnostics(input).descriptorVersion).toBe(2);
   });
 
   it("produces controlled seed differences without viewport inputs", () => {

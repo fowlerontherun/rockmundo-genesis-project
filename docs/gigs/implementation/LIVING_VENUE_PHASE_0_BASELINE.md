@@ -153,3 +153,55 @@ exit gate is explicitly **not passed**. Geometry correction remains Phase 2 work
 The attendance, camera, and fullscreen changes are presentation-only and do not
 change replay schemas or canonical gameplay, settlement, commerce, inventory,
 rewards, finance, or audio authority.
+
+## Phase 2A — versioned small-venue descriptors (2026-08-14)
+
+Phase 2A promotes the living-venue layout to immutable, JSON-only descriptor
+version `2`. Layout selection is namespaced `layout-v2`; decoration structure is
+namespaced `decor-v2`. The singular active `bar` and `merchandise` fixtures remain
+intentionally intact so the Phase 3 activity projection and canonical commerce
+boundary do not change.
+
+The registry now holds three deliberately authored pub, club, and theatre rooms.
+Their stage widths in normalized useful-scene coordinates are, respectively:
+
+- pub: `0.46`, `0.49`, `0.45`;
+- club: `0.48`, `0.47`, `0.46`;
+- theatre: `0.48`, `0.49`, `0.46`.
+
+This is 40–50% of useful scene width for all nine layouts. Pub variants change the
+room frontage, window/toilet/poster/table arrangement and side-bar relationship;
+club variants change stage orientation, dancefloor, booths, rig and security
+position; theatre variants change proscenium placement, curtain, stalls, balcony,
+and separated aisle treatment. These structural differences are covered by
+geometry/kind signatures rather than image snapshots.
+
+`validateVenueSceneDescriptor` reports stable error codes for non-finite or
+out-of-scene geometry, non-positive rectangles, unsafe UI/stage overlap,
+stage/crowd and fixture/stage overlap, off-stage performer anchors, invalid queues,
+short or stage-crossing routes, incorrect route endpoints, missing/invalid crowd
+return anchors, duplicate IDs, and unreadable stages. Runtime external candidates
+fall back deterministically to club variation 1, while tests validate all 21
+checked-in descriptors directly so registry defects cannot be hidden by fallback.
+
+Each descriptor exposes an identifier-free `venue-v2-*` structural fingerprint
+computed from canonical descriptor structure and decoration choices. It is stable
+across rendering state and viewport changes and differs between the nine authored
+small layouts. The prior `scene-v1-*` `seedFingerprint` diagnostic remains for
+compatibility, while descriptor version, variation, and structural fingerprint
+have dedicated DOM diagnostics. The demo's nine named small-venue choices use a
+production resolution helper that guarantees the requested variation rather than
+assuming arbitrary A/B/C seeds.
+
+Phase 2B remains responsible for redesigning arena, stadium, festival, and beach;
+service-point arrays and capacity scaling; distributed concourse services; full
+route/path graphs; and large-venue visual expansion. Their existing geometry and
+singular service model are preserved in this slice.
+
+Verification note: `npx tsc --noEmit --pretty false` completed successfully. The
+focused Vitest command was attempted but collected zero tests because the existing
+installed dependency tree lacks the transitive `redent` package required by
+`@testing-library/jest-dom`. An attempted `npx tsx` static check was also blocked
+by registry policy (`E403`). A local `vite-node` registry-validator audit did run
+without installation and confirmed all 21 descriptors valid after authoring. No
+blocked test is represented as passing.
