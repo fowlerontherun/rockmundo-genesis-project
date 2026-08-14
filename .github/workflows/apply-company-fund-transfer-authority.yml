@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      - run: npm run verify:dependency-lock
       - run: npm ci
       - run: node scripts/migrate-company-fund-transfer-authority.mjs src/hooks/useCompanyFinance.ts
       - run: npm test -- src/hooks/__tests__/useCompanyFinance.transfer-authority.test.ts src/lib/api/__tests__/companyFundTransfers.database.test.ts

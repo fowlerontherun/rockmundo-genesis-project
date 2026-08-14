@@ -44,7 +44,10 @@ test('admin fixture mode loads, changes controls, launches viewer, and stays rea
   await page.getByRole('button', { name: 'Search completed gigs' }).click();
   await expect(page.getByText('metadata loaded read-only')).toBeVisible();
   await expect(page.getByText(/https:\/\//)).toHaveCount(0);
-  const failures = await page.evaluate(() => (window as any).__phase5MutationFailures());
+  const failures = await page.evaluate(() => {
+    const getFailures = (window as Window & { __phase5MutationFailures?: () => string[] }).__phase5MutationFailures;
+    return getFailures?.() ?? [];
+  });
   expect(failures).toEqual([]);
 });
 
@@ -52,7 +55,8 @@ test('direct unauthenticated access is denied when admin test bypass is disabled
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(`${baseURL}/admin/gig-viewer-demo?no-test-admin=1`);
-  // The production route remains protected; this assertion is kept permissive because local test runs intentionally enable the bypass env.
-  await expect(page.locator('body')).toContainText(/Admin Gig Viewer Demo|Access denied/);
+  await expect(page).toHaveURL(/\/auth$/);
+  await expect(page.getByRole('heading', { name: /sign in|welcome/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Admin Gig Viewer Demo' })).toHaveCount(0);
   await context.close();
 });
