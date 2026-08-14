@@ -117,15 +117,18 @@ export const SessionConfigurator = ({
       }
       let query = supabase
         .from("band_members")
-        .select("band_id, bands!inner(id, status)")
-        .eq("member_status", "active")
+        .select("band_id, member_status, bands!inner(id, status)")
         .eq("bands.status", "active")
-        .limit(1);
+        .limit(10);
       query = profileId
         ? query.eq("profile_id", profileId)
         : query.eq("user_id", userId);
-      const { data } = await query.maybeSingle();
-      if (!cancelled) setFallbackBandId((data as any)?.band_id ?? null);
+      const { data } = await query;
+      const rows = (data as any[]) ?? [];
+      const match =
+        rows.find((r) => !r.member_status || r.member_status === "active") ??
+        rows[0];
+      if (!cancelled) setFallbackBandId(match?.band_id ?? null);
     };
     resolveBand();
     return () => {
