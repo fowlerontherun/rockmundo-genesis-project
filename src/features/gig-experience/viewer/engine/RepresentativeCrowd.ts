@@ -6,6 +6,7 @@ const FALLBACK: Record<VenueArchetype, number> = { pub: 18, club: 26, theatre: 3
 
 /** Presentation-only population; deliberately does not mirror attendee records one-for-one. */
 export function representativeCrowdCount(input: { attendance?: number | null; capacity?: number | null; archetype: VenueArchetype }): number {
+  if (input.attendance === 0) return 0;
   const attendance = Number.isFinite(input.attendance) && (input.attendance ?? 0) > 0 ? input.attendance! : null;
   const capacity = Number.isFinite(input.capacity) && (input.capacity ?? 0) > 0 ? input.capacity! : null;
   if (attendance == null && capacity == null) return FALLBACK[input.archetype];
