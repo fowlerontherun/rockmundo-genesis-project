@@ -1,4 +1,16 @@
 -- Add real-world TV Shows (US networks only for now)
+-- Earlier database snapshots supplied these IDs out of band.  A fresh replay does
+-- not, so establish the referenced parents here before inserting their shows.
+INSERT INTO tv_networks (id, name, network_type, country, viewer_base, quality_level, min_fame_required, genres, description) VALUES
+('cee6d3e3-d6ca-4966-bc04-c3b4b82bb89d', 'NBC', 'national', 'United States', 10000000, 10, 15000, ARRAY['pop', 'rock'], 'US national television network'),
+('5a0d4e0c-3810-4f54-b537-61337d54f24c', 'ABC', 'national', 'United States', 10000000, 10, 15000, ARRAY['pop', 'rock'], 'US national television network'),
+('68191158-02c0-49ed-a310-8977ea479e50', 'CBS', 'national', 'United States', 10000000, 10, 15000, ARRAY['pop', 'rock'], 'US national television network'),
+('48a5523d-f03a-42bc-8ebe-bceec1681b74', 'Fox', 'national', 'United States', 8000000, 9, 12000, ARRAY['pop', 'rock'], 'US national television network'),
+('af4f13ae-49e0-436e-99cd-a5dc94b916f6', 'HBO', 'cable', 'United States', 5000000, 10, 15000, ARRAY['pop', 'rock'], 'US cable television network'),
+('ff67467b-9bdb-4d71-a8f0-d96282651a65', 'PBS', 'national', 'United States', 3000000, 9, 5000, ARRAY['folk', 'rock', 'classical'], 'US public television network'),
+('f843fb66-6e3c-49d8-b60e-d63623c2a16c', 'TV Asahi', 'national', 'Japan', 5000000, 9, 12000, ARRAY['pop', 'rock'], 'Japanese national television network')
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO tv_shows (network_id, show_name, show_type, host_name, time_slot, viewer_reach, slots_per_day, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max, min_fame_required, is_active) VALUES
 ('cee6d3e3-d6ca-4966-bc04-c3b4b82bb89d', 'The Tonight Show Starring Jimmy Fallon', 'late_night', 'Jimmy Fallon', 'late_night', 3500000, 2, 800, 1500, 2000, 5000, 15000, 50000, 15000, true),
 ('cee6d3e3-d6ca-4966-bc04-c3b4b82bb89d', 'Today Show', 'morning_show', 'Hoda Kotb', 'morning', 4000000, 3, 600, 1200, 1500, 4000, 10000, 35000, 12000, true),

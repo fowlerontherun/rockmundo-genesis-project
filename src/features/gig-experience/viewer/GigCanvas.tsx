@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
+import type { ReportMetric } from "../types";
 import { CrowdTuningPanel, useDemoCrowdTuning } from "./CrowdTuningPanel";
 import { GlobalCrowdDefaultsControls } from "./GlobalCrowdDefaultsControls";
 import type { DerivedPlaybackState } from "./engine/PlaybackController";
@@ -116,6 +117,6 @@ export function GigCanvas({
   );
 }
 
-function metricNumber(metric: any) {
+function metricNumber(metric: ReportMetric<number> | undefined) {
   return metric?.status === "available" && typeof metric.value === "number" ? metric.value : 0;
 }

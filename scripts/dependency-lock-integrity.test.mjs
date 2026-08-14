@@ -8,8 +8,13 @@ const lock=JSON.parse(readFileSync(new URL("../package-lock.json",import.meta.ur
 export function assertDeclaredPackagesPresent(packages,dependencies,label){
  for(const dependency of Object.keys(dependencies??{})){
   const root=`node_modules/${dependency}`;
-  const nested=Object.keys(packages).some((entry)=>entry.endsWith(`/node_modules/${dependency}`));
-  assert.ok(packages[root]||nested,`${label} dependency ${dependency} has no package-lock entry`);
+  const entry=packages[root];
+  assert.ok(entry,`${label} dependency ${dependency} has no root package-lock entry`);
+  const externalEntry=!entry.link&&!entry.resolved?.startsWith("file:");
+  if(externalEntry){
+   assert.equal(typeof entry.version,"string",`${label} dependency ${dependency} has no resolved version`);
+   assert.ok(entry.resolved&&entry.integrity,`${label} dependency ${dependency} is an incomplete version-only stub`);
+  }
  }
 }
 
@@ -17,6 +22,15 @@ test("root manifest and lock entry have identical dependency declarations",()=>{
  const root=lock.packages[""];
  assert.deepEqual(root.dependencies,packageJson.dependencies);
  assert.deepEqual(root.devDependencies,packageJson.devDependencies);
+ assertDeclaredPackagesPresent(lock.packages,packageJson.dependencies,"manifest");
+ assertDeclaredPackagesPresent(lock.packages,packageJson.devDependencies,"manifest");
+});
+
+test("testing-library direct entries retain registry metadata and dependency closure",()=>{
+ for(const dependency of ["@testing-library/jest-dom","@testing-library/react","@testing-library/user-event"]){
+  assertDeclaredPackagesPresent(lock.packages,{[dependency]:"*"},"testing-library regression");
+  assertDeclaredPackagesPresent(lock.packages,lock.packages[`node_modules/${dependency}`].dependencies,dependency);
+ }
 });
 
 test("jsdom exists and every dependency declared by its lock entry has a lock entry",()=>{
@@ -33,6 +47,6 @@ test("the integrity check rejects a missing declared jsdom dependency",()=>{
  }
  assert.throws(
   ()=>assertDeclaredPackagesPresent(packages,{[dependency]:"*"},"jsdom"),
-  new RegExp(`jsdom dependency ${dependency} has no package-lock entry`),
+  new RegExp(`jsdom dependency ${dependency} has no root package-lock entry`),
  );
 });

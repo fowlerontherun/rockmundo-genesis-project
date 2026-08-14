@@ -17,7 +17,7 @@ export default defineConfig({
     actionTimeout: 10_000,
   },
   webServer: {
-    command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173',
+    command: 'npm run build -- --base=/ && npm run preview -- --host 127.0.0.1 --port 4173',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
