@@ -102,6 +102,15 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("button", { name: /next highlight/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /skip to result/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /playback speed/i })).toBeInTheDocument();
+    const camera = screen.getByRole("group", { name: /camera mode/i });
+    expect(within(camera).getByRole("button", { name: /venue wide/i })).toHaveAttribute("aria-pressed", "true");
+    expect(within(camera).getByRole("button", { name: /stage focus/i })).toBeInTheDocument();
+    expect(within(camera).getByRole("button", { name: /^auto$/i })).toBeInTheDocument();
+    fireEvent.click(within(camera).getByRole("button", { name: /stage focus/i }));
+    expect(localStorage.getItem("gig-viewer-camera-mode")).toBe("stage_focus");
+    const diagnostic = stage.querySelector("[data-seed-fingerprint]");
+    expect(diagnostic).toHaveAttribute("data-viewer-camera", "stage_focus");
+    expect(diagnostic).toHaveAttribute("data-performance-tier");
     expect(screen.getByRole("switch", { name: /reduced motion/i })).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: /pyrotechnics/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /pop out full screen stage view/i })).toBeInTheDocument();

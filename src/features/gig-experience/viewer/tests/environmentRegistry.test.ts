@@ -71,6 +71,20 @@ describe("venue environment resolution", () => {
     expect(environment.timeOfDay).toBe("night");
   });
 
+  it("resolves the structured Countryside park fixture distinctly from generic Demo", () => {
+    const countryside = resolveGigEnvironment({
+      gigId: "fixture-gig-a", venueArchetype: "festival",
+      venue: { type: "Outdoor park festival", location: "Rural park fixture", environment: "countryside" },
+    });
+    const demo = resolveGigEnvironment({
+      gigId: "fixture-gig-a", venueArchetype: "festival",
+      venue: { type: "Festival main stage", location: "Demo fixture" },
+    });
+    expect(countryside.profile.kind).toBe("countryside");
+    expect(demo.profile.kind).toBe("generic");
+    expect(countryside.profile).not.toEqual(demo.profile);
+  });
+
   it("uses the venue time zone for scheduled local time and a deterministic UTC fallback", () => {
     const scheduledDate = "2026-08-10T20:00:00Z";
     expect(resolve({ scheduledDate, timeZone: "America/Los_Angeles" }).timeOfDay).toBe("day");

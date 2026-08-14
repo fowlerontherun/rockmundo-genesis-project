@@ -11,6 +11,7 @@ import { resolveCrowdTuning } from "./engine/CrowdTuningResolution";
 import { useCanvasSize } from "./hooks/useCanvasSize";
 import { useGlobalCrowdTuning } from "./hooks/useGlobalCrowdTuning";
 import type { GigViewerCameraMode } from "./engine/CameraDirector";
+import { buildViewerDiagnostics } from "./engine/ViewerDiagnostics";
 
 export function GigCanvas({
   replay,
@@ -53,6 +54,7 @@ export function GigCanvas({
     global: globalTuning.data?.settings,
   });
   const tuningKey = crowdTuningSignature(resolved.tuning);
+  const diagnostics = buildViewerDiagnostics({ replay, experience, cameraMode, reducedMotion });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -76,7 +78,11 @@ export function GigCanvas({
   const capacity = experience?.gig?.venue?.capacity ?? 0;
 
   return (
-    <div className={className ?? (fill ? "h-full w-full" : "w-full")} data-crowd-tuning-source={resolved.source}>
+    <div className={className ?? (fill ? "h-full w-full" : "w-full")} data-crowd-tuning-source={resolved.source}
+      data-viewer-camera={diagnostics.cameraMode} data-venue-archetype={diagnostics.venueArchetype}
+      data-venue-variation={diagnostics.venueVariation} data-environment-kind={diagnostics.environmentKind}
+      data-seed-fingerprint={diagnostics.seedFingerprint} data-representative-crowd-count={diagnostics.representativeCrowdCount}
+      data-activity-evidence-mode={diagnostics.activityEvidenceMode} data-performance-tier={diagnostics.performanceTier}>
       {demoTuning.demoMode && !fill ? (
         <>
           <GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} />

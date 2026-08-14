@@ -22,6 +22,8 @@ export interface GigExperienceGigDTO {
     location: string | null;
     capacity: number;
     type?: string | null;
+    /** Explicit presentation classification; never overloaded into the city/location field. */
+    environment?: string | null;
     /** Existing city metadata used only to select a stable visual environment. */
     city?: {
       id: string;
