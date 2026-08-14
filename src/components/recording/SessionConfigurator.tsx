@@ -579,25 +579,31 @@ export const SessionConfigurator = ({
             <span>Total Cost</span>
             <span className="text-primary">${totalCost.toLocaleString()}</span>
           </div>
-          {effectiveBandId ? (
-            <div className="space-y-2 pt-2 border-t">
-              <Label className="text-sm">Who pays?</Label>
-              <RadioGroup
-                value={paymentSource}
-                onValueChange={(v) =>
-                  setPaymentSource(v as "band" | "personal")
-                }
-                className="space-y-2"
-              >
+          <div className="space-y-2 pt-2 border-t">
+            <Label className="text-sm">Who pays?</Label>
+            <RadioGroup
+              value={payer}
+              onValueChange={(v) =>
+                setPaymentSource(v as "band" | "personal")
+              }
+              className="space-y-2"
+            >
                 <label
                   htmlFor="pay-band"
                   className={cn(
-                    "flex items-center justify-between gap-3 rounded-md border p-3 cursor-pointer",
-                    paymentSource === "band" && "border-primary bg-primary/5",
+                    "flex items-center justify-between gap-3 rounded-md border p-3",
+                    effectiveBandId
+                      ? "cursor-pointer"
+                      : "opacity-60 cursor-not-allowed",
+                    payer === "band" && "border-primary bg-primary/5",
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="band" id="pay-band" />
+                    <RadioGroupItem
+                      value="band"
+                      id="pay-band"
+                      disabled={!effectiveBandId}
+                    />
                     <div>
                       <div className="text-sm font-medium flex items-center gap-2">
                         <Users className="h-4 w-4" /> Band funds ({bandName})
