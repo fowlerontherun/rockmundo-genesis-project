@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.665",
+    date: "2026-08-14",
+    changes: [
+      { type: 'feature', description: "Added 61 world-famous real music venues from around the globe — Royal Albert Hall, Madison Square Garden, Red Rocks, Nippon Budokan, Sydney Opera House, The Cavern Club, Ryman Auditorium, Paradiso, Whisky a Go Go and more. Each is marked legendary with prestige, a short description, top-tier sound/lighting and realistic capacities, so they appear in venue browsing and gig booking." },
+    ],
+  },
+  {
     version: "1.1.664",
     date: "2026-08-14",
     changes: [
