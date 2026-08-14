@@ -4,7 +4,7 @@ import type { GigViewerCameraMode } from "./CameraDirector";
 import { resolveGigEnvironment } from "./EnvironmentRegistry";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
 import { generateVenueScene } from "./VenueSceneRegistry";
-import { attendanceForPresentation } from "./AuthoritativeMetric";
+import { replayResultAttendance, resolvePresentationAttendance, type PresentationAttendanceResolution } from "./AuthoritativeMetric";
 
 export type PerformanceTier = "low" | "standard" | "high";
 export type ActivityEvidenceMode = "ambient" | "aggregate" | "event_replay";
@@ -44,6 +44,8 @@ export interface ViewerDiagnostics {
   environmentKind: string;
   seedFingerprint: string;
   representativeCrowdCount: number;
+  attendanceState: PresentationAttendanceResolution["state"];
+  attendanceSource: PresentationAttendanceResolution["source"];
   activityEvidenceMode: ActivityEvidenceMode;
   performanceTier: PerformanceTier;
 }
@@ -58,7 +60,7 @@ export function buildViewerDiagnostics(input: {
   const { replay, experience } = input;
   const scene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
   const environment = resolveGigEnvironment({ gigId: experience?.gig.id ?? replay.gigId, scheduledDate: experience?.gig.scheduledDate, venueArchetype: scene.archetype, venue: experience?.gig.venue });
-  const attendance = attendanceForPresentation(experience?.headline.attendance, experience?.headline.capacity);
+  const attendance = resolvePresentationAttendance(experience?.headline.attendance, replayResultAttendance(replay), experience?.headline.capacity);
   const navigatorCapabilities = typeof navigator === "undefined" ? {} : navigator as Navigator & { deviceMemory?: number };
   const performanceTier = resolvePerformanceTier({ preference: input.performancePreference, reducedMotion: input.reducedMotion, hardwareConcurrency: navigatorCapabilities.hardwareConcurrency, deviceMemoryGb: navigatorCapabilities.deviceMemory });
   return {
@@ -67,7 +69,9 @@ export function buildViewerDiagnostics(input: {
     venueVariation: scene.variation,
     environmentKind: environment.profile.kind,
     seedFingerprint: fingerprint(`${scene.seed}:layout|${environment.seed}`),
-    representativeCrowdCount: representativeCrowdCount({ attendance, capacity: experience?.gig.venue.capacity, archetype: scene.archetype }),
+    representativeCrowdCount: representativeCrowdCount({ attendance: attendance.value, capacity: null, archetype: scene.archetype }),
+    attendanceState: attendance.state,
+    attendanceSource: attendance.source,
     activityEvidenceMode: replay.commerce ? "aggregate" : "ambient",
     performanceTier,
   };

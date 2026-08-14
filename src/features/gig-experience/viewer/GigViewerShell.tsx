@@ -241,6 +241,8 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   const [fullscreen, setFullscreen] = useState(false);
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
   const popoutRef = useRef<HTMLDivElement>(null);
+  const ownedNativeFullscreenRef = useRef(false);
+  const nativeRequestPendingRef = useRef(false);
   const initializedPlayerReplayRef = useRef<string | null>(null);
   const seekMs = playback.seekMs;
 
@@ -248,13 +250,16 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     const next = !fullscreen;
     setFullscreen(next);
     try {
-      if (!next && document.fullscreenElement) void document.exitFullscreen?.().catch(() => undefined);
+      if (!next && ownedNativeFullscreenRef.current && document.fullscreenElement === popoutRef.current) void document.exitFullscreen?.().catch(() => undefined);
     } catch { /* The fixed inset overlay is the reliable fallback. */ }
   }, [fullscreen]);
 
   useEffect(() => {
-    if (!fullscreen || document.fullscreenElement) return;
-    try { void popoutRef.current?.requestFullscreen?.().catch(() => undefined); }
+    if (!fullscreen || document.fullscreenElement || nativeRequestPendingRef.current) return;
+    const host = popoutRef.current;
+    if (!host?.requestFullscreen) return;
+    nativeRequestPendingRef.current = true;
+    try { void host.requestFullscreen().catch(() => undefined).finally(() => { nativeRequestPendingRef.current = false; }); }
     catch { /* Fixed overlay remains active. */ }
   }, [fullscreen]);
 
@@ -268,10 +273,10 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   useEffect(() => {
     const onChange = () => {
       const active = document.fullscreenElement === popoutRef.current;
-      setNativeFullscreen((wasActive) => {
-        if (wasActive && !active) setFullscreen(false);
-        return active;
-      });
+      const wasOwned = ownedNativeFullscreenRef.current;
+      ownedNativeFullscreenRef.current = active;
+      setNativeFullscreen(active);
+      if (wasOwned && !active) setFullscreen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -284,7 +289,8 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     return () => {
       document.removeEventListener("fullscreenchange", onChange);
       window.removeEventListener("keydown", onKey);
-      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => undefined);
+      if (ownedNativeFullscreenRef.current && document.fullscreenElement === popoutRef.current) void document.exitFullscreen?.().catch(() => undefined);
+      ownedNativeFullscreenRef.current = false;
     };
   }, []);
 

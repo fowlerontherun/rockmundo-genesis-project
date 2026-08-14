@@ -88,3 +88,41 @@ remain required before the draft PR can be promoted from draft.
 Only after this verification PR is green, Phase 2A should add versioned descriptor
 validation plus materially distinct pub, club, and theatre layouts. It must remain
 separate from replay-schema, commerce-authority, and renderer-clock changes.
+
+## Final gate-closure attempt (2026-08-14)
+
+The dependency lock was regenerated as a complete npm resolution (not by adding
+transitive records by hand) after removing `node_modules`, using
+`npm install --package-lock-only --ignore-scripts --no-audit --no-fund --offline`.
+The resulting diff replaces the incompatible jsdom 25 subtree, including cssstyle
+4, data-urls 5, http-proxy-agent 7, tough-cookie 5, rrweb-cssom 0.7, and their
+nested dependencies. The lock-only integrity diagnostic now reads only
+`package.json` and `package-lock.json`; it passed before installation and its
+mutation check proves a removed jsdom dependency is detected.
+
+The requested npm 10.9.2 download and registry-backed clean install were blocked
+by the execution environment's registry policy (`E403` for npm 10.9.2, followed
+by `ENOTCACHED` for zustand when testing the generated lock offline). This checkout
+has no authenticated GitHub remote, so the prescribed temporary Actions-artifact
+fallback could not be pushed from this environment. Accordingly, `npm ci` and all
+dependency-backed verification commands remain **not passed** here; no screenshot,
+native-fullscreen capture, frame-cost result, or Actions-run URL is claimed.
+
+| Command/evidence | Result in this environment |
+| --- | --- |
+| `node -v` | Pass: `v20.20.2` |
+| `npx --yes npm@10.9.2 --version` | Blocked: registry `E403` |
+| `npm run verify:dependency-lock` (before install) | Pass: 3/3 |
+| `npm ci --ignore-scripts --no-audit --no-fund --offline` | Blocked: `ENOTCACHED` for zustand 5.0.8 |
+| post-install dependency, type, lint, unit, browser, accessibility, and build gates | Not run because clean install did not complete |
+| five device screenshots and fullscreen evidence | Not captured |
+| renderer frame-cost sample | Not measured |
+| GitHub Actions | Not available from this unauthenticated checkout |
+
+The deterministic geometry assertion remains approximately `0.6047` for its
+current fixture, outside the plan's 0.40–0.50 target. Per-archetype/per-variation
+measurements remain pending a successful install and test execution; this Phase 1
+exit gate is explicitly **not passed**. Geometry correction remains Phase 2 work.
+The attendance, camera, and fullscreen changes are presentation-only and do not
+change replay schemas or canonical gameplay, settlement, commerce, inventory,
+rewards, finance, or audio authority.

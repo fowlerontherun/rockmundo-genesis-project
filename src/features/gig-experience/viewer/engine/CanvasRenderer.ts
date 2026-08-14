@@ -14,7 +14,7 @@ import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
 import { buildVenueActivityPlan, deriveVenueActivity, deriveVenueStaffActivity, type VenueActivityPlan } from "./VenueActivity";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
-import { attendanceForPresentation } from "./AuthoritativeMetric";
+import { replayResultAttendance, resolvePresentationAttendance } from "./AuthoritativeMetric";
 import { resolveGigEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
 import { buildVenueDetailPlan, type VenueDetailPlan } from "./VenueDetailPlan";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
@@ -74,8 +74,8 @@ export class CanvasRenderer {
       venue: experience?.gig.venue,
     });
     this.storyModel = buildStoryModel(replay, experience);
-    const attendance = attendanceForPresentation(experience?.headline.attendance, experience?.headline.capacity);
-    const displayedCrowd = representativeCrowdCount({ attendance, capacity: experience?.gig.venue.capacity, archetype: this.venueScene.archetype });
+    const attendance = resolvePresentationAttendance(experience?.headline.attendance, replayResultAttendance(replay), experience?.headline.capacity);
+    const displayedCrowd = representativeCrowdCount({ attendance: attendance.value, capacity: null, archetype: this.venueScene.archetype });
     this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
@@ -96,7 +96,7 @@ export class CanvasRenderer {
     const crowdBounds = unionRects(this.venueScene.crowdZones);
     const scaledPreset = scaleVenuePreset({ ...this.basePreset, stage: this.venueScene.stage, audience: crowdBounds, crowdZones: this.venueScene.crowdZones, entrances: this.venueScene.entrances, performerSlots: this.venueScene.bandPositions, barriers: [{ x: this.venueScene.stage.x, y: this.venueScene.stage.y + this.venueScene.stage.height + .012, width: this.venueScene.stage.width, height: .018 }] }, this.size);
     this.preset = scaledPreset;
-    this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion });
+    this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion, attendance: resolvePresentationAttendance(this.experience?.headline.attendance, replayResultAttendance(this.replay), this.experience?.headline.capacity).value });
     this.crowdPlan = buildTunedCrowdPlan({
       replay: this.replay,
       attendance: this.layout.attendance,

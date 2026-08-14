@@ -15,9 +15,9 @@ function mulberry32(seed: number) { return () => { let t = seed += 0x6D2B79F5; t
 export function deterministicRandom(seed: string) { return mulberry32(hashSeed(seed)); }
 
 
-export function buildEntityLayout({ replay, experience, size, reducedMotion = false }: { replay: GigViewerReplay; experience?: GigExperienceDTO | null; size: Size; reducedMotion?: boolean }): EntityLayout {
+export function buildEntityLayout({ replay, experience, size, reducedMotion = false, attendance: resolvedAttendance }: { replay: GigViewerReplay; experience?: GigExperienceDTO | null; size: Size; reducedMotion?: boolean; attendance?: number }): EntityLayout {
   const capacity = Math.max(0, experience?.gig.venue.capacity ?? 0);
-  const attendance = Math.max(0, metricNumber(experience?.headline.attendance) ?? crowdAttendanceFromReplay(replay));
+  const attendance = Math.max(0, resolvedAttendance ?? metricNumber(experience?.headline.attendance) ?? crowdAttendanceFromReplay(replay));
   const preset = scaleVenuePreset(selectVenuePreset({ capacity }), size);
   const rand = deterministicRandom(`${replay.simulationSeed}:${preset.name}:${Math.round(size.width)}x${Math.round(size.height)}`);
   const fillRatio = capacity > 0 ? Math.min(1, attendance / capacity) : 0;

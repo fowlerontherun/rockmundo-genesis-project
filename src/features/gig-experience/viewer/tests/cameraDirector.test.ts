@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GigViewerEvent } from "../../events/types";
-import { cameraShotStrength, cameraTransform, deriveCameraForMode, deriveCameraFrame, stageUsefulAreaRatio } from "../engine/CameraDirector";
+import { clampToSafeBounds, cameraShotStrength, cameraTransform, deriveCameraForMode, deriveCameraFrame, stageUsefulAreaRatio } from "../engine/CameraDirector";
 
 const viewport = { width: 1280, height: 720 };
 const stage = { x: 250, y: 90, width: 780, height: 245 };
@@ -132,4 +132,18 @@ describe("gig viewer camera direction", () => {
   it("measures stage dominance as stage area divided by the stage/front-crowd union", () => {
     expect(stageUsefulAreaRatio(stage, audience)).toBeCloseTo(0.6047, 3);
   });
+
+  it("raises near-wide zoom enough to contain the visible rectangle", () => {
+    const safe = { x: 12, y: 8, width: 1256, height: 704 };
+    const frame = clampToSafeBounds({ x: 640, y: 360, zoom: 1.001 }, viewport, safe);
+    expect(frame.zoom).toBeGreaterThanOrEqual(720 / 704);
+    expect(frame.x - 640 / frame.zoom).toBeGreaterThanOrEqual(safe.x);
+    expect(frame.x + 640 / frame.zoom).toBeLessThanOrEqual(safe.x + safe.width);
+  });
+
+  it("fails malformed or impossible safe bounds closed to Venue Wide", () => {
+    expect(clampToSafeBounds({ x: 20, y: 20, zoom: 1.2 }, viewport, { x: NaN, y: 0, width: 10, height: 10 })).toEqual({ x: 640, y: 360, zoom: 1 });
+    expect(clampToSafeBounds({ x: 20, y: 20, zoom: 1.2 }, viewport, { x: 0, y: 0, width: 100, height: 100 })).toEqual({ x: 640, y: 360, zoom: 1 });
+  });
+
 });

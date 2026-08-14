@@ -97,13 +97,30 @@ export function deriveCameraFrame(options: {
 export function clampToSafeBounds(camera: SceneCamera, viewport: Size, safeBounds?: Rect): SceneCamera {
   const bounded = clampCamera(camera, viewport);
   if (!safeBounds || bounded.zoom === 1) return bounded;
-  const halfWidth = viewport.width / bounded.zoom / 2;
-  const halfHeight = viewport.height / bounded.zoom / 2;
+  const safe = normalizeSafeBounds(safeBounds, viewport);
+  if (!safe) return wideVenueCamera(viewport);
+  const minimumZoom = Math.max(viewport.width / safe.width, viewport.height / safe.height, 1);
+  const zoom = Math.min(1.2, Math.max(bounded.zoom, minimumZoom));
+  if (minimumZoom > 1.2) return wideVenueCamera(viewport);
+  const halfWidth = viewport.width / zoom / 2;
+  const halfHeight = viewport.height / zoom / 2;
+  const minX = safe.x + halfWidth, maxX = safe.x + safe.width - halfWidth;
+  const minY = safe.y + halfHeight, maxY = safe.y + safe.height - halfHeight;
   return {
-    ...bounded,
-    x: Math.max(safeBounds.x + halfWidth, Math.min(safeBounds.x + safeBounds.width - halfWidth, bounded.x)),
-    y: Math.max(safeBounds.y + halfHeight, Math.min(safeBounds.y + safeBounds.height - halfHeight, bounded.y)),
+    zoom,
+    x: minX > maxX ? safe.x + safe.width / 2 : Math.max(minX, Math.min(maxX, bounded.x)),
+    y: minY > maxY ? safe.y + safe.height / 2 : Math.max(minY, Math.min(maxY, bounded.y)),
   };
+}
+
+function normalizeSafeBounds(bounds: Rect, viewport: Size): Rect | null {
+  if (![bounds.x, bounds.y, bounds.width, bounds.height, viewport.width, viewport.height].every(Number.isFinite)
+    || bounds.width <= 0 || bounds.height <= 0 || viewport.width <= 0 || viewport.height <= 0) return null;
+  const left = Math.max(0, Math.min(viewport.width, bounds.x));
+  const top = Math.max(0, Math.min(viewport.height, bounds.y));
+  const right = Math.max(left, Math.min(viewport.width, bounds.x + bounds.width));
+  const bottom = Math.max(top, Math.min(viewport.height, bounds.y + bounds.height));
+  return right > left && bottom > top ? { x: left, y: top, width: right - left, height: bottom - top } : null;
 }
 
 /** Stage share of the useful Stage Focus union (stage plus the front 42% of the crowd). */
