@@ -33,19 +33,22 @@ export function deriveCameraForMode(options: {
   viewport: Size;
   stage: Rect;
   audience: Rect;
+  safeCameraBounds?: Rect;
   performers?: CameraPerformer[];
   performanceItemFocus?: Point | null;
   reducedMotion: boolean;
 }): CameraFrame {
   if (options.mode === "venue_wide") return wideFrame(wideVenueCamera(options.viewport));
   if (options.mode === "stage_focus") {
-    const compositionTop = options.stage.y;
-    const compositionBottom = Math.min(options.viewport.height, options.audience.y + options.audience.height * .42);
-    const compositionWidth = Math.max(options.stage.width, options.audience.width);
+    const compositionTop = Math.min(options.stage.y, options.audience.y);
+    const compositionBottom = Math.max(options.stage.y + options.stage.height, options.audience.y + options.audience.height * .42);
+    const compositionLeft = Math.min(options.stage.x, options.audience.x);
+    const compositionRight = Math.max(options.stage.x + options.stage.width, options.audience.x + options.audience.width);
+    const compositionWidth = compositionRight - compositionLeft;
     const compositionHeight = Math.max(1, compositionBottom - compositionTop);
     const safeZoom = Math.min(1.2, options.viewport.width / compositionWidth, options.viewport.height / compositionHeight);
-    const stageAndFrontCrowd = { x: options.stage.x + options.stage.width / 2, y: (compositionTop + compositionBottom) / 2, zoom: safeZoom };
-    return { camera: clampCamera(stageAndFrontCrowd, options.viewport), shot: "wide", subjectId: null, strength: 1 };
+    const stageAndFrontCrowd = { x: (compositionLeft + compositionRight) / 2, y: (compositionTop + compositionBottom) / 2, zoom: safeZoom };
+    return { camera: clampToSafeBounds(stageAndFrontCrowd, options.viewport, options.safeCameraBounds), shot: "wide", subjectId: null, strength: 1 };
   }
   return deriveCameraFrame(options);
 }
@@ -60,6 +63,7 @@ export function deriveCameraFrame(options: {
   viewport: Size;
   stage: Rect;
   audience: Rect;
+  safeCameraBounds?: Rect;
   performers?: CameraPerformer[];
   performanceItemFocus?: Point | null;
   reducedMotion: boolean;
@@ -80,13 +84,33 @@ export function deriveCameraFrame(options: {
     requested: { x: direction.focus.x, y: direction.focus.y, zoom: direction.zoom },
     scene: options.viewport,
   });
-  const camera = clampCamera({
+  const camera = clampToSafeBounds({
     x: interpolate(wide.x, requested.x, strength),
     y: interpolate(wide.y, requested.y, strength),
     zoom: interpolate(1, requested.zoom, strength),
-  }, options.viewport);
+  }, options.viewport, options.safeCameraBounds);
 
   return { camera, shot: direction.shot, subjectId: direction.subjectId, strength };
+}
+
+/** Clamp the camera's visible rectangle to authored safe bounds in logical pixels. */
+export function clampToSafeBounds(camera: SceneCamera, viewport: Size, safeBounds?: Rect): SceneCamera {
+  const bounded = clampCamera(camera, viewport);
+  if (!safeBounds || bounded.zoom === 1) return bounded;
+  const halfWidth = viewport.width / bounded.zoom / 2;
+  const halfHeight = viewport.height / bounded.zoom / 2;
+  return {
+    ...bounded,
+    x: Math.max(safeBounds.x + halfWidth, Math.min(safeBounds.x + safeBounds.width - halfWidth, bounded.x)),
+    y: Math.max(safeBounds.y + halfHeight, Math.min(safeBounds.y + safeBounds.height - halfHeight, bounded.y)),
+  };
+}
+
+/** Stage share of the useful Stage Focus union (stage plus the front 42% of the crowd). */
+export function stageUsefulAreaRatio(stage: Rect, audience: Rect): number {
+  const left = Math.min(stage.x, audience.x), right = Math.max(stage.x + stage.width, audience.x + audience.width);
+  const top = Math.min(stage.y, audience.y), bottom = Math.max(stage.y + stage.height, audience.y + audience.height * .42);
+  return stage.width * stage.height / Math.max(1, (right - left) * (bottom - top));
 }
 
 /** Ease in and out inside the event so every directed shot returns to wide. */

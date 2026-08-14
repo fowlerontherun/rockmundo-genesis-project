@@ -248,9 +248,14 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     const next = !fullscreen;
     setFullscreen(next);
     try {
-      if (next) void popoutRef.current?.requestFullscreen?.().catch(() => undefined);
-      else if (document.fullscreenElement === popoutRef.current) void document.exitFullscreen?.().catch(() => undefined);
+      if (!next && document.fullscreenElement) void document.exitFullscreen?.().catch(() => undefined);
     } catch { /* The fixed inset overlay is the reliable fallback. */ }
+  }, [fullscreen]);
+
+  useEffect(() => {
+    if (!fullscreen || document.fullscreenElement) return;
+    try { void popoutRef.current?.requestFullscreen?.().catch(() => undefined); }
+    catch { /* Fixed overlay remains active. */ }
   }, [fullscreen]);
 
   useEffect(() => {
@@ -262,7 +267,11 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
 
   useEffect(() => {
     const onChange = () => {
-      setNativeFullscreen(document.fullscreenElement === popoutRef.current);
+      const active = document.fullscreenElement === popoutRef.current;
+      setNativeFullscreen((wasActive) => {
+        if (wasActive && !active) setFullscreen(false);
+        return active;
+      });
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -275,7 +284,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     return () => {
       document.removeEventListener("fullscreenchange", onChange);
       window.removeEventListener("keydown", onKey);
-      if (document.fullscreenElement === popoutRef.current) void document.exitFullscreen?.().catch(() => undefined);
+      if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => undefined);
     };
   }, []);
 

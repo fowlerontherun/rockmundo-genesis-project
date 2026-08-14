@@ -27,4 +27,10 @@ describe("viewer baseline diagnostics", () => {
     expect(resolvePerformanceTier({ hardwareConcurrency: 2, deviceMemoryGb: 2 })).toBe("low");
     expect(resolvePerformanceTier({ hardwareConcurrency: 16, deviceMemoryGb: 16 })).toBe("high");
   });
+
+  it("keeps explicitly available zero attendance at zero", () => {
+    const empty = experience("gig-empty");
+    empty.headline.attendance.value = 0;
+    expect(buildViewerDiagnostics({ replay: replay("gig-empty"), experience: empty, cameraMode: "venue_wide", reducedMotion: false }).representativeCrowdCount).toBe(0);
+  });
 });

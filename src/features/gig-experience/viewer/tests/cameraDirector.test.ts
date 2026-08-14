@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GigViewerEvent } from "../../events/types";
-import { cameraShotStrength, cameraTransform, deriveCameraForMode, deriveCameraFrame } from "../engine/CameraDirector";
+import { cameraShotStrength, cameraTransform, deriveCameraForMode, deriveCameraFrame, stageUsefulAreaRatio } from "../engine/CameraDirector";
 
 const viewport = { width: 1280, height: 720 };
 const stage = { x: 250, y: 90, width: 780, height: 245 };
@@ -116,5 +116,20 @@ describe("gig viewer camera direction", () => {
     expect(focused.scale).toBe(1.2);
     expect(focused.translateX).toBeCloseTo(0);
     expect(focused.translateY).toBeCloseTo(-144);
+  });
+
+  it("centres asymmetric stage/front-crowd geometry and stays in authored safe bounds", () => {
+    const asymmetricStage = { x: 120, y: 90, width: 560, height: 245 };
+    const asymmetricAudience = { x: 260, y: 355, width: 800, height: 310 };
+    const safeCameraBounds = { x: 10, y: 8, width: 1260, height: 704 };
+    const frame = deriveCameraForMode({ event: event(), positionMs: 2_000, viewport, stage: asymmetricStage, audience: asymmetricAudience, safeCameraBounds, performers, reducedMotion: false, mode: "stage_focus" });
+    expect(frame.camera.x).toBeCloseTo(590);
+    const visible = { width: viewport.width / frame.camera.zoom, height: viewport.height / frame.camera.zoom };
+    expect(frame.camera.x - visible.width / 2).toBeGreaterThanOrEqual(safeCameraBounds.x);
+    expect(frame.camera.x + visible.width / 2).toBeLessThanOrEqual(safeCameraBounds.x + safeCameraBounds.width);
+  });
+
+  it("measures stage dominance as stage area divided by the stage/front-crowd union", () => {
+    expect(stageUsefulAreaRatio(stage, audience)).toBeCloseTo(0.6047, 3);
   });
 });

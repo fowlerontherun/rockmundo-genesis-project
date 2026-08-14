@@ -4,6 +4,7 @@ import type { GigViewerCameraMode } from "./CameraDirector";
 import { resolveGigEnvironment } from "./EnvironmentRegistry";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
 import { generateVenueScene } from "./VenueSceneRegistry";
+import { attendanceForPresentation } from "./AuthoritativeMetric";
 
 export type PerformanceTier = "low" | "standard" | "high";
 export type ActivityEvidenceMode = "ambient" | "aggregate" | "event_replay";
@@ -57,7 +58,7 @@ export function buildViewerDiagnostics(input: {
   const { replay, experience } = input;
   const scene = generateVenueScene({ gigId: experience?.gig.id ?? replay.id, venueId: experience?.gig.venue.id, venueName: experience?.gig.venue.name, venueType: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity });
   const environment = resolveGigEnvironment({ gigId: experience?.gig.id ?? replay.gigId, scheduledDate: experience?.gig.scheduledDate, venueArchetype: scene.archetype, venue: experience?.gig.venue });
-  const attendance = metricNumber(experience?.headline.attendance) || metricNumber(experience?.headline.capacity);
+  const attendance = attendanceForPresentation(experience?.headline.attendance, experience?.headline.capacity);
   const navigatorCapabilities = typeof navigator === "undefined" ? {} : navigator as Navigator & { deviceMemory?: number };
   const performanceTier = resolvePerformanceTier({ preference: input.performancePreference, reducedMotion: input.reducedMotion, hardwareConcurrency: navigatorCapabilities.hardwareConcurrency, deviceMemoryGb: navigatorCapabilities.deviceMemory });
   return {
@@ -76,9 +77,4 @@ function fingerprint(value: string) {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
   return `scene-v1-${(hash >>> 0).toString(16).padStart(8, "0")}`;
-}
-
-function metricNumber(metric: unknown) {
-  const value = metric as { status?: string; value?: unknown } | null | undefined;
-  return value?.status === "available" && typeof value.value === "number" ? value.value : 0;
 }

@@ -14,6 +14,7 @@ import { buildPyroPlan, drawPyrotechnics, type PyroPlan } from "./Pyrotechnics";
 import { buildAudienceActivityPlan, drawAudienceActivity, type AudienceActivityPlan } from "./AudienceActivity";
 import { buildVenueActivityPlan, deriveVenueActivity, deriveVenueStaffActivity, type VenueActivityPlan } from "./VenueActivity";
 import { representativeCrowdCount } from "./RepresentativeCrowd";
+import { attendanceForPresentation } from "./AuthoritativeMetric";
 import { resolveGigEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
 import { buildVenueDetailPlan, type VenueDetailPlan } from "./VenueDetailPlan";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
@@ -73,7 +74,7 @@ export class CanvasRenderer {
       venue: experience?.gig.venue,
     });
     this.storyModel = buildStoryModel(replay, experience);
-    const attendance = metricNumber(experience?.headline.attendance) || metricNumber(experience?.headline.capacity);
+    const attendance = attendanceForPresentation(experience?.headline.attendance, experience?.headline.capacity);
     const displayedCrowd = representativeCrowdCount({ attendance, capacity: experience?.gig.venue.capacity, archetype: this.venueScene.archetype });
     this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
@@ -146,6 +147,12 @@ export class CanvasRenderer {
       viewport: size,
       stage: preset.stage,
       audience: preset.audience,
+      safeCameraBounds: {
+        x: this.venueScene.safeCameraBounds.x * size.width,
+        y: this.venueScene.safeCameraBounds.y * size.height,
+        width: this.venueScene.safeCameraBounds.width * size.width,
+        height: this.venueScene.safeCameraBounds.height * size.height,
+      },
       performers: performers.map((performer) => ({
         id: performer.id,
         profileId: performer.profileId,
