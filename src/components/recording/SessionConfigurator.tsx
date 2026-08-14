@@ -49,6 +49,7 @@ import {
   type RecordingSkillBonus,
 } from "@/utils/skillRecordingBonus";
 import type { SkillProgressEntry } from "@/utils/skillGearPerformance";
+import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
 
 interface SessionConfiguratorProps {
   userId: string;
@@ -115,19 +116,7 @@ export const SessionConfigurator = ({
         setFallbackBandId(null);
         return;
       }
-      let query = supabase
-        .from("band_members")
-        .select("band_id, member_status, bands!inner(id, status)")
-        .eq("bands.status", "active")
-        .limit(10);
-      query = profileId
-        ? query.eq("profile_id", profileId)
-        : query.eq("user_id", userId);
-      const { data } = await query;
-      const rows = (data as any[]) ?? [];
-      const match =
-        rows.find((r) => !r.member_status || r.member_status === "active") ??
-        rows[0];
+      const match = await resolveActiveBandMembership(profileId, userId);
       if (!cancelled) setFallbackBandId(match?.band_id ?? null);
     };
     resolveBand();
