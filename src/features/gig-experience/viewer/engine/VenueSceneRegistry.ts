@@ -174,8 +174,26 @@ export function validateVenueSceneDescriptor(scene: VenueSceneDescriptor): Venue
   Object.entries(scene.paths).forEach(([name,points])=>{if(points.length<2)add("PATH_TOO_SHORT",`paths.${name}`,"Path needs at least two waypoints");points.forEach((v,i)=>{checkPoint(v,`paths.${name}[${i}]`);if((name.startsWith("crowd")||name.startsWith("barTo")||name.startsWith("merchandiseTo")||name==="entranceToCrowd")&&inside(v,scene.stage))add("AUDIENCE_PATH_CROSSES_STAGE",`paths.${name}[${i}]`,"Audience paths must avoid stage");});});
   const endpointInside=(name:PathName,index:number,target:Readonly<Rect>|Readonly<Point>)=>{const path=scene.paths[name], value=path[index<0?path.length+index:index];const ok="width" in target?inside(value,target):value.x===target.x&&value.y===target.y;if(!ok)add("PATH_ENDPOINT_MISMATCH",`paths.${name}`,"Path endpoint does not match its intended target");};
   endpointInside("crowdToBar",-1,scene.bar); endpointInside("barToCrowd",-1,scene.crowdZones[0]); endpointInside("crowdToMerchandise",-1,scene.merchandise); endpointInside("merchandiseToCrowd",-1,scene.crowdZones[0]); endpointInside("entranceToCrowd",0,scene.entrances[0]); endpointInside("entranceToCrowd",-1,scene.crowdZones[0]); endpointInside("staffToBar",-1,scene.bar); endpointInside("staffToMerchandise",-1,scene.merchandise);
-  const unique=(items:readonly {id:string}[],path:string)=>{const seen=new Set<string>();items.forEach(x=>{if(seen.has(x.id))add("DUPLICATE_ID",path,`Duplicate id: ${x.id}`);seen.add(x.id);});}; unique(scene.crowdZones,"crowdZones");unique(scene.decorations,"decorations");unique(scene.exteriorSlots,"exteriorSlots");
-  if(scene.stage.width<.4||scene.stage.height<.25)add("STAGE_NOT_READABLE","stage","Stage must remain readable in the wide scene");
+  const services = [...scene.bars, ...scene.merchandiseStands];
+  const routeById = new Map(scene.routes.map((route)=>[route.id,route] as const));
+  services.forEach((point,index)=>{
+    const path=`${point.kind === "bar" ? "bars" : "merchandiseStands"}[${index}]`;
+    checkRect(point.bounds,`${path}.bounds`);
+    if(intersects(point.bounds,scene.stage)) add("SERVICE_POINT_ON_STAGE",path,"Service point must not intersect stage");
+    if(point.queuePoints.length===0) add("SERVICE_POINT_NO_QUEUE",path,"Service point needs at least one queue slot");
+    point.queuePoints.forEach((v,q)=>{checkPoint(v,`${path}.queuePoints[${q}]`);if(inside(v,scene.stage))add("QUEUE_POINT_ON_STAGE",`${path}.queuePoints[${q}]`,"Queue point must be outside stage");});
+    if(point.staffPositions.length===0) add("SERVICE_POINT_NO_STAFF",path,"Service point needs at least one staff anchor");
+    point.staffPositions.forEach((v,s)=>checkPoint(v,`${path}.staffPositions[${s}]`));
+    [point.approachRouteId,point.returnRouteId].forEach((id)=>{ if(!routeById.has(id)) add("SERVICE_ROUTE_MISSING",`${path}.${id}`,"Service point references an unknown route"); });
+    const approach=routeById.get(point.approachRouteId);
+    if(approach && !inside(approach.waypoints[approach.waypoints.length-1],point.bounds)) add("ROUTE_ENDPOINT_MISMATCH",`routes.${point.approachRouteId}`,"Approach route must end inside its service point");
+  });
+  scene.routes.forEach((route)=>{
+    if(route.waypoints.length<2) add("ROUTE_TOO_SHORT",`routes.${route.id}`,"Route needs at least two waypoints");
+    route.waypoints.forEach((v,i)=>{checkPoint(v,`routes.${route.id}[${i}]`);if(inside(v,scene.stage))add("ROUTE_CROSSES_STAGE",`routes.${route.id}[${i}]`,"Audience routes must avoid stage");});
+  });
+  const unique=(items:readonly {id:string}[],path:string)=>{const seen=new Set<string>();items.forEach(x=>{if(seen.has(x.id))add("DUPLICATE_ID",path,`Duplicate id: ${x.id}`);seen.add(x.id);});}; unique(scene.crowdZones,"crowdZones");unique(scene.decorations,"decorations");unique(scene.exteriorSlots,"exteriorSlots");unique(services,"servicePoints");unique(scene.routes,"routes");
+  if(scene.stage.width<.4||scene.stage.width>.5||scene.stage.height<.25)add("STAGE_NOT_READABLE","stage","Stage must occupy 40-50% of scene width and remain readable");
   return {valid:errors.length===0,errors};
 }
 
