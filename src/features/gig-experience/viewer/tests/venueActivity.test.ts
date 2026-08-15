@@ -93,7 +93,7 @@ describe("deterministic venue activity", () => {
   });
 
   it("disables invalid or missing service routes safely", () => {
-    const { scene } = make(); scene.paths.crowdToBar = []; scene.queuePoints.merchandise = [];
+    const { scene: base } = make(); const scene = { ...base, paths: { ...base.paths, crowdToBar: [] }, queuePoints: { ...base.queuePoints, merchandise: [] } } as typeof base;
     const plan = buildVenueActivityPlan({ replay, story: buildStoryModel(replay, null), scene, displayedCrowd: 16 });
     expect(plan.visits).toEqual([]); expect(plan.staff).toEqual([]); expect(deriveVenueActivity(plan, 10_000)).toEqual([]); expect(deriveVenueStaffActivity(plan, 10_000)).toEqual([]);
   });

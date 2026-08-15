@@ -157,7 +157,7 @@ function buildVariation(archetype: VenueArchetype, variation: VenueVariation): V
   return deepFreeze({...base,structuralFingerprint});
 }
 
-export const VENUE_LAYOUT_REGISTRY: Readonly<Record<VenueArchetype, readonly VenueSceneDescriptor[]>> = deepFreeze(Object.fromEntries((["pub","club","theatre","arena","stadium","festival","beach"] as VenueArchetype[]).map(type=>[type,([0,1,2] as VenueVariation[]).map(v=>buildVariation(type,v))])) as Record<VenueArchetype,readonly VenueSceneDescriptor[]>);
+export const VENUE_LAYOUT_REGISTRY: Readonly<Record<VenueArchetype, readonly VenueSceneDescriptor[]>> = deepFreeze(Object.fromEntries((["pub","club","theatre","arena","stadium","festival","beach"] as VenueArchetype[]).map(type=>[type,([0,1,2] as VenueVariation[]).map(v=>buildVariation(type,v))])) as unknown as Record<VenueArchetype,readonly VenueSceneDescriptor[]>);
 export const SAFE_CLUB_DESCRIPTOR = VENUE_LAYOUT_REGISTRY.club[0];
 
 export function validateVenueSceneDescriptor(scene: VenueSceneDescriptor): VenueDescriptorValidationResult {
@@ -168,7 +168,8 @@ export function validateVenueSceneDescriptor(scene: VenueSceneDescriptor): Venue
   if(intersects(scene.labelSafeBounds,scene.stage)||intersects(scene.controlSafeBounds,scene.stage)) add("SAFE_AREA_OBSCURES_STAGE","safeBounds","Safe UI areas must not obscure the stage");
   scene.crowdZones.forEach((z,i)=>{checkRect(z,`crowdZones[${i}]`);checkPoint(z.returnAnchor,`crowdZones[${i}].returnAnchor`);if(!inside(z.returnAnchor,z))add("CROWD_RETURN_ANCHOR_INVALID",`crowdZones[${i}].returnAnchor`,"Return anchor must be inside its crowd zone");if(intersects(z,scene.stage))add("STAGE_CROWD_OVERLAP",`crowdZones[${i}]`,"Crowd zone must not overlap stage");});
   Object.entries(scene.bandPositions).forEach(([id,v])=>{checkPoint(v,`bandPositions.${id}`);if(!inside(v,scene.stage))add("BAND_ANCHOR_OUTSIDE_STAGE",`bandPositions.${id}`,"Band anchor must be inside stage");});
-  [[scene.bar,"bar"],[scene.merchandise,"merchandise"],...scene.decorations.map((d)=>[d.bounds,`decorations.${d.id}`] as const),...scene.exteriorSlots.map(d=>[d.bounds,`exteriorSlots.${d.id}`] as const)].forEach(([v,path])=>{checkRect(v,path);if(intersects(v,scene.stage))add("FIXTURE_STAGE_OVERLAP",path,"Fixture must not intersect stage");});
+  const fixtureChecks: Array<readonly [Readonly<Rect>, string]> = [[scene.bar,"bar"],[scene.merchandise,"merchandise"],...scene.decorations.map((d)=>[d.bounds,`decorations.${d.id}`] as const),...scene.exteriorSlots.map(d=>[d.bounds,`exteriorSlots.${d.id}`] as const)];
+  fixtureChecks.forEach(([v,path])=>{checkRect(v,path);if(intersects(v,scene.stage))add("FIXTURE_STAGE_OVERLAP",path,"Fixture must not intersect stage");});
   Object.entries(scene.queuePoints).forEach(([kind,points])=>points.forEach((v,i)=>{checkPoint(v,`queuePoints.${kind}[${i}]`);if(inside(v,scene.stage))add("QUEUE_POINT_ON_STAGE",`queuePoints.${kind}[${i}]`,"Queue point must be outside stage");}));
   Object.entries(scene.paths).forEach(([name,points])=>{if(points.length<2)add("PATH_TOO_SHORT",`paths.${name}`,"Path needs at least two waypoints");points.forEach((v,i)=>{checkPoint(v,`paths.${name}[${i}]`);if((name.startsWith("crowd")||name.startsWith("barTo")||name.startsWith("merchandiseTo")||name==="entranceToCrowd")&&inside(v,scene.stage))add("AUDIENCE_PATH_CROSSES_STAGE",`paths.${name}[${i}]`,"Audience paths must avoid stage");});});
   const endpointInside=(name:PathName,index:number,target:Readonly<Rect>|Readonly<Point>)=>{const path=scene.paths[name], value=path[index<0?path.length+index:index];const ok="width" in target?inside(value,target):value.x===target.x&&value.y===target.y;if(!ok)add("PATH_ENDPOINT_MISMATCH",`paths.${name}`,"Path endpoint does not match its intended target");};
