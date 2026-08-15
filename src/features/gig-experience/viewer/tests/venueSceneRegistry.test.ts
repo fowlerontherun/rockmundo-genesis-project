@@ -52,3 +52,55 @@ describe("versioned venue scene descriptors", () => {
   it("falls back at runtime for invalid external candidates",()=>{const descriptor=mutable(SAFE_CLUB_DESCRIPTOR);descriptor.stage.x=2;expect(generateVenueScene({candidate:descriptor})).toBe(SAFE_CLUB_DESCRIPTOR);});
   it("gives every crowd zone an in-zone return anchor",()=>{for(const descriptors of Object.values(VENUE_LAYOUT_REGISTRY))for(const d of descriptors)for(const z of d.crowdZones){expect(z.returnAnchor.x).toBeGreaterThanOrEqual(z.x);expect(z.returnAnchor.x).toBeLessThanOrEqual(z.x+z.width);}});
 });
+
+describe("phase 2B large venue descriptors", () => {
+  const LARGE_TYPES = ["arena", "stadium", "festival", "beach"] as const;
+
+  it("keeps every authored stage at 40-50% of useful scene width", () => {
+    for (const descriptors of Object.values(VENUE_LAYOUT_REGISTRY)) for (const d of descriptors) {
+      expect(d.stage.width).toBeGreaterThanOrEqual(.4); expect(d.stage.width).toBeLessThanOrEqual(.5);
+    }
+  });
+
+  it("authors three materially distinct large layouts per archetype", () => {
+    for (const archetype of LARGE_TYPES) {
+      const descriptors = VENUE_LAYOUT_REGISTRY[archetype];
+      expect(descriptors).toHaveLength(3);
+      for (const d of descriptors) expect(validateVenueSceneDescriptor(d)).toEqual({ valid: true, errors: [] });
+      expect(new Set(descriptors.map(d => d.structuralFingerprint))).toHaveLength(3);
+      expect(new Set(descriptors.map(d => JSON.stringify({ stage: d.stage, crowd: d.crowdZones.map(z => [z.x, z.y, z.width, z.height]), bars: d.bars.map(b => b.bounds), decor: d.decorations.map(x => x.kind) })))).toHaveLength(3);
+    }
+  });
+
+  it("scales distributed services and staffing by capacity band", () => {
+    for (const archetype of ["arena", "stadium", "festival"] as const) for (const d of VENUE_LAYOUT_REGISTRY[archetype]) {
+      expect(d.bars.length).toBeGreaterThanOrEqual(2);
+      expect(d.merchandiseStands.length).toBeGreaterThanOrEqual(2);
+      for (const point of [...d.bars, ...d.merchandiseStands]) expect(point.staffPositions.length).toBeGreaterThanOrEqual(2);
+    }
+    for (const d of VENUE_LAYOUT_REGISTRY.pub) { expect(d.bars).toHaveLength(1); expect(d.bars[0].staffPositions).toHaveLength(1); }
+    expect(VENUE_LAYOUT_REGISTRY.stadium[0].capacityBand).toBe("mega");
+    expect(VENUE_LAYOUT_REGISTRY.pub[0].capacityBand).toBe("intimate");
+  });
+
+  it("gives every service point resolvable approach and return routes", () => {
+    for (const descriptors of Object.values(VENUE_LAYOUT_REGISTRY)) for (const d of descriptors) {
+      const ids = new Set(d.routes.map(r => r.id));
+      for (const point of [...d.bars, ...d.merchandiseStands]) {
+        expect(ids.has(point.approachRouteId)).toBe(true);
+        expect(ids.has(point.returnRouteId)).toBe(true);
+      }
+      for (const route of d.routes) expect(route.waypoints.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it.each([
+    ["SERVICE_POINT_ON_STAGE", (d: any) => { d.bars[0].bounds = { ...d.stage }; }],
+    ["SERVICE_POINT_NO_QUEUE", (d: any) => { d.bars[0].queuePoints = []; }],
+    ["SERVICE_ROUTE_MISSING", (d: any) => { d.bars[0].approachRouteId = "nope"; }],
+    ["ROUTE_TOO_SHORT", (d: any) => { d.routes[0].waypoints = [d.routes[0].waypoints[0]]; }],
+  ])("reports %s", (code, breakIt) => {
+    const descriptor = mutable(SAFE_CLUB_DESCRIPTOR); breakIt(descriptor);
+    expect(validateVenueSceneDescriptor(descriptor).errors.map(e => e.code)).toContain(code);
+  });
+});
