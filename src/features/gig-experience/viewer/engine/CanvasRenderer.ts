@@ -61,7 +61,7 @@ export class CanvasRenderer {
       capacity: experience?.gig?.venue?.capacity,
       venueName: experience?.gig?.venue?.name,
       venueType: experience?.gig?.venue?.type ?? null,
-      variantSeed: this.venueScene.seed,
+      variantSeed: this.venueScene.structuralFingerprint,
     });
     this.venueDetailPlan = buildVenueDetailPlan({
       scene: this.venueScene,
@@ -93,8 +93,8 @@ export class CanvasRenderer {
     this.canvas.style.width = `${this.size.width}px`;
     this.canvas.style.height = `${this.size.height}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const crowdBounds = unionRects(this.venueScene.crowdZones);
-    const scaledPreset = scaleVenuePreset({ ...this.basePreset, stage: this.venueScene.stage, audience: crowdBounds, crowdZones: this.venueScene.crowdZones, entrances: this.venueScene.entrances, performerSlots: this.venueScene.bandPositions, barriers: [{ x: this.venueScene.stage.x, y: this.venueScene.stage.y + this.venueScene.stage.height + .012, width: this.venueScene.stage.width, height: .018 }] }, this.size);
+    const crowdBounds = unionRects([...this.venueScene.crowdZones]);
+    const scaledPreset = scaleVenuePreset({ ...this.basePreset, stage: this.venueScene.stage, audience: crowdBounds, crowdZones: [...this.venueScene.crowdZones], entrances: [...this.venueScene.entrances], performerSlots: this.venueScene.bandPositions, barriers: [{ x: this.venueScene.stage.x, y: this.venueScene.stage.y + this.venueScene.stage.height + .012, width: this.venueScene.stage.width, height: .018 }] }, this.size);
     this.preset = scaledPreset;
     this.layout = buildEntityLayout({ replay: this.replay, experience: this.experience, size: this.size, reducedMotion: this.reducedMotion, attendance: resolvePresentationAttendance(this.experience?.headline.attendance, replayResultAttendance(this.replay), this.experience?.headline.capacity).value });
     this.crowdPlan = buildTunedCrowdPlan({

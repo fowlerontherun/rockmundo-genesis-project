@@ -54,7 +54,7 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
   const services = (["bar", "merchandise"] as const).filter((service) => {
     const out = service === "bar" ? scene.paths.crowdToBar : scene.paths.crowdToMerchandise;
     const back = service === "bar" ? scene.paths.barToCrowd : scene.paths.merchandiseToCrowd;
-    return (!settledCounts || settledCounts[service] > 0) && scene.queuePoints[service].some(validPoint) && validRoute(out, scene.stage) && validRoute(back, scene.stage);
+    return (!settledCounts || settledCounts[service] > 0) && scene.queuePoints[service].some(validPoint) && validRoute([...out], scene.stage) && validRoute([...back], scene.stage);
   });
   const max = Math.min(CAPS[scene.archetype], Math.max(0, input.displayedCrowd - Math.max(4, Math.ceil(input.displayedCrowd * .55))));
   const slots = services.reduce((sum, service) => sum + scene.queuePoints[service].length, 0);

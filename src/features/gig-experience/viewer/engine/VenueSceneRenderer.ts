@@ -37,8 +37,10 @@ export function drawSceneDecorationsAndServices(
   ctx.save();
   scene.exteriorSlots.forEach((slot) => drawDecoration(ctx, size, slot));
   scene.decorations.forEach((slot) => drawDecoration(ctx, size, slot));
-  drawServiceFixture(ctx, size, scene.bar, "BAR", detailPlan.services.bar);
-  drawServiceFixture(ctx, size, scene.merchandise, "MERCH", detailPlan.services.merchandise);
+  const bars = scene.bars.length ? scene.bars.map((point) => point.bounds) : [scene.bar];
+  const stands = scene.merchandiseStands.length ? scene.merchandiseStands.map((point) => point.bounds) : [scene.merchandise];
+  bars.forEach((bounds) => drawServiceFixture(ctx, size, bounds, "BAR", detailPlan.services.bar));
+  stands.forEach((bounds) => drawServiceFixture(ctx, size, bounds, "MERCH", detailPlan.services.merchandise));
   ctx.restore();
 }
 

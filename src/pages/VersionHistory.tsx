@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.666",
+    date: "2026-08-14",
+    changes: [
+      { type: 'feature', description: "Living Venue Viewer Phase 2B: arena, stadium, festival and beach venues now use authored large-scale layouts with several bars and merch stands spread around the room instead of one oversized counter, plus capacity-scaled staffing (1-3 staff per counter) and authored crowd/staff walking routes to each one." },
+      { type: 'improvement', description: "The gig viewer now draws every bar and merchandise stand in a venue, so big rooms feel populated with facilities rather than a single fixture." },
+      { type: 'improvement', description: "Venue layout validation now checks distributed service points, their queues, staffing anchors and route endpoints, verifies entrances/exits stay inside the scene, and enforces the 40-50% stage width rule for every archetype." },
+      { type: 'fix', description: "Fixed viewer type errors around readonly scene data and restored the local test toolchain so the venue suites run again." },
+    ],
+  },
+  {
     version: "1.1.665",
     date: "2026-08-14",
     changes: [
