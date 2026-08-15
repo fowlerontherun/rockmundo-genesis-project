@@ -11,14 +11,25 @@ export type DecorationKind = "table" | "poster" | "booth" | "seat" | "balcony" |
 export type PathName = "crowdToBar" | "barToCrowd" | "crowdToMerchandise" | "merchandiseToCrowd" | "entranceToCrowd" | "staffToBar" | "staffToMerchandise";
 export interface DecorationSlot { readonly id: string; readonly kind: DecorationKind; readonly bounds: Readonly<Rect>; readonly style: number }
 export interface CrowdZone extends Readonly<Rect> { readonly id: string; readonly returnAnchor: Readonly<Point> }
+export type ServiceKind = "bar" | "merchandise";
+export type CapacityBand = "intimate" | "club" | "mid" | "large" | "mega";
+/** Distributed service point: large venues gain several rather than one oversized queue. */
+export interface ServicePoint {
+  readonly id: string; readonly kind: ServiceKind; readonly bounds: Readonly<Rect>;
+  readonly queuePoints: readonly Readonly<Point>[]; readonly staffPositions: readonly Readonly<Point>[];
+  readonly approachRouteId: string; readonly returnRouteId: string;
+}
+/** Authored route graph edge. Counters interpolate along waypoints; there is no collision solver. */
+export interface SceneRoute { readonly id: string; readonly from: string; readonly to: string; readonly waypoints: readonly Readonly<Point>[] }
 export interface VenueSceneDescriptor {
   readonly descriptorVersion: typeof VENUE_SCENE_DESCRIPTOR_VERSION;
   readonly archetype: VenueArchetype; readonly variation: VenueVariation;
   readonly seedNamespace: typeof VENUE_LAYOUT_SEED_NAMESPACE; readonly decorationNamespace: typeof VENUE_DECOR_SEED_NAMESPACE;
-  readonly structuralFingerprint: string;
+  readonly structuralFingerprint: string; readonly capacityBand: CapacityBand;
   readonly bounds: Readonly<Rect>; readonly safeCameraBounds: Readonly<Rect>; readonly foregroundEffectBounds: Readonly<Rect>; readonly labelSafeBounds: Readonly<Rect>; readonly controlSafeBounds: Readonly<Rect>;
   readonly stage: Readonly<Rect>; readonly bandPositions: Readonly<Record<string, Readonly<Point>>>; readonly crowdZones: readonly CrowdZone[];
   readonly bar: Readonly<Rect>; readonly merchandise: Readonly<Rect>; readonly entrances: readonly Readonly<Point>[]; readonly exits: readonly Readonly<Point>[];
+  readonly bars: readonly ServicePoint[]; readonly merchandiseStands: readonly ServicePoint[]; readonly routes: readonly SceneRoute[];
   readonly queuePoints: Readonly<{ bar: readonly Readonly<Point>[]; merchandise: readonly Readonly<Point>[]; entrance: readonly Readonly<Point>[] }>;
   readonly staffPositions: Readonly<{ bar: Readonly<Point>; merchandise: Readonly<Point> }>;
   readonly paths: Readonly<Record<PathName, readonly Readonly<Point>[]>>; readonly architecture: VenueArchitecture;
