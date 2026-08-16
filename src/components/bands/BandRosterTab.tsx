@@ -575,11 +575,13 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                   {members.map((member) => {
                     const lastStatus = statusHistory[member.id]?.[0];
                     const statusLabel = getStatusLabel(member.member_status);
-                    const draftRole = draftPerformanceRoles[member.id] ?? member.instrument_role ?? "Other";
-                    const roleOptions = draftRole && !performanceRoleOptions.includes(draftRole)
-                      ? [draftRole, ...performanceRoleOptions]
-                      : performanceRoleOptions;
-                    const hasUnsavedRole = draftRole !== (member.instrument_role || "Other");
+                    const savedRoles = getMemberRoles(member);
+                    const draftRoles = draftPerformanceRoles[member.id] ?? savedRoles;
+                    const roleOptions = Array.from(new Set([...draftRoles, ...performanceRoleOptions]));
+                    const hasUnsavedRole =
+                      draftRoles.length !== savedRoles.length ||
+                      draftRoles.some((role) => !savedRoles.includes(role));
+                    const canEdit = canEditMember(member);
                     return (
                       <TableRow key={member.id}>
                         <TableCell>
