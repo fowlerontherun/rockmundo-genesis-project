@@ -7,7 +7,9 @@ import { createScheduledActivity } from "./useActivityBooking";
 import { 
   createBandScheduledActivities, 
   checkBandAvailability, 
-  formatConflictMessage 
+  formatConflictMessage,
+  notifyAbsentBandMembers,
+  BandUnavailableError,
 } from "@/utils/bandActivityScheduling";
 
 export interface RecordingProducer {
@@ -213,6 +215,8 @@ interface CreateRecordingSessionInput {
   scheduled_start?: string;
   scheduled_end?: string;
   payment_source?: 'band' | 'personal';
+  /** Members (profile ids) the leader chose to book without. */
+  skip_profile_ids?: string[];
 }
 
 export const calculateRecordingQuality = (
@@ -289,6 +293,8 @@ export const useCreateRecordingSession = () => {
       const now = input.scheduled_start ? new Date(input.scheduled_start) : new Date();
       const sessionEnd = input.scheduled_end ? new Date(input.scheduled_end) : new Date(now.getTime() + input.duration_hours * 60 * 60 * 1000);
       let actingProfileId = input.profile_id ?? null;
+      let blockedConflicts: Awaited<ReturnType<typeof checkBandAvailability>>['conflicts'] = [];
+      let excludedConflicts: Awaited<ReturnType<typeof checkBandAvailability>>['conflicts'] = [];
 
       // If band session, check availability for ALL band members first
       if (input.band_id) {
@@ -298,8 +304,12 @@ export const useCreateRecordingSession = () => {
           sessionEnd
         );
 
-        if (!available) {
-          throw new Error(formatConflictMessage(conflicts));
+        const skipSet = new Set(input.skip_profile_ids || []);
+        blockedConflicts = conflicts.filter(c => !c.profileId || !skipSet.has(c.profileId));
+        excludedConflicts = conflicts.filter(c => c.profileId && skipSet.has(c.profileId));
+
+        if (!available && blockedConflicts.length > 0) {
+          throw new BandUnavailableError(blockedConflicts);
         }
       } else {
         // Solo artist - just check the user's schedule
@@ -491,12 +501,27 @@ export const useCreateRecordingSession = () => {
           description: `Recording at ${studioName}`,
           location: studioName,
           linkedRecordingId: sessionData.id,
+          skipProfileIds: input.skip_profile_ids,
           metadata: {
             sessionId: sessionData.id,
             studioId: input.studio_id,
             songId: input.song_id,
           },
         });
+
+        if (excludedConflicts.length > 0) {
+          await notifyAbsentBandMembers({
+            bandId: input.band_id,
+            activityType: 'recording',
+            activityLabel: `Recording Session at ${studioName}`,
+            scheduledStart: now,
+            scheduledEnd: sessionEnd,
+            location: studioName,
+            conflicts: excludedConflicts,
+            linkedRecordingId: sessionData.id,
+            actionPath: '/recording',
+          });
+        }
 
         // Notify all band members via inbox
         try {
@@ -545,12 +570,27 @@ export const useCreateRecordingSession = () => {
           description: `Recording at ${studioName}`,
           location: studioName,
           linkedRecordingId: sessionData.id,
+          skipProfileIds: input.skip_profile_ids,
           metadata: {
             sessionId: sessionData.id,
             studioId: input.studio_id,
             songId: input.song_id,
           },
         });
+
+        if (excludedConflicts.length > 0) {
+          await notifyAbsentBandMembers({
+            bandId: input.band_id,
+            activityType: 'recording',
+            activityLabel: `Recording Session at ${studioName}`,
+            scheduledStart: now,
+            scheduledEnd: sessionEnd,
+            location: studioName,
+            conflicts: excludedConflicts,
+            linkedRecordingId: sessionData.id,
+            actionPath: '/recording',
+          });
+        }
 
         // Notify solo artist
         try {
