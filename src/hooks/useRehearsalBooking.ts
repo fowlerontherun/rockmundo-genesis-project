@@ -7,7 +7,10 @@ import { logGameActivity } from '@/hooks/useGameActivityLog';
 import { 
   createBandScheduledActivities, 
   checkBandAvailability, 
-  formatConflictMessage 
+  formatConflictMessage,
+  notifyAbsentBandMembers,
+  BandUnavailableError,
+  isBandUnavailableError,
 } from '@/utils/bandActivityScheduling';
 import { validateFutureTime } from '@/utils/timeSlotValidation';
 import { calculateRehearsalEfficiency } from '@/utils/skillRehearsalEfficiency';
@@ -27,6 +30,9 @@ interface BookRehearsalParams {
   roomName: string;
   roomLocation: string;
   profileId?: string;
+  bandName?: string;
+  /** Members (profile ids) the leader chose to book without. */
+  skipProfileIds?: string[];
 }
 
 // Helper to manually complete rehearsal with skill efficiency
@@ -124,8 +130,12 @@ export function useRehearsalBooking() {
         scheduledEnd
       );
 
-      if (!available) {
-        throw new Error(formatConflictMessage(conflicts));
+      const skipSet = new Set(params.skipProfileIds || []);
+      const blockingConflicts = conflicts.filter(c => !c.profileId || !skipSet.has(c.profileId));
+      const excludedConflicts = conflicts.filter(c => c.profileId && skipSet.has(c.profileId));
+
+      if (!available && blockingConflicts.length > 0) {
+        throw new BandUnavailableError(blockingConflicts);
       }
 
       // Create rehearsal record
@@ -183,6 +193,7 @@ export function useRehearsalBooking() {
         title: `Band Rehearsal - ${params.roomName}`,
         location: params.roomLocation,
         linkedRehearsalId: rehearsalData.id,
+        skipProfileIds: params.skipProfileIds,
         metadata: {
           rehearsalId: rehearsalData.id,
           roomId: params.roomId,
@@ -225,9 +236,26 @@ export function useRehearsalBooking() {
         }
       }
 
+      if (excludedConflicts.length > 0) {
+        await notifyAbsentBandMembers({
+          bandId: params.bandId,
+          bandName: params.bandName ?? null,
+          activityType: 'rehearsal',
+          activityLabel: `Band Rehearsal - ${params.roomName}`,
+          scheduledStart: params.scheduledStart,
+          scheduledEnd,
+          location: params.roomLocation,
+          conflicts: excludedConflicts,
+          linkedRehearsalId: rehearsalData.id,
+          actionPath: '/rehearsals',
+        });
+      }
+
       toast({
-        title: 'Rehearsal Booked!',
-        description: `${params.duration}-hour rehearsal scheduled at ${params.roomName}`,
+        title: excludedConflicts.length > 0 ? 'Rehearsal booked without some members' : 'Rehearsal Booked!',
+        description: excludedConflicts.length > 0
+          ? `${params.duration}-hour rehearsal at ${params.roomName}. ${excludedConflicts.length} member(s) were notified they are not booked in.`
+          : `${params.duration}-hour rehearsal scheduled at ${params.roomName}`,
       });
 
       // Invalidate relevant queries
@@ -238,6 +266,10 @@ export function useRehearsalBooking() {
       return rehearsalData.id;
     } catch (error) {
       console.error('Failed to book rehearsal:', error);
+      if (isBandUnavailableError(error)) {
+        // Surfaced by the caller's conflict dialog instead of a generic toast.
+        throw error;
+      }
       toast({
         title: 'Booking Failed',
         description: error instanceof Error ? error.message : 'Unknown error occurred',

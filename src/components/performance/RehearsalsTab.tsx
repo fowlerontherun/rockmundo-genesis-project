@@ -11,6 +11,8 @@ import { RehearsalBookingDialog } from './RehearsalBookingDialog';
 import { format } from 'date-fns';
 import { useRehearsalBooking } from '@/hooks/useRehearsalBooking';
 import { calculateRehearsalStage } from '@/utils/rehearsalStageCalculation';
+import { BandAvailabilityConflictDialog } from '@/components/band/BandAvailabilityConflictDialog';
+import { isBandUnavailableError, type ConflictInfo } from '@/utils/bandActivityScheduling';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'] & {
   city?: { id: string; name: string } | null;
@@ -34,6 +36,11 @@ export function RehearsalsTab() {
   const [cities, setCities] = useState<City[]>([]);
   const [currentCityId, setCurrentCityId] = useState<string | null>(null);
   const [bandSongs, setBandSongs] = useState<any[]>([]);
+  const [conflictState, setConflictState] = useState<{
+    conflicts: ConflictInfo[];
+    label: string;
+    retry: (skipProfileIds: string[]) => Promise<void>;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!profileId) return;
@@ -179,7 +186,7 @@ export function RehearsalsTab() {
     void loadData();
   }, [loadData]);
 
-  const handleBookRehearsal = async (roomId: string, duration: number, songId: string | null, setlistId: string | null, scheduledStart: Date) => {
+  const handleBookRehearsal = async (roomId: string, duration: number, songId: string | null, setlistId: string | null, scheduledStart: Date, _paymentSource: 'band' | 'personal' = 'band', skipProfileIds: string[] = []) => {
     if (!userBand) return;
 
     const room = rooms.find(r => r.id === roomId);
@@ -215,12 +222,25 @@ export function RehearsalsTab() {
         familiarityGained,
         roomName: room.name,
         roomLocation: room.location || '',
+        bandName: userBand.name,
+        skipProfileIds,
       });
 
       setShowBookingDialog(false);
+      setConflictState(null);
       await loadData();
       return rehearsalId;
     } catch (error) {
+      if (isBandUnavailableError(error)) {
+        setConflictState({
+          conflicts: error.conflicts,
+          label: `this rehearsal at ${room.name}`,
+          retry: async (skipIds) => {
+            await handleBookRehearsal(roomId, duration, songId, setlistId, scheduledStart, _paymentSource, skipIds);
+          },
+        });
+        return;
+      }
       // Error handling done in hook
       return;
     }
@@ -332,6 +352,25 @@ export function RehearsalsTab() {
 
   return (
     <div className="space-y-6">
+      {conflictState && (
+        <BandAvailabilityConflictDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setConflictState(null);
+          }}
+          activityLabel={conflictState.label}
+          conflicts={conflictState.conflicts}
+          currentProfileId={profileId}
+          canOverride={(userBand as any)?.leader_id === profileId}
+          isSubmitting={isBooking}
+          onProceedWithout={(skipIds) => {
+            const retry = conflictState.retry;
+            setConflictState(null);
+            void retry(skipIds);
+          }}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Band Rehearsals</h2>

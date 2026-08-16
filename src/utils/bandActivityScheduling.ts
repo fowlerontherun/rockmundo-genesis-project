@@ -3,6 +3,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { checkTimeSlotAvailable } from '@/hooks/useActivityBooking';
+import { pushNotification } from '@/lib/notify';
 
 export interface BandActivityParams {
   bandId: string;
@@ -16,7 +17,10 @@ export interface BandActivityParams {
   linkedRehearsalId?: string;
   linkedRecordingId?: string;
   linkedGigId?: string;
+  /** Members (profile ids) deliberately left out because they were unavailable. */
+  skipProfileIds?: string[];
 }
+
 
 interface ProfileSummary {
   user_id: string;
@@ -24,11 +28,64 @@ interface ProfileSummary {
   username: string | null;
 }
 
-interface ConflictInfo {
+export interface ConflictInfo {
   userId: string;
+  profileId?: string;
   userName?: string;
   activityTitle: string;
+  activityType?: string | null;
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
 }
+
+/**
+ * Thrown when one or more band members are busy. Carries the full conflict
+ * detail so the UI can show which member clashes with which activity and let a
+ * band leader proceed without them.
+ */
+export class BandUnavailableError extends Error {
+  conflicts: ConflictInfo[];
+  constructor(conflicts: ConflictInfo[], message?: string) {
+    super(message || formatConflictMessage(conflicts));
+    this.name = 'BandUnavailableError';
+    this.conflicts = conflicts;
+  }
+}
+
+export function isBandUnavailableError(error: unknown): error is BandUnavailableError {
+  return error instanceof BandUnavailableError
+    || (typeof error === 'object' && error !== null && (error as any).name === 'BandUnavailableError');
+}
+
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  rehearsal: 'Rehearsal',
+  recording: 'Recording session',
+  gig: 'Gig',
+  tour: 'Tour date',
+  songwriting: 'Songwriting session',
+  jam_session: 'Jam session',
+  travel: 'Travel',
+  employment: 'Work shift',
+  education: 'Class',
+  wellness: 'Wellness activity',
+  festival: 'Festival appearance',
+};
+
+export function describeActivityType(activityType?: string | null): string {
+  if (!activityType) return 'Activity';
+  return ACTIVITY_TYPE_LABELS[activityType]
+    || activityType.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+}
+
+export function formatConflictWindow(conflict: ConflictInfo): string {
+  if (!conflict.scheduledStart) return '';
+  const start = new Date(conflict.scheduledStart);
+  const end = conflict.scheduledEnd ? new Date(conflict.scheduledEnd) : null;
+  const time = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const day = start.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  return end ? `${day} ${time(start)}–${time(end)}` : `${day} ${time(start)}`;
+}
+
 
 export interface ScheduleLikeActivity {
   id: string;
@@ -147,7 +204,7 @@ export async function checkBandAvailability(
 
   let query = (supabase as any)
     .from('player_scheduled_activities')
-    .select('id, profile_id, title, scheduled_start, scheduled_end, status')
+    .select('id, profile_id, title, activity_type, scheduled_start, scheduled_end, status')
     .in('profile_id', profileIds)
     .in('status', ['scheduled', 'in_progress'])
     .lt('scheduled_start', end.toISOString())
@@ -171,8 +228,12 @@ export async function checkBandAvailability(
     const member = memberDetails.find(m => m.profileId === row.profile_id);
     conflicts.push({
       userId: member?.userId || row.profile_id,
+      profileId: row.profile_id,
       userName: member?.name,
       activityTitle: row.title || 'Unknown activity',
+      activityType: row.activity_type ?? null,
+      scheduledStart: row.scheduled_start ?? null,
+      scheduledEnd: row.scheduled_end ?? null,
     });
   }
 
@@ -180,35 +241,33 @@ export async function checkBandAvailability(
 }
 
 /**
- * Format conflict information for user display
+ * Describe a single conflict, e.g.
+ * "Jimmy — Recording session "Abbey Road" (14:00–18:00)"
  */
-export function formatConflictMessage(conflicts: ConflictInfo[], currentUserId?: string): string {
-  if (conflicts.length === 0) return '';
-  
-  if (conflicts.length === 1) {
-    const conflict = conflicts[0];
-    // Highlight if it's the current user
-    const isYou = currentUserId && conflict.userId === currentUserId;
-    const name = isYou ? 'You have' : `${conflict.userName} has`;
-    return `${name} "${conflict.activityTitle}" scheduled at this time.`;
-  }
-  
-  // Check if current user is among the conflicts
-  const hasCurrentUser = currentUserId && conflicts.some(c => c.userId === currentUserId);
-  if (hasCurrentUser) {
-    const otherNames = conflicts
-      .filter(c => c.userId !== currentUserId)
-      .map(c => c.userName)
-      .join(', ');
-    if (otherNames) {
-      return `You and ${otherNames} have scheduling conflicts at this time.`;
-    }
-    return `You have a scheduling conflict at this time.`;
-  }
-  
-  const names = conflicts.map(c => c.userName).join(', ');
-  return `Multiple band members have scheduling conflicts: ${names}`;
+export function formatConflictLine(conflict: ConflictInfo, currentProfileId?: string | null): string {
+  const isYou = currentProfileId && conflict.profileId === currentProfileId;
+  const who = isYou ? 'You' : (conflict.userName || 'Band member');
+  const what = describeActivityType(conflict.activityType);
+  const when = formatConflictWindow(conflict);
+  const title = conflict.activityTitle && conflict.activityTitle !== 'Unknown activity'
+    ? ` “${conflict.activityTitle}”`
+    : '';
+  return `${who} — ${what}${title}${when ? ` (${when})` : ''}`;
 }
+
+/**
+ * Format conflict information for user display, naming each member and the
+ * activity that clashes.
+ */
+export function formatConflictMessage(conflicts: ConflictInfo[], currentProfileId?: string | null): string {
+  if (conflicts.length === 0) return '';
+  const lines = conflicts.map(c => formatConflictLine(c, currentProfileId));
+  if (conflicts.length === 1) {
+    return `${lines[0]} is already booked at this time.`;
+  }
+  return `${conflicts.length} band members are unavailable: ${lines.join('; ')}.`;
+}
+
 
 /**
  * Create scheduled activities for ALL band members
@@ -229,14 +288,16 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     throw new Error('Failed to fetch band members');
   }
 
+  const skipSet = new Set(params.skipProfileIds || []);
   const validMembers = ((members || []) as any[])
-    .filter(m => m.profile_id)
+    .filter(m => m.profile_id && !skipSet.has(m.profile_id))
     .map(m => ({ profileId: m.profile_id as string, userId: (m.user_id as string | null) ?? null }));
 
   if (validMembers.length === 0) {
     console.warn('No active band members with profiles found for band:', params.bandId);
     return [];
   }
+
 
   const profileIds = validMembers.map(m => m.profileId);
 
@@ -332,4 +393,128 @@ export async function deleteBandScheduledActivities(
     console.error('Failed to delete band scheduled activities:', error);
     throw error;
   }
+}
+
+export interface AbsentMemberNotificationParams {
+  bandId: string;
+  bandName?: string | null;
+  activityType: string;
+  activityLabel: string;
+  scheduledStart: Date;
+  scheduledEnd: Date;
+  location?: string | null;
+  conflicts: ConflictInfo[];
+  linkedRehearsalId?: string | null;
+  linkedRecordingId?: string | null;
+  actionPath?: string | null;
+}
+
+/**
+ * Notify members who were left out of a band booking, telling them what they
+ * clash with and giving them a path to opt back in.
+ */
+export async function notifyAbsentBandMembers(params: AbsentMemberNotificationParams): Promise<void> {
+  const when = formatConflictWindow({
+    activityTitle: params.activityLabel,
+    userId: '',
+    scheduledStart: params.scheduledStart.toISOString(),
+    scheduledEnd: params.scheduledEnd.toISOString(),
+  });
+  const label = describeActivityType(params.activityType);
+
+  await Promise.all(params.conflicts.map(async (conflict) => {
+    if (!conflict.userId) return;
+    await pushNotification({
+      userId: conflict.userId,
+      profileId: conflict.profileId ?? null,
+      category: 'social',
+      type: 'warning',
+      title: `${label} booked without you`,
+      message: `${params.bandName || 'Your band'} booked "${params.activityLabel}"${when ? ` for ${when}` : ''}${params.location ? ` at ${params.location}` : ''}. You were busy with ${describeActivityType(conflict.activityType)}${conflict.activityTitle ? ` “${conflict.activityTitle}”` : ''}. You can still join if you free up your schedule.`,
+      actionPath: params.actionPath ?? '/rehearsals',
+      metadata: {
+        band_id: params.bandId,
+        activity_type: params.activityType,
+        rehearsal_id: params.linkedRehearsalId ?? null,
+        recording_id: params.linkedRecordingId ?? null,
+        scheduled_start: params.scheduledStart.toISOString(),
+        scheduled_end: params.scheduledEnd.toISOString(),
+        can_join_late: true,
+      },
+    });
+  }));
+}
+
+/**
+ * Let a member who was skipped opt back into a band activity. Fails if they
+ * still have a clashing activity in that window.
+ */
+export async function joinBandActivityLate(options: {
+  profileId: string;
+  userId?: string | null;
+  bandId: string;
+  activityType: string;
+  title: string;
+  scheduledStart: Date;
+  scheduledEnd: Date;
+  location?: string | null;
+  linkedRehearsalId?: string | null;
+  linkedRecordingId?: string | null;
+  metadata?: Record<string, any>;
+}): Promise<{ joined: boolean; reason?: string }> {
+  const { data: clashes, error: clashError } = await (supabase as any)
+    .from('player_scheduled_activities')
+    .select('id, title, activity_type, scheduled_start, scheduled_end, linked_rehearsal_id, linked_recording_id')
+    .eq('profile_id', options.profileId)
+    .in('status', ['scheduled', 'in_progress'])
+    .lt('scheduled_start', options.scheduledEnd.toISOString())
+    .gt('scheduled_end', options.scheduledStart.toISOString());
+
+  if (clashError) {
+    return { joined: false, reason: 'Could not verify your schedule. Try again.' };
+  }
+
+  const linkedId = options.linkedRehearsalId || options.linkedRecordingId;
+  const existing = (clashes || []) as any[];
+  const alreadyIn = existing.find((row) =>
+    (options.linkedRehearsalId && row.linked_rehearsal_id === options.linkedRehearsalId)
+    || (options.linkedRecordingId && row.linked_recording_id === options.linkedRecordingId));
+  if (alreadyIn) return { joined: true };
+
+  if (existing.length > 0) {
+    const blocking = existing[0];
+    return {
+      joined: false,
+      reason: `You still have ${describeActivityType(blocking.activity_type)}${blocking.title ? ` “${blocking.title}”` : ''} booked in this window. Cancel it first.`,
+    };
+  }
+
+  const { error } = await (supabase as any)
+    .from('player_scheduled_activities')
+    .insert({
+      user_id: options.userId ?? null,
+      profile_id: options.profileId,
+      activity_type: options.activityType,
+      scheduled_start: options.scheduledStart.toISOString(),
+      scheduled_end: options.scheduledEnd.toISOString(),
+      title: options.title,
+      location: options.location ?? null,
+      metadata: {
+        ...(options.metadata || {}),
+        band_id: options.bandId,
+        is_band_activity: true,
+        joined_late: true,
+        linked_id: linkedId ?? null,
+      },
+      linked_rehearsal_id: options.linkedRehearsalId ?? null,
+      linked_recording_id: options.linkedRecordingId ?? null,
+      status: 'scheduled',
+    });
+
+  if (error) {
+    console.error('Failed to join band activity late:', error);
+    return { joined: false, reason: 'Could not add you to the session.' };
+  }
+
+  return { joined: true };
 }
