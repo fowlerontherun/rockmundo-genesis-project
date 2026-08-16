@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SongFilters } from "@/components/songs/SongFilters";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
-import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones, Flame } from "lucide-react";
+import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones, Flame, TrendingUp, RefreshCw, Handshake } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { SongArchiveButton } from "@/components/song/SongArchiveButton";
