@@ -409,6 +409,14 @@ export default function GigViewerReplayAudit() {
                           </div>
                         </div>
                       )}
+
+                      {inspected[row.gigId] && result?.state !== "running" && (
+                        <ReplayEvidenceInspector
+                          className="mt-1.5"
+                          replay={inspected[row.gigId]}
+                          validationFailures={result?.errors ?? null}
+                        />
+                      )}
                     </div>
                   );
                 })}
