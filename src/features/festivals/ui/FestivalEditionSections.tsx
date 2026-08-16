@@ -4,9 +4,12 @@ import {
   Banknote,
   BarChart3,
   Building2,
+  CalendarClock,
   Music2,
   PlayCircle,
+  Tent,
   Ticket,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
