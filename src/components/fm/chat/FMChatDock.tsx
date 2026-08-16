@@ -191,9 +191,12 @@ export function FMChatDock() {
                 </div>
               </ScrollArea>
             )}
+              </div>
+            )}
           </div>
         )}
       </div>
+
     </div>
   );
 }
