@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { getSystemPrefersReducedMotion, REDUCED_MOTION_STORAGE_KEY } from "../engine/reducedMotion";
 import { PYRO_STORAGE_KEY } from "../engine/Pyrotechnics";
 import type { GigViewerCameraMode } from "../engine/CameraDirector";
+import { PERFORMANCE_TIER_STORAGE_KEY, type PerformanceTier } from "../engine/ViewerDiagnostics";
+
+export type PerformancePreference = "auto" | PerformanceTier;
+const PERFORMANCE_PREFERENCES: readonly PerformancePreference[] = ["auto", "low", "standard", "high"];
 
 export const CAMERA_MODE_STORAGE_KEY = "gig-viewer-camera-mode";
 const CAMERA_MODES: readonly GigViewerCameraMode[] = ["venue_wide", "stage_focus", "auto"];
@@ -27,8 +31,13 @@ export function useGigViewerPreferences() {
     return stored == null ? true : stored === "true";
   });
   const [cameraMode, setCameraMode] = useState<GigViewerCameraMode>(storedCameraMode);
+  const [performancePreference, setPerformancePreference] = useState<PerformancePreference>(() => {
+    const stored = safeRead(PERFORMANCE_TIER_STORAGE_KEY);
+    return PERFORMANCE_PREFERENCES.includes(stored as PerformancePreference) ? stored as PerformancePreference : "auto";
+  });
   useEffect(() => { safeWrite(REDUCED_MOTION_STORAGE_KEY, String(reducedMotion)); }, [reducedMotion]);
   useEffect(() => { safeWrite(PYRO_STORAGE_KEY, String(pyrotechnics)); }, [pyrotechnics]);
   useEffect(() => { safeWrite(CAMERA_MODE_STORAGE_KEY, cameraMode); }, [cameraMode]);
-  return { reducedMotion, setReducedMotion, pyrotechnics, setPyrotechnics, cameraMode, setCameraMode };
+  useEffect(() => { safeWrite(PERFORMANCE_TIER_STORAGE_KEY, performancePreference); }, [performancePreference]);
+  return { reducedMotion, setReducedMotion, pyrotechnics, setPyrotechnics, cameraMode, setCameraMode, performancePreference, setPerformancePreference };
 }

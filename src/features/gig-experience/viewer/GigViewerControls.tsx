@@ -3,6 +3,14 @@ import { Switch } from "@/components/ui/switch";
 import { Maximize2, Minimize2, Pause, Play, RotateCcw, SkipBack, SkipForward, X } from "lucide-react";
 import type { PlaybackSpeed } from "./engine/PlaybackController";
 import type { GigViewerCameraMode } from "./engine/CameraDirector";
+import type { PerformancePreference } from "./hooks/useGigViewerPreferences";
+
+const QUALITY_LABELS: Record<PerformancePreference, string> = {
+  auto: "Auto",
+  low: "Low",
+  standard: "Std",
+  high: "High",
+};
 
 const CAMERA_LABELS: Record<GigViewerCameraMode, string> = {
   venue_wide: "Venue Wide",
@@ -10,7 +18,7 @@ const CAMERA_LABELS: Record<GigViewerCameraMode, string> = {
   auto: "Auto",
 };
 
-export function GigViewerControls({ playing, complete, speed, reducedMotion, pyrotechnics, cameraMode, fullscreen, compact = false, canPreviousSong, canNextSong, canNextHighlight, canResult, onPlay, onPause, onRestart, onSpeed, onPrevious, onNext, onPreviousSong, onNextSong, onNextHighlight, onSkipResult, onResult, onClose, onReducedMotion, onPyrotechnics, onCameraMode, onFullscreen }: { playing: boolean; complete: boolean; speed: PlaybackSpeed; reducedMotion: boolean; pyrotechnics?: boolean; cameraMode: GigViewerCameraMode; fullscreen?: boolean; canPreviousSong?: boolean; canNextSong?: boolean; canNextHighlight?: boolean; canResult?: boolean; onPlay: () => void; onPause: () => void; onRestart: () => void; onSpeed: (speed: PlaybackSpeed) => void; onPrevious: () => void; onNext: () => void; onPreviousSong?: () => void; onNextSong?: () => void; onNextHighlight?: () => void; onSkipResult?: () => void; onResult?: () => void; onClose: () => void; onReducedMotion: (v: boolean) => void; onPyrotechnics?: (v: boolean) => void; onCameraMode: (mode: GigViewerCameraMode) => void; onFullscreen?: () => void; compact?: boolean }) {
+export function GigViewerControls({ performancePreference = "auto", onPerformancePreference, playing, complete, speed, reducedMotion, pyrotechnics, cameraMode, fullscreen, compact = false, canPreviousSong, canNextSong, canNextHighlight, canResult, onPlay, onPause, onRestart, onSpeed, onPrevious, onNext, onPreviousSong, onNextSong, onNextHighlight, onSkipResult, onResult, onClose, onReducedMotion, onPyrotechnics, onCameraMode, onFullscreen }: { playing: boolean; complete: boolean; speed: PlaybackSpeed; reducedMotion: boolean; pyrotechnics?: boolean; cameraMode: GigViewerCameraMode; fullscreen?: boolean; canPreviousSong?: boolean; canNextSong?: boolean; canNextHighlight?: boolean; canResult?: boolean; onPlay: () => void; onPause: () => void; onRestart: () => void; onSpeed: (speed: PlaybackSpeed) => void; onPrevious: () => void; onNext: () => void; onPreviousSong?: () => void; onNextSong?: () => void; onNextHighlight?: () => void; onSkipResult?: () => void; onResult?: () => void; onClose: () => void; onReducedMotion: (v: boolean) => void; onPyrotechnics?: (v: boolean) => void; onCameraMode: (mode: GigViewerCameraMode) => void; onFullscreen?: () => void; compact?: boolean; performancePreference?: PerformancePreference; onPerformancePreference?: (value: PerformancePreference) => void }) {
   if (compact) {
     return (
       <div className="flex items-center gap-2 overflow-x-auto rounded-lg border bg-card/95 p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Replay controls">
@@ -22,6 +30,7 @@ export function GigViewerControls({ playing, complete, speed, reducedMotion, pyr
           {([1, 2, 4] as PlaybackSpeed[]).map((s) => <Button key={s} size="sm" className="h-9 px-2" variant={speed === s ? "default" : "ghost"} aria-pressed={speed === s} onClick={() => onSpeed(s)}>{s === 4 ? "Fast" : `${s}×`}</Button>)}
         </div>
         <CameraModeControls value={cameraMode} onChange={onCameraMode} compact />
+        {onPerformancePreference ? <QualityControls value={performancePreference} onChange={onPerformancePreference} compact /> : null}
         <Button variant="outline" className="h-11 shrink-0" disabled={!canNextHighlight} onClick={onNextHighlight} aria-label="Skip to next highlight">Highlight</Button>
         {onResult ? <Button variant="outline" className="h-11 shrink-0" disabled={!canResult} onClick={onSkipResult} aria-label="Skip to result reveal">Result</Button> : null}
         <label className="flex h-11 shrink-0 items-center gap-2 rounded-md border px-3 text-xs"><Switch checked={reducedMotion} onCheckedChange={onReducedMotion} aria-label="Reduced motion" />Motion</label>
@@ -46,6 +55,7 @@ export function GigViewerControls({ playing, complete, speed, reducedMotion, pyr
         {([1, 2, 4] as PlaybackSpeed[]).map((s) => <Button key={s} size="sm" variant={speed === s ? "default" : "ghost"} aria-pressed={speed === s} onClick={() => onSpeed(s)}>{s === 4 ? "Fast" : `${s}×`}</Button>)}
       </div>
       <CameraModeControls value={cameraMode} onChange={onCameraMode} />
+      {onPerformancePreference ? <QualityControls value={performancePreference} onChange={onPerformancePreference} /> : null}
       <label className="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm"><Switch checked={reducedMotion} onCheckedChange={onReducedMotion} aria-label="Reduced motion" />Reduced motion</label>
       {onPyrotechnics ? <label className="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm"><Switch checked={!!pyrotechnics} onCheckedChange={onPyrotechnics} aria-label="Pyrotechnics and fireworks" />Pyrotechnics</label> : null}
       {onFullscreen ? <Button variant="outline" onClick={onFullscreen} aria-pressed={!!fullscreen} aria-label={fullscreen ? "Exit full screen stage view" : "Pop out full screen stage view"}>{fullscreen ? <Minimize2 className="mr-1 h-4 w-4" /> : <Maximize2 className="mr-1 h-4 w-4" />}{fullscreen ? "Exit full screen" : "Pop out"}</Button> : null}
@@ -68,6 +78,26 @@ function CameraModeControls({ value, onChange, compact = false }: { value: GigVi
           onClick={() => onChange(mode)}
         >
           {CAMERA_LABELS[mode]}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function QualityControls({ value, onChange, compact = false }: { value: PerformancePreference; onChange: (value: PerformancePreference) => void; compact?: boolean }) {
+  return (
+    <div className="flex shrink-0 rounded-md border p-1" role="group" aria-label="Graphics quality">
+      {(Object.keys(QUALITY_LABELS) as PerformancePreference[]).map((option) => (
+        <Button
+          key={option}
+          size="sm"
+          className={compact ? "h-9 px-2" : undefined}
+          variant={value === option ? "default" : "ghost"}
+          aria-pressed={value === option}
+          aria-label={`Graphics quality ${option === "auto" ? "automatic" : option}`}
+          onClick={() => onChange(option)}
+        >
+          {QUALITY_LABELS[option]}
         </Button>
       ))}
     </div>
