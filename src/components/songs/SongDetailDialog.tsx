@@ -180,7 +180,21 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                     <div className="text-2xl font-bold text-purple-500">
                       {song.fame || 0}
                     </div>
+                    <p className="text-[10px] text-muted-foreground">Permanent legacy</p>
                   </div>
+                  <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-sky-500" />
+                      <span className="text-xs text-muted-foreground">Popularity</span>
+                    </div>
+                    <div className="text-2xl font-bold text-sky-500">
+                      {(song as any).popularity || 0}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Peak {(song as any).peak_popularity || 0} · fades when rested
+                    </p>
+                  </div>
+
                   <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingUp className="h-4 w-4 text-blue-500" />
