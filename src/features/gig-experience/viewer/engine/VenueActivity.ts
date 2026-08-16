@@ -147,7 +147,12 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
   const seed = `${replay.simulationSeed || replay.gigId}:venue-activity-v2`;
   const random = seededRandom(seed);
   const settledCounts = replay.commerce ? { bar: Math.max(0, replay.commerce.bar.drinksServed), merchandise: Math.max(0, replay.commerce.merchandise.itemsSold) } : null;
-  const evidenceMode: VenueActivityEvidenceMode = settledCounts ? "aggregate" : "ambient";
+  // Saved timestamped commerce evidence, when the settlement workflow provides it.
+  const savedEvents = (replay.commerce?.events ?? [])
+    .filter((event) => event && Number.isFinite(event.atMs) && event.atMs >= 0 && event.atMs <= replay.durationMs && event.quantity > 0)
+    .slice()
+    .sort((a, b) => a.atMs - b.atMs || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const evidenceMode: VenueActivityEvidenceMode = savedEvents.length ? "event_replay" : settledCounts ? "aggregate" : "ambient";
   const stations = resolveStations(scene).filter((station) => !settledCounts || settledCounts[station.service] > 0);
   const services = (["bar", "merchandise"] as const).filter((service) => stations.some((station) => station.service === service));
   const max = Math.min(CAPS[scene.archetype], Math.max(0, input.displayedCrowd - Math.max(4, Math.ceil(input.displayedCrowd * .55))));
@@ -155,7 +160,20 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
   const actorCount = Math.min(max, slots);
   const visits: VenueActivityVisit[] = [];
   const serviceVisits: ServiceKind[] = [];
-  if (settledCounts && services.length) {
+  const eventDepartures: number[] = [];
+  const eventItemTypes: (string | null)[] = [];
+  if (evidenceMode === "event_replay" && services.length) {
+    // Sample the saved events evenly so ordering and timing stay authoritative while
+    // the on-screen counter count still respects the archetype cap.
+    const usable = savedEvents.filter((event) => services.includes(event.service));
+    const take = Math.min(actorCount, usable.length);
+    for (let index = 0; index < take; index += 1) {
+      const event = usable[Math.floor(((index + .5) / take) * usable.length)] ?? usable[index];
+      serviceVisits.push(event.service);
+      eventDepartures.push(event.atMs);
+      eventItemTypes.push(event.itemType ?? null);
+    }
+  } else if (settledCounts && services.length) {
     const total = services.reduce((sum, service) => sum + settledCounts[service], 0);
     for (const service of services) {
       const capacity = stations.filter((station) => station.service === service).reduce((sum, station) => sum + station.queuePoints.length, 0);
@@ -169,7 +187,11 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
 
   const weights = buildDemandWeights(replay, story);
   const cycleFor = (index: number) => 12_500 + (index % 3) * 1_200;
-  const departures = scheduleDepartures(weights, serviceVisits.length, replay.durationMs, cycleFor, seededRandom(`${seed}:departures`));
+  const departures = evidenceMode === "event_replay"
+    // The saved timestamp is the moment of service, so the fan leaves the crowd earlier.
+    ? eventDepartures.map((atMs, index) => Math.max(0, Math.min(atMs - 5_200, Math.max(0, replay.durationMs - cycleFor(index) - 250))))
+    : scheduleDepartures(weights, serviceVisits.length, replay.durationMs, cycleFor, seededRandom(`${seed}:departures`));
+
   const queueUse: Record<string, number> = {};
   const serviceUse = { bar: 0, merchandise: 0 };
   for (let index = 0; index < serviceVisits.length; index += 1) {
