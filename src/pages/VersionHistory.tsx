@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.669",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Living Venue Viewer Phase 5: added a read-only Replay Evidence Inspector that reports replay schema and viewer versions, evidence mode (ambient vs aggregate settlement facts), event counts by phase, song starts, duration, seed fingerprint, checksum presence and validation failures." },
+      { type: 'improvement', description: "Aggregate merchandise and bar settlement facts (items sold, gross revenue, line count, drinks served, bar ownership and revenue share source) are now surfaced for auditing, and quantities spread across a replay are clearly labelled as presentation inference rather than customer-level sales." },
+      { type: 'improvement', description: "The inspector is wired into both the Admin Gig Viewer Demo and the Gig Viewer Replay Audit page, and it never displays signed asset URLs, private cost data or performs any gig, inventory or finance mutation." },
+      { type: 'improvement', description: "Replay schema drift is now classified as current, legacy or unsupported so historical replays remain viewable with ambient fallback instead of being rewritten." },
+    ],
+  },
+  {
     version: "1.1.668",
     date: "2026-08-16",
     changes: [
