@@ -37,64 +37,27 @@ export function useCasino() {
     }) => {
       if (!profileId) throw new Error("Not authenticated");
 
-      const { data: freshProfile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-
-      const currentCash = freshProfile?.cash ?? 0;
-      if (currentCash < betAmount) throw new Error("Insufficient funds");
-
-      const netResult = payout - betAmount;
-      const newCash = currentCash + netResult;
-
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: Math.max(0, newCash) })
-        .eq("id", profileId);
-      if (cashError) throw cashError;
-
-      await (supabase as any).from("casino_transactions").insert({
-        profile_id: profileId,
-        game_type: gameType,
-        bet_amount: betAmount,
-        payout,
-        net_result: netResult,
-        metadata,
+      // The server resolves the balance change, records the transaction and
+      // rolls addiction risk atomically. The browser never writes cash.
+      const { data, error } = await (supabase as any).rpc("play_casino_round", {
+        p_game_type: gameType,
+        p_bet_amount: betAmount,
+        p_payout: payout,
+        p_metadata: metadata ?? {},
       });
-
-      // Gambling addiction roll (5% chance per bet)
-      if (Math.random() < 0.05) {
-        const { data: existing } = await (supabase as any)
-          .from("player_addictions")
-          .select("id, severity")
-          .eq("profile_id", profileId)
-          .eq("addiction_type", "gambling")
-          .in("status", ["active", "recovering"])
-          .maybeSingle();
-
-        if (existing) {
-          await (supabase as any)
-            .from("player_addictions")
-            .update({ severity: Math.min(100, existing.severity + 3), updated_at: new Date().toISOString() })
-            .eq("id", existing.id);
-        } else {
-          await (supabase as any).from("player_addictions").insert({
-            user_id: profileId,
-            profile_id: profileId,
-            addiction_type: "gambling",
-            severity: 10,
-            status: "active",
-            triggered_at: new Date().toISOString(),
-            days_clean: 0,
-            relapse_count: 0,
-          });
-          toast.warning("You're developing a gambling habit...", { description: "Be careful at the casino." });
-        }
+      if (error) {
+        if (error.message?.includes("insufficient_funds")) throw new Error("Insufficient funds");
+        throw new Error(error.message ?? "Casino round failed");
       }
 
-      return { netResult, newCash };
+      if (data?.developedAddiction) {
+        toast.warning("You're developing a gambling habit...", { description: "Be careful at the casino." });
+      }
+
+      return {
+        netResult: Number(data?.netResult ?? 0),
+        newCash: Number(data?.newCash ?? 0),
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
