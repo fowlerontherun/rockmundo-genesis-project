@@ -286,7 +286,16 @@ export class CanvasRenderer {
     if (this.audiencePlan) drawAudienceActivity(ctx, this.audiencePlan, { positionMs: state.positionMs, energy: storySnapshot.crowdEnergy, reducedMotion: this.reducedMotion });
     drawPerformanceItemActivity(ctx, performanceItemFrame, preset.stage, preset.audience, this.reducedMotion, itemPerformer?.initials ?? "★");
     drawAtmosphere(ctx, preset, size, storySnapshot.crowdEnergy, state.positionMs, this.reducedMotion);
+    drawShowLighting(ctx, preset, size, showFrame);
+    drawPhoneLights(
+      ctx,
+      (crowd?.entities ?? []).filter((entity) => entity.visible).map((entity) => ({ x: entity.x, y: entity.y })),
+      showFrame.phoneLights,
+      state.positionMs,
+      this.reducedMotion,
+    );
     drawPyrotechnics(ctx, preset, size, { plan: this.pyroPlan, positionMs: state.positionMs, reducedMotion: this.reducedMotion, crowdEnergy: storySnapshot.crowdEnergy });
+    drawCurtains(ctx, preset, showFrame);
 
     if (state.activeEvent?.visualPayload.type === "spotlight" || state.activeEvent?.visualPayload.type === "moment_effect") {
       ctx.strokeStyle = "rgba(250, 204, 21, .75)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(size.width / 2, preset.stage.y + preset.stage.height / 2, 48 + (this.reducedMotion ? 0 : Math.sin(state.positionMs / 180) * 8), 0, Math.PI * 2); ctx.stroke();
