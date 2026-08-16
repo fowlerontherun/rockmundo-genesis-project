@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.684",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Seeded around 75 new random events with a much more adult, rock-and-roll tone: groupies at the stage door, trashed hotel rooms, tabloid stings, backstage temptations, casino detours and morning-after interviews." },
+      { type: 'feature', description: "New risky storylines with real consequences, including leaked photos, deepfakes, fake-dating stunts, dodgy sponsorship money, border searches and party emergencies where doing the right thing pays off." },
+      { type: 'improvement', description: "Events are spread across partying, media incidents, fan encounters, industry, financial, travel, health and merchandise, so daily events repeat far less often." },
+    ],
+  },
+  {
     version: "1.1.683",
     date: "2026-08-16",
     changes: [
