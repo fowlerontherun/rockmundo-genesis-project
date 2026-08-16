@@ -3,7 +3,7 @@ import { useState } from "react";
 import { 
   Building2, ArrowLeft, DollarSign, Users, MapPin, 
   TrendingUp, Settings, Plus, Disc, AlertTriangle,
-  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3, Newspaper
+  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3, Newspaper, Package
 } from "lucide-react";
 import { CompanyNewsFeed } from "@/components/company/CompanyNewsFeed";
 import { CompanyContractBoard } from "@/components/company/CompanyContractBoard";
@@ -32,6 +32,7 @@ import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
 import { CompanyEmployeeRoster } from "@/components/company/CompanyEmployeeRoster";
 import { CompanyShiftBoard } from "@/components/company/CompanyShiftBoard";
 import { CompanyReviewsPanel } from "@/components/company/CompanyReviewsPanel";
+import { CompanyOperationsPanel } from "@/components/company/CompanyOperationsPanel";
 import {
   CompanyGoalsManager,
   CompanySynergiesCard,
@@ -215,15 +216,21 @@ const CompanyDetailContent = () => {
 
       {/* Main Content */}
       <Tabs defaultValue={isHolding ? "structure" : "empire"} className="space-y-4">
-        <TabsList>
+        <TabsList className="flex w-full flex-nowrap overflow-x-auto justify-start scrollbar-none">
           {isHolding && <TabsTrigger value="structure">Structure</TabsTrigger>}
           <TabsTrigger value="empire">Empire</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
+          {(isHolding || company.company_type === 'label' || labels.length > 0) && (
+            <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
+          )}
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="jobs">
             <Briefcase className="h-3.5 w-3.5 mr-1" />
             Recruitment
+          </TabsTrigger>
+          <TabsTrigger value="operations">
+            <Package className="h-3.5 w-3.5 mr-1" />
+            Operations
           </TabsTrigger>
           <TabsTrigger value="storefront">Storefront</TabsTrigger>
           <TabsTrigger value="analytics">
@@ -448,6 +455,10 @@ const CompanyDetailContent = () => {
 
         <TabsContent value="shares" className="space-y-4">
           <CompanySharesPanel companyId={company.id} isMajorityOwner={company.owner_id === userId} />
+        </TabsContent>
+
+        <TabsContent value="operations" className="space-y-4">
+          <CompanyOperationsPanel companyId={company.id} isOwner={company.owner_id === userId} />
         </TabsContent>
 
         <TabsContent value="storefront" className="space-y-4">
