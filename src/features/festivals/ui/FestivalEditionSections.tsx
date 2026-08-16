@@ -19,6 +19,10 @@ import {
 } from "@/components/ui/card";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import { FestivalSitePlanner } from "@/features/festival-company/ui/FestivalSitePlanner";
+import { FestivalOperationsPlanner } from "@/features/festival-company/ui/FestivalOperationsPlanner";
+import { FestivalSponsorshipPlanner } from "@/features/festival-company/ui/FestivalSponsorshipPlanner";
+import { FestivalTimetablePlanner } from "@/features/festival-company/ui/FestivalTimetablePlanner";
 import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
 import { FestivalPublicProfileEditor } from "@/features/festival-company/ui/FestivalPublicProfileEditor";
 import { useFestivalSalesSummary } from "@/features/festival-company/application/useFestivalLaunch";
