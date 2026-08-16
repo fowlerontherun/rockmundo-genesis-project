@@ -86,7 +86,7 @@ export function FMChatDock() {
         </div>
       ))}
 
-      <div className="pointer-events-auto w-[260px] bg-fm-panel border border-fm-border border-b-0 rounded-t-sm shadow-lg flex flex-col">
+      <div className="pointer-events-auto w-[300px] bg-fm-panel border border-fm-border border-b-0 rounded-t-sm shadow-lg flex flex-col">
         <button
           onClick={() => setOpen(!open)}
           className="h-8 flex items-center justify-between px-2 bg-fm-panel-2 border-b border-fm-border hover:bg-fm-panel-2/80"
@@ -94,12 +94,66 @@ export function FMChatDock() {
           <span className="flex items-center gap-1.5 text-[11px] tracking-tight text-fm-fg font-medium">
             <MessageSquare className="h-3.5 w-3.5 text-fm-accent" />
             Chat
-            <span className="text-fm-fg-muted">({accepted.length})</span>
+            <span className="text-fm-fg-muted">
+              ({activeRoom === "friends" ? accepted.length : rooms.find((r) => r.id === activeRoom)?.label})
+            </span>
           </span>
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
         </button>
         {open && (
-          <div className="h-[320px] flex flex-col">
+          <div className="h-[340px] flex flex-col">
+            <div className="flex overflow-x-auto scrollbar-hide border-b border-fm-border bg-fm-panel-2/60">
+              {rooms.map((room) => {
+                const Icon = room.icon;
+                const isActive = activeRoom === room.id;
+                return (
+                  <button
+                    key={room.id}
+                    onClick={() => setActiveRoom(room.id)}
+                    className={cn(
+                      "flex shrink-0 items-center gap-1 px-2 py-1.5 text-[10px] font-medium text-fm-fg-muted hover:text-fm-fg",
+                      isActive && "bg-fm-panel text-fm-accent border-b-2 border-fm-accent",
+                    )}
+                  >
+                    <Icon className="h-3 w-3" />
+                    {room.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeRoom === "world" && (
+              <ChatRoomView
+                channelKey="world"
+                emptyMessage="World Chat is quiet — start the conversation."
+                placeholder="Message World Chat…"
+              />
+            )}
+            {activeRoom === "help" && (
+              <ChatRoomView
+                channelKey="help"
+                emptyMessage="Ask anything — players and staff answer here."
+                placeholder="Ask for help…"
+              />
+            )}
+            {activeRoom === "recruit" && (
+              <ChatRoomView
+                channelKey="recruit"
+                emptyMessage="Post what you play and which band you're looking for."
+                placeholder="Looking for a band / member…"
+              />
+            )}
+            {activeRoom === "band" && (
+              <ChatRoomView
+                channelKey={bandId ? `band:${bandId}` : null}
+                lockedMessage={bandId ? null : "Join or form a band to unlock band chat."}
+                emptyMessage={`No messages in ${bandName} yet.`}
+                placeholder={`Message ${bandName}…`}
+              />
+            )}
+            {activeRoom === "friends" && (
+              <div className="flex flex-1 min-h-0 flex-col">
+
             {loading ? (
               <div className="flex-1 flex items-center justify-center text-xs text-fm-fg-muted">
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Loading…
