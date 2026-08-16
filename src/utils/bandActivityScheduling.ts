@@ -24,11 +24,64 @@ interface ProfileSummary {
   username: string | null;
 }
 
-interface ConflictInfo {
+export interface ConflictInfo {
   userId: string;
+  profileId?: string;
   userName?: string;
   activityTitle: string;
+  activityType?: string | null;
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
 }
+
+/**
+ * Thrown when one or more band members are busy. Carries the full conflict
+ * detail so the UI can show which member clashes with which activity and let a
+ * band leader proceed without them.
+ */
+export class BandUnavailableError extends Error {
+  conflicts: ConflictInfo[];
+  constructor(conflicts: ConflictInfo[], message?: string) {
+    super(message || formatConflictMessage(conflicts));
+    this.name = 'BandUnavailableError';
+    this.conflicts = conflicts;
+  }
+}
+
+export function isBandUnavailableError(error: unknown): error is BandUnavailableError {
+  return error instanceof BandUnavailableError
+    || (typeof error === 'object' && error !== null && (error as any).name === 'BandUnavailableError');
+}
+
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  rehearsal: 'Rehearsal',
+  recording: 'Recording session',
+  gig: 'Gig',
+  tour: 'Tour date',
+  songwriting: 'Songwriting session',
+  jam_session: 'Jam session',
+  travel: 'Travel',
+  employment: 'Work shift',
+  education: 'Class',
+  wellness: 'Wellness activity',
+  festival: 'Festival appearance',
+};
+
+export function describeActivityType(activityType?: string | null): string {
+  if (!activityType) return 'Activity';
+  return ACTIVITY_TYPE_LABELS[activityType]
+    || activityType.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+}
+
+export function formatConflictWindow(conflict: ConflictInfo): string {
+  if (!conflict.scheduledStart) return '';
+  const start = new Date(conflict.scheduledStart);
+  const end = conflict.scheduledEnd ? new Date(conflict.scheduledEnd) : null;
+  const time = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const day = start.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  return end ? `${day} ${time(start)}–${time(end)}` : `${day} ${time(start)}`;
+}
+
 
 export interface ScheduleLikeActivity {
   id: string;
