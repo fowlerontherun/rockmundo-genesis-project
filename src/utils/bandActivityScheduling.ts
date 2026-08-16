@@ -200,7 +200,7 @@ export async function checkBandAvailability(
 
   let query = (supabase as any)
     .from('player_scheduled_activities')
-    .select('id, profile_id, title, scheduled_start, scheduled_end, status')
+    .select('id, profile_id, title, activity_type, scheduled_start, scheduled_end, status')
     .in('profile_id', profileIds)
     .in('status', ['scheduled', 'in_progress'])
     .lt('scheduled_start', end.toISOString())
@@ -224,8 +224,12 @@ export async function checkBandAvailability(
     const member = memberDetails.find(m => m.profileId === row.profile_id);
     conflicts.push({
       userId: member?.userId || row.profile_id,
+      profileId: row.profile_id,
       userName: member?.name,
       activityTitle: row.title || 'Unknown activity',
+      activityType: row.activity_type ?? null,
+      scheduledStart: row.scheduled_start ?? null,
+      scheduledEnd: row.scheduled_end ?? null,
     });
   }
 
@@ -233,35 +237,33 @@ export async function checkBandAvailability(
 }
 
 /**
- * Format conflict information for user display
+ * Describe a single conflict, e.g.
+ * "Jimmy — Recording session "Abbey Road" (14:00–18:00)"
  */
-export function formatConflictMessage(conflicts: ConflictInfo[], currentUserId?: string): string {
-  if (conflicts.length === 0) return '';
-  
-  if (conflicts.length === 1) {
-    const conflict = conflicts[0];
-    // Highlight if it's the current user
-    const isYou = currentUserId && conflict.userId === currentUserId;
-    const name = isYou ? 'You have' : `${conflict.userName} has`;
-    return `${name} "${conflict.activityTitle}" scheduled at this time.`;
-  }
-  
-  // Check if current user is among the conflicts
-  const hasCurrentUser = currentUserId && conflicts.some(c => c.userId === currentUserId);
-  if (hasCurrentUser) {
-    const otherNames = conflicts
-      .filter(c => c.userId !== currentUserId)
-      .map(c => c.userName)
-      .join(', ');
-    if (otherNames) {
-      return `You and ${otherNames} have scheduling conflicts at this time.`;
-    }
-    return `You have a scheduling conflict at this time.`;
-  }
-  
-  const names = conflicts.map(c => c.userName).join(', ');
-  return `Multiple band members have scheduling conflicts: ${names}`;
+export function formatConflictLine(conflict: ConflictInfo, currentProfileId?: string | null): string {
+  const isYou = currentProfileId && conflict.profileId === currentProfileId;
+  const who = isYou ? 'You' : (conflict.userName || 'Band member');
+  const what = describeActivityType(conflict.activityType);
+  const when = formatConflictWindow(conflict);
+  const title = conflict.activityTitle && conflict.activityTitle !== 'Unknown activity'
+    ? ` “${conflict.activityTitle}”`
+    : '';
+  return `${who} — ${what}${title}${when ? ` (${when})` : ''}`;
 }
+
+/**
+ * Format conflict information for user display, naming each member and the
+ * activity that clashes.
+ */
+export function formatConflictMessage(conflicts: ConflictInfo[], currentProfileId?: string | null): string {
+  if (conflicts.length === 0) return '';
+  const lines = conflicts.map(c => formatConflictLine(c, currentProfileId));
+  if (conflicts.length === 1) {
+    return `${lines[0]} is already booked at this time.`;
+  }
+  return `${conflicts.length} band members are unavailable: ${lines.join('; ')}.`;
+}
+
 
 /**
  * Create scheduled activities for ALL band members
