@@ -51042,6 +51042,15 @@ export type Database = {
         Args: { p_festival_company_id: string; p_idempotency_key: string }
         Returns: Json
       }
+      play_casino_round: {
+        Args: {
+          p_bet_amount: number
+          p_game_type: string
+          p_metadata?: Json
+          p_payout: number
+        }
+        Returns: Json
+      }
       prepare_festival_edition_settlement: {
         Args: {
           p_admin_override_reason?: string
