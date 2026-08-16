@@ -344,8 +344,8 @@ const CoverSongs = () => {
               {requestCover.isPending ? "Sending…" : "Send request"}
             </Button>
           </DialogFooter>
-        </DialogFooter>
         </DialogContent>
+
       </Dialog>
     </FMPageScaffold>
   );
