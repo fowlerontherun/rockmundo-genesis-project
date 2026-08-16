@@ -252,6 +252,10 @@ const CompanyDetailContent = () => {
             <Trophy className="h-3.5 w-3.5 mr-1" />
             Rankings
           </TabsTrigger>
+          <TabsTrigger value="growth">
+            <TrendingUp className="h-3.5 w-3.5 mr-1" />
+            Growth
+          </TabsTrigger>
         </TabsList>
 
         {isHolding && (
