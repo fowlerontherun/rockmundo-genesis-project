@@ -95,7 +95,12 @@ describe("Phase 5 browser release gate surrogate", () => {
       ],
     } as unknown as GigExperienceDTO;
     const before = JSON.stringify(liveExperience);
-    render(<LiveGigStageView gigId="gig-live" experience={liveExperience} onViewResult={onResult} onClose={onClose} />);
+    const liveQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={liveQueryClient}>
+        <LiveGigStageView gigId="gig-live" experience={liveExperience} onViewResult={onResult} onClose={onClose} />
+      </QueryClientProvider>,
+    );
     await waitFor(() => expect(screen.getByRole("region", { name: /player gig stage view/i })).toBeInTheDocument());
     expect(screen.queryByText("Stage view unavailable")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /result/i })).not.toBeInTheDocument();

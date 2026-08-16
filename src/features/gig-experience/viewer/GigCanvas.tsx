@@ -15,6 +15,7 @@ import type { GigViewerCameraMode } from "./engine/CameraDirector";
 import { buildViewerDiagnostics } from "./engine/ViewerDiagnostics";
 import { resolveRenderBudget } from "./engine/PerformanceProfile";
 import type { PerformancePreference } from "./hooks/useGigViewerPreferences";
+import { resolveViewerCapabilities, type ViewerCapabilityContext } from "./config/viewerCapabilityFlags";
 
 export function GigCanvas({
   replay,
@@ -28,6 +29,7 @@ export function GigCanvas({
   immersive = false,
   cameraMode = "venue_wide",
   performancePreference = "auto",
+  capability,
   className,
 }: {
   replay: GigViewerReplay;
@@ -41,6 +43,8 @@ export function GigCanvas({
   immersive?: boolean;
   cameraMode?: GigViewerCameraMode;
   performancePreference?: PerformancePreference;
+  /** Staged-rollout context; defaults to a player audience bucketed on the gig id. */
+  capability?: Partial<ViewerCapabilityContext>;
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -59,6 +63,13 @@ export function GigCanvas({
     global: globalTuning.data?.settings,
   });
   const tuningKey = crowdTuningSignature(resolved.tuning);
+  const capabilities = resolveViewerCapabilities({
+    audience: capability?.audience ?? "player",
+    subjectId: capability?.subjectId ?? replay.gigId ?? replay.id,
+    stage: capability?.stage ?? null,
+    percentage: capability?.percentage ?? null,
+    legacyFallbackAvailable: capability?.legacyFallbackAvailable ?? null,
+  });
   const diagnostics = buildViewerDiagnostics({ replay, experience, cameraMode, reducedMotion, performancePreference: performancePreference === "auto" ? null : performancePreference });
   const renderBudget = resolveRenderBudget({
     tier: diagnostics.performanceTier,
@@ -77,11 +88,12 @@ export function GigCanvas({
       crowdTuning: resolved.tuning,
       cameraMode,
       performanceTier: diagnostics.performanceTier,
+      livingVenue: capabilities.livingVenueEnabled,
     });
     rendererRef.current = renderer;
     renderer.resize(logical);
     return () => { renderer.destroy(); rendererRef.current = null; };
-  }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey, cameraMode, diagnostics.performanceTier]);
+  }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey, cameraMode, diagnostics.performanceTier, capabilities.livingVenueEnabled]);
 
   // Preference changes recreate the renderer; include them here so a paused
   // replay paints its new camera/effects immediately rather than waiting for a tick.
@@ -99,7 +111,11 @@ export function GigCanvas({
       data-attendance-state={diagnostics.attendanceState} data-attendance-source={diagnostics.attendanceSource}
       data-activity-evidence-mode={diagnostics.activityEvidenceMode} data-performance-tier={diagnostics.performanceTier}
       data-render-dpr-cap={renderBudget.dprCap} data-crowd-detail={renderBudget.crowdDetail}
-      data-degradations={renderBudget.appliedDegradations.join(",")}>
+      data-degradations={renderBudget.appliedDegradations.join(",")}
+      data-living-venue={capabilities.livingVenueEnabled ? "enabled" : "fallback"}
+      data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
+      data-viewer-rollout-bucket={capabilities.bucket}
+      data-legacy-fallback-available={capabilities.legacyFallbackAvailable ? "true" : "false"}>
       {demoTuning.demoMode && !fill ? (
         <>
           <GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} />

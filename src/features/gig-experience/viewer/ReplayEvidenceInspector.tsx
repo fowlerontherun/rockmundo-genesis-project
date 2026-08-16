@@ -52,6 +52,13 @@ export function ReplayEvidenceInspector({
           {summary.presentationInference ? <Badge variant="outline">presentation inference</Badge> : null}
           {summary.resultAvailable ? null : <Badge variant="outline">result pending</Badge>}
           <Badge variant="outline">{summary.checksumPresent ? "checksum stored" : "no checksum"}</Badge>
+          <Badge variant={summary.checksumVerdict === "mismatched" ? "destructive" : "outline"}>
+            checksum {summary.checksumVerdict}
+          </Badge>
+          {summary.commerce.savedEventCount > 0 ? (
+            <Badge variant="outline">{summary.commerce.savedEventCount} saved commerce events</Badge>
+          ) : null}
+
         </div>
 
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
