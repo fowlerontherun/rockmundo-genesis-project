@@ -41929,6 +41929,110 @@ export type Database = {
         }
         Relationships: []
       }
+      social_activities: {
+        Row: {
+          activity_type: string
+          band_id: string | null
+          city_id: string | null
+          completed_at: string | null
+          cost_payer: string
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          end_at: string
+          estimated_cost: number
+          host_player_id: string
+          id: string
+          location_id: string | null
+          quality: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          activity_type: string
+          band_id?: string | null
+          city_id?: string | null
+          completed_at?: string | null
+          cost_payer?: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          end_at: string
+          estimated_cost?: number
+          host_player_id: string
+          id?: string
+          location_id?: string | null
+          quality?: string | null
+          start_at: string
+          status?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          activity_type?: string
+          band_id?: string | null
+          city_id?: string | null
+          completed_at?: string | null
+          cost_payer?: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          end_at?: string
+          estimated_cost?: number
+          host_player_id?: string
+          id?: string
+          location_id?: string | null
+          quality?: string | null
+          start_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
+      social_activity_participants: {
+        Row: {
+          activity_id: string
+          attended: boolean
+          created_at: string
+          id: string
+          profile_id: string
+          responded_at: string | null
+          response: string
+        }
+        Insert: {
+          activity_id: string
+          attended?: boolean
+          created_at?: string
+          id?: string
+          profile_id: string
+          responded_at?: string | null
+          response?: string
+        }
+        Update: {
+          activity_id?: string
+          attended?: boolean
+          created_at?: string
+          id?: string
+          profile_id?: string
+          responded_at?: string | null
+          response?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_activity_participants_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "social_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_drama_events: {
         Row: {
           chart_boost: number
@@ -49920,6 +50024,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_social_activity: {
+        Args: { p_activity_id: string }
+        Returns: {
+          activity_type: string
+          band_id: string | null
+          city_id: string | null
+          completed_at: string | null
+          cost_payer: string
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          end_at: string
+          estimated_cost: number
+          host_player_id: string
+          id: string
+          location_id: string | null
+          quality: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "social_activities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_song_sale: {
         Args: {
           p_buyer_user_id: string
@@ -50316,6 +50450,48 @@ export type Database = {
           p_target_date?: string
         }
         Returns: string
+      }
+      create_social_activity: {
+        Args: {
+          p_activity_type: string
+          p_band_id?: string
+          p_city_id?: string
+          p_cost_payer: string
+          p_duration_minutes: number
+          p_location_id?: string
+          p_note?: string
+          p_participant_ids: string[]
+          p_start_at: string
+          p_title?: string
+          p_visibility?: string
+        }
+        Returns: {
+          activity_type: string
+          band_id: string | null
+          city_id: string | null
+          completed_at: string | null
+          cost_payer: string
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          end_at: string
+          estimated_cost: number
+          host_player_id: string
+          id: string
+          location_id: string | null
+          quality: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "social_activities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       credit_city_treasury: {
         Args: {
@@ -52147,6 +52323,36 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "band_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      respond_social_activity_invitation: {
+        Args: { p_activity_id: string; p_response: string }
+        Returns: {
+          activity_type: string
+          band_id: string | null
+          city_id: string | null
+          completed_at: string | null
+          cost_payer: string
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          end_at: string
+          estimated_cost: number
+          host_player_id: string
+          id: string
+          location_id: string | null
+          quality: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "social_activities"
           isOneToOne: true
           isSetofReturn: false
         }
