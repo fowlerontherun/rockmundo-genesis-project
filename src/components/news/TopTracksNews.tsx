@@ -67,7 +67,7 @@ export function TopTracksNews() {
             <Headphones className="h-5 w-5 text-primary" />
             {t('todaysNews.topTracks')}
           </CardTitle>
-          <Link to="/charts">
+          <Link to="/music/charts">
             <Button variant="ghost" size="sm" className="gap-1">
               {t('common.viewAll')}
               <ExternalLink className="h-3 w-3" />
