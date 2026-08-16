@@ -204,7 +204,7 @@ Staff use a smaller `Idle → WalkingToStation → Serving → Handover → Idle
 - Same gig/location/time data yields the same environment; invalid explicit combinations fall back safely.
 - Background contrast never makes performers, queues, or controls unreadable.
 
-### Phase 5 — Canonical gameplay integration
+### Phase 5 — Canonical gameplay integration (inspector + evidence modes implemented v1.1.669)
 
 **Goal:** replace aggregate visual approximations with saved gameplay evidence where that evidence exists.
 
