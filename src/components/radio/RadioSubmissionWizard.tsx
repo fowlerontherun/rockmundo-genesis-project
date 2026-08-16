@@ -245,18 +245,23 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         reasons.push(`Need ${station.min_fans_required} fans`);
       }
 
-      // Check regional fame requirement
-      const stationCountryFame = countryFameMap.get(station.country) || 0;
+      // Check regional fame requirement (untoured markets get a 20% spillover of overall fame)
+      const stationCountryFame = countryFameMap.has(station.country)
+        ? countryFameMap.get(station.country) || 0
+        : Math.round((band.fame || 0) * 0.2);
       if ((station.min_fame_required || 0) > stationCountryFame) {
         isEligible = false;
         reasons.push(`Need ${station.min_fame_required} fame in ${station.country}`);
       }
 
-      // Check local presence for local stations
-      if (station.requires_local_presence && !cityFanMap.has(station.city_id)) {
+      // Check local presence: local fans or physically being in the city both count
+      const hasLocalPresence =
+        cityFanMap.has(station.city_id) || (!!currentCityId && station.city_id === currentCityId);
+      if (station.requires_local_presence && !hasLocalPresence) {
         isEligible = false;
         reasons.push("No local presence");
       }
+
 
       return {
         id: station.id,
