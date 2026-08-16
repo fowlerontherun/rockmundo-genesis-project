@@ -312,20 +312,21 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   }, [bandId]);
 
   const handleTravelToggle = async (memberId: string, currentValue: boolean) => {
-    if (!isLeader) {
+    const member = members.find((candidate) => candidate.id === memberId);
+    if (!member || !canEditMember(member)) {
       toast({
         title: "Permission denied",
-        description: "Only the band leader can change travel settings",
+        description: "Only the band leader or the member themselves can change travel settings",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from("band_members")
-        .update({ travels_with_band: !currentValue })
-        .eq("id", memberId);
+      const { error } = await (supabase as any).rpc("set_band_member_travel", {
+        p_member_id: memberId,
+        p_travels_with_band: !currentValue,
+      });
 
       if (error) throw error;
 
@@ -336,7 +337,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       );
 
       toast({
-        title: "Travel setting updated",
+        title: "Travel setting saved",
         description: !currentValue 
           ? "Member will now travel with the band" 
           : "Member will arrange their own travel",
@@ -345,14 +346,20 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       console.error("Failed to update travel setting", error);
       toast({
         title: "Update failed",
-        description: "Could not update travel setting",
+        description: error instanceof Error ? error.message : "Could not update travel setting",
         variant: "destructive",
       });
     }
   };
 
-  const handlePerformanceRoleDraftChange = (memberId: string, nextRole: string) => {
-    setDraftPerformanceRoles((current) => ({ ...current, [memberId]: nextRole }));
+  const handlePerformanceRoleDraftChange = (memberId: string, role: string, checked: boolean) => {
+    setDraftPerformanceRoles((current) => {
+      const existing = current[memberId] ?? [];
+      const next = checked
+        ? Array.from(new Set([...existing, role]))
+        : existing.filter((entry) => entry !== role);
+      return { ...current, [memberId]: next };
+    });
   };
 
   const handlePerformanceRoleSave = async (memberId: string) => {
