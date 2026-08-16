@@ -130,7 +130,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         region: bandHomeInfo.region,
         distanceTier: "domestic",
         costMultiplier: 1.0,
-        distributionCost: hasPhysicalFormats ? 5000 : 1000,
+        distributionCost: hasPhysicalFormats ? 1500 : 300,
       }]);
     }
   }, [bandHomeInfo]);
