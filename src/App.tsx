@@ -581,6 +581,8 @@ function App() {
                     <Route path="busking" element={<Busking />} />
                     
                     <Route path="song-manager" element={<SongManager />} />
+                    <Route path="cover-songs" element={<CoverSongs />} />
+
                     <Route path="music/overview" element={<PreserveQueryRedirect to="/music" />} />
                     <Route path="music/songs" element={<PreserveQueryRedirect to="/song-manager" />} />
                     <Route path="music/songwriting" element={<PreserveQueryRedirect to="/songwriting" />} />
