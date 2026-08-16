@@ -17,7 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.673",
+    date: "2026-08-16",
+    changes: [
+      { type: 'improvement', description: "Living Venue Viewer Phase 6: added automated accessibility gates covering keyboard-only use of the camera, graphics quality, reduced motion and pyrotechnics controls in both the full and compact control bars." },
+      { type: 'improvement', description: "Added an authority gate that scans every gig viewer source file to guarantee the viewer and demo never write gig, inventory, settlement or finance data." },
+    ],
+  },
+  {
     version: "1.1.672",
+
     date: "2026-08-16",
     changes: [
       { type: 'feature', description: "Gig viewer now has a Graphics quality control (Auto, Low, Std, High) in both the full and compact control bars, keyboard accessible and remembered between shows." },
