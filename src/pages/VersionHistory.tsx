@@ -17,6 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.679",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Newspaper, magazine, podcast and website pitches were never reviewed and sat pending forever. They are now reviewed automatically every 20 minutes, and the existing backlog has been decided." },
+      { type: 'feature', description: "Radio and press standards now scale with the world: the quality bar for each outlet tier is calculated from the number of active bands and characters and the live average quality of recorded songs." },
+      { type: 'feature', description: "Submissions now come back with detailed feedback: a score, a written verdict, a factor-by-factor breakdown (quality vs market bar, genre fit, local standing, buzz, reputation, competition) and projected weekly plays and listener reach for radio." },
+      { type: 'fix', description: "The radio submission wizard no longer shows zero stations for bands that have not toured - it now includes your home country and the country you are currently in, and untoured markets get a 20% spillover of your overall fame." },
+      { type: 'fix', description: "Radio submissions are no longer auto-accepted on a fixed quality number; every submission goes through the same scoring the feedback shows." },
+    ],
+  },
+  {
+
     version: "1.1.678",
     date: "2026-08-16",
     changes: [
