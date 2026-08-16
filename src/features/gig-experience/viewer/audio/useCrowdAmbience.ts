@@ -113,9 +113,12 @@ export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, 
     const energy = snapshot ? Math.max(0, Math.min(100, snapshot.crowdEnergy)) / 100 : 0.3;
     // Stage type modifies size/reverb feel via bandpass width
     const typeMod = stageType === "club" ? 0.75 : stageType === "theater" ? 0.85 : stageType === "arena" ? 1.1 : stageType === "stadium" ? 1.25 : stageType === "festival" ? 1.15 : 1;
-    const targetLevel = (0.06 + energy * 0.32) * typeMod;
+    // Between-set phases keep a busier room murmur even though energy is low.
+    const phase = showFrame?.phase ?? null;
+    const roomBoost = phase === "pre_show" || phase === "encore_break" || phase === "load_out" ? 0.16 : 0;
+    const targetLevel = (0.06 + energy * 0.32 + roomBoost) * typeMod;
     ambience.gain.setTargetAtTime(targetLevel, now, 0.5);
-    bp.frequency.setTargetAtTime(360 + energy * 620, now, 0.6);
+    bp.frequency.setTargetAtTime(360 + energy * 620 + roomBoost * 400, now, 0.6);
     bp.Q.setTargetAtTime(0.7 + energy * 0.6, now, 0.6);
 
     // Trigger a cheer burst on qualifying reactions
@@ -131,7 +134,27 @@ export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, 
       lastCheerAtRef.current = now;
       playCheer(ctx, cheer, energy, typeMod);
     }
-  }, [snapshot?.crowdEnergy, snapshot?.reaction, snapshot?.finaleActive, muted, volume, stageType, snapshot]);
+
+    // Show lifecycle stings: band walk-on, encore return and the final bow.
+    if (phase && phase !== lastPhaseRef.current) {
+      lastPhaseRef.current = phase;
+      if (phase === "band_entry" || phase === "encore") {
+        lastCheerAtRef.current = now;
+        playCheer(ctx, cheer, 0.95, typeMod);
+        playWhistles(ctx, cheer, typeMod);
+      } else if (phase === "bows") {
+        lastCheerAtRef.current = now;
+        playCheer(ctx, cheer, 1, typeMod * 1.1);
+      }
+    }
+
+    // Rhythmic "one more song" chant and stomping during the encore break.
+    const chant = showFrame?.chant ?? 0;
+    if (chant > 0.45 && now - lastChantAtRef.current > 2.6) {
+      lastChantAtRef.current = now;
+      playChant(ctx, cheer, chant, typeMod);
+    }
+  }, [snapshot?.crowdEnergy, snapshot?.reaction, snapshot?.finaleActive, muted, volume, stageType, snapshot, showFrame?.phase, showFrame?.chant]);
 
   function teardown() {
     try { noiseRef.current?.stop(); } catch { /* noop */ }
