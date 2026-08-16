@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { StorySnapshot } from "../engine/StoryEngine";
+import type { ShowSequenceFrame } from "../engine/ShowSequence";
 
 interface CrowdAmbienceOptions {
   enabled: boolean;
@@ -8,6 +9,8 @@ interface CrowdAmbienceOptions {
   isPlaying: boolean;
   snapshot: StorySnapshot | null;
   stageType: string;
+  /** Show lifecycle frame: drives pre-show murmur, encore chants and final applause. */
+  showFrame?: ShowSequenceFrame | null;
 }
 
 /**
