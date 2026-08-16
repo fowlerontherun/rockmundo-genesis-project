@@ -274,9 +274,9 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         setMembers(membersWithProfiles);
         setDraftPerformanceRoles(
           membersWithProfiles.reduce((acc, member) => {
-            acc[member.id] = member.instrument_role || "Other";
+            acc[member.id] = getMemberRoles(member);
             return acc;
-          }, {} as Record<string, string>),
+          }, {} as Record<string, string[]>),
         );
 
         const historyMap = (historyData as BandMembershipStatusHistory[] | null)?.reduce(
