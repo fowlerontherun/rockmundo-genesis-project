@@ -83,7 +83,7 @@ function moverPool(profile: EnvironmentProfile, archetype: VenueArchetype): Move
   if (profile.features.includes("buildings") || profile.features.includes("brick") || profile.features.includes("roofs")) pool.push("car", "car");
   if (profile.kind === "industrial" || profile.kind === "riverside") pool.push("train");
   if (profile.kind === "urban" || profile.kind === "coastal" || profile.kind === "desert") pool.push("plane");
-  if (archetype === "festival" || archetype === "countryside" as VenueArchetype) pool.push("car");
+  if (archetype === "festival") pool.push("car");
   return pool.length ? pool : ["car"];
 }
 
