@@ -23,6 +23,9 @@ import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, draw
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
 import { applyCameraTransform, deriveCameraForMode, type GigViewerCameraMode } from "./CameraDirector";
 import { buildPerformerTrail, drawPerformerCounter, performerIsMoving } from "./PerformerCounterRenderer";
+import { crowdDrawStride, effectiveDevicePixelRatio, resolveRenderBudget, type RenderBudget } from "./PerformanceProfile";
+import { resolvePerformanceTier, type PerformanceTier } from "./ViewerDiagnostics";
+import { StaticSceneLayer } from "./StaticSceneLayer";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -42,6 +45,10 @@ export class CanvasRenderer {
   private readonly venueActivityPlan: VenueActivityPlan;
   private readonly environment: ResolvedEnvironment;
   private readonly environmentPlan: EnvironmentScenePlan;
+  private renderBudget: RenderBudget;
+  private readonly displayedCrowd: number;
+  private readonly backgroundLayer = new StaticSceneLayer("background");
+  private readonly architectureLayer = new StaticSceneLayer("architecture");
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -53,6 +60,7 @@ export class CanvasRenderer {
       pyroIntensity?: number;
       crowdTuning?: Partial<CrowdTuningOptions> | null;
       cameraMode?: GigViewerCameraMode;
+      performanceTier?: PerformanceTier | null;
     } = {},
   ) {
     const ctx = canvas.getContext("2d");
@@ -83,6 +91,14 @@ export class CanvasRenderer {
     this.storyModel = buildStoryModel(replay, experience);
     const attendance = resolvePresentationAttendance(experience?.headline.attendance, replayResultAttendance(replay), experience?.headline.capacity);
     const displayedCrowd = representativeCrowdCount({ attendance: attendance.value, capacity: null, archetype: this.venueScene.archetype });
+    this.displayedCrowd = displayedCrowd;
+    this.renderBudget = resolveRenderBudget({
+      tier: this.options.performanceTier ?? resolvePerformanceTier({ reducedMotion: this.reducedMotion }),
+      displayedCrowd,
+      devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio,
+      reducedMotion: this.reducedMotion,
+      archetype: this.venueScene.archetype,
+    });
     this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
@@ -94,7 +110,7 @@ export class CanvasRenderer {
 
   resize(size: Size) {
     this.size = { width: Math.max(280, size.width), height: Math.max(220, size.height) };
-    this.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    this.dpr = effectiveDevicePixelRatio(this.renderBudget, typeof window === "undefined" ? 1 : window.devicePixelRatio);
     this.canvas.width = Math.floor(this.size.width * this.dpr);
     this.canvas.height = Math.floor(this.size.height * this.dpr);
     this.canvas.style.width = `${this.size.width}px`;
@@ -174,12 +190,17 @@ export class CanvasRenderer {
     ctx.clearRect(0, 0, size.width, size.height);
     ctx.save();
     applyCameraTransform(ctx, cameraFrame.camera, size);
-    drawBackground(ctx, preset, size);
+    const staticKey = `${this.venueScene.structuralFingerprint}|${this.environment.profile.kind}`;
+    this.backgroundLayer.paint(ctx, { key: staticKey, size, dpr: this.dpr }, (layerCtx, layerSize) => {
+      drawBackground(layerCtx, preset, layerSize);
+    });
     drawExteriorEnvironment(ctx, size, this.environment, this.environmentPlan, state.positionMs, this.reducedMotion);
-    drawVenueArchitecture(ctx, size, this.venueScene);
-    drawVenueShell(ctx, preset, size);
-    drawFloor(ctx, preset, this.venueDetailPlan.floorMarks);
-    drawSceneDecorationsAndServices(ctx, size, this.venueScene, this.venueDetailPlan);
+    this.architectureLayer.paint(ctx, { key: staticKey, size, dpr: this.dpr }, (layerCtx, layerSize) => {
+      drawVenueArchitecture(layerCtx, layerSize, this.venueScene);
+      drawVenueShell(layerCtx, preset, layerSize);
+      drawFloor(layerCtx, preset, this.venueDetailPlan.floorMarks);
+      drawSceneDecorationsAndServices(layerCtx, layerSize, this.venueScene, this.venueDetailPlan);
+    });
     if (crowd && preset.crowdZones.length > 1) {
       ctx.globalAlpha = .14 + crowd.fillProgress * .14;
       ctx.fillStyle = preset.decorations.palette.accent;
@@ -196,9 +217,11 @@ export class CanvasRenderer {
     ctx.fillStyle = "#9ca3af";
     ctx.beginPath(); ctx.arc(preset.backstage.x, preset.backstage.y, 10, 0, Math.PI * 2); ctx.fill();
 
+    const crowdStride = crowdDrawStride(this.renderBudget);
     (crowd?.entities ?? []).forEach((c, i) => {
       if (!c.visible && c.state !== "queued") return;
       if (!c.visible && i % 7 !== 0) return;
+      if (crowdStride > 1 && c.visible && i % crowdStride !== 0) return;
       const alpha = c.state === "queued" ? .22 : c.state === "entering" ? .58 : c.state === "settling" ? .72 : .82;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = c.state === "queued" ? "#cbd5e1" : i % 3 === 0 ? "#60a5fa" : i % 3 === 1 ? "#a78bfa" : "#f472b6";
@@ -255,7 +278,15 @@ export class CanvasRenderer {
     }
   }
 
-  destroy() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+  get budget(): RenderBudget { return this.renderBudget; }
+
+  get displayedCrowdCount() { return this.displayedCrowd; }
+
+  destroy() {
+    this.backgroundLayer.destroy();
+    this.architectureLayer.destroy();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
 }
 
 function drawVenueActivity(ctx: CanvasRenderingContext2D, size: Size, plan: VenueActivityPlan, positionMs: number, reducedMotion: boolean) {

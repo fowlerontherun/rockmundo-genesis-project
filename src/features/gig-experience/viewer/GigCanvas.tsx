@@ -13,6 +13,7 @@ import { useCanvasSize } from "./hooks/useCanvasSize";
 import { useGlobalCrowdTuning } from "./hooks/useGlobalCrowdTuning";
 import type { GigViewerCameraMode } from "./engine/CameraDirector";
 import { buildViewerDiagnostics } from "./engine/ViewerDiagnostics";
+import { resolveRenderBudget } from "./engine/PerformanceProfile";
 
 export function GigCanvas({
   replay,
@@ -56,6 +57,13 @@ export function GigCanvas({
   });
   const tuningKey = crowdTuningSignature(resolved.tuning);
   const diagnostics = buildViewerDiagnostics({ replay, experience, cameraMode, reducedMotion });
+  const renderBudget = resolveRenderBudget({
+    tier: diagnostics.performanceTier,
+    displayedCrowd: diagnostics.representativeCrowdCount,
+    reducedMotion,
+    archetype: diagnostics.venueArchetype,
+    devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,6 +73,7 @@ export function GigCanvas({
       pyroIntensity,
       crowdTuning: resolved.tuning,
       cameraMode,
+      performanceTier: diagnostics.performanceTier,
     });
     rendererRef.current = renderer;
     renderer.resize(logical);
@@ -85,7 +94,9 @@ export function GigCanvas({
       data-venue-descriptor-version={diagnostics.descriptorVersion} data-venue-structural-fingerprint={diagnostics.structuralFingerprint}
       data-seed-fingerprint={diagnostics.seedFingerprint} data-representative-crowd-count={diagnostics.representativeCrowdCount}
       data-attendance-state={diagnostics.attendanceState} data-attendance-source={diagnostics.attendanceSource}
-      data-activity-evidence-mode={diagnostics.activityEvidenceMode} data-performance-tier={diagnostics.performanceTier}>
+      data-activity-evidence-mode={diagnostics.activityEvidenceMode} data-performance-tier={diagnostics.performanceTier}
+      data-render-dpr-cap={renderBudget.dprCap} data-crowd-detail={renderBudget.crowdDetail}
+      data-degradations={renderBudget.appliedDegradations.join(",")}>
       {demoTuning.demoMode && !fill ? (
         <>
           <GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} />
