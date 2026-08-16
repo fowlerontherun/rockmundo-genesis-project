@@ -11,7 +11,6 @@ import { EducationSourceBadge, type EducationSource } from "./EducationSourceBad
 import { SchedulePracticeDialog } from "./SchedulePracticeDialog";
 import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useAuth } from "@/hooks/use-auth-context";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,7 +63,6 @@ export const CompactSkillRow = ({
 }: CompactSkillRowProps) => {
   const queryClient = useQueryClient();
   
-  const { user } = useAuth();
   const { profileId: activeProfileId } = useActiveProfile();
   const [practiceOpen, setPracticeOpen] = useState(false);
   const { data: practiceConfig } = useSkillPracticeRestrictions(activeProfileId ?? undefined);
