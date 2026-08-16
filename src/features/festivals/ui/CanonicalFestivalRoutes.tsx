@@ -201,8 +201,12 @@ const Summary = ({ title, value }: { title: string; value: string }) => (
 
 export const editionNavigation = [
   { section: "overview", label: "Plan" },
-  { section: "applications", label: "Line-up" },
+  { section: "site", label: "Site & stages" },
   { section: "finance", label: "Tickets & budget" },
+  { section: "applications", label: "Line-up" },
+  { section: "operations", label: "Staff & suppliers" },
+  { section: "sponsorship", label: "Sponsors" },
+  { section: "schedule", label: "Running order" },
   { section: "launch", label: "Announce & sell" },
   { section: "live", label: "Run Festival" },
   { section: "history", label: "Results" },
@@ -218,10 +222,18 @@ function editionSectionRoute(
   switch (section) {
     case "overview":
       return festivalRoutes.edition(festivalCompanyId, editionId);
+    case "site":
+      return festivalRoutes.site(festivalCompanyId, editionId);
     case "applications":
       return festivalRoutes.applications(festivalCompanyId, editionId);
     case "finance":
       return festivalRoutes.finance(festivalCompanyId, editionId);
+    case "operations":
+      return festivalRoutes.operations(festivalCompanyId, editionId);
+    case "sponsorship":
+      return festivalRoutes.sponsorship(festivalCompanyId, editionId);
+    case "schedule":
+      return festivalRoutes.schedule(festivalCompanyId, editionId);
     case "launch":
       return festivalRoutes.launch(festivalCompanyId, editionId);
     case "live":
