@@ -73,7 +73,7 @@ describe("deterministic venue activity", () => {
     const samples = Array.from({ length: 121 }, (_, index) => index * 500);
     for (const time of samples) {
       for (const staff of deriveVenueStaffActivity(plan, time)) {
-        const bounds = staff.bounds;
+        const bounds = plan.staff.find((entry) => entry.id === staff.id)!.bounds;
         expect(staff.position.x).toBeGreaterThanOrEqual(bounds.x);
         expect(staff.position.x).toBeLessThanOrEqual(bounds.x + bounds.width);
         expect(staff.position.y).toBeGreaterThanOrEqual(bounds.y);
@@ -98,7 +98,7 @@ describe("deterministic venue activity", () => {
   });
 
   it("disables invalid or missing service routes safely", () => {
-    const { scene: base } = make(); const scene = { ...base, paths: { ...base.paths, crowdToBar: [] }, queuePoints: { ...base.queuePoints, merchandise: [] } } as typeof base;
+    const { scene: base } = make(); const scene = { ...base, bars: [], merchandiseStands: [], routes: [], paths: { ...base.paths, crowdToBar: [] }, queuePoints: { ...base.queuePoints, merchandise: [] } } as typeof base;
     const plan = buildVenueActivityPlan({ replay, story: buildStoryModel(replay, null), scene, displayedCrowd: 16 });
     expect(plan.visits).toEqual([]); expect(plan.staff).toEqual([]); expect(deriveVenueActivity(plan, 10_000)).toEqual([]); expect(deriveVenueStaffActivity(plan, 10_000)).toEqual([]);
   });
