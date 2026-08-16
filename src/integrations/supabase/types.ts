@@ -22561,6 +22561,286 @@ export type Database = {
           },
         ]
       }
+      gig_audience_attendance: {
+        Row: {
+          attendance_type: string
+          created_at: string
+          gig_id: string
+          id: string
+          last_presence_at: string
+          live_session_id: string | null
+          participation_score: number
+          profile_id: string
+          reward_status: string
+          status: string
+          ticket_id: string | null
+          watch_duration_seconds: number
+        }
+        Insert: {
+          attendance_type?: string
+          created_at?: string
+          gig_id: string
+          id?: string
+          last_presence_at?: string
+          live_session_id?: string | null
+          participation_score?: number
+          profile_id: string
+          reward_status?: string
+          status?: string
+          ticket_id?: string | null
+          watch_duration_seconds?: number
+        }
+        Update: {
+          attendance_type?: string
+          created_at?: string
+          gig_id?: string
+          id?: string
+          last_presence_at?: string
+          live_session_id?: string | null
+          participation_score?: number
+          profile_id?: string
+          reward_status?: string
+          status?: string
+          ticket_id?: string | null
+          watch_duration_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_audience_attendance_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_audience_reactions: {
+        Row: {
+          attendance_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          reaction_type: string
+          segment_id: string | null
+        }
+        Insert: {
+          attendance_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          reaction_type: string
+          segment_id?: string | null
+        }
+        Update: {
+          attendance_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          reaction_type?: string
+          segment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_audience_reactions_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "gig_audience_attendance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_audience_segment_aggregates: {
+        Row: {
+          audience_modifier: number
+          encore_demand: number
+          gig_id: string | null
+          id: string
+          live_session_id: string
+          participation_level: string
+          participation_score: number
+          reaction_counts: Json
+          singalong_strength: number
+          unique_participants: number
+          updated_at: string
+        }
+        Insert: {
+          audience_modifier?: number
+          encore_demand?: number
+          gig_id?: string | null
+          id?: string
+          live_session_id: string
+          participation_level?: string
+          participation_score?: number
+          reaction_counts?: Json
+          singalong_strength?: number
+          unique_participants?: number
+          updated_at?: string
+        }
+        Update: {
+          audience_modifier?: number
+          encore_demand?: number
+          gig_id?: string | null
+          id?: string
+          live_session_id?: string
+          participation_level?: string
+          participation_score?: number
+          reaction_counts?: Json
+          singalong_strength?: number
+          unique_participants?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gig_commerce_settlements: {
+        Row: {
+          bar_band_entitlement: number
+          commerce_snapshot: Json
+          gig_id: string
+          id: string
+          merch_cost: number
+          merch_gross_revenue: number
+          merch_items_sold: number
+          settled_at: string
+        }
+        Insert: {
+          bar_band_entitlement?: number
+          commerce_snapshot?: Json
+          gig_id: string
+          id?: string
+          merch_cost?: number
+          merch_gross_revenue?: number
+          merch_items_sold?: number
+          settled_at?: string
+        }
+        Update: {
+          bar_band_entitlement?: number
+          commerce_snapshot?: Json
+          gig_id?: string
+          id?: string
+          merch_cost?: number
+          merch_gross_revenue?: number
+          merch_items_sold?: number
+          settled_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_commerce_settlements_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_consequence_snapshots: {
+        Row: {
+          category: string
+          consequence_key: string
+          created_at: string
+          delta_value: number | null
+          explanation: string | null
+          gig_id: string
+          id: string
+          metadata: Json
+          new_value: number | null
+          previous_value: number | null
+          source_factors: Json
+          status: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          category: string
+          consequence_key: string
+          created_at?: string
+          delta_value?: number | null
+          explanation?: string | null
+          gig_id: string
+          id?: string
+          metadata?: Json
+          new_value?: number | null
+          previous_value?: number | null
+          source_factors?: Json
+          status?: string
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          category?: string
+          consequence_key?: string
+          created_at?: string
+          delta_value?: number | null
+          explanation?: string | null
+          gig_id?: string
+          id?: string
+          metadata?: Json
+          new_value?: number | null
+          previous_value?: number | null
+          source_factors?: Json
+          status?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_consequence_snapshots_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_crew_assignments: {
+        Row: {
+          assignment_status: string
+          band_crew_member_id: string | null
+          cost: number
+          created_at: string
+          crew_role: string
+          gig_id: string
+          id: string
+          npc_staff_id: string | null
+          profile_id: string | null
+          updated_at: string
+          worker_type: string
+        }
+        Insert: {
+          assignment_status?: string
+          band_crew_member_id?: string | null
+          cost?: number
+          created_at?: string
+          crew_role: string
+          gig_id: string
+          id?: string
+          npc_staff_id?: string | null
+          profile_id?: string | null
+          updated_at?: string
+          worker_type?: string
+        }
+        Update: {
+          assignment_status?: string
+          band_crew_member_id?: string | null
+          cost?: number
+          created_at?: string
+          crew_role?: string
+          gig_id?: string
+          id?: string
+          npc_staff_id?: string | null
+          profile_id?: string | null
+          updated_at?: string
+          worker_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_crew_assignments_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_crowd_sounds: {
         Row: {
           audio_url: string
@@ -22599,6 +22879,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      gig_equipment_loadouts: {
+        Row: {
+          band_stage_equipment_id: string | null
+          created_at: string
+          equipment_role: string
+          gig_id: string
+          id: string
+          is_primary: boolean
+          is_spare: boolean
+          rental_cost: number
+          rented_item_name: string | null
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          band_stage_equipment_id?: string | null
+          created_at?: string
+          equipment_role: string
+          gig_id: string
+          id?: string
+          is_primary?: boolean
+          is_spare?: boolean
+          rental_cost?: number
+          rented_item_name?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Update: {
+          band_stage_equipment_id?: string | null
+          created_at?: string
+          equipment_role?: string
+          gig_id?: string
+          id?: string
+          is_primary?: boolean
+          is_spare?: boolean
+          rental_cost?: number
+          rented_item_name?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_equipment_loadouts_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gig_fan_conversions: {
         Row: {
@@ -22649,6 +22979,41 @@ export type Database = {
             foreignKeyName: "gig_fan_conversions_gig_id_fkey"
             columns: ["gig_id"]
             isOneToOne: true
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_forecast_snapshots: {
+        Row: {
+          calculation_version: number
+          forecast: Json
+          generated_at: string
+          gig_id: string
+          id: string
+          is_final: boolean
+        }
+        Insert: {
+          calculation_version?: number
+          forecast?: Json
+          generated_at?: string
+          gig_id: string
+          id?: string
+          is_final?: boolean
+        }
+        Update: {
+          calculation_version?: number
+          forecast?: Json
+          generated_at?: string
+          gig_id?: string
+          id?: string
+          is_final?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_forecast_snapshots_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
             referencedRelation: "gigs"
             referencedColumns: ["id"]
           },
@@ -22950,6 +23315,94 @@ export type Database = {
         }
         Relationships: []
       }
+      gig_post_processing: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          gig_id: string
+          id: string
+          processing_version: number
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          gig_id: string
+          id?: string
+          processing_version?: number
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          gig_id?: string
+          id?: string
+          processing_version?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_post_processing_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_production_plans: {
+        Row: {
+          cost_breakdown: Json
+          created_at: string
+          effects_package: string
+          estimated_cost: number
+          estimated_setup_minutes: number
+          gig_id: string
+          id: string
+          lighting_package: string
+          setup_level: string
+          status: string
+          updated_at: string
+          visual_package: string
+        }
+        Insert: {
+          cost_breakdown?: Json
+          created_at?: string
+          effects_package?: string
+          estimated_cost?: number
+          estimated_setup_minutes?: number
+          gig_id: string
+          id?: string
+          lighting_package?: string
+          setup_level?: string
+          status?: string
+          updated_at?: string
+          visual_package?: string
+        }
+        Update: {
+          cost_breakdown?: Json
+          created_at?: string
+          effects_package?: string
+          estimated_cost?: number
+          estimated_setup_minutes?: number
+          gig_id?: string
+          id?: string
+          lighting_package?: string
+          setup_level?: string
+          status?: string
+          updated_at?: string
+          visual_package?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_production_plans_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_rider_fulfillment: {
         Row: {
           backstage_fulfillment: number | null
@@ -23018,6 +23471,79 @@ export type Database = {
             columns: ["rider_id"]
             isOneToOne: false
             referencedRelation: "band_riders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_setlist_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_encore: boolean
+          position: number
+          setlist_id: string
+          song_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_encore?: boolean
+          position: number
+          setlist_id: string
+          song_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_encore?: boolean
+          position?: number
+          setlist_id?: string
+          song_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_setlist_items_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "gig_setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_setlists: {
+        Row: {
+          created_at: string
+          gig_id: string
+          id: string
+          name: string
+          status: string
+          total_duration_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gig_id: string
+          id?: string
+          name?: string
+          status?: string
+          total_duration_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gig_id?: string
+          id?: string
+          name?: string
+          status?: string
+          total_duration_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_setlists_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
             referencedColumns: ["id"]
           },
         ]
@@ -23131,6 +23657,47 @@ export type Database = {
           },
         ]
       }
+      gig_soundcheck_plans: {
+        Row: {
+          created_at: string
+          estimated_cost: number
+          gig_id: string
+          id: string
+          scheduled_start: string | null
+          soundcheck_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estimated_cost?: number
+          gig_id: string
+          id?: string
+          scheduled_start?: string | null
+          soundcheck_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estimated_cost?: number
+          gig_id?: string
+          id?: string
+          scheduled_start?: string | null
+          soundcheck_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_soundcheck_plans_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_stage_instances: {
         Row: {
           created_at: string | null
@@ -23206,6 +23773,62 @@ export type Database = {
         }
         Relationships: []
       }
+      gig_viewer_replays: {
+        Row: {
+          checksum: string | null
+          duration_ms: number
+          event_count: number
+          event_payload: Json
+          event_schema_version: number
+          generated_at: string
+          generation_error_code: string | null
+          generation_status: string
+          gig_id: string
+          gig_outcome_id: string | null
+          id: string
+          simulation_seed: string | null
+          viewer_version: string
+        }
+        Insert: {
+          checksum?: string | null
+          duration_ms?: number
+          event_count?: number
+          event_payload?: Json
+          event_schema_version?: number
+          generated_at?: string
+          generation_error_code?: string | null
+          generation_status?: string
+          gig_id: string
+          gig_outcome_id?: string | null
+          id?: string
+          simulation_seed?: string | null
+          viewer_version: string
+        }
+        Update: {
+          checksum?: string | null
+          duration_ms?: number
+          event_count?: number
+          event_payload?: Json
+          event_schema_version?: number
+          generated_at?: string
+          generation_error_code?: string | null
+          generation_status?: string
+          gig_id?: string
+          gig_outcome_id?: string | null
+          id?: string
+          simulation_seed?: string | null
+          viewer_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_viewer_replays_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gigs: {
         Row: {
           attendance: number | null
@@ -23213,6 +23836,7 @@ export type Database = {
           booking_fee: number | null
           booking_request_id: string | null
           completed_at: string | null
+          completion_claimed_at: string | null
           created_at: string | null
           crowd_engagement: number | null
           current_song_position: number | null
@@ -23228,7 +23852,9 @@ export type Database = {
           pre_gig_forecast: Json | null
           predicted_tickets: number | null
           price_adjusted_at: string | null
+          processed_positions: number[]
           promoter_id: string | null
+          result_ready_at: string | null
           rider_id: string | null
           scheduled_date: string
           scheduled_end: string | null
@@ -23256,6 +23882,7 @@ export type Database = {
           booking_fee?: number | null
           booking_request_id?: string | null
           completed_at?: string | null
+          completion_claimed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
           current_song_position?: number | null
@@ -23271,7 +23898,9 @@ export type Database = {
           pre_gig_forecast?: Json | null
           predicted_tickets?: number | null
           price_adjusted_at?: string | null
+          processed_positions?: number[]
           promoter_id?: string | null
+          result_ready_at?: string | null
           rider_id?: string | null
           scheduled_date: string
           scheduled_end?: string | null
@@ -23299,6 +23928,7 @@ export type Database = {
           booking_fee?: number | null
           booking_request_id?: string | null
           completed_at?: string | null
+          completion_claimed_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
           current_song_position?: number | null
@@ -23314,7 +23944,9 @@ export type Database = {
           pre_gig_forecast?: Json | null
           predicted_tickets?: number | null
           price_adjusted_at?: string | null
+          processed_positions?: number[]
           promoter_id?: string | null
+          result_ready_at?: string | null
           rider_id?: string | null
           scheduled_date?: string
           scheduled_end?: string | null
@@ -48401,6 +49033,8 @@ export type Database = {
         }
       }
       caller_can_act_for_band: { Args: { _band_id: string }; Returns: boolean }
+      caller_in_band: { Args: { p_band_id: string }; Returns: boolean }
+      caller_in_gig_band: { Args: { p_gig_id: string }; Returns: boolean }
       can_apply_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
@@ -48557,6 +49191,33 @@ export type Database = {
         Args: { p_idempotency_key?: string; p_session_id: string }
         Returns: Json
       }
+      check_in_gig_audience: {
+        Args: {
+          p_attendance_type?: string
+          p_gig_id: string
+          p_ticket_id?: string
+        }
+        Returns: {
+          attendance_type: string
+          created_at: string
+          gig_id: string
+          id: string
+          last_presence_at: string
+          live_session_id: string | null
+          participation_score: number
+          profile_id: string
+          reward_status: string
+          status: string
+          ticket_id: string | null
+          watch_duration_seconds: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gig_audience_attendance"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_marriage_eligibility: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -48580,6 +49241,15 @@ export type Database = {
       }
       child_stage_for_age: { Args: { p_age: number }; Returns: string }
       claim_company_shift: { Args: { p_shift_id: string }; Returns: string }
+      claim_gig_completion: { Args: { p_gig_id: string }; Returns: Json }
+      claim_gig_viewer_replay_generation: {
+        Args: {
+          p_gig_id: string
+          p_gig_outcome_id: string
+          p_viewer_version: string
+        }
+        Returns: Json
+      }
       cleanup_stuck_cron_runs: { Args: never; Returns: number }
       cleanup_timed_out_generations: { Args: never; Returns: number }
       close_festival_ticket_sales: {
@@ -50289,6 +50959,10 @@ export type Database = {
         }
         Returns: string
       }
+      mark_gig_position_processed: {
+        Args: { p_gig_id: string; p_position: number }
+        Returns: Json
+      }
       mayor_company_modifier: { Args: { p_city_id: string }; Returns: number }
       media_quality_bar: { Args: { p_tier: number }; Returns: number }
       normalize_gig_viewer_crowd_settings: {
@@ -50388,6 +51062,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      preserve_final_gig_forecast_snapshot: {
+        Args: { p_forecast: Json; p_gig_id: string; p_version?: number }
+        Returns: Json
+      }
       preview_copy_festival_edition: {
         Args: { p_source_edition_id: string; p_target_edition_id?: string }
         Returns: Json
@@ -50421,6 +51099,10 @@ export type Database = {
           p_sale_price: number
         }
         Returns: string
+      }
+      process_gig_preparation_costs_and_rewards: {
+        Args: { p_gig_id: string }
+        Returns: Json
       }
       process_inactive_character_comas: { Args: never; Returns: Json }
       process_media_submission_reviews: {
@@ -50610,6 +51292,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_gig_audience_reaction: {
+        Args: {
+          p_attendance_id: string
+          p_idempotency_key?: string
+          p_reaction_type: string
+          p_segment_id?: string
+        }
+        Returns: Json
       }
       refresh_festival_world_records: { Args: never; Returns: Json }
       reorder_setlist_items: {
@@ -50936,6 +51627,55 @@ export type Database = {
         }
         Returns: Json
       }
+      save_gig_crew_assignment: {
+        Args: {
+          p_assignment_status?: string
+          p_cost?: number
+          p_crew_role: string
+          p_gig_id: string
+          p_npc_staff_id?: string
+          p_profile_id?: string
+          p_worker_type: string
+        }
+        Returns: Json
+      }
+      save_gig_equipment_loadout: {
+        Args: {
+          p_band_stage_equipment_id?: string
+          p_equipment_role: string
+          p_gig_id: string
+          p_is_primary?: boolean
+          p_is_spare?: boolean
+          p_rental_cost?: number
+          p_rented_item_name?: string
+          p_source_type: string
+        }
+        Returns: Json
+      }
+      save_gig_production_plan: {
+        Args: {
+          p_effects_package: string
+          p_gig_id: string
+          p_lighting_package: string
+          p_setup_level: string
+          p_status?: string
+          p_visual_package: string
+        }
+        Returns: Json
+      }
+      save_gig_setlist: {
+        Args: { p_gig_id: string; p_items: Json; p_name: string }
+        Returns: Json
+      }
+      save_gig_soundcheck_plan: {
+        Args: {
+          p_gig_id: string
+          p_scheduled_start?: string
+          p_soundcheck_type: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       schedule_songwriting_session: {
         Args: {
           p_effort_hours: number
@@ -51016,6 +51756,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      settle_gig_commerce: {
+        Args: {
+          p_gig_id: string
+          p_merch_multiplier?: number
+          p_performance_rating: number
+        }
+        Returns: Json
       }
       settle_legacy_festival_participation: {
         Args: {
@@ -51137,6 +51885,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      start_gig_authoritative: { Args: { p_gig_id: string }; Returns: Json }
       start_songwriting_session: {
         Args: {
           p_activity_id?: string
