@@ -3,22 +3,24 @@ import { readFileSync } from "node:fs";
 
 const appSource = readFileSync("src/App.tsx", "utf8");
 
-const legacyFestivalRoutes = [
+const retiredLegacyFestivalRoutes = [
   "festivals/marketplace",
   "festivals/directory",
-  "festivals/:festivalId",
   "festivals/perform/:participationId",
   "festivals/sessions/:sessionId",
 ];
 
 describe("legacy festival route boundary", () => {
-  it("wraps every player-facing legacy festival route in LegacyFestivalGate", () => {
-    for (const route of legacyFestivalRoutes) {
-      const pattern = new RegExp(
-        `<Route\\s+path=\\"${route.replace(/[/:]/g, (match) => `\\${match}`)}\\"\\s+element=\\{<LegacyFestivalGate`,
+  it("retires every legacy festival gameplay route with a redirect instead of a legacy page", () => {
+    for (const route of retiredLegacyFestivalRoutes) {
+      expect(appSource, `${route} must redirect to the canonical directory`).toContain(
+        `path="${route}" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />}`,
       );
-      expect(appSource, `${route} must be feature gated`).toMatch(pattern);
     }
+    expect(appSource).toContain(
+      'path="festivals/:festivalId" element={<LegacyFestivalRedirect target="overview" />}',
+    );
+    expect(appSource).not.toContain("LegacyFestivalGate");
   });
 
   it("redirects retired discovery routes without mounting a legacy writer", () => {
