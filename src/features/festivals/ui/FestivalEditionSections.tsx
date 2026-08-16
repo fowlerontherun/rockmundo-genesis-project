@@ -231,6 +231,27 @@ export function FestivalEditionOverview({
 
       <div className="grid gap-4 md:grid-cols-2">
         <ActionCard
+          icon={<Tent className="h-5 w-5" />}
+          title="Set up the site and stages"
+          description="Pick the site, capacity and opening hours, then add stages. Do this first — tickets and the line-up depend on it."
+          label="Plan site & stages"
+          to={festivalRoutes.site(festivalCompanyId, editionId)}
+        />
+        <ActionCard
+          icon={<Users className="h-5 w-5" />}
+          title="Staff, suppliers and sponsors"
+          description="Commit staffing and supplier budgets, then agree sponsorship packages for the event."
+          label="Plan operations"
+          to={festivalRoutes.operations(festivalCompanyId, editionId)}
+        />
+        <ActionCard
+          icon={<CalendarClock className="h-5 w-5" />}
+          title="Build the running order"
+          description="Place booked acts into stage slots, resolve conflicts and confirm readiness before announcing."
+          label="Running order"
+          to={festivalRoutes.schedule(festivalCompanyId, editionId)}
+        />
+        <ActionCard
           icon={<Music2 className="h-5 w-5" />}
           title="Choose the line-up"
           description="Set the artist budget and decide whether to use applications, invitations or a mixture. Empty spaces can be filled automatically."
