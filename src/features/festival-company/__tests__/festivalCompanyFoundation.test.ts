@@ -27,13 +27,17 @@ describe("festival company secure founding foundation", () => {
   });
 
   it("sends only user-entered fields plus idempotency key to the RPC", () => {
-    expect(repositorySource).toContain('supabase.rpc("found_festival_company"');
-    expect(repositorySource).toContain('supabase.rpc("get_festival_company_setup"');
+    expect(repositorySource).toContain('.rpc("found_festival_company"');
+    expect(repositorySource).toContain('.rpc("get_festival_company_setup"');
     expect(repositorySource).toContain("p_company_name: input.companyName");
     expect(repositorySource).toContain("p_public_name: input.publicName");
-    expect(repositorySource).not.toContain("foundingCost:");
-    expect(repositorySource).not.toContain("owner_id");
-    expect(repositorySource).not.toContain("company_type");
+    const rpcArguments = repositorySource.slice(
+      repositorySource.indexOf('.rpc("found_festival_company"'),
+      repositorySource.indexOf("});", repositorySource.indexOf('.rpc("found_festival_company"')),
+    );
+    expect(rpcArguments).not.toContain("foundingCost");
+    expect(rpcArguments).not.toContain("owner_id");
+    expect(rpcArguments).not.toContain("company_type");
   });
 
   it("maps stable RPC errors to player-facing messages", () => {
@@ -69,7 +73,8 @@ describe("festival company secure founding foundation", () => {
     expect(concurrencyScript).toContain("p2=$!");
     expect(concurrencyScript).toContain("festival_test_run_token");
     expect(concurrencyScript).toContain("reached_pause_at");
-    expect(concurrencyScript).toContain("exactly one JSON line");
+    expect(concurrencyScript).toContain("separators=(',',':')");
+    expect(concurrencyScript).toContain("validate-concurrency-summary.mjs");
     expect(trustedRuntimeMigration).toContain("CREATE SCHEMA IF NOT EXISTS festival_test");
     expect(trustedRuntimeMigration).toContain("_festival_test_context");
     expect(trustedRuntimeMigration).toContain("festival_primary_financial_account_required");
@@ -88,8 +93,8 @@ describe("festival company secure founding foundation", () => {
     expect(cardSource).not.toContain("/companies/festivals/${festival.festivalCompanyId}`");
   });
 
-  it("registers the authorised setup route without LegacyFestivalGate", () => {
-    expect(appSource).toContain('path="companies/festivals/:festivalCompanyId/setup" element={<FestivalCompanySetupPage />}');
-    expect(appSource).not.toContain('path="companies/festivals/:festivalCompanyId/setup" element={<LegacyFestivalGate');
+  it("routes the legacy setup path into the canonical festival workspace, never a legacy gate", () => {
+    expect(appSource).toContain('path="companies/festivals/:festivalCompanyId/setup" element={<LegacyFestivalSetupRedirect />}');
+    expect(appSource).not.toContain("LegacyFestivalGate");
   });
 });

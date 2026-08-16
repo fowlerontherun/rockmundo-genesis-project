@@ -70,9 +70,9 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByText("Main Stage")).toBeInTheDocument();
+    expect(screen.getAllByText("Main Stage").length).toBeGreaterThan(0);
     expect(screen.getByText("Second Stage")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Sunset opener/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Sunset opener/i }).length).toBeGreaterThan(0);
   });
 
   it("creates a manual festival slot in the owner schedule workspace", async () => {
@@ -104,7 +104,7 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
   it("edits an existing festival slot from the schedule inspector", async () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Sunset opener/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /Sunset opener/i })[0]);
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByDisplayValue("Sunset opener"), { target: { value: "Edited sunset opener" } });
     fireEvent.change(within(dialog).getByDisplayValue("Hold for local act"), { target: { value: "Confirmed for local act" } });

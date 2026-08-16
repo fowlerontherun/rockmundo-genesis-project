@@ -19,7 +19,6 @@ import { bandHubNavigation, businessHubNavigation, careerHubNavigation, characte
 import { isHubNavigationItemActive } from "@/components/hub/HubLayout";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
-import { LegacyFestivalGate } from "./features/festival-company";
 import { festivalRoutePatterns, festivalRoutes } from "./features/festivals/routes";
 import { FestivalFoundingPage, FestivalCompanyHome, FestivalEditionShell, FestivalEditionWorkspace, FestivalUpgradesPage, PublicFestivalEditionPage, LegacyFestivalRedirect, LegacyFestivalSetupRedirect } from "./features/festivals/ui/CanonicalFestivalRoutes";
 
@@ -115,11 +114,6 @@ const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 // StreamingNew removed in v1.1.194 — consolidated into StreamingPlatforms
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
 // const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
-const FestivalPerformance = lazyWithRetry(() => import("./pages/FestivalPerformance"));
-const FestivalDetail = lazyWithRetry(() => import("./pages/FestivalDetail"));
-const FestivalMarketplace = lazyWithRetry(() => import("./pages/FestivalMarketplace"));
-const FestivalDirectory = lazyWithRetry(() => import("./pages/FestivalDirectory"));
-const FestivalSessionPage = lazyWithRetry(() => import("./pages/festivals/FestivalSessionPage"));
 const FestivalLegacyPage = lazyWithRetry(() => import("./pages/festivals/FestivalLegacyPage"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
@@ -724,8 +718,8 @@ function App() {
                     <Route path="venues" element={<VenueManagement />} />
                     {/* <Route path="community/charity" element={<CharityPage />} /> */}
                     <Route path="festivals" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
-                    <Route path="festivals/marketplace" element={<LegacyFestivalGate area="Festival marketplace"><FestivalMarketplace /></LegacyFestivalGate>} />
-                    <Route path="festivals/directory" element={<LegacyFestivalGate area="Festival directory"><FestivalDirectory /></LegacyFestivalGate>} />
+                    <Route path="festivals/marketplace" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
+                    <Route path="festivals/directory" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
                     <Route path="festivals/results" element={<FestivalLegacyPage />} />
                     <Route path="festivals/results/:resultId" element={<FestivalLegacyPage />} />
                     <Route path="festivals/history" element={<FestivalLegacyPage />} />
@@ -733,12 +727,12 @@ function App() {
                     <Route path="festivals/hall-of-fame" element={<FestivalLegacyPage />} />
                     <Route path="festivals/records" element={<FestivalLegacyPage />} />
                     <Route path="festivals/statistics" element={<FestivalLegacyPage />} />
-                    <Route path="festivals/:festivalId" element={<LegacyFestivalGate area="Festival detail"><FestivalDetail /></LegacyFestivalGate>} />
+                    <Route path="festivals/:festivalId" element={<LegacyFestivalRedirect target="overview" />} />
                     <Route path="festivals/simulation" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
-                    <Route path="festivals/perform/:participationId" element={<LegacyFestivalGate area="Festival performance"><FestivalPerformance /></LegacyFestivalGate>} />
+                    <Route path="festivals/perform/:participationId" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
                     <Route path="festivals/:festivalId/manage" element={<LegacyFestivalRedirect target="overview" />} />
                     <Route path="festivals/:festivalId/manage/editions/:editionId" element={<LegacyFestivalRedirect target="overview" />} />
-                    <Route path="festivals/sessions/:sessionId" element={<LegacyFestivalGate area="Festival live session"><FestivalSessionPage /></LegacyFestivalGate>} />
+                    <Route path="festivals/sessions/:sessionId" element={<PreserveQueryRedirect to={festivalRoutes.publicDirectory()} />} />
                     <Route path="festivals/:festivalId/calendar" element={<LegacyFestivalRedirect target="schedule" />} />
                     <Route path="festivals/:festivalId/run" element={<LegacyFestivalRedirect target="operations" />} />
                     <Route path="awards" element={<Awards />} />

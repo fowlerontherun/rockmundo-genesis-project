@@ -42,25 +42,27 @@
       "kind": "route",
       "target": "FestivalMarketplace",
       "disposition": "remove",
-      "removal_phase": 6,
+      "removal_phase": "phase_12",
       "risk": "low",
-      "notes": "Duplicate of directory."
+      "notes": "Retired in Phase 12: route now redirects to the canonical public festival directory; legacy page deleted."
     },
     {
       "path": "/festivals/directory",
       "kind": "route",
       "target": "FestivalDirectory",
-      "disposition": "replace",
-      "removal_phase": 6,
-      "risk": "low"
+      "disposition": "remove",
+      "removal_phase": "phase_12",
+      "risk": "low",
+      "notes": "Retired in Phase 12: route now redirects to the canonical public festival directory; legacy page deleted."
     },
     {
       "path": "/festivals/:festivalId",
       "kind": "route",
       "target": "FestivalDetail",
-      "disposition": "replace",
-      "removal_phase": 6,
-      "risk": "medium"
+      "disposition": "remove",
+      "removal_phase": "phase_12",
+      "risk": "medium",
+      "notes": "Retired in Phase 12: route now redirects to the canonical public festival directory; legacy page deleted."
     },
     {
       "path": "/festivals/simulation",
@@ -75,10 +77,10 @@
       "path": "/festivals/perform/:participationId",
       "kind": "route",
       "target": "FestivalPerformance",
-      "disposition": "replace",
-      "removal_phase": 9,
+      "disposition": "remove",
+      "removal_phase": "phase_12",
       "risk": "high",
-      "notes": "Currently client-authoritative in parts; must move server-side."
+      "notes": "Retired in Phase 12: route now redirects to the canonical public festival directory; legacy page deleted."
     },
     {
       "path": "/festivals/:festivalId/manage",
@@ -100,9 +102,10 @@
       "path": "/festivals/sessions/:sessionId",
       "kind": "route",
       "target": "FestivalSessionPage",
-      "disposition": "replace",
-      "removal_phase": 9,
-      "risk": "high"
+      "disposition": "remove",
+      "removal_phase": "phase_12",
+      "risk": "high",
+      "notes": "Retired in Phase 12: route now redirects to the canonical public festival directory; legacy page deleted."
     },
     {
       "path": "/festivals/:festivalId/calendar",
@@ -152,6 +155,78 @@
       "disposition": "remove",
       "removal_phase": 6,
       "risk": "low"
+    },
+    {
+      "path": "/festival-opportunities",
+      "kind": "route",
+      "target": "FestivalArtistOpportunitiesPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Canonical artist opportunities hub (applications, invitations, offers)."
+    },
+    {
+      "path": "/festivals/results",
+      "kind": "route",
+      "target": "FestivalLegacyPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Historical legacy results archive; read-only reporting only."
+    },
+    {
+      "path": "/festivals/results/:resultId",
+      "kind": "route",
+      "target": "FestivalLegacyPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Historical legacy result detail; read-only reporting only."
+    },
+    {
+      "path": "/festivals/history",
+      "kind": "route",
+      "target": "FestivalLegacyPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Historical legacy timeline; read-only reporting only."
+    },
+    {
+      "path": "/festivals/awards",
+      "kind": "route",
+      "target": "FestivalLegacyPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Historical legacy awards; read-only reporting only."
+    },
+    {
+      "path": "/festivals/hall-of-fame",
+      "kind": "route",
+      "target": "FestivalLegacyPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Historical legacy hall of fame; read-only reporting only."
+    },
+    {
+      "path": "/festivals/records",
+      "kind": "route",
+      "target": "FestivalLegacyPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Historical legacy records; read-only reporting only."
+    },
+    {
+      "path": "/festivals/statistics",
+      "kind": "route",
+      "target": "FestivalLegacyPage",
+      "disposition": "reuse",
+      "removal_phase": null,
+      "risk": "low",
+      "notes": "Historical legacy statistics; read-only reporting only."
     }
   ],
   "pages": [

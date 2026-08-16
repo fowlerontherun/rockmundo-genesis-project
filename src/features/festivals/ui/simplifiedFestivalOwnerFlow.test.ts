@@ -107,8 +107,10 @@ describe("simplified company-owned Festival owner flow", () => {
       /FestivalEditionFinance[\s\S]*requiredBindings=\{\["site"\]\}/,
     );
     expect(sections).not.toContain('requiredBindings={["artists"]}');
-    expect(sections).not.toContain(
-      'requiredBindings={["site", "tickets"]}',
+    // Announce and sell is the only section that needs both prior choices,
+    // because it publishes the site plan and opens ticket sales together.
+    expect(sections).toMatch(
+      /Announce and sell[\s\S]*requiredBindings=\{\["site", "tickets"\]\}/,
     );
   });
 
