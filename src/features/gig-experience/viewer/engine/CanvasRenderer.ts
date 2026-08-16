@@ -27,6 +27,9 @@ import { crowdDrawStride, effectiveDevicePixelRatio, resolveRenderBudget, type R
 import { resolvePerformanceTier, type PerformanceTier } from "./ViewerDiagnostics";
 import { StaticSceneLayer } from "./StaticSceneLayer";
 import { buildVenueSignagePlan, drawVenueSignage, type VenueSignagePlan } from "./VenueSignagePlan";
+import { buildShowSequence, deriveShowSequenceFrame, type ShowSequenceModel } from "./ShowSequence";
+import { drawCurtains, drawPhoneLights, drawShowLighting } from "./ShowStaging";
+import { buildToiletActivityPlan, deriveToiletActivity, drawToiletActivity, type ToiletActivityPlan } from "./ToiletActivity";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
