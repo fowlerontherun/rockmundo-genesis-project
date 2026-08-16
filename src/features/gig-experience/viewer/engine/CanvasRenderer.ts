@@ -17,6 +17,7 @@ import { representativeCrowdCount } from "./RepresentativeCrowd";
 import { replayResultAttendance, resolvePresentationAttendance } from "./AuthoritativeMetric";
 import { resolveGigEnvironment, type ResolvedEnvironment } from "./EnvironmentRegistry";
 import { buildVenueDetailPlan, type VenueDetailPlan } from "./VenueDetailPlan";
+import { buildEnvironmentScenePlan, type EnvironmentScenePlan } from "./EnvironmentScenePlan";
 import { drawExteriorEnvironment, drawSceneDecorationsAndServices, drawVenueArchitecture } from "./VenueSceneRenderer";
 import { drawVenueShell, drawBackground, drawFloor, drawStage, drawBarrier, drawAtmosphere, drawStageExtras, drawFOHAndSecurity, drawFollowSpots } from "./StageDecor";
 import { derivePerformanceItemActivity, drawPerformanceItemActivity } from "./PerformanceItemActivity";
@@ -40,6 +41,7 @@ export class CanvasRenderer {
   private readonly venueDetailPlan: VenueDetailPlan;
   private readonly venueActivityPlan: VenueActivityPlan;
   private readonly environment: ResolvedEnvironment;
+  private readonly environmentPlan: EnvironmentScenePlan;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -72,6 +74,11 @@ export class CanvasRenderer {
       scheduledDate: experience?.gig.scheduledDate,
       venueArchetype: this.venueScene.archetype,
       venue: experience?.gig.venue,
+    });
+    this.environmentPlan = buildEnvironmentScenePlan({
+      environment: this.environment,
+      venueArchetype: this.venueScene.archetype,
+      reducedMotion: this.reducedMotion,
     });
     this.storyModel = buildStoryModel(replay, experience);
     const attendance = resolvePresentationAttendance(experience?.headline.attendance, replayResultAttendance(replay), experience?.headline.capacity);
@@ -168,7 +175,7 @@ export class CanvasRenderer {
     ctx.save();
     applyCameraTransform(ctx, cameraFrame.camera, size);
     drawBackground(ctx, preset, size);
-    drawExteriorEnvironment(ctx, size, this.environment, this.reducedMotion);
+    drawExteriorEnvironment(ctx, size, this.environment, this.environmentPlan, state.positionMs, this.reducedMotion);
     drawVenueArchitecture(ctx, size, this.venueScene);
     drawVenueShell(ctx, preset, size);
     drawFloor(ctx, preset, this.venueDetailPlan.floorMarks);

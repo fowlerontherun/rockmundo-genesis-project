@@ -1,4 +1,5 @@
 import type { ResolvedEnvironment } from "./EnvironmentRegistry";
+import type { EnvironmentScenePlan } from "./EnvironmentScenePlan";
 import type { VenueDetailPlan, VenueServiceDetail } from "./VenueDetailPlan";
 import type { DecorationSlot, VenueSceneDescriptor } from "./VenueSceneRegistry";
 import type { Size } from "./Viewport";
@@ -6,19 +7,224 @@ import type { Size } from "./Viewport";
 export const SCENE_LAYER_ORDER = ["environment", "architecture", "background-decorations", "stage-band", "crowd", "venue-activity", "foreground-effects", "viewer-interface"] as const;
 const rect = (r: { x: number; y: number; width: number; height: number }, s: Size) => ({ x: r.x * s.width, y: r.y * s.height, width: r.width * s.width, height: r.height * s.height });
 
-export function drawExteriorEnvironment(ctx: CanvasRenderingContext2D, size: Size, environment: ResolvedEnvironment, reducedMotion: boolean) {
-  const { profile, timeOfDay, atmosphere, variation } = environment;
+const SKY_GRADIENTS: Readonly<Record<"day" | "sunset" | "night", readonly [string, string, string]>> = Object.freeze({
+  day: ["#1e3a8a", "#3b82f6", "#bae6fd"],
+  sunset: ["#1e1b4b", "#b45309", "#fbbf24"],
+  night: ["#020617", "#0b1220", "#1e293b"],
+});
+
+const BUILDING_TONES: Readonly<Record<EnvironmentScenePlan["skyline"], readonly string[]>> = Object.freeze({
+  tower: ["#0f172a", "#111c33", "#1b263b", "#0b1220"],
+  brick: ["#451a03", "#5b2109", "#7c2d12", "#3b1606"],
+  roofline: ["#292524", "#3f2a22", "#44403c", "#231f1d"],
+  shed: ["#1f2937", "#334155", "#263041", "#111827"],
+  resort: ["#e2e8f0", "#cbd5e1", "#f1f5f9", "#94a3b8"],
+  none: ["#1e293b"],
+});
+
+/**
+ * Layered stylized exterior. Static layers derive from the deterministic plan;
+ * only movers, water and weather advance with playback and they are skipped
+ * entirely under Reduced Motion.
+ */
+export function drawExteriorEnvironment(
+  ctx: CanvasRenderingContext2D,
+  size: Size,
+  environment: ResolvedEnvironment,
+  plan: EnvironmentScenePlan,
+  positionMs = 0,
+  reducedMotion = false,
+) {
+  const { profile, timeOfDay, atmosphere } = environment;
+  const horizonY = size.height * .31;
+  const time = reducedMotion ? 0 : positionMs / 1000;
   ctx.save();
-  ctx.fillStyle = timeOfDay === "night" ? "#08111f" : timeOfDay === "sunset" ? "#9a3412" : profile.horizon; ctx.fillRect(0, 0, size.width, size.height * .42);
-  ctx.fillStyle = profile.ground; ctx.fillRect(0, size.height * .31, size.width, size.height * .69);
-  if (profile.features.includes("water")) { ctx.fillStyle = "rgba(14,165,233,.58)"; ctx.fillRect(0, size.height * .25, size.width, size.height * .13); }
-  if (profile.features.includes("mountains")) { ctx.fillStyle = profile.silhouette; for (let i = 0; i < 7; i++) { const x = (i - 1) * size.width / 5; ctx.beginPath(); ctx.moveTo(x, size.height * .3); ctx.lineTo(x + size.width / 8, size.height * (.1 + ((i + variation) % 3) * .035)); ctx.lineTo(x + size.width / 4, size.height * .3); ctx.fill(); } }
-  if (profile.features.includes("buildings") || profile.features.includes("brick") || profile.features.includes("roofs")) for (let i = 0; i < 12; i++) { const w = size.width / 14; const h = size.height * (.07 + ((i * 3 + variation) % 5) * .025); ctx.fillStyle = profile.features.includes("brick") ? (i % 2 ? "#451a03" : "#7c2d12") : profile.silhouette; ctx.fillRect(i * size.width / 11 - w / 2, size.height * .31 - h, w, h); if (timeOfDay === "night" && i % 2 === 0) { ctx.fillStyle = environment.accent; ctx.globalAlpha = .55; ctx.fillRect(i * size.width / 11, size.height * .27 - h / 2, 3, 3); ctx.globalAlpha = 1; } }
-  if (profile.features.includes("trees") || profile.features.includes("palms")) for (let i = 0; i < 8; i++) { const x = (i + .5) * size.width / 8; ctx.strokeStyle = "#3f2a18"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, size.height * .33); ctx.lineTo(x, size.height * .24); ctx.stroke(); ctx.fillStyle = profile.silhouette; ctx.beginPath(); ctx.arc(x, size.height * .22, profile.features.includes("palms") ? 11 : 15, 0, Math.PI * 2); ctx.fill(); }
-  if (profile.features.includes("rocks")) { ctx.fillStyle = profile.silhouette; for (let i = 0; i < 6; i++) ctx.fillRect(i * size.width / 5, size.height * (.23 + (i % 2) * .03), size.width * .12, size.height * .08); }
-  if (atmosphere !== "clear") { ctx.fillStyle = atmosphere === "rainy" ? "rgba(30,41,59,.18)" : "rgba(226,232,240,.12)"; ctx.fillRect(0, 0, size.width, size.height); if (atmosphere === "rainy" && !reducedMotion) { ctx.strokeStyle = "rgba(186,230,253,.25)"; for (let i = 0; i < 18; i++) { ctx.beginPath(); ctx.moveTo(i * size.width / 17, 10); ctx.lineTo(i * size.width / 17 - 8, 28); ctx.stroke(); } } }
+
+  // Sky.
+  const [top, mid, low] = SKY_GRADIENTS[timeOfDay];
+  const sky = ctx.createLinearGradient(0, 0, 0, horizonY);
+  sky.addColorStop(0, top); sky.addColorStop(.62, mid); sky.addColorStop(1, low);
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, size.width, horizonY);
+
+  if (plan.starField.length) {
+    ctx.fillStyle = "rgba(248,250,252,.75)";
+    plan.starField.forEach((star) => { ctx.beginPath(); ctx.arc(star.x * size.width, star.y * horizonY, star.radius, 0, Math.PI * 2); ctx.fill(); });
+  }
+  if (timeOfDay !== "night") {
+    const glowX = size.width * (timeOfDay === "sunset" ? .78 : .22);
+    const glowY = horizonY * (timeOfDay === "sunset" ? .82 : .34);
+    const glow = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, size.height * .3);
+    glow.addColorStop(0, timeOfDay === "sunset" ? "rgba(254,215,170,.95)" : "rgba(255,255,255,.85)");
+    glow.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, size.width, horizonY);
+  }
+
+  // Distant relief.
+  plan.ridges.forEach((ridge, index) => {
+    const x = ridge.x * size.width; const w = ridge.width * size.width; const peak = horizonY - ridge.height * size.height;
+    ctx.fillStyle = index % 2 ? profile.silhouette : shade(profile.silhouette, .82);
+    ctx.beginPath(); ctx.moveTo(x, horizonY); ctx.lineTo(x + w / 2, peak); ctx.lineTo(x + w, horizonY); ctx.closePath(); ctx.fill();
+    if (ridge.snow) { ctx.fillStyle = "rgba(248,250,252,.9)"; ctx.beginPath(); ctx.moveTo(x + w * .38, peak + ridge.height * size.height * .22); ctx.lineTo(x + w / 2, peak); ctx.lineTo(x + w * .62, peak + ridge.height * size.height * .22); ctx.closePath(); ctx.fill(); }
+  });
+
+  // Skyline, back layer first for depth.
+  const tones = BUILDING_TONES[plan.skyline];
+  [0, 1].forEach((depth) => {
+    plan.buildings.filter((building) => building.depth === depth).forEach((building) => {
+      const w = building.width * size.width;
+      const h = building.height * size.height;
+      const x = building.x * size.width;
+      const y = horizonY - h;
+      ctx.fillStyle = tones[building.tone % tones.length];
+      ctx.globalAlpha = depth === 0 ? .72 : 1;
+      ctx.fillRect(x, y, w, h);
+      if (building.roof === "pitched") { ctx.beginPath(); ctx.moveTo(x - 1, y); ctx.lineTo(x + w / 2, y - h * .16); ctx.lineTo(x + w + 1, y); ctx.closePath(); ctx.fill(); }
+      if (building.roof === "spire") { ctx.beginPath(); ctx.moveTo(x + w * .42, y); ctx.lineTo(x + w / 2, y - h * .34); ctx.lineTo(x + w * .58, y); ctx.closePath(); ctx.fill(); }
+      if (building.roof === "dome") { ctx.beginPath(); ctx.arc(x + w / 2, y, w * .42, Math.PI, 0); ctx.fill(); }
+      if (building.roof === "saw") for (let i = 0; i < 3; i += 1) { ctx.beginPath(); ctx.moveTo(x + w * i / 3, y); ctx.lineTo(x + w * (i + .5) / 3, y - h * .1); ctx.lineTo(x + w * (i + 1) / 3, y); ctx.closePath(); ctx.fill(); }
+      ctx.globalAlpha = 1;
+      if (depth === 1) {
+        const lit = timeOfDay === "night" || timeOfDay === "sunset";
+        for (let row = 0; row < building.windowRows; row += 1) {
+          for (let column = 0; column < building.windowColumns; column += 1) {
+            const on = lit && ((row * 3 + column * 7 + building.tone) % 4 !== 0);
+            ctx.fillStyle = on ? "rgba(253,224,71,.85)" : "rgba(148,163,184,.22)";
+            const ww = w / (building.windowColumns * 2.4);
+            const wh = h / (building.windowRows * 3.1);
+            ctx.fillRect(x + w * (column + .6) / (building.windowColumns + .2), y + h * (row + .55) / (building.windowRows + .2), Math.max(1, ww), Math.max(1, wh));
+          }
+        }
+      }
+    });
+  });
+
+  // Ground.
+  const ground = ctx.createLinearGradient(0, horizonY, 0, size.height);
+  ground.addColorStop(0, shade(profile.ground, 1.18)); ground.addColorStop(1, shade(profile.ground, .78));
+  ctx.fillStyle = ground; ctx.fillRect(0, horizonY, size.width, size.height - horizonY);
+
+  // Water band with animated waves.
+  if (plan.hasWater) {
+    const waterTop = size.height * .24;
+    const waterHeight = size.height * .14;
+    const water = ctx.createLinearGradient(0, waterTop, 0, waterTop + waterHeight);
+    water.addColorStop(0, "rgba(8,145,178,.85)"); water.addColorStop(1, "rgba(12,74,110,.92)");
+    ctx.fillStyle = water; ctx.fillRect(0, waterTop, size.width, waterHeight);
+    ctx.strokeStyle = "rgba(224,242,254,.5)"; ctx.lineWidth = 1;
+    plan.waterWaves.forEach((wave) => {
+      ctx.beginPath();
+      for (let px = 0; px <= size.width; px += 8) {
+        const y = size.height * wave.y + Math.sin(px / (wave.wavelength * size.width) * Math.PI * 2 + wave.phase + time * .8) * wave.amplitude;
+        if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+      }
+      ctx.stroke();
+    });
+  }
+
+  // Vegetation.
+  plan.vegetation.forEach((mark) => {
+    const x = mark.x * size.width;
+    const baseY = horizonY + size.height * .012;
+    const height = size.height * .1 * mark.scale;
+    if (mark.kind === "palm") {
+      ctx.strokeStyle = "#854d0e"; ctx.lineWidth = Math.max(2, height * .07);
+      ctx.beginPath(); ctx.moveTo(x, baseY); ctx.quadraticCurveTo(x - height * .16, baseY - height * .6, x, baseY - height); ctx.stroke();
+      ctx.strokeStyle = "#15803d"; ctx.lineWidth = Math.max(1.5, height * .05);
+      for (let i = 0; i < 6; i += 1) { const a = Math.PI + (i / 5) * Math.PI; ctx.beginPath(); ctx.moveTo(x, baseY - height); ctx.quadraticCurveTo(x + Math.cos(a) * height * .28, baseY - height - Math.sin(a) * height * .2, x + Math.cos(a) * height * .5, baseY - height * .82); ctx.stroke(); }
+    } else if (mark.kind === "conifer") {
+      ctx.fillStyle = mark.variant % 2 ? "#14532d" : "#166534";
+      for (let tier = 0; tier < 3; tier += 1) { const ty = baseY - height * (.25 + tier * .28); const tw = height * (.36 - tier * .08); ctx.beginPath(); ctx.moveTo(x - tw, ty); ctx.lineTo(x, ty - height * .34); ctx.lineTo(x + tw, ty); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = "#3f2a18"; ctx.fillRect(x - height * .04, baseY - height * .28, height * .08, height * .28);
+    } else if (mark.kind === "scrub") {
+      ctx.fillStyle = mark.variant % 2 ? "#4d7c0f" : "#65a30d"; ctx.globalAlpha = .8;
+      ctx.beginPath(); ctx.ellipse(x, baseY, height * .22, height * .12, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    } else if (mark.kind === "broadleaf") {
+      ctx.fillStyle = "#3f2a18"; ctx.fillRect(x - height * .04, baseY - height * .42, height * .08, height * .42);
+      ctx.fillStyle = mark.variant % 2 ? "#166534" : "#15803d";
+      [[0, .62, .3], [-.18, .5, .22], [.18, .5, .22]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(x + height * dx, baseY - height * dy, height * r, 0, Math.PI * 2); ctx.fill(); });
+    }
+  });
+
+  // Road furniture along the kerb.
+  plan.streetFurniture.forEach((item) => {
+    const x = item.x * size.width;
+    const baseY = horizonY + size.height * .035;
+    ctx.strokeStyle = "#94a3b8"; ctx.fillStyle = "#475569"; ctx.lineWidth = 1.6;
+    if (item.kind === "lamp") {
+      ctx.beginPath(); ctx.moveTo(x, baseY); ctx.lineTo(x, baseY - size.height * .075); ctx.lineTo(x + size.width * .012, baseY - size.height * .08); ctx.stroke();
+      ctx.fillStyle = timeOfDay === "day" ? "#cbd5e1" : "rgba(253,224,71,.9)"; ctx.beginPath(); ctx.arc(x + size.width * .014, baseY - size.height * .079, 2.4, 0, Math.PI * 2); ctx.fill();
+      if (timeOfDay !== "day") { ctx.globalAlpha = .16; ctx.fillStyle = "#fde047"; ctx.beginPath(); ctx.arc(x + size.width * .014, baseY - size.height * .075, size.height * .045, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+    } else if (item.kind === "sign") {
+      ctx.beginPath(); ctx.moveTo(x, baseY); ctx.lineTo(x, baseY - size.height * .05); ctx.stroke();
+      ctx.fillStyle = environment.accent; ctx.fillRect(x - size.width * .009, baseY - size.height * .062, size.width * .018, size.height * .014);
+    } else if (item.kind === "hydrant") {
+      ctx.fillStyle = "#b91c1c"; ctx.fillRect(x - 2, baseY - 8, 4, 8); ctx.fillRect(x - 4, baseY - 6, 8, 2);
+    } else if (item.kind === "bin") {
+      ctx.fillStyle = "#334155"; ctx.fillRect(x - 3, baseY - 9, 6, 9); ctx.fillStyle = "#64748b"; ctx.fillRect(x - 4, baseY - 10, 8, 2);
+    } else {
+      ctx.fillStyle = "#facc15"; ctx.fillRect(x - 1.5, baseY - 7, 3, 7);
+    }
+  });
+
+  // Background movers.
+  if (!reducedMotion) {
+    plan.movers.forEach((mover) => {
+      const travel = (mover.phase + time * mover.speed) % 1;
+      const x = (mover.direction === 1 ? travel : 1 - travel) * (size.width + 60) - 30;
+      const y = mover.lane * size.height;
+      ctx.save();
+      if (mover.kind === "car") {
+        ctx.fillStyle = ["#e11d48", "#0ea5e9", "#f8fafc", "#facc15"][mover.tone % 4];
+        ctx.fillRect(x, y, 16, 5); ctx.fillRect(x + 4, y - 3, 8, 3);
+        ctx.fillStyle = "#0f172a"; ctx.fillRect(x + 2, y + 5, 3, 2); ctx.fillRect(x + 11, y + 5, 3, 2);
+      } else if (mover.kind === "boat") {
+        ctx.fillStyle = "#f8fafc"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 22, y); ctx.lineTo(x + 17, y + 6); ctx.lineTo(x + 4, y + 6); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = "#e2e8f0"; ctx.beginPath(); ctx.moveTo(x + 11, y); ctx.lineTo(x + 11, y - 12); ctx.stroke();
+        ctx.fillStyle = "rgba(248,250,252,.8)"; ctx.beginPath(); ctx.moveTo(x + 11, y - 12); ctx.lineTo(x + 11, y - 1); ctx.lineTo(x + 20, y - 1); ctx.closePath(); ctx.fill();
+      } else if (mover.kind === "plane") {
+        ctx.fillStyle = "rgba(226,232,240,.85)"; ctx.fillRect(x, y, 14, 2); ctx.fillRect(x + 5, y - 3, 3, 8);
+        ctx.strokeStyle = "rgba(226,232,240,.28)"; ctx.beginPath(); ctx.moveTo(x - 40 * mover.direction, y + 1); ctx.lineTo(x, y + 1); ctx.stroke();
+      } else if (mover.kind === "train") {
+        ctx.fillStyle = "#1f2937"; for (let car = 0; car < 4; car += 1) ctx.fillRect(x + car * 20, y - 6, 18, 7);
+        ctx.fillStyle = "rgba(253,224,71,.7)"; for (let car = 0; car < 4; car += 1) ctx.fillRect(x + car * 20 + 3, y - 4, 12, 2);
+      }
+      ctx.restore();
+    });
+  }
+
+  // Weather.
+  if (atmosphere === "hazy" || atmosphere === "foggy") {
+    const haze = ctx.createLinearGradient(0, 0, 0, size.height * .5);
+    haze.addColorStop(0, atmosphere === "foggy" ? "rgba(226,232,240,.34)" : "rgba(251,191,36,.18)");
+    haze.addColorStop(1, "rgba(226,232,240,.05)");
+    ctx.fillStyle = haze; ctx.fillRect(0, 0, size.width, size.height * .5);
+  }
+  if (atmosphere === "cloudy") { ctx.fillStyle = "rgba(148,163,184,.16)"; ctx.fillRect(0, 0, size.width, size.height * .34); }
+  if (atmosphere === "rainy") {
+    ctx.fillStyle = "rgba(15,23,42,.22)"; ctx.fillRect(0, 0, size.width, size.height);
+    if (!reducedMotion) {
+      ctx.strokeStyle = "rgba(186,230,253,.35)"; ctx.lineWidth = 1;
+      plan.particles.forEach((drop) => {
+        const y = ((drop.y + time * drop.speed * .35) % 1) * size.height * .6;
+        const x = ((drop.x + drop.drift * time * .05) % 1) * size.width;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - drop.length * size.width * .3, y + drop.length * size.height); ctx.stroke();
+      });
+    }
+  }
   ctx.restore();
 }
+
+/** Multiplies a #rrggbb tone; keeps palettes coherent without extra assets. */
+function shade(hex: string, factor: number): string {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return hex;
+  const channels = [0, 2, 4].map((offset) => {
+    const channel = Math.round(Math.min(255, parseInt(value.slice(offset, offset + 2), 16) * factor));
+    return channel.toString(16).padStart(2, "0");
+  });
+  return `#${channels.join("")}`;
+}
+
 
 export function drawVenueArchitecture(ctx: CanvasRenderingContext2D, size: Size, scene: VenueSceneDescriptor) {
   ctx.save(); const indoor = !["festival-field", "beachfront"].includes(scene.architecture);
