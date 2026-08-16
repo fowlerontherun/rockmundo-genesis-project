@@ -1,13 +1,11 @@
-export const version = "1.1.689";
+import { Badge } from "@/components/ui/badge";
 
-interface VersionHeaderProps {
-  className?: string;
-}
+export const version = "1.1.690";
 
-export const VersionHeader = ({ className = "" }: VersionHeaderProps) => {
+export function VersionHeader() {
   return (
-    <div className={`text-xs text-muted-foreground ${className}`}>
+    <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
       v{version}
-    </div>
+    </Badge>
   );
-};
+}

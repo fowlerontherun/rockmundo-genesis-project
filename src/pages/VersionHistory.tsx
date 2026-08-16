@@ -17,7 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.690",
+    date: "2026-08-16",
+    changes: [
+      { type: 'improvement', description: "Pre-gig preparation is now just two steps: choose your setlist and complete a soundcheck." },
+      { type: 'improvement', description: "Removed the stage production, crew, equipment, setup timeline and forecast phases from gig prep so nothing else blocks showtime." },
+      { type: 'feature', description: "Gig prep now shows a simple readiness checklist with clear done/pending status for the setlist and soundcheck." },
+    ],
+  },
+  {
     version: "1.1.689",
+
     date: "2026-08-16",
     changes: [
       { type: 'fix', description: "Friend requests now work end to end: sending, accepting and declining are handled on the server, and the friends/incoming/outgoing counters are accurate again." },
