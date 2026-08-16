@@ -17,6 +17,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.687",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Restored the missing live gig backend: setlists, stage production, soundcheck, crew and equipment plans now save again, and gig completion, merch/bar settlement, song-by-song processing and viewer replays are handled once and only once on the server." },
+      { type: 'feature', description: "Fans can now check in to a live show and react during it, with participation tracked per character." },
+      { type: 'fix', description: "Casino play is now resolved entirely on the server, so payouts and balances can no longer be tampered with from the browser." },
+      { type: 'fix', description: "Repaired failing background jobs: Battle of the Bands now awards achievements per character instead of failing, demo reviews run again, and database maintenance and history pruning jobs no longer error." },
+      { type: 'fix', description: "Charts and news now show the correct artist names instead of \"Unknown Artist\"." },
+      { type: 'fix', description: "Marriage and child activity feed entries are now recorded against the right account and character." },
+      { type: 'improvement', description: "Restored shared server actions used across the game for cash, fame, XP, health, band counters and relationship changes." },
+    ],
+  },
+  {
     version: "1.1.686",
     date: "2026-08-16",
     changes: [
