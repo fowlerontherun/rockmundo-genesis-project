@@ -83,7 +83,7 @@ export function useMarriageHistory(profileId: string | undefined) {
 
 export function useProposeMarriage() {
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ partnerAId, partnerBId, weddingDate }: {
@@ -107,7 +107,7 @@ export function useProposeMarriage() {
       // Post activity feed entry
       if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: profileId,
+          user_id: userId,
           profile_id: profileId,
           activity_type: "marriage_proposal",
           message: "💍 Proposed marriage!",
@@ -130,7 +130,7 @@ export function useProposeMarriage() {
 
 export function useRespondToProposal() {
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ marriageId, accept }: { marriageId: string; accept: boolean }) => {
@@ -147,7 +147,7 @@ export function useRespondToProposal() {
       // Post activity feed
       if (profileId && accept) {
         await supabase.from("activity_feed").insert({
-          user_id: profileId,
+          user_id: userId,
           profile_id: profileId,
           activity_type: "marriage",
           message: "💒 Got married!",
@@ -168,7 +168,7 @@ export function useRespondToProposal() {
 
 export function useInitiateDivorce() {
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ marriageId, profileId: targetProfileId }: { marriageId: string; profileId: string }) => {
@@ -185,7 +185,7 @@ export function useInitiateDivorce() {
 
       if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: profileId,
+          user_id: userId,
           profile_id: profileId,
           activity_type: "divorce",
           message: "📝 Filed for divorce",

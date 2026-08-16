@@ -50,7 +50,7 @@ const SELECT_WITH_RELATIONS = `
     title,
     genre,
     bands(name),
-    profiles:user_id(stage_name)
+    profiles:profile_id(stage_name)
   )
 `;
 

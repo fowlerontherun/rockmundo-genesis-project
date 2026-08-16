@@ -44,7 +44,7 @@ export const fetchWorldNews = async (limit = NEWS_LIMIT): Promise<WorldNewsItem[
     collect(async () => {
       const { data, error } = await db
         .from("chart_entries")
-        .select("id, rank, previous_rank, trend, chart_date, chart_type, country, songs(title, genre, bands(name), profiles:user_id(stage_name))")
+        .select("id, rank, previous_rank, trend, chart_date, chart_type, country, songs(title, genre, bands(name), profiles:profile_id(stage_name))")
         .order("chart_date", { ascending: false, nullsFirst: false })
         .order("rank", { ascending: true })
         .limit(12);

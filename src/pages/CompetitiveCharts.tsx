@@ -58,7 +58,7 @@ const CompetitiveCharts = () => {
             audio_url,
             audio_generation_status,
             bands (name),
-            profiles:user_id (stage_name)
+            profiles:profile_id (stage_name)
           )
         `)
         .eq("chart_date", new Date().toISOString().split('T')[0])

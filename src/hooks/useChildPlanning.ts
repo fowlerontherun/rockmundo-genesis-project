@@ -276,7 +276,7 @@ export function calculateInheritedPotentials(
 
 export function useCompleteChildBirth() {
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async (params: {
@@ -329,7 +329,7 @@ export function useCompleteChildBirth() {
       // Post activity feed entry
       if (profileId) {
         await supabase.from("activity_feed").insert({
-          user_id: profileId,
+          user_id: userId,
           profile_id: profileId,
           activity_type: "child_born",
           message: `👶 Welcome ${params.name} ${params.surname} to the family!`,
