@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.670",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Living Venue Viewer Phase 6: added opt-in low-volume ambience buses to the gig viewer (venue room tone, bar chatter, tills and glassware, outdoor traffic/water/weather) that always sit beneath music and crowd audio." },
+      { type: 'improvement', description: "Ambience levels come from a pure deterministic plan driven by venue archetype, capacity band, service station count and song phase, so bar activity ducks during peaks and lifts between songs." },
+      { type: 'improvement', description: "Reduced Motion flattens ambience modulation without muting it, and audio nodes are fully torn down on disable, pause, hidden tab and viewer close with no allocation in the frame loop." },
+      { type: 'improvement', description: "Added an Ambience On/Off control to the gig viewer audio bar, persisted with the existing audio preferences, plus a deterministic ambience test suite." },
+    ],
+  },
+  {
     version: "1.1.669",
     date: "2026-08-16",
     changes: [
