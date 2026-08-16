@@ -342,7 +342,27 @@ const SongManager = () => {
                       size="sm"
                       showDelete={!song.archived}
                     />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1"
+                      onClick={() => setLicensingSong(song)}
+                    >
+                      <Handshake className="h-3 w-3" />
+                      {song.available_for_covers ? `Covers ${Number(song.cover_royalty_percentage ?? 0)}%` : "Licence covers"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1"
+                      disabled={recalcMetrics.isPending}
+                      onClick={() => recalcMetrics.mutate(song.id)}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Refresh stats
+                    </Button>
                   </div>
+
 
                 </div>
               </Card>
