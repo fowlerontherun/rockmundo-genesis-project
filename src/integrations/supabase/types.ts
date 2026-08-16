@@ -24033,6 +24033,7 @@ export type Database = {
           created_at: string | null
           id: string
           message: string
+          profile_id: string | null
           user_id: string
         }
         Insert: {
@@ -24040,6 +24041,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           message: string
+          profile_id?: string | null
           user_id: string
         }
         Update: {
@@ -24047,6 +24049,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           message?: string
+          profile_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -49033,6 +49036,10 @@ export type Database = {
         }
       }
       caller_can_act_for_band: { Args: { _band_id: string }; Returns: boolean }
+      caller_can_use_chat_channel: {
+        Args: { p_channel: string }
+        Returns: boolean
+      }
       caller_in_band: { Args: { p_band_id: string }; Returns: boolean }
       caller_in_gig_band: { Args: { p_gig_id: string }; Returns: boolean }
       can_apply_for_band: {
@@ -49182,6 +49189,7 @@ export type Database = {
         }
         Returns: Json
       }
+      chat_channel_band_id: { Args: { p_channel: string }; Returns: string }
       check_character_health_decay: { Args: never; Returns: Json }
       check_greatest_hits_eligibility: {
         Args: { p_band_id: string; p_user_id: string }
