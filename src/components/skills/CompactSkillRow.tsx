@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { EducationSourceBadge, type EducationSource } from "./EducationSourceBadge";
 import { SchedulePracticeDialog } from "./SchedulePracticeDialog";
 import { useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAuth } from "@/hooks/use-auth-context";
 import {
   AlertDialog,
@@ -64,8 +65,9 @@ export const CompactSkillRow = ({
   const queryClient = useQueryClient();
   
   const { user } = useAuth();
+  const { profileId: activeProfileId } = useActiveProfile();
   const [practiceOpen, setPracticeOpen] = useState(false);
-  const { data: practiceConfig } = useSkillPracticeRestrictions(user?.id);
+  const { data: practiceConfig } = useSkillPracticeRestrictions(activeProfileId ?? undefined);
 
   const level = progress?.current_level || 0;
   const xp = progress?.current_xp || 0;

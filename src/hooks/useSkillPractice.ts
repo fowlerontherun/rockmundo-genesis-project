@@ -25,11 +25,11 @@ export interface PracticeRestrictions {
   hasSnookerConflict: boolean;
 }
 
-export function useSkillPracticeRestrictions(userId?: string) {
+export function useSkillPracticeRestrictions(profileId?: string) {
   return useQuery({
-    queryKey: ['skill-practice-restrictions', userId],
+    queryKey: ['skill-practice-restrictions', profileId],
     queryFn: async (): Promise<PracticeRestrictions> => {
-      if (!userId) {
+      if (!profileId) {
         return { canPractice: false, reason: 'Not authenticated', todaysPracticeCount: 0, sessionsUsed: 0, sessionsRemaining: 0, maxDailySessions: SKILL_PRACTICE_CONFIG.maxDailySessions, durationOptionsHours: SKILL_PRACTICE_CONFIG.durationOptionsHours, baseXpReward: SKILL_PRACTICE_CONFIG.baseXpReward, minimumSkillLevel: SKILL_PRACTICE_CONFIG.minimumSkillLevel, hasSnookerConflict: false };
       }
 
@@ -50,7 +50,7 @@ export function useSkillPracticeRestrictions(userId?: string) {
       const { data: activities, error } = await supabase
         .from('player_scheduled_activities')
         .select('*')
-        .eq('user_id', userId)
+        .eq('profile_id', profileId)
         .gte('scheduled_start', dayStart.toISOString())
         .lt('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress']);
