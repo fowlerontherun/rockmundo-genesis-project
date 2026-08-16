@@ -17,6 +17,11 @@ import {
   CalendarIcon,
   Sparkles,
 } from "lucide-react";
+import { BandAvailabilityConflictDialog } from "@/components/band/BandAvailabilityConflictDialog";
+import {
+  isBandUnavailableError,
+  type ConflictInfo,
+} from "@/utils/bandActivityScheduling";
 import {
   useCreateRecordingSession,
   calculateRecordingQuality,
@@ -106,6 +111,11 @@ export const SessionConfigurator = ({
   const [formError, setFormError] = useState("");
   const createSession = useCreateRecordingSession();
   const [fallbackBandId, setFallbackBandId] = useState<string | null>(null);
+  const [bandLeaderId, setBandLeaderId] = useState<string | null>(null);
+  const [conflictState, setConflictState] = useState<{
+    conflicts: ConflictInfo[];
+    retry: (skipProfileIds: string[]) => Promise<void>;
+  } | null>(null);
 
   // The parent page may fail to resolve the player's band (stricter filters or
   // legacy rows). Resolve it here as a fallback so the payer choice always shows.
@@ -140,12 +150,13 @@ export const SessionConfigurator = ({
       if (effectiveBandId) {
         const { data: band } = await supabase
           .from("bands")
-          .select("band_balance, name")
+          .select("band_balance, name, leader_id")
           .eq("id", effectiveBandId)
           .single();
 
         setBandBalance(band?.band_balance || 0);
         setBandName(band?.name || "Unknown Band");
+        setBandLeaderId(((band as any)?.leader_id as string | null) ?? null);
 
         const { data: familiarity } = await supabase
           .from("band_song_familiarity")
@@ -308,7 +319,7 @@ export const SessionConfigurator = ({
     }
   };
 
-  const proceedWithRecording = async () => {
+  const proceedWithRecording = async (skipProfileIds: string[] = []) => {
     setShowRehearsalWarning(false);
 
     const slot = STUDIO_SLOTS.find((s) => s.id === selectedSlotId);
@@ -333,9 +344,20 @@ export const SessionConfigurator = ({
         scheduled_start: start.toISOString(),
         scheduled_end: end.toISOString(),
         payment_source: payer,
+        skip_profile_ids: skipProfileIds,
       });
+      setConflictState(null);
       onComplete();
     } catch (error: unknown) {
+      if (isBandUnavailableError(error)) {
+        setConflictState({
+          conflicts: error.conflicts,
+          retry: async (skipIds) => {
+            await proceedWithRecording(skipIds);
+          },
+        });
+        return;
+      }
       setFormError(
         getErrorMessage(
           error,
@@ -349,6 +371,24 @@ export const SessionConfigurator = ({
 
   return (
     <div className="space-y-6">
+      {conflictState && (
+        <BandAvailabilityConflictDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setConflictState(null);
+          }}
+          activityLabel={`this recording session at ${studio.name}`}
+          conflicts={conflictState.conflicts}
+          currentProfileId={profileId}
+          canOverride={!!profileId && bandLeaderId === profileId}
+          isSubmitting={createSession.isPending}
+          onProceedWithout={(skipIds) => {
+            const retry = conflictState.retry;
+            setConflictState(null);
+            void retry(skipIds);
+          }}
+        />
+      )}
       {/* Date Selection */}
       <Card>
         <CardHeader>
