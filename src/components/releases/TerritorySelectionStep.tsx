@@ -47,8 +47,8 @@ const TIER_COLORS: Record<string, string> = {
   intercontinental: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
-const BASE_COST_PHYSICAL = 5000; // $50 per country in cents
-const BASE_COST_DIGITAL = 1000;  // $10 per country in cents
+const BASE_COST_PHYSICAL = 1500; // $15 per country in cents
+const BASE_COST_DIGITAL = 300;   // $3 per country in cents
 
 function getDistanceTier(
   homeCountry: string | null,
