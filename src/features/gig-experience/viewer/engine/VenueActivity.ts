@@ -213,11 +213,16 @@ export function buildVenueActivityPlan(input: { replay: GigViewerReplay; story: 
     const mix = replay.commerce?.merchandise.lines ?? [];
     const mixTotal = mix.reduce((sum, item) => sum + Math.max(0, item.quantity), 0);
     let merchCarry: VenueActivityVisit["carriedItem"] = "bag";
-    if (service === "merchandise" && mixTotal > 0) {
+    const savedItemType = eventItemTypes[index] ?? null;
+    const carryFor = (itemType: string) => /shirt|hood|tee/i.test(itemType) ? "shirt" : /poster|print/i.test(itemType) ? "poster" : "bag";
+    if (service === "merchandise" && savedItemType) {
+      merchCarry = carryFor(savedItemType);
+    } else if (service === "merchandise" && mixTotal > 0) {
       let choice = random() * mixTotal;
       const chosen = mix.find((item) => (choice -= Math.max(0, item.quantity)) <= 0) ?? mix[mix.length - 1];
-      merchCarry = /shirt|hood|tee/i.test(chosen.itemType) ? "shirt" : /poster|print/i.test(chosen.itemType) ? "poster" : "bag";
+      merchCarry = carryFor(chosen.itemType);
     } else if (service === "merchandise" && !replay.commerce) merchCarry = (["shirt", "poster", "bag"] as const)[Math.floor(random() * 3)];
+
     visits.push({
       id: `${actorId}:visit:0`, actorId, service, stationId: station.id, stationIndex: station.index,
       departureMs: departures[index] ?? 0, walkMs: 3200,
