@@ -318,9 +318,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         if (!station) continue;
 
         try {
-          // Determine if auto-accept (song quality >= threshold)
-          const shouldAutoAccept = (selectedSong.quality_score || 0) >= station.auto_accept_threshold;
-          
+          // Every submission is reviewed with the live market scoring engine
           const { error } = await supabase
             .from("radio_submissions")
             .insert({
@@ -329,17 +327,17 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
               profile_id: profileId,
               user_id: userId,
               band_id: bandId,
-              status: shouldAutoAccept ? "accepted" : "pending",
-              reviewed_at: shouldAutoAccept ? new Date().toISOString() : null,
+              status: "pending",
+              reviewed_at: null,
             });
 
           if (error) throw error;
-          
-          if (shouldAutoAccept) {
-            results.accepted.push(station.name);
-          } else {
-            results.pending.push(station.name);
-          }
+
+          results.pending.push(station.name);
+        } catch (err) {
+          results.failed.push(station.name);
+        }
+
         } catch (err) {
           results.failed.push(station.name);
         }
