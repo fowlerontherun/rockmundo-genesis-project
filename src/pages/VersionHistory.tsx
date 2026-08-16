@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.667",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Living Venue Viewer Phase 3: fans now walk to whichever bar or merch stand is nearest their side of the room, queue, get served and return to a different spot in the crowd — big venues spread trips across all their counters instead of one queue." },
+      { type: 'improvement', description: "Service demand now follows the show: more trips before the first song, between songs and during weaker songs, and far fewer during highlights, the encore, the finale and the result reveal, so the stage crowd stays readable at the big moments." },
+      { type: 'improvement', description: "Bar and merch staff are now anchored to their own counter, walking between till, queue head and stock within that fixture, and each handover is matched to one reconstructable staff member." },
+      { type: 'improvement', description: "Replays now report their activity evidence mode (ambient, aggregate settlement totals, or future saved transaction events) so viewer diagnostics never imply customer-level financial truth." },
+    ],
+  },
+  {
     version: "1.1.666",
     date: "2026-08-14",
     changes: [
