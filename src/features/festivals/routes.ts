@@ -38,6 +38,8 @@ export const festivalRoutes = {
   editions: (id: string) => `/festival-company/${encode(id)}/editions`,
   edition,
   schedule: (c: string, e: string) => `${edition(c, e)}/schedule`,
+  site: (c: string, e: string) => `${edition(c, e)}/site`,
+  sponsorship: (c: string, e: string) => `${edition(c, e)}/sponsorship`,
   applications: (c: string, e: string) => `${edition(c, e)}/applications`,
   contracts: (c: string, e: string) => `${edition(c, e)}/contracts`,
   operations: (c: string, e: string) => `${edition(c, e)}/operations`,
