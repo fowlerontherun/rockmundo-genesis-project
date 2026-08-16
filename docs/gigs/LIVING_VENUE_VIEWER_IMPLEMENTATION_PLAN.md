@@ -182,7 +182,7 @@ Staff use a smaller `Idle → WalkingToStation → Serving → Handover → Idle
 - Normal, 2×, and Fast end with identical canonical merchandise/bar totals and activity fingerprints.
 - Empty, zero-stock, missing-product, and legacy-commerce cases render safely without fabricated financial claims.
 
-### Phase 4 — City and environment packs
+### Phase 4 — City and environment packs (implemented v1.1.668)
 
 **Goal:** show a valid location-aware exterior behind or around the venue cutaway.
 
