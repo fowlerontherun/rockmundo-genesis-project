@@ -570,10 +570,14 @@ export default function Employment() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="jobs" className="flex items-center gap-2">
               <Briefcase className="h-4 w-4" />
               <span className="hidden sm:inline">Find Jobs</span>
+            </TabsTrigger>
+            <TabsTrigger value="shifts" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Shifts</span>
             </TabsTrigger>
             <TabsTrigger value="current" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
@@ -584,6 +588,10 @@ export default function Employment() {
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="shifts" className="space-y-4 mt-4">
+            <CompanyShiftMarketplace />
+          </TabsContent>
 
           <TabsContent value="jobs" className="space-y-4 mt-4">
             {/* Filters */}
