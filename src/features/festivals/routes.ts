@@ -9,6 +9,8 @@ export const festivalRoutePatterns = {
   editions: "/festival-company/:festivalCompanyId/editions",
   edition: "/festival-company/:festivalCompanyId/editions/:editionId",
   schedule: "/festival-company/:festivalCompanyId/editions/:editionId/schedule",
+  site: "/festival-company/:festivalCompanyId/editions/:editionId/site",
+  sponsorship: "/festival-company/:festivalCompanyId/editions/:editionId/sponsorship",
   applications: "/festival-company/:festivalCompanyId/editions/:editionId/applications",
   contracts: "/festival-company/:festivalCompanyId/editions/:editionId/contracts",
   operations: "/festival-company/:festivalCompanyId/editions/:editionId/operations",
