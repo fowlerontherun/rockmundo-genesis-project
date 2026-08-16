@@ -75,16 +75,26 @@ export function buildVenueSignagePlan(input: {
     });
   };
 
-  // Entrance marquee above the main entrance side, biased away from the stage.
-  const marqueeY = Math.max(0.04, scene.stage.y - 0.075);
-  push({
-    id: "signage:marquee:front",
-    kind: "marquee",
-    bounds: { x: 0.06 + random() * 0.04, y: marqueeY, width: 0.26, height: 0.045 },
-    text: venueName.toUpperCase(),
-    palette: PALETTES.marquee,
-    motion: 0.7,
-  });
+  // Entrance marquee. Candidates are tried in order so a scene whose top strip is
+  // reserved for labels or controls still gets a name board on a side wall.
+  const marqueeCandidates: Rect[] = [
+    { x: 0.06 + random() * 0.04, y: Math.max(0.04, scene.stage.y - 0.075), width: 0.26, height: 0.045 },
+    { x: 0.04, y: Math.min(0.9, scene.stage.y + scene.stage.height + 0.04), width: 0.24, height: 0.042 },
+    { x: 0.7, y: Math.min(0.9, scene.stage.y + scene.stage.height + 0.04), width: 0.24, height: 0.042 },
+    { x: 0.36, y: 0.9, width: 0.28, height: 0.04 },
+  ];
+  const marqueeBounds = marqueeCandidates.find((bounds) => usable(bounds, scene));
+  if (marqueeBounds) {
+    push({
+      id: "signage:marquee:front",
+      kind: "marquee",
+      bounds: marqueeBounds,
+      text: venueName.toUpperCase(),
+      palette: PALETTES.marquee,
+      motion: 0.7,
+    });
+  }
+
 
   // One sign per distributed service point.
   [...scene.bars, ...scene.merchandiseStands].forEach((point, index) => {
