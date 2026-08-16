@@ -363,40 +363,49 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   };
 
   const handlePerformanceRoleSave = async (memberId: string) => {
-    if (!isLeader) {
+    const member = members.find((candidate) => candidate.id === memberId);
+    if (!member || !canEditMember(member)) {
       toast({
         title: "Permission denied",
-        description: "Only the band leader can change member performance roles",
+        description: "Only the band leader or the member themselves can change performance roles",
         variant: "destructive",
       });
       return;
     }
 
-    const member = members.find((candidate) => candidate.id === memberId);
-    const nextRole = draftPerformanceRoles[memberId];
-    if (!member || !nextRole || member.instrument_role === nextRole) return;
+    const nextRoles = draftPerformanceRoles[memberId] ?? [];
+    if (nextRoles.length === 0) {
+      toast({
+        title: "Pick at least one role",
+        description: "Every member needs at least one performance role.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUpdatingRoleMemberId(memberId);
     try {
-      const { data, error } = await (supabase as any).rpc("update_band_member_performance_role", {
+      const { data, error } = await (supabase as any).rpc("update_band_member_roles", {
         p_member_id: memberId,
-        p_instrument_role: nextRole,
+        p_instrument_roles: nextRoles,
       });
 
       if (error) throw error;
 
-      const updatedRole = data?.instrument_role ?? nextRole;
+      const updatedRoles: string[] = data?.instrument_roles ?? nextRoles;
 
       setMembers(prev =>
         prev.map(m =>
-          m.id === memberId ? { ...m, instrument_role: updatedRole } : m
+          m.id === memberId
+            ? { ...m, instrument_role: updatedRoles[0], instrument_roles: updatedRoles } as MemberWithProfile
+            : m
         )
       );
-      setDraftPerformanceRoles((current) => ({ ...current, [memberId]: updatedRole }));
+      setDraftPerformanceRoles((current) => ({ ...current, [memberId]: updatedRoles }));
 
       toast({
-        title: "Performance role saved",
-        description: `${member.profiles?.display_name ?? member.profiles?.username ?? "Member"} is now assigned to ${updatedRole}.`,
+        title: "Performance roles saved",
+        description: `${member.profiles?.display_name ?? member.profiles?.username ?? "Member"} now plays ${updatedRoles.join(", ")}.`,
       });
     } catch (error) {
       console.error("Failed to save performance role", error);
