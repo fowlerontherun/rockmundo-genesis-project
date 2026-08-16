@@ -38,13 +38,7 @@ export const useTours = (bandId?: string) => {
   const { data: venues } = useQuery({
     queryKey: ["tour-venues"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("venues")
-        .select("*, city:cities(*)")
-        .order("name");
-
-      if (error) throw error;
-      return data;
+      return await fetchAllVenues<any>("*, city:cities(*)", { column: "name", ascending: true });
     },
   });
 
