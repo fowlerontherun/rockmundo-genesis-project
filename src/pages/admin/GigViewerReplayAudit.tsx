@@ -144,6 +144,7 @@ export default function GigViewerReplayAudit() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Record<string, CheckResult>>({});
+  const [inspected, setInspected] = useState<Record<string, GigViewerReplay>>({});
   const [batchRunning, setBatchRunning] = useState(false);
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
