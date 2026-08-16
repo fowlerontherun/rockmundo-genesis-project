@@ -51018,6 +51018,10 @@ export type Database = {
         Returns: Json
       }
       get_festival_awards: { Args: { p_year?: number }; Returns: Json }
+      get_festival_company_editions: {
+        Args: { p_festival_company_id: string }
+        Returns: Json
+      }
       get_festival_company_founding_eligibility: { Args: never; Returns: Json }
       get_festival_company_setup: {
         Args: { p_festival_company_id: string }
@@ -52052,6 +52056,14 @@ export type Database = {
       }
       resolve_owner_festival_identifier: {
         Args: { p_edition_identifier?: string; p_identifier: string }
+        Returns: Json
+      }
+      resolve_public_festival_identifier: {
+        Args: {
+          p_edition_identifier?: string
+          p_expected_identifier_kind?: string
+          p_identifier: string
+        }
         Returns: Json
       }
       respond_band_application: {
