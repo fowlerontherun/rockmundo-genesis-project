@@ -570,7 +570,6 @@ export const useCreateRecordingSession = () => {
           description: `Recording at ${studioName}`,
           location: studioName,
           linkedRecordingId: sessionData.id,
-          skipProfileIds: input.skip_profile_ids,
           metadata: {
             sessionId: sessionData.id,
             studioId: input.studio_id,
