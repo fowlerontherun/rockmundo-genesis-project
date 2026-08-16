@@ -304,3 +304,14 @@ The expansion is complete only when all of the following are demonstrated in bot
 - Unique hand-authored geometry for every city.
 - Customer-level commerce claims when only aggregate settlement facts exist.
 - Rendering every attendee in arena or stadium crowds.
+
+## Closure log (v1.1.674)
+
+All previously outstanding items are implemented and covered by automated gates:
+
+- Capability flag and staged rollout with a legacy renderer fallback — `viewer/config/viewerCapabilityFlags.ts`, wired through `GigViewerShell` and `GigCanvas` (`data-living-venue`, `data-viewer-rollout-*`).
+- Animated signage layer (marquee, service signs, screens, neon) — `engine/VenueSignagePlan.ts`, budget-gated and reduced-motion safe.
+- Visual-regression gate via draw-call fingerprints per archetype — `tests/visualRegression.test.ts`.
+- Replay regeneration idempotency proof — `engine/ReplayChecksum.ts` plus `tests/replayChecksum.test.ts`, surfaced in the evidence inspector and admin audit.
+- `event_replay` commerce evidence mode — `GigReplayCommerceEvent` schema, authoritative timings in `engine/VenueActivity.ts`.
+- Baseline performance and rollout artifacts — `docs/gigs/artifacts/viewer-performance-baseline.md`.
