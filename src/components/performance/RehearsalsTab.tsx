@@ -352,6 +352,25 @@ export function RehearsalsTab() {
 
   return (
     <div className="space-y-6">
+      {conflictState && (
+        <BandAvailabilityConflictDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setConflictState(null);
+          }}
+          activityLabel={conflictState.label}
+          conflicts={conflictState.conflicts}
+          currentProfileId={profileId}
+          canOverride={(userBand as any)?.leader_id === profileId}
+          isSubmitting={isBooking}
+          onProceedWithout={(skipIds) => {
+            const retry = conflictState.retry;
+            setConflictState(null);
+            void retry(skipIds);
+          }}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Band Rehearsals</h2>
