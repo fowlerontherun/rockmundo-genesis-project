@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.691",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Festival owners can now reach site and stage setup again \u2014 the missing planning screens were blocking tickets and the line-up." },
+      { type: 'feature', description: "Added Site & stages, Staff & suppliers, Sponsors and Running order sections to the annual festival workspace." },
+      { type: 'improvement', description: "The festival plan screen now links straight to site setup, operations and the running order." },
+    ],
+  },
+  {
     version: "1.1.690",
     date: "2026-08-16",
     changes: [

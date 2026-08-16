@@ -706,6 +706,8 @@ function App() {
                     <Route path={festivalRoutePatterns.edition} element={<FestivalEditionShell />}>
                       <Route index element={<FestivalEditionWorkspace section="overview" />} />
                       <Route path={festivalRoutePatterns.schedule.split("/").at(-1)} element={<FestivalEditionWorkspace section="schedule" />} />
+                      <Route path={festivalRoutePatterns.site.split("/").at(-1)} element={<FestivalEditionWorkspace section="site" />} />
+                      <Route path={festivalRoutePatterns.sponsorship.split("/").at(-1)} element={<FestivalEditionWorkspace section="sponsorship" />} />
                       <Route path={festivalRoutePatterns.applications.split("/").at(-1)} element={<FestivalEditionWorkspace section="applications" />} />
                       <Route path={festivalRoutePatterns.contracts.split("/").at(-1)} element={<FestivalEditionWorkspace section="contracts" />} />
                       <Route path={festivalRoutePatterns.operations.split("/").at(-1)} element={<FestivalEditionWorkspace section="operations" />} />

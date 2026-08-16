@@ -4,9 +4,12 @@ import {
   Banknote,
   BarChart3,
   Building2,
+  CalendarClock,
   Music2,
   PlayCircle,
+  Tent,
   Ticket,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +22,10 @@ import {
 } from "@/components/ui/card";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import { FestivalSitePlanner } from "@/features/festival-company/ui/FestivalSitePlanner";
+import { FestivalOperationsPlanner } from "@/features/festival-company/ui/FestivalOperationsPlanner";
+import { FestivalSponsorshipPlanner } from "@/features/festival-company/ui/FestivalSponsorshipPlanner";
+import { FestivalTimetablePlanner } from "@/features/festival-company/ui/FestivalTimetablePlanner";
 import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
 import { FestivalPublicProfileEditor } from "@/features/festival-company/ui/FestivalPublicProfileEditor";
 import { useFestivalSalesSummary } from "@/features/festival-company/application/useFestivalLaunch";
@@ -227,6 +234,27 @@ export function FestivalEditionOverview({
 
       <div className="grid gap-4 md:grid-cols-2">
         <ActionCard
+          icon={<Tent className="h-5 w-5" />}
+          title="Set up the site and stages"
+          description="Pick the site, capacity and opening hours, then add stages. Do this first — tickets and the line-up depend on it."
+          label="Plan site & stages"
+          to={festivalRoutes.site(festivalCompanyId, editionId)}
+        />
+        <ActionCard
+          icon={<Users className="h-5 w-5" />}
+          title="Staff, suppliers and sponsors"
+          description="Commit staffing and supplier budgets, then agree sponsorship packages for the event."
+          label="Plan operations"
+          to={festivalRoutes.operations(festivalCompanyId, editionId)}
+        />
+        <ActionCard
+          icon={<CalendarClock className="h-5 w-5" />}
+          title="Build the running order"
+          description="Place booked acts into stage slots, resolve conflicts and confirm readiness before announcing."
+          label="Running order"
+          to={festivalRoutes.schedule(festivalCompanyId, editionId)}
+        />
+        <ActionCard
           icon={<Music2 className="h-5 w-5" />}
           title="Choose the line-up"
           description="Set the artist budget and decide whether to use applications, invitations or a mixture. Empty spaces can be filled automatically."
@@ -273,6 +301,98 @@ export function FestivalEditionOverview({
   );
 }
 
+export function FestivalEditionSite({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Site and stages"
+      description="Choose the festival site, capacity and opening times, then add the stages the line-up will be booked onto."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalSitePlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
+export function FestivalEditionOperations({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Staffing and suppliers"
+      description="Plan staff, suppliers, safety coverage and contingency budgets for the event."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
+export function FestivalEditionSponsorship({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Sponsors and commercial"
+      description="Agree sponsorship packages, branding and commercial partnerships for this annual Festival."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
+export function FestivalEditionTimetable({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Running order and readiness"
+      description="Build the stage running order, review conflicts and confirm the Festival is ready before announcing."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalTimetablePlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
 export function FestivalEditionApplications({
   festivalCompanyId,
   editionId,
@@ -289,7 +409,6 @@ export function FestivalEditionApplications({
         festivalCompanyId={festivalCompanyId}
         editionId={editionId}
         requireEditable
-        requiredBindings={["tickets"]}
       >
         <FestivalArtistPlanner
         festivalCompanyId={festivalCompanyId}
