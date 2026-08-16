@@ -76,6 +76,14 @@ const performanceRoleOptions = [
   "Other",
 ];
 
+function getMemberRoles(member: MemberWithProfile): string[] {
+  const stored = (member as unknown as { instrument_roles?: string[] | null }).instrument_roles;
+  if (Array.isArray(stored) && stored.length > 0) {
+    return stored.filter((role): role is string => Boolean(role));
+  }
+  return member.instrument_role ? [member.instrument_role] : [];
+}
+
 function getStatusLabel(status?: string | null) {
   if (!status) return "Active";
   return statusLabels[status] ?? status
