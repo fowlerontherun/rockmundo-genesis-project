@@ -176,7 +176,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   const [selectedMember, setSelectedMember] = useState<MemberWithProfile | null>(null);
   const [bandLeaderId, setBandLeaderId] = useState<string | null>(null);
   const [updatingRoleMemberId, setUpdatingRoleMemberId] = useState<string | null>(null);
-  const [draftPerformanceRoles, setDraftPerformanceRoles] = useState<Record<string, string>>({});
+  const [draftPerformanceRoles, setDraftPerformanceRoles] = useState<Record<string, string[]>>({});
 
   const currentMember = useMemo(() => (
     members.find((member) => (
@@ -190,6 +190,13 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
     (profile?.id && bandLeaderId === profile.id) ||
     (profile?.user_id && bandLeaderId === profile.user_id),
   );
+
+  const isSelfMember = (member: MemberWithProfile) => Boolean(
+    (profile?.id && member.profile_id === profile.id) ||
+    (profile?.user_id && member.user_id === profile.user_id),
+  );
+
+  const canEditMember = (member: MemberWithProfile) => isLeader || isSelfMember(member);
 
   useEffect(() => {
     let isMounted = true;
