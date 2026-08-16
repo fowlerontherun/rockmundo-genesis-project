@@ -25,6 +25,7 @@ function replay(overrides: Partial<GigViewerReplay> = {}): GigViewerReplay {
     durationMs: 60_000,
     generatedAt: "2026-07-11T00:00:00Z",
     status: "ready",
+    checksum: null,
     events: [
       { id: "e1", sequence: 0, phase: "doors", eventType: "phase_change", scheduledOffsetMs: 0, durationMs: 1000, importance: "minor", messageKey: "doors", messageParams: {}, visualPayload: { type: "phase" } },
       { id: "e2", sequence: 1, phase: "main_set", eventType: "song_start", scheduledOffsetMs: 1000, durationMs: 20_000, importance: "major", messageKey: "song", messageParams: {}, visualPayload: { type: "song_start", songId: "song-1" } },
@@ -86,7 +87,7 @@ describe("event_replay commerce evidence", () => {
 
   it("switches to event_replay mode and keeps saved timings authoritative", () => {
     const source = replay();
-    const plan = buildVenueActivityPlan({ replay: source, story: buildStoryModel(source), scene, displayedCrowd: 420 });
+    const plan = buildVenueActivityPlan({ replay: source, story: buildStoryModel(source, null), scene, displayedCrowd: 420 });
     expect(plan.evidenceMode).toBe("event_replay");
     const departures = plan.visits.map((visit) => visit.departureMs);
     expect(departures).toEqual([...departures].sort((a, b) => a - b));
@@ -95,7 +96,7 @@ describe("event_replay commerce evidence", () => {
 
   it("stays deterministic across rebuilds and falls back to aggregate without saved events", () => {
     const source = replay();
-    const story = buildStoryModel(source);
+    const story = buildStoryModel(source, null);
     const a = buildVenueActivityPlan({ replay: source, story, scene, displayedCrowd: 420 });
     const b = buildVenueActivityPlan({ replay: source, story, scene, displayedCrowd: 420 });
     expect(b.visits.map((v) => `${v.service}:${v.departureMs}:${v.stationId}`)).toEqual(
@@ -103,6 +104,6 @@ describe("event_replay commerce evidence", () => {
     );
 
     const aggregate = replay({ commerce: { ...source.commerce!, events: null } });
-    expect(buildVenueActivityPlan({ replay: aggregate, story: buildStoryModel(aggregate), scene, displayedCrowd: 420 }).evidenceMode).toBe("aggregate");
+    expect(buildVenueActivityPlan({ replay: aggregate, story: buildStoryModel(aggregate, null), scene, displayedCrowd: 420 }).evidenceMode).toBe("aggregate");
   });
 });
