@@ -29,6 +29,15 @@ import { CompanyRecruitmentLifecycle } from "@/components/company/CompanyRecruit
 import { CompanyWeeklyFinancePanel } from "@/components/company/CompanyWeeklyFinancePanel";
 import { CompanyStorefrontManager } from "@/components/company/CompanyStorefrontManager";
 import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
+import { CompanyEmployeeRoster } from "@/components/company/CompanyEmployeeRoster";
+import { CompanyShiftBoard } from "@/components/company/CompanyShiftBoard";
+import { CompanyReviewsPanel } from "@/components/company/CompanyReviewsPanel";
+import {
+  CompanyGoalsManager,
+  CompanySynergiesCard,
+  CompanyNotificationsCenter,
+  CompanyInternalServicesLog,
+} from "@/components/company-advanced";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels, useUnlinkedOwnedLabels } from "@/hooks/useCompanyLabels";
@@ -243,6 +252,10 @@ const CompanyDetailContent = () => {
             <Trophy className="h-3.5 w-3.5 mr-1" />
             Rankings
           </TabsTrigger>
+          <TabsTrigger value="growth">
+            <TrendingUp className="h-3.5 w-3.5 mr-1" />
+            Growth
+          </TabsTrigger>
         </TabsList>
 
         {isHolding && (
@@ -417,18 +430,8 @@ const CompanyDetailContent = () => {
 
         <TabsContent value="employees" className="space-y-4">
           <PlayerStaffBonusCard companyId={company.id} />
-          <Card>
-            <CardHeader>
-              <CardTitle>Employees</CardTitle>
-              <CardDescription>Players hired via your job listings appear here. Real players boost performance; NPC-only staffing applies a small penalty.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p>Use the <strong>Jobs</strong> tab to post listings and start hiring.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <CompanyEmployeeRoster companyId={company.id} isOwner={company.owner_id === userId} />
+          <CompanyShiftBoard companyId={company.id} isOwner={company.owner_id === userId} />
         </TabsContent>
 
 
@@ -522,6 +525,19 @@ const CompanyDetailContent = () => {
 
         <TabsContent value="rankings" className="space-y-4">
           <MarketRankings companyId={company.id} companyType={company.company_type} />
+        </TabsContent>
+
+        <TabsContent value="growth" className="space-y-4">
+          <CompanyGoalsManager companyId={company.id} />
+          <CompanySynergiesCard
+            companyId={company.id}
+            ownedBusinessTypes={[company.company_type, ...subsidiaries.map((s) => s.company_type)]}
+          />
+          <CompanyReviewsPanel companyId={company.id} isOwner={company.owner_id === userId} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <CompanyNotificationsCenter companyId={company.id} />
+            <CompanyInternalServicesLog companyId={company.id} />
+          </div>
         </TabsContent>
       </Tabs>
     </FMPageScaffold>
