@@ -26,6 +26,7 @@ import { buildPerformerTrail, drawPerformerCounter, performerIsMoving } from "./
 import { crowdDrawStride, effectiveDevicePixelRatio, resolveRenderBudget, type RenderBudget } from "./PerformanceProfile";
 import { resolvePerformanceTier, type PerformanceTier } from "./ViewerDiagnostics";
 import { StaticSceneLayer } from "./StaticSceneLayer";
+import { buildVenueSignagePlan, drawVenueSignage, type VenueSignagePlan } from "./VenueSignagePlan";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -49,6 +50,7 @@ export class CanvasRenderer {
   private readonly displayedCrowd: number;
   private readonly backgroundLayer = new StaticSceneLayer("background");
   private readonly architectureLayer = new StaticSceneLayer("architecture");
+  private readonly signagePlan: VenueSignagePlan;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -100,6 +102,7 @@ export class CanvasRenderer {
       archetype: this.venueScene.archetype,
     });
     this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd });
+    this.signagePlan = buildVenueSignagePlan({ scene: this.venueScene, venueName: experience?.gig.venue.name, reducedMotion });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
       stageType: selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: experience?.gig?.venue?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }),
@@ -201,6 +204,9 @@ export class CanvasRenderer {
       drawFloor(layerCtx, preset, this.venueDetailPlan.floorMarks);
       drawSceneDecorationsAndServices(layerCtx, layerSize, this.venueScene, this.venueDetailPlan);
     });
+    if (this.renderBudget.decorDetail !== "minimal") {
+      drawVenueSignage(ctx, size, this.signagePlan, state.positionMs, this.reducedMotion);
+    }
     if (crowd && preset.crowdZones.length > 1) {
       ctx.globalAlpha = .14 + crowd.fillProgress * .14;
       ctx.fillStyle = preset.decorations.palette.accent;
