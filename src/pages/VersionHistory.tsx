@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.677",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Booking a band rehearsal or recording now names exactly which member is unavailable, what they are doing and when, instead of a vague conflict warning." },
+      { type: 'feature', description: "Band leaders can now book an activity without the unavailable members, and those members are notified that the band went ahead without them." },
+      { type: 'feature', description: "Members left out of a session can join it later from the rehearsals page once their schedule is clear." },
+    ],
+  },
+  {
     version: "1.1.676",
     date: "2026-08-16",
     changes: [
