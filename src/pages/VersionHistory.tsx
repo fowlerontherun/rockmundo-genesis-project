@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.668",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Living Venue Viewer Phase 4: gigs now show a location-aware exterior built from deterministic city and environment packs — brick industrial skylines, glass city towers, historic rooflines with spires and domes, dockland sheds, coastal resorts, alpine ridges with snow caps, desert scrub and tropical palms." },
+      { type: 'improvement', description: "Higher quality background art: gradient skies with sunrise/sunset glow and night star fields, lit windows after dark, layered depth for distant and near buildings, gradient ground, animated water with wave lines, and proper vegetation instead of flat circles." },
+      { type: 'improvement', description: "Added road furniture (street lamps with night glow, signs, hydrants, bins, bollards) and background movers — cars, boats, trains and aircraft with contrails — filtered by profile so boats only appear where there is water and trains only in industrial or dockland settings." },
+      { type: 'improvement', description: "Weather now renders as layered haze, fog, cloud and animated rain, and all background motion has its own budget that drops to zero under Reduced Motion while static scenery still draws." },
+    ],
+  },
+  {
     version: "1.1.667",
     date: "2026-08-16",
     changes: [
