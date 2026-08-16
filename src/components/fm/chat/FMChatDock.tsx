@@ -1,16 +1,30 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { MessageSquare, ChevronUp, ChevronDown, X, Loader2 } from "lucide-react";
+import {
+  MessageSquare,
+  ChevronUp,
+  ChevronDown,
+  X,
+  Loader2,
+  Globe,
+  HelpCircle,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatDock } from "./ChatDockContext";
+import { ChatRoomView } from "./ChatRoomView";
 import { useGameData } from "@/hooks/useGameData";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { DirectMessageThread } from "@/features/social-hub/components/DirectMessageThread";
 
 const HIDDEN_PATHS = ["/auth", "/onboarding", "/create-character"];
+
+type RoomId = "world" | "help" | "recruit" | "band" | "friends";
 
 export function FMChatDock() {
   const { pathname } = useLocation();
@@ -18,11 +32,27 @@ export function FMChatDock() {
   const myProfileId = (profile as any)?.id ?? null;
   const { open, setOpen, threads, openThread, closeThread } = useChatDock();
   const { friendships, loading } = useFriendships(myProfileId);
+  const { data: primaryBand } = usePrimaryBand();
+  const [activeRoom, setActiveRoom] = useState<RoomId>("world");
+  const bandId = (primaryBand as any)?.band_id ?? null;
+  const bandName = (primaryBand as any)?.bands?.name ?? "Band";
+
+  const rooms = useMemo(
+    () => [
+      { id: "world" as RoomId, label: "World", icon: Globe },
+      { id: "help" as RoomId, label: "Help", icon: HelpCircle },
+      { id: "recruit" as RoomId, label: "Recruit", icon: UserPlus },
+      { id: "band" as RoomId, label: "Band", icon: Users },
+      { id: "friends" as RoomId, label: "Friends", icon: MessageSquare },
+    ],
+    [],
+  );
 
   const accepted = useMemo(
     () => friendships.filter((f) => f.friendship.status === "accepted" && f.otherProfile),
     [friendships],
   );
+
 
   if (!myProfileId) return null;
   if (HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
