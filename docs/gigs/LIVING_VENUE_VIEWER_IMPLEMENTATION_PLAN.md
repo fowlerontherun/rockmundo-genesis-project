@@ -226,7 +226,7 @@ Staff use a smaller `Idle → WalkingToStation → Serving → Handover → Idle
 - No viewer or demo interaction performs a gig, inventory, settlement, or finance mutation.
 - Legacy and partially populated gigs retain a usable stage-first replay.
 
-### Phase 6 — Atmosphere, performance, accessibility, and release (ambience buses implemented v1.1.670)
+### Phase 6 — Atmosphere, performance, accessibility, and release (ambience buses implemented v1.1.670; performance tiers, static layer caching, DPR caps and degradation order implemented v1.1.671)
 
 **Goal:** polish the living venue while certifying smooth large-scene playback.
 
