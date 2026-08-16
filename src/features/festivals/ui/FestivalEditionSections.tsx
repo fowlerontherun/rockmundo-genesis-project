@@ -273,6 +273,98 @@ export function FestivalEditionOverview({
   );
 }
 
+export function FestivalEditionSite({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Site and stages"
+      description="Choose the festival site, capacity and opening times, then add the stages the line-up will be booked onto."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalSitePlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
+export function FestivalEditionOperations({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Staffing and suppliers"
+      description="Plan staff, suppliers, safety coverage and contingency budgets for the event."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
+export function FestivalEditionSponsorship({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Sponsors and commercial"
+      description="Agree sponsorship packages, branding and commercial partnerships for this annual Festival."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
+export function FestivalEditionTimetable({
+  festivalCompanyId,
+  editionId,
+}: {
+  festivalCompanyId: string;
+  editionId: string;
+}) {
+  return (
+    <SectionShell
+      title="Running order and readiness"
+      description="Build the stage running order, review conflicts and confirm the Festival is ready before announcing."
+    >
+      <EditionScope
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+        requireEditable
+      >
+        <FestivalTimetablePlanner festivalCompanyId={festivalCompanyId} />
+      </EditionScope>
+    </SectionShell>
+  );
+}
+
 export function FestivalEditionApplications({
   festivalCompanyId,
   editionId,
@@ -289,7 +381,6 @@ export function FestivalEditionApplications({
         festivalCompanyId={festivalCompanyId}
         editionId={editionId}
         requireEditable
-        requiredBindings={["tickets"]}
       >
         <FestivalArtistPlanner
         festivalCompanyId={festivalCompanyId}
