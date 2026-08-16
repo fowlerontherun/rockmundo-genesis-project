@@ -188,6 +188,7 @@ export default function GigViewerReplayAudit() {
         });
         if (stored?.state === "ready" && stored.replay) {
           const validation = validateGigViewerReplay(stored.replay);
+          setInspected((prev) => ({ ...prev, [row.gigId]: stored.replay! }));
           setResults((prev) => ({
             ...prev,
             [row.gigId]: {
