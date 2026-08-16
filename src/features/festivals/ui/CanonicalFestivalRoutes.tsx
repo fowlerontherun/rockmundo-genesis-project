@@ -16,7 +16,11 @@ import {
   FestivalEditionFinance,
   FestivalEditionHistory,
   FestivalEditionLaunch,
+  FestivalEditionOperations,
   FestivalEditionOverview,
+  FestivalEditionSite,
+  FestivalEditionSponsorship,
+  FestivalEditionTimetable,
 } from "./FestivalEditionSections";
 
 export function FestivalFoundingPage() {
