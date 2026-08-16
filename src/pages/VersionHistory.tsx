@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.683",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "New Operations tab on every company: manage stocked products with prices, unit costs, margins, low-stock warnings and quick restocking." },
+      { type: 'feature', description: "Companies can now publish bookable services with a price, duration and quality tier, and pause or remove them at any time." },
+      { type: 'improvement', description: "The Labels tab now only appears for record labels, holding companies or businesses that actually own a label, so other business types have a cleaner console." },
+      { type: 'improvement', description: "Company tabs scroll horizontally on smaller screens instead of wrapping and overflowing." },
+    ],
+  },
+  {
     version: "1.1.682",
     date: "2026-08-16",
     changes: [
