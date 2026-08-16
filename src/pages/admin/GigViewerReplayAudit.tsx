@@ -14,6 +14,8 @@ import { getGigViewerReplay } from "@/features/gig-experience/services/GigViewer
 import { getGigExperience } from "@/features/gig-experience/services/GigExperienceService";
 import { metricValue } from "@/features/gig-experience/reportMetric";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import type { GigViewerReplay } from "@/features/gig-experience/events/types";
+import { ReplayEvidenceInspector } from "@/features/gig-experience/viewer/ReplayEvidenceInspector";
 
 type StoredState = "ready" | "generating" | "failed" | "unavailable" | "unsupported_version" | "not_provisioned" | "unknown";
 
@@ -144,6 +146,7 @@ export default function GigViewerReplayAudit() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Record<string, CheckResult>>({});
+  const [inspected, setInspected] = useState<Record<string, GigViewerReplay>>({});
   const [batchRunning, setBatchRunning] = useState(false);
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
@@ -185,6 +188,7 @@ export default function GigViewerReplayAudit() {
         });
         if (stored?.state === "ready" && stored.replay) {
           const validation = validateGigViewerReplay(stored.replay);
+          setInspected((prev) => ({ ...prev, [row.gigId]: stored.replay! }));
           setResults((prev) => ({
             ...prev,
             [row.gigId]: {
@@ -231,6 +235,7 @@ export default function GigViewerReplayAudit() {
       });
 
       const validation = validateGigViewerReplay(replay);
+      setInspected((prev) => ({ ...prev, [row.gigId]: replay }));
       setResults((prev) => ({
         ...prev,
         [row.gigId]: {
@@ -403,6 +408,14 @@ export default function GigViewerReplayAudit() {
                             )}
                           </div>
                         </div>
+                      )}
+
+                      {inspected[row.gigId] && result?.state !== "running" && (
+                        <ReplayEvidenceInspector
+                          className="mt-1.5"
+                          replay={inspected[row.gigId]}
+                          validationFailures={result?.errors ?? null}
+                        />
                       )}
                     </div>
                   );
