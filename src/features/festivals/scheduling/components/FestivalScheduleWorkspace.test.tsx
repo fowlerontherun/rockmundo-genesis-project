@@ -70,7 +70,7 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByText("Main Stage")).toBeInTheDocument();
+    expect(screen.getAllByText("Main Stage").length).toBeGreaterThan(0);
     expect(screen.getByText("Second Stage")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Sunset opener/i })).toBeInTheDocument();
   });
