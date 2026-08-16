@@ -29,6 +29,15 @@ import { CompanyRecruitmentLifecycle } from "@/components/company/CompanyRecruit
 import { CompanyWeeklyFinancePanel } from "@/components/company/CompanyWeeklyFinancePanel";
 import { CompanyStorefrontManager } from "@/components/company/CompanyStorefrontManager";
 import { CompanyAnalytics } from "@/components/company/CompanyAnalytics";
+import { CompanyEmployeeRoster } from "@/components/company/CompanyEmployeeRoster";
+import { CompanyShiftBoard } from "@/components/company/CompanyShiftBoard";
+import { CompanyReviewsPanel } from "@/components/company/CompanyReviewsPanel";
+import {
+  CompanyGoalsManager,
+  CompanySynergiesCard,
+  CompanyNotificationsCenter,
+  CompanyInternalServicesLog,
+} from "@/components/company-advanced";
 import { useCompany, useCompanySubsidiaries } from "@/hooks/useCompanies";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCompanyLabels, useUnlinkedOwnedLabels } from "@/hooks/useCompanyLabels";
