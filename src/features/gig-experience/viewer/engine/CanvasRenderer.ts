@@ -204,7 +204,7 @@ export class CanvasRenderer {
       drawFloor(layerCtx, preset, this.venueDetailPlan.floorMarks);
       drawSceneDecorationsAndServices(layerCtx, layerSize, this.venueScene, this.venueDetailPlan);
     });
-    if (this.renderBudget.crowdDetail !== "silhouette") {
+    if (this.renderBudget.crowdDetail !== "aggregated") {
       drawVenueSignage(ctx, size, this.signagePlan, state.positionMs, this.reducedMotion);
     }
     if (crowd && preset.crowdZones.length > 1) {
