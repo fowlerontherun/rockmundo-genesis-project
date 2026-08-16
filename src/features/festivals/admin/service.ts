@@ -52,8 +52,10 @@ export class FestivalAdminServiceError extends Error {
   }
 }
 
+// Only genuine transport failures count as network errors: a Postgres or RLS
+// error can arrive without a code and must keep its own mapped meaning.
 const isNetworkFailure = (error: { message?: string; code?: string }) =>
-  !error.code || /failed to fetch|network|load failed|abort/i.test(error.message ?? "");
+  /failed to fetch|network ?error|networkerror|load failed|aborted?$/i.test(error.message ?? "");
 
 const rpc = async <T>(
   fn: RpcName,
