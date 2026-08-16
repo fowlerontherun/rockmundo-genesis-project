@@ -618,23 +618,56 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                         </TableCell>
                         <TableCell className="align-middle">
                           <div className="flex flex-col gap-2">
-                            <Select
-                              value={draftRole}
-                              onValueChange={(value) => handlePerformanceRoleDraftChange(member.id, value)}
-                              disabled={!isLeader || updatingRoleMemberId === member.id}
-                            >
-                              <SelectTrigger className="h-8 w-[190px]">
-                                <SelectValue placeholder="Assign performance role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {roleOptions.map((role) => (
-                                  <SelectItem key={role} value={role}>
+                            <div className="flex flex-wrap gap-1">
+                              {savedRoles.length > 0 ? (
+                                savedRoles.map((role) => (
+                                  <Badge key={role} variant="secondary" className="text-[10px]">
                                     {role}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {isLeader && (
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No role set</span>
+                              )}
+                            </div>
+                            {canEdit && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-[190px] justify-between"
+                                    disabled={updatingRoleMemberId === member.id}
+                                  >
+                                    <span className="truncate">
+                                      {draftRoles.length > 0
+                                        ? `${draftRoles.length} role${draftRoles.length === 1 ? "" : "s"} selected`
+                                        : "Select roles"}
+                                    </span>
+                                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="start" className="w-56 max-h-72 overflow-y-auto p-2">
+                                  <div className="space-y-1">
+                                    {roleOptions.map((role) => (
+                                      <label
+                                        key={role}
+                                        className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-accent"
+                                      >
+                                        <Checkbox
+                                          checked={draftRoles.includes(role)}
+                                          onCheckedChange={(checked) =>
+                                            handlePerformanceRoleDraftChange(member.id, role, checked === true)
+                                          }
+                                        />
+                                        {role}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                            {canEdit && (
                               <Button
                                 type="button"
                                 size="sm"
@@ -643,7 +676,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                                 disabled={!hasUnsavedRole || updatingRoleMemberId === member.id}
                                 onClick={() => handlePerformanceRoleSave(member.id)}
                               >
-                                {updatingRoleMemberId === member.id ? "Saving…" : "Save role"}
+                                {updatingRoleMemberId === member.id ? "Saving…" : "Save roles"}
                               </Button>
                             )}
                             <div className="flex flex-wrap gap-1">
@@ -662,8 +695,9 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                             <Switch
                               checked={member.travels_with_band ?? false}
                               onCheckedChange={() => handleTravelToggle(member.id, member.travels_with_band ?? false)}
-                              disabled={!isLeader}
+                              disabled={!canEdit}
                             />
+
                             <span className="text-xs text-muted-foreground">
                               {member.travels_with_band ? "Yes" : "No"}
                             </span>
