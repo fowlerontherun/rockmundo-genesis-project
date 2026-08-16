@@ -394,3 +394,127 @@ export async function deleteBandScheduledActivities(
     throw error;
   }
 }
+
+export interface AbsentMemberNotificationParams {
+  bandId: string;
+  bandName?: string | null;
+  activityType: string;
+  activityLabel: string;
+  scheduledStart: Date;
+  scheduledEnd: Date;
+  location?: string | null;
+  conflicts: ConflictInfo[];
+  linkedRehearsalId?: string | null;
+  linkedRecordingId?: string | null;
+  actionPath?: string | null;
+}
+
+/**
+ * Notify members who were left out of a band booking, telling them what they
+ * clash with and giving them a path to opt back in.
+ */
+export async function notifyAbsentBandMembers(params: AbsentMemberNotificationParams): Promise<void> {
+  const when = formatConflictWindow({
+    activityTitle: params.activityLabel,
+    userId: '',
+    scheduledStart: params.scheduledStart.toISOString(),
+    scheduledEnd: params.scheduledEnd.toISOString(),
+  });
+  const label = describeActivityType(params.activityType);
+
+  await Promise.all(params.conflicts.map(async (conflict) => {
+    if (!conflict.userId) return;
+    await pushNotification({
+      userId: conflict.userId,
+      profileId: conflict.profileId ?? null,
+      category: 'social',
+      type: 'warning',
+      title: `${label} booked without you`,
+      message: `${params.bandName || 'Your band'} booked "${params.activityLabel}"${when ? ` for ${when}` : ''}${params.location ? ` at ${params.location}` : ''}. You were busy with ${describeActivityType(conflict.activityType)}${conflict.activityTitle ? ` “${conflict.activityTitle}”` : ''}. You can still join if you free up your schedule.`,
+      actionPath: params.actionPath ?? '/rehearsals',
+      metadata: {
+        band_id: params.bandId,
+        activity_type: params.activityType,
+        rehearsal_id: params.linkedRehearsalId ?? null,
+        recording_id: params.linkedRecordingId ?? null,
+        scheduled_start: params.scheduledStart.toISOString(),
+        scheduled_end: params.scheduledEnd.toISOString(),
+        can_join_late: true,
+      },
+    });
+  }));
+}
+
+/**
+ * Let a member who was skipped opt back into a band activity. Fails if they
+ * still have a clashing activity in that window.
+ */
+export async function joinBandActivityLate(options: {
+  profileId: string;
+  userId?: string | null;
+  bandId: string;
+  activityType: string;
+  title: string;
+  scheduledStart: Date;
+  scheduledEnd: Date;
+  location?: string | null;
+  linkedRehearsalId?: string | null;
+  linkedRecordingId?: string | null;
+  metadata?: Record<string, any>;
+}): Promise<{ joined: boolean; reason?: string }> {
+  const { data: clashes, error: clashError } = await (supabase as any)
+    .from('player_scheduled_activities')
+    .select('id, title, activity_type, scheduled_start, scheduled_end')
+    .eq('profile_id', options.profileId)
+    .in('status', ['scheduled', 'in_progress'])
+    .lt('scheduled_start', options.scheduledEnd.toISOString())
+    .gt('scheduled_end', options.scheduledStart.toISOString());
+
+  if (clashError) {
+    return { joined: false, reason: 'Could not verify your schedule. Try again.' };
+  }
+
+  const linkedId = options.linkedRehearsalId || options.linkedRecordingId;
+  const existing = (clashes || []) as any[];
+  const alreadyIn = existing.find((row) =>
+    (options.linkedRehearsalId && row.linked_rehearsal_id === options.linkedRehearsalId)
+    || (options.linkedRecordingId && row.linked_recording_id === options.linkedRecordingId));
+  if (alreadyIn) return { joined: true };
+
+  if (existing.length > 0) {
+    const blocking = existing[0];
+    return {
+      joined: false,
+      reason: `You still have ${describeActivityType(blocking.activity_type)}${blocking.title ? ` “${blocking.title}”` : ''} booked in this window. Cancel it first.`,
+    };
+  }
+
+  const { error } = await (supabase as any)
+    .from('player_scheduled_activities')
+    .insert({
+      user_id: options.userId ?? null,
+      profile_id: options.profileId,
+      activity_type: options.activityType,
+      scheduled_start: options.scheduledStart.toISOString(),
+      scheduled_end: options.scheduledEnd.toISOString(),
+      title: options.title,
+      location: options.location ?? null,
+      metadata: {
+        ...(options.metadata || {}),
+        band_id: options.bandId,
+        is_band_activity: true,
+        joined_late: true,
+        linked_id: linkedId ?? null,
+      },
+      linked_rehearsal_id: options.linkedRehearsalId ?? null,
+      linked_recording_id: options.linkedRecordingId ?? null,
+      status: 'scheduled',
+    });
+
+  if (error) {
+    console.error('Failed to join band activity late:', error);
+    return { joined: false, reason: 'Could not add you to the session.' };
+  }
+
+  return { joined: true };
+}
