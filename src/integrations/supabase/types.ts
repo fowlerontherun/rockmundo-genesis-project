@@ -26824,15 +26824,18 @@ export type Database = {
           compensation: number | null
           completed_at: string | null
           created_at: string | null
+          evaluation: Json | null
           fame_boost: number | null
           fan_boost: number | null
           feature_type: string | null
+          feedback: string | null
           id: string
           linked_release_id: string | null
           magazine_id: string
           proposed_date: string | null
           rejection_reason: string | null
           reviewed_at: string | null
+          score: number | null
           status: string | null
           submitted_at: string | null
           user_id: string
@@ -26842,15 +26845,18 @@ export type Database = {
           compensation?: number | null
           completed_at?: string | null
           created_at?: string | null
+          evaluation?: Json | null
           fame_boost?: number | null
           fan_boost?: number | null
           feature_type?: string | null
+          feedback?: string | null
           id?: string
           linked_release_id?: string | null
           magazine_id: string
           proposed_date?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           status?: string | null
           submitted_at?: string | null
           user_id: string
@@ -26860,15 +26866,18 @@ export type Database = {
           compensation?: number | null
           completed_at?: string | null
           created_at?: string | null
+          evaluation?: Json | null
           fame_boost?: number | null
           fan_boost?: number | null
           feature_type?: string | null
+          feedback?: string | null
           id?: string
           linked_release_id?: string | null
           magazine_id?: string
           proposed_date?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           status?: string | null
           submitted_at?: string | null
           user_id?: string
@@ -29614,8 +29623,10 @@ export type Database = {
           compensation: number | null
           completed_at: string | null
           created_at: string | null
+          evaluation: Json | null
           fame_boost: number | null
           fan_boost: number | null
+          feedback: string | null
           id: string
           interview_type: string | null
           linked_release_id: string | null
@@ -29623,6 +29634,7 @@ export type Database = {
           proposed_date: string | null
           rejection_reason: string | null
           reviewed_at: string | null
+          score: number | null
           status: string | null
           submitted_at: string | null
           user_id: string
@@ -29632,8 +29644,10 @@ export type Database = {
           compensation?: number | null
           completed_at?: string | null
           created_at?: string | null
+          evaluation?: Json | null
           fame_boost?: number | null
           fan_boost?: number | null
+          feedback?: string | null
           id?: string
           interview_type?: string | null
           linked_release_id?: string | null
@@ -29641,6 +29655,7 @@ export type Database = {
           proposed_date?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           status?: string | null
           submitted_at?: string | null
           user_id: string
@@ -29650,8 +29665,10 @@ export type Database = {
           compensation?: number | null
           completed_at?: string | null
           created_at?: string | null
+          evaluation?: Json | null
           fame_boost?: number | null
           fan_boost?: number | null
+          feedback?: string | null
           id?: string
           interview_type?: string | null
           linked_release_id?: string | null
@@ -29659,6 +29676,7 @@ export type Database = {
           proposed_date?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           status?: string | null
           submitted_at?: string | null
           user_id?: string
@@ -35836,14 +35854,17 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           episode_topic: string | null
+          evaluation: Json | null
           fame_boost: number | null
           fan_boost: number | null
+          feedback: string | null
           id: string
           linked_release_id: string | null
           podcast_id: string
           proposed_date: string | null
           rejection_reason: string | null
           reviewed_at: string | null
+          score: number | null
           status: string | null
           submitted_at: string | null
           user_id: string
@@ -35854,14 +35875,17 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           episode_topic?: string | null
+          evaluation?: Json | null
           fame_boost?: number | null
           fan_boost?: number | null
+          feedback?: string | null
           id?: string
           linked_release_id?: string | null
           podcast_id: string
           proposed_date?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           status?: string | null
           submitted_at?: string | null
           user_id: string
@@ -35872,14 +35896,17 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           episode_topic?: string | null
+          evaluation?: Json | null
           fame_boost?: number | null
           fan_boost?: number | null
+          feedback?: string | null
           id?: string
           linked_release_id?: string | null
           podcast_id?: string
           proposed_date?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           status?: string | null
           submitted_at?: string | null
           user_id?: string
@@ -37491,11 +37518,16 @@ export type Database = {
         Row: {
           band_id: string | null
           created_at: string | null
+          evaluation: Json | null
+          feedback: string | null
           id: string
           profile_id: string | null
+          projected_weekly_plays: number | null
+          projected_weekly_reach: number | null
           rejection_reason: string | null
           release_id: string | null
           reviewed_at: string | null
+          score: number | null
           song_id: string
           station_id: string
           status: string | null
@@ -37506,11 +37538,16 @@ export type Database = {
         Insert: {
           band_id?: string | null
           created_at?: string | null
+          evaluation?: Json | null
+          feedback?: string | null
           id?: string
           profile_id?: string | null
+          projected_weekly_plays?: number | null
+          projected_weekly_reach?: number | null
           rejection_reason?: string | null
           release_id?: string | null
           reviewed_at?: string | null
+          score?: number | null
           song_id: string
           station_id: string
           status?: string | null
@@ -37521,11 +37558,16 @@ export type Database = {
         Update: {
           band_id?: string | null
           created_at?: string | null
+          evaluation?: Json | null
+          feedback?: string | null
           id?: string
           profile_id?: string | null
+          projected_weekly_plays?: number | null
+          projected_weekly_reach?: number | null
           rejection_reason?: string | null
           release_id?: string | null
           reviewed_at?: string | null
+          score?: number | null
           song_id?: string
           station_id?: string
           status?: string | null
@@ -46106,13 +46148,16 @@ export type Database = {
           band_id: string
           compensation_earned: number | null
           created_at: string | null
+          evaluation: Json | null
           fame_gained: number | null
           fans_gained: number | null
+          feedback: string | null
           id: string
           linked_release_id: string | null
           pitch_message: string | null
           rejection_reason: string | null
           reviewed_at: string | null
+          score: number | null
           song_id: string | null
           status: string | null
           submitted_at: string | null
@@ -46122,13 +46167,16 @@ export type Database = {
           band_id: string
           compensation_earned?: number | null
           created_at?: string | null
+          evaluation?: Json | null
           fame_gained?: number | null
           fans_gained?: number | null
+          feedback?: string | null
           id?: string
           linked_release_id?: string | null
           pitch_message?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           song_id?: string | null
           status?: string | null
           submitted_at?: string | null
@@ -46138,13 +46186,16 @@ export type Database = {
           band_id?: string
           compensation_earned?: number | null
           created_at?: string | null
+          evaluation?: Json | null
           fame_gained?: number | null
           fans_gained?: number | null
+          feedback?: string | null
           id?: string
           linked_release_id?: string | null
           pitch_message?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
+          score?: number | null
           song_id?: string | null
           status?: string | null
           submitted_at?: string | null
@@ -49192,6 +49243,14 @@ export type Database = {
         }
         Returns: Json
       }
+      evaluate_media_submission: {
+        Args: { p_band_id: string; p_media_id: string; p_media_type: string }
+        Returns: Json
+      }
+      evaluate_radio_submission: {
+        Args: { p_band_id?: string; p_song_id: string; p_station_id: string }
+        Returns: Json
+      }
       evaluate_wellness_gate: {
         Args: { _activity_type: string; _profile_id: string }
         Returns: {
@@ -49806,6 +49865,7 @@ export type Database = {
         Args: { profile_a: string; profile_b: string }
         Returns: string
       }
+      get_media_market_benchmarks: { Args: never; Returns: Json }
       get_my_band_funding_sources: {
         Args: { p_band_id: string }
         Returns: Json
@@ -50187,6 +50247,7 @@ export type Database = {
         Returns: string
       }
       mayor_company_modifier: { Args: { p_city_id: string }; Returns: number }
+      media_quality_bar: { Args: { p_tier: number }; Returns: number }
       normalize_gig_viewer_crowd_settings: {
         Args: { p_settings: Json }
         Returns: Json
@@ -50318,7 +50379,15 @@ export type Database = {
         Returns: string
       }
       process_inactive_character_comas: { Args: never; Returns: Json }
+      process_media_submission_reviews: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       process_offline_health_decay: { Args: never; Returns: Json }
+      process_pending_radio_submissions: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       process_radio_submission: {
         Args: { p_submission_id: string }
         Returns: Json
@@ -50705,6 +50774,10 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      review_radio_submission: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
       revive_character: { Args: { p_profile_id: string }; Returns: undefined }
       revoke_endorsement: {
         Args: { p_election_id: string; p_party_id: string }
