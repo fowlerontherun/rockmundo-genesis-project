@@ -79,7 +79,7 @@ export function buildViewerDiagnostics(input: {
     representativeCrowdCount: representativeCrowdCount({ attendance: attendance.value, capacity: null, archetype: scene.archetype }),
     attendanceState: attendance.state,
     attendanceSource: attendance.source,
-    activityEvidenceMode: replay.commerce ? "aggregate" : "ambient",
+    activityEvidenceMode: replay.commerce?.events?.length ? "event_replay" : replay.commerce ? "aggregate" : "ambient",
     performanceTier,
   };
 }
