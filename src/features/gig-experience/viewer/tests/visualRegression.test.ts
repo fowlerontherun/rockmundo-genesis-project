@@ -15,7 +15,7 @@ const CASES = [
 
 function renderCase(input: (typeof CASES)[number]["input"], reducedMotion: boolean, positionMs: number) {
   const scene = generateVenueScene(input);
-  const detail = buildVenueDetailPlan({ scene, floorPattern: "planks" });
+  const detail = buildVenueDetailPlan({ scene, floorPattern: "wood" });
   const signage = buildVenueSignagePlan({ scene, venueName: input.venueName, reducedMotion });
   const recorder = createRecordingCanvas();
   drawVenueArchitecture(recorder.ctx, SIZE, scene);
