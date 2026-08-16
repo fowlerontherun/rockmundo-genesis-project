@@ -20,7 +20,7 @@ interface CrowdAmbienceOptions {
  * No audio assets required — driven entirely from the existing crowd state
  * (energy, reaction, finaleActive) already tracked by the gig replay engine.
  */
-export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, stageType }: CrowdAmbienceOptions) {
+export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, stageType, showFrame = null }: CrowdAmbienceOptions) {
   const ctxRef = useRef<AudioContext | null>(null);
   const noiseRef = useRef<AudioBufferSourceNode | null>(null);
   const bandpassRef = useRef<BiquadFilterNode | null>(null);
