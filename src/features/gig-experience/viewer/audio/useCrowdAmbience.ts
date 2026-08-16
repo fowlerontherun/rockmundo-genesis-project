@@ -204,3 +204,70 @@ function playCheer(ctx: AudioContext, out: GainNode, intensity: number, typeMod:
   src.start(now);
   src.stop(now + duration + 0.05);
 }
+
+/** Rhythmic stomp + clap chant used while the crowd calls the band back on. */
+function playChant(ctx: AudioContext, out: GainNode, intensity: number, typeMod: number) {
+  const start = ctx.currentTime;
+  const beats = 4;
+  const beatMs = 0.62;
+  for (let i = 0; i < beats; i += 1) {
+    const at = start + i * beatMs;
+
+    // Stomp: short low thud.
+    const stomp = ctx.createOscillator();
+    stomp.type = "sine";
+    stomp.frequency.setValueAtTime(78, at);
+    stomp.frequency.exponentialRampToValueAtTime(42, at + 0.18);
+    const stompEnv = ctx.createGain();
+    stompEnv.gain.setValueAtTime(0.0001, at);
+    stompEnv.gain.exponentialRampToValueAtTime(0.34 * intensity * typeMod, at + 0.02);
+    stompEnv.gain.exponentialRampToValueAtTime(0.0001, at + 0.24);
+    stomp.connect(stompEnv);
+    stompEnv.connect(out);
+    stomp.start(at);
+    stomp.stop(at + 0.28);
+
+    // Clap layer: filtered noise transient.
+    const length = Math.floor(ctx.sampleRate * 0.16);
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let s = 0; s < length; s += 1) {
+      data[s] = (Math.random() * 2 - 1) * (1 - s / length);
+    }
+    const clap = ctx.createBufferSource();
+    clap.buffer = buffer;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 900;
+    const clapEnv = ctx.createGain();
+    clapEnv.gain.setValueAtTime(0.0001, at);
+    clapEnv.gain.exponentialRampToValueAtTime(0.3 * intensity * typeMod, at + 0.015);
+    clapEnv.gain.exponentialRampToValueAtTime(0.0001, at + 0.2);
+    clap.connect(hp);
+    hp.connect(clapEnv);
+    clapEnv.connect(out);
+    clap.start(at);
+    clap.stop(at + 0.2);
+  }
+}
+
+/** Scattered whistles that punctuate a walk-on or encore return. */
+function playWhistles(ctx: AudioContext, out: GainNode, typeMod: number) {
+  const start = ctx.currentTime;
+  for (let i = 0; i < 3; i += 1) {
+    const at = start + 0.12 + Math.random() * 0.9;
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    const base = 1600 + Math.random() * 900;
+    osc.frequency.setValueAtTime(base, at);
+    osc.frequency.linearRampToValueAtTime(base * 1.22, at + 0.22);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, at);
+    env.gain.exponentialRampToValueAtTime(0.09 * typeMod, at + 0.05);
+    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.38);
+    osc.connect(env);
+    env.connect(out);
+    osc.start(at);
+    osc.stop(at + 0.4);
+  }
+}
