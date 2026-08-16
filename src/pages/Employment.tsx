@@ -20,6 +20,7 @@ import { Slider } from "@/components/ui/slider";
 import type { Database } from "@/lib/supabase-types";
 import { computePlayerLevel } from "@/hooks/usePlayerLevel";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { CompanyShiftMarketplace } from "@/components/company/CompanyShiftMarketplace";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"] & {
   cities?: { name: string; country: string } | null;
