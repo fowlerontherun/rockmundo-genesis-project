@@ -9,9 +9,10 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, Shield, Zap, Activity, Bus, UserCheck, User, UserX } from "lucide-react";
+import { Users, Shield, Zap, Activity, Bus, UserCheck, User, UserX, ChevronsUpDown } from "lucide-react";
 import { BandMemberDetailDialog } from "./BandMemberDetailDialog";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +75,14 @@ const performanceRoleOptions = [
   "Multi-instrumentalist",
   "Other",
 ];
+
+function getMemberRoles(member: MemberWithProfile): string[] {
+  const stored = (member as unknown as { instrument_roles?: string[] | null }).instrument_roles;
+  if (Array.isArray(stored) && stored.length > 0) {
+    return stored.filter((role): role is string => Boolean(role));
+  }
+  return member.instrument_role ? [member.instrument_role] : [];
+}
 
 function getStatusLabel(status?: string | null) {
   if (!status) return "Active";
@@ -176,7 +185,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   const [selectedMember, setSelectedMember] = useState<MemberWithProfile | null>(null);
   const [bandLeaderId, setBandLeaderId] = useState<string | null>(null);
   const [updatingRoleMemberId, setUpdatingRoleMemberId] = useState<string | null>(null);
-  const [draftPerformanceRoles, setDraftPerformanceRoles] = useState<Record<string, string>>({});
+  const [draftPerformanceRoles, setDraftPerformanceRoles] = useState<Record<string, string[]>>({});
 
   const currentMember = useMemo(() => (
     members.find((member) => (
@@ -190,6 +199,13 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
     (profile?.id && bandLeaderId === profile.id) ||
     (profile?.user_id && bandLeaderId === profile.user_id),
   );
+
+  const isSelfMember = (member: MemberWithProfile) => Boolean(
+    (profile?.id && member.profile_id === profile.id) ||
+    (profile?.user_id && member.user_id === profile.user_id),
+  );
+
+  const canEditMember = (member: MemberWithProfile) => isLeader || isSelfMember(member);
 
   useEffect(() => {
     let isMounted = true;
@@ -267,9 +283,9 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         setMembers(membersWithProfiles);
         setDraftPerformanceRoles(
           membersWithProfiles.reduce((acc, member) => {
-            acc[member.id] = member.instrument_role || "Other";
+            acc[member.id] = getMemberRoles(member);
             return acc;
-          }, {} as Record<string, string>),
+          }, {} as Record<string, string[]>),
         );
 
         const historyMap = (historyData as BandMembershipStatusHistory[] | null)?.reduce(
@@ -305,20 +321,21 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   }, [bandId]);
 
   const handleTravelToggle = async (memberId: string, currentValue: boolean) => {
-    if (!isLeader) {
+    const member = members.find((candidate) => candidate.id === memberId);
+    if (!member || !canEditMember(member)) {
       toast({
         title: "Permission denied",
-        description: "Only the band leader can change travel settings",
+        description: "Only the band leader or the member themselves can change travel settings",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from("band_members")
-        .update({ travels_with_band: !currentValue })
-        .eq("id", memberId);
+      const { error } = await (supabase as any).rpc("set_band_member_travel", {
+        p_member_id: memberId,
+        p_travels_with_band: !currentValue,
+      });
 
       if (error) throw error;
 
@@ -329,7 +346,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       );
 
       toast({
-        title: "Travel setting updated",
+        title: "Travel setting saved",
         description: !currentValue 
           ? "Member will now travel with the band" 
           : "Member will arrange their own travel",
@@ -338,51 +355,66 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       console.error("Failed to update travel setting", error);
       toast({
         title: "Update failed",
-        description: "Could not update travel setting",
+        description: error instanceof Error ? error.message : "Could not update travel setting",
         variant: "destructive",
       });
     }
   };
 
-  const handlePerformanceRoleDraftChange = (memberId: string, nextRole: string) => {
-    setDraftPerformanceRoles((current) => ({ ...current, [memberId]: nextRole }));
+  const handlePerformanceRoleDraftChange = (memberId: string, role: string, checked: boolean) => {
+    setDraftPerformanceRoles((current) => {
+      const existing = current[memberId] ?? [];
+      const next = checked
+        ? Array.from(new Set([...existing, role]))
+        : existing.filter((entry) => entry !== role);
+      return { ...current, [memberId]: next };
+    });
   };
 
   const handlePerformanceRoleSave = async (memberId: string) => {
-    if (!isLeader) {
+    const member = members.find((candidate) => candidate.id === memberId);
+    if (!member || !canEditMember(member)) {
       toast({
         title: "Permission denied",
-        description: "Only the band leader can change member performance roles",
+        description: "Only the band leader or the member themselves can change performance roles",
         variant: "destructive",
       });
       return;
     }
 
-    const member = members.find((candidate) => candidate.id === memberId);
-    const nextRole = draftPerformanceRoles[memberId];
-    if (!member || !nextRole || member.instrument_role === nextRole) return;
+    const nextRoles = draftPerformanceRoles[memberId] ?? [];
+    if (nextRoles.length === 0) {
+      toast({
+        title: "Pick at least one role",
+        description: "Every member needs at least one performance role.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUpdatingRoleMemberId(memberId);
     try {
-      const { data, error } = await (supabase as any).rpc("update_band_member_performance_role", {
+      const { data, error } = await (supabase as any).rpc("update_band_member_roles", {
         p_member_id: memberId,
-        p_instrument_role: nextRole,
+        p_instrument_roles: nextRoles,
       });
 
       if (error) throw error;
 
-      const updatedRole = data?.instrument_role ?? nextRole;
+      const updatedRoles: string[] = data?.instrument_roles ?? nextRoles;
 
       setMembers(prev =>
         prev.map(m =>
-          m.id === memberId ? { ...m, instrument_role: updatedRole } : m
+          m.id === memberId
+            ? { ...m, instrument_role: updatedRoles[0], instrument_roles: updatedRoles } as MemberWithProfile
+            : m
         )
       );
-      setDraftPerformanceRoles((current) => ({ ...current, [memberId]: updatedRole }));
+      setDraftPerformanceRoles((current) => ({ ...current, [memberId]: updatedRoles }));
 
       toast({
-        title: "Performance role saved",
-        description: `${member.profiles?.display_name ?? member.profiles?.username ?? "Member"} is now assigned to ${updatedRole}.`,
+        title: "Performance roles saved",
+        description: `${member.profiles?.display_name ?? member.profiles?.username ?? "Member"} now plays ${updatedRoles.join(", ")}.`,
       });
     } catch (error) {
       console.error("Failed to save performance role", error);
@@ -528,7 +560,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Band roster</CardTitle>
-          <CardDescription>Overview of every active member and their contributions. Band leaders can change performance roles, including solo-act lineups.</CardDescription>
+          <CardDescription>Overview of every active member and their contributions. Members can hold multiple performance roles, and leaders or the members themselves can update roles and travel plans.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {members.length === 0 ? (
@@ -552,11 +584,13 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                   {members.map((member) => {
                     const lastStatus = statusHistory[member.id]?.[0];
                     const statusLabel = getStatusLabel(member.member_status);
-                    const draftRole = draftPerformanceRoles[member.id] ?? member.instrument_role ?? "Other";
-                    const roleOptions = draftRole && !performanceRoleOptions.includes(draftRole)
-                      ? [draftRole, ...performanceRoleOptions]
-                      : performanceRoleOptions;
-                    const hasUnsavedRole = draftRole !== (member.instrument_role || "Other");
+                    const savedRoles = getMemberRoles(member);
+                    const draftRoles = draftPerformanceRoles[member.id] ?? savedRoles;
+                    const roleOptions = Array.from(new Set([...draftRoles, ...performanceRoleOptions]));
+                    const hasUnsavedRole =
+                      draftRoles.length !== savedRoles.length ||
+                      draftRoles.some((role) => !savedRoles.includes(role));
+                    const canEdit = canEditMember(member);
                     return (
                       <TableRow key={member.id}>
                         <TableCell>
@@ -593,23 +627,56 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                         </TableCell>
                         <TableCell className="align-middle">
                           <div className="flex flex-col gap-2">
-                            <Select
-                              value={draftRole}
-                              onValueChange={(value) => handlePerformanceRoleDraftChange(member.id, value)}
-                              disabled={!isLeader || updatingRoleMemberId === member.id}
-                            >
-                              <SelectTrigger className="h-8 w-[190px]">
-                                <SelectValue placeholder="Assign performance role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {roleOptions.map((role) => (
-                                  <SelectItem key={role} value={role}>
+                            <div className="flex flex-wrap gap-1">
+                              {savedRoles.length > 0 ? (
+                                savedRoles.map((role) => (
+                                  <Badge key={role} variant="secondary" className="text-[10px]">
                                     {role}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {isLeader && (
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No role set</span>
+                              )}
+                            </div>
+                            {canEdit && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-[190px] justify-between"
+                                    disabled={updatingRoleMemberId === member.id}
+                                  >
+                                    <span className="truncate">
+                                      {draftRoles.length > 0
+                                        ? `${draftRoles.length} role${draftRoles.length === 1 ? "" : "s"} selected`
+                                        : "Select roles"}
+                                    </span>
+                                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="start" className="w-56 max-h-72 overflow-y-auto p-2">
+                                  <div className="space-y-1">
+                                    {roleOptions.map((role) => (
+                                      <label
+                                        key={role}
+                                        className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-accent"
+                                      >
+                                        <Checkbox
+                                          checked={draftRoles.includes(role)}
+                                          onCheckedChange={(checked) =>
+                                            handlePerformanceRoleDraftChange(member.id, role, checked === true)
+                                          }
+                                        />
+                                        {role}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                            {canEdit && (
                               <Button
                                 type="button"
                                 size="sm"
@@ -618,7 +685,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                                 disabled={!hasUnsavedRole || updatingRoleMemberId === member.id}
                                 onClick={() => handlePerformanceRoleSave(member.id)}
                               >
-                                {updatingRoleMemberId === member.id ? "Saving…" : "Save role"}
+                                {updatingRoleMemberId === member.id ? "Saving…" : "Save roles"}
                               </Button>
                             )}
                             <div className="flex flex-wrap gap-1">
@@ -637,8 +704,9 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                             <Switch
                               checked={member.travels_with_band ?? false}
                               onCheckedChange={() => handleTravelToggle(member.id, member.travels_with_band ?? false)}
-                              disabled={!isLeader}
+                              disabled={!canEdit}
                             />
+
                             <span className="text-xs text-muted-foreground">
                               {member.travels_with_band ? "Yes" : "No"}
                             </span>

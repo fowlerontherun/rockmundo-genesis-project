@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.678",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Band leaders can now actually save member performance roles and travel settings from the band roster - the save previously failed silently." },
+      { type: 'feature', description: "Band members can hold multiple performance roles (for example Lead Vocals and Rhythm Guitar) selected from a checklist." },
+      { type: 'feature', description: "Each member can now set their own roles and whether they travel with the band, not just the leader." },
+    ],
+  },
+  {
     version: "1.1.677",
     date: "2026-08-16",
     changes: [
