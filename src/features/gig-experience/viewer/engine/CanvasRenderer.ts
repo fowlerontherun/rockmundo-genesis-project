@@ -280,6 +280,8 @@ export class CanvasRenderer {
 
   get budget(): RenderBudget { return this.renderBudget; }
 
+  get displayedCrowdCount() { return this.displayedCrowd; }
+
   destroy() {
     this.backgroundLayer.destroy();
     this.architectureLayer.destroy();
