@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { acceptLoanOffer, createLoanApplication, estimateEqualPrincipalSchedule, formatCurrencyMinor, getLoanApplicationResult, listEligibleLoanProducts, listPlayerBankAccounts, type BankingProduct, type PlayerBankAccount } from "@/services/banking/bankingService";
 
 export default function BankingApply() {
+  const { profileId: activeProfileId } = useActiveProfile();
   const [products, setProducts] = useState<BankingProduct[]>([]);
   const [accounts, setAccounts] = useState<PlayerBankAccount[]>([]);
   const [productId, setProductId] = useState("");
@@ -35,7 +37,11 @@ export default function BankingApply() {
 
   async function submitApplication() {
     if (!product) return;
-    const profileId = localStorage.getItem("activeProfileId") ?? "00000000-0000-0000-0000-000000000000";
+    if (!activeProfileId) {
+      setMessage("Select an active character before applying for credit.");
+      return;
+    }
+    const profileId = activeProfileId;
     const applicationId = await createLoanApplication({ borrowerType: "player", borrowerId: profileId, productId: product.id, requestedAmountMinor: amount, requestedTermMonths: term, purpose, expectedUse: "Player starter loan", idempotencyKey: `ui-${crypto.randomUUID()}` });
     setApplicationResult(await getLoanApplicationResult(applicationId));
   }

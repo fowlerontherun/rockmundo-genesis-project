@@ -22,6 +22,7 @@ export interface TokenHolding {
 
 export const useCryptoTokens = (profileId?: string) => {
   const { userId } = useActiveProfile();
+  void userId;
   const queryClient = useQueryClient();
 
   // Fetch all tokens
@@ -53,7 +54,7 @@ export const useCryptoTokens = (profileId?: string) => {
           *,
           token:crypto_tokens(*)
         `)
-        .eq("user_id", userId);
+        .eq("profile_id", profileId);
 
       if (error) throw error;
       return data as any as TokenHolding[];
@@ -73,7 +74,7 @@ export const useCryptoTokens = (profileId?: string) => {
           *,
           token:crypto_tokens(symbol, name)
         `)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
         .limit(50);
 
