@@ -68,17 +68,17 @@ function getCostMultiplier(tier: string, isPhysical: boolean): number {
   if (isPhysical) {
     switch (tier) {
       case "domestic": return 1.0;
-      case "regional": return 1.5;
-      case "continental": return 2.5;
-      case "intercontinental": return 4.0;
+      case "regional": return 1.2;
+      case "continental": return 1.6;
+      case "intercontinental": return 2.2;
       default: return 1.0;
     }
   } else {
     switch (tier) {
       case "domestic": return 1.0;
-      case "regional": return 1.1;
-      case "continental": return 1.2;
-      case "intercontinental": return 1.3;
+      case "regional": return 1.05;
+      case "continental": return 1.1;
+      case "intercontinental": return 1.15;
       default: return 1.0;
     }
   }
