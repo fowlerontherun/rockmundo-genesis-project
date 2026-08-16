@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.686",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Seeded the world calendar with 255 major event dates across six game years, from the Grammys and Eurosong to Glastonbury, Coachella, halftime shows and Olympic ceremonies, with four-year events only appearing on their proper cycle." },
+      { type: 'fix', description: "Fixed major event invitations and performance history being invisible: performances are now correctly linked to the active character rather than the account." },
+      { type: 'fix', description: "Fixed automatic major event completion so accepted shows are played out and settled once their in-game date passes." },
+      { type: 'improvement', description: "Past event dates are automatically marked as completed and future ones stay open for invitations, so the Major Events page always shows an accurate schedule." },
+    ],
+  },
+  {
     version: "1.1.685",
     date: "2026-08-16",
     changes: [
