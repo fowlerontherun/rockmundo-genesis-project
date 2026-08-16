@@ -2298,6 +2298,7 @@ export type Database = {
           current_city_id: string | null
           id: string
           instrument_role: string
+          instrument_roles: string[]
           is_touring_member: boolean | null
           joined_at: string | null
           leadership_votes: number | null
@@ -2319,6 +2320,7 @@ export type Database = {
           current_city_id?: string | null
           id?: string
           instrument_role?: string
+          instrument_roles?: string[]
           is_touring_member?: boolean | null
           joined_at?: string | null
           leadership_votes?: number | null
@@ -2340,6 +2342,7 @@ export type Database = {
           current_city_id?: string | null
           id?: string
           instrument_role?: string
+          instrument_roles?: string[]
           is_touring_member?: boolean | null
           joined_at?: string | null
           leadership_votes?: number | null
@@ -48090,6 +48093,10 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: Json
       }
+      band_member_edit_authorised: {
+        Args: { p_member_id: string }
+        Returns: boolean
+      }
       bank_deposit_from_cash: {
         Args: { p_account_id: string; p_amount_cents: number }
         Returns: number
@@ -50854,6 +50861,37 @@ export type Database = {
         }
         Returns: Json
       }
+      set_band_member_travel: {
+        Args: { p_member_id: string; p_travels_with_band: boolean }
+        Returns: {
+          band_id: string
+          can_be_leader: boolean | null
+          chemistry_contribution: number | null
+          current_city_id: string | null
+          id: string
+          instrument_role: string
+          instrument_roles: string[]
+          is_touring_member: boolean | null
+          joined_at: string | null
+          leadership_votes: number | null
+          member_status: string | null
+          profile_id: string | null
+          role: string
+          salary: number | null
+          skill_contribution: number | null
+          touring_member_cost: number | null
+          touring_member_tier: number | null
+          travels_with_band: boolean | null
+          user_id: string | null
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       settle_legacy_festival_participation: {
         Args: {
           p_crowd_energy_avg?: number
@@ -51225,6 +51263,68 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "festival_editions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_band_member_performance_role: {
+        Args: { p_instrument_role: string; p_member_id: string }
+        Returns: {
+          band_id: string
+          can_be_leader: boolean | null
+          chemistry_contribution: number | null
+          current_city_id: string | null
+          id: string
+          instrument_role: string
+          instrument_roles: string[]
+          is_touring_member: boolean | null
+          joined_at: string | null
+          leadership_votes: number | null
+          member_status: string | null
+          profile_id: string | null
+          role: string
+          salary: number | null
+          skill_contribution: number | null
+          touring_member_cost: number | null
+          touring_member_tier: number | null
+          travels_with_band: boolean | null
+          user_id: string | null
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_band_member_roles: {
+        Args: { p_instrument_roles: string[]; p_member_id: string }
+        Returns: {
+          band_id: string
+          can_be_leader: boolean | null
+          chemistry_contribution: number | null
+          current_city_id: string | null
+          id: string
+          instrument_role: string
+          instrument_roles: string[]
+          is_touring_member: boolean | null
+          joined_at: string | null
+          leadership_votes: number | null
+          member_status: string | null
+          profile_id: string | null
+          role: string
+          salary: number | null
+          skill_contribution: number | null
+          touring_member_cost: number | null
+          touring_member_tier: number | null
+          travels_with_band: boolean | null
+          user_id: string | null
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_members"
           isOneToOne: true
           isSetofReturn: false
         }
