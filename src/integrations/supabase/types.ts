@@ -8676,6 +8676,91 @@ export type Database = {
           },
         ]
       }
+      conversation_participants: {
+        Row: {
+          archived_at: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          last_read_at: string | null
+          muted_until: string | null
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          last_read_at?: string | null
+          muted_until?: string | null
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          last_read_at?: string | null
+          muted_until?: string | null
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          last_message_id: string | null
+          last_message_preview: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_id?: string | null
+          last_message_preview?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_id?: string | null
+          last_message_preview?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coop_quest_events: {
         Row: {
           actor_profile_id: string
@@ -9992,31 +10077,48 @@ export type Database = {
         Row: {
           body: string
           channel_id: string
+          client_message_id: string | null
+          conversation_id: string | null
           created_at: string
           id: string
           read_at: string | null
           recipient_profile_id: string
+          reply_to_message_id: string | null
           sender_profile_id: string
         }
         Insert: {
           body: string
           channel_id: string
+          client_message_id?: string | null
+          conversation_id?: string | null
           created_at?: string
           id?: string
           read_at?: string | null
           recipient_profile_id: string
+          reply_to_message_id?: string | null
           sender_profile_id: string
         }
         Update: {
           body?: string
           channel_id?: string
+          client_message_id?: string | null
+          conversation_id?: string | null
           created_at?: string
           id?: string
           read_at?: string | null
           recipient_profile_id?: string
+          reply_to_message_id?: string | null
           sender_profile_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "direct_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       education_mentors: {
         Row: {
@@ -32234,6 +32336,68 @@ export type Database = {
         }
         Relationships: []
       }
+      player_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+          private_note: string | null
+          reason_category: string | null
+          removed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+          private_note?: string | null
+          reason_category?: string | null
+          removed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+          private_note?: string | null
+          reason_category?: string | null
+          removed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_book_purchases: {
         Row: {
           book_id: string
@@ -35105,6 +35269,95 @@ export type Database = {
           },
         ]
       }
+      player_reports: {
+        Row: {
+          category: string
+          content_id: string | null
+          content_type: string
+          context: Json
+          description: string
+          evidence: Json
+          id: string
+          priority: string
+          reported_player_id: string | null
+          reporter_profile_id: string
+          resolution_summary: string | null
+          status: string
+          subcategory: string | null
+          submitted_at: string
+          target_id: string | null
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          content_id?: string | null
+          content_type?: string
+          context?: Json
+          description?: string
+          evidence?: Json
+          id?: string
+          priority?: string
+          reported_player_id?: string | null
+          reporter_profile_id: string
+          resolution_summary?: string | null
+          status?: string
+          subcategory?: string | null
+          submitted_at?: string
+          target_id?: string | null
+          target_type?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content_id?: string | null
+          content_type?: string
+          context?: Json
+          description?: string
+          evidence?: Json
+          id?: string
+          priority?: string
+          reported_player_id?: string | null
+          reporter_profile_id?: string
+          resolution_summary?: string | null
+          status?: string
+          subcategory?: string | null
+          submitted_at?: string
+          target_id?: string | null
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_reports_reported_player_id_fkey"
+            columns: ["reported_player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_reports_reported_player_id_fkey"
+            columns: ["reported_player_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_reports_reporter_profile_id_fkey"
+            columns: ["reporter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_reports_reporter_profile_id_fkey"
+            columns: ["reporter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_reputation: {
         Row: {
           attitude_score: number
@@ -37362,6 +37615,68 @@ export type Database = {
           xp_amount?: number
         }
         Relationships: []
+      }
+      profile_mutes: {
+        Row: {
+          created_at: string
+          id: string
+          mute_until: string | null
+          note: string | null
+          removed_at: string | null
+          target_profile_id: string
+          updated_at: string
+          viewer_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mute_until?: string | null
+          note?: string | null
+          removed_at?: string | null
+          target_profile_id: string
+          updated_at?: string
+          viewer_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mute_until?: string | null
+          note?: string | null
+          removed_at?: string | null
+          target_profile_id?: string
+          updated_at?: string
+          viewer_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_mutes_target_profile_id_fkey"
+            columns: ["target_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_mutes_target_profile_id_fkey"
+            columns: ["target_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_mutes_viewer_profile_id_fkey"
+            columns: ["viewer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_mutes_viewer_profile_id_fkey"
+            columns: ["viewer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -48712,6 +49027,10 @@ export type Database = {
         Args: { p_message?: string; p_vacancy_id: string }
         Returns: string
       }
+      are_profiles_blocked: {
+        Args: { first_profile_id: string; second_profile_id: string }
+        Returns: boolean
+      }
       auto_build_release_hype: { Args: never; Returns: undefined }
       auto_complete_manufacturing: { Args: never; Returns: number }
       auto_complete_songwriting_sessions: {
@@ -48871,6 +49190,48 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "festival_performance_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      block_player: {
+        Args: {
+          private_note?: string
+          reason_category?: string
+          target_profile_id: string
+        }
+        Returns: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+          private_note: string | null
+          reason_category: string | null
+          removed_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_blocks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      block_profile: {
+        Args: { note?: string; target_profile_id: string }
+        Returns: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+          private_note: string | null
+          reason_category: string | null
+          removed_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_blocks"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -50472,6 +50833,10 @@ export type Database = {
           employee_count: number
         }[]
       }
+      get_connection_state: {
+        Args: { target_profile_id: string }
+        Returns: string
+      }
       get_fame_fans_attribution: {
         Args: { p_day: string; p_profile_id: string }
         Returns: {
@@ -50578,6 +50943,14 @@ export type Database = {
         Args: { p_category_key: string; p_festival_company_id: string }
         Returns: Json
       }
+      get_friend_request_counts: {
+        Args: never
+        Returns: {
+          friends: number
+          incoming: number
+          outgoing: number
+        }[]
+      }
       get_friendship_lifetime_xp: {
         Args: { profile_a: string; profile_b: string }
         Returns: number
@@ -50644,6 +51017,10 @@ export type Database = {
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
         Returns: number
+      }
+      get_social_permissions: {
+        Args: { target_profile_id: string }
+        Returns: Json
       }
       get_song_vote_score: { Args: { p_song_id: string }; Returns: number }
       get_songs_on_albums: {
@@ -50841,6 +51218,10 @@ export type Database = {
         Args: { p_mentor_id: string; p_profile_id: string }
         Returns: boolean
       }
+      is_profile_muted: {
+        Args: { target_profile_id: string; viewer_profile_id: string }
+        Returns: boolean
+      }
       is_public_festival_edition_status: {
         Args: {
           p_status: Database["public"]["Enums"]["festival_edition_status"]
@@ -50862,6 +51243,28 @@ export type Database = {
       link_label_to_company: {
         Args: { p_company_id: string; p_label_id: string }
         Returns: undefined
+      }
+      list_conversations: {
+        Args: {
+          before_activity_at?: string
+          include_archived?: boolean
+          page_limit?: number
+          search_query?: string
+        }
+        Returns: {
+          archived_at: string
+          conversation_id: string
+          last_message_at: string
+          last_message_id: string
+          last_message_preview: string
+          muted_until: string
+          other_avatar_url: string
+          other_display_name: string
+          other_profile_id: string
+          other_username: string
+          type: string
+          unread_count: number
+        }[]
       }
       list_festival_for_sale: {
         Args: { p_festival_id: string; p_notes?: string; p_price_cents: number }
@@ -50997,12 +51400,35 @@ export type Database = {
         }
         Returns: string
       }
+      mark_conversation_read: {
+        Args: { conversation_id: string; read_message_id?: string }
+        Returns: boolean
+      }
       mark_gig_position_processed: {
         Args: { p_gig_id: string; p_position: number }
         Returns: Json
       }
       mayor_company_modifier: { Args: { p_city_id: string }; Returns: number }
       media_quality_bar: { Args: { p_tier: number }; Returns: number }
+      mute_profile: {
+        Args: { mute_until?: string; note?: string; target_profile_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          mute_until: string | null
+          note: string | null
+          removed_at: string | null
+          target_profile_id: string
+          updated_at: string
+          viewer_profile_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profile_mutes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       normalize_gig_viewer_crowd_settings: {
         Args: { p_settings: Json }
         Returns: Json
@@ -51358,6 +51784,41 @@ export type Database = {
         Args: { p_action: string; p_issue_id: string; p_reason?: string }
         Returns: Json
       }
+      report_social_target: {
+        Args: {
+          category: string
+          context?: Json
+          reason: string
+          reported_profile_id: string
+          target_id: string
+          target_type: string
+        }
+        Returns: {
+          category: string
+          content_id: string | null
+          content_type: string
+          context: Json
+          description: string
+          evidence: Json
+          id: string
+          priority: string
+          reported_player_id: string | null
+          reporter_profile_id: string
+          resolution_summary: string | null
+          status: string
+          subcategory: string | null
+          submitted_at: string
+          target_id: string | null
+          target_type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       resign_company_employment: {
         Args: { p_employee_id: string }
@@ -51462,6 +51923,24 @@ export type Database = {
           p_response: string
         }
         Returns: Json
+      }
+      respond_to_friend_request: {
+        Args: { friendship_id: string; next_status: string }
+        Returns: {
+          addressee_id: string
+          created_at: string | null
+          id: string
+          requestor_id: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "friendships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       resume_festival_ticket_sales: {
         Args: {
@@ -51748,6 +52227,53 @@ export type Database = {
         Returns: Json
       }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
+      send_conversation_message: {
+        Args: {
+          client_message_id?: string
+          conversation_id: string
+          message_body: string
+          reply_to_message_id?: string
+        }
+        Returns: {
+          body: string
+          channel_id: string
+          client_message_id: string | null
+          conversation_id: string | null
+          created_at: string
+          id: string
+          read_at: string | null
+          recipient_profile_id: string
+          reply_to_message_id: string | null
+          sender_profile_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "direct_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      send_direct_message: {
+        Args: { message_body: string; recipient_profile_id: string }
+        Returns: {
+          body: string
+          channel_id: string
+          client_message_id: string | null
+          conversation_id: string | null
+          created_at: string
+          id: string
+          read_at: string | null
+          recipient_profile_id: string
+          reply_to_message_id: string | null
+          sender_profile_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "direct_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       send_festival_artist_invitation: {
         Args: {
           p_artist_profile_id?: string
@@ -51772,6 +52298,24 @@ export type Database = {
           p_offer_id: string
         }
         Returns: Json
+      }
+      send_friend_request: {
+        Args: { target_profile_id: string }
+        Returns: {
+          addressee_id: string
+          created_at: string | null
+          id: string
+          requestor_id: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "friendships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_band_member_travel: {
         Args: { p_member_id: string; p_travels_with_band: boolean }
@@ -51883,6 +52427,10 @@ export type Database = {
           p_party_id?: string
         }
         Returns: string
+      }
+      start_direct_conversation: {
+        Args: { recipient_profile_id: string }
+        Returns: Json
       }
       start_festival_performance: {
         Args: { p_idempotency_key?: string; p_session_id: string }
@@ -52101,6 +52649,43 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      submit_player_report: {
+        Args: {
+          block_after_report?: boolean
+          category: string
+          content_id?: string
+          content_type?: string
+          description: string
+          evidence?: Json
+          subcategory?: string
+          target_profile_id: string
+        }
+        Returns: {
+          category: string
+          content_id: string | null
+          content_type: string
+          context: Json
+          description: string
+          evidence: Json
+          id: string
+          priority: string
+          reported_player_id: string | null
+          reporter_profile_id: string
+          resolution_summary: string | null
+          status: string
+          subcategory: string | null
+          submitted_at: string
+          target_id: string | null
+          target_type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       swap_gettit_comment_vote: {
         Args: { comment_id: string; new_field: string; old_field: string }
         Returns: undefined
@@ -52193,6 +52778,9 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      unblock_player: { Args: { target_profile_id: string }; Returns: boolean }
+      unblock_profile: { Args: { target_profile_id: string }; Returns: boolean }
+      unmute_profile: { Args: { target_profile_id: string }; Returns: boolean }
       update_band_member_performance_role: {
         Args: { p_instrument_role: string; p_member_id: string }
         Returns: {
