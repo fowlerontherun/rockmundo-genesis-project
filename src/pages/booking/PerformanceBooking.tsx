@@ -18,6 +18,7 @@ import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
 import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { fetchAllVenues } from "@/utils/fetchAllVenues";
 import { addDurationHours, buildScheduledDateTime, getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 
 export default function PerformanceBooking() {
