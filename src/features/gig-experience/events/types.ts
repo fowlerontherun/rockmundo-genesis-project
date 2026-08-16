@@ -22,7 +22,22 @@ export interface GigReplayCommerceSnapshot {
   settlementId: string;
   merchandise: { itemsSold: number; grossRevenue: number; cost: number; owner: "band"; lines: Array<{ merchandiseId: string; variantId?: string | null; itemType: string; name: string; quantity: number; unitPrice: number; gross: number }> };
   bar: { drinksServed: number; grossRevenue: number; venueRevenue: number; bandEntitlement: number; owner: "venue" | "shared_by_confirmed_booking"; shareSource: "confirmed_booking" | "venue_fallback" };
+  /**
+   * Optional timestamped commerce evidence (viewer evidence mode `event_replay`).
+   * Written only by the authoritative gig/settlement workflow; the viewer consumes
+   * it read-only and never creates, orders, or totals these events itself.
+   */
+  events?: GigReplayCommerceEvent[] | null;
 }
+
+export interface GigReplayCommerceEvent {
+  id: string;
+  atMs: number;
+  service: "bar" | "merchandise";
+  quantity: number;
+  itemType?: string | null;
+}
+
 
 export type GigReplaySetlistItemType = "song" | "performance_item";
 export type PerformanceItemVisualAction =
