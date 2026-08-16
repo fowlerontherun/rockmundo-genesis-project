@@ -35134,6 +35134,7 @@ export type Database = {
           average_buy_price: number | null
           created_at: string | null
           id: string
+          profile_id: string
           quantity: number
           token_id: string
           updated_at: string | null
@@ -35143,6 +35144,7 @@ export type Database = {
           average_buy_price?: number | null
           created_at?: string | null
           id?: string
+          profile_id: string
           quantity?: number
           token_id: string
           updated_at?: string | null
@@ -35152,12 +35154,27 @@ export type Database = {
           average_buy_price?: number | null
           created_at?: string | null
           id?: string
+          profile_id?: string
           quantity?: number
           token_id?: string
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "player_token_holdings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_token_holdings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_token_holdings_token_id_fkey"
             columns: ["token_id"]
@@ -43459,6 +43476,7 @@ export type Database = {
           created_at: string | null
           id: string
           price_per_token: number
+          profile_id: string
           quantity: number
           token_id: string
           total_amount: number
@@ -43469,6 +43487,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           price_per_token: number
+          profile_id: string
           quantity: number
           token_id: string
           total_amount: number
@@ -43479,6 +43498,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           price_per_token?: number
+          profile_id?: string
           quantity?: number
           token_id?: string
           total_amount?: number
@@ -43486,6 +43506,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "token_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "token_transactions_token_id_fkey"
             columns: ["token_id"]
