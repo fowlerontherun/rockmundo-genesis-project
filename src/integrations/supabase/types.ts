@@ -35406,6 +35406,51 @@ export type Database = {
           },
         ]
       }
+      player_saved_searches: {
+        Row: {
+          alerts_enabled: boolean
+          created_at: string
+          discovery_mode: string
+          filters: Json
+          id: string
+          last_used_at: string | null
+          name: string
+          profile_id: string | null
+          search_query: string
+          sort_order: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alerts_enabled?: boolean
+          created_at?: string
+          discovery_mode?: string
+          filters?: Json
+          id?: string
+          last_used_at?: string | null
+          name: string
+          profile_id?: string | null
+          search_query?: string
+          sort_order?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          alerts_enabled?: boolean
+          created_at?: string
+          discovery_mode?: string
+          filters?: Json
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          profile_id?: string | null
+          search_query?: string
+          sort_order?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_scheduled_activities: {
         Row: {
           activity_type: string
@@ -48521,6 +48566,13 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      _saved_search_json: {
+        Args: {
+          r: Database["public"]["Tables"]["player_saved_searches"]["Row"]
+        }
+        Returns: Json
+      }
+      _social_blocked: { Args: { p_a: string; p_b: string }; Returns: boolean }
       accept_festival_offer: {
         Args: {
           p_idempotency_key?: string
@@ -50346,6 +50398,10 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: undefined
       }
+      delete_player_saved_search: {
+        Args: { saved_search_id: string; viewer_profile_id?: string }
+        Returns: undefined
+      }
       deposit_to_band_treasury: {
         Args: {
           p_amount_cents: number
@@ -51145,6 +51201,7 @@ export type Database = {
         Returns: Json
       }
       get_owned_festival_companies: { Args: never; Returns: Json }
+      get_player_discovery_filter_options: { Args: never; Returns: Json }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_public_festival: { Args: { p_slug: string }; Returns: Json }
       get_public_festival_directory: {
@@ -51156,6 +51213,10 @@ export type Database = {
         Returns: Json
       }
       get_public_festival_timetable: { Args: { p_slug: string }; Returns: Json }
+      get_public_profile_detail: {
+        Args: { target_profile_id: string; viewer_profile_id?: string }
+        Returns: Json
+      }
       get_recent_twaat_count: { Args: never; Returns: number }
       get_release_sale_dates: {
         Args: { p_release_id: string }
@@ -51432,6 +51493,10 @@ export type Database = {
       list_festival_for_sale: {
         Args: { p_festival_id: string; p_notes?: string; p_price_cents: number }
         Returns: string
+      }
+      list_player_saved_searches: {
+        Args: { viewer_profile_id?: string }
+        Returns: Json
       }
       lock_festival_session_readiness: {
         Args: { p_idempotency_key?: string; p_session_id: string }
@@ -52086,6 +52151,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      respond_social_invite: {
+        Args: { invite_id: string; next_status: string }
+        Returns: {
+          created_at: string
+          from_profile_id: string
+          id: string
+          kind: Database["public"]["Enums"]["social_invite_kind"]
+          location_city_id: string | null
+          message: string | null
+          ref_id: string | null
+          responded_at: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["social_invite_status"]
+          to_profile_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "social_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       respond_to_company_offer: {
         Args: { p_accept: boolean; p_application_id: string }
         Returns: Json
@@ -52395,6 +52483,10 @@ export type Database = {
         }
         Returns: Json
       }
+      save_player_search: {
+        Args: { saved_search: Json; viewer_profile_id?: string }
+        Returns: Json
+      }
       schedule_songwriting_session: {
         Args: {
           p_effort_hours: number
@@ -52418,6 +52510,30 @@ export type Database = {
           p_query?: string
         }
         Returns: Json
+      }
+      search_player_discovery: {
+        Args: { query: Json; viewer_profile_id?: string }
+        Returns: Json
+      }
+      search_public_profiles: {
+        Args: {
+          result_limit?: number
+          search_term: string
+          viewer_profile_id?: string
+        }
+        Returns: {
+          avatar_url: string
+          bands: Json
+          bio: string
+          city_name: string
+          display_name: string
+          fame: number
+          fans: number
+          level: number
+          profile_id: string
+          user_id: string
+          username: string
+        }[]
       }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
       send_conversation_message: {
@@ -52506,6 +52622,36 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "friendships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      send_social_invite: {
+        Args: {
+          invite_kind: string
+          invite_location_city_id?: string
+          invite_message?: string
+          invite_ref_id?: string
+          scheduled_for?: string
+          target_profile_id: string
+        }
+        Returns: {
+          created_at: string
+          from_profile_id: string
+          id: string
+          kind: Database["public"]["Enums"]["social_invite_kind"]
+          location_city_id: string | null
+          message: string | null
+          ref_id: string | null
+          responded_at: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["social_invite_status"]
+          to_profile_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "social_invites"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -53141,6 +53287,14 @@ export type Database = {
       update_player_health: {
         Args: { p_health_change: number; p_user_id: string }
         Returns: number
+      }
+      update_player_saved_search: {
+        Args: {
+          patch: Json
+          saved_search_id: string
+          viewer_profile_id?: string
+        }
+        Returns: Json
       }
       update_song_fame: {
         Args: { p_fame_amount: number; p_song_id: string; p_source: string }
