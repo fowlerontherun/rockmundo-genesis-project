@@ -377,6 +377,34 @@ export function FestivalEditionWorkspace({ section }: { section: string }) {
       );
     case "history":
       return <FestivalEditionHistory editionId={editionId} />;
+    case "site":
+      return (
+        <FestivalEditionSite
+          festivalCompanyId={festivalCompanyId}
+          editionId={editionId}
+        />
+      );
+    case "operations":
+      return (
+        <FestivalEditionOperations
+          festivalCompanyId={festivalCompanyId}
+          editionId={editionId}
+        />
+      );
+    case "sponsorship":
+      return (
+        <FestivalEditionSponsorship
+          festivalCompanyId={festivalCompanyId}
+          editionId={editionId}
+        />
+      );
+    case "schedule":
+      return (
+        <FestivalEditionTimetable
+          festivalCompanyId={festivalCompanyId}
+          editionId={editionId}
+        />
+      );
     case "settlement":
       return (
         <Navigate
@@ -384,9 +412,7 @@ export function FestivalEditionWorkspace({ section }: { section: string }) {
           to={festivalRoutes.live(festivalCompanyId, editionId)}
         />
       );
-    case "schedule":
     case "contracts":
-    case "operations":
     default:
       return (
         <Navigate
