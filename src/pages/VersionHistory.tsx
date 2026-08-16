@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.674",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Gig viewer now ships behind a staged rollout flag (off, admin demo, internal replays, deterministic player percentage, default) with the previous renderer kept reachable as a fallback." },
+      { type: 'feature', description: "Added animated venue signage: entrance marquees with the venue name, bar and merch station signs, arena/stadium screens and club neon, all frozen under reduced motion." },
+      { type: 'feature', description: "Gig replays with saved timestamped bar and merch events now drive fan trips at their real moments (event_replay evidence), instead of inferring timings from totals." },
+      { type: 'improvement', description: "Added replay checksums that prove regenerating a replay reproduces identical facts, surfaced with a match/mismatch badge in the replay evidence inspector and admin audit." },
+      { type: 'improvement', description: "Added a visual-regression gate that fingerprints scene draw calls per venue archetype, plus a recorded performance and rollout baseline document." },
+    ],
+  },
+  {
     version: "1.1.673",
     date: "2026-08-16",
     changes: [
