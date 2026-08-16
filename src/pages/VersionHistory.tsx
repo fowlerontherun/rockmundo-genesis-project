@@ -17,6 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.694",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Founded festivals can be managed again \u2014 the Annual Festivals list now loads, showing every edition with its dates, size, target attendance, planning progress and which plans are done." },
+      { type: 'fix', description: "Public festival pages and legacy festival links now resolve correctly by festival name, id or edition year." },
+      { type: 'fix', description: "The festival card in your company holdings now opens the festival management home instead of the old setup redirect." },
+      { type: 'fix', description: "Social is working again: musician search, full player profiles, social invites (send, accept, decline, cancel) and player discovery with filters all load instead of failing." },
+      { type: 'feature', description: "Saved player searches are back \u2014 save, rename, update and delete up to 20 discovery searches with optional alerts." },
+      { type: 'feature', description: "Social activities can now be created and completed for real, with invitations, host cancellation, attendance tracking and mood, stress and energy effects for everyone who turns up." },
+    ],
+  },
+  {
     version: "1.1.693",
     date: "2026-08-16",
     changes: [

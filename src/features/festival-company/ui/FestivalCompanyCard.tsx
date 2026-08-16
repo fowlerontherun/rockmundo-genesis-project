@@ -3,6 +3,7 @@ import { CalendarCheck, Settings, Tent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { festivalRoutes } from "@/features/festivals/routes";
 import type { OwnedFestivalCompanySummary } from "../data/festivalCompanyRepository";
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
@@ -10,8 +11,8 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { styl
 export const FestivalCompanyCard = ({ festival }: { festival: OwnedFestivalCompanySummary }) => {
   const navigate = useNavigate();
   const needsSetup = !festival.setupCompleted || !festival.configurationComplete || !festival.firstEditionExists;
-  const actionLabel = !festival.managementEnabled ? "Management unavailable" : needsSetup ? "Continue setup" : "View setup summary";
-  const actionPath = `/companies/festivals/${festival.festivalCompanyId}/setup`;
+  const actionLabel = !festival.managementEnabled ? "Management unavailable" : needsSetup ? "Continue setup" : "Manage festival";
+  const actionPath = festivalRoutes.company(festival.festivalCompanyId);
 
   return (
     <Card data-testid={`festival-company-${festival.festivalCompanyId}`}>
