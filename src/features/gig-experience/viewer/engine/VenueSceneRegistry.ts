@@ -7,7 +7,7 @@ export const VENUE_DECOR_SEED_NAMESPACE = "decor-v2" as const;
 export type VenueVariation = 0 | 1 | 2;
 export type VenueArchetype = "pub" | "club" | "theatre" | "arena" | "stadium" | "festival" | "beach";
 export type VenueArchitecture = "brick-room" | "nightclub" | "proscenium" | "arena-bowl" | "stadium-stands" | "festival-field" | "beachfront";
-export type DecorationKind = "table" | "poster" | "booth" | "seat" | "balcony" | "screen" | "tier" | "tunnel" | "tent" | "fence" | "generator" | "palm" | "promenade" | "water" | "speaker" | "light" | "window" | "toilet" | "security" | "curtain" | "aisle";
+export type DecorationKind = "table" | "poster" | "booth" | "seat" | "balcony" | "screen" | "tier" | "tunnel" | "tent" | "fence" | "generator" | "palm" | "promenade" | "water" | "speaker" | "light" | "window" | "toilet" | "security" | "curtain" | "aisle" | "concourse";
 export type PathName = "crowdToBar" | "barToCrowd" | "crowdToMerchandise" | "merchandiseToCrowd" | "entranceToCrowd" | "staffToBar" | "staffToMerchandise";
 export interface DecorationSlot { readonly id: string; readonly kind: DecorationKind; readonly bounds: Readonly<Rect>; readonly style: number }
 export interface CrowdZone extends Readonly<Rect> { readonly id: string; readonly returnAnchor: Readonly<Point> }
@@ -109,6 +109,17 @@ const LARGE: Record<"arena" | "stadium" | "festival" | "beach", readonly Authore
   ],
 };
 
+/** Stage share of the scene, scaled by room size: a stadium stage should read as a small platform in a huge bowl. */
+export const STAGE_SIZE_RULES: Readonly<Record<VenueArchetype, { minWidth: number; maxWidth: number; minHeight: number }>> = Object.freeze({
+  pub: { minWidth: .4, maxWidth: .5, minHeight: .25 },
+  club: { minWidth: .4, maxWidth: .5, minHeight: .25 },
+  theatre: { minWidth: .4, maxWidth: .5, minHeight: .25 },
+  arena: { minWidth: .28, maxWidth: .38, minHeight: .18 },
+  stadium: { minWidth: .22, maxWidth: .32, minHeight: .14 },
+  festival: { minWidth: .3, maxWidth: .4, minHeight: .2 },
+  beach: { minWidth: .34, maxWidth: .48, minHeight: .2 },
+});
+
 const CAPACITY_BAND: Record<VenueArchetype, CapacityBand> = { pub:"intimate", club:"club", theatre:"mid", beach:"mid", arena:"large", stadium:"mega", festival:"mega" };
 const STAFF_PER_POINT: Record<CapacityBand, number> = { intimate:1, club:1, mid:2, large:2, mega:3 };
 
@@ -150,7 +161,7 @@ function buildVariation(archetype: VenueArchetype, variation: VenueVariation): V
     ...barPoints.flatMap((x)=>x.routes), ...merchPoints.flatMap((x)=>x.routes),
     { id: "entrance-to-crowd", from: "entrance-0", to: crowdZones[0].id, waypoints: [entrance,p(entrance.x,.89),hub] },
   ];
-  const genericKinds: Record<VenueArchetype, DecorationKind[]>={pub:["table","poster","window","toilet"],club:["booth","light","security","speaker"],theatre:["seat","balcony","curtain","aisle"],arena:["tier","screen","seat","tunnel"],stadium:["tier","screen","tunnel","seat"],festival:["tent","fence","generator","speaker"],beach:["palm","promenade","water","tent"]};
+  const genericKinds: Record<VenueArchetype, DecorationKind[]>={pub:["table","poster","window","toilet"],club:["booth","light","security","speaker"],theatre:["seat","balcony","curtain","aisle"],arena:["tier","screen","concourse","tunnel"],stadium:["tier","screen","tunnel","concourse"],festival:["tent","fence","generator","speaker"],beach:["palm","promenade","water","tent"]};
   const decorations=authored?.decor ?? large?.decor ?? genericKinds[archetype].map((kind,i)=>slot(`${kind}-${i}`,kind,r(i%2===0?.02:.91,.18+i*.075,.07,.06),i+variation));
   const exteriorSlots = large?.exterior ?? (archetype==="beach"?[slot("sea","water",r(0,.02,1,.09),variation)]:archetype==="festival"?[slot("fence","fence",r(.04,.08,.92,.03),variation)]:[]);
   const base = { descriptorVersion:VENUE_SCENE_DESCRIPTOR_VERSION,archetype,variation,capacityBand:band,seedNamespace:VENUE_LAYOUT_SEED_NAMESPACE,decorationNamespace:VENUE_DECOR_SEED_NAMESPACE,bounds:r(0,0,1,1),safeCameraBounds:r(.01,.01,.98,.98),foregroundEffectBounds:r(.18,.08,.64,.82),labelSafeBounds:r(.03,.02,.94,.07),controlSafeBounds:r(.03,.91,.94,.07),stage,bandPositions:{vocalist:p(stage.x+stage.width*.5,stage.y+stage.height*.72),guitar:p(stage.x+stage.width*.28,stage.y+stage.height*.62),bass:p(stage.x+stage.width*.72,stage.y+stage.height*.62),drums:p(stage.x+stage.width*.5,stage.y+stage.height*.28),keyboard:p(stage.x+stage.width*.78,stage.y+stage.height*.35),unknown:center(stage)},crowdZones,bar,merchandise,bars:barPoints.map(x=>x.point),merchandiseStands:merchPoints.map(x=>x.point),routes,entrances:[entrance],exits:[entrance],queuePoints:{bar:barPoints.flatMap(x=>x.point.queuePoints),merchandise:merchPoints.flatMap(x=>x.point.queuePoints),entrance:[entrance]},staffPositions:{bar:p(bar.x+bar.width*.5,bar.y+bar.height*.28),merchandise:p(merchandise.x+merchandise.width*.5,merchandise.y+merchandise.height*.28)},paths:{crowdToBar:route(barTarget),barToCrowd:reverse(route(barTarget)),crowdToMerchandise:route(merchTarget),merchandiseToCrowd:reverse(route(merchTarget)),entranceToCrowd:[entrance,p(entrance.x,.89),hub],staffToBar:[p(bar.x+bar.width*.2,bar.y+bar.height*.28),barTarget],staffToMerchandise:[p(merchandise.x+merchandise.width*.2,merchandise.y+merchandise.height*.28),merchTarget]},architecture:ARCHITECTURE[archetype],decorations,exteriorSlots };
@@ -195,7 +206,8 @@ export function validateVenueSceneDescriptor(scene: VenueSceneDescriptor): Venue
     route.waypoints.forEach((v,i)=>{checkPoint(v,`routes.${route.id}[${i}]`);if(inside(v,scene.stage))add("ROUTE_CROSSES_STAGE",`routes.${route.id}[${i}]`,"Audience routes must avoid stage");});
   });
   const unique=(items:readonly {id:string}[],path:string)=>{const seen=new Set<string>();items.forEach(x=>{if(seen.has(x.id))add("DUPLICATE_ID",path,`Duplicate id: ${x.id}`);seen.add(x.id);});}; unique(scene.crowdZones,"crowdZones");unique(scene.decorations,"decorations");unique(scene.exteriorSlots,"exteriorSlots");unique(services,"servicePoints");unique(scene.routes,"routes");
-  if(scene.stage.width<.4||scene.stage.width>.5||scene.stage.height<.25)add("STAGE_NOT_READABLE","stage","Stage must occupy 40-50% of scene width and remain readable");
+  const stageRule = STAGE_SIZE_RULES[scene.archetype];
+  if(scene.stage.width<stageRule.minWidth||scene.stage.width>stageRule.maxWidth||scene.stage.height<stageRule.minHeight)add("STAGE_NOT_READABLE","stage",`Stage must occupy ${Math.round(stageRule.minWidth*100)}-${Math.round(stageRule.maxWidth*100)}% of scene width and remain readable`);
   return {valid:errors.length===0,errors};
 }
 
