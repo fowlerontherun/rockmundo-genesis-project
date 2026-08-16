@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.682",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Company jobs work end to end again: applying to a vacancy, withdrawing an application, accepting or declining an offer and resigning all function correctly with skill and capacity checks." },
+      { type: 'feature', description: "Casual shift work added - player businesses now publish paid shifts every morning, and any character can claim, work and get paid from the new Shifts tab on the Employment page." },
+      { type: 'feature', description: "Company owners get a full employee roster with wages, performance and the ability to dismiss staff, plus a working reviews panel that feeds the company's public rating." },
+      { type: 'feature', description: "New Growth tab on every company: goals, cross-business synergies, notifications and internal service usage in one place." },
+      { type: 'improvement', description: "Business automation is live for all company types: daily shift generation, daily demand resolution, daily performance snapshots and weekly finances covering revenue, running costs and staff wages." },
+    ],
+  },
+  {
     version: "1.1.681",
     date: "2026-08-16",
     changes: [
