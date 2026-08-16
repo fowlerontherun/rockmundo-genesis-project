@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.680",
+    date: "2026-08-16",
+    changes: [
+      { type: 'improvement', description: "Song and release distribution costs have been cut sharply: digital distribution is now $3 per country (was $10) and physical is $15 per country (was $50)." },
+      { type: 'improvement', description: "Distance surcharges for distant territories are much gentler - intercontinental physical is 2.2x instead of 4x, and digital barely changes with distance, so global releases are far more affordable." },
+    ],
+  },
+  {
     version: "1.1.679",
     date: "2026-08-16",
     changes: [
