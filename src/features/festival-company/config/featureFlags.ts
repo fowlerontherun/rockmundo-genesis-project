@@ -1,14 +1,15 @@
 /**
  * Central feature flags for the new festival-company replacement programme.
  *
- * Phase 11 (activation): the replacement system defaults ON now that
- * Phases 1-10B are implemented and server capabilities report enabled.
- * Legacy festival reads stay ON as read-only compatibility; legacy
- * gameplay writes stay OFF. Toggle via Vite env vars at build time or
- * override per-render for tests.
+ * Phase 12 (legacy retirement): the replacement system is the only
+ * gameplay surface. Legacy festival gameplay routes are retired and now
+ * redirect to the canonical directory, so the legacy switches default OFF.
+ * They remain as an emergency, read-only escape hatch that can be enabled
+ * per build, and legacy writes stay OFF regardless. Toggle via Vite env
+ * vars at build time or override per-render for tests.
  *
- * VITE_FEATURE_LEGACY_FESTIVAL_SYSTEM   ("true"|"false", default "true")
- * VITE_FEATURE_LEGACY_FESTIVAL_READ     (default "true")
+ * VITE_FEATURE_LEGACY_FESTIVAL_SYSTEM   ("true"|"false", default "false")
+ * VITE_FEATURE_LEGACY_FESTIVAL_READ     (default "false")
  * VITE_FEATURE_LEGACY_FESTIVAL_WRITE    (default "false")
  * VITE_FEATURE_NEW_FESTIVAL_SYSTEM      (default "true")
  * VITE_FEATURE_FESTIVAL_CREATION        (default "true")
@@ -46,9 +47,9 @@ export const resolveFestivalFeatureFlags = (
 ): FestivalFeatureFlags => ({
   legacyFestivalSystemEnabled:
     overrides.legacyFestivalSystemEnabled ??
-    bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_SYSTEM"), true),
+    bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_SYSTEM"), false),
   legacyFestivalReadEnabled:
-    overrides.legacyFestivalReadEnabled ?? bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_READ"), true),
+    overrides.legacyFestivalReadEnabled ?? bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_READ"), false),
   legacyFestivalWriteEnabled:
     overrides.legacyFestivalWriteEnabled ?? bool(readEnv("VITE_FEATURE_LEGACY_FESTIVAL_WRITE"), false),
   newFestivalSystemEnabled:
