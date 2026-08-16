@@ -174,6 +174,7 @@ export class CanvasRenderer {
         ))
       : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
+    const showFrame = deriveShowSequenceFrame(this.showSequence, state.positionMs, this.reducedMotion);
     const activePayload = state.activeEvent?.visualPayload;
     const itemPerformer = activePayload?.type === "performance_item"
       ? performers.find((performer) => performer.id === activePayload.performerId)
