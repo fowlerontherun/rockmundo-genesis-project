@@ -121,6 +121,16 @@ export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
             {song.fame} Fame
           </Badge>
         )}
+        {((song as any).popularity ?? 0) > 0 && (
+          <Badge
+            variant="outline"
+            className="gap-1 bg-sky-500/10 text-sky-500 border-sky-500/20"
+          >
+            <Star className="h-3 w-3" />
+            {(song as any).popularity} Popularity
+          </Badge>
+        )}
+
         <Badge variant="outline" className="gap-1">
           <Clock className="h-3 w-3" />
           {song.duration_display || formatDuration(song.duration_seconds)}

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SongFilters } from "@/components/songs/SongFilters";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
-import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones, Flame } from "lucide-react";
+import { Music, ArrowLeft, Star, Calendar, Music2, Archive, Headphones, Flame, TrendingUp, RefreshCw, Handshake } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { SongArchiveButton } from "@/components/song/SongArchiveButton";
@@ -18,6 +18,9 @@ import { ContributeSongToBandButton } from "@/components/song/ContributeSongToBa
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { useRecalculateSongMetrics } from "@/hooks/useSongCovers";
+import { SongCoverLicensingDialog } from "@/components/songs/SongCoverLicensingDialog";
+
 
 const SongManager = () => {
   const navigate = useNavigate();
@@ -29,6 +32,9 @@ const SongManager = () => {
   const [sortBy, setSortBy] = useState("date_desc");
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [licensingSong, setLicensingSong] = useState<any | null>(null);
+  const recalcMetrics = useRecalculateSongMetrics();
+
 
   const { data: songs, isLoading } = useQuery({
     queryKey: ["user-songs", profileId, user?.id],
@@ -273,6 +279,13 @@ const SongManager = () => {
                         <span className="text-purple-500">{song.fame} Fame</span>
                       </div>
                     )}
+                    {(song.popularity || 0) > 0 && (
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3 text-sky-500" />
+                        <span className="text-sky-500">{song.popularity} Popularity</span>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-1 col-span-2">
                       <Calendar className="h-3 w-3" />
                       <span>{format(new Date(song.created_at), "MMM d, yyyy")}</span>
@@ -335,7 +348,27 @@ const SongManager = () => {
                       size="sm"
                       showDelete={!song.archived}
                     />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1"
+                      onClick={() => setLicensingSong(song)}
+                    >
+                      <Handshake className="h-3 w-3" />
+                      {song.available_for_covers ? `Covers ${Number(song.cover_royalty_percentage ?? 0)}%` : "Licence covers"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs gap-1"
+                      disabled={recalcMetrics.isPending}
+                      onClick={() => recalcMetrics.mutate(song.id)}
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Refresh stats
+                    </Button>
                   </div>
+
 
                 </div>
               </Card>
@@ -351,6 +384,13 @@ const SongManager = () => {
           onClose={() => setSelectedSongId(null)}
         />
       )}
+
+      <SongCoverLicensingDialog
+        open={!!licensingSong}
+        onOpenChange={(open) => !open && setLicensingSong(null)}
+        song={licensingSong}
+      />
+
     </FMPageScaffold>
   );
 };

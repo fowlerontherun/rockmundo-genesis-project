@@ -290,6 +290,8 @@ const ActingCareer = lazyWithRetry(() => import("./pages/ActingCareer"));
 const WebsitesBrowser = lazyWithRetry(() => import("./pages/media/WebsitesBrowser"));
 const SelfPromotionBrowser = lazyWithRetry(() => import("./pages/media/SelfPromotionBrowser"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
+const CoverSongs = lazyWithRetry(() => import("./pages/CoverSongs"));
+
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const ProgressionPanel = lazyWithRetry(() => import("./pages/ProgressionPanel"));
 const GearHistoryPublic = lazyWithRetry(() => import("./pages/GearHistoryPublic"));
@@ -581,6 +583,8 @@ function App() {
                     <Route path="busking" element={<Busking />} />
                     
                     <Route path="song-manager" element={<SongManager />} />
+                    <Route path="cover-songs" element={<CoverSongs />} />
+
                     <Route path="music/overview" element={<PreserveQueryRedirect to="/music" />} />
                     <Route path="music/songs" element={<PreserveQueryRedirect to="/song-manager" />} />
                     <Route path="music/songwriting" element={<PreserveQueryRedirect to="/songwriting" />} />

@@ -42064,8 +42064,105 @@ export type Database = {
         }
         Relationships: []
       }
+      song_cover_requests: {
+        Row: {
+          created_at: string
+          flat_fee_amount: number
+          id: string
+          message: string | null
+          owner_band_id: string | null
+          owner_profile_id: string | null
+          purpose: string
+          requesting_band_id: string
+          requesting_profile_id: string
+          responded_at: string | null
+          responded_by: string | null
+          response_message: string | null
+          royalty_percentage: number
+          song_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flat_fee_amount?: number
+          id?: string
+          message?: string | null
+          owner_band_id?: string | null
+          owner_profile_id?: string | null
+          purpose?: string
+          requesting_band_id: string
+          requesting_profile_id: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_message?: string | null
+          royalty_percentage?: number
+          song_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flat_fee_amount?: number
+          id?: string
+          message?: string | null
+          owner_band_id?: string | null
+          owner_profile_id?: string | null
+          purpose?: string
+          requesting_band_id?: string
+          requesting_profile_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_message?: string | null
+          royalty_percentage?: number
+          song_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_cover_requests_requesting_band_id_fkey"
+            columns: ["requesting_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_cover_requests_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_cover_requests_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_cover_requests_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_cover_requests_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       song_covers: {
         Row: {
+          allows_live: boolean
+          allows_recording: boolean
+          approved_at: string | null
+          approved_by: string | null
           cover_quality: number | null
           covering_band_id: string
           created_at: string | null
@@ -42076,10 +42173,16 @@ export type Database = {
           original_song_id: string
           original_user_id: string | null
           payment_type: string
+          request_id: string | null
           royalty_percentage: number | null
           skill_multiplier: number | null
+          status: string
         }
         Insert: {
+          allows_live?: boolean
+          allows_recording?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           cover_quality?: number | null
           covering_band_id: string
           created_at?: string | null
@@ -42090,10 +42193,16 @@ export type Database = {
           original_song_id: string
           original_user_id?: string | null
           payment_type: string
+          request_id?: string | null
           royalty_percentage?: number | null
           skill_multiplier?: number | null
+          status?: string
         }
         Update: {
+          allows_live?: boolean
+          allows_recording?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           cover_quality?: number | null
           covering_band_id?: string
           created_at?: string | null
@@ -42104,8 +42213,10 @@ export type Database = {
           original_song_id?: string
           original_user_id?: string | null
           payment_type?: string
+          request_id?: string | null
           royalty_percentage?: number | null
           skill_multiplier?: number | null
+          status?: string
         }
         Relationships: [
           {
@@ -42726,17 +42837,22 @@ export type Database = {
           audio_generation_status: string | null
           audio_prompt: string | null
           audio_url: string | null
+          available_for_covers: boolean
           band_id: string | null
           catalog_status: string | null
           chart_position: number | null
           chord_progression_id: string | null
           completed_at: string | null
+          cover_auto_approve: boolean
+          cover_flat_fee: number
+          cover_royalty_percentage: number
           created_at: string
           duration_display: string | null
           duration_seconds: number | null
           extended_audio_generated_at: string | null
           extended_audio_url: string | null
           fame: number | null
+          fame_updated_at: string | null
           fan_favourite_at: string | null
           genre: string
           gig_play_count: number | null
@@ -42756,7 +42872,9 @@ export type Database = {
           original_writer_id: string | null
           ownership_type: string | null
           parent_song_id: string | null
+          peak_popularity: number
           popularity: number | null
+          popularity_updated_at: string | null
           production_potential: number | null
           profile_id: string | null
           purchased_at: string | null
@@ -42790,17 +42908,22 @@ export type Database = {
           audio_generation_status?: string | null
           audio_prompt?: string | null
           audio_url?: string | null
+          available_for_covers?: boolean
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
           chord_progression_id?: string | null
           completed_at?: string | null
+          cover_auto_approve?: boolean
+          cover_flat_fee?: number
+          cover_royalty_percentage?: number
           created_at?: string
           duration_display?: string | null
           duration_seconds?: number | null
           extended_audio_generated_at?: string | null
           extended_audio_url?: string | null
           fame?: number | null
+          fame_updated_at?: string | null
           fan_favourite_at?: string | null
           genre: string
           gig_play_count?: number | null
@@ -42820,7 +42943,9 @@ export type Database = {
           original_writer_id?: string | null
           ownership_type?: string | null
           parent_song_id?: string | null
+          peak_popularity?: number
           popularity?: number | null
+          popularity_updated_at?: string | null
           production_potential?: number | null
           profile_id?: string | null
           purchased_at?: string | null
@@ -42854,17 +42979,22 @@ export type Database = {
           audio_generation_status?: string | null
           audio_prompt?: string | null
           audio_url?: string | null
+          available_for_covers?: boolean
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
           chord_progression_id?: string | null
           completed_at?: string | null
+          cover_auto_approve?: boolean
+          cover_flat_fee?: number
+          cover_royalty_percentage?: number
           created_at?: string
           duration_display?: string | null
           duration_seconds?: number | null
           extended_audio_generated_at?: string | null
           extended_audio_url?: string | null
           fame?: number | null
+          fame_updated_at?: string | null
           fan_favourite_at?: string | null
           genre?: string
           gig_play_count?: number | null
@@ -42884,7 +43014,9 @@ export type Database = {
           original_writer_id?: string | null
           ownership_type?: string | null
           parent_song_id?: string | null
+          peak_popularity?: number
           popularity?: number | null
+          popularity_updated_at?: string | null
           production_potential?: number | null
           profile_id?: string | null
           purchased_at?: string | null
@@ -48949,6 +49081,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      apply_daily_song_popularity_decay: { Args: never; Returns: Json }
       apply_festival_company_licence: {
         Args: {
           p_expected_licence_version: number
@@ -50837,6 +50970,32 @@ export type Database = {
         Args: { target_profile_id: string }
         Returns: string
       }
+      get_coverable_songs: {
+        Args: {
+          p_exclude_band_id?: string
+          p_genre?: string
+          p_limit?: number
+          p_search?: string
+        }
+        Returns: {
+          cover_auto_approve: boolean
+          cover_flat_fee: number
+          cover_royalty_percentage: number
+          existing_request_status: string
+          fame: number
+          genre: string
+          gig_play_count: number
+          owner_band_id: string
+          owner_band_name: string
+          owner_profile_id: string
+          peak_popularity: number
+          popularity: number
+          quality_score: number
+          release_date: string
+          song_id: string
+          title: string
+        }[]
+      }
       get_fame_fans_attribution: {
         Args: { p_day: string; p_profile_id: string }
         Returns: {
@@ -51725,6 +51884,10 @@ export type Database = {
         }
         Returns: Json
       }
+      recalculate_song_fame_popularity: {
+        Args: { p_song_id: string }
+        Returns: Json
+      }
       recompute_candidate_endorsement_bonus: {
         Args: { p_candidate_id: string }
         Returns: undefined
@@ -51818,6 +51981,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      request_song_cover: {
+        Args: {
+          p_band_id: string
+          p_message?: string
+          p_purpose?: string
+          p_song_id: string
+        }
+        Returns: Json
       }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       resign_company_employment: {
@@ -51941,6 +52113,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      respond_to_song_cover_request: {
+        Args: {
+          p_approve: boolean
+          p_request_id: string
+          p_response_message?: string
+          p_royalty_percentage?: number
+        }
+        Returns: Json
       }
       resume_festival_ticket_sales: {
         Args: {
