@@ -17,6 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.693",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Every song now tracks Fame, which builds permanently from streams, radio, hype and live plays and never falls, alongside a dynamic Popularity score that peaks after gigs and fades while the song is rested." },
+      { type: 'feature', description: "New Cover Songs page: search the world's catalogue for songs open to covers, ranked by fame and popularity, and request them for your live sets, recordings or both." },
+      { type: 'feature', description: "Songwriters can list a song for covers from the Song Manager, set the royalty percentage they keep and optionally auto-approve requests." },
+      { type: 'feature', description: "Cover requests now run through a proper approval flow \u2014 owners approve or decline, can adjust the royalty share, and approved covers are licensed for live use and/or recording." },
+      { type: 'improvement', description: "Song cards, song details and the Song Manager now show Popularity and peak popularity next to Fame, with a refresh button to recalculate a song's stats." },
+    ],
+  },
+  {
+
     version: "1.1.692",
     date: "2026-08-16",
     changes: [
