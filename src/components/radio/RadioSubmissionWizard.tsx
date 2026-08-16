@@ -103,37 +103,72 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
     enabled: !!bandId,
   });
 
-  // Fetch visited countries
-  const { data: visitedCountries = [] } = useQuery({
-    queryKey: ["visited-countries-wizard", bandId],
+  // Markets the band can pitch to: countries performed in, plus the band's home
+  // country and the country the active character is currently standing in.
+  const { data: markets = [] } = useQuery({
+    queryKey: ["radio-markets-wizard", bandId, profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const countries = new Set<string>();
+
+      const { data: performed } = await supabase
         .from("band_country_fans")
         .select("country")
         .eq("band_id", bandId)
         .eq("has_performed", true);
-      if (error) throw error;
-      return data.map(d => d.country);
+      (performed ?? []).forEach((row) => row.country && countries.add(row.country));
+
+      const { data: bandRow } = await supabase
+        .from("bands")
+        .select("home_city_id")
+        .eq("id", bandId)
+        .maybeSingle();
+      if (bandRow?.home_city_id) {
+        const { data: city } = await supabase
+          .from("cities")
+          .select("country")
+          .eq("id", bandRow.home_city_id)
+          .maybeSingle();
+        if (city?.country) countries.add(city.country);
+      }
+
+      if (profileId) {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("current_city_id")
+          .eq("id", profileId)
+          .maybeSingle();
+        if (profileRow?.current_city_id) {
+          const { data: city } = await supabase
+            .from("cities")
+            .select("country")
+            .eq("id", profileRow.current_city_id)
+            .maybeSingle();
+          if (city?.country) countries.add(city.country);
+        }
+      }
+
+      return Array.from(countries);
     },
     enabled: !!bandId,
   });
 
-  // Fetch radio stations — only from visited countries
+  // Fetch radio stations in the band's reachable markets
   const { data: stations = [], isLoading: stationsLoading } = useQuery({
-    queryKey: ["radio-stations-wizard", visitedCountries],
+    queryKey: ["radio-stations-wizard", markets],
     queryFn: async () => {
-      if (visitedCountries.length === 0) return [];
+      if (markets.length === 0) return [];
       const { data, error } = await supabase
         .from("radio_stations")
         .select("*")
         .eq("is_active", true)
-        .in("country", visitedCountries)
+        .in("country", markets)
         .order("listener_base", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: visitedCountries.length > 0,
+    enabled: markets.length > 0,
   });
+
 
   // Fetch existing submissions
   const { data: countryFame = [] } = useQuery({
