@@ -19,6 +19,7 @@ import { GigPerformerPanel } from "./GigPerformerPanel";
 import { PlayerGigStageSurface } from "./PlayerGigStageSurface";
 import { fitReplayToPlayerSongExcerpts, PLAYER_SONG_EXCERPT_DURATION_MS } from "./playerReplayTimeline";
 import { buildStoryModel, deriveStorySnapshot } from "./engine/StoryEngine";
+import { buildShowSequence, deriveShowSequenceFrame } from "./engine/ShowSequence";
 import { useGigReplayPlayback } from "./hooks/useGigReplayPlayback";
 import { useGigViewerPreferences } from "./hooks/useGigViewerPreferences";
 import { useGigViewerAudio } from "./audio/useGigViewerAudio";
