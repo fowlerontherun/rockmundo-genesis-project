@@ -273,6 +273,13 @@ const SongManager = () => {
                         <span className="text-purple-500">{song.fame} Fame</span>
                       </div>
                     )}
+                    {(song.popularity || 0) > 0 && (
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3 text-sky-500" />
+                        <span className="text-sky-500">{song.popularity} Popularity</span>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-1 col-span-2">
                       <Calendar className="h-3 w-3" />
                       <span>{format(new Date(song.created_at), "MMM d, yyyy")}</span>
