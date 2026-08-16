@@ -14,6 +14,8 @@ import { getGigViewerReplay } from "@/features/gig-experience/services/GigViewer
 import { getGigExperience } from "@/features/gig-experience/services/GigExperienceService";
 import { metricValue } from "@/features/gig-experience/reportMetric";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import type { GigViewerReplay } from "@/features/gig-experience/events/types";
+import { ReplayEvidenceInspector } from "@/features/gig-experience/viewer/ReplayEvidenceInspector";
 
 type StoredState = "ready" | "generating" | "failed" | "unavailable" | "unsupported_version" | "not_provisioned" | "unknown";
 
