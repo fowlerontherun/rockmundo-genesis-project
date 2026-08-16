@@ -293,7 +293,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         eligibilityReason: reasons.join(", "),
       };
     });
-  }, [selectedSong, band, stations, cityFans, countryFame, existingSubmissions]);
+  }, [selectedSong, band, stations, cityFans, countryFame, existingSubmissions, currentCityId]);
 
   const eligibleCount = eligibleStations.filter(s => s.isEligible).length;
 
@@ -347,9 +347,6 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
       queryClient.invalidateQueries({ queryKey: ["my-radio-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["existing-submissions", selectedSong?.id] });
       
-      if (results.accepted.length > 0) {
-        toast.success(`${results.accepted.length} stations auto-accepted your song!`);
-      }
       if (results.pending.length > 0) {
         toast.info(`${results.pending.length} submissions pending review`);
       }
@@ -568,7 +565,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
 
             <div className="p-3 bg-primary/10 rounded-lg text-sm">
               <AlertCircle className="h-4 w-4 inline mr-2" />
-              Songs meeting quality thresholds will be auto-accepted. Others will be reviewed.
+              Every submission is scored against live market standards, which rise with the number of active bands and the average quality of recorded songs. You will get a written verdict with a full breakdown.
             </div>
 
             <div className="flex gap-2">
