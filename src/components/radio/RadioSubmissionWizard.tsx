@@ -170,23 +170,24 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
   });
 
 
-  // Fetch existing submissions
+  // Regional fame in the reachable markets
   const { data: countryFame = [] } = useQuery({
-    queryKey: ["band-country-fame-wizard", bandId, visitedCountries],
+    queryKey: ["band-country-fame-wizard", bandId, markets],
     queryFn: async () => {
-      if (!bandId || visitedCountries.length === 0) return [];
+      if (!bandId || markets.length === 0) return [];
 
       const { data, error } = await supabase
         .from("band_country_fans")
         .select("country, fame")
         .eq("band_id", bandId)
-        .in("country", visitedCountries);
+        .in("country", markets);
 
       if (error) throw error;
       return data;
     },
-    enabled: !!bandId && visitedCountries.length > 0,
+    enabled: !!bandId && markets.length > 0,
   });
+
 
   const { data: existingSubmissions = [] } = useQuery({
     queryKey: ["existing-submissions", selectedSong?.id],
