@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { StorySnapshot } from "../engine/StoryEngine";
+import type { ShowSequenceFrame } from "../engine/ShowSequence";
 
 interface CrowdAmbienceOptions {
   enabled: boolean;
@@ -8,6 +9,8 @@ interface CrowdAmbienceOptions {
   isPlaying: boolean;
   snapshot: StorySnapshot | null;
   stageType: string;
+  /** Show lifecycle frame: drives pre-show murmur, encore chants and final applause. */
+  showFrame?: ShowSequenceFrame | null;
 }
 
 /**
@@ -17,7 +20,7 @@ interface CrowdAmbienceOptions {
  * No audio assets required — driven entirely from the existing crowd state
  * (energy, reaction, finaleActive) already tracked by the gig replay engine.
  */
-export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, stageType }: CrowdAmbienceOptions) {
+export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, stageType, showFrame = null }: CrowdAmbienceOptions) {
   const ctxRef = useRef<AudioContext | null>(null);
   const noiseRef = useRef<AudioBufferSourceNode | null>(null);
   const bandpassRef = useRef<BiquadFilterNode | null>(null);
@@ -26,6 +29,8 @@ export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, 
   const cheerGainRef = useRef<GainNode | null>(null);
   const lastCheerAtRef = useRef<number>(0);
   const lastReactionRef = useRef<string | null>(null);
+  const lastPhaseRef = useRef<string | null>(null);
+  const lastChantAtRef = useRef<number>(0);
 
   // Setup / teardown
   useEffect(() => {
@@ -108,9 +113,12 @@ export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, 
     const energy = snapshot ? Math.max(0, Math.min(100, snapshot.crowdEnergy)) / 100 : 0.3;
     // Stage type modifies size/reverb feel via bandpass width
     const typeMod = stageType === "club" ? 0.75 : stageType === "theater" ? 0.85 : stageType === "arena" ? 1.1 : stageType === "stadium" ? 1.25 : stageType === "festival" ? 1.15 : 1;
-    const targetLevel = (0.06 + energy * 0.32) * typeMod;
+    // Between-set phases keep a busier room murmur even though energy is low.
+    const phase = showFrame?.phase ?? null;
+    const roomBoost = phase === "pre_show" || phase === "encore_break" || phase === "load_out" ? 0.16 : 0;
+    const targetLevel = (0.06 + energy * 0.32 + roomBoost) * typeMod;
     ambience.gain.setTargetAtTime(targetLevel, now, 0.5);
-    bp.frequency.setTargetAtTime(360 + energy * 620, now, 0.6);
+    bp.frequency.setTargetAtTime(360 + energy * 620 + roomBoost * 400, now, 0.6);
     bp.Q.setTargetAtTime(0.7 + energy * 0.6, now, 0.6);
 
     // Trigger a cheer burst on qualifying reactions
@@ -126,7 +134,27 @@ export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, 
       lastCheerAtRef.current = now;
       playCheer(ctx, cheer, energy, typeMod);
     }
-  }, [snapshot?.crowdEnergy, snapshot?.reaction, snapshot?.finaleActive, muted, volume, stageType, snapshot]);
+
+    // Show lifecycle stings: band walk-on, encore return and the final bow.
+    if (phase && phase !== lastPhaseRef.current) {
+      lastPhaseRef.current = phase;
+      if (phase === "band_entry" || phase === "encore") {
+        lastCheerAtRef.current = now;
+        playCheer(ctx, cheer, 0.95, typeMod);
+        playWhistles(ctx, cheer, typeMod);
+      } else if (phase === "bows") {
+        lastCheerAtRef.current = now;
+        playCheer(ctx, cheer, 1, typeMod * 1.1);
+      }
+    }
+
+    // Rhythmic "one more song" chant and stomping during the encore break.
+    const chant = showFrame?.chant ?? 0;
+    if (chant > 0.45 && now - lastChantAtRef.current > 2.6) {
+      lastChantAtRef.current = now;
+      playChant(ctx, cheer, chant, typeMod);
+    }
+  }, [snapshot?.crowdEnergy, snapshot?.reaction, snapshot?.finaleActive, muted, volume, stageType, snapshot, showFrame?.phase, showFrame?.chant]);
 
   function teardown() {
     try { noiseRef.current?.stop(); } catch { /* noop */ }
@@ -175,4 +203,71 @@ function playCheer(ctx: AudioContext, out: GainNode, intensity: number, typeMod:
   src.connect(hp); hp.connect(lp); lp.connect(env); env.connect(out);
   src.start(now);
   src.stop(now + duration + 0.05);
+}
+
+/** Rhythmic stomp + clap chant used while the crowd calls the band back on. */
+function playChant(ctx: AudioContext, out: GainNode, intensity: number, typeMod: number) {
+  const start = ctx.currentTime;
+  const beats = 4;
+  const beatMs = 0.62;
+  for (let i = 0; i < beats; i += 1) {
+    const at = start + i * beatMs;
+
+    // Stomp: short low thud.
+    const stomp = ctx.createOscillator();
+    stomp.type = "sine";
+    stomp.frequency.setValueAtTime(78, at);
+    stomp.frequency.exponentialRampToValueAtTime(42, at + 0.18);
+    const stompEnv = ctx.createGain();
+    stompEnv.gain.setValueAtTime(0.0001, at);
+    stompEnv.gain.exponentialRampToValueAtTime(0.34 * intensity * typeMod, at + 0.02);
+    stompEnv.gain.exponentialRampToValueAtTime(0.0001, at + 0.24);
+    stomp.connect(stompEnv);
+    stompEnv.connect(out);
+    stomp.start(at);
+    stomp.stop(at + 0.28);
+
+    // Clap layer: filtered noise transient.
+    const length = Math.floor(ctx.sampleRate * 0.16);
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let s = 0; s < length; s += 1) {
+      data[s] = (Math.random() * 2 - 1) * (1 - s / length);
+    }
+    const clap = ctx.createBufferSource();
+    clap.buffer = buffer;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 900;
+    const clapEnv = ctx.createGain();
+    clapEnv.gain.setValueAtTime(0.0001, at);
+    clapEnv.gain.exponentialRampToValueAtTime(0.3 * intensity * typeMod, at + 0.015);
+    clapEnv.gain.exponentialRampToValueAtTime(0.0001, at + 0.2);
+    clap.connect(hp);
+    hp.connect(clapEnv);
+    clapEnv.connect(out);
+    clap.start(at);
+    clap.stop(at + 0.2);
+  }
+}
+
+/** Scattered whistles that punctuate a walk-on or encore return. */
+function playWhistles(ctx: AudioContext, out: GainNode, typeMod: number) {
+  const start = ctx.currentTime;
+  for (let i = 0; i < 3; i += 1) {
+    const at = start + 0.12 + Math.random() * 0.9;
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    const base = 1600 + Math.random() * 900;
+    osc.frequency.setValueAtTime(base, at);
+    osc.frequency.linearRampToValueAtTime(base * 1.22, at + 0.22);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, at);
+    env.gain.exponentialRampToValueAtTime(0.09 * typeMod, at + 0.05);
+    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.38);
+    osc.connect(env);
+    env.connect(out);
+    osc.start(at);
+    osc.stop(at + 0.4);
+  }
 }

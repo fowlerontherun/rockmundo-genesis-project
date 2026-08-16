@@ -19,6 +19,7 @@ import { GigPerformerPanel } from "./GigPerformerPanel";
 import { PlayerGigStageSurface } from "./PlayerGigStageSurface";
 import { fitReplayToPlayerSongExcerpts, PLAYER_SONG_EXCERPT_DURATION_MS } from "./playerReplayTimeline";
 import { buildStoryModel, deriveStorySnapshot } from "./engine/StoryEngine";
+import { buildShowSequence, deriveShowSequenceFrame } from "./engine/ShowSequence";
 import { useGigReplayPlayback } from "./hooks/useGigReplayPlayback";
 import { useGigViewerPreferences } from "./hooks/useGigViewerPreferences";
 import { useGigViewerAudio } from "./audio/useGigViewerAudio";
@@ -232,6 +233,15 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     [experience?.gig?.venue?.name, experience?.gig?.venue?.type, experience?.gig?.venue?.capacity],
   );
 
+  const showSequence = useMemo(
+    () => buildShowSequence({ story, stageType, durationMs: playbackReplay.durationMs }),
+    [story, stageType, playbackReplay.durationMs],
+  );
+  const showFrame = useMemo(
+    () => state ? deriveShowSequenceFrame(showSequence, state.positionMs, reducedMotion) : null,
+    [showSequence, state, reducedMotion],
+  );
+
   useCrowdAmbience({
     enabled: !!audio.enabled,
     muted: !!audio.muted,
@@ -239,6 +249,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     isPlaying: !!state?.isPlaying,
     snapshot,
     stageType,
+    showFrame,
   });
 
   const ambiencePlan = useMemo(() => {

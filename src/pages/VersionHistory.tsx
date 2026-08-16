@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.692",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Gigs now play out as a full show: house lights up before the band walk on, curtains fly out, the band leave for the encore break and finally walk off at the end." },
+      { type: 'feature', description: "Crowds hold phone lights up and chant and stomp for one more song during the encore break, with new walk-on, encore and final-bow crowd roars and whistles." },
+      { type: 'improvement', description: "Fans now slip off to the toilets before the show, between songs and during weaker songs, queueing at the washrooms before heading back into the room." },
+    ],
+  },
+  {
     version: "1.1.691",
     date: "2026-08-16",
     changes: [

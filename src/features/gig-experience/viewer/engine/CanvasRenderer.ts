@@ -27,6 +27,9 @@ import { crowdDrawStride, effectiveDevicePixelRatio, resolveRenderBudget, type R
 import { resolvePerformanceTier, type PerformanceTier } from "./ViewerDiagnostics";
 import { StaticSceneLayer } from "./StaticSceneLayer";
 import { buildVenueSignagePlan, drawVenueSignage, type VenueSignagePlan } from "./VenueSignagePlan";
+import { buildShowSequence, deriveShowSequenceFrame, type ShowSequenceModel } from "./ShowSequence";
+import { drawCurtains, drawPhoneLights, drawShowLighting } from "./ShowStaging";
+import { buildToiletActivityPlan, deriveToiletActivity, drawToiletActivity, type ToiletActivityPlan } from "./ToiletActivity";
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -51,6 +54,8 @@ export class CanvasRenderer {
   private readonly backgroundLayer = new StaticSceneLayer("background");
   private readonly architectureLayer = new StaticSceneLayer("architecture");
   private readonly signagePlan: VenueSignagePlan;
+  private readonly showSequence: ShowSequenceModel;
+  private toiletPlan: ToiletActivityPlan | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -105,12 +110,18 @@ export class CanvasRenderer {
     });
     this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd });
     this.signagePlan = buildVenueSignagePlan({ scene: this.venueScene, venueName: experience?.gig.venue.name, reducedMotion });
+    const stageType = selectStageType({
+      venueName: experience?.gig?.venue?.name ?? null,
+      venueType: experience?.gig?.venue?.type ?? null,
+      capacity: experience?.gig?.venue?.capacity ?? null,
+    });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
-      stageType: selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: experience?.gig?.venue?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }),
+      stageType,
       seed: replay.simulationSeed ?? replay.id,
       intensity: this.options.pyroIntensity ?? 1,
     });
+    this.showSequence = buildShowSequence({ story: this.storyModel, stageType, durationMs: replay.durationMs });
   }
 
   resize(size: Size) {
@@ -137,6 +148,13 @@ export class CanvasRenderer {
     });
     this.performerPlan = buildPerformerPlan({ replay: this.replay, experience: this.experience, size: this.size });
     this.audiencePlan = buildAudienceActivityPlan({ preset: scaledPreset, seed: this.replay.simulationSeed ?? this.replay.id, attendanceRatio: this.layout.capacity > 0 ? this.layout.attendance / this.layout.capacity : 0.6, reducedMotion: this.reducedMotion });
+    this.toiletPlan = buildToiletActivityPlan({
+      replay: this.replay,
+      story: this.storyModel,
+      scene: this.venueScene,
+      size: this.size,
+      displayedCrowd: this.displayedCrowd,
+    });
   }
 
   render(state: DerivedPlaybackState) {
@@ -156,6 +174,7 @@ export class CanvasRenderer {
         ))
       : [];
     const storySnapshot = deriveStorySnapshot(this.storyModel, state.positionMs, this.reducedMotion);
+    const showFrame = deriveShowSequenceFrame(this.showSequence, state.positionMs, this.reducedMotion);
     const activePayload = state.activeEvent?.visualPayload;
     const itemPerformer = activePayload?.type === "performance_item"
       ? performers.find((performer) => performer.id === activePayload.performerId)
@@ -245,9 +264,18 @@ export class CanvasRenderer {
     ctx.globalAlpha = 1;
 
     if (livingVenue) drawVenueActivity(ctx, size, this.venueActivityPlan, state.positionMs, this.reducedMotion);
+    if (livingVenue && this.toiletPlan) {
+      drawToiletActivity(
+        ctx,
+        this.toiletPlan,
+        deriveToiletActivity(this.toiletPlan, state.positionMs),
+        state.positionMs,
+        this.reducedMotion,
+      );
+    }
 
     performers.forEach((p) => {
-      if (!p.visible) return;
+      if (!p.visible || !showFrame.bandOnStage) return;
       if (performanceItemFrame?.hideStagePerformer && performanceItemFrame.performerId === p.id) return;
       const focusIds = [state.performerFocusId, storySnapshot.performerFocusId];
       const focus = focusIds.some((id) => id === p.id || id === p.profileId)
@@ -268,7 +296,16 @@ export class CanvasRenderer {
     if (this.audiencePlan) drawAudienceActivity(ctx, this.audiencePlan, { positionMs: state.positionMs, energy: storySnapshot.crowdEnergy, reducedMotion: this.reducedMotion });
     drawPerformanceItemActivity(ctx, performanceItemFrame, preset.stage, preset.audience, this.reducedMotion, itemPerformer?.initials ?? "★");
     drawAtmosphere(ctx, preset, size, storySnapshot.crowdEnergy, state.positionMs, this.reducedMotion);
+    drawShowLighting(ctx, preset, size, showFrame);
+    drawPhoneLights(
+      ctx,
+      (crowd?.entities ?? []).filter((entity) => entity.visible).map((entity) => ({ x: entity.x, y: entity.y })),
+      showFrame.phoneLights,
+      state.positionMs,
+      this.reducedMotion,
+    );
     drawPyrotechnics(ctx, preset, size, { plan: this.pyroPlan, positionMs: state.positionMs, reducedMotion: this.reducedMotion, crowdEnergy: storySnapshot.crowdEnergy });
+    drawCurtains(ctx, preset, showFrame);
 
     if (state.activeEvent?.visualPayload.type === "spotlight" || state.activeEvent?.visualPayload.type === "moment_effect") {
       ctx.strokeStyle = "rgba(250, 204, 21, .75)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(size.width / 2, preset.stage.y + preset.stage.height / 2, 48 + (this.reducedMotion ? 0 : Math.sin(state.positionMs / 180) * 8), 0, Math.PI * 2); ctx.stroke();

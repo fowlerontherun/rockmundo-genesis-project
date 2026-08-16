@@ -96,7 +96,7 @@ function resolveStations(scene: VenueSceneDescriptor): ActivityStation[] {
  * Demand windows: fans leave the crowd before the show, between songs and during
  * comparatively weak songs, and stay put through highlights, the encore and the finale.
  */
-function buildDemandWeights(replay: GigViewerReplay, story: StoryModel): number[] {
+export function buildDemandWeights(replay: GigViewerReplay, story: StoryModel): number[] {
   const buckets = 96; const size = Math.max(1, replay.durationMs / buckets);
   const highlights = story.highlights.filter((h) => h.importance === "important" || h.importance === "critical").map((h) => h.offsetMs);
   const protectedFrom = Math.min(
