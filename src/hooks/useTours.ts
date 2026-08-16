@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { listTours, rescheduleTour, updateTour } from "@/lib/api/tours";
 import type { UpdateTourInput } from "@/lib/api/tours";
+import { fetchAllVenues } from "@/utils/fetchAllVenues";
 
 export const useTours = (bandId?: string) => {
   const { toast } = useToast();
