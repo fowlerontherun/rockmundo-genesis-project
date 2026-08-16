@@ -263,6 +263,15 @@ export class CanvasRenderer {
     ctx.globalAlpha = 1;
 
     if (livingVenue) drawVenueActivity(ctx, size, this.venueActivityPlan, state.positionMs, this.reducedMotion);
+    if (livingVenue && this.toiletPlan) {
+      drawToiletActivity(
+        ctx,
+        this.toiletPlan,
+        deriveToiletActivity(this.toiletPlan, state.positionMs),
+        state.positionMs,
+        this.reducedMotion,
+      );
+    }
 
     performers.forEach((p) => {
       if (!p.visible || !showFrame.bandOnStage) return;
