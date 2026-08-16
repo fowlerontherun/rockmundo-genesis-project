@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.695",
+    date: "2026-08-16",
+    changes: [
+      { type: 'improvement', description: "Stadium and arena gigs now feel properly huge: the stage is a much smaller platform at one end, with a deep floor, side stands, a rear stand, upper tiers behind the stage and a concourse ring around the outside." },
+      { type: 'improvement', description: "Stands are drawn as raked, stepped seating tiers with stairway gaps, and concourses show walkways and kiosks, so the bowl reads as real architecture rather than a plain outline." },
+      { type: 'improvement', description: "Stage-to-room proportions are now scaled per venue type — stadiums get the smallest stage share, then arenas and festivals, while pubs, clubs and theatres keep their intimate close-up stages." },
+      { type: 'improvement', description: "Crowds now stand in rows facing the stage instead of clustering in blocks: fans are shoulder to shoulder and tightly aligned at the front barrier, then progressively more spread out and less ordered towards the back." },
+      { type: 'improvement', description: "Partly sold gigs now fill the front of the floor first and only spread back through the stands as attendance grows, so a half-full stadium looks half full in the right places." },
+    ],
+  },
+  {
     version: "1.1.694",
     date: "2026-08-16",
     changes: [

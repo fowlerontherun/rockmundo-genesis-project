@@ -117,6 +117,136 @@ export function representedWeights(attendance: number, cap: number, densityMulti
   return Array.from({ length: count }, (_, i) => base + (i >= count - remainder ? 1 : 0));
 }
 
+
+export interface CrowdRowSlot {
+  id: string;
+  point: Point;
+  rowIndex: number;
+  lateralDistance: number;
+  stageDistance: number;
+}
+
+const ROW_LATERAL_JITTER = .22;
+const ROW_DEPTH_JITTER = .3;
+
+/** Depth axis for a zone: fans face the stage, so rows run perpendicular to the stage-to-zone direction. */
+function zoneDepthAxis(zone: Rect, stage: Rect): { axis: "x" | "y"; sign: 1 | -1 } {
+  const centre = rectCentre(zone);
+  const stageCentre = rectCentre(stage);
+  const dx = centre.x - stageCentre.x;
+  const dy = centre.y - stageCentre.y;
+  if (Math.abs(dx) > Math.abs(dy) * 1.2) return { axis: "x", sign: dx >= 0 ? 1 : -1 };
+  return { axis: "y", sign: dy >= 0 ? 1 : -1 };
+}
+
+function distributeRowCounts(total: number, rows: number): number[] {
+  const weights = Array.from({ length: rows }, (_, index) => 1 - .45 * (rows <= 1 ? 0 : index / (rows - 1)));
+  const sum = weights.reduce((acc, value) => acc + value, 0);
+  const counts = weights.map((weight) => Math.max(1, Math.floor((total * weight) / sum)));
+  let assigned = counts.reduce((acc, value) => acc + value, 0);
+  let index = 0;
+  while (assigned > total && counts.some((count) => count > 1)) {
+    const cursor = counts.length - 1 - (index % counts.length);
+    if (counts[cursor] > 1) { counts[cursor] -= 1; assigned -= 1; }
+    index += 1;
+  }
+  index = 0;
+  while (assigned < total) { counts[index % counts.length] += 1; assigned += 1; index += 1; }
+  return counts;
+}
+
+/**
+ * Places fans in rows parallel to the stage: shoulder-to-shoulder and tightly aligned at the barrier,
+ * progressively sparser, wider spaced and more jittered towards the back of the zone.
+ */
+export function buildCrowdRowsForZone(zone: Rect, stage: Rect, count: number, fillFraction: number, rand: () => number, zoneLabel: string): CrowdRowSlot[] {
+  const total = Math.max(0, Math.floor(count));
+  if (total === 0) return [];
+  const { axis, sign } = zoneDepthAxis(zone, stage);
+  const depthSpan = Math.max(1, (axis === "y" ? zone.height : zone.width) * Math.max(.12, Math.min(1, fillFraction)));
+  const lateralSpan = Math.max(1, axis === "y" ? zone.width : zone.height);
+  const rows = Math.max(1, Math.min(64, Math.round(Math.sqrt((total * depthSpan * 1.35) / lateralSpan)) || 1));
+  const counts = distributeRowCounts(total, rows);
+
+  const gapWeights = Array.from({ length: rows }, (_, index) => 1 + 1.25 * (rows <= 1 ? 0 : index / (rows - 1)));
+  const gapSum = gapWeights.reduce((acc, value) => acc + value, 0);
+  const depthOrigin = axis === "y" ? (sign > 0 ? zone.y : zone.y + zone.height) : sign > 0 ? zone.x : zone.x + zone.width;
+  const lateralOrigin = axis === "y" ? zone.x : zone.y;
+
+  const slots: CrowdRowSlot[] = [];
+  let cumulative = 0;
+  for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
+    const gap = (gapWeights[rowIndex] / gapSum) * depthSpan;
+    const rowDepth = cumulative + gap * .5;
+    cumulative += gap;
+    const depthFraction = rows <= 1 ? 0 : rowIndex / (rows - 1);
+    const members = counts[rowIndex];
+    const pitch = lateralSpan / members;
+    for (let member = 0; member < members; member += 1) {
+      const stagger = rowIndex % 2 === 1 ? pitch * .5 : 0;
+      const jitterScale = .25 + .75 * depthFraction;
+      const lateral = lateralOrigin + Math.max(pitch * .3, Math.min(lateralSpan - pitch * .3,
+        (member + .5) * pitch + stagger - (stagger ? pitch * .25 : 0) + (rand() - .5) * pitch * ROW_LATERAL_JITTER * 2 * jitterScale));
+      const depth = rowDepth + (rand() - .5) * gap * ROW_DEPTH_JITTER * 2 * depthFraction;
+      const along = depthOrigin + sign * Math.max(1, Math.min(depthSpan, depth));
+      const point = axis === "y" ? { x: lateral, y: along } : { x: along, y: lateral };
+      slots.push({
+        id: `${zoneLabel}-row${rowIndex}-${member}`,
+        point,
+        rowIndex,
+        lateralDistance: Math.abs(lateral - (lateralOrigin + lateralSpan / 2)),
+        stageDistance: rowDepth,
+      });
+    }
+  }
+  return slots;
+}
+
+/**
+ * Builds the whole audience as realistic rows: zones fill front-to-back, so a half-full room
+ * packs the front of the floor rather than scattering clusters across the venue.
+ */
+export function buildCrowdRowPlan(zones: Rect[], stage: Rect, attendanceRatio: number, entityCount: number, rand: () => number): CrowdRowSlot[] {
+  const total = Math.max(0, Math.floor(entityCount));
+  if (total === 0) return [];
+  const source = zones.length ? zones : [{ x: stage.x, y: stage.y + stage.height, width: stage.width, height: 1 }];
+  const axes = packingAxes(source, stage);
+  const ordered = [...source]
+    .map((rect, originalIndex) => ({ rect, originalIndex, distance: projectedDepth(rectCentre(rect), axes) }))
+    .sort((a, b) => a.distance - b.distance || a.originalIndex - b.originalIndex);
+
+  const ratio = Math.max(.02, Math.min(1, Number.isFinite(attendanceRatio) ? attendanceRatio : 0));
+  const areas = ordered.map(({ rect }) => Math.max(1, rect.width * rect.height));
+  const areaTotal = areas.reduce((acc, value) => acc + value, 0);
+  const reach = Math.pow(ratio, .85);
+
+  const used: { rect: Rect; label: string; fill: number; area: number }[] = [];
+  let cumulative = 0;
+  for (let index = 0; index < ordered.length; index += 1) {
+    const share = areas[index] / areaTotal;
+    if (cumulative >= reach && used.length) break;
+    const label = index === 0 ? "front" : index === ordered.length - 1 && ordered.length > 2 ? "rear" : "middle";
+    used.push({ rect: ordered[index].rect, label, area: areas[index], fill: Math.max(.15, Math.min(1, (reach - cumulative) / share)) });
+    cumulative += share;
+  }
+
+  const usedArea = used.reduce((acc, zone) => acc + zone.area * zone.fill, 0);
+  let assigned = 0;
+  const slots: CrowdRowSlot[] = [];
+  used.forEach((zone, index) => {
+    const count = index === used.length - 1
+      ? total - assigned
+      : Math.max(1, Math.min(total - assigned - (used.length - index - 1), Math.round((total * zone.area * zone.fill) / usedArea)));
+    assigned += count;
+    slots.push(...buildCrowdRowsForZone(zone.rect, stage, count, zone.fill, rand, `${zone.label}-${index}`)
+      .map((slot) => ({ ...slot, stageDistance: index * 1e5 + slot.stageDistance })));
+  });
+
+  return slots
+    .sort((a, b) => a.stageDistance - b.stageDistance || a.rowIndex - b.rowIndex || a.lateralDistance - b.lateralDistance)
+    .slice(0, total);
+}
+
 export function buildCrowdPackingCells(zones: Rect[], stage: Rect): CrowdPackingCell[] {
   const source = zones.length ? zones : [{ x: stage.x, y: stage.y + stage.height, width: stage.width, height: 1 }];
   const axes = packingAxes(source, stage);
@@ -192,12 +322,6 @@ export function buildCrowdPlan({
   });
   const preset = scaleVenuePreset(selectVenuePreset({ capacity: safeCapacity }), size);
   const weights = representedWeights(safeAttendance, cap, CROWD_DENSITY_MULTIPLIER);
-  const packingCells = selectActivePackingCells(
-    buildCrowdPackingCells(preset.crowdZones.length ? preset.crowdZones : [preset.audience], preset.stage),
-    ratio,
-    weights.length,
-  );
-  const packingSlots = allocatePackingSlots(packingCells, weights.length);
 
   const entryStartMs = findEventOffset(replay, "venue_open", 0);
   const crowdFill = replay.events.filter((event) => event.visualPayload.type === "crowd_fill");
@@ -213,23 +337,29 @@ export function buildCrowdPlan({
   const rand = deterministicRandom(
     `${replay.simulationSeed}:crowd-entry:${preset.name}:${Math.round(size.width)}x${Math.round(size.height)}`,
   );
+  const rowRand = deterministicRandom(
+    `${replay.simulationSeed}:crowd-rows:${preset.name}:${Math.round(size.width)}x${Math.round(size.height)}:${weights.length}`,
+  );
+  const rowSlots = buildCrowdRowPlan(
+    preset.crowdZones.length ? preset.crowdZones : [preset.audience],
+    preset.stage,
+    ratio,
+    weights.length,
+    rowRand,
+  );
 
   const baseEntities = weights.map((weight, i) => {
     const entranceIndex = weightedIndex(i, preset.entrances.length || 1, replay.simulationSeed);
     const entrance = preset.entrances[entranceIndex] ?? fallbackEntrance(preset.audience);
     const start = boundedEntrancePoint(entrance, preset.audience, rand, i);
-    const slot = packingSlots[i] ?? {
-      cell: {
-        id: "front-0-centre",
-        rect: preset.audience,
-        stageDistance: 0,
-        lateralDistance: 0,
-        area: preset.audience.width * preset.audience.height,
-      },
-      localIndex: i,
-      localCount: weights.length,
+    const slot = rowSlots[i] ?? {
+      id: "front-0-row0-0",
+      point: rectCentre(preset.audience),
+      rowIndex: 0,
+      lateralDistance: 0,
+      stageDistance: 0,
     };
-    const target = deterministicPackedPoint(slot.cell.rect, rand, slot.localIndex, slot.localCount);
+    const target = slot.point;
     const waypoint = {
       x: start.x + (target.x - start.x) * 0.45,
       y: Math.max(preset.audience.y + 8, start.y + (target.y - start.y) * 0.35),
@@ -243,7 +373,7 @@ export function buildCrowdPlan({
       seedIndex: i,
       weight,
       entranceId: `entrance-${entranceIndex}`,
-      targetZoneId: slot.cell.id,
+      targetZoneId: slot.id,
       x: start.x,
       y: start.y,
       start,

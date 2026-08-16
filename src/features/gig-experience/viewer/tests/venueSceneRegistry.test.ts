@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deterministicVenueVariationSeed, generateVenueScene, resolveVenueArchetype, SAFE_CLUB_DESCRIPTOR, validateVenueSceneDescriptor, VENUE_LAYOUT_REGISTRY, VENUE_SCENE_DESCRIPTOR_VERSION, type VenueSceneDescriptor } from "../engine/VenueSceneRegistry";
+import { deterministicVenueVariationSeed, generateVenueScene, resolveVenueArchetype, SAFE_CLUB_DESCRIPTOR, validateVenueSceneDescriptor, VENUE_LAYOUT_REGISTRY, VENUE_SCENE_DESCRIPTOR_VERSION, STAGE_SIZE_RULES, type VenueSceneDescriptor } from "../engine/VenueSceneRegistry";
 
 const mutable = (descriptor: VenueSceneDescriptor): any => JSON.parse(JSON.stringify(descriptor));
 
@@ -56,9 +56,24 @@ describe("versioned venue scene descriptors", () => {
 describe("phase 2B large venue descriptors", () => {
   const LARGE_TYPES = ["arena", "stadium", "festival", "beach"] as const;
 
-  it("keeps every authored stage at 40-50% of useful scene width", () => {
+  it("scales the stage share to the room so large venues read as big rooms", () => {
     for (const descriptors of Object.values(VENUE_LAYOUT_REGISTRY)) for (const d of descriptors) {
-      expect(d.stage.width).toBeGreaterThanOrEqual(.4); expect(d.stage.width).toBeLessThanOrEqual(.5);
+      const rule = STAGE_SIZE_RULES[d.archetype];
+      expect(d.stage.width).toBeGreaterThanOrEqual(rule.minWidth);
+      expect(d.stage.width).toBeLessThanOrEqual(rule.maxWidth);
+      expect(d.stage.height).toBeGreaterThanOrEqual(rule.minHeight);
+    }
+    for (const d of VENUE_LAYOUT_REGISTRY.stadium) expect(d.stage.width).toBeLessThan(VENUE_LAYOUT_REGISTRY.club[0].stage.width);
+  });
+
+  it("gives arenas and stadiums stands, concourses and floor depth", () => {
+    for (const archetype of ["arena", "stadium"] as const) for (const d of VENUE_LAYOUT_REGISTRY[archetype]) {
+      expect(d.crowdZones.length).toBeGreaterThanOrEqual(5);
+      const kinds = d.decorations.map((slot) => slot.kind);
+      expect(kinds.filter((kind) => kind === "tier").length).toBeGreaterThanOrEqual(4);
+      expect(kinds).toContain("concourse");
+      const deepest = Math.max(...d.crowdZones.map((zone) => zone.y + zone.height));
+      expect(deepest).toBeGreaterThan(.75);
     }
   });
 

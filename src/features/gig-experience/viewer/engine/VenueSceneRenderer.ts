@@ -230,8 +230,34 @@ export function drawVenueArchitecture(ctx: CanvasRenderingContext2D, size: Size,
   ctx.save(); const indoor = !["festival-field", "beachfront"].includes(scene.architecture);
   if (indoor) { ctx.fillStyle = scene.architecture === "brick-room" ? "rgba(69,26,3,.82)" : scene.architecture === "nightclub" ? "rgba(24,8,38,.86)" : "rgba(15,23,42,.84)"; ctx.fillRect(0, size.height * .09, size.width, size.height * .86); }
   if (scene.architecture === "proscenium") { ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 18; const s = rect(scene.stage, size); ctx.strokeRect(s.x - 8, s.y - 8, s.width + 16, s.height + 16); }
-  if (scene.architecture === "arena-bowl" || scene.architecture === "stadium-stands") { ctx.strokeStyle = scene.architecture === "stadium-stands" ? "#475569" : "#334155"; ctx.lineWidth = scene.architecture === "stadium-stands" ? 38 : 26; ctx.strokeRect(18, 25, size.width - 36, size.height - 50); }
+  if (scene.architecture === "arena-bowl" || scene.architecture === "stadium-stands") drawBowlShell(ctx, size, scene.architecture === "stadium-stands");
   ctx.restore();
+}
+
+/** Bowl shell: outer structure, stepped stand rings and a pitch-side barrier so the floor reads as a small island in a big room. */
+function drawBowlShell(ctx: CanvasRenderingContext2D, size: Size, stadium: boolean) {
+  const rings = stadium ? 5 : 4;
+  const outer = { x: size.width * .008, y: size.height * .05, width: size.width * .984, height: size.height * .92 };
+  ctx.fillStyle = stadium ? "#0b1220" : "#0d1526";
+  ctx.fillRect(outer.x, outer.y, outer.width, outer.height);
+  for (let index = 0; index < rings; index += 1) {
+    const inset = (index + 1) / (rings + 1);
+    const ringRect = {
+      x: outer.x + outer.width * .045 * inset * rings * .5,
+      y: outer.y + outer.height * .05 * inset * rings * .5,
+      width: outer.width * (1 - .045 * inset * rings),
+      height: outer.height * (1 - .05 * inset * rings),
+    };
+    ctx.strokeStyle = index % 2 ? "rgba(71,85,105,.85)" : "rgba(51,65,85,.85)";
+    ctx.lineWidth = stadium ? 9 : 7;
+    ctx.strokeRect(ringRect.x, ringRect.y, ringRect.width, ringRect.height);
+  }
+  if (stadium) {
+    ctx.strokeStyle = "rgba(148,163,184,.35)"; ctx.lineWidth = 3;
+    ctx.strokeRect(outer.x, outer.y, outer.width, outer.height);
+    ctx.fillStyle = "rgba(2,6,23,.55)";
+    ctx.fillRect(outer.x, outer.y, outer.width, size.height * .035);
+  }
 }
 
 export function drawSceneDecorationsAndServices(
@@ -306,7 +332,46 @@ function drawDecoration(ctx: CanvasRenderingContext2D, size: Size, slot: Decorat
       break;
     }
     case "tier": {
-      for (let index = 0; index < 4; index += 1) { ctx.fillStyle = index % 2 ? "#334155" : "#475569"; ctx.fillRect(r.x + index * r.width * .06, r.y + index * r.height * .2, r.width - index * r.width * .12, r.height * .18); }
+      // Raked seating stand: stepped rows rise away from the pitch, with vomitory gaps.
+      const vertical = r.height >= r.width;
+      const steps = Math.max(4, Math.min(9, Math.round((vertical ? r.width : r.height) / 6) + 4));
+      ctx.fillStyle = "rgba(15,23,42,.86)"; ctx.fillRect(r.x, r.y, r.width, r.height);
+      for (let index = 0; index < steps; index += 1) {
+        const t = index / steps;
+        const next = (index + 1) / steps;
+        ctx.fillStyle = index % 2 ? "#334155" : "#3f4b5f";
+        if (vertical) {
+          const x = r.x + r.width * t;
+          ctx.fillRect(x, r.y + r.height * .02 * index, r.width * (next - t) * .92, r.height * (1 - .04 * index));
+        } else {
+          const y = r.y + r.height * t;
+          ctx.fillRect(r.x + r.width * .02 * index, y, r.width * (1 - .04 * index), r.height * (next - t) * .92);
+        }
+      }
+      ctx.fillStyle = "rgba(2,6,23,.85)";
+      [.34, .68].forEach((gap) => {
+        if (vertical) ctx.fillRect(r.x, r.y + r.height * gap, r.width, Math.max(1.5, r.height * .022));
+        else ctx.fillRect(r.x + r.width * gap, r.y, Math.max(1.5, r.width * .022), r.height);
+      });
+      ctx.strokeStyle = "rgba(203,213,225,.35)"; ctx.strokeRect(r.x, r.y, r.width, r.height);
+      break;
+    }
+    case "concourse": {
+      // Walkway ring with kiosk shutters and stair markings.
+      ctx.fillStyle = "#1f2937"; ctx.fillRect(r.x, r.y, r.width, r.height);
+      ctx.fillStyle = "rgba(148,163,184,.28)"; ctx.fillRect(r.x, r.y, r.width, Math.max(1, r.height * .16));
+      const along = Math.max(r.width, r.height);
+      const kiosks = Math.max(3, Math.round(along / 46));
+      for (let index = 0; index < kiosks; index += 1) {
+        const t = (index + .5) / kiosks;
+        ctx.fillStyle = index % 3 === 0 ? "#475569" : "#334155";
+        if (r.width >= r.height) ctx.fillRect(r.x + r.width * t - r.width / (kiosks * 3), r.y + r.height * .3, r.width / (kiosks * 1.6), r.height * .6);
+        else ctx.fillRect(r.x + r.width * .3, r.y + r.height * t - r.height / (kiosks * 3), r.width * .6, r.height / (kiosks * 1.6));
+      }
+      ctx.strokeStyle = "rgba(226,232,240,.22)"; ctx.setLineDash([5, 5]);
+      if (r.width >= r.height) { ctx.beginPath(); ctx.moveTo(r.x, cy); ctx.lineTo(r.x + r.width, cy); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.moveTo(cx, r.y); ctx.lineTo(cx, r.y + r.height); ctx.stroke(); }
+      ctx.setLineDash([]);
       break;
     }
     case "tunnel": {
