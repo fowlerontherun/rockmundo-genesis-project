@@ -26,7 +26,6 @@ import { useCrowdAmbience } from "./audio/useCrowdAmbience";
 import { useVenueAmbience } from "./audio/useVenueAmbience";
 import { resolveVenueAmbiencePlan } from "./engine/VenueAmbiencePlan";
 import { resolveVenueArchetype } from "./engine/VenueSceneRegistry";
-import { resolveGigEnvironment } from "./engine/EnvironmentRegistry";
 import { selectStageType } from "./engine/VenueLayout";
 import { StageTypeLabels } from "./engine/StageDecor";
 import { GigViewerAudioControls } from "./audio/GigViewerAudioControls";
