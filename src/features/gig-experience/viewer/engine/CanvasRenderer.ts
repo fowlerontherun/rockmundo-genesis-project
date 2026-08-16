@@ -265,7 +265,7 @@ export class CanvasRenderer {
     if (livingVenue) drawVenueActivity(ctx, size, this.venueActivityPlan, state.positionMs, this.reducedMotion);
 
     performers.forEach((p) => {
-      if (!p.visible) return;
+      if (!p.visible || !showFrame.bandOnStage) return;
       if (performanceItemFrame?.hideStagePerformer && performanceItemFrame.performerId === p.id) return;
       const focusIds = [state.performerFocusId, storySnapshot.performerFocusId];
       const focus = focusIds.some((id) => id === p.id || id === p.profileId)
