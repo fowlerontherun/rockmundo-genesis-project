@@ -110,12 +110,18 @@ export class CanvasRenderer {
     });
     this.venueActivityPlan = buildVenueActivityPlan({ replay, story: this.storyModel, scene: this.venueScene, displayedCrowd });
     this.signagePlan = buildVenueSignagePlan({ scene: this.venueScene, venueName: experience?.gig.venue.name, reducedMotion });
+    const stageType = selectStageType({
+      venueName: experience?.gig?.venue?.name ?? null,
+      venueType: experience?.gig?.venue?.type ?? null,
+      capacity: experience?.gig?.venue?.capacity ?? null,
+    });
     this.pyroPlan = this.options.pyrotechnics === false ? null : buildPyroPlan({
       story: this.storyModel,
-      stageType: selectStageType({ venueName: experience?.gig?.venue?.name ?? null, venueType: experience?.gig?.venue?.type ?? null, capacity: experience?.gig?.venue?.capacity ?? null }),
+      stageType,
       seed: replay.simulationSeed ?? replay.id,
       intensity: this.options.pyroIntensity ?? 1,
     });
+    this.showSequence = buildShowSequence({ story: this.storyModel, stageType, durationMs: replay.durationMs });
   }
 
   resize(size: Size) {
