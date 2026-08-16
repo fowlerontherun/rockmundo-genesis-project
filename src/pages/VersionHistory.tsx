@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.681",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Seeded another 40+ world-famous venues, including Madison Square Garden, Red Rocks, Ryman Auditorium, The O2, Elbphilharmonie, Teatro alla Scala, Auditorio Nacional, Rod Laver Arena, Hong Kong Coliseum and Cairo Opera House." },
+      { type: 'fix', description: "All venues are now visible to players - gig booking, tour planning and performance booking previously only loaded the first 1,000 venues, hiding most of the world's stages." },
+    ],
+  },
+  {
     version: "1.1.680",
     date: "2026-08-16",
     changes: [
