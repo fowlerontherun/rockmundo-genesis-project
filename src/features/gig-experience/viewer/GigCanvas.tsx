@@ -14,6 +14,7 @@ import { useGlobalCrowdTuning } from "./hooks/useGlobalCrowdTuning";
 import type { GigViewerCameraMode } from "./engine/CameraDirector";
 import { buildViewerDiagnostics } from "./engine/ViewerDiagnostics";
 import { resolveRenderBudget } from "./engine/PerformanceProfile";
+import type { PerformancePreference } from "./hooks/useGigViewerPreferences";
 
 export function GigCanvas({
   replay,
@@ -26,6 +27,7 @@ export function GigCanvas({
   fill = false,
   immersive = false,
   cameraMode = "venue_wide",
+  performancePreference = "auto",
   className,
 }: {
   replay: GigViewerReplay;
@@ -38,6 +40,7 @@ export function GigCanvas({
   fill?: boolean;
   immersive?: boolean;
   cameraMode?: GigViewerCameraMode;
+  performancePreference?: PerformancePreference;
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -56,7 +59,7 @@ export function GigCanvas({
     global: globalTuning.data?.settings,
   });
   const tuningKey = crowdTuningSignature(resolved.tuning);
-  const diagnostics = buildViewerDiagnostics({ replay, experience, cameraMode, reducedMotion });
+  const diagnostics = buildViewerDiagnostics({ replay, experience, cameraMode, reducedMotion, performancePreference: performancePreference === "auto" ? null : performancePreference });
   const renderBudget = resolveRenderBudget({
     tier: diagnostics.performanceTier,
     displayedCrowd: diagnostics.representativeCrowdCount,
@@ -78,7 +81,7 @@ export function GigCanvas({
     rendererRef.current = renderer;
     renderer.resize(logical);
     return () => { renderer.destroy(); rendererRef.current = null; };
-  }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey, cameraMode]);
+  }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey, cameraMode, diagnostics.performanceTier]);
 
   // Preference changes recreate the renderer; include them here so a paused
   // replay paints its new camera/effects immediately rather than waiting for a tick.

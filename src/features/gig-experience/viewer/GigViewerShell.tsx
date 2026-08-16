@@ -201,7 +201,7 @@ interface ReadyReplayProps {
 }
 
 function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onClose }: ReadyReplayProps) {
-  const { reducedMotion, setReducedMotion, pyrotechnics, setPyrotechnics, cameraMode, setCameraMode } = prefs;
+  const { reducedMotion, setReducedMotion, pyrotechnics, setPyrotechnics, cameraMode, setCameraMode, performancePreference, setPerformancePreference } = prefs;
   const playbackReplay = useMemo(
     () => mode === "player" ? fitReplayToPlayerSongExcerpts(replay, experience) : replay,
     [mode, replay, experience],
@@ -438,6 +438,8 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onReducedMotion={setReducedMotion}
       onPyrotechnics={setPyrotechnics}
       onCameraMode={setCameraMode}
+      performancePreference={performancePreference}
+      onPerformancePreference={setPerformancePreference}
       onFullscreen={toggleFullscreen}
     />
   );
@@ -470,6 +472,8 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onReducedMotion={setReducedMotion}
       onPyrotechnics={setPyrotechnics}
       onCameraMode={setCameraMode}
+      performancePreference={performancePreference}
+      onPerformancePreference={setPerformancePreference}
       onFullscreen={toggleFullscreen}
     />
   );
@@ -502,6 +506,8 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onReducedMotion={setReducedMotion}
       onPyrotechnics={setPyrotechnics}
       onCameraMode={setCameraMode}
+      performancePreference={performancePreference}
+      onPerformancePreference={setPerformancePreference}
       onFullscreen={toggleFullscreen}
     />
   );
@@ -515,6 +521,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
         reducedMotion={reducedMotion}
         pyrotechnics={pyrotechnics}
         cameraMode={cameraMode}
+        performancePreference={performancePreference}
         fill
         immersive
         className="h-full w-full"
@@ -548,6 +555,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       reducedMotion={reducedMotion}
       pyrotechnics={pyrotechnics}
       cameraMode={cameraMode}
+      performancePreference={performancePreference}
       fill={fullscreen}
       className={fullscreen ? "h-full min-h-0 w-full" : "w-full"}
     />
