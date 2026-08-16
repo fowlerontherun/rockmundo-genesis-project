@@ -103,12 +103,10 @@ export default function PerformanceBooking() {
   const { data: venues = [] } = useQuery({
     queryKey: ["venues"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("venues")
-        .select("id, name, capacity, reputation")
-        .order("reputation", { ascending: false });
-      if (error) throw error;
-      return data || [];
+      return await fetchAllVenues<{ id: string; name: string; capacity: number | null; reputation: number | null }>(
+        "id, name, capacity, reputation",
+        { column: "reputation", ascending: false },
+      );
     },
   });
 
