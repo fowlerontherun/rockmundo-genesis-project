@@ -54,6 +54,8 @@ export class CanvasRenderer {
   private readonly backgroundLayer = new StaticSceneLayer("background");
   private readonly architectureLayer = new StaticSceneLayer("architecture");
   private readonly signagePlan: VenueSignagePlan;
+  private readonly showSequence: ShowSequenceModel;
+  private toiletPlan: ToiletActivityPlan | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
