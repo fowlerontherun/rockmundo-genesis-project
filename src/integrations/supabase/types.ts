@@ -14596,6 +14596,65 @@ export type Database = {
           },
         ]
       }
+      festival_edition_runtimes: {
+        Row: {
+          admitted: number
+          created_at: string
+          departed: number
+          edition_id: string
+          festival_company_id: string
+          gate_status: string
+          id: string
+          idempotency_key: string | null
+          last_action: string | null
+          notes: string | null
+          simulated_time: string
+          state: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          admitted?: number
+          created_at?: string
+          departed?: number
+          edition_id: string
+          festival_company_id: string
+          gate_status?: string
+          id?: string
+          idempotency_key?: string | null
+          last_action?: string | null
+          notes?: string | null
+          simulated_time?: string
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          admitted?: number
+          created_at?: string
+          departed?: number
+          edition_id?: string
+          festival_company_id?: string
+          gate_status?: string
+          id?: string
+          idempotency_key?: string | null
+          last_action?: string | null
+          notes?: string | null
+          simulated_time?: string
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_runtimes_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_edition_settlements: {
         Row: {
           calculation_config_version: string
@@ -19863,6 +19922,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      festival_stage_operating_hours: {
+        Row: {
+          changeover_minutes: number
+          created_at: string
+          curfew: string
+          edition_id: string
+          festival_date: string
+          id: string
+          opening_time: string
+          shutdown_buffer_minutes: number
+          stage_id: string
+          updated_at: string
+        }
+        Insert: {
+          changeover_minutes?: number
+          created_at?: string
+          curfew?: string
+          edition_id: string
+          festival_date: string
+          id?: string
+          opening_time?: string
+          shutdown_buffer_minutes?: number
+          stage_id: string
+          updated_at?: string
+        }
+        Update: {
+          changeover_minutes?: number
+          created_at?: string
+          curfew?: string
+          edition_id?: string
+          festival_date?: string
+          id?: string
+          opening_time?: string
+          shutdown_buffer_minutes?: number
+          stage_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       festival_stage_slot_reservations: {
         Row: {
@@ -50964,6 +51062,37 @@ export type Database = {
         }
         Returns: Json
       }
+      festival_schedule_configure_stage_hours: {
+        Args: {
+          p_changeover_minutes?: number
+          p_curfew?: string
+          p_edition_id: string
+          p_festival_date: string
+          p_idempotency_key?: string
+          p_opening_time?: string
+          p_shutdown_buffer_minutes?: number
+          p_stage_id: string
+        }
+        Returns: Json
+      }
+      festival_schedule_discard_draft: {
+        Args: {
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_reason?: string
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      festival_schedule_lock: {
+        Args: {
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_reason?: string
+          p_revision_id: string
+        }
+        Returns: Json
+      }
       festival_schedule_preview_template: {
         Args: {
           p_curfew?: string
@@ -50980,6 +51109,25 @@ export type Database = {
           p_acknowledge_warnings?: boolean
           p_edition_id: string
           p_idempotency_key?: string
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      festival_schedule_reopen: {
+        Args: {
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_reason?: string
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      festival_schedule_upsert_item: {
+        Args: {
+          p_edition_id: string
+          p_expected_version?: number
+          p_idempotency_key?: string
+          p_item: Json
           p_revision_id: string
         }
         Returns: Json
@@ -51265,6 +51413,10 @@ export type Database = {
       }
       get_festival_configuration: {
         Args: { p_festival_company_id: string }
+        Returns: Json
+      }
+      get_festival_edition_runtime_control_room: {
+        Args: { p_edition_id: string; p_festival_company_id: string }
         Returns: Json
       }
       get_festival_hall_of_fame: { Args: never; Returns: Json }
@@ -51886,6 +52038,16 @@ export type Database = {
           p_game_type: string
           p_metadata?: Json
           p_payout: number
+        }
+        Returns: Json
+      }
+      prepare_festival_edition_runtime: {
+        Args: {
+          p_edition_id: string
+          p_expected_edition_version?: number
+          p_expected_schedule_revision?: string
+          p_festival_company_id: string
+          p_idempotency_key?: string
         }
         Returns: Json
       }
@@ -53322,6 +53484,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      transition_festival_edition_runtime: {
+        Args: {
+          p_action: string
+          p_expected_version: number
+          p_idempotency_key?: string
+          p_reason?: string
+          p_runtime_id: string
+        }
+        Returns: Json
       }
       unblock_player: { Args: { target_profile_id: string }; Returns: boolean }
       unblock_profile: { Args: { target_profile_id: string }; Returns: boolean }
