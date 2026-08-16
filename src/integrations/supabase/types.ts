@@ -50632,6 +50632,7 @@ export type Database = {
           units: number
         }[]
       }
+      get_server_time: { Args: never; Returns: string }
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
         Returns: number
@@ -50736,9 +50737,38 @@ export type Database = {
         Args: { post_id: string; vote_field: string }
         Returns: undefined
       }
+      increment_performance_count: {
+        Args: { band_id: string }
+        Returns: number
+      }
+      increment_profile_xp: {
+        Args: { profile_id_param: string; xp_amount: number }
+        Returns: number
+      }
+      increment_relationship_score: {
+        Args: {
+          p_delta: number
+          p_entity_a_id: string
+          p_entity_b_id: string
+          p_field: string
+        }
+        Returns: Json
+      }
       increment_release_revenue: {
         Args: { amount: number; release_id: string }
         Returns: undefined
+      }
+      increment_user_cash: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: number
+      }
+      increment_user_fame: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: number
+      }
+      increment_value: {
+        Args: { amount: number; row_id: string }
+        Returns: number
       }
       invalidate_festival_performance_outcome: {
         Args: {
@@ -52310,6 +52340,10 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      update_player_health: {
+        Args: { p_health_change: number; p_user_id: string }
+        Returns: number
+      }
       update_song_fame: {
         Args: { p_fame_amount: number; p_song_id: string; p_source: string }
         Returns: undefined
