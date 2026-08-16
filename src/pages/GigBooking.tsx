@@ -14,6 +14,7 @@ import { useGameData } from '@/hooks/useGameData';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllVenues } from '@/utils/fetchAllVenues';
 import type { Database } from '@/lib/supabase-types';
 import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog, GigBookingSubmission } from '@/components/gig/GigBookingDialog';
@@ -109,15 +110,16 @@ const GigBooking = () => {
   }, [currentCity, playerCountry, playerCity]);
 
   const loadVenues = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('venues')
-      .select(`
+    let venueData: VenueWithCity[] = [];
+    try {
+      venueData = await fetchAllVenues<VenueWithCity>(
+        `
         *,
         cities!city_id (id, name, country, timezone)
-      `)
-      .order('prestige_level', { ascending: true });
-
-    if (error) {
+      `,
+        { column: 'prestige_level', ascending: true },
+      );
+    } catch (error) {
       console.error('Error loading venues:', error);
       toast({
         title: 'Unable to load venues',
@@ -127,7 +129,6 @@ const GigBooking = () => {
       return;
     }
 
-    const venueData = (data ?? []) as VenueWithCity[];
     setVenues(venueData);
     
     // Extract unique countries from venues

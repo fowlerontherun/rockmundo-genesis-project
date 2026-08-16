@@ -18,6 +18,7 @@ import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
 import { ScheduleConflictAlert } from "@/components/ScheduleConflictAlert";
 import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { fetchAllVenues } from "@/utils/fetchAllVenues";
 import { addDurationHours, buildScheduledDateTime, getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 
 export default function PerformanceBooking() {
@@ -103,12 +104,10 @@ export default function PerformanceBooking() {
   const { data: venues = [] } = useQuery({
     queryKey: ["venues"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("venues")
-        .select("id, name, capacity, reputation")
-        .order("reputation", { ascending: false });
-      if (error) throw error;
-      return data || [];
+      return await fetchAllVenues<{ id: string; name: string; capacity: number | null; reputation: number | null }>(
+        "id, name, capacity, reputation",
+        { column: "reputation", ascending: false },
+      );
     },
   });
 

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { listTours, rescheduleTour, updateTour } from "@/lib/api/tours";
 import type { UpdateTourInput } from "@/lib/api/tours";
+import { fetchAllVenues } from "@/utils/fetchAllVenues";
 
 export const useTours = (bandId?: string) => {
   const { toast } = useToast();
@@ -38,13 +39,7 @@ export const useTours = (bandId?: string) => {
   const { data: venues } = useQuery({
     queryKey: ["tour-venues"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("venues")
-        .select("*, city:cities(*)")
-        .order("name");
-
-      if (error) throw error;
-      return data;
+      return await fetchAllVenues<any>("*, city:cities(*)", { column: "name", ascending: true });
     },
   });
 
