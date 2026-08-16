@@ -20,6 +20,7 @@ describe("deterministic venue activity", () => {
     expect(first).toEqual(resized);
     expect(first.visits.every((visit) => visit.service === "merchandise" && visit.carriedItem === "shirt")).toBe(true);
     expect(first.visits.length).toBeGreaterThan(0);
+    expect(first.evidenceMode).toBe("aggregate");
 
     const zeroReplay = { ...commerceReplay, commerce: { ...commerceReplay.commerce!, merchandise: { ...commerceReplay.commerce!.merchandise, itemsSold: 0, lines: [] } } };
     expect(buildVenueActivityPlan({ replay: zeroReplay, story: buildStoryModel(zeroReplay, null), scene, displayedCrowd: 16 }).visits).toEqual([]);
@@ -30,7 +31,10 @@ describe("deterministic venue activity", () => {
     const first = make(); const second = make(); expect(first.plan).toEqual(second.plan);
     expect(new Set(first.plan.visits.map((v) => v.actorId)).size).toBe(first.plan.visits.length);
     expect(first.plan.visits.length).toBeLessThanOrEqual(first.scene.queuePoints.bar.length + first.scene.queuePoints.merchandise.length);
-    for (const service of ["bar", "merchandise"] as const) expect(new Set(first.plan.visits.filter((v) => v.service === service).map((v) => v.queueSlot)).size).toBe(first.plan.visits.filter((v) => v.service === service).length);
+    expect(first.plan.evidenceMode).toBe("ambient");
+    expect(new Set(first.plan.visits.map((v) => v.stationId)).size).toBeGreaterThan(1);
+    for (const visit of first.plan.visits) expect(first.plan.staff.some((staff) => staff.stationId === visit.stationId)).toBe(true);
+    for (const station of new Set(first.plan.visits.map((v) => v.stationId))) expect(new Set(first.plan.visits.filter((v) => v.stationId === station).map((v) => v.queueSlot)).size).toBe(first.plan.visits.filter((v) => v.stationId === station).length);
   });
 
   it("derives valid routes, service states and a return to the original crowd point", () => {
@@ -40,7 +44,8 @@ describe("deterministic venue activity", () => {
       const states = samples.map((time) => deriveVenueActivity(plan, time).find((a) => a.id === visit.actorId)!);
       expect(states[0].state).toBe(visit.service === "bar" ? "walking_to_bar" : "walking_to_merchandise");
       expect(states[1].state).toContain("queueing"); expect(states[2].state).toContain("being_served");
-      expect(states[3]).toMatchObject({ state: "watching_stage", position: visit.origin, service: null, queueSlot: null });
+      expect(states[3]).toMatchObject({ state: "watching_stage", position: visit.returnDestination, service: null, queueSlot: null });
+      expect(visit.returnDestination).not.toEqual(visit.origin);
       for (const point of [...visit.routeOut, ...visit.routeBack]) { expect(point.x).toBeGreaterThanOrEqual(0); expect(point.x).toBeLessThanOrEqual(1); expect(point.y).toBeGreaterThanOrEqual(0); expect(point.y).toBeLessThanOrEqual(1); expect(point.x >= scene.stage.x && point.x <= scene.stage.x + scene.stage.width && point.y >= scene.stage.y && point.y <= scene.stage.y + scene.stage.height).toBe(false); }
     }
     expect(plan.minimumWatchingFans).toBeGreaterThanOrEqual(4);
@@ -68,7 +73,7 @@ describe("deterministic venue activity", () => {
     const samples = Array.from({ length: 121 }, (_, index) => index * 500);
     for (const time of samples) {
       for (const staff of deriveVenueStaffActivity(plan, time)) {
-        const bounds = staff.service === "bar" ? scene.bar : scene.merchandise;
+        const bounds = plan.staff.find((entry) => entry.id === staff.id)!.bounds;
         expect(staff.position.x).toBeGreaterThanOrEqual(bounds.x);
         expect(staff.position.x).toBeLessThanOrEqual(bounds.x + bounds.width);
         expect(staff.position.y).toBeGreaterThanOrEqual(bounds.y);
@@ -84,8 +89,8 @@ describe("deterministic venue activity", () => {
     const { plan } = make(); const visit = plan.visits[0];
     const serviceStart = visit.departureMs + visit.walkMs + visit.browseMs + visit.queueMs;
     const handoverTime = serviceStart + visit.serviceMs * .5;
-    const serviceStaff = plan.staff.filter((staff) => staff.service === visit.service);
-    const expected = serviceStaff.find((staff) => staff.stationIndex === visit.queueSlot % serviceStaff.length)!;
+    const stationStaff = plan.staff.filter((staff) => staff.stationId === visit.stationId);
+    const expected = stationStaff.find((staff) => staff.staffIndex === visit.queueSlot % stationStaff.length)!;
     const serving = deriveVenueStaffActivity(plan, handoverTime).find((staff) => staff.id === expected.id)!;
     expect(serving).toMatchObject({ state: "serving", servingActorId: visit.actorId, service: visit.service });
     expect(deriveVenueStaffActivity(plan, handoverTime)).toEqual(deriveVenueStaffActivity(plan, handoverTime));
@@ -93,7 +98,7 @@ describe("deterministic venue activity", () => {
   });
 
   it("disables invalid or missing service routes safely", () => {
-    const { scene: base } = make(); const scene = { ...base, paths: { ...base.paths, crowdToBar: [] }, queuePoints: { ...base.queuePoints, merchandise: [] } } as typeof base;
+    const { scene: base } = make(); const scene = { ...base, bars: [], merchandiseStands: [], routes: [], paths: { ...base.paths, crowdToBar: [] }, queuePoints: { ...base.queuePoints, merchandise: [] } } as typeof base;
     const plan = buildVenueActivityPlan({ replay, story: buildStoryModel(replay, null), scene, displayedCrowd: 16 });
     expect(plan.visits).toEqual([]); expect(plan.staff).toEqual([]); expect(deriveVenueActivity(plan, 10_000)).toEqual([]); expect(deriveVenueStaffActivity(plan, 10_000)).toEqual([]);
   });
