@@ -384,6 +384,13 @@ const SongManager = () => {
           onClose={() => setSelectedSongId(null)}
         />
       )}
+
+      <SongCoverLicensingDialog
+        open={!!licensingSong}
+        onOpenChange={(open) => !open && setLicensingSong(null)}
+        song={licensingSong}
+      />
+
     </FMPageScaffold>
   );
 };
