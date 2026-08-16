@@ -27,7 +27,7 @@ export function WorldAtAGlance() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const rows: { label: string; value: number | null | undefined }[] = [
+  const allRows: { label: string; value: number | null | undefined }[] = [
     { label: "Registered artists", value: data?.artists },
     { label: "Active bands", value: data?.bands },
     { label: "Songs written", value: data?.songs },
@@ -35,6 +35,9 @@ export function WorldAtAGlance() {
     { label: "Venues worldwide", value: data?.venues },
     { label: "Cities on the map", value: data?.cities },
   ];
+
+  // Hide figures we could not read, so the box never prints a misleading zero
+  const rows = allRows.filter((row) => typeof row.value === "number" && row.value > 0);
 
   return (
     <section className="border-2 border-foreground p-3">
