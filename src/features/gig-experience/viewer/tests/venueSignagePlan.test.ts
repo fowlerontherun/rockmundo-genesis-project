@@ -40,11 +40,14 @@ describe("venue signage plan", () => {
     }
   });
 
-  it("varies with the venue name without changing panel count", () => {
-    const [scene] = scenes;
+  it("puts the venue name on marquee boards without changing panel count", () => {
+    const scene = scenes[1];
     const a = buildVenueSignagePlan({ scene, venueName: "Alpha Hall" });
     const b = buildVenueSignagePlan({ scene, venueName: "Beta Hall" });
     expect(a.panels.length).toBe(b.panels.length);
-    expect(a.panels.map((panel) => panel.text)).not.toEqual(b.panels.map((panel) => panel.text));
+    const marquee = (plan: typeof a) => plan.panels.filter((panel) => panel.kind === "marquee").map((panel) => panel.text);
+    expect(marquee(a).length).toBeGreaterThan(0);
+    expect(marquee(a).join("|")).toContain("ALPHA HALL");
+    expect(marquee(a)).not.toEqual(marquee(b));
   });
 });
