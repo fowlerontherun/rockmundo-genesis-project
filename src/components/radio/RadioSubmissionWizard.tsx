@@ -213,8 +213,23 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
     enabled: !!selectedSong && (!!profileId || !!userId),
   });
 
+  const { data: currentCityId } = useQuery({
+    queryKey: ["radio-wizard-current-city", profileId],
+    queryFn: async () => {
+      if (!profileId) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("current_city_id")
+        .eq("id", profileId)
+        .maybeSingle();
+      return data?.current_city_id ?? null;
+    },
+    enabled: !!profileId,
+  });
+
   // Calculate eligible stations
   const eligibleStations = useMemo((): EligibleStation[] => {
+
     if (!selectedSong || !band) return [];
     
     const cityFanMap = new Set(cityFans.map(cf => cf.city_id));
