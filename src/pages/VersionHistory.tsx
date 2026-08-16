@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.689",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Friend requests now work end to end: sending, accepting and declining are handled on the server, and the friends/incoming/outgoing counters are accurate again." },
+      { type: 'feature', description: "Private messaging now uses proper conversation threads with unread counts, read receipts, archiving and per-conversation muting." },
+      { type: 'feature', description: "Player safety tools are live: you can block, unblock, mute, unmute and report other players, and your blocks and reports are visible only to you." },
+      { type: 'improvement', description: "Blocked players can no longer send each other friend requests or messages, and blocked conversations are hidden from your inbox." },
+    ],
+  },
+  {
     version: "1.1.688",
     date: "2026-08-16",
     changes: [
