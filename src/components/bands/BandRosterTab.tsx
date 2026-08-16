@@ -560,7 +560,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Band roster</CardTitle>
-          <CardDescription>Overview of every active member and their contributions. Band leaders can change performance roles, including solo-act lineups.</CardDescription>
+          <CardDescription>Overview of every active member and their contributions. Members can hold multiple performance roles, and leaders or the members themselves can update roles and travel plans.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {members.length === 0 ? (
