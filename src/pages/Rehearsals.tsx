@@ -33,6 +33,7 @@ import { RehearsalParticipantsSection } from "@/components/social/ParticipantSta
 import { BandAvailabilityConflictDialog } from "@/components/band/BandAvailabilityConflictDialog";
 import {
   isBandUnavailableError,
+  joinBandActivityLate,
   type ConflictInfo,
 } from "@/utils/bandActivityScheduling";
 
@@ -216,6 +217,56 @@ const Rehearsals = () => {
     enabled: !!selectedBand?.id,
   });
 
+
+  // Which upcoming rehearsals is the active character actually booked into?
+  // Members skipped by a leader override are missing here and can opt back in.
+  const { data: myBookedRehearsalIds = [] } = useQuery({
+    queryKey: ["my-rehearsal-schedule", profileId],
+    queryFn: async () => {
+      if (!profileId) return [] as string[];
+      const { data, error } = await (supabase as any)
+        .from("player_scheduled_activities")
+        .select("linked_rehearsal_id")
+        .eq("profile_id", profileId)
+        .eq("activity_type", "rehearsal")
+        .neq("status", "cancelled")
+        .not("linked_rehearsal_id", "is", null);
+      if (error) return [] as string[];
+      return (data || []).map((row: any) => row.linked_rehearsal_id as string);
+    },
+    enabled: !!profileId,
+  });
+
+  const handleJoinRehearsal = async (rehearsal: Rehearsal) => {
+    if (!profileId) return;
+    const result = await joinBandActivityLate({
+      profileId,
+      userId: profile?.user_id ?? null,
+      bandId: rehearsal.band_id,
+      activityType: "rehearsal",
+      title: `Band Rehearsal - ${rehearsal.rehearsal_rooms?.name || "Rehearsal room"}`,
+      scheduledStart: new Date(rehearsal.scheduled_start),
+      scheduledEnd: new Date(rehearsal.scheduled_end),
+      location: rehearsal.rehearsal_rooms?.location || null,
+      linkedRehearsalId: rehearsal.id,
+      metadata: { rehearsalId: rehearsal.id },
+    });
+
+    if (result.joined) {
+      toast({
+        title: "You're in",
+        description: "You've been added to this rehearsal.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["my-rehearsal-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+    } else {
+      toast({
+        title: "Can't join yet",
+        description: result.reason,
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch rehearsals for all user's bands
   const { data: rehearsals = [], isLoading } = useQuery({
@@ -679,6 +730,24 @@ const Rehearsals = () => {
                         </div>
                       </div>
                     </div>
+
+                    {rehearsal.status === "scheduled" &&
+                      !myBookedRehearsalIds.includes(rehearsal.id) && (
+                        <div className="flex flex-col gap-2 rounded-md border border-dashed border-destructive/40 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            You are not booked into this session — the band went
+                            ahead without you.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleJoinRehearsal(rehearsal)}
+                          >
+                            <CalendarPlus className="mr-2 h-4 w-4" />
+                            Join session
+                          </Button>
+                        </div>
+                      )}
 
                     <Separator />
                     <RehearsalParticipantsSection
