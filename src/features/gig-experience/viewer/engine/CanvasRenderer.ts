@@ -63,6 +63,8 @@ export class CanvasRenderer {
       crowdTuning?: Partial<CrowdTuningOptions> | null;
       cameraMode?: GigViewerCameraMode;
       performanceTier?: PerformanceTier | null;
+      /** When false, the prior stage-first renderer path is used (staged rollout fallback). */
+      livingVenue?: boolean;
     } = {},
   ) {
     const ctx = canvas.getContext("2d");
@@ -193,18 +195,19 @@ export class CanvasRenderer {
     ctx.clearRect(0, 0, size.width, size.height);
     ctx.save();
     applyCameraTransform(ctx, cameraFrame.camera, size);
-    const staticKey = `${this.venueScene.structuralFingerprint}|${this.environment.profile.kind}`;
+    const livingVenue = this.options.livingVenue !== false;
+    const staticKey = `${this.venueScene.structuralFingerprint}|${this.environment.profile.kind}|${livingVenue ? "living" : "legacy"}`;
     this.backgroundLayer.paint(ctx, { key: staticKey, size, dpr: this.dpr }, (layerCtx, layerSize) => {
       drawBackground(layerCtx, preset, layerSize);
     });
-    drawExteriorEnvironment(ctx, size, this.environment, this.environmentPlan, state.positionMs, this.reducedMotion);
+    if (livingVenue) drawExteriorEnvironment(ctx, size, this.environment, this.environmentPlan, state.positionMs, this.reducedMotion);
     this.architectureLayer.paint(ctx, { key: staticKey, size, dpr: this.dpr }, (layerCtx, layerSize) => {
-      drawVenueArchitecture(layerCtx, layerSize, this.venueScene);
+      if (livingVenue) drawVenueArchitecture(layerCtx, layerSize, this.venueScene);
       drawVenueShell(layerCtx, preset, layerSize);
       drawFloor(layerCtx, preset, this.venueDetailPlan.floorMarks);
-      drawSceneDecorationsAndServices(layerCtx, layerSize, this.venueScene, this.venueDetailPlan);
+      if (livingVenue) drawSceneDecorationsAndServices(layerCtx, layerSize, this.venueScene, this.venueDetailPlan);
     });
-    if (this.renderBudget.crowdDetail !== "aggregated") {
+    if (livingVenue && this.renderBudget.crowdDetail !== "aggregated") {
       drawVenueSignage(ctx, size, this.signagePlan, state.positionMs, this.reducedMotion);
     }
     if (crowd && preset.crowdZones.length > 1) {
@@ -241,7 +244,7 @@ export class CanvasRenderer {
     });
     ctx.globalAlpha = 1;
 
-    drawVenueActivity(ctx, size, this.venueActivityPlan, state.positionMs, this.reducedMotion);
+    if (livingVenue) drawVenueActivity(ctx, size, this.venueActivityPlan, state.positionMs, this.reducedMotion);
 
     performers.forEach((p) => {
       if (!p.visible) return;
