@@ -1,5 +1,6 @@
 import type { GigViewerReplay } from "../../events/types";
 import type { ActivityEvidenceMode } from "./ViewerDiagnostics";
+import { verifyReplayChecksum, type ReplayChecksumVerdict } from "./ReplayChecksum";
 
 /**
  * Phase 5 inspector contract. Pure, read-only projection of an already loaded
@@ -16,6 +17,9 @@ export interface ReplayEvidenceSummary {
   status: GigViewerReplay["status"];
   resultAvailable: boolean;
   checksumPresent: boolean;
+  /** Recomputed from the immutable payload: proves regeneration produced identical facts. */
+  checksumVerdict: ReplayChecksumVerdict;
+  computedChecksum: string;
   simulationSeedFingerprint: string;
   durationMs: number;
   eventCount: number;
@@ -35,6 +39,7 @@ export interface ReplayEvidenceSummary {
     barGrossRevenue: number | null;
     barOwner: string | null;
     barShareSource: string | null;
+    savedEventCount: number;
   };
   validationFailures: readonly string[];
 }
@@ -53,7 +58,9 @@ export function buildReplayEvidenceSummary(input: {
   }
 
   const commerce = replay.commerce ?? null;
-  const evidenceMode: ActivityEvidenceMode = commerce ? "aggregate" : "ambient";
+  const savedEventCount = commerce?.events?.length ?? 0;
+  const evidenceMode: ActivityEvidenceMode = savedEventCount > 0 ? "event_replay" : commerce ? "aggregate" : "ambient";
+  const checksum = verifyReplayChecksum(replay);
 
   return {
     replayId: replay.id,
@@ -69,7 +76,9 @@ export function buildReplayEvidenceSummary(input: {
           : "unsupported",
     status: replay.status,
     resultAvailable: replay.resultAvailable !== false,
-    checksumPresent: typeof replay.checksum === "string" && replay.checksum.length > 0,
+    checksumPresent: checksum.stored !== null,
+    checksumVerdict: checksum.verdict,
+    computedChecksum: checksum.computed,
     simulationSeedFingerprint: seedFingerprint(replay.simulationSeed),
     durationMs: replay.durationMs,
     eventCount: replay.events.length,
@@ -88,6 +97,7 @@ export function buildReplayEvidenceSummary(input: {
       barGrossRevenue: commerce?.bar.grossRevenue ?? null,
       barOwner: commerce?.bar.owner ?? null,
       barShareSource: commerce?.bar.shareSource ?? null,
+      savedEventCount,
     },
     validationFailures: Object.freeze([...(input.validationFailures ?? [])]),
   };
