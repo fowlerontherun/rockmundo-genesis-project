@@ -29,6 +29,8 @@ export function useCrowdAmbience({ enabled, muted, volume, isPlaying, snapshot, 
   const cheerGainRef = useRef<GainNode | null>(null);
   const lastCheerAtRef = useRef<number>(0);
   const lastReactionRef = useRef<string | null>(null);
+  const lastPhaseRef = useRef<string | null>(null);
+  const lastChantAtRef = useRef<number>(0);
 
   // Setup / teardown
   useEffect(() => {
