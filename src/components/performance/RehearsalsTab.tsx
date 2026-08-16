@@ -186,7 +186,7 @@ export function RehearsalsTab() {
     void loadData();
   }, [loadData]);
 
-  const handleBookRehearsal = async (roomId: string, duration: number, songId: string | null, setlistId: string | null, scheduledStart: Date, skipProfileIds: string[] = []) => {
+  const handleBookRehearsal = async (roomId: string, duration: number, songId: string | null, setlistId: string | null, scheduledStart: Date, _paymentSource: 'band' | 'personal' = 'band', skipProfileIds: string[] = []) => {
     if (!userBand) return;
 
     const room = rooms.find(r => r.id === roomId);
@@ -236,7 +236,7 @@ export function RehearsalsTab() {
           conflicts: error.conflicts,
           label: `this rehearsal at ${room.name}`,
           retry: async (skipIds) => {
-            await handleBookRehearsal(roomId, duration, songId, setlistId, scheduledStart, skipIds);
+            await handleBookRehearsal(roomId, duration, songId, setlistId, scheduledStart, _paymentSource, skipIds);
           },
         });
         return;
