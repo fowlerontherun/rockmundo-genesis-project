@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.675",
+    date: "2026-08-16",
+    changes: [
+      { type: 'improvement', description: "Festival Phase 12 retirement: the old festival marketplace, directory, detail, performance and live session pages now redirect to the canonical festival directory, and the legacy festival system is off by default." },
+      { type: 'improvement', description: "Deleted 22 dead legacy festival pages and components so only the replacement festival system can read or write festival data." },
+      { type: 'feature', description: "Timetable rules are now enforced in the database: performances must run between 13:00 and 22:00 local festival time, regular slots last 40-50 minutes and headline slots 60-90 minutes." },
+      { type: 'improvement', description: "Added a client-side timetable rule module so schedule problems can be flagged before the database rejects them." },
+      { type: 'fix', description: "Added a festival RPC contract test that fails the build if any festival function called from the app is missing from migrations, preventing FESTIVAL_RPC_UNAVAILABLE regressions." },
+    ],
+  },
+  {
     version: "1.1.674",
     date: "2026-08-16",
     changes: [
