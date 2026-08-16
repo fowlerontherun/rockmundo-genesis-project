@@ -23,6 +23,11 @@ export class StaticSceneLayer {
     options: { key: string; size: Size; dpr: number },
     draw: (ctx: CanvasRenderingContext2D, size: Size) => void,
   ) {
+    if (typeof target.drawImage !== "function") {
+      // Minimal/stubbed 2D contexts (tests, unsupported browsers) draw directly.
+      draw(target, options.size);
+      return false;
+    }
     const key = `${this.name}|${options.key}|${Math.round(options.size.width)}x${Math.round(options.size.height)}@${options.dpr.toFixed(2)}`;
     if (this.key !== key || !this.canvas) {
       const canvas = this.canvas ?? createCanvas();
