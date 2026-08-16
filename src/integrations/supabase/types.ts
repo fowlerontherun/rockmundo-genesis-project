@@ -7168,8 +7168,11 @@ export type Database = {
           profile_id: string
           role: string
           salary: number
+          shifts_completed: number
           status: string
+          total_earned: number
           updated_at: string
+          vacancy_id: string | null
         }
         Insert: {
           company_id: string
@@ -7180,8 +7183,11 @@ export type Database = {
           profile_id: string
           role: string
           salary?: number
+          shifts_completed?: number
           status?: string
+          total_earned?: number
           updated_at?: string
+          vacancy_id?: string | null
         }
         Update: {
           company_id?: string
@@ -7192,8 +7198,11 @@ export type Database = {
           profile_id?: string
           role?: string
           salary?: number
+          shifts_completed?: number
           status?: string
+          total_earned?: number
           updated_at?: string
+          vacancy_id?: string | null
         }
         Relationships: [
           {
@@ -7215,6 +7224,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employees_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "company_vacancies"
             referencedColumns: ["id"]
           },
         ]
@@ -48057,6 +48073,10 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: number
       }
+      apply_to_company_vacancy: {
+        Args: { p_message?: string; p_vacancy_id: string }
+        Returns: string
+      }
       auto_build_release_hype: { Args: never; Returns: undefined }
       auto_complete_manufacturing: { Args: never; Returns: number }
       auto_complete_songwriting_sessions: {
@@ -48559,6 +48579,7 @@ export type Database = {
         Returns: Json
       }
       child_stage_for_age: { Args: { p_age: number }; Returns: string }
+      claim_company_shift: { Args: { p_shift_id: string }; Returns: string }
       cleanup_stuck_cron_runs: { Args: never; Returns: number }
       cleanup_timed_out_generations: { Args: never; Returns: number }
       close_festival_ticket_sales: {
@@ -48569,6 +48590,7 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_company_shift: { Args: { p_claim_id: string }; Returns: Json }
       complete_festival_performance: {
         Args: { p_idempotency_key?: string; p_session_id: string }
         Returns: {
@@ -49680,6 +49702,7 @@ export type Database = {
         Args: { p_child_id: string }
         Returns: number
       }
+      generate_company_shifts: { Args: never; Returns: number }
       generate_festival_edition_audience: {
         Args: { p_edition_id: string; p_idempotency_key: string }
         Returns: {
@@ -49744,6 +49767,22 @@ export type Database = {
         Returns: Json
       }
       get_banking_dashboard: { Args: never; Returns: Json }
+      get_company_employee_roster: {
+        Args: { p_company_id: string }
+        Returns: {
+          display_name: string
+          hired_at: string
+          id: string
+          performance_rating: number
+          profile_id: string
+          role: string
+          salary: number
+          shifts_completed: number
+          status: string
+          total_earned: number
+          username: string
+        }[]
+      }
       get_company_workforce_counts: {
         Args: { _owner_id: string }
         Returns: {
@@ -50370,6 +50409,7 @@ export type Database = {
         }
         Returns: Json
       }
+      process_company_weekly_finances: { Args: never; Returns: number }
       process_gear_sale: {
         Args: {
           p_buyer_user_id: string
@@ -50577,6 +50617,10 @@ export type Database = {
         Returns: Json
       }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
+      resign_company_employment: {
+        Args: { p_employee_id: string }
+        Returns: undefined
+      }
       resolve_botb_event: { Args: { p_event_id: string }; Returns: Json }
       resolve_company_demand: {
         Args: { target_date?: string }
@@ -50654,6 +50698,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      respond_to_company_offer: {
+        Args: { p_accept: boolean; p_application_id: string }
+        Returns: Json
       }
       respond_to_festival_artist_invitation: {
         Args: {
@@ -51026,6 +51074,7 @@ export type Database = {
         Args: { p_profile_id: string; p_slug: string }
         Returns: boolean
       }
+      snapshot_company_kpis: { Args: never; Returns: number }
       spend_campaign_funds: {
         Args: {
           p_amount: number
@@ -51123,6 +51172,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_company_review: {
+        Args: { p_comment?: string; p_company_id: string; p_rating: number }
+        Returns: undefined
       }
       submit_festival_application: {
         Args: {
@@ -51568,6 +51621,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      withdraw_company_application: {
+        Args: { p_application_id: string }
+        Returns: undefined
       }
       withdraw_festival_application: {
         Args: {
