@@ -522,6 +522,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
         pyrotechnics={pyrotechnics}
         cameraMode={cameraMode}
         performancePreference={performancePreference}
+        capability={{ audience: "player", subjectId: playbackReplay.gigId ?? playbackReplay.id }}
         fill
         immersive
         className="h-full w-full"
@@ -556,6 +557,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       pyrotechnics={pyrotechnics}
       cameraMode={cameraMode}
       performancePreference={performancePreference}
+      capability={{ audience: mode === "analysis" ? "admin_demo" : "player", subjectId: replay.gigId ?? replay.id }}
       fill={fullscreen}
       className={fullscreen ? "h-full min-h-0 w-full" : "w-full"}
     />
