@@ -103,55 +103,91 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
     enabled: !!bandId,
   });
 
-  // Fetch visited countries
-  const { data: visitedCountries = [] } = useQuery({
-    queryKey: ["visited-countries-wizard", bandId],
+  // Markets the band can pitch to: countries performed in, plus the band's home
+  // country and the country the active character is currently standing in.
+  const { data: markets = [] } = useQuery({
+    queryKey: ["radio-markets-wizard", bandId, profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const countries = new Set<string>();
+
+      const { data: performed } = await supabase
         .from("band_country_fans")
         .select("country")
         .eq("band_id", bandId)
         .eq("has_performed", true);
-      if (error) throw error;
-      return data.map(d => d.country);
+      (performed ?? []).forEach((row) => row.country && countries.add(row.country));
+
+      const { data: bandRow } = await supabase
+        .from("bands")
+        .select("home_city_id")
+        .eq("id", bandId)
+        .maybeSingle();
+      if (bandRow?.home_city_id) {
+        const { data: city } = await supabase
+          .from("cities")
+          .select("country")
+          .eq("id", bandRow.home_city_id)
+          .maybeSingle();
+        if (city?.country) countries.add(city.country);
+      }
+
+      if (profileId) {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("current_city_id")
+          .eq("id", profileId)
+          .maybeSingle();
+        if (profileRow?.current_city_id) {
+          const { data: city } = await supabase
+            .from("cities")
+            .select("country")
+            .eq("id", profileRow.current_city_id)
+            .maybeSingle();
+          if (city?.country) countries.add(city.country);
+        }
+      }
+
+      return Array.from(countries);
     },
     enabled: !!bandId,
   });
 
-  // Fetch radio stations — only from visited countries
+  // Fetch radio stations in the band's reachable markets
   const { data: stations = [], isLoading: stationsLoading } = useQuery({
-    queryKey: ["radio-stations-wizard", visitedCountries],
+    queryKey: ["radio-stations-wizard", markets],
     queryFn: async () => {
-      if (visitedCountries.length === 0) return [];
+      if (markets.length === 0) return [];
       const { data, error } = await supabase
         .from("radio_stations")
         .select("*")
         .eq("is_active", true)
-        .in("country", visitedCountries)
+        .in("country", markets)
         .order("listener_base", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: visitedCountries.length > 0,
+    enabled: markets.length > 0,
   });
 
-  // Fetch existing submissions
+
+  // Regional fame in the reachable markets
   const { data: countryFame = [] } = useQuery({
-    queryKey: ["band-country-fame-wizard", bandId, visitedCountries],
+    queryKey: ["band-country-fame-wizard", bandId, markets],
     queryFn: async () => {
-      if (!bandId || visitedCountries.length === 0) return [];
+      if (!bandId || markets.length === 0) return [];
 
       const { data, error } = await supabase
         .from("band_country_fans")
         .select("country, fame")
         .eq("band_id", bandId)
-        .in("country", visitedCountries);
+        .in("country", markets);
 
       if (error) throw error;
       return data;
     },
-    enabled: !!bandId && visitedCountries.length > 0,
+    enabled: !!bandId && markets.length > 0,
   });
+
 
   const { data: existingSubmissions = [] } = useQuery({
     queryKey: ["existing-submissions", selectedSong?.id],
@@ -177,8 +213,23 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
     enabled: !!selectedSong && (!!profileId || !!userId),
   });
 
+  const { data: currentCityId } = useQuery({
+    queryKey: ["radio-wizard-current-city", profileId],
+    queryFn: async () => {
+      if (!profileId) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("current_city_id")
+        .eq("id", profileId)
+        .maybeSingle();
+      return data?.current_city_id ?? null;
+    },
+    enabled: !!profileId,
+  });
+
   // Calculate eligible stations
   const eligibleStations = useMemo((): EligibleStation[] => {
+
     if (!selectedSong || !band) return [];
     
     const cityFanMap = new Set(cityFans.map(cf => cf.city_id));
@@ -209,18 +260,23 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         reasons.push(`Need ${station.min_fans_required} fans`);
       }
 
-      // Check regional fame requirement
-      const stationCountryFame = countryFameMap.get(station.country) || 0;
+      // Check regional fame requirement (untoured markets get a 20% spillover of overall fame)
+      const stationCountryFame = countryFameMap.has(station.country)
+        ? countryFameMap.get(station.country) || 0
+        : Math.round((band.fame || 0) * 0.2);
       if ((station.min_fame_required || 0) > stationCountryFame) {
         isEligible = false;
         reasons.push(`Need ${station.min_fame_required} fame in ${station.country}`);
       }
 
-      // Check local presence for local stations
-      if (station.requires_local_presence && !cityFanMap.has(station.city_id)) {
+      // Check local presence: local fans or physically being in the city both count
+      const hasLocalPresence =
+        cityFanMap.has(station.city_id) || (!!currentCityId && station.city_id === currentCityId);
+      if (station.requires_local_presence && !hasLocalPresence) {
         isEligible = false;
         reasons.push("No local presence");
       }
+
 
       return {
         id: station.id,
@@ -237,7 +293,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         eligibilityReason: reasons.join(", "),
       };
     });
-  }, [selectedSong, band, stations, cityFans, countryFame, existingSubmissions]);
+  }, [selectedSong, band, stations, cityFans, countryFame, existingSubmissions, currentCityId]);
 
   const eligibleCount = eligibleStations.filter(s => s.isEligible).length;
 
@@ -262,9 +318,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         if (!station) continue;
 
         try {
-          // Determine if auto-accept (song quality >= threshold)
-          const shouldAutoAccept = (selectedSong.quality_score || 0) >= station.auto_accept_threshold;
-          
+          // Every submission is reviewed with the live market scoring engine
           const { error } = await supabase
             .from("radio_submissions")
             .insert({
@@ -273,17 +327,13 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
               profile_id: profileId,
               user_id: userId,
               band_id: bandId,
-              status: shouldAutoAccept ? "accepted" : "pending",
-              reviewed_at: shouldAutoAccept ? new Date().toISOString() : null,
+              status: "pending",
+              reviewed_at: null,
             });
 
           if (error) throw error;
-          
-          if (shouldAutoAccept) {
-            results.accepted.push(station.name);
-          } else {
-            results.pending.push(station.name);
-          }
+
+          results.pending.push(station.name);
         } catch (err) {
           results.failed.push(station.name);
         }
@@ -297,9 +347,6 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
       queryClient.invalidateQueries({ queryKey: ["my-radio-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["existing-submissions", selectedSong?.id] });
       
-      if (results.accepted.length > 0) {
-        toast.success(`${results.accepted.length} stations auto-accepted your song!`);
-      }
       if (results.pending.length > 0) {
         toast.info(`${results.pending.length} submissions pending review`);
       }
@@ -518,7 +565,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
 
             <div className="p-3 bg-primary/10 rounded-lg text-sm">
               <AlertCircle className="h-4 w-4 inline mr-2" />
-              Songs meeting quality thresholds will be auto-accepted. Others will be reviewed.
+              Every submission is scored against live market standards, which rise with the number of active bands and the average quality of recorded songs. You will get a written verdict with a full breakdown.
             </div>
 
             <div className="flex gap-2">
