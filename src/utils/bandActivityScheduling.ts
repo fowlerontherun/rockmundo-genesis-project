@@ -3,6 +3,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { checkTimeSlotAvailable } from '@/hooks/useActivityBooking';
+import { pushNotification } from '@/lib/notify';
 
 export interface BandActivityParams {
   bandId: string;
@@ -16,7 +17,10 @@ export interface BandActivityParams {
   linkedRehearsalId?: string;
   linkedRecordingId?: string;
   linkedGigId?: string;
+  /** Members (profile ids) deliberately left out because they were unavailable. */
+  skipProfileIds?: string[];
 }
+
 
 interface ProfileSummary {
   user_id: string;
