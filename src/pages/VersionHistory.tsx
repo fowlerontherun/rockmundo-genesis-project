@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.688",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "The in-game instant chat now has multiple rooms: World Chat, Help, Recruit, Band and your friend conversations, switchable from tabs in the chat dock." },
+      { type: 'feature', description: "World, Help and Recruit are open to every player at any time, while Band chat is private to the members of your current band." },
+      { type: 'improvement', description: "Room messages now show the character who sent them and arrive live without needing to refresh." },
+    ],
+  },
+  {
+
     version: "1.1.687",
     date: "2026-08-16",
     changes: [
