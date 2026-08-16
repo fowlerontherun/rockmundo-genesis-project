@@ -526,6 +526,19 @@ const CompanyDetailContent = () => {
         <TabsContent value="rankings" className="space-y-4">
           <MarketRankings companyId={company.id} companyType={company.company_type} />
         </TabsContent>
+
+        <TabsContent value="growth" className="space-y-4">
+          <CompanyGoalsManager companyId={company.id} />
+          <CompanySynergiesCard
+            companyId={company.id}
+            ownedBusinessTypes={[company.company_type, ...subsidiaries.map((s) => s.company_type)]}
+          />
+          <CompanyReviewsPanel companyId={company.id} isOwner={company.owner_id === userId} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <CompanyNotificationsCenter companyId={company.id} />
+            <CompanyInternalServicesLog companyId={company.id} />
+          </div>
+        </TabsContent>
       </Tabs>
     </FMPageScaffold>
   );
