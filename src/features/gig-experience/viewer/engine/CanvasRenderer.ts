@@ -148,6 +148,13 @@ export class CanvasRenderer {
     });
     this.performerPlan = buildPerformerPlan({ replay: this.replay, experience: this.experience, size: this.size });
     this.audiencePlan = buildAudienceActivityPlan({ preset: scaledPreset, seed: this.replay.simulationSeed ?? this.replay.id, attendanceRatio: this.layout.capacity > 0 ? this.layout.attendance / this.layout.capacity : 0.6, reducedMotion: this.reducedMotion });
+    this.toiletPlan = buildToiletActivityPlan({
+      replay: this.replay,
+      story: this.storyModel,
+      scene: this.venueScene,
+      size: this.size,
+      displayedCrowd: this.displayedCrowd,
+    });
   }
 
   render(state: DerivedPlaybackState) {
