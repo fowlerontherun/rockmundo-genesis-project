@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Music, Calendar, Newspaper } from "lucide-react";
 import { format } from "date-fns";
@@ -31,34 +30,38 @@ import { ElectionCoverage } from "@/components/news/ElectionCoverage";
 import { ParliamentDigest } from "@/components/news/ParliamentDigest";
 import { PartyPowerRankings } from "@/components/news/PartyPowerRankings";
 import { BattleOfTheBandsNews } from "@/components/news/BattleOfTheBandsNews";
+import { WorldWire } from "@/components/news/WorldWire";
+import { WorldAtAGlance } from "@/components/news/WorldAtAGlance";
 
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split("T")[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
+  // Bands formed recently (falls back to the last week so the page is never empty)
   const { data: newBands } = useQuery({
     queryKey: ["news-new-bands", today],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bands")
-        .select("id, name, genre, created_at")
-        .gte("created_at", `${today}T00:00:00`)
-        .lte("created_at", `${today}T23:59:59`)
-        .order("created_at", { ascending: false });
+        .select("id, name, genre, created_at, popularity, total_fans")
+        .gte("created_at", weekAgo)
+        .order("created_at", { ascending: false })
+        .limit(6);
       if (error) throw error;
       return data || [];
     },
   });
 
   const { data: releasedSongs } = useQuery({
-    queryKey: ["news-songs", today],
+    queryKey: ["news-releases", today],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("releases")
         .select("id, title, release_type, release_date, bands(name)")
         .eq("release_status", "released")
-        .gte("release_date", `${today}T00:00:00`)
         .lte("release_date", `${today}T23:59:59`)
-        .order("release_date", { ascending: false });
+        .order("release_date", { ascending: false })
+        .limit(6);
       if (error) throw error;
       return data || [];
     },
@@ -71,9 +74,9 @@ export default function TodaysNewsPage() {
         .from("game_events")
         .select("id, title, event_type, start_date, end_date")
         .eq("event_type", "festival")
-        .gte("start_date", `${today}T00:00:00`)
-        .lte("start_date", `${today}T23:59:59`)
-        .order("start_date", { ascending: false });
+        .gte("start_date", weekAgo)
+        .order("start_date", { ascending: true })
+        .limit(5);
       if (error) throw error;
       return data || [];
     },
@@ -86,49 +89,49 @@ export default function TodaysNewsPage() {
       icon={Newspaper}
       backTo="/hub/media"
     >
-      {/* Masthead */}
-      <NewspaperMasthead />
+      <div className="mx-auto max-w-[1400px] border-x border-y-2 border-foreground/70 bg-card/40 px-3 py-4 sm:px-6 sm:py-6">
+        <NewspaperMasthead />
+        <BreakingNewsTicker />
 
-      {/* Breaking News Ticker */}
-      <BreakingNewsTicker />
+        {/* Front page splash */}
+        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="space-y-5">
+            <TopStoryHero />
+            <RandomEventsNews />
+            <PersonalUpdates />
+          </div>
+          <aside className="space-y-5 lg:border-l lg:border-border lg:pl-5">
+            <WorldAtAGlance />
+            <WeatherReport />
+            <GossipColumn />
+          </aside>
+        </div>
 
-      {/* Top Story */}
-      <TopStoryHero />
+        <div className="my-6 border-t-4 border-double border-foreground" />
 
-      {/* Urgent: Random Events */}
-      <RandomEventsNews />
+        {/* Wire section — real world activity */}
+        <WorldWire limit={12} />
 
-      {/* Personal Updates */}
-      <PersonalUpdates />
+        <div className="my-6 border-t-4 border-double border-foreground" />
 
-      {/* === FRONT PAGE: Two-column layout === */}
-      <div className="grid gap-6 lg:grid-cols-3 mb-8">
-        {/* Main column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Section Header */}
-          <SectionDivider title="Entertainment" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main column */}
+          <div className="lg:col-span-2 space-y-5">
+            <SectionDivider title="Entertainment" page="Page 2" />
 
-          <TopTracksNews />
-          <BattleOfTheBandsNews />
-          <LastNightGigs />
-          <OtherBandsGigOutcomes />
-          <InterviewNews />
+            <TopTracksNews />
+            <BattleOfTheBandsNews />
+            <LastNightGigs />
+            <OtherBandsGigOutcomes />
+            <InterviewNews />
 
-          <SectionDivider title="Charts & Music" />
+            <SectionDivider title="Charts & Music" page="Page 3" />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <ChartMoversSection />
-            {/* New Releases */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-serif flex items-center gap-2">
-                  <Music className="h-5 w-5" />
-                  New Releases
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ChartMoversSection />
+              <NewsPanel title="Latest Releases" icon={Music}>
                 {releasedSongs && releasedSongs.length > 0 ? (
-                  releasedSongs.slice(0, 5).map((release: any) => (
+                  releasedSongs.map((release: any) => (
                     <div
                       key={release.id}
                       className="py-1 border-b border-border/50 last:border-0"
@@ -137,122 +140,136 @@ export default function TodaysNewsPage() {
                         {release.title}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {release.bands?.name} · {release.release_type}
+                        {release.bands?.name || "Independent"} · {release.release_type}
+                        {release.release_date
+                          ? ` · ${format(new Date(release.release_date), "d MMM")}`
+                          : ""}
                       </p>
                     </div>
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground italic font-serif py-2">
-                    No releases today
+                    No records have hit the shelves yet.
                   </p>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </NewsPanel>
+            </div>
 
-          <SectionDivider title="Your Column" />
+            <SectionDivider title="Your Column" page="Page 4" />
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <PlayerGainsNews />
-            <BandGainsNews />
-            <EarningsNews />
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <PlayerGainsNews />
+              <BandGainsNews />
+              <EarningsNews />
+            </div>
 
-          <MerchSalesNews />
+            <MerchSalesNews />
 
-          <SectionDivider title="Business & Deals" />
+            <SectionDivider title="Business & Deals" page="Page 5" />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DealAnnouncements />
-            {/* New Bands */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-serif flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  New Bands Formed
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DealAnnouncements />
+              <NewsPanel title="New Bands Formed" icon={Users}>
                 {newBands && newBands.length > 0 ? (
-                  newBands.slice(0, 5).map((band) => (
+                  newBands.map((band: any) => (
                     <div
                       key={band.id}
-                      className="flex items-center justify-between py-1 border-b border-border/50 last:border-0"
+                      className="flex items-start justify-between gap-2 py-1 border-b border-border/50 last:border-0"
                     >
-                      <div>
-                        <p className="font-semibold text-sm font-serif">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm font-serif break-words">
                           {band.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {band.genre}
+                          {band.genre || "Genre TBC"}
+                          {band.total_fans
+                            ? ` · ${band.total_fans.toLocaleString()} fans`
+                            : ""}
                         </p>
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {format(new Date(band.created_at!), "HH:mm")}
+                      <Badge variant="secondary" className="text-xs flex-shrink-0">
+                        {format(new Date(band.created_at!), "d MMM")}
                       </Badge>
                     </div>
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground italic font-serif py-2">
-                    No new bands today
+                    No new bands this week.
                   </p>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </NewsPanel>
+            </div>
 
-          {/* Festivals */}
-          {festivals && festivals.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-serif flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Festivals Starting Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {festivals.slice(0, 5).map((fest) => (
+            {festivals && festivals.length > 0 && (
+              <NewsPanel title="Festival Diary" icon={Calendar}>
+                {festivals.map((fest: any) => (
                   <div
                     key={fest.id}
                     className="py-1 border-b border-border/50 last:border-0"
                   >
-                    <p className="font-semibold text-sm font-serif">
-                      {fest.title}
-                    </p>
+                    <p className="font-semibold text-sm font-serif">{fest.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {fest.event_type}
+                      {fest.start_date
+                        ? format(new Date(fest.start_date), "EEE d MMM")
+                        : fest.event_type}
                     </p>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          )}
+              </NewsPanel>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-5 lg:border-l lg:border-border lg:pl-5">
+            <SectionDivider title="World Desk" page="Page 6" />
+            <TrendingHashtags />
+            <MilestoneNews />
+            <ElectionCoverage />
+            <ParliamentDigest />
+            <PartyPowerRankings />
+            <ClassifiedAds />
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <WeatherReport />
-          <GossipColumn />
-          <TrendingHashtags />
-          <MilestoneNews />
-          <ElectionCoverage />
-          <ParliamentDigest />
-          <PartyPowerRankings />
-          <ClassifiedAds />
-        </div>
+        <footer className="mt-8 border-t-2 border-foreground pt-2 text-center text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          The Rockmundo Times · Printed daily in every city on the map ·
+          {" "}{format(new Date(), "yyyy")}
+        </footer>
       </div>
     </FMPageScaffold>
   );
 }
 
-function SectionDivider({ title }: { title: string }) {
+function SectionDivider({ title, page }: { title: string; page?: string }) {
   return (
-    <div className="flex items-center gap-3 pt-4">
-      <div className="h-px flex-1 bg-border" />
-      <h3 className="text-xs font-bold text-muted-foreground font-serif">
+    <div className="flex items-center gap-3 pt-2">
+      <h3 className="text-[11px] font-black uppercase tracking-[0.25em] font-serif">
         {title}
       </h3>
-      <div className="h-px flex-1 bg-border" />
+      <div className="h-px flex-1 bg-foreground/40" />
+      {page && (
+        <span className="text-[10px] font-mono text-muted-foreground">{page}</span>
+      )}
     </div>
+  );
+}
+
+function NewsPanel({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border border-foreground/40 bg-card/60 p-3">
+      <h4 className="font-serif text-base font-black flex items-center gap-2 border-b border-foreground/40 pb-1 mb-2">
+        <Icon className="h-4 w-4" />
+        {title}
+      </h4>
+      <div className="space-y-1">{children}</div>
+    </section>
   );
 }
