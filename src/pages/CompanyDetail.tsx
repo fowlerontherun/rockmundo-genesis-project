@@ -215,15 +215,21 @@ const CompanyDetailContent = () => {
 
       {/* Main Content */}
       <Tabs defaultValue={isHolding ? "structure" : "empire"} className="space-y-4">
-        <TabsList>
+        <TabsList className="flex w-full flex-nowrap overflow-x-auto justify-start scrollbar-none">
           {isHolding && <TabsTrigger value="structure">Structure</TabsTrigger>}
           <TabsTrigger value="empire">Empire</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
+          {(isHolding || company.company_type === 'record_label' || labels.length > 0) && (
+            <TabsTrigger value="labels">Labels ({labels.length})</TabsTrigger>
+          )}
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="jobs">
             <Briefcase className="h-3.5 w-3.5 mr-1" />
             Recruitment
+          </TabsTrigger>
+          <TabsTrigger value="operations">
+            <Package className="h-3.5 w-3.5 mr-1" />
+            Operations
           </TabsTrigger>
           <TabsTrigger value="storefront">Storefront</TabsTrigger>
           <TabsTrigger value="analytics">
