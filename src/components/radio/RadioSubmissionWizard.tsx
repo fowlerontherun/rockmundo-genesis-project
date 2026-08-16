@@ -337,10 +337,6 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         } catch (err) {
           results.failed.push(station.name);
         }
-
-        } catch (err) {
-          results.failed.push(station.name);
-        }
       }
 
       return results;
