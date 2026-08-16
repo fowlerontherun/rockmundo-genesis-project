@@ -74,7 +74,7 @@ const RealtimeCommunication: React.FC = () => {
           </CardHeader>
           <CardContent>
             <ChatWindow
-              channel="general"
+              channel="world"
               hideHeader
               onOnlineCountChange={setOnlineCount}
               onConnectionStatusChange={setIsConnected}
