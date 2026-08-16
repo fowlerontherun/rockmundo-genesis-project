@@ -288,14 +288,16 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     throw new Error('Failed to fetch band members');
   }
 
+  const skipSet = new Set(params.skipProfileIds || []);
   const validMembers = ((members || []) as any[])
-    .filter(m => m.profile_id)
+    .filter(m => m.profile_id && !skipSet.has(m.profile_id))
     .map(m => ({ profileId: m.profile_id as string, userId: (m.user_id as string | null) ?? null }));
 
   if (validMembers.length === 0) {
     console.warn('No active band members with profiles found for band:', params.bandId);
     return [];
   }
+
 
   const profileIds = validMembers.map(m => m.profileId);
 
