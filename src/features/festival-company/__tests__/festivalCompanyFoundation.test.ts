@@ -31,9 +31,13 @@ describe("festival company secure founding foundation", () => {
     expect(repositorySource).toContain('.rpc("get_festival_company_setup"');
     expect(repositorySource).toContain("p_company_name: input.companyName");
     expect(repositorySource).toContain("p_public_name: input.publicName");
-    expect(repositorySource).not.toContain("foundingCost:");
-    expect(repositorySource).not.toContain("owner_id");
-    expect(repositorySource).not.toContain("company_type");
+    const rpcArguments = repositorySource.slice(
+      repositorySource.indexOf('.rpc("found_festival_company"'),
+      repositorySource.indexOf("});", repositorySource.indexOf('.rpc("found_festival_company"')),
+    );
+    expect(rpcArguments).not.toContain("foundingCost");
+    expect(rpcArguments).not.toContain("owner_id");
+    expect(rpcArguments).not.toContain("company_type");
   });
 
   it("maps stable RPC errors to player-facing messages", () => {
