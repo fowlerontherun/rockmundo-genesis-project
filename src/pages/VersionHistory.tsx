@@ -25,6 +25,9 @@ const versionHistory: VersionEntry[] = [
       { type: 'feature', description: "Timetable rules are now enforced in the database: performances must run between 13:00 and 22:00 local festival time, regular slots last 40-50 minutes and headline slots 60-90 minutes." },
       { type: 'improvement', description: "Added a client-side timetable rule module so schedule problems can be flagged before the database rejects them." },
       { type: 'fix', description: "Added a festival RPC contract test that fails the build if any festival function called from the app is missing from migrations, preventing FESTIVAL_RPC_UNAVAILABLE regressions." },
+      { type: 'fix', description: "Fixed a crash in the festival schedule workspace mobile agenda that stopped the stage timeline rendering on phones." },
+      { type: 'fix', description: "Festival admin errors are no longer mislabelled as network failures, so permission and data-repair problems now show the correct message." },
+      { type: 'improvement', description: "Schedule templates now default to a 13:00 opening and 22:00 curfew to match the enforced timetable rules." },
     ],
   },
   {
