@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.672",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Gig viewer now has a Graphics quality control (Auto, Low, Std, High) in both the full and compact control bars, keyboard accessible and remembered between shows." },
+      { type: 'improvement', description: "Choosing a quality level drives the render budget directly — particle counts, background motion, crowd detail and device pixel ratio all follow the selected tier instead of only device detection." },
+      { type: 'improvement', description: "Replay rendering now stops its animation frame loop entirely while the tab is hidden and resumes cleanly when you return, instead of looping in the background." },
+      { type: 'fix', description: "Cached scene layers now fall back to direct drawing on minimal canvas contexts, so the viewer never fails to mount in restricted environments." },
+    ],
+  },
+  {
     version: "1.1.671",
     date: "2026-08-16",
     changes: [
