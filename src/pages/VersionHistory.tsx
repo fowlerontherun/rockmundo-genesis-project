@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.671",
+    date: "2026-08-16",
+    changes: [
+      { type: 'feature', description: "Living Venue Viewer Phase 6: added device performance tiers to the gig viewer with a documented degradation order (ambient particles, then background movers, then crowd detail, then service detail) so the stage always stays readable." },
+      { type: 'improvement', description: "Static background, architecture, shell, floor and concession layers are now painted once into cached offscreen layers keyed by the venue fingerprint and blitted each frame instead of being redrawn." },
+      { type: 'improvement', description: "Device pixel ratio is now capped per tier and dropped to 1 for very large stadium and festival crowds, with crowd counters sampled at a stride when a scene exceeds its budget." },
+      { type: 'improvement', description: "Viewer diagnostics now expose the resolved DPR cap, crowd detail level and applied degradations, and cached layers are fully released on viewer close or replay change." },
+    ],
+  },
+  {
     version: "1.1.670",
     date: "2026-08-16",
     changes: [
