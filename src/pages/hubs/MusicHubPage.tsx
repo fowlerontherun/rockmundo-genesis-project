@@ -14,6 +14,8 @@ export default function MusicHubPage() {
             { icon: Gamepad2, labelKey: "nav.stagePractice", path: "/stage-practice", imagePrompt: "A rhythm game screen with colorful notes falling, a guitarist on stage" },
             { icon: Disc, labelKey: "nav.recording", path: "/recording-studio", imagePrompt: "A professional recording studio with mixing console, microphones, and booth" },
             { icon: ListMusic, labelKey: "Song Manager", path: "/song-manager", imagePrompt: "A library view of song files, drafts, and finished tracks organized neatly" },
+            { icon: Disc, labelKey: "Cover Songs", path: "/cover-songs", imagePrompt: "A band rehearsing another artist's hit song from sheet music in a rehearsal room" },
+
           ],
         },
         {
