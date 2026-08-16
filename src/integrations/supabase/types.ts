@@ -49750,6 +49750,10 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_major_event_instances: {
+        Args: { p_max_year?: number }
+        Returns: number
+      }
       generate_pending_company_taxes: {
         Args: never
         Returns: {
