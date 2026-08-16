@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.676",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Crypto holdings and trade history now belong to the individual character instead of being shared by every character on your account." },
+      { type: 'fix', description: "Daily skill practice limits and activity conflicts are now counted for the character you are playing, so an alt character's schedule no longer blocks or unblocks practice." },
+      { type: 'fix', description: "Applying for banking credit now uses your active character rather than failing with a placeholder borrower." },
+    ],
+  },
+  {
+
     version: "1.1.675",
     date: "2026-08-16",
     changes: [
