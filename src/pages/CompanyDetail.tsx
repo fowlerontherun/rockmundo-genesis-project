@@ -430,18 +430,8 @@ const CompanyDetailContent = () => {
 
         <TabsContent value="employees" className="space-y-4">
           <PlayerStaffBonusCard companyId={company.id} />
-          <Card>
-            <CardHeader>
-              <CardTitle>Employees</CardTitle>
-              <CardDescription>Players hired via your job listings appear here. Real players boost performance; NPC-only staffing applies a small penalty.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p>Use the <strong>Jobs</strong> tab to post listings and start hiring.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <CompanyEmployeeRoster companyId={company.id} isOwner={company.owner_id === userId} />
+          <CompanyShiftBoard companyId={company.id} isOwner={company.owner_id === userId} />
         </TabsContent>
 
 
