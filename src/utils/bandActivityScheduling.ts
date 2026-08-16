@@ -464,7 +464,7 @@ export async function joinBandActivityLate(options: {
 }): Promise<{ joined: boolean; reason?: string }> {
   const { data: clashes, error: clashError } = await (supabase as any)
     .from('player_scheduled_activities')
-    .select('id, title, activity_type, scheduled_start, scheduled_end')
+    .select('id, title, activity_type, scheduled_start, scheduled_end, linked_rehearsal_id, linked_recording_id')
     .eq('profile_id', options.profileId)
     .in('status', ['scheduled', 'in_progress'])
     .lt('scheduled_start', options.scheduledEnd.toISOString())
