@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.685",
+    date: "2026-08-16",
+    changes: [
+      { type: 'fix', description: "Today's News now shows full song titles in the Top Tracks chart instead of cutting them off, with artist, genre and quality shown alongside each track." },
+      { type: 'feature', description: "Added The World Wire: a newspaper-style dispatch column filled with real activity from across the game world, plus a World at a Glance box counting artists, bands, songs, shows, venues and cities." },
+      { type: 'improvement', description: "Redesigned Today's News as a proper newspaper front page: bordered broadsheet frame, double-rule section breaks, page numbers, column rules and a printed footer." },
+      { type: 'improvement', description: "Releases, new bands and festival listings now look back over the past week so the paper is filled with real game data instead of empty 'nothing today' panels." },
+    ],
+  },
+  {
+
     version: "1.1.684",
     date: "2026-08-16",
     changes: [
