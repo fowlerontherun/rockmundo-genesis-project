@@ -3,7 +3,7 @@ import { useState } from "react";
 import { 
   Building2, ArrowLeft, DollarSign, Users, MapPin, 
   TrendingUp, Settings, Plus, Disc, AlertTriangle,
-  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3, Newspaper
+  Calendar, ChevronRight, Wallet, Briefcase, Sparkles, Swords, Trophy, BarChart3, Newspaper, Package
 } from "lucide-react";
 import { CompanyNewsFeed } from "@/components/company/CompanyNewsFeed";
 import { CompanyContractBoard } from "@/components/company/CompanyContractBoard";
