@@ -23,6 +23,10 @@ import { useGigReplayPlayback } from "./hooks/useGigReplayPlayback";
 import { useGigViewerPreferences } from "./hooks/useGigViewerPreferences";
 import { useGigViewerAudio } from "./audio/useGigViewerAudio";
 import { useCrowdAmbience } from "./audio/useCrowdAmbience";
+import { useVenueAmbience } from "./audio/useVenueAmbience";
+import { resolveVenueAmbiencePlan } from "./engine/VenueAmbiencePlan";
+import { resolveVenueArchetype } from "./engine/VenueSceneRegistry";
+import { resolveGigEnvironment } from "./engine/EnvironmentRegistry";
 import { selectStageType } from "./engine/VenueLayout";
 import { StageTypeLabels } from "./engine/StageDecor";
 import { GigViewerAudioControls } from "./audio/GigViewerAudioControls";
@@ -236,6 +240,30 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     isPlaying: !!state?.isPlaying,
     snapshot,
     stageType,
+  });
+
+  const ambiencePlan = useMemo(() => {
+    const venue = experience?.gig?.venue ?? null;
+    const archetype = resolveVenueArchetype({ venueType: venue?.type ?? null, venueName: venue?.name ?? null, capacity: venue?.capacity ?? null });
+    const capacity = typeof venue?.capacity === "number" ? venue.capacity : null;
+    const capacityBand = capacity === null ? "mid" : capacity <= 200 ? "intimate" : capacity <= 900 ? "club" : capacity <= 5000 ? "mid" : capacity <= 30000 ? "large" : "mega";
+    return resolveVenueAmbiencePlan({
+      archetype,
+      capacityBand,
+      environmentKind: null,
+      songPhase: snapshot?.song?.phase ?? null,
+      crowdEnergy: snapshot?.crowdEnergy ?? null,
+      servicePointCount: capacity === null ? 2 : Math.max(1, Math.min(12, Math.round(capacity / 900) + 1)),
+      reducedMotion,
+    });
+  }, [experience?.gig?.venue, snapshot?.song?.phase, snapshot?.crowdEnergy, reducedMotion]);
+
+  useVenueAmbience({
+    enabled: !!audio.enabled && !!audio.ambience,
+    muted: !!audio.muted,
+    volume: typeof audio.volume === "number" ? audio.volume : 0.6,
+    isPlaying: !!state?.isPlaying,
+    plan: ambiencePlan,
   });
 
   const [fullscreen, setFullscreen] = useState(false);
