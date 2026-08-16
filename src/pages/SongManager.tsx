@@ -18,6 +18,9 @@ import { ContributeSongToBandButton } from "@/components/song/ContributeSongToBa
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { useRecalculateSongMetrics } from "@/hooks/useSongCovers";
+import { SongCoverLicensingDialog } from "@/components/songs/SongCoverLicensingDialog";
+
 
 const SongManager = () => {
   const navigate = useNavigate();
