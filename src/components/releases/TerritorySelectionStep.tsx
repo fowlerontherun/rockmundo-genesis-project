@@ -47,8 +47,8 @@ const TIER_COLORS: Record<string, string> = {
   intercontinental: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
-const BASE_COST_PHYSICAL = 5000; // $50 per country in cents
-const BASE_COST_DIGITAL = 1000;  // $10 per country in cents
+const BASE_COST_PHYSICAL = 1500; // $15 per country in cents
+const BASE_COST_DIGITAL = 300;   // $3 per country in cents
 
 function getDistanceTier(
   homeCountry: string | null,
@@ -68,17 +68,17 @@ function getCostMultiplier(tier: string, isPhysical: boolean): number {
   if (isPhysical) {
     switch (tier) {
       case "domestic": return 1.0;
-      case "regional": return 1.5;
-      case "continental": return 2.5;
-      case "intercontinental": return 4.0;
+      case "regional": return 1.2;
+      case "continental": return 1.6;
+      case "intercontinental": return 2.2;
       default: return 1.0;
     }
   } else {
     switch (tier) {
       case "domestic": return 1.0;
-      case "regional": return 1.1;
-      case "continental": return 1.2;
-      case "intercontinental": return 1.3;
+      case "regional": return 1.05;
+      case "continental": return 1.1;
+      case "intercontinental": return 1.15;
       default: return 1.0;
     }
   }
