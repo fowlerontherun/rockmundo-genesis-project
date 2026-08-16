@@ -29,6 +29,9 @@ const SongManager = () => {
   const [sortBy, setSortBy] = useState("date_desc");
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [licensingSong, setLicensingSong] = useState<any | null>(null);
+  const recalcMetrics = useRecalculateSongMetrics();
+
 
   const { data: songs, isLoading } = useQuery({
     queryKey: ["user-songs", profileId, user?.id],
