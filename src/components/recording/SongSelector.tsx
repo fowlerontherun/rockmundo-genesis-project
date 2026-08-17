@@ -81,7 +81,7 @@ export const SongSelector = ({ userId, profileId, bandId, selectedSong, onSelect
 
       const deduped = new Map<string, any>();
       for (const res of results) {
-        for (const song of (res?.data ?? [])) {
+        for (const song of (Array.isArray(res?.data) ? res.data : [])) {
           if (!deduped.has(song.id)) deduped.set(song.id, song);
         }
       }

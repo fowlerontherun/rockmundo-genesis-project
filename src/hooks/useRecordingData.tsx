@@ -309,7 +309,7 @@ export const useCreateRecordingSession = () => {
           sessionEnd
         );
 
-        const skipSet = new Set(input.skip_profile_ids || []);
+        const skipSet = new Set(Array.isArray(input.skip_profile_ids) ? input.skip_profile_ids : []);
         blockedConflicts = conflicts.filter(c => !c.profileId || !skipSet.has(c.profileId));
         excludedConflicts = conflicts.filter(c => c.profileId && skipSet.has(c.profileId));
 

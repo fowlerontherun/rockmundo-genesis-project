@@ -222,7 +222,7 @@ export async function checkBandAvailability(
 
   const conflicts: ConflictInfo[] = [];
   const seen = new Set<string>();
-  for (const row of (overlapping || []) as any[]) {
+  for (const row of (Array.isArray(overlapping) ? overlapping : []) as any[]) {
     if (seen.has(row.profile_id)) continue;
     seen.add(row.profile_id);
     const member = memberDetails.find(m => m.profileId === row.profile_id);
@@ -288,7 +288,7 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     throw new Error('Failed to fetch band members');
   }
 
-  const skipSet = new Set(params.skipProfileIds || []);
+  const skipSet = new Set(Array.isArray(params.skipProfileIds) ? params.skipProfileIds : []);
   const validMembers = ((members || []) as any[])
     .filter(m => m.profile_id && !skipSet.has(m.profile_id))
     .map(m => ({ profileId: m.profile_id as string, userId: (m.user_id as string | null) ?? null }));
