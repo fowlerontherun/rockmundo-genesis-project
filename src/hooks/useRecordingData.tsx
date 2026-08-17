@@ -492,8 +492,9 @@ export const useCreateRecordingSession = () => {
         .eq('id', input.song_id)
         .single();
       const songTitle = (songInfo as any)?.title || 'a song';
-
+      stage = "scheduling the session for everyone involved";
       if (input.band_id) {
+
         // Band session - schedule for ALL band members
         await createBandScheduledActivities({
           bandId: input.band_id,
