@@ -610,7 +610,17 @@ export const useCreateRecordingSession = () => {
       }
 
       return sessionData;
+      } catch (bookingError) {
+        if (bookingError instanceof BandUnavailableError) throw bookingError;
+        console.error(`[recording-booking] failed during stage "${stage}"`, bookingError);
+        const detail =
+          bookingError instanceof Error
+            ? bookingError.message
+            : String((bookingError as any)?.message ?? bookingError);
+        throw new Error(`${detail} (while ${stage})`);
+      }
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recording-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['recorded-songs-list'] });
