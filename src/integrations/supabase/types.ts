@@ -18584,6 +18584,118 @@ export type Database = {
           },
         ]
       }
+      festival_settlement_lines: {
+        Row: {
+          cash_state: string
+          category: string
+          counterparty_id: string | null
+          counterparty_type: string | null
+          created_at: string
+          currency_code: string
+          edition_id: string
+          gross_amount_minor: number
+          id: string
+          line_kind: string
+          net_amount_minor: number
+          posted_at: string | null
+          settlement_id: string
+          source_id: string | null
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          cash_state?: string
+          category: string
+          counterparty_id?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          currency_code?: string
+          edition_id: string
+          gross_amount_minor?: number
+          id?: string
+          line_kind: string
+          net_amount_minor?: number
+          posted_at?: string | null
+          settlement_id: string
+          source_id?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Update: {
+          cash_state?: string
+          category?: string
+          counterparty_id?: string | null
+          counterparty_type?: string | null
+          created_at?: string
+          currency_code?: string
+          edition_id?: string
+          gross_amount_minor?: number
+          id?: string
+          line_kind?: string
+          net_amount_minor?: number
+          posted_at?: string | null
+          settlement_id?: string
+          source_id?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_settlement_lines_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_settlement_posting_batches: {
+        Row: {
+          completed_items: number
+          created_at: string
+          error_code: string | null
+          expected_items: number
+          failed_items: number
+          failed_line_id: string | null
+          id: string
+          settlement_id: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          completed_items?: number
+          created_at?: string
+          error_code?: string | null
+          expected_items?: number
+          failed_items?: number
+          failed_line_id?: string | null
+          id?: string
+          settlement_id: string
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_items?: number
+          created_at?: string
+          error_code?: string | null
+          expected_items?: number
+          failed_items?: number
+          failed_line_id?: string | null
+          id?: string
+          settlement_id?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_settlement_posting_batches_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "festival_edition_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_settlement_transactions: {
         Row: {
           category: string
@@ -48710,7 +48822,15 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: Json
       }
+      _festival_edition_authorised: {
+        Args: { p_edition_id: string }
+        Returns: boolean
+      }
       _festival_effect_delta: { Args: { cur: Json; nxt: Json }; Returns: Json }
+      _festival_generate_settlement_lines: {
+        Args: { p_edition_id: string; p_settlement_id: string }
+        Returns: number
+      }
       _festival_operations_result: {
         Args: { p_company: string }
         Returns: Json
@@ -48720,6 +48840,24 @@ export type Database = {
           p_festival_company_id: string
           p_idempotency_key: string
           p_payload_hash: string
+        }
+        Returns: Json
+      }
+      _festival_posting_result: { Args: { p_batch_id: string }; Returns: Json }
+      _festival_settlement_aggregate: {
+        Args: { p_settlement_id: string }
+        Returns: Json
+      }
+      _festival_settlement_company: {
+        Args: { p_settlement_id: string }
+        Returns: string
+      }
+      _festival_settlement_line_op: {
+        Args: {
+          p_apply_cash: boolean
+          p_from: string[]
+          p_line_id: string
+          p_to: string
         }
         Returns: Json
       }
@@ -49345,6 +49483,14 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_festival_edition_outcomes: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_settlement_id: string
+        }
+        Returns: Json
+      }
       apply_festival_legacy_migration: {
         Args: { p_idempotency_key?: string; p_mapping_id: string }
         Returns: Json
@@ -49413,6 +49559,14 @@ export type Database = {
       apply_to_company_vacancy: {
         Args: { p_message?: string; p_vacancy_id: string }
         Returns: string
+      }
+      approve_festival_edition_settlement: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_settlement_id: string
+        }
+        Returns: Json
       }
       are_profiles_blocked: {
         Args: { first_profile_id: string; second_profile_id: string }
@@ -49926,6 +50080,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      cancel_festival_settlement_payable: {
+        Args: { p_idempotency_key: string; p_line_id: string }
+        Returns: Json
       }
       cancel_launched_festival: {
         Args: {
@@ -51225,6 +51383,18 @@ export type Database = {
         }
       }
       festival_validate_terms: { Args: { p_terms: Json }; Returns: Json }
+      finalise_festival_edition_settlement: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_settlement_id: string
+        }
+        Returns: Json
+      }
+      finalise_festival_edition_settlement_posting: {
+        Args: { p_idempotency_key: string; p_settlement_id: string }
+        Returns: Json
+      }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
       found_festival_company: {
         Args: {
@@ -51419,6 +51589,14 @@ export type Database = {
         Args: { p_edition_id: string; p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_edition_settlement: {
+        Args: { p_edition_id: string; p_festival_company_id: string }
+        Returns: Json
+      }
+      get_festival_edition_settlement_readiness: {
+        Args: { p_edition_id: string; p_festival_company_id: string }
+        Returns: Json
+      }
       get_festival_hall_of_fame: { Args: never; Returns: Json }
       get_festival_history: {
         Args: {
@@ -51459,6 +51637,10 @@ export type Database = {
           p_offset?: number
           p_year?: number
         }
+        Returns: Json
+      }
+      get_festival_settlement_effect_progress: {
+        Args: { p_settlement_id: string }
         Returns: Json
       }
       get_festival_site_plan: {
@@ -51534,6 +51716,10 @@ export type Database = {
       get_public_festival: { Args: { p_slug: string }; Returns: Json }
       get_public_festival_directory: {
         Args: { p_filters?: Json }
+        Returns: Json
+      }
+      get_public_festival_edition_history: {
+        Args: { p_edition_id: string }
         Returns: Json
       }
       get_public_festival_ticket_products: {
@@ -52016,6 +52202,10 @@ export type Database = {
         Args: { p_company_id: string; p_total: number }
         Returns: Json
       }
+      pay_festival_settlement_payable: {
+        Args: { p_idempotency_key: string; p_line_id: string }
+        Returns: Json
+      }
       perform_wellness_activity: {
         Args: { _catalog_slug: string; _profile_id: string }
         Returns: Json
@@ -52041,6 +52231,10 @@ export type Database = {
         }
         Returns: Json
       }
+      post_next_festival_edition_settlement_item: {
+        Args: { p_idempotency_key: string; p_settlement_id: string }
+        Returns: Json
+      }
       prepare_festival_edition_runtime: {
         Args: {
           p_edition_id: string
@@ -52051,56 +52245,65 @@ export type Database = {
         }
         Returns: Json
       }
-      prepare_festival_edition_settlement: {
-        Args: {
-          p_admin_override_reason?: string
-          p_edition_id: string
-          p_expected_readiness_hash: string
-          p_idempotency_key: string
-        }
-        Returns: {
-          calculation_config_version: string
-          completed_at: string | null
-          contracts_settled_at: string | null
-          created_at: string
-          currency_code: string
-          edition_id: string
-          effects_applied_at: string | null
-          failed_at: string | null
-          failed_phase: string | null
-          failure_code: string | null
-          failure_details: Json
-          festival_id: string
-          id: string
-          idempotency_key: string
-          input_hash: string
-          input_snapshot: Json
-          invalidated_at: string | null
-          invalidated_by_profile_id: string | null
-          invalidation_reason: string | null
-          last_completed_phase: string | null
-          locked_at: string | null
-          next_retry_at: string | null
-          operator_note: string | null
-          readiness_snapshot: Json
-          reconciled_at: string | null
-          retry_count: number
-          retryable: boolean
-          revenue_settled_at: string | null
-          settlement_version: number
-          started_at: string
-          started_by_profile_id: string | null
-          status: Database["public"]["Enums"]["festival_settlement_status"]
-          supersedes_settlement_id: string | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "festival_edition_settlements"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      prepare_festival_edition_settlement:
+        | {
+            Args: {
+              p_admin_override_reason?: string
+              p_edition_id: string
+              p_expected_readiness_hash: string
+              p_idempotency_key: string
+            }
+            Returns: {
+              calculation_config_version: string
+              completed_at: string | null
+              contracts_settled_at: string | null
+              created_at: string
+              currency_code: string
+              edition_id: string
+              effects_applied_at: string | null
+              failed_at: string | null
+              failed_phase: string | null
+              failure_code: string | null
+              failure_details: Json
+              festival_id: string
+              id: string
+              idempotency_key: string
+              input_hash: string
+              input_snapshot: Json
+              invalidated_at: string | null
+              invalidated_by_profile_id: string | null
+              invalidation_reason: string | null
+              last_completed_phase: string | null
+              locked_at: string | null
+              next_retry_at: string | null
+              operator_note: string | null
+              readiness_snapshot: Json
+              reconciled_at: string | null
+              retry_count: number
+              retryable: boolean
+              revenue_settled_at: string | null
+              settlement_version: number
+              started_at: string
+              started_by_profile_id: string | null
+              status: Database["public"]["Enums"]["festival_settlement_status"]
+              supersedes_settlement_id: string | null
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "festival_edition_settlements"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_edition_id: string
+              p_expected_runtime_digest: string
+              p_idempotency_key: string
+            }
+            Returns: Json
+          }
       preserve_final_gig_forecast_snapshot: {
         Args: { p_forecast: Json; p_gig_id: string; p_version?: number }
         Returns: Json
@@ -52293,6 +52496,10 @@ export type Database = {
       }
       recalculate_song_fame_popularity: {
         Args: { p_song_id: string }
+        Returns: Json
+      }
+      receive_festival_settlement_receivable: {
+        Args: { p_idempotency_key: string; p_line_id: string }
         Returns: Json
       }
       recompute_candidate_endorsement_bonus: {
@@ -52588,6 +52795,14 @@ export type Database = {
           p_request_id: string
           p_response_message?: string
           p_royalty_percentage?: number
+        }
+        Returns: Json
+      }
+      resume_festival_settlement_effects: {
+        Args: {
+          p_effect_ids: string[]
+          p_reason: string
+          p_settlement_id: string
         }
         Returns: Json
       }
@@ -53137,6 +53352,14 @@ export type Database = {
       }
       start_direct_conversation: {
         Args: { recipient_profile_id: string }
+        Returns: Json
+      }
+      start_festival_edition_settlement_posting: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_settlement_id: string
+        }
         Returns: Json
       }
       start_festival_performance: {
@@ -53801,6 +54024,10 @@ export type Database = {
           p_idempotency_key?: string
           p_offer_id: string
         }
+        Returns: Json
+      }
+      write_off_festival_settlement_receivable: {
+        Args: { p_idempotency_key: string; p_line_id: string }
         Returns: Json
       }
     }
