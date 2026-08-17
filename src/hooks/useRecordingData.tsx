@@ -329,6 +329,8 @@ export const useCreateRecordingSession = () => {
       }
       
       // Fetch required data
+      stage = "loading song, studio and producer details";
+
       const [songResult, studioResult, producerResult] = await Promise.all([
         supabase.from('songs').select('quality_score').eq('id', input.song_id).single(),
         supabase.from('city_studios').select('quality_rating, hourly_rate').eq('id', input.studio_id).single(),
