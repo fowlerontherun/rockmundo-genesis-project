@@ -375,7 +375,9 @@ export const useCreateRecordingSession = () => {
       // Band pays by default when a band is attached; the player can opt to pay personally
       const paysFromBand = !!input.band_id && (input.payment_source ?? 'band') === 'band';
 
+      stage = "charging the session cost";
       if (paysFromBand) {
+
         const { data: band } = await supabase
           .from('bands')
           .select('band_balance')
