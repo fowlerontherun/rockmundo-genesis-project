@@ -17,6 +17,18 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.697",
+    date: "2026-08-17",
+    changes: [
+      { type: 'feature', description: "Festival end-of-event accounting now works end to end: preparing a settlement builds a full list of money in and money out for the edition (ticket income, ticket tax, logged expenses, supplier commitments and artist fees)." },
+      { type: 'feature', description: "Owners can approve a settlement, then post the money to the festival company balance one item at a time, so a single failure never loses earlier payments." },
+      { type: 'feature', description: "Unpaid items become receivables or payables you can later mark as received, paid, written off or cancelled." },
+      { type: 'feature', description: "Performance results are recorded as festival effects, progress is reported per effect, failed effects can be resumed, and finalising the settlement writes the edition's permanent financial result and public history." },
+      { type: 'improvement', description: "Only the festival owner (or an admin) can prepare, approve, post or finalise a settlement; the edition's public history is readable by everyone." },
+    ],
+  },
+  {
+
     version: "1.1.696",
     date: "2026-08-16",
     changes: [
