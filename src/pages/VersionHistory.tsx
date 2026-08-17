@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.698",
+    date: "2026-08-17",
+    changes: [
+      { type: 'fix', description: "Booking a recording session no longer shows the confusing \"object is not iterable\" message: the booking now says exactly which step failed (availability check, loading details, charging the cost, creating the session or scheduling it) so problems are clear and reportable." },
+      { type: 'fix', description: "Hardened the recording booking, band availability check and song list against unexpected data shapes that could crash the booking before anything was saved." },
+    ],
+  },
+  {
     version: "1.1.697",
     date: "2026-08-17",
     changes: [
