@@ -439,6 +439,7 @@ export const useCreateRecordingSession = () => {
         .select('city_id')
         .eq('id', input.studio_id)
         .single();
+      stage = "creating the recording session";
 
       const { data: session, error: sessionError } = await supabase
         .from('recording_sessions')
