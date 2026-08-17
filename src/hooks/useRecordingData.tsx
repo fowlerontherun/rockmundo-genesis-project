@@ -285,8 +285,11 @@ export const useCreateRecordingSession = () => {
 
   return useMutation({
     mutationFn: async (input: CreateRecordingSessionInput) => {
+      let stage = "starting the booking";
+      try {
       // Check for scheduling conflicts before starting
       const { data: { user } } = await supabase.auth.getUser();
+
       if (!user) throw new Error('Not authenticated');
 
       // Use scheduled times if provided, otherwise use now
@@ -297,14 +300,16 @@ export const useCreateRecordingSession = () => {
       let excludedConflicts: Awaited<ReturnType<typeof checkBandAvailability>>['conflicts'] = [];
 
       // If band session, check availability for ALL band members first
+      stage = "checking band availability";
       if (input.band_id) {
+
         const { available, conflicts } = await checkBandAvailability(
           input.band_id,
           now,
           sessionEnd
         );
 
-        const skipSet = new Set(input.skip_profile_ids || []);
+        const skipSet = new Set(Array.isArray(input.skip_profile_ids) ? input.skip_profile_ids : []);
         blockedConflicts = conflicts.filter(c => !c.profileId || !skipSet.has(c.profileId));
         excludedConflicts = conflicts.filter(c => c.profileId && skipSet.has(c.profileId));
 
@@ -326,6 +331,8 @@ export const useCreateRecordingSession = () => {
       }
       
       // Fetch required data
+      stage = "loading song, studio and producer details";
+
       const [songResult, studioResult, producerResult] = await Promise.all([
         supabase.from('songs').select('quality_score').eq('id', input.song_id).single(),
         supabase.from('city_studios').select('quality_rating, hourly_rate').eq('id', input.studio_id).single(),
@@ -372,7 +379,9 @@ export const useCreateRecordingSession = () => {
       // Band pays by default when a band is attached; the player can opt to pay personally
       const paysFromBand = !!input.band_id && (input.payment_source ?? 'band') === 'band';
 
+      stage = "charging the session cost";
       if (paysFromBand) {
+
         const { data: band } = await supabase
           .from('bands')
           .select('band_balance')
@@ -436,6 +445,7 @@ export const useCreateRecordingSession = () => {
         .select('city_id')
         .eq('id', input.studio_id)
         .single();
+      stage = "creating the recording session";
 
       const { data: session, error: sessionError } = await supabase
         .from('recording_sessions')
@@ -489,8 +499,9 @@ export const useCreateRecordingSession = () => {
         .eq('id', input.song_id)
         .single();
       const songTitle = (songInfo as any)?.title || 'a song';
-
+      stage = "scheduling the session for everyone involved";
       if (input.band_id) {
+
         // Band session - schedule for ALL band members
         await createBandScheduledActivities({
           bandId: input.band_id,
@@ -610,7 +621,17 @@ export const useCreateRecordingSession = () => {
       }
 
       return sessionData;
+      } catch (bookingError) {
+        if (bookingError instanceof BandUnavailableError) throw bookingError;
+        console.error(`[recording-booking] failed during stage "${stage}"`, bookingError);
+        const detail =
+          bookingError instanceof Error
+            ? bookingError.message
+            : String((bookingError as any)?.message ?? bookingError);
+        throw new Error(`${detail} (while ${stage})`);
+      }
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recording-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['recorded-songs-list'] });
