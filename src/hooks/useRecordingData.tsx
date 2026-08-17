@@ -300,7 +300,9 @@ export const useCreateRecordingSession = () => {
       let excludedConflicts: Awaited<ReturnType<typeof checkBandAvailability>>['conflicts'] = [];
 
       // If band session, check availability for ALL band members first
+      stage = "checking band availability";
       if (input.band_id) {
+
         const { available, conflicts } = await checkBandAvailability(
           input.band_id,
           now,
