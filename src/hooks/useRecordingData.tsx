@@ -285,8 +285,11 @@ export const useCreateRecordingSession = () => {
 
   return useMutation({
     mutationFn: async (input: CreateRecordingSessionInput) => {
+      let stage = "starting the booking";
+      try {
       // Check for scheduling conflicts before starting
       const { data: { user } } = await supabase.auth.getUser();
+
       if (!user) throw new Error('Not authenticated');
 
       // Use scheduled times if provided, otherwise use now
