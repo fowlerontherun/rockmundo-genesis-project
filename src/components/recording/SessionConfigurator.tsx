@@ -320,6 +320,9 @@ export const SessionConfigurator = ({
   };
 
   const proceedWithRecording = async (skipProfileIds: string[] = []) => {
+    const normalizedSkipProfileIds = Array.isArray(skipProfileIds)
+      ? skipProfileIds
+      : [];
     setShowRehearsalWarning(false);
 
     const slot = STUDIO_SLOTS.find((s) => s.id === selectedSlotId);
@@ -344,7 +347,7 @@ export const SessionConfigurator = ({
         scheduled_start: start.toISOString(),
         scheduled_end: end.toISOString(),
         payment_source: payer,
-        skip_profile_ids: skipProfileIds,
+        skip_profile_ids: normalizedSkipProfileIds,
       });
       setConflictState(null);
       onComplete();
@@ -799,7 +802,9 @@ export const SessionConfigurator = ({
         rehearsalStage={rehearsalData?.stage || "unrehearsed"}
         familiarityMinutes={rehearsalData?.minutes || 0}
         qualityPenalty={rehearsalBonus}
-        onConfirm={proceedWithRecording}
+        onConfirm={() => {
+          void proceedWithRecording([]);
+        }}
       />
 
       <div className="flex gap-3">

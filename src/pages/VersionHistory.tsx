@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.699",
+    date: "2026-08-18",
+    changes: [
+      { type: 'fix', description: "Fixed the War Dogs recording failure: confirming the rehearsal warning no longer passes a button click event into the booking request as though it were a list of absent band members." },
+      { type: 'fix', description: "Recording bookings now normalize the absent-member list at the form boundary, preventing non-array values from reaching band availability and scheduling logic." },
+    ],
+  },
+  {
     version: "1.1.698",
     date: "2026-08-17",
     changes: [
