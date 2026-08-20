@@ -1,0 +1,13 @@
+begin;
+select plan(9);
+select has_function('public','is_authorized_band_member',array['uuid'],'canonical finance authorization helper exists');
+select has_function('public','get_release_financial_summary',array['uuid','uuid'],'financial summary RPC exists');
+select has_function('public','charge_band_release_cost',array['uuid','integer','text','jsonb'],'band charge RPC exists');
+select has_function('public','reorder_release_stock',array['uuid','uuid','integer','integer','timestamp with time zone','boolean'],'reorder RPC exists');
+select has_function('public','purchase_release_format',array['uuid','text','integer','integer','integer','timestamp with time zone','text','boolean'],'format purchase RPC exists');
+select has_function('public','create_release_with_financing',array['jsonb'],'creation RPC exists');
+select has_function('public','get_release_finance_health',array[]::text[],'health RPC exists');
+select is((public.get_release_finance_health()->>'ready')::boolean,true,'clean database reports finance contract ready');
+select is((public.get_release_finance_health()->>'contract_version')::integer,2,'health contract is version 2');
+select * from finish();
+rollback;

@@ -33,9 +33,11 @@ import { ReorderStockDialog } from "./ReorderStockDialog";
 import { minorToMajor } from "@/lib/releaseMoney";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
+import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
 
 interface MyReleasesTabProps {
   userId: string;
+  authUserId?: string | null;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; icon: typeof Music }> = {
@@ -52,7 +54,7 @@ const RELEASE_TYPE_CONFIG: Record<string, { label: string; trackRange: string }>
   album: { label: "Album", trackRange: "7+ tracks" },
 };
 
-export function MyReleasesTab({ userId }: MyReleasesTabProps) {
+export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -111,13 +113,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
     queryKey: ["releases", userId],
     queryFn: async () => {
       // First get user's band IDs
-      const { data: bandMemberships } = await supabase
-        .from("band_members")
-        .select("band_id")
-        .or(`profile_id.eq.${userId},user_id.eq.${userId}`)
-        .eq("member_status", "active");
-      
-      const bandIds = bandMemberships?.map(d => d.band_id) || [];
+      const membership = await resolveActiveBandMembership(userId, authUserId);
+      const bandIds = membership ? [membership.band_id] : [];
       
       // Build the query with comprehensive data
       let query = supabase
@@ -154,9 +151,9 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
       
       // Filter by user_id OR band membership
       if (bandIds.length > 0) {
-        query = query.or(`user_id.eq.${userId},band_id.in.(${bandIds.join(",")})`);
+        query = query.or(`user_id.eq.${authUserId ?? userId},band_id.in.(${bandIds.join(",")})`);
       } else {
-        query = query.eq("user_id", userId);
+        query = query.eq("user_id", authUserId ?? userId);
       }
       
       const { data, error } = await query;
@@ -227,7 +224,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
     return cut;
   };
 
-  const { data: salesFinancials } = useQuery({
+  const financeHealth = useQuery({queryKey:["release-finance-health"],queryFn:async()=>{const {data,error}=await (supabase as any).rpc("get_release_finance_health");if(error)throw error;if(!data?.ready||Number(data.contract_version)<2)throw new Error("Incomplete release finance backend");return data;},retry:false});
+  const { data: salesFinancials, error: financeError, isLoading: financeLoading } = useQuery({
     queryKey: ["release-sales-financials", releaseIds.join(",")],
     queryFn: async () => {
       const result: Record<string, any> = {};
@@ -241,7 +239,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
           bandRevenue: minorToMajor(Number(row.band_revenue_cents)), economicCost: minorToMajor(Number(row.economic_cost_cents)),
           bandCost: minorToMajor(Number(row.band_cost_cents)), labelCost: minorToMajor(Number(row.label_cost_cents)), unknownCost: minorToMajor(Number(row.unknown_cost_cents)) };
       })); return result;
-    }, enabled: releaseIds.length > 0,
+    }, enabled: releaseIds.length > 0 && financeHealth.isSuccess, retry:false,
   });
 
   const filteredReleases = releases?.filter(r => {
@@ -341,6 +339,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 
   return (
     <div className="space-y-6">
+      {(financeHealth.error || financeError) && <Card className="border-amber-500"><CardContent className="p-4 flex gap-2"><AlertCircle className="h-5 w-5 text-amber-500"/><div><strong>Release financial data is temporarily unavailable.</strong><p className="text-sm text-muted-foreground">Your releases are still shown below; financial values are hidden until the finance service recovers.</p></div></CardContent></Card>}
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card>
@@ -361,7 +360,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             <p className="text-2xl font-bold">{stats.released}</p>
           </CardContent>
         </Card>
-        <Card>
+        {!financeHealth.error && !financeError && !financeLoading && <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <DollarSign className="h-4 w-4" />
@@ -369,8 +368,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             </div>
             <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
           </CardContent>
-        </Card>
-        <Card>
+        </Card>}
+        {!financeHealth.error && !financeError && !financeLoading && <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <DollarSign className="h-4 w-4" />
@@ -379,8 +378,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             <p className="text-2xl font-bold text-orange-500">${(totalTaxPaid + totalDistFees + totalManufacturerShare).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Tax ${totalTaxPaid.toLocaleString(undefined, { maximumFractionDigits: 0 })} · Dist ${totalDistFees.toLocaleString(undefined, { maximumFractionDigits: 0 })} · Mfr ${totalManufacturerShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
           </CardContent>
-        </Card>
-        <Card>
+        </Card>}
+        {!financeHealth.error && !financeError && !financeLoading && <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Users className="h-4 w-4" />
@@ -389,8 +388,8 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             <p className="text-2xl font-bold text-purple-500">${totalLabelShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Paid to record labels</p>
           </CardContent>
-        </Card>
-        <Card>
+        </Card>}
+        {!financeHealth.error && !financeError && !financeLoading && <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <TrendingUp className="h-4 w-4" />
@@ -401,7 +400,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             </p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Band revenue minus band-paid costs</p>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
 
       {/* Search and Filters */}
@@ -462,6 +461,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             key={release.id} 
             release={release} 
             financials={salesFinancials?.[release.id]}
+            financeAvailable={financeHealth.isSuccess && !financeError && !financeLoading}
             labelCutPct={getEffectiveLabelCutPct(release)}
             onEdit={() => setEditingRelease(release)}
             onCancel={() => setCancellingRelease(release)}
@@ -535,6 +535,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 interface ReleaseCardProps {
   release: any;
   financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; manufacturerShare: number; netRevenue: number };
+  financeAvailable?: boolean;
   labelCutPct?: number;
   onEdit: () => void;
   onCancel: () => void;
@@ -548,7 +549,7 @@ interface ReleaseCardProps {
   isReleasing?: boolean;
 }
 
-function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -595,7 +596,7 @@ function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, o
             <span>•</span>
             <span>{formatDistanceToNow(new Date(release.created_at), { addSuffix: true })}</span>
           </div>
-          <div className="flex items-center gap-3 text-[11px] flex-wrap">
+          {financeAvailable ? <div className="flex items-center gap-3 text-[11px] flex-wrap">
             <span className="text-muted-foreground">Economic cost: <strong>${(financials?.economicCost || 0).toLocaleString()}</strong> · Band paid: <strong>${(financials?.bandCost || 0).toLocaleString()}</strong></span>
             <span className="text-green-600">Rev: <strong>${(financials?.grossRevenue || 0).toLocaleString()}</strong></span>
             {labelCutPct > 0 && (
@@ -610,7 +611,7 @@ function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, o
             })()}
             {release.total_streams > 0 && <span className="text-muted-foreground"><Play className="h-3 w-3 inline mr-0.5" />{release.total_streams.toLocaleString()}</span>}
             {release.units_sold > 0 && <span className="text-muted-foreground">Sold: {release.units_sold.toLocaleString()}</span>}
-          </div>
+          </div> : <p className="text-[11px] text-amber-600">Financial breakdown unavailable</p>}
           {release.release_formats?.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
               {release.release_formats.map((fmt: any) => {
