@@ -26,7 +26,20 @@ const festivalSettlementV2ExecutionContinuation = "20291218040000_execute_festiv
 const festivalSettlementV2NativeContinuation = "20291218050000_native_festival_settlement_v2.sql";
 const festivalSettlementV2AuditContinuation = "20291218060000_auditable_festival_settlement_v2.sql";
 const festivalSettlementV2CompletionContinuation = "20291218070000_complete_festival_settlement_v2.sql";
-const documentedFestivalSequence = /^2029121[78]\d{6}_.+\.sql$/;
+// PR #1517 may already have been applied. Preserve that exact immutable filename;
+// all corrections live in a current, forward migration.
+const deployedReleaseFinanceException = "20291218245800_release_finance_consistency.sql";
+const inheritedFutureMigrations = new Set(JSON.parse(readFileSync(join(process.cwd(), "scripts", "supabase", "inherited-future-migrations.json"), "utf8")));
+const documentedFestivalSequence = new Set([
+  festivalPhase2Continuation, festivalPhase3Continuation, festivalPhase4Continuation,
+  festivalPhase4WorkflowContinuation, festivalPhase5Continuation, festivalPhase5WorkflowContinuation,
+  festivalPhase6Continuation, festivalPhase6WorkflowContinuation, festivalPhase7Continuation,
+  festivalPhase7LaunchContinuation, festivalPhase8RuntimeContinuation, festivalPhase8OperationsContinuation,
+  festivalPhase9SettlementContinuation, festivalPhase9LegacyContinuation, festivalRuntimeWorkerContinuation,
+  festivalCrossPhaseContinuation, festivalRuntimeV2HardeningContinuation, festivalSettlementV2Continuation,
+  festivalSettlementV2ExecutionContinuation, festivalSettlementV2NativeContinuation,
+  festivalSettlementV2AuditContinuation, festivalSettlementV2CompletionContinuation,
+]);
 const legacySequenceNames = new Set(["085_jam_sessions_core.sql", "086_band_member_locks.sql", "087_bands_add_chemistry_cohesion.sql"]);
 const today = new Date();
 const reasonableFuture = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 2, 23, 59, 59));
@@ -48,7 +61,8 @@ for (const filename of migrationFiles) {
     failures.push(`${filename}: expected YYYYMMDDHHMMSS_description.sql`); continue;
   }
   const stamp = match[1];
-  if (documentedFestivalSequence.test(filename)) { exceptions.push(filename); continue; }
+  if (documentedFestivalSequence.has(filename)) { exceptions.push(filename); continue; }
+  if (filename === deployedReleaseFinanceException || inheritedFutureMigrations.has(filename)) { exceptions.push(filename); continue; }
   const todayStamp = `${today.getUTCFullYear()}${String(today.getUTCMonth() + 1).padStart(2, "0")}${String(today.getUTCDate()).padStart(2, "0")}235959`;
   // Freeze every inherited future sequence through the known anomaly. This includes
   // several historical invalid calendar-day names; accepting the exact bounded

@@ -187,203 +187,44 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       if (selectedFormats.length === 0) throw new Error("Select at least one release format");
       if (selectedTerritories.length === 0) throw new Error("Select at least one release territory");
 
-      // Calculate total cost including territory distribution
       const manufacturingCostMinor = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
       const totalCostMinor = manufacturingCostMinor + territoryCostMinor;
-      
-      const manufacturingDays = selectedFormats.reduce((max, format) => {
-        const days = MANUFACTURING_DAYS[format.format_type] || 2;
-        return Math.max(max, days);
-      }, 2);
-      
+      const manufacturingDays = selectedFormats.reduce((max, format) => Math.max(max, MANUFACTURING_DAYS[format.format_type] || 2), 2);
       const manufacturingCompleteAt = new Date();
       manufacturingCompleteAt.setDate(manufacturingCompleteAt.getDate() + manufacturingDays);
-
-      // Determine who pays manufacturing
       const bandPaysMinor = labelCoversManufacturing ? territoryCostMinor : totalCostMinor;
       const labelPaysMinor = labelCoversManufacturing ? manufacturingCostMinor : 0;
-
-      // If label covers manufacturing, deduct from label balance
-      if (labelPaysMinor > 0 && activeContract) {
-        const { data: label } = await supabase
-          .from("labels")
-          .select("balance")
-          .eq("id", activeContract.label_id)
-          .single();
-
-        const labelPaysDollars = minorToMajor(labelPaysMinor); // Convert cents to dollars
-        if (!label || (label.balance || 0) < labelPaysDollars) {
-          throw new Error(`Label doesn't have enough funds to cover manufacturing ($${labelPaysDollars.toFixed(2)}). Label balance: $${((label?.balance || 0)).toLocaleString()}`);
-        }
-
-        await supabase
-          .from("labels")
-          .update({ balance: (label.balance || 0) - labelPaysDollars })
-          .eq("id", activeContract.label_id);
-
-        // Record label transaction
-        await supabase.from("label_financial_transactions").insert({
-          label_id: activeContract.label_id,
-          transaction_type: "expense",
-          amount: labelPaysDollars,
-          description: `Manufacturing costs for "${title}" (contract benefit)`,
-          related_contract_id: activeContract.id,
-        });
-      }
-
-      // The canonical RPC converts cents to treasury dollars and writes the ledger atomically.
-      if (userBand && bandPaysMinor > 0) {
-        const { error } = await (supabase as any).rpc("charge_band_release_cost", {
-          p_band_id: userBand.id, p_amount_minor: bandPaysMinor,
-          p_description: `Release manufacturing and territory setup: ${title}`,
-          p_metadata: { release_type: releaseType, formats: selectedFormats.map(f => f.format_type), territories: selectedTerritories.length, manufacturing_cost_minor: manufacturingCostMinor, territory_setup_cost_minor: territoryCostMinor, label_covered_minor: labelPaysMinor },
-        });
-        if (error) throw error;
-      }
-
-      // Calculate initial hype from label marketing support
       const marketingHypeBonus = activeContract?.marketing_support
-        ? Math.min(200, Math.floor((activeContract.marketing_support as number) / 50))
-        : 0;
+        ? Math.min(200, Math.floor((activeContract.marketing_support as number) / 50)) : 0;
 
-      // Create release with label contract info
-      const { data: release, error: releaseError } = await supabase
-        .from("releases")
-        .insert({
-          user_id: userBand ? null : userId,
-          band_id: userBand?.id || null,
+      // One PostgreSQL transaction creates every child row, records payer evidence,
+      // and moves treasury funds. Any validation/insert failure rolls everything back.
+      const { data: releaseId, error: createError } = await (supabase as any).rpc("create_release_with_financing", {
+        p_payload: {
+          band_id: userBand?.id,
           release_type: releaseType === "greatest_hits" ? "album" : releaseType,
-          title: title.trim(),
-          artist_name: artistName.trim(),
-          release_status: "manufacturing",
-          total_cost: totalCostMinor,
+          title: title.trim(), artist_name: artistName.trim(),
+          manufacturing_cost_minor: manufacturingCostMinor, territory_cost_minor: territoryCostMinor,
           manufacturing_complete_at: manufacturingCompleteAt.toISOString(),
-          scheduled_release_date: scheduledReleaseDate?.toISOString().split('T')[0] || null,
-          streaming_platforms: selectedStreamingPlatforms.length > 0 ? selectedStreamingPlatforms : null,
-          is_greatest_hits: releaseType === "greatest_hits",
-          revenue_share_enabled: revenueShareEnabled,
+          scheduled_release_date: scheduledReleaseDate?.toISOString().split("T")[0] || null,
+          streaming_platforms: selectedStreamingPlatforms,
+          is_greatest_hits: releaseType === "greatest_hits", revenue_share_enabled: revenueShareEnabled,
           revenue_share_percentage: revenueShareEnabled ? 10 : null,
           manufacturing_discount_percentage: revenueShareEnabled ? 50 : null,
-          home_country: bandHomeInfo?.country || null,
-          // ── Label contract fields ──
-          label_contract_id: activeContract?.id || null,
-          label_revenue_share_pct: activeContract ? labelCutPct : null,
-          hype_score: marketingHypeBonus > 0 ? marketingHypeBonus : undefined,
-        })
-        .select()
-        .single();
-
-      if (releaseError) throw releaseError;
-
-      // Save territories
-      if (selectedTerritories.length > 0) {
-        const territoryInserts = selectedTerritories.map(t => ({
-          release_id: release.id,
-          country: t.country,
-          distance_tier: t.distanceTier,
-          cost_multiplier: t.costMultiplier,
-          distribution_cost: t.distributionCost,
-          is_active: true,
-        }));
-
-        const { error: territoryError } = await supabase
-          .from("release_territories")
-          .insert(territoryInserts);
-
-        if (territoryError) {
-          throw territoryError;
-        }
-      }
-
-      // Update last_greatest_hits_date if this is a greatest hits album
-      if (releaseType === "greatest_hits" && userBand?.id) {
-        await supabase
-          .from("releases")
-          .update({ last_greatest_hits_date: new Date().toISOString() })
-          .eq("id", release.id);
-      }
-
-      // Add songs with their recording versions
-      const songInserts = selectedSongs.map((song, index) => ({
-        release_id: release.id,
-        song_id: song.songId,
-        track_number: index + 1,
-        is_b_side: releaseType === "single" && index === 1,
-        recording_version: song.version,
-        album_release_id: releaseType === "album" ? release.id : null
-      }));
-
-      const { error: songsError } = await supabase
-        .from("release_songs")
-        .insert(songInserts);
-
-      if (songsError) throw songsError;
-
-      // Add formats
-      const formatInserts = selectedFormats.map(format => ({
-        release_id: release.id,
-        ...format,
-        // Convert retail_price from dollars to cents for DB storage
-        retail_price: Math.round((format.retail_price || 0) * 100),
-      }));
-
-      const { error: formatsError } = await supabase
-        .from("release_formats")
-        .insert(formatInserts);
-
-      if (formatsError) throw formatsError;
-
-      // Increment contract release count
-      if (activeContract) {
-        const isAlbum = releaseType === "album" || releaseType === "greatest_hits";
-        const updateField = isAlbum ? "albums_completed" : "singles_completed";
-        const fallbackField = "releases_completed";
-
-        // Also increment releases_completed as a general counter
-        const { data: currentContract } = await supabase
-          .from("artist_label_contracts")
-          .select(`${updateField}, releases_completed`)
-          .eq("id", activeContract.id)
-          .single();
-
-        if (currentContract) {
-          const updateObj: Record<string, number> = {
-            [updateField]: ((currentContract as any)[updateField] || 0) + 1,
-            releases_completed: (currentContract.releases_completed || 0) + 1,
-          };
-          await supabase
-            .from("artist_label_contracts")
-            .update(updateObj as any)
-            .eq("id", activeContract.id);
-        }
-      }
-
-      // Log release creation activity
-      logGameActivity({
-        userId,
-        bandId: userBand?.id,
-        activityType: 'release_created',
-        activityCategory: 'release',
-        description: `Created ${releaseType === "greatest_hits" ? "Greatest Hits" : releaseType} release "${title}"${activeContract ? ` under ${labelName}` : ''} - Manufacturing in progress (${selectedTerritories.length} territories)`,
-        amount: -minorToMajor(bandPaysMinor),
-        metadata: {
-          releaseId: release.id,
-          releaseType,
-          title,
-          artistName,
-          formats: selectedFormats.map(f => f.format_type),
-          songCount: selectedSongs.length,
-          manufacturingDays,
-          streamingPlatforms: selectedStreamingPlatforms,
-          territories: selectedTerritories.map(t => t.country),
-          territoryCostMinor,
-          revenueShareEnabled,
-          labelContractId: activeContract?.id,
-          labelCoveredCostMinor: labelPaysMinor,
-          marketingHypeBonus,
-        }
+          home_country: bandHomeInfo?.country || null, label_contract_id: activeContract?.id || null,
+          label_revenue_share_pct: activeContract ? labelCutPct : null, hype_score: marketingHypeBonus || null,
+          territories: selectedTerritories.map(t => ({ country: t.country, distance_tier: t.distanceTier, cost_multiplier: t.costMultiplier, distribution_cost: t.distributionCost })),
+          songs: selectedSongs.map((song, index) => ({ song_id: song.songId, track_number: index + 1, is_b_side: releaseType === "single" && index === 1, recording_version: song.version })),
+          formats: selectedFormats.map(format => ({ ...format, retail_price: Math.round((format.retail_price || 0) * 100), release_date: format.release_date || manufacturingCompleteAt.toISOString() })),
+        },
       });
+      if (createError) throw createError;
+      const { data: release, error: fetchError } = await supabase.from("releases").select("*").eq("id", releaseId).single();
+      if (fetchError) throw fetchError;
 
+      logGameActivity({ userId, bandId: userBand?.id, activityType: "release_created", activityCategory: "release",
+        description: `Created ${releaseType} release "${title}" - Manufacturing in progress`, amount: -minorToMajor(bandPaysMinor),
+        metadata: { releaseId, manufacturingDays, territoryCostMinor, labelCoveredCostMinor: labelPaysMinor } });
       return release;
     },
     onSuccess: (release) => {
