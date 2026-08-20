@@ -19,3 +19,8 @@ export const releaseCostMajor = (
 export function releaseProfitMajor(bandNetMajor: MajorUnits, totalReleaseCostMinor: MinorUnits): MajorUnits {
   return bandNetMajor - minorToMajor(totalReleaseCostMinor);
 }
+
+/** Band P/L must never include costs funded by a label (or unattributed legacy costs). */
+export function bandReleaseProfitMajor(bandRevenueMinor: MinorUnits, bandPaidCostMinor: MinorUnits): MajorUnits {
+  return minorToMajor(bandRevenueMinor - bandPaidCostMinor);
+}

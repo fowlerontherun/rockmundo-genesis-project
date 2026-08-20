@@ -111,7 +111,7 @@ export function ReleaseAnalyticsDialog({
   });
 
   // Fetch sales data via server-side aggregation (bypasses 1000-row PostgREST cap)
-  const { data: salesData, isLoading: loadingSales } = useQuery({
+  const { data: salesData, isLoading: loadingSales, error: salesFinanceError } = useQuery({
     queryKey: ["release-sales-analytics", release?.id, salesDayFilter],
     queryFn: async () => {
       if (!release?.id) return null;
@@ -154,30 +154,7 @@ export function ReleaseAnalyticsDialog({
         };
       });
 
-      // Fallback: synthesize from release-level columns if RPC empty AND no day filter
-      if (salesDayFilter === "all") {
-        const formatTypes = ["digital", "cd", "vinyl", "cassette"] as const;
-        for (const ft of formatTypes) {
-          const colUnits = release[`${ft}_sales`] || 0;
-          if (!formatStatsMap[ft] && colUnits > 0) {
-            const fmt = release.release_formats?.find((f: any) => f.format_type === ft);
-            const pricePerUnit = fmt?.retail_price ? fmt.retail_price / 100 : 0;
-            const gross = Math.round(colUnits * pricePerUnit * 100) / 100;
-            const distRate = ft === "digital" ? 0.30 : ft === "cd" ? 0.20 : 0.15;
-            const tax = Math.round(gross * 0.10 * 100) / 100;
-            const dist = Math.round(gross * distRate * 100) / 100;
-            formatStatsMap[ft] = {
-              format: ft,
-              units: colUnits,
-              gross,
-              tax,
-              dist,
-              manufacturer: 0,
-              net: gross - tax - dist,
-            };
-          }
-        }
-      }
+      if (rpcError) throw rpcError;
 
       const formatStats = Object.values(formatStatsMap)
         .filter((v) => v.units > 0)
@@ -334,7 +311,7 @@ export function ReleaseAnalyticsDialog({
   const totalStreams = streamingData?.totalStreams || release.total_streams || 0;
   const streamingRevenue = streamingData?.totalRevenue || 0;
   const salesRevenue = salesData?.totalRevenue || 0;
-  const totalRevenue = release.total_revenue || (streamingRevenue + salesRevenue);
+  const totalRevenue = streamingRevenue + salesRevenue;
 
   const isLoading = loadingStreaming || loadingSales || loadingCharts || loadingFinancials;
 
@@ -442,7 +419,9 @@ export function ReleaseAnalyticsDialog({
           </TabsContent>
 
           <TabsContent value="financials" className="space-y-4">
-            {(() => {
+            {salesFinanceError ? (
+              <Card><CardContent className="p-6 text-center text-muted-foreground">Release financial breakdown is temporarily unavailable.</CardContent></Card>
+            ) : (() => {
               const releaseCost = minorToMajor(release.total_cost || 0);
               const gross = financialData?.grossRevenue || 0;
               const tax = financialData?.taxPaid || 0;

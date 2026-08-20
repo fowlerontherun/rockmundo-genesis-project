@@ -458,6 +458,11 @@ serve(async (req) => {
               const distributionFeeCents = deductions.distributorMinor;
               const manufacturerShareCents = deductions.manufacturerShareMinor;
               const netRevenueCents = deductions.preLabelNetMinor;
+              // Persist the actual split on every sale.  The release snapshot is used,
+              // never the mutable current contract, so historical reports reconcile.
+              const labelShareRate = Math.max(0, Math.min(1, ((release as any).label_revenue_share_pct || 0) / 100));
+              const labelShareCents = Math.round(netRevenueCents * labelShareRate);
+              const bandRevenueCents = netRevenueCents - labelShareCents;
               const salesTaxAmount = salesTaxCents / 100;
               const distributionFee = distributionFeeCents / 100;
               const netRevenue = netRevenueCents / 100;
@@ -475,6 +480,8 @@ serve(async (req) => {
                 distribution_rate: distributionRate * 100,
                 manufacturing_revenue_share: manufacturerShareCents,
                 net_revenue: netRevenueCents,
+                label_share_amount: labelShareCents,
+                band_revenue_amount: bandRevenueCents,
                 city_id: homeCityId,
                 country: territory.country || null,
               });

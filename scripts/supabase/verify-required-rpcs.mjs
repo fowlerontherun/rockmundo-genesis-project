@@ -3,6 +3,11 @@ import { join } from 'node:path';
 
 const root = process.cwd();
 const requiredRpcs = [
+  { name: 'purchase_release_format', arguments: [{name:'p_release_id',type:'uuid'}] },
+  { name: 'reorder_release_stock', arguments: [{name:'p_release_id',type:'uuid'}] },
+  { name: 'get_release_sales_breakdown', arguments: [{name:'p_release_id',type:'uuid'},{name:'p_sale_date',type:'date'}] },
+  { name: 'get_release_financial_summary', arguments: [{name:'p_release_id',type:'uuid'},{name:'p_band_id',type:'uuid'}] },
+  { name: 'create_release_with_financing', arguments: [{name:'p_payload',type:'jsonb'}] },
   {
     name: 'get_banking_dashboard',
     arguments: [],
@@ -87,7 +92,7 @@ for (const rpc of requiredRpcs) {
   const args = rpc.arguments ?? [];
   const signatureBody = args.length === 0
     ? '\\s*'
-    : args.map((arg) => `${arg.name}\\s+${arg.type}\\b`).join('[\\s\\S]*?,[\\s\\S]*?');
+    : `\\s*${args.map((arg) => `${arg.name}\\s+${arg.type}\\b`).join('[\\s\\S]*?,[\\s\\S]*?')}`;
   const signature = new RegExp(
     `CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+public\\.${rpc.name}\\s*\\(${signatureBody}`,
     'i',
