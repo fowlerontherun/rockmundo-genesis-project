@@ -12,7 +12,7 @@ import { useAutoReleaseManufacturing } from "@/hooks/useAutoReleaseManufacturing
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function ReleaseManager() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId: authUserId } = useActiveProfile();
   const { t } = useTranslation();
   const userId = profileId;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -67,11 +67,11 @@ export default function ReleaseManager() {
         </TabsList>
 
         <TabsContent value="releases" className="mt-6">
-          <MyReleasesTab userId={userId} />
+          <MyReleasesTab userId={userId} authUserId={authUserId} />
         </TabsContent>
 
         <TabsContent value="sales" className="mt-6">
-          <ReleaseSalesTab userId={userId} />
+          <ReleaseSalesTab userId={userId} authUserId={authUserId} />
         </TabsContent>
       </Tabs>
 

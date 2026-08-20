@@ -56,8 +56,10 @@ export async function resolveActiveBandMembership(
   }
 
   const results = await Promise.all(requests);
+  const requestError = results.find((result) => result.error)?.error;
+  if (requestError) throw requestError;
   const memberships = results.flatMap((result) =>
-    result.error ? [] : ((result.data ?? []) as BandMembership[]),
+    (result.data ?? []) as BandMembership[],
   );
   const uniqueBandIds = [...new Set(memberships.map((row) => row.band_id))];
   if (!uniqueBandIds.length) return null;
@@ -67,7 +69,7 @@ export async function resolveActiveBandMembership(
     .select("id")
     .in("id", uniqueBandIds)
     .eq("status", "active");
-  if (error) return null;
+  if (error) throw error;
 
   return chooseActiveBandMembership(
     memberships,

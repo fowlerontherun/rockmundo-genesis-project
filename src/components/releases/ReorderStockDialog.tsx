@@ -108,6 +108,7 @@ export function ReorderStockDialog({ open, onOpenChange, format, release }: Reor
         p_release_id: release.id, p_format_id: format.id, p_quantity: quantity,
         p_manufacturing_cost_minor: manufacturingCost,
         p_release_date: manufacturingCompleteDate.toISOString(),
+        p_revenue_share_deal: revenueShareEnabled,
       });
       if (formatError) throw formatError;
 
@@ -138,12 +139,17 @@ export function ReorderStockDialog({ open, onOpenChange, format, release }: Reor
       setRevenueShareEnabled(false);
     },
     onError: (error: any) => {
-      // Surface more error details from Supabase
-      const message = error?.message || "Unknown error";
-      const details = error?.details || error?.hint || "";
+      const technical = String(error?.message || "");
+      const message = technical.includes("Not authorized") ? "Not authorized for this band"
+        : technical.includes("Insufficient band") ? "Insufficient band funds"
+        : technical.includes("Insufficient label") ? "Insufficient label funds"
+        : technical.includes("format not found") ? "Release format no longer exists"
+        : technical.includes("Invalid manufacturing") ? "Invalid quantity"
+        : technical.includes("function") || technical.includes("schema cache") ? "Finance backend unavailable"
+        : "Reorder could not be completed";
       toast({
         title: "Error placing reorder",
-        description: details ? `${message} - ${details}` : message,
+        description: message,
         variant: "destructive",
       });
       console.error("Reorder error:", error);

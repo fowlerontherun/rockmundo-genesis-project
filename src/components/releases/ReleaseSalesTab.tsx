@@ -4,27 +4,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DollarSign, Package, Music, Radio, AlertTriangle } from "lucide-react";
 import { minorToMajor } from "@/lib/releaseMoney";
+import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
 
-interface ReleaseSalesTabProps { userId: string }
+interface ReleaseSalesTabProps { userId: string; authUserId?: string | null }
 type Summary = { gross_cents:number; tax_cents:number; dist_cents:number; manufacturer_cents:number; net_before_label_cents:number; label_cents:number; band_revenue_cents:number; units:number; economic_cost_cents:number; band_cost_cents:number; label_cost_cents:number; unknown_cost_cents:number };
 const money = (minor:number) => minorToMajor(minor || 0).toLocaleString(undefined,{style:"currency",currency:"USD"});
 
-export function ReleaseSalesTab({ userId }: ReleaseSalesTabProps) {
+export function ReleaseSalesTab({ userId, authUserId }: ReleaseSalesTabProps) {
+  const health = useQuery({ queryKey:["release-finance-health"], queryFn:async()=>{
+    const {data,error}=await (supabase as any).rpc("get_release_finance_health");
+    if(error) throw error;
+    if(!data?.ready || Number(data.contract_version)<2) throw new Error("Incomplete release finance backend");
+    return data;
+  }, retry:false });
   const { data: finance, isLoading, error } = useQuery({
-    queryKey:["release-financial-summary",userId], queryFn:async()=>{
-      const { data: memberships, error: membershipError } = await supabase.from("band_members").select("band_id").or(`profile_id.eq.${userId},user_id.eq.${userId}`).eq("member_status","active");
-      if (membershipError) throw membershipError;
+    queryKey:["release-financial-summary",userId,authUserId], queryFn:async()=>{
+      const membership=await resolveActiveBandMembership(userId,authUserId);
+      if (!membership) return null;
       const rows: Summary[]=[];
-      for (const bandId of [...new Set((memberships||[]).map(m=>m.band_id))]) {
+      for (const bandId of [membership.band_id]) {
         const { data,error }=await (supabase as any).rpc("get_release_financial_summary",{p_release_id:null,p_band_id:bandId});
         if(error) throw error; rows.push(...(data||[]));
       }
       return rows.reduce((a,r)=>{ Object.keys(a).forEach(k=>a[k as keyof Summary]+=Number(r[k as keyof Summary]||0)); return a; },{gross_cents:0,tax_cents:0,dist_cents:0,manufacturer_cents:0,net_before_label_cents:0,label_cents:0,band_revenue_cents:0,units:0,economic_cost_cents:0,band_cost_cents:0,label_cost_cents:0,unknown_cost_cents:0} as Summary);
-    }
+    }, enabled:health.isSuccess, retry:false
   });
   const { data: streaming }=useQuery({queryKey:["streaming-revenue",userId],queryFn:async()=>{const {data,error}=await supabase.from("song_releases").select("total_streams,total_revenue").eq("user_id",userId).eq("is_active",true).eq("release_type","streaming");if(error)throw error;return {streams:(data||[]).reduce((s,r)=>s+(r.total_streams||0),0),revenue:(data||[]).reduce((s,r)=>s+(r.total_revenue||0),0)};}});
-  if(isLoading) return <div>Loading financial data…</div>;
-  if(error||!finance) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4"/><AlertDescription>Release financial breakdown is temporarily unavailable.</AlertDescription></Alert>;
+  if(health.isLoading||isLoading) return <div>Loading financial data…</div>;
+  if(health.error||error) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4"/><AlertDescription>Release financial data is temporarily unavailable.</AlertDescription></Alert>;
+  if(!finance) return <Alert><AlertTriangle className="h-4 w-4"/><AlertDescription>You are not currently an active member of a band. Existing releases remain available in My Releases.</AlertDescription></Alert>;
   const profit=finance.band_revenue_cents-finance.band_cost_cents;
   const cards=[["Gross Sales",money(finance.gross_cents),DollarSign],["Band Revenue",money(finance.band_revenue_cents),DollarSign],["Costs Paid by Band",money(finance.band_cost_cents),Package],["Band Profit / Loss",money(profit),DollarSign],["Units Sold",finance.units.toLocaleString(),Package],["Streams",(streaming?.streams||0).toLocaleString(),Music]] as const;
   return <div className="space-y-6">
