@@ -17,6 +17,7 @@ import { Loader2, AlertTriangle, Building2, BadgeCheck } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { addDays, isBefore } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { minorToMajor } from "@/lib/releaseMoney";
 
 interface CreateReleaseDialogProps {
   open: boolean;
@@ -172,7 +173,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const manufacturingCompleteDate = getManufacturingCompleteDate();
   const isScheduledTooEarly = scheduledReleaseDate && isBefore(scheduledReleaseDate, manufacturingCompleteDate);
 
-  const territoryCost = selectedTerritories.reduce((sum, t) => sum + t.distributionCost, 0);
+  const territoryCostMinor = selectedTerritories.reduce((sum, t) => sum + t.distributionCost, 0);
 
   const labelCoversManufacturing = activeContract?.manufacturing_covered === true;
   const labelName = (activeContract?.labels as any)?.name;
@@ -187,8 +188,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       if (selectedTerritories.length === 0) throw new Error("Select at least one release territory");
 
       // Calculate total cost including territory distribution
-      const formatCost = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
-      const totalCost = formatCost + territoryCost;
+      const manufacturingCostMinor = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
+      const totalCostMinor = manufacturingCostMinor + territoryCostMinor;
       
       const manufacturingDays = selectedFormats.reduce((max, format) => {
         const days = MANUFACTURING_DAYS[format.format_type] || 2;
@@ -199,18 +200,18 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       manufacturingCompleteAt.setDate(manufacturingCompleteAt.getDate() + manufacturingDays);
 
       // Determine who pays manufacturing
-      const bandPays = labelCoversManufacturing ? territoryCost : totalCost; // Label covers format costs but not territory distribution
-      const labelPays = labelCoversManufacturing ? formatCost : 0;
+      const bandPaysMinor = labelCoversManufacturing ? territoryCostMinor : totalCostMinor;
+      const labelPaysMinor = labelCoversManufacturing ? manufacturingCostMinor : 0;
 
       // If label covers manufacturing, deduct from label balance
-      if (labelPays > 0 && activeContract) {
+      if (labelPaysMinor > 0 && activeContract) {
         const { data: label } = await supabase
           .from("labels")
           .select("balance")
           .eq("id", activeContract.label_id)
           .single();
 
-        const labelPaysDollars = labelPays / 100; // Convert cents to dollars
+        const labelPaysDollars = minorToMajor(labelPaysMinor); // Convert cents to dollars
         if (!label || (label.balance || 0) < labelPaysDollars) {
           throw new Error(`Label doesn't have enough funds to cover manufacturing ($${labelPaysDollars.toFixed(2)}). Label balance: $${((label?.balance || 0)).toLocaleString()}`);
         }
@@ -230,33 +231,14 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         });
       }
 
-      // Check and deduct from band balance
-      if (userBand && bandPays > 0) {
-        const { data: band } = await supabase
-          .from("bands")
-          .select("band_balance")
-          .eq("id", userBand.id)
-          .single();
-
-        if (!band || (band.band_balance || 0) < bandPays) {
-          throw new Error("Insufficient band balance for this release");
-        }
-
-        const newBalance = (band.band_balance || 0) - bandPays;
-        await supabase
-          .from("bands")
-          .update({ band_balance: newBalance })
-          .eq("id", userBand.id);
-
-        // Record expense
-        await supabase.from("band_earnings").insert({
-          band_id: userBand.id,
-          amount: -bandPays,
-          source: "release",
-          description: `Release manufacturing: ${title}${labelCoversManufacturing ? ' (label covered format costs)' : ''} (includes $${(territoryCost / 100).toFixed(2)} distribution to ${selectedTerritories.length} territories)`,
-          earned_by_user_id: userId,
-          metadata: { release_type: releaseType, formats: selectedFormats.map(f => f.format_type), territories: selectedTerritories.length, label_covered: labelPays }
+      // The canonical RPC converts cents to treasury dollars and writes the ledger atomically.
+      if (userBand && bandPaysMinor > 0) {
+        const { error } = await (supabase as any).rpc("charge_band_release_cost", {
+          p_band_id: userBand.id, p_amount_minor: bandPaysMinor,
+          p_description: `Release manufacturing and territory setup: ${title}`,
+          p_metadata: { release_type: releaseType, formats: selectedFormats.map(f => f.format_type), territories: selectedTerritories.length, manufacturing_cost_minor: manufacturingCostMinor, territory_setup_cost_minor: territoryCostMinor, label_covered_minor: labelPaysMinor },
         });
+        if (error) throw error;
       }
 
       // Calculate initial hype from label marketing support
@@ -274,7 +256,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           title: title.trim(),
           artist_name: artistName.trim(),
           release_status: "manufacturing",
-          total_cost: bandPays + labelPays,
+          total_cost: totalCostMinor,
           manufacturing_complete_at: manufacturingCompleteAt.toISOString(),
           scheduled_release_date: scheduledReleaseDate?.toISOString().split('T')[0] || null,
           streaming_platforms: selectedStreamingPlatforms.length > 0 ? selectedStreamingPlatforms : null,
@@ -383,7 +365,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         activityType: 'release_created',
         activityCategory: 'release',
         description: `Created ${releaseType === "greatest_hits" ? "Greatest Hits" : releaseType} release "${title}"${activeContract ? ` under ${labelName}` : ''} - Manufacturing in progress (${selectedTerritories.length} territories)`,
-        amount: -bandPays,
+        amount: -minorToMajor(bandPaysMinor),
         metadata: {
           releaseId: release.id,
           releaseType,
@@ -394,10 +376,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           manufacturingDays,
           streamingPlatforms: selectedStreamingPlatforms,
           territories: selectedTerritories.map(t => t.country),
-          territoryCost,
+          territoryCostMinor,
           revenueShareEnabled,
           labelContractId: activeContract?.id,
-          labelCoveredCost: labelPays,
+          labelCoveredCostMinor: labelPaysMinor,
           marketingHypeBonus,
         }
       });
@@ -603,8 +585,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
               <Alert className="border-emerald-500/30 bg-emerald-500/5">
                 <BadgeCheck className="h-4 w-4 text-emerald-500" />
                 <AlertDescription>
-                  <strong>{labelName}</strong> is covering manufacturing costs (${(selectedFormats.reduce((sum: number, f: any) => sum + f.manufacturing_cost, 0) / 100).toFixed(2)}).
-                  You only pay distribution costs (${(territoryCost / 100).toFixed(2)}).
+                  <strong>{labelName}</strong> is covering manufacturing costs (${minorToMajor(selectedFormats.reduce((sum: number, f: any) => sum + f.manufacturing_cost, 0)).toFixed(2)}).
+                  You only pay territory distribution setup costs (${minorToMajor(territoryCostMinor).toFixed(2)}).
                 </AlertDescription>
               </Alert>
             )}

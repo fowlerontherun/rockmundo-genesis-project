@@ -202,7 +202,7 @@ export function TerritorySelectionStep({
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Choose which countries to distribute your release in. Distribution costs vary by distance from your home country.
+        Choose which countries to distribute your release in. Territory distribution setup costs vary by distance from your home country.
         {homeCountry && (
           <span className="block mt-1 text-primary">
             Home country: <strong>{homeCountry}</strong> ({homeRegion})
@@ -316,7 +316,7 @@ export function TerritorySelectionStep({
               </span>
             </div>
             <span className="text-sm font-bold text-primary">
-              ${(totalCost / 100).toFixed(2)} distribution cost
+              ${(totalCost / 100).toFixed(2)} territory setup cost
             </span>
           </div>
         </Card>

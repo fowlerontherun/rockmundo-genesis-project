@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { minorToMajor } from "@/lib/releaseMoney";
 
 interface CancelReleaseDialogProps {
   open: boolean;
@@ -42,7 +43,7 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
           .single();
 
         if (band) {
-          const newBalance = (band.band_balance || 0) + release.total_cost;
+          const newBalance = (band.band_balance || 0) + minorToMajor(release.total_cost);
           await supabase
             .from("bands")
             .update({ band_balance: newBalance })
@@ -51,7 +52,7 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
           // Record the refund
           await supabase.from("band_earnings").insert({
             band_id: release.band_id,
-            amount: release.total_cost,
+            amount: minorToMajor(release.total_cost),
             source: "refund",
             description: `Release cancelled: ${release.title} (manufacturing refund)`,
           });
@@ -71,7 +72,7 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
       toast({
         title: "Release Cancelled",
         description: release?.total_cost 
-          ? `$${release.total_cost.toLocaleString()} has been refunded.`
+          ? `$${minorToMajor(release.total_cost).toLocaleString()} has been refunded.`
           : "Release has been cancelled.",
       });
       onOpenChange(false);
@@ -101,7 +102,7 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
             </p>
             {release.total_cost && release.total_cost > 0 && (
               <p className="text-sm bg-muted p-2 rounded">
-                Manufacturing cost of <strong>${release.total_cost.toLocaleString()}</strong> will be refunded to your band balance.
+                Release cost of <strong>${minorToMajor(release.total_cost).toLocaleString()}</strong> will be refunded to your band balance.
               </p>
             )}
             <p className="text-sm text-muted-foreground">

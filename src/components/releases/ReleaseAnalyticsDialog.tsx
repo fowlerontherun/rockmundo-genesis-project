@@ -18,6 +18,7 @@ import {
   BarChart3, Package, Radio, CalendarDays
 } from "lucide-react";
 import { format } from "date-fns";
+import { minorToMajor, releaseProfitMajor } from "@/lib/releaseMoney";
 
 interface ReleaseAnalyticsDialogProps {
   open: boolean;
@@ -123,6 +124,7 @@ export function ReleaseAnalyticsDialog({
         gross: number;
         tax: number;
         dist: number;
+        manufacturer: number;
         net: number;
       };
 
@@ -147,6 +149,7 @@ export function ReleaseAnalyticsDialog({
           gross: (Number(row.gross_cents) || 0) / 100,
           tax: (Number(row.tax_cents) || 0) / 100,
           dist: (Number(row.dist_cents) || 0) / 100,
+          manufacturer: (Number(row.manufacturer_cents) || 0) / 100,
           net: (Number(row.net_cents) || 0) / 100,
         };
       });
@@ -169,6 +172,7 @@ export function ReleaseAnalyticsDialog({
               gross,
               tax,
               dist,
+              manufacturer: 0,
               net: gross - tax - dist,
             };
           }
@@ -274,11 +278,12 @@ export function ReleaseAnalyticsDialog({
     const grossRevenue = salesData.formats.reduce((s, f) => s + f.gross, 0);
     const taxPaid = salesData.formats.reduce((s, f) => s + f.tax, 0);
     const distributionFees = salesData.formats.reduce((s, f) => s + f.dist, 0);
+    const manufacturerShare = salesData.formats.reduce((s, f) => s + f.manufacturer, 0);
     const netRevenue = salesData.formats.reduce((s, f) => s + f.net, 0);
     const labelCutPct = labelInfo?.labelCutPct || 0;
     const labelShare = Math.round(netRevenue * labelCutPct * 100) / 100;
     const bandNet = netRevenue - labelShare;
-    return { grossRevenue, taxPaid, distributionFees, netRevenue, labelShare, bandNet, labelCutPct };
+    return { grossRevenue, taxPaid, distributionFees, manufacturerShare, netRevenue, labelShare, bandNet, labelCutPct };
   })();
   const loadingFinancials = loadingSales;
 
@@ -438,7 +443,7 @@ export function ReleaseAnalyticsDialog({
 
           <TabsContent value="financials" className="space-y-4">
             {(() => {
-              const mfgCost = release.total_cost || 0;
+              const releaseCost = minorToMajor(release.total_cost || 0);
               const gross = financialData?.grossRevenue || 0;
               const tax = financialData?.taxPaid || 0;
               const dist = financialData?.distributionFees || 0;
@@ -446,7 +451,7 @@ export function ReleaseAnalyticsDialog({
               const labelShare = financialData?.labelShare || 0;
               const bandNet = financialData?.bandNet || net;
               const labelCutPct = financialData?.labelCutPct || 0;
-              const profit = bandNet - mfgCost;
+              const profit = releaseProfitMajor(bandNet, release.total_cost || 0);
               const totalTracks = release.release_songs?.length || 1;
 
               return (
@@ -468,6 +473,10 @@ export function ReleaseAnalyticsDialog({
                         <span className="text-muted-foreground">Distribution Fees</span>
                         <span className="font-medium text-orange-500">-${dist.toLocaleString()}</span>
                       </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Manufacturer Revenue Share</span>
+                        <span className="font-medium text-orange-500">-${(financialData?.manufacturerShare || 0).toLocaleString()}</span>
+                      </div>
                       <div className="flex justify-between text-sm border-t border-border pt-2">
                         <span className="text-muted-foreground">Net Revenue</span>
                         <span className="font-medium">${net.toLocaleString()}</span>
@@ -483,8 +492,8 @@ export function ReleaseAnalyticsDialog({
                         <span className="font-medium">${bandNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Manufacturing Cost</span>
-                        <span className="font-medium text-orange-500">-${mfgCost.toLocaleString()}</span>
+                        <span className="text-muted-foreground">Total Release Cost (manufacturing + territory setup)</span>
+                        <span className="font-medium text-orange-500">-${releaseCost.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm border-t border-border pt-2 font-bold">
                         <span>{profit >= 0 ? 'Band Profit' : 'Band Loss'}</span>
@@ -503,7 +512,7 @@ export function ReleaseAnalyticsDialog({
                       <div className="space-y-2">
                         {release.release_songs?.map((rs: any, idx: number) => {
                           const songRevShare = totalTracks > 0 ? net / totalTracks : 0;
-                          const songCostShare = totalTracks > 0 ? mfgCost / totalTracks : 0;
+                          const songCostShare = totalTracks > 0 ? releaseCost / totalTracks : 0;
                           const songProfit = songRevShare - songCostShare;
                           return (
                             <div key={idx} className="flex justify-between items-center text-sm p-2 bg-muted/30 rounded">

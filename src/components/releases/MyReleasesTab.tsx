@@ -30,6 +30,7 @@ import { ReleaseTracklistWithAudio } from "./ReleaseTracklistWithAudio";
 import { AddPhysicalFormatDialog } from "./AddPhysicalFormatDialog";
 import { ReleaseAnalyticsDialog } from "./ReleaseAnalyticsDialog";
 import { ReorderStockDialog } from "./ReorderStockDialog";
+import { minorToMajor, releaseProfitMajor } from "@/lib/releaseMoney";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 
@@ -233,7 +234,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
       
       const { data, error } = await supabase
         .from("release_sales")
-        .select("release_format_id, total_amount, sales_tax_amount, distribution_fee, net_revenue")
+        .select("release_format_id, total_amount, sales_tax_amount, distribution_fee, manufacturing_revenue_share, net_revenue")
         .in("release_format_id", formatIds);
       
       if (error) {
@@ -249,16 +250,17 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         });
       });
 
-      const result: Record<string, { grossRevenue: number; taxPaid: number; distributionFees: number; netRevenue: number }> = {};
+      const result: Record<string, { grossRevenue: number; taxPaid: number; distributionFees: number; manufacturerShare: number; netRevenue: number }> = {};
       data?.forEach((sale: any) => {
         const releaseId = formatToRelease[sale.release_format_id];
         if (!releaseId) return;
         if (!result[releaseId]) {
-          result[releaseId] = { grossRevenue: 0, taxPaid: 0, distributionFees: 0, netRevenue: 0 };
+          result[releaseId] = { grossRevenue: 0, taxPaid: 0, distributionFees: 0, manufacturerShare: 0, netRevenue: 0 };
         }
         result[releaseId].grossRevenue += (sale.total_amount || 0) / 100;
         result[releaseId].taxPaid += (sale.sales_tax_amount || 0) / 100;
         result[releaseId].distributionFees += (sale.distribution_fee || 0) / 100;
+        result[releaseId].manufacturerShare += (sale.manufacturing_revenue_share || 0) / 100;
         result[releaseId].netRevenue += (sale.net_revenue || 0) / 100;
       });
 
@@ -296,7 +298,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 
   const totalTaxPaid = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.taxPaid || 0), 0);
   const totalDistFees = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.distributionFees || 0), 0);
-  const totalMfgCost = releases?.reduce((sum, r) => sum + (r.total_cost || 0), 0) || 0;
+  const totalMfgCost = releases?.reduce((sum, r) => sum + minorToMajor(r.total_cost || 0), 0) || 0;
   const totalGrossRevenue = releases?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0;
   // Label share: per-release netRevenue × that release's effective label cut %
   const totalLabelShare = (releases || []).reduce((sum: number, r: any) => {
@@ -563,7 +565,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
 
 interface ReleaseCardProps {
   release: any;
-  financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; netRevenue: number };
+  financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; manufacturerShare: number; netRevenue: number };
   labelCutPct?: number;
   onEdit: () => void;
   onCancel: () => void;
@@ -625,8 +627,8 @@ function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, o
             <span>{formatDistanceToNow(new Date(release.created_at), { addSuffix: true })}</span>
           </div>
           <div className="flex items-center gap-3 text-[11px] flex-wrap">
-            <span className="text-muted-foreground">Cost: <strong>${(release.total_cost || 0).toLocaleString()}</strong></span>
-            <span className="text-green-600">Rev: <strong>${(release.total_revenue || 0).toLocaleString()}</strong></span>
+            <span className="text-muted-foreground">Cost: <strong>${minorToMajor(release.total_cost || 0).toLocaleString()}</strong></span>
+            <span className="text-green-600">Rev: <strong>${(financials?.grossRevenue || 0).toLocaleString()}</strong></span>
             {labelCutPct > 0 && (
               <span className="text-purple-500">
                 Label: <strong>${Math.round((financials?.netRevenue || 0) * labelCutPct).toLocaleString()}</strong>
@@ -636,7 +638,7 @@ function ReleaseCard({ release, financials, labelCutPct = 0, onEdit, onCancel, o
             {(() => {
               const labelShare = (financials?.netRevenue || 0) * labelCutPct;
               const bandNet = (financials?.netRevenue || 0) - labelShare;
-              const profit = bandNet - (release.total_cost || 0);
+              const profit = releaseProfitMajor(bandNet, release.total_cost || 0);
               return <span className={profit >= 0 ? 'text-green-600' : 'text-destructive'}>P/L: <strong>${profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong></span>;
             })()}
             {release.total_streams > 0 && <span className="text-muted-foreground"><Play className="h-3 w-3 inline mr-0.5" />{release.total_streams.toLocaleString()}</span>}
