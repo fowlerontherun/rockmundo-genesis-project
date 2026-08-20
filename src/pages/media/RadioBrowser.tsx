@@ -405,7 +405,7 @@ const RadioBrowser = () => {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
@@ -427,6 +427,17 @@ const RadioBrowser = () => {
                         </Button>
                       )}
                     </div>
+                    {station.is_active && (
+                      <RequestAppearanceButton
+                        mediaType="radio"
+                        outletId={station.id}
+                        outletName={station.name}
+                        minFameRequired={station.min_fame_required ?? 0}
+                        label="Request Interview"
+                        className="w-full"
+                      />
+                    )}
+
                   </CardContent>
                 </Card>
               ))}
