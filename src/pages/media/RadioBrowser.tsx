@@ -23,6 +23,7 @@ import { AirplayDashboard } from "@/components/radio/AirplayDashboard";
 import { MyAirplayStats } from "@/components/radio/MyAirplayStats";
 import { SongsInRotation } from "@/components/radio/SongsInRotation";
 import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard";
+import { RequestAppearanceButton } from "@/components/media/RequestAppearanceButton";
 import type { RadioStation } from "@/hooks/useRadioStations";
 
 const RadioBrowser = () => {
@@ -405,7 +406,7 @@ const RadioBrowser = () => {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="outline"
@@ -427,6 +428,17 @@ const RadioBrowser = () => {
                         </Button>
                       )}
                     </div>
+                    {station.is_active && (
+                      <RequestAppearanceButton
+                        mediaType="radio"
+                        outletId={station.id}
+                        outletName={station.name}
+                        minFameRequired={station.min_fame_required ?? 0}
+                        label="Request Interview"
+                        className="w-full"
+                      />
+                    )}
+
                   </CardContent>
                 </Card>
               ))}

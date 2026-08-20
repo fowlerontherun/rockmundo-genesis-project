@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { Tv, Users, Clock, Star, Search, Globe, MapPin } from "lucide-react";
 import { TVNetworkLogo } from "@/components/media/TVNetworkLogo";
+import { RequestAppearanceButton } from "@/components/media/RequestAppearanceButton";
 
 interface TVShow {
   id: string;
@@ -263,6 +264,19 @@ const TVShowsBrowser = () => {
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {show.description}
                   </p>
+                )}
+
+                {show.network_id && (
+                  <RequestAppearanceButton
+                    mediaType="tv"
+                    outletId={show.network_id}
+                    outletName={show.tv_networks?.name || 'TV Network'}
+                    showId={show.id}
+                    showName={show.show_name}
+                    minFameRequired={show.min_fame_required ?? 0}
+                    label="Request Appearance"
+                    className="w-full"
+                  />
                 )}
               </CardContent>
             </Card>
