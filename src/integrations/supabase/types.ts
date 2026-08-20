@@ -52596,6 +52596,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_media_appearance: {
+        Args: {
+          p_band_id: string
+          p_media_outlet_id: string
+          p_media_type: string
+          p_offer_type?: string
+          p_outlet_name: string
+          p_proposed_date?: string
+          p_show_id?: string
+          p_show_name?: string
+        }
+        Returns: string
+      }
       request_song_cover: {
         Args: {
           p_band_id: string
