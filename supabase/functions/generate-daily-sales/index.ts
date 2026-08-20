@@ -7,6 +7,7 @@ import {
   safeJson,
   startJobRun,
 } from "../_shared/job-logger.ts";
+import { calculateSaleDeductions, distributionRate as resolveDistributionRate } from "../_shared/release-finance.ts";
 
 // Helper: get sales tax rate for a city
 async function getCitySalesTaxRate(cityId: string | null, client?: any): Promise<number> {
@@ -163,8 +164,10 @@ serve(async (req) => {
         home_country,
         label_contract_id,
         label_revenue_share_pct,
+        revenue_share_enabled,
+        revenue_share_percentage,
         bands(id, fame, popularity, chemistry_level, home_city_id),
-        release_formats(id, format_type, retail_price, quantity),
+        release_formats(id, format_type, retail_price, quantity, distribution_fee_percentage),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
       .eq("release_status", "released");
@@ -439,17 +442,25 @@ serve(async (req) => {
                 : format.format_type === "vinyl" ? vinylDistributionRate
                 : format.format_type === "cassette" ? cassetteDistributionRate
                 : getDistributionRate(format.format_type);
-              const rawRate = formatOverride != null ? formatOverride / 100 : fallbackByConfig;
-              const distributionRate = Math.max(0, Math.min(0.5, rawRate));
-              const salesTaxAmount = Math.round(grossRevenue * salesTaxRate * 100) / 100;
-              const distributionFee = Math.round(grossRevenue * distributionRate * 100) / 100;
-              const netRevenue = grossRevenue - salesTaxAmount - distributionFee;
-              
+              const fallbackPercentage = fallbackByConfig * 100;
+              // A legacy zero default means "not configured"; explicit overrides are 1-50%.
+              const effectiveOverride = formatOverride == null || formatOverride === 0 ? null : formatOverride;
+              const distributionRate = resolveDistributionRate(effectiveOverride, fallbackPercentage);
+              const deductions = calculateSaleDeductions({
+                quantity: actualSales, unitPriceMinor: retailPrice, taxRate: salesTaxRate,
+                distributionRate, physical: !isDigital,
+                manufacturerRevenueSharePercentage: (release as any).revenue_share_enabled
+                  ? (release as any).revenue_share_percentage : 0,
+              });
               const unitPriceCents = retailPrice;
-              const totalAmountCents = Math.round(grossRevenue * 100);
-              const salesTaxCents = Math.round(salesTaxAmount * 100);
-              const distributionFeeCents = Math.round(distributionFee * 100);
-              const netRevenueCents = Math.round(netRevenue * 100);
+              const totalAmountCents = deductions.grossMinor;
+              const salesTaxCents = deductions.taxMinor;
+              const distributionFeeCents = deductions.distributorMinor;
+              const manufacturerShareCents = deductions.manufacturerShareMinor;
+              const netRevenueCents = deductions.preLabelNetMinor;
+              const salesTaxAmount = salesTaxCents / 100;
+              const distributionFee = distributionFeeCents / 100;
+              const netRevenue = netRevenueCents / 100;
 
               await supabaseClient.from("release_sales").insert({
                 release_format_id: format.id,
@@ -462,6 +473,7 @@ serve(async (req) => {
                 sales_tax_rate: salesTaxRate * 100,
                 distribution_fee: distributionFeeCents,
                 distribution_rate: distributionRate * 100,
+                manufacturing_revenue_share: manufacturerShareCents,
                 net_revenue: netRevenueCents,
                 city_id: homeCityId,
                 country: territory.country || null,

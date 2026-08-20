@@ -103,31 +103,13 @@ export function ReorderStockDialog({ open, onOpenChange, format, release }: Reor
     mutationFn: async () => {
       if (!format || !release) throw new Error("Missing format or release data");
 
-      // Update the existing format with additional quantity
-      const newQuantity = (format.quantity || 0) + quantity;
-      const newManufacturingCost = (format.manufacturing_cost || 0) + manufacturingCost;
-
-      const { error: formatError } = await supabase
-        .from("release_formats")
-        .update({
-          quantity: newQuantity,
-          manufacturing_cost: newManufacturingCost,
-          manufacturing_status: "manufacturing",
-          // Update release date to when new batch will be ready
-          release_date: formatDate(manufacturingCompleteDate, "yyyy-MM-dd"),
-        })
-        .eq("id", format.id);
-
+      // Affordability, charge, ledger, stock, and cost updates are one transaction.
+      const { error: formatError } = await (supabase as any).rpc("reorder_release_stock", {
+        p_release_id: release.id, p_format_id: format.id, p_quantity: quantity,
+        p_manufacturing_cost_minor: manufacturingCost,
+        p_release_date: manufacturingCompleteDate.toISOString(),
+      });
       if (formatError) throw formatError;
-
-      // Update release total cost
-      const newTotalCost = (release.total_cost || 0) + manufacturingCost;
-      const { error: releaseError } = await supabase
-        .from("releases")
-        .update({ total_cost: newTotalCost })
-        .eq("id", release.id);
-
-      if (releaseError) throw releaseError;
 
       // Log the activity - use current user's ID for RLS compliance
       if (profileId) {

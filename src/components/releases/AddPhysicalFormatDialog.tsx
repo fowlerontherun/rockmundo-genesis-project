@@ -110,40 +110,15 @@ export function AddPhysicalFormatDialog({ open, onOpenChange, release }: AddPhys
     mutationFn: async () => {
       if (!selectedFormat || !release) throw new Error("No format selected");
 
-      // Insert the new format
-      const formatData: any = {
-        release_id: release.id,
-        format_type: selectedFormat,
-        quantity,
-        retail_price: retailPrice,
-        manufacturing_cost: manufacturingCost,
-        manufacturing_status: "manufacturing",
-        release_date: formatDate(manufacturingCompleteDate, "yyyy-MM-dd"),
-      };
-
-      if (selectedFormat === "vinyl") {
-        formatData.vinyl_color = vinylColor;
-        formatData.is_limited_edition = isLimitedEdition;
-      }
-
-      const { error: formatError } = await supabase
-        .from("release_formats")
-        .insert(formatData);
-
+      // Payment, ledger, inventory, and cumulative cost commit atomically.
+      const { error: formatError } = await (supabase as any).rpc("purchase_release_format", {
+        p_release_id: release.id, p_format_type: selectedFormat, p_quantity: quantity,
+        p_retail_price: retailPrice, p_manufacturing_cost_minor: manufacturingCost,
+        p_release_date: manufacturingCompleteDate.toISOString(),
+        p_vinyl_color: selectedFormat === "vinyl" ? vinylColor : null,
+        p_is_limited_edition: selectedFormat === "vinyl" && isLimitedEdition,
+      });
       if (formatError) throw formatError;
-
-      // Update release total cost
-      const newTotalCost = (release.total_cost || 0) + manufacturingCost;
-      const { error: releaseError } = await supabase
-        .from("releases")
-        .update({
-          total_cost: newTotalCost,
-          // If release was already released, the physical format goes into manufacturing
-          // We keep the release_status as "released" since digital is already out
-        })
-        .eq("id", release.id);
-
-      if (releaseError) throw releaseError;
 
       // Log the activity - use current user's ID for RLS compliance
       if (profileId) {

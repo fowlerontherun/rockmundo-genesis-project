@@ -40015,6 +40015,7 @@ export type Database = {
           distribution_fee: number | null
           distribution_rate: number | null
           id: string
+          manufacturing_revenue_share: number
           net_revenue: number | null
           platform: string | null
           quantity_sold: number
