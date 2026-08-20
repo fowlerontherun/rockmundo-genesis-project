@@ -16,6 +16,7 @@ const corsHeaders = {
 interface ScheduledActivity {
   id: string;
   user_id: string;
+  profile_id: string;
   activity_type: string;
   scheduled_start: string;
   scheduled_end: string;
@@ -110,7 +111,17 @@ Deno.serve(async (req) => {
         completedCount++;
       } catch (error) {
         console.error(`Error processing activity ${activity.id}:`, error);
-        // Mark as missed if processing fails
+        // Practice rewards are transactional and retryable. Never turn a reward
+        // failure into an apparently legitimate completion (or a missed session).
+        if (activity.activity_type === 'skill_practice') {
+          await supabase
+            .from('player_scheduled_activities')
+            .update({ metadata: { ...activity.metadata, completionError: getErrorMessage(error) } })
+            .eq('id', activity.id)
+            .eq('status', 'in_progress');
+          continue;
+        }
+        // Preserve the established failure behaviour for unrelated activities.
         await supabase
           .from('player_scheduled_activities')
           .update({ status: 'missed' })
@@ -178,6 +189,14 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
   const duration = (new Date(activity.scheduled_end).getTime() - new Date(activity.scheduled_start).getTime()) / (1000 * 60 * 60);
   
   switch (activity.activity_type) {
+    case 'skill_practice': {
+      const { error } = await supabase.rpc('complete_skill_practice', {
+        p_activity_id: activity.id,
+      });
+      if (error) throw error;
+      break;
+    }
+
     case 'gig':
       if (activity.linked_gig_id) {
         const { data: gig } = await supabase
