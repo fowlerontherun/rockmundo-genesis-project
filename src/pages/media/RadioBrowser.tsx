@@ -23,6 +23,7 @@ import { AirplayDashboard } from "@/components/radio/AirplayDashboard";
 import { MyAirplayStats } from "@/components/radio/MyAirplayStats";
 import { SongsInRotation } from "@/components/radio/SongsInRotation";
 import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard";
+import { RequestAppearanceButton } from "@/components/media/RequestAppearanceButton";
 import type { RadioStation } from "@/hooks/useRadioStations";
 
 const RadioBrowser = () => {
