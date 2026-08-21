@@ -11,6 +11,13 @@ describe("mobile route bridge", () => {
     expect(getMobileBridgeTarget("/inbox")).toBe("/mobile/social/mail");
   });
 
+  it("keeps band discovery social while band management stays career-owned", () => {
+    expect(getMobileBridgeTarget("/bands/browse")).toBe("/mobile/social/friends");
+    expect(getMobileBridgeTarget("/bands/search")).toBe("/mobile/social/friends");
+    expect(getMobileBridgeTarget("/band/members")).toBe("/mobile/career/band");
+    expect(getMobileBridgeTarget("/bands/example-band/management")).toBe("/mobile/career/band");
+  });
+
   it("preserves a direct player-profile deep link inside mobile Social", () => {
     expect(getMobileBridgeTarget("/player/example-player")).toBe("/mobile/social/profile/example-player");
     expect(getMobileBridgeTarget("/players/example-player")).toBe("/mobile/social/profile/example-player");
