@@ -53237,6 +53237,15 @@ export type Database = {
         Args: { saved_search: Json; viewer_profile_id?: string }
         Returns: Json
       }
+      schedule_skill_practice: {
+        Args: {
+          p_profile_id: string
+          p_scheduled_end: string
+          p_scheduled_start: string
+          p_skill_slug: string
+        }
+        Returns: Json
+      }
       schedule_songwriting_session: {
         Args: {
           p_effort_hours: number
