@@ -167,7 +167,7 @@ export function normalizeNotification(notification: PersistedNotification): Disp
 
   return {
     ...notification,
-    body: prOutcomeBody ?? notification.message?.trim() || "Open this update for more details.",
+    body: prOutcomeBody ?? (notification.message?.trim() || "Open this update for more details."),
     categoryLabel: CATEGORY_LABELS[notification.category] ?? toTitleCase(notification.category || "notification"),
     priority,
     isRead: !!notification.read_at,
