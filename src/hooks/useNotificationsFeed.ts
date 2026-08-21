@@ -35,13 +35,12 @@ export function useNotificationsFeed() {
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (error) throw error;
       return (data ?? []) as unknown as PersistedNotification[];
     },
   });
 
-  // Realtime updates
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
