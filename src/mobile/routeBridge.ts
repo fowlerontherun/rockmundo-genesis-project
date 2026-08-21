@@ -17,6 +17,11 @@ export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/schedule", "/mobile/career/schedule"],
   ["/schedule/*", "/mobile/career/schedule"],
 
+  // Social discovery routes must beat generic /bands/:bandId/* management matching.
+  ["/bands/finder", "/mobile/social/friends"],
+  ["/bands/browse", "/mobile/social/friends"],
+  ["/bands/search", "/mobile/social/friends"],
+
   // Career
   ["/stage-practice", "/mobile/career/practice"],
   ["/songwriting", "/mobile/career/songwriting"],
@@ -52,6 +57,7 @@ export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/band/gigs", "/mobile/career/gigs"],
   ["/band/tours", "/mobile/career/tours"],
   ["/band/equipment", "/mobile/career/band"],
+  ["/band/:bandId", "/mobile/social"],
   ["/bands/:bandId/*", "/mobile/career/band"],
   ["/booking/*", "/mobile/career"],
   ["/career", "/mobile/career"],
@@ -97,9 +103,6 @@ export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/community/players", "/mobile/social/friends"],
   ["/community/invitations", "/mobile/social/requests"],
   ["/community/*", "/mobile/social"],
-  ["/bands/finder", "/mobile/social/friends"],
-  ["/bands/browse", "/mobile/social/friends"],
-  ["/bands/search", "/mobile/social/friends"],
   ["/band-rankings", "/mobile/social"],
   ["/band-fame-map", "/mobile/social"],
   ["/social/messages", "/mobile/social/messages"],
