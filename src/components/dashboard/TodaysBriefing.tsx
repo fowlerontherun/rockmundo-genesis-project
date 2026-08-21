@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { addDays, format, formatDistanceToNow, isAfter } from "date-fns";
-import { AlertTriangle, Bell, CalendarClock, ExternalLink, HeartPulse, Inbox, Music2, Radio, TrendingUp, Users, Zap } from "lucide-react";
+import { AlertTriangle, Bell, CalendarClock, ExternalLink, Globe2, HeartPulse, Inbox, Music2, Radio, TrendingUp, Users, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 import { supabase } from "@/integrations/supabase/client";
 import { getNotificationPreview } from "@/lib/notificationModels";
+import { fetchWorldNews } from "@/lib/api/worldNews";
 
 interface TodaysBriefingProps {
   profile: any;
@@ -50,7 +51,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
       if (bandIdsResult.error) throw bandIdsResult.error;
       const bandIds = (bandIdsResult.data ?? []).map((row: any) => row.band_id).filter(Boolean);
 
-      const [activitiesResult, inboxResult, notificationsResult, releasesResult, activityLogResult, chartResult] = await Promise.all([
+      const [activitiesResult, inboxResult, notificationsResult, releasesResult, activityLogResult, chartResult, worldNews] = await Promise.all([
         supabase
           .from("player_scheduled_activities")
           .select("id, title, activity_type, scheduled_start, location, status, linked_recording_id")
@@ -91,11 +92,12 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         bandIds.length > 0
           ? (supabase as any)
               .from("chart_entries")
-              .select("id, rank, trend, trend_change, chart_date, country, song_id, songs(title, band_id, user_id)")
+              .select("id, rank, previous_rank, trend, trend_change, chart_date, country, song_id, songs(title, band_id, user_id)")
               .eq("chart_date", today)
               .order("rank", { ascending: true })
               .limit(20)
           : Promise.resolve({ data: [], error: null }),
+        fetchWorldNews(6).catch(() => []),
       ]);
 
       const results = [activitiesResult, inboxResult, notificationsResult, releasesResult, activityLogResult, chartResult];
@@ -115,6 +117,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
           const song = Array.isArray(entry.songs) ? entry.songs[0] : entry.songs;
           return song?.user_id === userId || (song?.band_id && bandIds.includes(song.band_id));
         }),
+        worldNews,
       };
     },
   });
@@ -177,10 +180,24 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
       next.push({ id: `band-${activity.id}`, title: "Band activity", description: `${activity.description} · ${formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}`, href: "/band", icon: Users });
     });
 
-    return next.slice(0, 8);
+    const existingTitles = new Set(next.map((item) => item.title));
+    data?.worldNews?.slice(0, 4).forEach((world: any) => {
+      if (existingTitles.has(world.title)) return;
+      next.push({
+        id: `world-${world.id}`,
+        title: world.title,
+        description: world.description,
+        href: world.href ?? "/world-pulse",
+        icon: Globe2,
+        meta: `World · ${world.category} · ${formatDistanceToNow(new Date(world.timestamp), { addSuffix: true })}`,
+        actionLabel: "See world activity",
+      });
+    });
+
+    return next.slice(0, 10);
   }, [data, profile]);
 
-  if (isLoading) return <PageLoadingState title="Loading today’s briefing" description="Checking your schedule, inbox, charts, releases, and band activity..." />;
+  if (isLoading) return <PageLoadingState title="Loading today’s briefing" description="Checking your schedule, inbox, charts, releases, band activity, and the wider RockMundo world..." />;
   if (error) return <PageErrorState title="Today’s Briefing could not be loaded" description="The dashboard is still available, but the briefing data could not be refreshed." onRetry={() => void refetch()} />;
 
   return (
@@ -189,14 +206,14 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-base"><CalendarClock className="h-4 w-4 text-primary" />Today’s Briefing</CardTitle>
-            <CardDescription>Context from your schedule, messages, charts, releases, vitals, and band.</CardDescription>
+            <CardDescription>Your character, band, career, and the biggest things happening around RockMundo today.</CardDescription>
           </div>
           {items.length > 0 && <Badge variant="secondary">{items.length}</Badge>}
         </div>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <PageEmptyState title="Nothing urgent today" description="No upcoming activity, unread messages, health warnings, chart moves, or release reminders need attention." />
+          <PageEmptyState title="A quiet day so far" description="No urgent personal updates or major world activity need your attention yet." />
         ) : (
           <div className="grid gap-2 md:grid-cols-2">
             {items.map((item) => {
@@ -210,7 +227,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
             })}
           </div>
         )}
-        {items.length > 0 && <div className="mt-3 flex justify-end"><Button asChild size="sm" variant="outline"><Link to="/inbox">Open inbox</Link></Button></div>}
+        {items.length > 0 && <div className="mt-3 flex flex-wrap justify-end gap-2"><Button asChild size="sm" variant="outline"><Link to="/world-pulse">World Pulse</Link></Button><Button asChild size="sm" variant="outline"><Link to="/inbox">Open inbox</Link></Button></div>}
       </CardContent>
     </Card>
   );
