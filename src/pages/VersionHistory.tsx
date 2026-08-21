@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.700",
+    date: "2026-08-18",
+    changes: [
+      { type: 'feature', description: "Media is now reachable from the main menu and on mobile: radio, TV, podcasts, newspapers, magazines, websites and films all sit under the new Media hub link." },
+      { type: 'feature', description: "Band leaders can request their own media appearances on radio stations and TV shows. Requests are booked immediately, block your diary for the slot and pay out a reduced reward compared to being approached." },
+      { type: 'fix', description: "Incoming media offers now generate correctly again — the offer generator was querying columns that do not exist on TV shows, radio shows, YouTube channels and film productions, which silently produced no offers." },
+      { type: 'improvement', description: "Radio appearance rewards now scale with a show's listener reach, and film pay uses the production's pay range." },
+    ],
+  },
+  {
+
     version: "1.1.699",
     date: "2026-08-18",
     changes: [
