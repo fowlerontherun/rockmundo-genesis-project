@@ -39,8 +39,6 @@ export const MobileActivityBar = () => {
   const active = useMemo(() => {
     const now = Date.now();
 
-    // Prefer the canonical merged schedule. A "scheduled" row is only current when
-    // its actual start/end window contains the current time.
     const scheduledNow = (today.data ?? []).find((activity) => {
       const starts = new Date(activity.scheduled_start).getTime();
       const ends = new Date(activity.scheduled_end).getTime();
@@ -60,9 +58,14 @@ export const MobileActivityBar = () => {
       };
     }
 
-    // Legacy status is a fallback only for genuinely active rows. Never display a
-    // future/scheduled or already-ended status as the player's current activity.
     if (!activityStatus) return null;
+
+    // Busking currently resolves and awards immediately on desktop. Older busking
+    // sessions leave a timed legacy status behind, so they must never make mobile
+    // claim the character is still busy after the outcome has already completed.
+    const legacyType = String((activityStatus as any).activity_type ?? "").toLowerCase();
+    if (legacyType === "busking" || legacyType === "busking_session") return null;
+
     const status = String((activityStatus as any).status ?? "");
     if (!["active", "in_progress"].includes(status)) return null;
 
