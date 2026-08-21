@@ -32,7 +32,7 @@ const me = [
 
 function meta(pattern: string, section: MobileDestination, fallbackStatus: MobileFallbackStatus = "wrapped-desktop"): MobileRouteMeta {
   const dedicated = pattern.startsWith("/mobile") || fallbackStatus === "dedicated";
-  return { pattern, section, bottomNav: section, auth: "player", shell: "mobile", component: dedicated ? `Mobile${section}` : "Desktop route wrapped by MobileShell", showActivityBar: true, showFab: true, fullscreenAllowed: pattern.includes("perform") || pattern.includes("compose"), fallbackStatus, notes: dedicated ? "Dedicated mobile implementation." : "Contained fallback: desktop navigation, breadcrumbs and DesktopOnlyGate are not mounted on mobile." };
+  return { pattern, section, bottomNav: section, auth: "player", shell: "mobile", component: dedicated ? `Mobile${section}` : "Desktop route wrapped by MobileShell", showActivityBar: true, showFab: true, fullscreenAllowed: pattern.includes("perform") || pattern.includes("compose"), fallbackStatus, notes: dedicated ? "Dedicated mobile implementation." : "Desktop gameplay route; companion navigation should map to a supported mobile destination instead of mounting this route." };
 }
 
 export const mobileRouteRegistry: MobileRouteMeta[] = [
@@ -50,6 +50,36 @@ export function getMobileRouteMeta(pathname: string): MobileRouteMeta | undefine
 
 export function getMobileDestination(pathname: string): MobileDestination {
   return getMobileRouteMeta(pathname)?.bottomNav ?? "home";
+}
+
+/**
+ * Convert action/notification paths into the supported companion surface.
+ * Mobile never falls through into deep desktop gameplay by accident.
+ */
+export function resolveCompanionPath(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("/mobile")) return path;
+
+  const clean = path.split("?")[0].split("#")[0];
+
+  if (["/home", "/dashboard", "/schedule", "/schedule/today", "/schedule/week", "/schedule/current", "/schedule/upcoming"].includes(clean)) {
+    return "/mobile?view=day";
+  }
+  if (["/stage-practice", "/skills"].includes(clean)) return "/mobile?view=day#practice";
+  if (clean === "/travel" || clean.startsWith("/world/travel")) return "/mobile/world/travel";
+  if (clean === "/wellness" || clean === "/character/wellness") return "/mobile/me/wellness";
+  if (clean === "/inbox") return "/mobile/social/mail";
+  if (clean === "/twaater" || clean.startsWith("/twaater/")) return "/mobile/social/twaater";
+  if (clean === "/social" || clean.startsWith("/social/")) return "/mobile/social";
+  if (clean.startsWith("/player/") || clean.startsWith("/players/")) return "/mobile/social/friends";
+
+  const meta = getMobileRouteMeta(clean);
+  if (!meta) return "/mobile";
+  if (meta.section === "career") return "/mobile/career";
+  if (meta.section === "social") return "/mobile/social";
+  if (meta.section === "world") return "/mobile/world";
+  if (meta.section === "me") return "/mobile/me";
+  return "/mobile";
 }
 
 export const mobileRouteAuditSummary = {
