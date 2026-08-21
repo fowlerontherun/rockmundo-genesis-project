@@ -5,6 +5,7 @@ import { resolveCompanionPath } from "./routeRegistry";
 const careerRoutes = readFileSync("src/mobile/pages/MobileCareerRoutes.tsx", "utf8");
 const careerOverview = readFileSync("src/mobile/pages/MobileCareer.tsx", "utf8");
 const topBar = readFileSync("src/mobile/shell/TopAppBar.tsx", "utf8");
+const shell = readFileSync("src/mobile/shell/MobileShell.tsx", "utf8");
 
 describe("mobile navigation and page contracts", () => {
   it("renders a real Career overview instead of redirecting the route to itself", () => {
@@ -34,5 +35,11 @@ describe("mobile navigation and page contracts", () => {
     expect(topBar).toContain('"/mobile/world/travel": "Travel"');
     expect(topBar).toContain('"/mobile/social/messages": "Messages"');
     expect(topBar).toContain('"/mobile/me/wellness": "Wellness"');
+  });
+
+  it("resets scroll between pages and honors quick-action hash targets", () => {
+    expect(shell).toContain("location.hash");
+    expect(shell).toContain("scrollIntoView");
+    expect(shell).toContain("window.scrollTo");
   });
 });
