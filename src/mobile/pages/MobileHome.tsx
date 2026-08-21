@@ -25,9 +25,11 @@ const clamp = (value: unknown) => Math.max(0, Math.min(100, Number(value ?? 0)))
 function nextWholeHour() { const d = new Date(); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); return d; }
 function toLocalInputValue(date: Date) { const pad = (n: number) => String(n).padStart(2, "0"); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`; }
 
+type PracticeSkillOption = { slug: string; level: number };
+
 export default function MobileHome() {
   const navigate = useNavigate();
-  const { profile, skills, activities } = useGameData();
+  const { profile, skillProgress, activities } = useGameData();
   const { userId, profileId } = useActiveProfile();
   const wellness = useWellnessState(profileId ?? null);
   const { notifications, markRead, isLoading } = useNotificationsFeed();
@@ -51,7 +53,7 @@ export default function MobileHome() {
   const greet = hr < 5 ? "Late night" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
   const vitals: any = wellness.vitals;
 
-  if (mode === "day") return <MobileDay userId={userId ?? undefined} profileId={profileId ?? undefined} skills={skills ?? {}} activities={activities ?? []} onBack={() => setParams({}, { replace: true })} />;
+  if (mode === "day") return <MobileDay userId={userId ?? undefined} profileId={profileId ?? undefined} skillProgress={skillProgress ?? []} activities={activities ?? []} onBack={() => setParams({}, { replace: true })} />;
 
   return <div className="space-y-4">
     <div className="flex items-center justify-between px-1"><div><div className="text-[11px] uppercase tracking-wider text-muted-foreground">{greet}</div><div className="font-bold text-xl leading-tight">{displayName}</div></div><button onClick={() => qc.invalidateQueries()} aria-label="Refresh" className="rm-tap h-10 w-10 rounded-full hover:bg-muted flex items-center justify-center"><RefreshCw className="h-5 w-5" /></button></div>
@@ -78,19 +80,23 @@ export default function MobileHome() {
   </div>;
 }
 
-function MobileDay({ userId, profileId, skills, activities, onBack }: { userId?: string; profileId?: string; skills: Record<string, number | undefined>; activities: any[]; onBack: () => void; }) {
+function MobileDay({ userId, profileId, skillProgress, activities, onBack }: { userId?: string; profileId?: string; skillProgress: any[]; activities: any[]; onBack: () => void; }) {
   const navigate = useNavigate();
   const today = useScheduledActivities(new Date(), userId);
   const practice = usePracticeSkill();
-  const skillOptions = useMemo(() => Object.entries(skills).filter(([, value]) => Number(value ?? 0) > 0).sort((a, b) => Number(b[1] ?? 0) - Number(a[1] ?? 0)).slice(0, 12), [skills]);
+  const skillOptions = useMemo<PracticeSkillOption[]>(() => skillProgress
+    .map((row: any) => ({ slug: String(row?.skill_slug ?? "").trim(), level: Number(row?.current_level ?? 0) }))
+    .filter((row) => row.slug.length > 0 && Number.isFinite(row.level) && row.level >= 1)
+    .sort((a, b) => b.level - a.level)
+    .slice(0, 20), [skillProgress]);
   const [skillSlug, setSkillSlug] = useState("");
   const [when, setWhen] = useState(toLocalInputValue(nextWholeHour()));
   const practiceDate = useMemo(() => { const parsed = new Date(when); return Number.isNaN(parsed.getTime()) ? new Date() : parsed; }, [when]);
   const restrictions = useSkillPracticeRestrictions(profileId, practiceDate);
-  useEffect(() => { if (!skillSlug && skillOptions[0]?.[0]) setSkillSlug(skillOptions[0][0]); }, [skillOptions, skillSlug]);
-  const selectedSkill = skillOptions.find(([slug]) => slug === skillSlug);
+  useEffect(() => { if (!skillSlug && skillOptions[0]?.slug) setSkillSlug(skillOptions[0].slug); }, [skillOptions, skillSlug]);
+  const selectedSkill = skillOptions.find((skill) => skill.slug === skillSlug);
   const recentOutcomes = activities.slice(0, 5);
-  const bookPractice = () => { if (!selectedSkill || !when) return; const scheduledStart = new Date(when); if (Number.isNaN(scheduledStart.getTime())) return; practice.mutate({ skillSlug: selectedSkill[0], skillName: humanise(selectedSkill[0]), scheduledStart }); };
+  const bookPractice = () => { if (!selectedSkill || !when) return; const scheduledStart = new Date(when); if (Number.isNaN(scheduledStart.getTime())) return; practice.mutate({ skillSlug: selectedSkill.slug, skillName: humanise(selectedSkill.slug), scheduledStart }); };
 
   return <div className="space-y-4">
     <div className="flex items-center gap-2"><button onClick={onBack} aria-label="Back to mobile home" className="rm-tap flex h-10 w-10 items-center justify-center rounded-full border"><ChevronLeft className="h-5 w-5" /></button><div><div className="text-[11px] uppercase tracking-wider text-muted-foreground">Companion</div><h1 className="text-xl font-bold">My Day</h1></div></div>
@@ -99,7 +105,7 @@ function MobileDay({ userId, profileId, skills, activities, onBack }: { userId?:
     </MobileSectionCard>
 
     <div id="practice" /><MobileSectionCard title="Quick practice" subtitle="Book a lightweight practice session. Conflict, wellness and daily-cap rules are checked by the existing server RPC." action={<MobileStatusBadge tone={restrictions.data?.canPractice === false ? "warning" : "success"}>{restrictions.data?.sessionsRemaining ?? "—"} left</MobileStatusBadge>}>
-      {restrictions.isLoading ? <SkeletonCard /> : restrictions.isError ? <MobileErrorState message="Practice availability could not be checked." onRetry={() => restrictions.refetch()} /> : skillOptions.length === 0 ? <EmptyState title="No practice skills available" message="Unlock a skill on desktop before scheduling mobile practice." /> : <div className="space-y-3">{restrictions.data?.canPractice === false && <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">{restrictions.data.reason}</p>}<label className="block text-sm font-medium">Skill<select value={skillSlug} onChange={(e) => setSkillSlug(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3">{skillOptions.map(([slug, level]) => <option key={slug} value={slug}>{humanise(slug)} · level {level}</option>)}</select></label><label className="block text-sm font-medium">Start time<Input type="datetime-local" value={when} min={toLocalInputValue(new Date())} onChange={(e) => setWhen(e.target.value)} className="mt-1 min-h-11" /></label><Button className="w-full min-h-11" disabled={!selectedSkill || !when || restrictions.data?.canPractice === false || practice.isPending} onClick={bookPractice}>{practice.isPending ? "Booking…" : `Schedule ${selectedSkill ? humanise(selectedSkill[0]) : "practice"}`}</Button><p className="text-xs text-muted-foreground">Detailed skill progression remains desktop-only.</p></div>}
+      {restrictions.isLoading ? <SkeletonCard /> : restrictions.isError ? <MobileErrorState message="Practice availability could not be checked." onRetry={() => restrictions.refetch()} /> : skillOptions.length === 0 ? <EmptyState title="No practice skills available" message="Unlock a canonical skill on desktop before scheduling mobile practice." /> : <div className="space-y-3">{restrictions.data?.canPractice === false && <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">{restrictions.data.reason}</p>}<label className="block text-sm font-medium">Skill<select value={skillSlug} onChange={(e) => setSkillSlug(e.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3">{skillOptions.map((skill) => <option key={skill.slug} value={skill.slug}>{humanise(skill.slug)} · level {skill.level}</option>)}</select></label><label className="block text-sm font-medium">Start time<Input type="datetime-local" value={when} min={toLocalInputValue(new Date())} onChange={(e) => setWhen(e.target.value)} className="mt-1 min-h-11" /></label><Button className="w-full min-h-11" disabled={!selectedSkill || !when || restrictions.data?.canPractice === false || practice.isPending} onClick={bookPractice}>{practice.isPending ? "Booking…" : `Schedule ${selectedSkill ? humanise(selectedSkill.slug) : "practice"}`}</Button><p className="text-xs text-muted-foreground">Only skills genuinely unlocked in your canonical skill progression are offered here.</p></div>}
     </MobileSectionCard>
 
     <MobileSectionCard title="Quick tasks" subtitle="Tasks suitable for short mobile sessions."><div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => navigate("/mobile/me/wellness")}>Recover now</Button><Button variant="outline" onClick={() => navigate("/mobile/world/travel")}>Check travel</Button><Button variant="outline" onClick={() => navigate("/mobile/social/messages")}>Messages</Button><Button variant="outline" onClick={() => navigate("/mobile/social/twaater")}>Twaater</Button></div></MobileSectionCard>
