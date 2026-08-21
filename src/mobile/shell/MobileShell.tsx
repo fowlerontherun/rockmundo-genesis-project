@@ -38,6 +38,7 @@ export const MobileShell = ({ children }: { children?: ReactNode }) => {
 
     if (!location.hash) {
       container.scrollTo({ top: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, behavior: "auto" });
       return;
     }
 
