@@ -14,10 +14,31 @@ describe("Mobile Social companion contract", () => {
     expect(source).toContain("useNotificationsFeed");
   });
 
+  it("uses authoritative conversation and public-profile services", () => {
+    expect(source).toContain('import { listConversations } from "@/features/direct-messages/services/conversations"');
+    expect(source).toContain('import { getPublicProfileDetail } from "@/services/publicProfileDetail"');
+    expect(source).toContain("listConversations({ limit: 50 })");
+    expect(source).toContain("getPublicProfileDetail(id, profileId)");
+    expect(source).not.toContain('.from("direct_messages")');
+    expect(source).not.toContain('.from("profiles")');
+  });
+
+  it("only exposes incoming pending requests as actionable requests", () => {
+    expect(source).toContain('x.friendship?.status === "pending" && x.friendship?.addressee_id === profileId');
+    expect(source).toContain("No incoming friend requests");
+  });
+
   it("routes notification actions through the shared companion resolver", () => {
     expect(source).toContain('import { resolveCompanionPath } from "@/mobile/routeRegistry"');
     expect(source).toContain("navigate(resolveCompanionPath(n.action_path))");
     expect(source).not.toContain("location.assign(");
+  });
+
+  it("shows explicit failure and empty states rather than blank mobile panels", () => {
+    expect(source).toContain("Friends could not be loaded.");
+    expect(source).toContain("Conversations could not be loaded.");
+    expect(source).toContain("Notifications could not be loaded.");
+    expect(source).toContain("No public posts");
   });
 
   it("keeps long-form mail management behind a desktop boundary", () => {
