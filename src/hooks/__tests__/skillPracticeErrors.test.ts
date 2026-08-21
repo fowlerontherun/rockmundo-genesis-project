@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toPracticeBookingMessage } from "../useSkillPractice";
+import { practiceUtcDayKey, toPracticeBookingMessage } from "../useSkillPractice";
 
 describe("practice booking error messages", () => {
   it.each([
@@ -12,5 +12,10 @@ describe("practice booking error messages", () => {
 
   it("does not expose an unknown database error", () => {
     expect(toPracticeBookingMessage("relation secret_table does not exist")).not.toContain("secret_table");
+  });
+
+  it("uses the UTC date of the selected instant for the practice cap", () => {
+    expect(practiceUtcDayKey(new Date("2026-08-20T23:30:00.000Z"))).toBe("2026-08-20");
+    expect(practiceUtcDayKey(new Date("2026-08-21T00:30:00.000Z"))).toBe("2026-08-21");
   });
 });
