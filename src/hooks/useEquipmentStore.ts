@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
-import { financeService } from "@/services/finance/financeService";
 
 export interface EquipmentItem {
   id: string;
@@ -80,7 +79,8 @@ export const useEquipmentStore = (_profileId?: string) => {
     enabled: !!userId,
   });
 
-  // Purchase equipment
+  // Purchase equipment atomically in Postgres. Money, stock and inventory are
+  // committed together or all rolled back together on failure.
   const purchaseEquipment = useMutation({
     mutationFn: async (equipmentId: string) => {
       if (!userId) throw new Error("User not authenticated");
@@ -89,64 +89,35 @@ export const useEquipmentStore = (_profileId?: string) => {
       const equipment = catalog.find((e) => e.id === equipmentId);
       if (!equipment) throw new Error("Equipment not found");
 
-      const stockQty = (equipment as any).stock_quantity;
-      if (stockQty !== undefined && stockQty !== null && stockQty <= 0) {
-        throw new Error("Item is out of stock");
+      const { data, error } = await (supabase as any).rpc("purchase_equipment_atomic", {
+        p_profile_id: profileId,
+        p_equipment_id: equipmentId,
+        p_idempotency_key: crypto.randomUUID(),
+      });
+
+      if (error) {
+        const message = error.message ?? "Equipment purchase failed";
+
+        if (message.includes("insufficient_funds")) {
+          throw new Error("Insufficient funds");
+        }
+        if (message.includes("equipment_out_of_stock")) {
+          throw new Error("Item is out of stock");
+        }
+        if (message.includes("equipment_not_available")) {
+          throw new Error("Equipment is no longer available");
+        }
+
+        throw error;
       }
 
-      // Check balance via profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-
-      if (!profile || profile.cash < equipment.base_price) {
-        throw new Error("Insufficient funds");
-      }
-
-      await financeService.debit(
-        "player",
-        profileId,
-        equipment.base_price,
-        "equipment_purchase",
-        `Equipment purchase: ${equipment.name}`,
-        `equipment-purchase-${profileId}-${equipmentId}`,
-        profileId,
-      );
-
-      // Compatibility mirror while legacy profiles.cash remains deprecated.
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - equipment.base_price })
-        .eq("id", profileId);
-
-      if (cashError) throw cashError;
-
-      // Decrease stock if stock tracking is enabled
-      if (stockQty !== undefined && stockQty !== null) {
-        await supabase
-          .from("equipment_catalog")
-          .update({ stock_quantity: stockQty - 1 })
-          .eq("id", equipmentId);
-      }
-
-      // Add to inventory — user_id MUST be the auth user id (RLS requires auth.uid() = user_id)
-      const { data, error } = await supabase
-        .from("player_equipment_inventory")
-        .insert({
-          user_id: userId,
-          equipment_id: equipmentId,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-equipment", userId] });
       queryClient.invalidateQueries({ queryKey: ["equipment-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["profile", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
       toast.success("Equipment purchased successfully");
     },
     onError: (error: any) => {
