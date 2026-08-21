@@ -89,6 +89,48 @@ const isPriority = (value: unknown): value is NotificationPriority =>
   value === "low" || value === "normal" || value === "high" || value === "urgent";
 
 const getString = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
+const getNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const signed = (value: number) => `${value > 0 ? "+" : ""}${value.toLocaleString()}`;
+
+function buildPrOutcomeBody(notification: PersistedNotification): string | null {
+  if (notification.type !== "pr_outcome" && notification.category !== "pr") return null;
+
+  const metadata = notification.metadata ?? {};
+  const mediaType = getString(metadata.media_type) ?? getString(metadata.mediaType);
+  const outlet = getString(metadata.outlet_name) ?? getString(metadata.outlet) ?? getString(metadata.program_name);
+  const fame = getNumber(metadata.fame_boost ?? metadata.fame_gained);
+  const fans = getNumber(metadata.fan_boost ?? metadata.fans_gained);
+  const compensation = getNumber(metadata.compensation ?? metadata.cash_gained);
+  const reputation = getNumber(metadata.reputation_gain ?? metadata.reputation_delta);
+  const morale = getNumber(metadata.morale_gain ?? metadata.morale_delta);
+  const sentiment = getNumber(metadata.sentiment_gain ?? metadata.sentiment_delta);
+  const reach = getNumber(metadata.audience_reach ?? metadata.reach);
+
+  const gains: string[] = [];
+  if (fans !== null && fans !== 0) gains.push(`${signed(fans)} fans`);
+  if (fame !== null && fame !== 0) gains.push(`${signed(fame)} fame`);
+  if (compensation !== null && compensation !== 0) gains.push(`${signed(compensation)} cash`);
+  if (reputation !== null && reputation !== 0) gains.push(`${signed(reputation)} reputation`);
+  if (morale !== null && morale !== 0) gains.push(`${signed(morale)} morale`);
+  if (sentiment !== null && sentiment !== 0) gains.push(`${signed(sentiment)} fan sentiment`);
+
+  const appearance = [mediaType ? toTitleCase(mediaType) : null, outlet].filter(Boolean).join(" appearance on ");
+  const intro = appearance
+    ? `Your ${appearance} has finished.`
+    : "Your PR appearance has finished.";
+  const reachText = reach !== null && reach > 0 ? ` Estimated reach: ${reach.toLocaleString()}.` : "";
+  const gainsText = gains.length > 0 ? ` Outcome: ${gains.join(", ")}.` : "";
+
+  return `${intro}${reachText}${gainsText}`;
+}
 
 export function getNotificationRoute(notification: PersistedNotification): string | null {
   const metadata = notification.metadata ?? {};
@@ -104,6 +146,10 @@ export function getNotificationRoute(notification: PersistedNotification): strin
     return `/bands/${bandId}`;
   }
 
+  if ((notification.type === "pr_outcome" || notification.category === "pr") && !notification.action_path) {
+    return "/pr";
+  }
+
   return notification.action_path;
 }
 
@@ -117,10 +163,11 @@ export function normalizeNotification(notification: PersistedNotification): Disp
   const recruitmentMeta = recruitmentStatus ? getRecruitmentStatusMeta(recruitmentStatus) : null;
   const isRecruitment = notification.type === "band_request" || Boolean(recruitmentStatus);
   const routePath = getNotificationRoute(notification);
+  const prOutcomeBody = buildPrOutcomeBody(notification);
 
   return {
     ...notification,
-    body: notification.message?.trim() || "Open this update for more details.",
+    body: prOutcomeBody ?? notification.message?.trim() || "Open this update for more details.",
     categoryLabel: CATEGORY_LABELS[notification.category] ?? toTitleCase(notification.category || "notification"),
     priority,
     isRead: !!notification.read_at,
