@@ -27,4 +27,17 @@ describe("Mobile World companion contract", () => {
     expect(source).toContain("await bookTravel({");
     expect(source).toContain('queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] })');
   });
+
+  it("only reports legacy travel status when it is genuinely active now", () => {
+    expect(source).toContain("const currentTravel = (activityStatus: any) =>");
+    expect(source).toContain('["active", "in_progress"].includes(status)');
+    expect(source).toContain("if (Number.isFinite(start) && start > now) return null");
+    expect(source).toContain("if (Number.isFinite(end) && end <= now) return null");
+    expect(source).toContain("const activeTravel = currentTravel(activityStatus)");
+  });
+
+  it("does not fabricate a zero cash balance while profile data is unavailable", () => {
+    expect(source).toContain('profile?.cash == null ? "Unavailable"');
+    expect(source).not.toContain('profile as any)?.cash ?? 0');
+  });
 });
