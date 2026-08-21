@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
+import { purchaseEquipmentAtomic } from "@/services/equipment/equipmentPurchaseService";
 
 export interface EquipmentItem {
   id: string;
@@ -43,7 +44,6 @@ export const useEquipmentStore = (_profileId?: string) => {
   const { userId, profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  // Fetch equipment catalog
   const { data: catalog = [], isLoading: catalogLoading } = useQuery({
     queryKey: ["equipment-catalog"],
     queryFn: async () => {
@@ -58,7 +58,6 @@ export const useEquipmentStore = (_profileId?: string) => {
     },
   });
 
-  // Fetch player inventory (keyed by auth user id, not profile id)
   const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ["player-equipment", userId],
     queryFn: async () => {
@@ -79,8 +78,6 @@ export const useEquipmentStore = (_profileId?: string) => {
     enabled: !!userId,
   });
 
-  // Purchase equipment atomically in Postgres. Money, stock and inventory are
-  // committed together or all rolled back together on failure.
   const purchaseEquipment = useMutation({
     mutationFn: async (equipmentId: string) => {
       if (!userId) throw new Error("User not authenticated");
@@ -89,29 +86,7 @@ export const useEquipmentStore = (_profileId?: string) => {
       const equipment = catalog.find((e) => e.id === equipmentId);
       if (!equipment) throw new Error("Equipment not found");
 
-      const { data, error } = await (supabase as any).rpc("purchase_equipment_atomic", {
-        p_profile_id: profileId,
-        p_equipment_id: equipmentId,
-        p_idempotency_key: crypto.randomUUID(),
-      });
-
-      if (error) {
-        const message = error.message ?? "Equipment purchase failed";
-
-        if (message.includes("insufficient_funds")) {
-          throw new Error("Insufficient funds");
-        }
-        if (message.includes("equipment_out_of_stock")) {
-          throw new Error("Item is out of stock");
-        }
-        if (message.includes("equipment_not_available")) {
-          throw new Error("Equipment is no longer available");
-        }
-
-        throw error;
-      }
-
-      return data;
+      return purchaseEquipmentAtomic(profileId, equipmentId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-equipment", userId] });
@@ -125,7 +100,6 @@ export const useEquipmentStore = (_profileId?: string) => {
     },
   });
 
-  // Maintain equipment
   const maintainEquipment = useMutation({
     mutationFn: async (inventoryId: string) => {
       if (!userId) throw new Error("User not authenticated");
@@ -136,7 +110,6 @@ export const useEquipmentStore = (_profileId?: string) => {
 
       const maintenanceCost = Math.floor(item.equipment.base_price * 0.1);
 
-      // Check balance via profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
@@ -147,7 +120,6 @@ export const useEquipmentStore = (_profileId?: string) => {
         throw new Error("Insufficient funds for maintenance");
       }
 
-      // Deduct cost
       const { error: cashError } = await supabase
         .from("profiles")
         .update({ cash: profile.cash - maintenanceCost })
@@ -155,7 +127,6 @@ export const useEquipmentStore = (_profileId?: string) => {
 
       if (cashError) throw cashError;
 
-      // Update equipment
       const { error } = await supabase
         .from("player_equipment_inventory")
         .update({
