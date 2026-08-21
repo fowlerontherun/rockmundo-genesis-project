@@ -36,7 +36,11 @@ function meta(pattern: string, section: MobileDestination, fallbackStatus: Mobil
 }
 
 export const mobileRouteRegistry: MobileRouteMeta[] = [
-  meta("/mobile", "home", "dedicated"), meta("/mobile/career/*", "career", "dedicated"), meta("/mobile/social/*", "social", "dedicated"), meta("/mobile/world/*", "world", "dedicated"), meta("/mobile/me/*", "me", "dedicated"),
+  meta("/mobile", "home", "dedicated"),
+  meta("/mobile/career", "career", "dedicated"), meta("/mobile/career/*", "career", "dedicated"),
+  meta("/mobile/social", "social", "dedicated"), meta("/mobile/social/*", "social", "dedicated"),
+  meta("/mobile/world", "world", "dedicated"), meta("/mobile/world/*", "world", "dedicated"),
+  meta("/mobile/me", "me", "dedicated"), meta("/mobile/me/*", "me", "dedicated"),
   meta("/", "home", "public"), meta("/home", "home", "redirect"), meta("/dashboard", "home", "redirect"), meta("/schedule", "home", "redirect"), meta("/schedule/*", "home", "redirect"),
   ...career.map((p) => meta(p, "career")), ...social.map((p) => meta(p, "social")), ...world.map((p) => meta(p, "world")), ...me.map((p) => meta(p, "me")),
   { pattern: "/auth", section: "home", bottomNav: "home", auth: "public", shell: "none", component: "Auth", showActivityBar: false, showFab: false, fullscreenAllowed: true, fallbackStatus: "public" },
