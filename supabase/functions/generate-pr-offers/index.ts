@@ -145,19 +145,19 @@ serve(async (req) => {
     ] = await Promise.all([
       supabaseClient.from('tv_networks').select('id, name, min_fame_required, min_fans_required').eq('is_active', true),
       supabaseClient.from('radio_stations').select('id, name, min_fame_required').eq('is_active', true),
-      supabaseClient.from('radio_shows').select('id, station_id, show_name, min_fame_required, compensation_min, compensation_max, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, cooldown_days').eq('is_active', true),
+      supabaseClient.from('radio_shows').select('id, station_id, show_name, listener_multiplier').eq('is_active', true),
       supabaseClient.from('podcasts').select('id, podcast_name, min_fame_required, cooldown_days').eq('is_active', true),
       supabaseClient.from('newspapers').select('id, name, min_fame_required').eq('is_active', true),
       supabaseClient.from('magazines').select('id, name, min_fame_required, cooldown_days').eq('is_active', true),
-      supabaseClient.from('youtube_channels').select('id, name, min_fame_required').eq('is_active', true),
+      supabaseClient.from('youtube_channels').select('id, channel_name, min_fame_required, compensation_min, compensation_max, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max').eq('is_active', true),
       supabaseClient.from('websites').select('id, name, website_url, min_fame_required, compensation_min, compensation_max, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max').eq('is_active', true),
-      supabaseClient.from('film_productions').select('id, title, min_fame_required, compensation, fame_boost, fan_boost, film_type').eq('is_active', true),
+      supabaseClient.from('film_productions').select('id, title, min_fame_required, compensation_min, compensation_max, fame_boost, fan_boost, film_type').eq('is_available', true),
     ]);
 
     // Fetch TV shows with compensation info
     const { data: tvShows } = await supabaseClient
       .from('tv_shows')
-      .select('id, network_id, show_name, fame_boost_multiplier, fan_boost_multiplier, compensation_range_min, compensation_range_max, cooldown_days')
+      .select('id, network_id, show_name, min_fame_required, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max')
       .eq('is_active', true);
 
     for (const band of bands as Band[]) {
@@ -234,9 +234,9 @@ serve(async (req) => {
                   continue;
                 }
                 
-                compensation = getRandomInt(show.compensation_range_min || 500, show.compensation_range_max || 5000);
-                fameBoost = Math.floor(getRandomInt(200, 1500) * (show.fame_boost_multiplier || 1));
-                fanBoost = Math.floor(getRandomInt(500, 5000) * (show.fan_boost_multiplier || 1));
+                compensation = getRandomInt(show.compensation_min || 500, show.compensation_max || 5000);
+                fameBoost = getRandomInt(show.fame_boost_min || 200, show.fame_boost_max || 1500);
+                fanBoost = getRandomInt(show.fan_boost_min || 500, show.fan_boost_max || 5000);
               } else {
                 compensation = getRandomInt(500, 3000);
                 fameBoost = getRandomInt(200, 800);
@@ -253,7 +253,7 @@ serve(async (req) => {
                 mediaOutletId = show.station_id;
                 showId = show.id;
                 showName = show.show_name;
-                cooldownDays = show.cooldown_days || 14;
+                cooldownDays = 14;
                 
                 // Get station name
                 const station = (radioStations.data || []).find((s: any) => s.id === show.station_id);
@@ -265,9 +265,10 @@ serve(async (req) => {
                   continue;
                 }
                 
-                compensation = getRandomInt(show.compensation_min || 100, show.compensation_max || 1000);
-                fameBoost = getRandomInt(show.fame_boost_min || 50, show.fame_boost_max || 400);
-                fanBoost = getRandomInt(show.fan_boost_min || 100, show.fan_boost_max || 1500);
+                const mult = Number(show.listener_multiplier) || 1;
+                compensation = Math.round(getRandomInt(100, 1000) * mult);
+                fameBoost = Math.round(getRandomInt(50, 400) * mult);
+                fanBoost = Math.round(getRandomInt(100, 1500) * mult);
               } else {
                 // Fallback to radio stations
                 const eligible = (radioStations.data || []).filter((s: any) => fame >= (s.min_fame_required || 0));
@@ -346,16 +347,16 @@ serve(async (req) => {
               if (eligible.length === 0) continue;
               const channel = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = channel.id;
-              outletName = channel.name || 'YouTube Channel';
+              outletName = channel.channel_name || 'YouTube Channel';
               
               if (await isOnCooldown(supabaseClient, band.id, 'youtube', mediaOutletId)) {
                 skippedCooldown++;
                 continue;
               }
               
-              compensation = getRandomInt(400, 2500);
-              fameBoost = getRandomInt(200, 600);
-              fanBoost = getRandomInt(600, 2000);
+              compensation = getRandomInt(channel.compensation_min || 400, channel.compensation_max || 2500);
+              fameBoost = getRandomInt(channel.fame_boost_min || 200, channel.fame_boost_max || 600);
+              fanBoost = getRandomInt(channel.fan_boost_min || 600, channel.fan_boost_max || 2000);
               break;
             }
             case 'website': {
@@ -381,7 +382,7 @@ serve(async (req) => {
               const film = eligible[Math.floor(Math.random() * eligible.length)];
               mediaOutletId = film.id;
               outletName = film.title || 'Film Production';
-              compensation = film.compensation || 50000;
+              compensation = getRandomInt(film.compensation_min || 50000, film.compensation_max || 150000);
               fameBoost = film.fame_boost || 5000;
               fanBoost = film.fan_boost || 20000;
               cooldownDays = 365; // Films have very long cooldowns

@@ -534,7 +534,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
 
 interface ReleaseCardProps {
   release: any;
-  financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; manufacturerShare: number; netRevenue: number };
+  financials?: { grossRevenue: number; taxPaid: number; distributionFees: number; manufacturerShare: number; netRevenue: number; economicCost?: number; bandCost?: number; bandRevenue?: number; labelShare?: number };
   financeAvailable?: boolean;
   labelCutPct?: number;
   onEdit: () => void;
