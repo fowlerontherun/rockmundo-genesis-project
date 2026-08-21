@@ -4,24 +4,27 @@ import path from "node:path";
 
 const source = fs.readFileSync(path.resolve("src/mobile/pages/MobileWorldPhase5.tsx"), "utf8");
 
-describe("Mobile World Phase 8 route migration", () => {
-  it("keeps core world and economy routes inside the mobile shell", () => {
-    for (const route of ["/mobile/world/city", "/mobile/world/venues", "/mobile/world/events", "/mobile/world/companies", "/mobile/world/jobs", "/mobile/world/marketplace", "/mobile/world/shops", "/mobile/world/search"]) {
-      expect(source).toContain(route);
-    }
-    expect(source).not.toContain("/world/current-city");
-    expect(source).not.toContain("/world-companies");
+describe("Mobile World companion contract", () => {
+  it("keeps only overview and travel as first-class mobile World flows", () => {
+    expect(source).toContain('to="/mobile/world"');
+    expect(source).toContain('to="/mobile/world/travel"');
+    expect(source).toContain('if (section === "travel") return <TravelMobile />');
+    expect(source).toContain('return <WorldOverviewMobile />');
   });
 
-  it("documents server-authoritative transaction and application validation in mobile flows", () => {
-    for (const text of ["Server revalidates current price", "Duplicate submissions are disabled", "no mobile-only economy logic", "sold listing", "closed job"]) {
-      expect(source).toContain(text);
+  it("gates deep World systems behind explicit desktop-only boundaries", () => {
+    for (const section of ["venues", "companies", "jobs", "marketplace", "shops", "charts", "festivals", "events", "search", "city", "locations"]) {
+      expect(source).toContain(`${section}:`);
     }
+    expect(source).toContain("Desktop world gameplay");
+    expect(source).toContain("remain desktop gameplay");
   });
 
-  it("uses dedicated mobile sections for city, venue, shop, marketplace, company, job, event and search experiences", () => {
-    for (const component of ["CityMobile", "VenuesMobile", "ShopsMobile", "MarketplaceMobile", "CompaniesMobile", "JobsMobile", "EventsMobile", "SearchMobile"]) {
-      expect(source).toContain(`function ${component}`);
-    }
+  it("reuses the authoritative travel engine instead of mobile-only economy logic", () => {
+    expect(source).toContain('import { bookTravel } from "@/utils/travelSystem"');
+    expect(source).toContain("getAvailableModes");
+    expect(source).toContain("getNextAvailableDeparture");
+    expect(source).toContain("await bookTravel({");
+    expect(source).toContain('queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] })');
   });
 });

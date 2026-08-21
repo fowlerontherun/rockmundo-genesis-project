@@ -12,7 +12,7 @@ import {
   type WellnessVitals,
 } from "@/lib/api/wellnessActivities";
 import { supabase } from "@/integrations/supabase/client";
-import { deriveLifestyleProfile, type LifestyleProfile } from "@/lib/wellnessLifestyle";
+import type { LifestyleProfile } from "@/lib/wellnessLifestyle";
 
 export interface UseWellnessStateResult {
   catalog: WellnessCatalogEntry[];
@@ -38,72 +38,113 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
   const [error, setError] = useState<string | null>(null);
 
   const loadVitals = useCallback(async () => {
-    if (!profileId) return;
+    if (!profileId) {
+      setVitals(null);
+      setLifestyle(null);
+      return;
+    }
+
     const { data, error: vitalsError } = await (supabase as any)
       .from("profiles")
       .select("health, energy, mood, stress")
       .eq("id", profileId)
       .maybeSingle();
-    if (vitalsError) {
-      console.error("[useWellnessState] Failed to load vitals", vitalsError);
+
+    if (vitalsError) throw vitalsError;
+    if (!data) {
+      setVitals(null);
+      setLifestyle(null);
+      return;
     }
-    if (data) {
-      const nextVitals: WellnessVitals = {
-        health: data.health ?? 80,
-        energy: data.energy ?? 80,
-        mood: data.mood ?? 70,
-        stress: data.stress ?? 30,
-        physical_health: data.health ?? 80,
-        happiness: data.mood ?? 70,
-        fatigue: Math.max(0, 100 - (data.energy ?? 80)),
-        sleep_quality: 72,
-        nutrition: 68,
-        fitness: 60,
-        motivation: 70,
-        burnout_risk: Math.min(100, (data.stress ?? 30) + Math.max(0, 100 - (data.energy ?? 80)) / 2),
-      } as WellnessVitals;
-      setVitals(nextVitals);
-      const { data: lifestyleRow } = await (supabase as any)
-        .from("wellness_lifestyle_profiles")
-        .select("*")
-        .eq("profile_id", profileId)
-        .maybeSingle();
-      if (lifestyleRow) {
-        const { data: traitRows } = await (supabase as any)
-          .from("wellness_lifestyle_traits")
-          .select("trait_slug, trait_name, progress, active, benefits, tradeoffs")
-          .eq("profile_id", profileId)
-          .order("active", { ascending: false });
-        setLifestyle({
-          sleep_consistency: lifestyleRow.sleep_consistency,
-          sleep_debt: lifestyleRow.sleep_debt,
-          activity_balance: lifestyleRow.activity_balance,
-          exercise_consistency: lifestyleRow.exercise_consistency,
-          nutrition_consistency: lifestyleRow.nutrition_consistency,
-          hydration_consistency: lifestyleRow.hydration_consistency,
-          social_activity: lifestyleRow.social_activity,
-          partying_frequency: lifestyleRow.partying_frequency,
-          alcohol_exposure: lifestyleRow.alcohol_exposure,
-          recovery_discipline: lifestyleRow.recovery_discipline,
-          workload_intensity: lifestyleRow.workload_intensity,
-          downtime_quality: lifestyleRow.downtime_quality,
-          routine_stability: lifestyleRow.routine_stability,
-          burnout_pressure: lifestyleRow.burnout_pressure,
-          lifestyle_balance: lifestyleRow.lifestyle_balance,
-          state: lifestyleRow.lifestyle_state,
-          burnout_stage: lifestyleRow.burnout_stage,
-          identity: lifestyleRow.lifestyle_identity,
-          recommendation: lifestyleRow.primary_recommendation,
-          traits: (traitRows ?? []).map((t: any) => ({ slug: t.trait_slug, name: t.trait_name, progress: t.progress, active: t.active, benefit: t.benefits, tradeoff: t.tradeoffs })),
-        });
-      } else {
-        setLifestyle(deriveLifestyleProfile([{ day: new Date().toISOString().slice(0, 10), sleepMinutes: (nextVitals.sleep_quality ?? 72) * 6, restMinutes: Math.max(0, 100 - (nextVitals.fatigue ?? 35)), nutritionScore: nextVitals.nutrition ?? 68, hydrationScore: 65, workloadMinutes: Math.max(0, 100 - (nextVitals.energy ?? 80)) * 5, socialMinutes: nextVitals.happiness ?? nextVitals.mood ?? 70 }]));
-      }
+
+    const missingCoreVital = [data.health, data.energy, data.mood, data.stress].some(
+      (value) => value === null || value === undefined || Number.isNaN(Number(value)),
+    );
+    if (missingCoreVital) {
+      setVitals(null);
+      setLifestyle(null);
+      return;
     }
+
+    const health = Number(data.health);
+    const energy = Number(data.energy);
+    const mood = Number(data.mood);
+    const stress = Number(data.stress);
+    const nextVitals: WellnessVitals = {
+      health,
+      energy,
+      mood,
+      stress,
+      physical_health: health,
+      happiness: mood,
+      fatigue: Math.max(0, 100 - energy),
+      burnout_risk: Math.min(100, stress + Math.max(0, 100 - energy) / 2),
+    };
+    setVitals(nextVitals);
+
+    const { data: lifestyleRow, error: lifestyleError } = await (supabase as any)
+      .from("wellness_lifestyle_profiles")
+      .select("*")
+      .eq("profile_id", profileId)
+      .maybeSingle();
+    if (lifestyleError) throw lifestyleError;
+
+    if (!lifestyleRow) {
+      setLifestyle(null);
+      return;
+    }
+
+    const { data: traitRows, error: traitsError } = await (supabase as any)
+      .from("wellness_lifestyle_traits")
+      .select("trait_slug, trait_name, progress, active, benefits, tradeoffs")
+      .eq("profile_id", profileId)
+      .order("active", { ascending: false });
+    if (traitsError) throw traitsError;
+
+    setLifestyle({
+      sleep_consistency: lifestyleRow.sleep_consistency,
+      sleep_debt: lifestyleRow.sleep_debt,
+      activity_balance: lifestyleRow.activity_balance,
+      exercise_consistency: lifestyleRow.exercise_consistency,
+      nutrition_consistency: lifestyleRow.nutrition_consistency,
+      hydration_consistency: lifestyleRow.hydration_consistency,
+      social_activity: lifestyleRow.social_activity,
+      partying_frequency: lifestyleRow.partying_frequency,
+      alcohol_exposure: lifestyleRow.alcohol_exposure,
+      recovery_discipline: lifestyleRow.recovery_discipline,
+      workload_intensity: lifestyleRow.workload_intensity,
+      downtime_quality: lifestyleRow.downtime_quality,
+      routine_stability: lifestyleRow.routine_stability,
+      burnout_pressure: lifestyleRow.burnout_pressure,
+      lifestyle_balance: lifestyleRow.lifestyle_balance,
+      state: lifestyleRow.lifestyle_state,
+      burnout_stage: lifestyleRow.burnout_stage,
+      identity: lifestyleRow.lifestyle_identity,
+      recommendation: lifestyleRow.primary_recommendation,
+      traits: (traitRows ?? []).map((t: any) => ({
+        slug: t.trait_slug,
+        name: t.trait_name,
+        progress: t.progress,
+        active: t.active,
+        benefit: t.benefits,
+        tradeoff: t.tradeoffs,
+      })),
+    });
   }, [profileId]);
 
   const refresh = useCallback(async () => {
-    if (!profileId) return;
+    if (!profileId) {
+      setCatalog([]);
+      setCooldowns([]);
+      setAilments([]);
+      setBlocks([]);
+      setVitals(null);
+      setLifestyle(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [c, cd, am, bl] = await Promise.all([
@@ -119,6 +160,7 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
       await loadVitals();
       setError(null);
     } catch (e: any) {
+      setVitals(null);
       setError(e?.message ?? "Failed to load wellness data");
     } finally {
       setLoading(false);
