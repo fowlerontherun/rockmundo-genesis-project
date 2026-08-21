@@ -56,8 +56,8 @@ export function getMobileDestination(pathname: string): MobileDestination {
  * Convert action/notification paths into the supported companion surface.
  * Mobile never falls through into deep desktop gameplay by accident.
  */
-export function resolveCompanionPath(path?: string | null): string | null {
-  if (!path) return null;
+export function resolveCompanionPath(path?: string | null): string {
+  if (!path) return "/mobile";
   if (path.startsWith("/mobile")) return path;
 
   const clean = path.split("?")[0].split("#")[0];
