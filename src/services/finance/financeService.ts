@@ -39,10 +39,10 @@ export const financeService = {
     return rpc("get_or_create_primary_financial_account", { p_owner_type: ownerType, p_owner_id: ownerId, p_name: name });
   },
   async credit(ownerType: FinanceOwnerType, ownerId: string, amount: number, category: FinanceTransactionCategory, description: string, idempotencyKey: string, createdByProfileId?: string) {
-    return rpc<string>("finance_credit_owner", { p_owner_type: ownerType, p_owner_id: ownerId, p_amount_minor: toMinorUnits(amount), p_category: category, p_description: description, p_idempotency_key: idempotencyKey, p_created_by_profile_id: createdByProfileId });
+    return rpc<string>("finance_credit_owner", { p_owner_type: ownerType, p_owner_id: ownerId, p_amount_minor: toMinorUnits(amount), p_category: category, p_description: description, p_idempotency_key: idempotencyKey, p_created_by_profile_id: createdByProfileId, p_metadata: {} });
   },
   async debit(ownerType: FinanceOwnerType, ownerId: string, amount: number, category: FinanceTransactionCategory, description: string, idempotencyKey: string, createdByProfileId?: string) {
-    return rpc<string>("finance_debit_owner", { p_owner_type: ownerType, p_owner_id: ownerId, p_amount_minor: toMinorUnits(amount), p_category: category, p_description: description, p_idempotency_key: idempotencyKey, p_created_by_profile_id: createdByProfileId });
+    return rpc<string>("finance_debit_owner", { p_owner_type: ownerType, p_owner_id: ownerId, p_amount_minor: toMinorUnits(amount), p_category: category, p_description: description, p_idempotency_key: idempotencyKey, p_created_by_profile_id: createdByProfileId, p_metadata: {} });
   },
   async transfer(input: FinanceTransferInput) {
     if (input.source.ownerType === input.destination.ownerType && input.source.ownerId === input.destination.ownerId) throw new FinanceError("Self transfers are not allowed", "self_transfer");
