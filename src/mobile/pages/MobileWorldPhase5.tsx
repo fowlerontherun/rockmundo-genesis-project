@@ -1,34 +1,296 @@
-import { useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Briefcase, Building2, CalendarClock, LineChart, MapPin, Package, Plane, Search, Store, Ticket, Trophy } from "lucide-react";
-import { useGameData } from "@/hooks/useGameData";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { CalendarClock, MapPin, Monitor, Plane, Search, Train, Bus, Ship } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useCountryCharts } from "@/hooks/useCountryCharts";
+import { useGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { bookTravel } from "@/utils/travelSystem";
+import { calculateDistance, getAvailableModes, type CityWithCoords, type TravelOption } from "@/utils/dynamicTravel";
+import { formatDepartureDateTime, getNextAvailableDeparture } from "@/utils/transportSchedules";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "../components/EmptyState";
-import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileProgressCard, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileStickyActionBar, MobileTimeline, MobileTimelineItem } from "../components/MobilePrimitives";
+import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge } from "../components/MobilePrimitives";
 
-type Row = Record<string, any>;
-const worldTabs = [["Overview","/mobile/world"],["City","/mobile/world/city"],["Travel","/mobile/world/travel"],["Venues","/mobile/world/venues"],["Events","/mobile/world/events"],["Companies","/mobile/world/companies"],["Jobs","/mobile/world/jobs"],["Marketplace","/mobile/world/marketplace"],["Shops","/mobile/world/shops"],["Charts","/mobile/world/charts"],["Search","/mobile/world/search"]] as const;
-const money=(n?:number|string)=>Number(n??0).toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0});
-function WorldNav(){ const {pathname}=useLocation(); return <nav aria-label="World sections" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">{worldTabs.map(([l,to])=>{const active=pathname===to||pathname.startsWith(`${to}/`); return <Link key={to} to={to} aria-current={active?"page":undefined} className={`rm-tap shrink-0 rounded-full border px-3 py-2 text-xs font-semibold ${active?"border-primary bg-primary text-primary-foreground":"border-border bg-muted/40"}`}>{l}</Link>})}</nav> }
-function Shell({title,description,children}:{title:string;description?:string;children:any}){return <MobilePageShell><MobileSectionHeader eyebrow="World" title={title} description={description}/><WorldNav/>{children}</MobilePageShell>}
-function useRows(table:string, select="*", limit=20, filters?:(q:any)=>any){return useQuery({queryKey:["mobile-world",table,select,limit,String(filters)],queryFn:async()=>{let q=(supabase as any).from(table).select(select).limit(limit); if(filters) q=filters(q); const {data,error}=await q; if(error) throw error; return (data??[]) as Row[];},retry:1})}
-function Cards({q,empty,icon,kind}:{q:any;empty:string;icon:any;kind:string}){if(q.isLoading)return <MobileLoadingSkeleton/>; if(q.isError)return <MobileErrorState message={(q.error as Error)?.message} onRetry={()=>q.refetch()}/>; if(!q.data?.length)return <EmptyState title={empty} message="Try a different filter or come back later."/>; return <div className="space-y-2">{q.data.map((r:Row)=><Entity key={r.id??r.name} r={r} icon={icon} kind={kind}/>)}</div>}
-function Entity({r,icon,kind}:{r:Row;icon:any;kind:string}){const nav=useNavigate(); const title=r.name??r.title??r.item_name??r.company_name??`${kind} ${r.id}`; const city=r.city?.name??r.cities?.name??r.city_name??r.city??r.location??"World"; const quality=r.quality??r.reputation??r.reputation_score??r.condition??r.status; const price=r.price??r.buy_now_price??r.salary??r.pay; const go=()=>nav(`/mobile/world/${kind}/${r.id}`); return <MobileEntityCard title={title} subtitle={[city, r.company_type??r.type??r.category??r.venue_type, quality&&`Quality ${quality}`, price&&money(price)].filter(Boolean).join(" • ")} icon={icon} meta={<MobileStatusBadge tone={r.is_active===false||r.status==="sold"?"warning":"info"}>{r.status??(r.is_active===false?"Closed":"Open")}</MobileStatusBadge>} onPress={r.id?go:undefined}/>}
-export default function MobileWorldPhase5(){ const {section,id}=useParams(); if(id) return <Detail kind={section??"city"} id={id}/>; if(section==="travel") return <TravelMobile/>; if(section==="festivals") return <FestivalsMobile/>; if(section==="charts") return <ChartsMobile/>; if(section==="city"||section==="locations") return <CityMobile/>; if(section==="venues") return <VenuesMobile/>; if(section==="events") return <EventsMobile/>; if(section==="shops") return <ShopsMobile/>; if(section==="marketplace") return <MarketplaceMobile/>; if(section==="companies") return <CompaniesMobile/>; if(section==="jobs") return <JobsMobile/>; if(section==="search") return <SearchMobile/>; return <WorldOverviewMobile/> }
-function WorldOverviewMobile(){ const {currentCity,activityStatus}=useGameData(); const travelling=String((activityStatus as any)?.activity_type??"").includes("travel"); return <Shell title={currentCity?.name??"Explore"} description="A mobile-first world hub for places, work, shops, companies, events and search."><div className="grid grid-cols-4 gap-2">{worldTabs.slice(1,9).map(([l,to])=><Link key={l} to={to} className="rm-tap rounded-xl border p-2 text-center text-xs font-semibold">{l}</Link>)}</div><MobileSectionCard title="Priority"><MobileEntityCard title={travelling?"Travel in progress":currentCity?`Explore ${currentCity.name}`:"Choose a city"} subtitle="Deterministic priority uses current travel state before local work, events, shops and venues." icon={<MapPin/>} meta={<MobileStatusBadge tone={travelling?"info":"success"}>{travelling?"Journey":"Ready"}</MobileStatusBadge>}/></MobileSectionCard><MobileSectionCard title="Where you are"><MobileEntityCard title={currentCity?.name??"No city loaded"} subtitle={currentCity?[currentCity.country,currentCity.region].filter(Boolean).join(" • "):"Travel data unavailable"} icon={<MapPin/>}/></MobileSectionCard></Shell> }
-function CityMobile(){ const {currentCity,activityStatus}=useGameData(); const cityId=currentCity?.id; const venues=useRows("venues","id,name,capacity,reputation,venue_type,city_id",8,q=>cityId?q.eq("city_id",cityId):q); const shops=useRows("shops","*",8,q=>cityId?q.eq("city_id",cityId):q); const companies=useRows("companies","*",8,q=>cityId?q.eq("headquarters_city_id",cityId):q); const jobs=useRows("jobs","*",8,q=>cityId?q.eq("city_id",cityId):q); return <Shell title={currentCity?.name??"Current City"} description="Current city dashboard with independent venue, shop, company and job sections."><MobileSectionCard title="City priority"><MobileEntityCard title={String((activityStatus as any)?.activity_type??"").includes("travel")?"Travel is active":"Local opportunities available"} subtitle="Uses current activity status first, then live local sections below." icon={<CalendarClock/>}/></MobileSectionCard><MobileSectionCard title="Quick actions"><div className="grid grid-cols-2 gap-2">{[["Explore Locations","locations"],["View Venues","venues"],["Find Events","events"],["Browse Shops","shops"],["Find Jobs","jobs"],["Marketplace","marketplace"],["Companies","companies"],["Travel","travel"]].map(([l,s])=><Link className="rm-tap rounded-xl border p-3 text-sm font-semibold" key={s} to={`/mobile/world/${s}`}>{l}</Link>)}</div></MobileSectionCard><MobileSectionCard title="Places"><Cards q={venues} empty="No venues found" icon={<Building2/>} kind="venues"/></MobileSectionCard><MobileSectionCard title="Shopping"><Cards q={shops} empty="No shops found" icon={<Store/>} kind="shops"/></MobileSectionCard><MobileSectionCard title="Work"><Cards q={jobs} empty="No jobs found" icon={<Briefcase/>} kind="jobs"/></MobileSectionCard><MobileSectionCard title="Companies"><Cards q={companies} empty="No companies found" icon={<Building2/>} kind="companies"/></MobileSectionCard></Shell>}
-function VenuesMobile(){const q=useRows("venues","id,name,capacity,reputation,venue_type,city_id",25);return <Shell title="Venues" description="Discovery cards replace desktop venue tables."><MobileSectionCard title="Filters"><Chips items={["Nearby","Upcoming gig","Available","Popular","Suitable","Festival"]}/></MobileSectionCard><MobileSectionCard title="Venue discovery"><Cards q={q} empty="No venues found" icon={<Building2/>} kind="venues"/></MobileSectionCard></Shell>}
-function ShopsMobile(){const q=useRows("shops","*",25);return <Shell title="Shops" description="Browse shops, categories and products without desktop tables."><MobileSectionCard title="Shop types"><Chips items={["Instruments","Equipment","Clothing","Food","Wellness","Travel","Merch"]}/></MobileSectionCard><MobileSectionCard title="Shop discovery"><Cards q={q} empty="No shops found" icon={<Store/>} kind="shops"/></MobileSectionCard></Shell>}
-function MarketplaceMobile(){const q=useRows("marketplace_listings","*",25);return <Shell title="Marketplace" description="Search listings, buy safely and start a sell flow with server-authoritative validation."><MobileSectionCard title="Quick actions"><div className="grid grid-cols-2 gap-2">{["Search","Sell Item","My Listings","Saved"].map(x=><button className="rm-tap rounded-xl border p-3 text-sm font-semibold" key={x}>{x}</button>)}</div></MobileSectionCard><MobileSectionCard title="Listing filters"><Chips items={["Recent","Equipment","Clothing","Instruments","Buy now","Ending soon"]}/></MobileSectionCard><MobileSectionCard title="Listings"><Cards q={q} empty="No listings found" icon={<Package/>} kind="marketplace"/></MobileSectionCard><Safety kind="marketplace"/></Shell>}
-function CompaniesMobile(){const q=useRows("companies","*",25);return <Shell title="Companies" description="Company discovery, services, privacy-safe details and hiring states."><MobileSectionCard title="Company filters"><Chips items={["Hiring","My city","Music","Logistics","Venue","High reputation"]}/></MobileSectionCard><MobileSectionCard title="Company discovery"><Cards q={q} empty="No companies found" icon={<Building2/>} kind="companies"/></MobileSectionCard></Shell>}
-function JobsMobile(){const q=useRows("jobs","*",25);return <Shell title="Jobs" description="Vacancies, employment status and safe mobile applications."><MobileSectionCard title="Job filters"><Chips items={["Recommended","Current city","Matches skills","Applied","Hiring now"]}/></MobileSectionCard><MobileSectionCard title="Job listings"><Cards q={q} empty="No jobs found" icon={<Briefcase/>} kind="jobs"/></MobileSectionCard><Safety kind="applications"/></Shell>}
-function EventsMobile(){const q=useRows("events","*",25);return <Shell title="City Events" description="Happening now, today and upcoming city events as timeline cards."><MobileSectionCard title="Event groups"><Chips items={["Now","Today","Upcoming","Gigs","Festivals","Social","Education"]}/></MobileSectionCard><MobileSectionCard title="Upcoming"><Cards q={q} empty="No events found" icon={<CalendarClock/>} kind="events"/></MobileSectionCard></Shell>}
-function SearchMobile(){const [term,setTerm]=useState(""); const debounced=term.trim(); const q=useQuery({queryKey:["mobile-world-search",debounced],enabled:debounced.length>1,queryFn:async()=>{const tables:[[string,string,string,any]]=[["cities","id,name,country","name","city"],["venues","id,name,venue_type","name","venues"],["companies","id,name,company_type","name","companies"],["jobs","id,title,status","title","jobs"],["marketplace_listings","id,title,item_name,price,status","title","marketplace"]] as any; const results=await Promise.all(tables.map(async([table,select,column,kind])=>{const {data}=await (supabase as any).from(table).select(select).ilike(column,`%${debounced}%`).limit(5); return {kind,rows:data??[]};})); return results;}});return <Shell title="World Search" description="Grouped, debounced entity discovery for supported world APIs."><label className="sr-only" htmlFor="world-search">Search world</label><div className="flex min-h-11 items-center gap-2 rounded-xl border px-3"><Search className="h-4 w-4"/><input id="world-search" value={term} onChange={e=>setTerm(e.target.value)} className="min-h-11 flex-1 bg-transparent outline-none" placeholder="Search cities, venues, companies, jobs..."/></div>{!debounced?<EmptyState title="Search the world" message="Enter at least two characters."/>:q.isLoading?<MobileLoadingSkeleton/>:q.isError?<MobileErrorState message="Search failed."/>:q.data?.map(g=><MobileSectionCard key={g.kind} title={g.kind}><div className="space-y-2">{g.rows.length?g.rows.map((r:Row)=><Entity key={`${g.kind}-${r.id}`} r={r} icon={<Search/>} kind={g.kind}/>):<p className="text-sm text-muted-foreground">No results.</p>}</div></MobileSectionCard>)}</Shell>}
-function Detail({kind,id}:{kind:string;id:string}){const table=kind==="marketplace"?"marketplace_listings":kind==="city"?"cities":kind; const q=useRows(table,"*",1,query=>query.eq("id",id)); const row=q.data?.[0]; const title=row?.name??row?.title??row?.item_name??`${kind} detail`; return <Shell title={q.isLoading?"Loading…":title} description="Dedicated mobile detail view with progressive disclosure and valid actions only.">{q.isLoading?<MobileLoadingSkeleton/>:q.isError?<MobileErrorState message={(q.error as Error)?.message}/>:!row?<EmptyState title="Not found" message="This entity may be missing, deleted, sold or unavailable."/>:<><MobileSectionCard title="Overview"><Entity r={row} icon={<MapPin/>} kind={kind}/></MobileSectionCard><MobileSectionCard title={kind==="venues"?"Schedule":kind==="jobs"?"Application":kind==="marketplace"?"Buy flow":kind==="shops"?"Products":"Details"}><MobileTimeline>{["Availability is reloaded from the server","Balance, ownership, stock and permissions stay backend authoritative","Duplicate submissions are disabled while confirmation is pending","Stale, sold, expired, missing and permission states render without leaving mobile shell"].map(x=><MobileTimelineItem key={x} title={x}/>)}</MobileTimeline></MobileSectionCard><Safety kind={kind}/></>}<MobileStickyActionBar><Link to={`/mobile/world/${kind}`} className="block rounded-xl bg-primary p-3 text-center font-semibold text-primary-foreground">Back to {kind}</Link></MobileStickyActionBar></Shell>}
-function Safety({kind}:{kind:string}){return <MobileSectionCard title="Validation and safety"><MobileTimeline>{["Server revalidates current price, stock, listing status, eligibility and balance","Client blocks invalid quantities, duplicate taps and obvious ineligible actions before submit","Relevant balance, inventory, listing, hiring and application queries are invalidated after success","Errors for stale price, sold listing, closed job, unavailable venue, full inventory and permission denial stay in context"].map(t=><MobileTimelineItem key={t} title={t} detail={`${kind} uses existing APIs and transaction rules; no mobile-only economy logic is introduced.`}/>)}</MobileTimeline></MobileSectionCard>}
-function Chips({items}:{items:string[]}){return <div className="flex gap-2 overflow-x-auto">{items.map(x=><button className="rm-tap min-h-11 shrink-0 rounded-full border px-3 py-2 text-xs font-semibold" key={x}>{x}</button>)}</div>}
-function TravelMobile(){ const {currentCity,activityStatus}=useGameData(); const q=useRows("cities","id,name,country,region,population",30); const active=String((activityStatus as any)?.activity_type??"").includes("travel"); return <Shell title="Travel" description="Destination browser, booking preview and active journeys without the desktop city table."><div className="grid grid-cols-2 gap-2"><MobileProgressCard label="Current city" value={currentCity?100:0} detail={currentCity?.name??"Unknown"}/><MobileProgressCard label="Active journey" value={active?65:0} detail={active?"In progress":"No active travel"}/></div><MobileSectionCard title="Destination picker"><Cards q={q} empty="No cities found" icon={<Plane/>} kind="city"/></MobileSectionCard></Shell> }
-function FestivalsMobile(){ const q=useRows("festivals","*",20); return <Shell title="Festivals" description="Discovery, player applications and organiser summaries as mobile cards."><MobileSectionCard title="Festival discovery"><Cards q={q} empty="No festivals found" icon={<Ticket/>} kind="festivals"/></MobileSectionCard></Shell> }
-function ChartsMobile(){ const [period]=useState<any>("weekly"); const q=useCountryCharts("Global","all","streaming","single",period); return <Shell title="Charts" description="Mobile chart browser and awards entry point."><Chips items={["daily","weekly","monthly","yearly","songs","releases","artists","bands"]}/><MobileSectionCard title="Chart list">{q.isLoading?<MobileLoadingSkeleton/>:((q as any).chartEntries??[]).slice(0,15).map((e:any)=><MobileEntityCard key={e.id} title={`#${e.rank} ${e.title}`} subtitle={`${e.artist} · ${e.trend??"new"} · weeks ${e.weeks_on_chart??0}`} icon={<LineChart/>} meta={<MobileStatusBadge tone={e.trend==="up"?"success":"info"}>{e.trend_change??0}</MobileStatusBadge>}/>)}</MobileSectionCard><MobileSectionCard title="Awards"><MobileEntityCard title="Awards summary" subtitle="Recent awards, nominations, career and annual awards" icon={<Trophy/>}/></MobileSectionCard></Shell> }
+type DesktopSection = "venues" | "companies" | "jobs" | "marketplace" | "shops" | "charts" | "festivals" | "events" | "search" | "city" | "locations";
+
+const desktopOnly: Record<DesktopSection, { title: string; description: string }> = {
+  venues: { title: "Venue management", description: "Detailed venue discovery, booking and management remain desktop gameplay." },
+  companies: { title: "Companies", description: "Company discovery, ownership and management remain desktop gameplay." },
+  jobs: { title: "Jobs", description: "Job applications and employment management remain desktop gameplay. Scheduled work still appears in My Day." },
+  marketplace: { title: "Marketplace", description: "Buying, selling and inventory-linked market actions remain desktop gameplay." },
+  shops: { title: "Shops", description: "Equipment, clothing and other shopping flows remain desktop gameplay." },
+  charts: { title: "Charts", description: "Detailed chart browsing and analysis remain desktop gameplay." },
+  festivals: { title: "Festivals", description: "Festival setup, applications and management remain desktop gameplay." },
+  events: { title: "Events", description: "Detailed event browsing and participation setup remain desktop gameplay." },
+  search: { title: "World search", description: "Full world search stays on desktop. Mobile travel includes a focused city search." },
+  city: { title: "City details", description: "Full city exploration and detailed local systems remain desktop gameplay." },
+  locations: { title: "Locations", description: "Detailed location discovery remains desktop gameplay." },
+};
+
+const modeIcon = (mode: string) => {
+  if (mode === "train") return <Train className="h-5 w-5" />;
+  if (mode === "bus") return <Bus className="h-5 w-5" />;
+  if (mode === "ship" || mode === "ferry") return <Ship className="h-5 w-5" />;
+  return <Plane className="h-5 w-5" />;
+};
+
+const money = (value: number) => value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+function Shell({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <MobilePageShell>
+      <MobileSectionHeader eyebrow="World" title={title} description={description} />
+      <nav aria-label="World companion sections" className="grid grid-cols-2 gap-2">
+        <Link to="/mobile/world" className="rm-tap rounded-xl border p-3 text-center text-sm font-semibold">Overview</Link>
+        <Link to="/mobile/world/travel" className="rm-tap rounded-xl border p-3 text-center text-sm font-semibold">Travel</Link>
+      </nav>
+      {children}
+    </MobilePageShell>
+  );
+}
+
+export default function MobileWorldPhase5() {
+  const { section } = useParams();
+  if (section === "travel") return <TravelMobile />;
+  if (section && section in desktopOnly) return <DesktopOnly section={section as DesktopSection} />;
+  return <WorldOverviewMobile />;
+}
+
+function WorldOverviewMobile() {
+  const { currentCity, activityStatus, profile } = useGameData();
+  const travelling = String((activityStatus as any)?.activity_type ?? "").includes("travel");
+  const endsAt = (activityStatus as any)?.ends_at;
+
+  return (
+    <Shell title={currentCity?.name ?? "World"} description="Mobile World is intentionally lightweight: check where you are, monitor travel and book a simple journey.">
+      <MobileSectionCard title="Current status">
+        <MobileEntityCard
+          title={travelling ? "Travel in progress" : currentCity?.name ?? "Location unavailable"}
+          subtitle={travelling && endsAt ? `Journey due to finish ${new Date(endsAt).toLocaleString()}` : [currentCity?.country, currentCity?.region].filter(Boolean).join(" • ") || "Current city"}
+          icon={travelling ? <Plane className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+          meta={<MobileStatusBadge tone={travelling ? "info" : "success"}>{travelling ? "Travelling" : "Available"}</MobileStatusBadge>}
+        />
+      </MobileSectionCard>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Link to="/mobile/world/travel" className="rm-tap rounded-2xl border p-4">
+          <Plane className="mb-2 h-6 w-6" />
+          <div className="font-semibold">Plan travel</div>
+          <div className="mt-1 text-xs text-muted-foreground">Choose a city and transport option.</div>
+        </Link>
+        <Link to="/mobile?view=day" className="rm-tap rounded-2xl border p-4">
+          <CalendarClock className="mb-2 h-6 w-6" />
+          <div className="font-semibold">My Day</div>
+          <div className="mt-1 text-xs text-muted-foreground">See travel alongside today’s schedule.</div>
+        </Link>
+      </div>
+
+      <MobileSectionCard title="Character funds" subtitle="Travel booking uses the same balance and conflict checks as desktop.">
+        <p className="text-2xl font-bold">{money(Number((profile as any)?.cash ?? 0))}</p>
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Desktop world gameplay" subtitle="Deliberately not duplicated on mobile.">
+        <p className="text-sm text-muted-foreground">
+          Shops, marketplace trading, detailed jobs, companies, venue management, festivals, city administration and deeper exploration stay on desktop.
+        </p>
+      </MobileSectionCard>
+    </Shell>
+  );
+}
+
+function useCities() {
+  return useQuery({
+    queryKey: ["mobile-travel-cities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cities")
+        .select("id,name,country,region,latitude,longitude,music_scene,population,is_coastal,has_train_network")
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as CityWithCoords[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+function TravelMobile() {
+  const { currentCity, activityStatus, profile } = useGameData();
+  const { profileId } = useActiveProfile();
+  const queryClient = useQueryClient();
+  const cities = useCities();
+  const [term, setTerm] = useState("");
+  const [destination, setDestination] = useState<CityWithCoords | null>(null);
+  const [selectedMode, setSelectedMode] = useState<string | null>(null);
+  const [booking, setBooking] = useState(false);
+
+  const fromCity = currentCity as CityWithCoords | null;
+  const travelling = String((activityStatus as any)?.activity_type ?? "").includes("travel");
+  const filtered = useMemo(() => {
+    const q = term.trim().toLowerCase();
+    return (cities.data ?? [])
+      .filter((city) => city.id !== fromCity?.id)
+      .filter((city) => !q || `${city.name} ${city.country} ${city.region ?? ""}`.toLowerCase().includes(q))
+      .slice(0, 20);
+  }, [cities.data, fromCity?.id, term]);
+
+  const options = useMemo(() => {
+    if (!fromCity || !destination || fromCity.latitude == null || fromCity.longitude == null || destination.latitude == null || destination.longitude == null) return [] as TravelOption[];
+    const distanceKm = calculateDistance(fromCity.latitude, fromCity.longitude, destination.latitude, destination.longitude);
+    return getAvailableModes(distanceKm, fromCity, destination).filter((option) => option.available);
+  }, [fromCity, destination]);
+
+  const chosen = options.find((option) => option.mode === selectedMode) ?? options[0] ?? null;
+  const departure = chosen ? getNextAvailableDeparture(chosen.mode) : null;
+
+  const chooseDestination = (city: CityWithCoords) => {
+    setDestination(city);
+    if (!fromCity || fromCity.latitude == null || fromCity.longitude == null || city.latitude == null || city.longitude == null) {
+      setSelectedMode(null);
+      return;
+    }
+    const distanceKm = calculateDistance(fromCity.latitude, fromCity.longitude, city.latitude, city.longitude);
+    const available = getAvailableModes(distanceKm, fromCity, city).filter((option) => option.available);
+    const cheapest = available.length ? available.reduce((best, option) => option.cost < best.cost ? option : best) : null;
+    setSelectedMode(cheapest?.mode ?? null);
+  };
+
+  const confirmTravel = async () => {
+    if (!profileId || !fromCity || !destination || !chosen || !departure) return;
+    const scheduledDeparture = new Date(departure.date);
+    scheduledDeparture.setHours(departure.hour, 0, 0, 0);
+    setBooking(true);
+    try {
+      await bookTravel({
+        profileId,
+        fromCityId: fromCity.id,
+        toCityId: destination.id,
+        routeId: `dynamic-${fromCity.id}-${destination.id}`,
+        transportType: chosen.mode,
+        cost: chosen.cost,
+        durationHours: chosen.durationHours,
+        comfortRating: chosen.comfort,
+        scheduledDepartureTime: scheduledDeparture.toISOString(),
+      });
+      toast.success(`Travel booked to ${destination.name}`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile"] }),
+        queryClient.invalidateQueries({ queryKey: ["upcoming-travel"] }),
+      ]);
+      setDestination(null);
+      setSelectedMode(null);
+    } catch (error: any) {
+      toast.error(error?.message ?? "Travel could not be booked");
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  return (
+    <Shell title="Travel" description="Choose a destination, compare the available transport modes and book the next valid departure.">
+      {travelling && (
+        <MobileSectionCard title="Journey in progress">
+          <MobileEntityCard
+            title="You are currently travelling"
+            subtitle={(activityStatus as any)?.ends_at ? `Expected completion ${new Date((activityStatus as any).ends_at).toLocaleString()}` : "Your active journey is still in progress."}
+            icon={<Plane className="h-5 w-5" />}
+            meta={<MobileStatusBadge tone="info">Active</MobileStatusBadge>}
+          />
+        </MobileSectionCard>
+      )}
+
+      <MobileSectionCard title="From">
+        <MobileEntityCard
+          title={fromCity?.name ?? "Current city unavailable"}
+          subtitle={[fromCity?.country, fromCity?.region].filter(Boolean).join(" • ") || "Travel data unavailable"}
+          icon={<MapPin className="h-5 w-5" />}
+          meta={<MobileStatusBadge>{money(Number((profile as any)?.cash ?? 0))}</MobileStatusBadge>}
+        />
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Find destination" subtitle="City search only; deeper world discovery remains desktop-only.">
+        <div className="flex min-h-11 items-center gap-2 rounded-xl border px-3">
+          <Search className="h-4 w-4" />
+          <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search city or country" className="min-h-11 flex-1 bg-transparent outline-none" aria-label="Search destinations" />
+        </div>
+        {cities.isLoading ? <MobileLoadingSkeleton /> : cities.isError ? (
+          <MobileErrorState message="Destinations could not be loaded." onRetry={() => cities.refetch()} />
+        ) : filtered.length ? (
+          <div className="mt-3 space-y-2">
+            {filtered.map((city) => (
+              <MobileEntityCard
+                key={city.id}
+                title={city.name}
+                subtitle={[city.country, city.region].filter(Boolean).join(" • ")}
+                icon={<MapPin className="h-5 w-5" />}
+                meta={destination?.id === city.id ? <MobileStatusBadge tone="success">Selected</MobileStatusBadge> : null}
+                onPress={() => chooseDestination(city)}
+              />
+            ))}
+          </div>
+        ) : <EmptyState title="No destinations found" message="Try another city or country." />}
+      </MobileSectionCard>
+
+      {destination && (
+        <MobileSectionCard title={`Travel to ${destination.name}`} subtitle="The cheapest available option is selected initially; choose another mode if you prefer.">
+          {options.length ? (
+            <div className="space-y-3">
+              {options.map((option) => (
+                <button
+                  type="button"
+                  key={option.mode}
+                  onClick={() => setSelectedMode(option.mode)}
+                  className={`rm-tap flex w-full items-center justify-between rounded-xl border p-3 text-left ${chosen?.mode === option.mode ? "border-primary bg-primary/5" : ""}`}
+                >
+                  <span className="flex items-center gap-3">
+                    {modeIcon(option.mode)}
+                    <span>
+                      <span className="block font-semibold capitalize">{option.mode.replace("_", " ")}</span>
+                      <span className="block text-xs text-muted-foreground">{option.durationHours.toFixed(1)}h · comfort {option.comfort}/100</span>
+                    </span>
+                  </span>
+                  <span className="font-semibold">{money(option.cost)}</span>
+                </button>
+              ))}
+
+              {chosen && departure && (
+                <div className="rounded-xl border bg-muted/30 p-3 text-sm">
+                  <div className="font-semibold">Next departure</div>
+                  <div className="text-muted-foreground">{formatDepartureDateTime(departure.date, departure.hour)}</div>
+                </div>
+              )}
+
+              <Button className="min-h-11 w-full" disabled={!chosen || !departure || booking || travelling} onClick={confirmTravel}>
+                {travelling ? "Finish current journey first" : booking ? "Booking…" : chosen ? `Book ${chosen.mode.replace("_", " ")} · ${money(chosen.cost)}` : "Choose transport"}
+              </Button>
+              <p className="text-xs text-muted-foreground">Balance and schedule conflicts are rechecked by the same travel system used on desktop.</p>
+            </div>
+          ) : (
+            <EmptyState title="No route available" message="This city pair does not currently have an available transport mode." />
+          )}
+        </MobileSectionCard>
+      )}
+    </Shell>
+  );
+}
+
+function DesktopOnly({ section }: { section: DesktopSection }) {
+  const item = desktopOnly[section];
+  return (
+    <Shell title={item.title} description={item.description}>
+      <MobileSectionCard title="Desktop gameplay" subtitle="This is intentionally outside the mobile companion scope.">
+        <div className="flex gap-3">
+          <Monitor className="mt-0.5 h-5 w-5 shrink-0" />
+          <p className="text-sm text-muted-foreground">Use the desktop game for the full workflow. Mobile keeps the related status and scheduled outcomes visible through Home and My Day where relevant.</p>
+        </div>
+      </MobileSectionCard>
+      <div className="grid grid-cols-2 gap-2">
+        <Link to="/mobile" className="rm-tap rounded-xl border p-3 text-center text-sm font-semibold">Mobile Home</Link>
+        <Link to="/mobile?view=day" className="rm-tap rounded-xl border p-3 text-center text-sm font-semibold">My Day</Link>
+      </div>
+    </Shell>
+  );
+}
