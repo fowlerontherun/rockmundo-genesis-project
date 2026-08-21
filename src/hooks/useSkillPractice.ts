@@ -94,7 +94,7 @@ export function usePracticeSkill() {
   return useMutation({
     mutationFn: async ({ skillSlug, scheduledStart }: PracticeSkillData) => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) throw new Error('You need to be signed in to book practice.');
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -104,7 +104,7 @@ export function usePracticeSkill() {
         .is('died_at', null)
         .single();
 
-      if (!profile) throw new Error('Profile not found');
+      if (!profile) throw new Error('No active character was found. Switch or create a character first.');
 
       const scheduledEnd = addHours(scheduledStart, SKILL_PRACTICE_CONFIG.durationOptionsHours[0]);
       const { data, error } = await (supabase as any).rpc('schedule_skill_practice', {
@@ -113,20 +113,30 @@ export function usePracticeSkill() {
         p_scheduled_start: scheduledStart.toISOString(),
         p_scheduled_end: scheduledEnd.toISOString(),
       });
-      if (error) throw new Error(toPracticeBookingMessage(error.message));
-      return data;
+      if (error) {
+        throw new Error(toPracticeBookingMessage(
+          [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | '),
+        ));
+      }
+      return data as { sessions_remaining?: number } | null;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
       queryClient.invalidateQueries({ queryKey: ['week-scheduled-activities'] });
       queryClient.invalidateQueries({ queryKey: ['skill-practice-restrictions'] });
-      
-      toast.success('Practice scheduled!', {
-        description: `${variables.skillName} practice booked`,
+
+      const remaining = result?.sessions_remaining;
+      const when = variables.scheduledStart.toLocaleString(undefined, {
+        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+      });
+      toast.success(`${variables.skillName} practice booked`, {
+        description: typeof remaining === 'number'
+          ? `${when} · ${remaining} of ${SKILL_PRACTICE_CONFIG.maxDailySessions} sessions left that day.`
+          : when,
       });
     },
     onError: (error: Error) => {
-      toast.error('Failed to schedule practice', {
+      toast.error('Practice not booked', {
         description: error.message || 'The server could not schedule this practice. Please try again.',
       });
     },
@@ -140,5 +150,9 @@ export function toPracticeBookingMessage(message = ''): string {
   if (message.includes('PRACTICE_WELLNESS')) return 'Your current wellness prevents training. Visit Wellness to recover.';
   if (message.includes('PRACTICE_SKILL')) return 'This skill is locked or no longer available.';
   if (message.includes('PRACTICE_PROFILE')) return 'The active character could not be verified.';
+  if (message.includes('schedule_skill_practice') || message.includes('PGRST202') || message.includes('does not exist')) {
+    return 'Practice booking is temporarily unavailable on the server. Please try again shortly.';
+  }
   return 'The server could not schedule this practice. Please try again.';
 }
+
