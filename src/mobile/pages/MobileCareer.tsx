@@ -1,10 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Award, CalendarDays, Monitor, Zap } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { EmptyState } from "../components/EmptyState";
 import { MobileEntityCard, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileTimeline, MobileTimelineItem } from "../components/MobilePrimitives";
 
 export default function MobileCareer() {
+  const navigate = useNavigate();
   const { profile, activities, loading, error, refetch } = useGameData();
   const recent = activities.slice(0, 5);
 
@@ -34,13 +35,13 @@ export default function MobileCareer() {
             title="My Day"
             subtitle="See gigs, rehearsals, recording sessions, work, travel and scheduled activities."
             icon={<CalendarDays className="h-5 w-5" />}
-            href="/mobile?view=day"
+            onPress={() => navigate("/mobile?view=day")}
           />
           <MobileEntityCard
             title="Quick Practice"
             subtitle="Schedule a lightweight practice session using the existing practice rules."
             icon={<Zap className="h-5 w-5" />}
-            href="/mobile?view=day#practice"
+            onPress={() => navigate("/mobile?view=day#practice")}
           />
         </div>
       </MobileSectionCard>
