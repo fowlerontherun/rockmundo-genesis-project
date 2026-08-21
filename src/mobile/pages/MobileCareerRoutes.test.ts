@@ -2,55 +2,45 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 const routeSource = readFileSync("src/mobile/pages/MobileCareerRoutes.tsx", "utf8");
-const dataSource = readFileSync("src/mobile/pages/mobileCareerData.ts", "utf8");
-const appSource = readFileSync("src/App.tsx", "utf8");
-const rehearsalBookingSource = readFileSync("src/hooks/useRehearsalBooking.ts", "utf8");
+const careerSource = readFileSync("src/mobile/pages/MobileCareer.tsx", "utf8");
 
-describe("mobile career phase 4 routes", () => {
-  it("keeps migrated career routes inside the mobile shell", () => {
-    expect(appSource).toContain('path="/mobile" element={<MobileLayout />}');
-    expect(appSource).toContain('path="career/:section" element={<MobileCareer />}');
-    for (const section of ['section === "band"', 'section === "songs"', 'section === "songwriting"', 'section === "practice"', 'section === "recording"', 'section === "rehearsals"', 'section === "setlists"', 'section === "gigs"']) {
-      expect(routeSource).toContain(section);
+describe("mobile Career companion routes", () => {
+  it("keeps the mobile Career surface focused on companion actions", () => {
+    expect(careerSource).toContain("Career companion");
+    expect(careerSource).toContain("My Day");
+    expect(careerSource).toContain("Quick Practice");
+    expect(careerSource).toContain("Recent outcomes");
+    expect(careerSource).toContain("Desktop career management");
+  });
+
+  it("does not advertise deep Career management as mobile quick actions", () => {
+    for (const legacyAction of ["Write Song", "Book Rehearsal", "Setlist", "Book Studio", "Band command"]) {
+      expect(careerSource).not.toContain(legacyAction);
     }
   });
 
-  it("extends mobile career sub-navigation without wrapping into desktop tabs", () => {
-    for (const label of ["Recording", "Rehearsals", "Gigs", "Practice"]) expect(routeSource).toContain(label);
-    expect(routeSource).toContain("overflow-x-auto");
-    expect(routeSource).not.toContain("<table");
+  it("routes quick practice into the authoritative My Day practice flow", () => {
+    expect(routeSource).toContain('section === "practice"');
+    expect(routeSource).toContain('/mobile?view=day#practice');
   });
 
-  it("uses mobile cards for recording sessions, rehearsals, setlists and readiness", () => {
-    for (const text of ["RecordingCard", "RehearsalCard", "Setlist editor", "MobileProgressCard", "MobileStickyActionBar"]) {
-      expect(routeSource).toContain(text);
+  it("lets schedule-oriented Career sections hand off to My Day", () => {
+    expect(routeSource).toContain('new Set(["gigs", "rehearsals", "recording"])');
+    expect(routeSource).toContain("Check your schedule");
+    expect(routeSource).toContain('/mobile?view=day');
+  });
+
+  it("gates deep Career sections behind the desktop boundary", () => {
+    for (const label of ["Band management", "Song library", "Songwriting", "Setlists", "Tours", "Releases", "Streaming", "Charts", "Awards"]) {
+      expect(routeSource).toContain(label);
     }
-    expect(routeSource).toContain("Book studio");
-    expect(routeSource).toContain("Book rehearsal");
+    expect(routeSource).toContain("Continue on desktop");
+    expect(routeSource).toContain("intentionally desktop-only");
   });
 
-  it("reuses existing hooks, queries, validation and readiness utilities", () => {
-    expect(dataSource).toContain('usePrimaryBand');
-    expect(dataSource).toContain('useAdvancedGigs');
-    expect(dataSource).toContain('band_rehearsals');
-    expect(routeSource).toContain('useRecordingSessions');
-    expect(routeSource).toContain('useSetlists');
-    expect(routeSource).toContain('useSetlistSongs');
-    expect(routeSource).toContain('validateGigSetlist');
-    expect(routeSource).toContain('calculateGigReadiness');
-  });
-
-  it("blocks past-time rehearsal and recording dates before confirmation", () => {
-    expect(rehearsalBookingSource).toContain('validateFutureTime(params.scheduledStart)');
-    expect(routeSource).toContain('min={today}');
-    expect(routeSource).toContain('Past dates cannot be selected');
-    expect(routeSource).toContain('Past dates are blocked');
-  });
-
-  it("guards permission-restricted actions and completed gig preparation actions", () => {
-    expect(dataSource).toContain('canManageBand');
-    expect(routeSource).toContain('manage?');
-    expect(routeSource).toContain('gig.status!=="completed"');
-    expect(routeSource).toContain('Completed gigs do not show preparation actions');
+  it("does not mount old deep mobile booking and management components", () => {
+    for (const oldComponent of ["RecordingBooking", "RehearsalBooking", "SetlistDetail", "TourCreate", "ReleaseCreate", "SongwritingPage"]) {
+      expect(routeSource).not.toContain(oldComponent);
+    }
   });
 });
