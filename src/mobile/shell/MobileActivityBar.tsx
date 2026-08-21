@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Clock, ChevronRight } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useScheduledActivities } from "@/hooks/useScheduledActivities";
+import { useMobileDaySchedule } from "@/mobile/hooks/useMobileDaySchedule";
 import { resolveCompanionPath } from "@/mobile/routeRegistry";
 
 const routeFor = (type?: string | null) => {
@@ -27,8 +27,8 @@ const formatRemaining = (endsAt?: string | null) => {
 export const MobileActivityBar = () => {
   const navigate = useNavigate();
   const { activityStatus } = useGameData();
-  const { userId } = useActiveProfile();
-  const today = useScheduledActivities(new Date(), userId ?? undefined);
+  const { userId, profileId } = useActiveProfile();
+  const today = useMobileDaySchedule(new Date(), userId, profileId);
   const [clock, tick] = useState(0);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export const MobileActivityBar = () => {
   const active = useMemo(() => {
     const now = Date.now();
 
-    const scheduledNow = (today.data ?? []).find((activity) => {
+    const scheduledNow = today.data.find((activity) => {
       const starts = new Date(activity.scheduled_start).getTime();
       const ends = new Date(activity.scheduled_end).getTime();
       return Number.isFinite(starts)
