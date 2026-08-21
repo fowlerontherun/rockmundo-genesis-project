@@ -371,7 +371,7 @@ export const FM_MODULES: FMModule[] = [
   {
     id: "media",
     label: "Media",
-    primary: false,
+    primary: true,
     icon: Newspaper,
     rootPath: "/hub/media",
     matchPaths: [
