@@ -39832,6 +39832,77 @@ export type Database = {
         }
         Relationships: []
       }
+      release_cost_transactions: {
+        Row: {
+          amount_minor: number
+          band_id: string | null
+          cost_type: string
+          created_at: string
+          description: string
+          id: string
+          label_id: string | null
+          ledger_transaction_id: string | null
+          metadata: Json
+          payer_type: string
+          release_id: string
+        }
+        Insert: {
+          amount_minor: number
+          band_id?: string | null
+          cost_type: string
+          created_at?: string
+          description: string
+          id?: string
+          label_id?: string | null
+          ledger_transaction_id?: string | null
+          metadata?: Json
+          payer_type: string
+          release_id: string
+        }
+        Update: {
+          amount_minor?: number
+          band_id?: string | null
+          cost_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          label_id?: string | null
+          ledger_transaction_id?: string | null
+          metadata?: Json
+          payer_type?: string
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_cost_transactions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "release_cost_transactions_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "release_cost_transactions_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "release_cost_transactions_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       release_formats: {
         Row: {
           created_at: string
@@ -40009,12 +40080,15 @@ export type Database = {
       }
       release_sales: {
         Row: {
+          allocation_is_reconstructed: boolean
+          band_revenue_amount: number
           city_id: string | null
           country: string | null
           created_at: string
           distribution_fee: number | null
           distribution_rate: number | null
           id: string
+          label_share_amount: number
           manufacturing_revenue_share: number
           net_revenue: number | null
           platform: string | null
@@ -40027,12 +40101,16 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          allocation_is_reconstructed?: boolean
+          band_revenue_amount?: number
           city_id?: string | null
           country?: string | null
           created_at?: string
           distribution_fee?: number | null
           distribution_rate?: number | null
           id?: string
+          label_share_amount?: number
+          manufacturing_revenue_share?: number
           net_revenue?: number | null
           platform?: string | null
           quantity_sold?: number
@@ -40044,12 +40122,16 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          allocation_is_reconstructed?: boolean
+          band_revenue_amount?: number
           city_id?: string | null
           country?: string | null
           created_at?: string
           distribution_fee?: number | null
           distribution_rate?: number | null
           id?: string
+          label_share_amount?: number
+          manufacturing_revenue_share?: number
           net_revenue?: number | null
           platform?: string | null
           quantity_sold?: number
@@ -50096,6 +50178,15 @@ export type Database = {
         }
         Returns: Json
       }
+      charge_band_release_cost: {
+        Args: {
+          p_amount_minor: number
+          p_band_id: string
+          p_description: string
+          p_metadata?: Json
+        }
+        Returns: number
+      }
       chat_channel_band_id: { Args: { p_channel: string }; Returns: string }
       check_character_health_decay: { Args: never; Returns: Json }
       check_greatest_hits_eligibility: {
@@ -50697,6 +50788,10 @@ export type Database = {
           p_type: string
           p_user_id: string
         }
+        Returns: string
+      }
+      create_release_with_financing: {
+        Args: { p_payload: Json }
         Returns: string
       }
       create_savings_goal: {
@@ -51733,6 +51828,25 @@ export type Database = {
         Returns: Json
       }
       get_recent_twaat_count: { Args: never; Returns: number }
+      get_release_finance_health: { Args: never; Returns: Json }
+      get_release_financial_summary: {
+        Args: { p_band_id?: string; p_release_id?: string }
+        Returns: {
+          band_cost_cents: number
+          band_revenue_cents: number
+          dist_cents: number
+          economic_cost_cents: number
+          gross_cents: number
+          label_cents: number
+          label_cost_cents: number
+          manufacturer_cents: number
+          net_before_label_cents: number
+          release_id: string
+          tax_cents: number
+          units: number
+          unknown_cost_cents: number
+        }[]
+      }
       get_release_sale_dates: {
         Args: { p_release_id: string }
         Returns: {
@@ -51947,6 +52061,10 @@ export type Database = {
         }
       }
       is_active_band_member: { Args: { p_band_id: string }; Returns: boolean }
+      is_authorized_band_member: {
+        Args: { p_band_id: string }
+        Returns: boolean
+      }
       is_caller_identity: { Args: { p_id: string }; Returns: boolean }
       is_company_owner: { Args: { _company_id: string }; Returns: boolean }
       is_current_band_member: {
@@ -52486,6 +52604,19 @@ export type Database = {
         }
         Returns: Json
       }
+      purchase_release_format: {
+        Args: {
+          p_format_type: string
+          p_is_limited_edition?: boolean
+          p_manufacturing_cost_minor: number
+          p_quantity: number
+          p_release_date: string
+          p_release_id: string
+          p_retail_price: number
+          p_vinyl_color?: string
+        }
+        Returns: string
+      }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
       quote_festival_edition_insurance: {
         Args: {
@@ -52553,7 +52684,29 @@ export type Database = {
         }
         Returns: Json
       }
+      record_release_cost: {
+        Args: {
+          p_amount_minor: number
+          p_cost_type: string
+          p_description: string
+          p_metadata?: Json
+          p_payer_type: string
+          p_release_id: string
+        }
+        Returns: string
+      }
       refresh_festival_world_records: { Args: never; Returns: Json }
+      reorder_release_stock: {
+        Args: {
+          p_format_id: string
+          p_manufacturing_cost_minor: number
+          p_quantity: number
+          p_release_date: string
+          p_release_id: string
+          p_revenue_share_deal?: boolean
+        }
+        Returns: undefined
+      }
       reorder_setlist_items: {
         Args: { p_setlist_id: string; p_updates: Json }
         Returns: undefined
