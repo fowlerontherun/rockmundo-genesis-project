@@ -80,14 +80,8 @@ const PRIORITY_BY_TYPE: Record<string, NotificationPriority> = {
   info: "normal",
 };
 
-const toTitleCase = (value: string) =>
-  value
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const isPriority = (value: unknown): value is NotificationPriority =>
-  value === "low" || value === "normal" || value === "high" || value === "urgent";
-
+const toTitleCase = (value: string) => value.replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+const isPriority = (value: unknown): value is NotificationPriority => value === "low" || value === "normal" || value === "high" || value === "urgent";
 const getString = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null);
 const getNumber = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -97,12 +91,10 @@ const getNumber = (value: unknown) => {
   }
   return null;
 };
-
 const signed = (value: number) => `${value > 0 ? "+" : ""}${value.toLocaleString()}`;
 
 function buildPrOutcomeBody(notification: PersistedNotification): string | null {
   if (notification.type !== "pr_outcome" && notification.category !== "pr") return null;
-
   const metadata = notification.metadata ?? {};
   const mediaType = getString(metadata.media_type) ?? getString(metadata.mediaType);
   const outlet = getString(metadata.outlet_name) ?? getString(metadata.outlet) ?? getString(metadata.program_name);
@@ -113,7 +105,6 @@ function buildPrOutcomeBody(notification: PersistedNotification): string | null 
   const morale = getNumber(metadata.morale_gain ?? metadata.morale_delta);
   const sentiment = getNumber(metadata.sentiment_gain ?? metadata.sentiment_delta);
   const reach = getNumber(metadata.audience_reach ?? metadata.reach);
-
   const gains: string[] = [];
   if (fans !== null && fans !== 0) gains.push(`${signed(fans)} fans`);
   if (fame !== null && fame !== 0) gains.push(`${signed(fame)} fame`);
@@ -121,7 +112,6 @@ function buildPrOutcomeBody(notification: PersistedNotification): string | null 
   if (reputation !== null && reputation !== 0) gains.push(`${signed(reputation)} reputation`);
   if (morale !== null && morale !== 0) gains.push(`${signed(morale)} morale`);
   if (sentiment !== null && sentiment !== 0) gains.push(`${signed(sentiment)} fan sentiment`);
-
   const appearance = [mediaType ? toTitleCase(mediaType) : null, outlet].filter(Boolean).join(" appearance on ");
   const intro = appearance ? `Your ${appearance} has finished.` : "Your PR appearance has finished.";
   const reachText = reach !== null && reach > 0 ? ` Estimated reach: ${reach.toLocaleString()}.` : "";
@@ -137,7 +127,6 @@ function buildPracticeOutcomeBody(notification: PersistedNotification): string |
   const level = getNumber(metadata.current_level ?? metadata.level);
   const currentXp = getNumber(metadata.current_xp);
   const requiredXp = getNumber(metadata.required_xp);
-
   const progress = currentXp !== null && requiredXp !== null && requiredXp > 0
     ? ` Progress: ${currentXp.toLocaleString()}/${requiredXp.toLocaleString()} XP toward level ${(level ?? 0) + 1}.`
     : level !== null ? ` You are now level ${level}.` : "";
@@ -146,8 +135,9 @@ function buildPracticeOutcomeBody(notification: PersistedNotification): string |
 }
 
 function buildRehearsalOutcomeBody(notification: PersistedNotification): string | null {
-  if (notification.type !== "rehearsal_outcome" && notification.category !== "rehearsal" && notification.category !== "gig_result") return null;
   const metadata = notification.metadata ?? {};
+  const isRehearsal = notification.type === "rehearsal_outcome" || notification.category === "rehearsal" || Boolean(getString(metadata.rehearsal_id));
+  if (!isRehearsal) return null;
   const chemistry = getNumber(metadata.chemistry_gain ?? metadata.chemistry_gained);
   const xp = getNumber(metadata.xp_earned ?? metadata.xp_gained);
   const morale = getNumber(metadata.morale_gain ?? metadata.morale_gained);
@@ -155,13 +145,11 @@ function buildRehearsalOutcomeBody(notification: PersistedNotification): string 
   const songs = getNumber(metadata.songs_improved ?? metadata.song_count);
   const topSong = getString(metadata.top_song ?? metadata.strongest_song);
   const stage = getString(metadata.best_rehearsal_stage ?? metadata.rehearsal_stage);
-
   const details: string[] = [];
   if (xp !== null && xp !== 0) details.push(`${signed(xp)} XP each`);
   if (chemistry !== null && chemistry !== 0) details.push(`${signed(chemistry)} chemistry`);
   if (morale !== null && morale !== 0) details.push(`${signed(morale)} morale`);
   if (songs !== null && songs > 0) details.push(`${songs} song${songs === 1 ? "" : "s"} improved`);
-
   const durationText = duration !== null && duration > 0 ? ` after ${duration} hour${duration === 1 ? "" : "s"}` : "";
   const resultText = details.length > 0 ? ` Outcome: ${details.join(", ")}.` : "";
   const songText = topSong ? ` Strongest progress: ${topSong}${stage ? ` (${toTitleCase(stage)})` : ""}.` : "";
@@ -173,29 +161,24 @@ export function getNotificationRoute(notification: PersistedNotification): strin
   const bandId = getString(metadata.band_id);
   const hasApplication = Boolean(getString(metadata.band_application_id));
   const hasInvitation = Boolean(getString(metadata.band_invitation_id));
-
-  if (notification.type === "band_request" && bandId) {
-    return hasApplication ? `/bands/${bandId}` : hasInvitation ? "/band-manager" : `/bands/${bandId}`;
-  }
+  const isRehearsal = notification.type === "rehearsal_outcome" || notification.category === "rehearsal" || Boolean(getString(metadata.rehearsal_id));
+  if (notification.type === "band_request" && bandId) return hasApplication ? `/bands/${bandId}` : hasInvitation ? "/band-manager" : `/bands/${bandId}`;
   if (notification.action_path?.includes("?tab=applications") && bandId) return `/bands/${bandId}`;
   if ((notification.type === "pr_outcome" || notification.category === "pr") && !notification.action_path) return "/pr";
   if ((notification.type === "practice_outcome" || notification.category === "practice") && !notification.action_path) return "/skills";
-  if ((notification.type === "rehearsal_outcome" || notification.category === "rehearsal") && !notification.action_path) return "/rehearsals";
+  if (isRehearsal && !notification.action_path) return "/rehearsals";
   return notification.action_path;
 }
 
 export function normalizeNotification(notification: PersistedNotification): DisplayNotification {
   const metadata = notification.metadata ?? {};
   const metadataPriority = metadata.priority;
-  const priority = isPriority(metadataPriority)
-    ? metadataPriority
-    : PRIORITY_BY_TYPE[notification.type] ?? PRIORITY_BY_TYPE[notification.category] ?? "normal";
+  const priority = isPriority(metadataPriority) ? metadataPriority : PRIORITY_BY_TYPE[notification.type] ?? PRIORITY_BY_TYPE[notification.category] ?? "normal";
   const recruitmentStatus = getString(metadata.band_application_status) ?? getString(metadata.band_invitation_status);
   const recruitmentMeta = recruitmentStatus ? getRecruitmentStatusMeta(recruitmentStatus) : null;
   const isRecruitment = notification.type === "band_request" || Boolean(recruitmentStatus);
   const routePath = getNotificationRoute(notification);
   const outcomeBody = buildPrOutcomeBody(notification) ?? buildPracticeOutcomeBody(notification) ?? buildRehearsalOutcomeBody(notification);
-
   return {
     ...notification,
     body: outcomeBody ?? (notification.message?.trim() || "Open this update for more details."),
