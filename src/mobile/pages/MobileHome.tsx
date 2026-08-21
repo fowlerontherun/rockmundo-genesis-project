@@ -1,12 +1,16 @@
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Zap, Heart, Smile, Plane, MessageSquare, Twitter, Moon, RefreshCw, CalendarDays,
+  Zap, Heart, Smile, Plane, MessageSquare, Twitter, Moon, RefreshCw, CalendarDays, ChevronLeft, Clock3,
 } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useScheduledActivities } from "@/hooks/useScheduledActivities";
+import { usePracticeSkill, useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatCard } from "../components/StatCard";
 import { QuickActionCard } from "../components/QuickActionCard";
 import { NotificationCard } from "../components/NotificationCard";
@@ -16,15 +20,29 @@ import { MobileEntityCard, MobileErrorState, MobileSectionCard, MobileStatusBadg
 import { MobileInstallPrompt, MobileNotificationGroups, MobileOfflineState, MobileReturningBriefing, MobileUpdateBanner } from "../components/MobileOnboarding";
 
 const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const humanise = (value: string) => value.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+function nextWholeHour() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return d;
+}
+
+function toLocalInputValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 export default function MobileHome() {
   const navigate = useNavigate();
-  const { profile } = useGameData();
-  const { userId } = useActiveProfile();
+  const { profile, skills, activities } = useGameData();
+  const { userId, profileId } = useActiveProfile();
   const { notifications, markRead, isLoading } = useNotificationsFeed();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const qc = useQueryClient();
   const today = useScheduledActivities(new Date(), userId ?? undefined);
+  const mode = params.get("view") === "day" ? "day" : "home";
 
   const displayName = profile?.display_name || profile?.username || "Player";
   const p: any = profile ?? {};
@@ -35,11 +53,9 @@ export default function MobileHome() {
   const filter = params.get("tab");
   const shown = filter === "notifications" ? notifications : notifications.slice(0, 5);
 
-  // Mobile is intentionally a companion experience: plan/check the day and perform
-  // lightweight actions. Deep creation and management remain desktop-only.
   const quickActions = [
-    { label: "My Day", icon: <CalendarDays className="h-5 w-5" />, to: "/mobile/career/practice" },
-    { label: "Practice", icon: <Zap className="h-5 w-5" />, to: "/mobile/career/practice" },
+    { label: "My Day", icon: <CalendarDays className="h-5 w-5" />, to: "/mobile?view=day" },
+    { label: "Practice", icon: <Zap className="h-5 w-5" />, to: "/mobile?view=day#practice" },
     { label: "Travel", icon: <Plane className="h-5 w-5" />, to: "/mobile/world/travel" },
     { label: "Message", icon: <MessageSquare className="h-5 w-5" />, to: "/mobile/social/messages" },
     { label: "Twaater", icon: <Twitter className="h-5 w-5" />, to: "/mobile/social/twaater" },
@@ -50,6 +66,21 @@ export default function MobileHome() {
   const now = new Date();
   const hr = now.getHours();
   const greet = hr < 5 ? "Late night" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
+
+  if (mode === "day") {
+    return (
+      <MobileDay
+        userId={userId ?? undefined}
+        profileId={profileId ?? undefined}
+        skills={skills ?? {}}
+        activities={activities ?? []}
+        onBack={() => {
+          params.delete("view");
+          setParams(params, { replace: true });
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -73,12 +104,16 @@ export default function MobileHome() {
         <StatCard label="Health" value={health} icon={<Heart className="h-4 w-4" />} color="hsl(var(--destructive))" />
       </div>
 
-      <MobileSectionCard title="Today" subtitle="Your authoritative schedule and completed outcomes for today.">
+      <MobileSectionCard
+        title="Today"
+        subtitle="Your authoritative schedule and completed outcomes for today."
+        action={<Button size="sm" variant="outline" onClick={() => setParams({ view: "day" })}>Plan day</Button>}
+      >
         {today.isLoading ? <SkeletonCard /> : today.isError ? (
           <MobileErrorState message="Today's schedule could not be loaded." onRetry={() => today.refetch()} />
         ) : today.data?.length ? (
           <div className="space-y-2">
-            {today.data.slice(0, 8).map((activity) => (
+            {today.data.slice(0, 6).map((activity) => (
               <MobileEntityCard
                 key={`${activity.activity_type}-${activity.id}`}
                 title={activity.title}
@@ -89,7 +124,7 @@ export default function MobileHome() {
             ))}
           </div>
         ) : (
-          <EmptyState title="Nothing scheduled today" message="Use the mobile companion to plan lightweight activities, then check back here for progress and outcomes." />
+          <EmptyState title="Nothing scheduled today" message="Plan a quick practice or recovery activity, then check back here for progress and outcomes." />
         )}
       </MobileSectionCard>
 
@@ -123,6 +158,153 @@ export default function MobileHome() {
       </section>
 
       <MobileInstallPrompt />
+    </div>
+  );
+}
+
+function MobileDay({
+  userId,
+  profileId,
+  skills,
+  activities,
+  onBack,
+}: {
+  userId?: string;
+  profileId?: string;
+  skills: Record<string, number | undefined>;
+  activities: any[];
+  onBack: () => void;
+}) {
+  const today = useScheduledActivities(new Date(), userId);
+  const restrictions = useSkillPracticeRestrictions(profileId, new Date());
+  const practice = usePracticeSkill();
+  const skillOptions = useMemo(
+    () => Object.entries(skills)
+      .filter(([, value]) => Number(value ?? 0) > 0)
+      .sort((a, b) => Number(b[1] ?? 0) - Number(a[1] ?? 0))
+      .slice(0, 12),
+    [skills],
+  );
+  const [skillSlug, setSkillSlug] = useState(skillOptions[0]?.[0] ?? "");
+  const [when, setWhen] = useState(toLocalInputValue(nextWholeHour()));
+
+  const selectedSkill = skillOptions.find(([slug]) => slug === skillSlug);
+  const recentOutcomes = activities
+    .filter((a: any) => a?.status === "completed" || a?.status === "success")
+    .slice(0, 5);
+
+  const bookPractice = () => {
+    if (!selectedSkill || !when) return;
+    const scheduledStart = new Date(when);
+    if (Number.isNaN(scheduledStart.getTime())) return;
+    practice.mutate({
+      skillSlug: selectedSkill[0],
+      skillName: humanise(selectedSkill[0]),
+      scheduledStart,
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} aria-label="Back to mobile home" className="rm-tap flex h-10 w-10 items-center justify-center rounded-full border">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Companion</div>
+          <h1 className="text-xl font-bold">My Day</h1>
+        </div>
+      </div>
+
+      <MobileSectionCard title="Today's schedule" subtitle="Gigs, rehearsals, recordings, work, travel and scheduled activities are merged from the canonical schedule.">
+        {today.isLoading ? <SkeletonCard /> : today.isError ? (
+          <MobileErrorState message="Your day could not be loaded." onRetry={() => today.refetch()} />
+        ) : today.data?.length ? (
+          <div className="space-y-2">
+            {today.data.map((activity) => (
+              <MobileEntityCard
+                key={`${activity.activity_type}-${activity.id}`}
+                title={activity.title}
+                subtitle={`${formatTime(activity.scheduled_start)}–${formatTime(activity.scheduled_end)}${activity.location ? ` • ${activity.location}` : ""}`}
+                icon={<Clock3 className="h-5 w-5" />}
+                meta={<MobileStatusBadge tone={activity.status === "completed" ? "success" : activity.status === "in_progress" ? "info" : "neutral"}>{activity.status.replace("_", " ")}</MobileStatusBadge>}
+              />
+            ))}
+          </div>
+        ) : <EmptyState title="Open day" message="You have no scheduled activities today." />}
+      </MobileSectionCard>
+
+      <div id="practice" />
+      <MobileSectionCard
+        title="Quick practice"
+        subtitle="Book a lightweight practice session. Conflict, wellness and daily-cap rules are checked by the existing server RPC."
+        action={<MobileStatusBadge tone={restrictions.data?.canPractice === false ? "warning" : "success"}>{restrictions.data?.sessionsRemaining ?? "—"} left</MobileStatusBadge>}
+      >
+        {restrictions.isLoading ? <SkeletonCard /> : restrictions.isError ? (
+          <MobileErrorState message="Practice availability could not be checked." onRetry={() => restrictions.refetch()} />
+        ) : skillOptions.length === 0 ? (
+          <EmptyState title="No practice skills available" message="Unlock a skill on desktop before scheduling mobile practice." />
+        ) : (
+          <div className="space-y-3">
+            {restrictions.data?.canPractice === false && (
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">{restrictions.data.reason}</p>
+            )}
+            <label className="block text-sm font-medium">
+              Skill
+              <select
+                value={skillSlug}
+                onChange={(e) => setSkillSlug(e.target.value)}
+                className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+              >
+                {skillOptions.map(([slug, level]) => <option key={slug} value={slug}>{humanise(slug)} · level {level}</option>)}
+              </select>
+            </label>
+            <label className="block text-sm font-medium">
+              Start time
+              <Input type="datetime-local" value={when} min={toLocalInputValue(new Date())} onChange={(e) => setWhen(e.target.value)} className="mt-1 min-h-11" />
+            </label>
+            <Button
+              className="w-full min-h-11"
+              disabled={!selectedSkill || !when || restrictions.data?.canPractice === false || practice.isPending}
+              onClick={bookPractice}
+            >
+              {practice.isPending ? "Booking…" : `Schedule ${selectedSkill ? humanise(selectedSkill[0]) : "practice"}`}
+            </Button>
+            <p className="text-xs text-muted-foreground">Practice duration and XP use the canonical practice configuration. More detailed skill progression remains desktop-only.</p>
+          </div>
+        )}
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Quick tasks" subtitle="Tasks suitable for short mobile sessions.">
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" onClick={() => location.assign("/mobile/me/wellness")}>Recover now</Button>
+          <Button variant="outline" onClick={() => location.assign("/mobile/world/travel")}>Check travel</Button>
+          <Button variant="outline" onClick={() => location.assign("/mobile/social/messages")}>Messages</Button>
+          <Button variant="outline" onClick={() => location.assign("/mobile/social/twaater")}>Twaater</Button>
+        </div>
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Recent outcomes" subtitle="Latest completed activity-feed outcomes available to the current character.">
+        {recentOutcomes.length ? (
+          <div className="space-y-2">
+            {recentOutcomes.map((outcome: any, index: number) => (
+              <MobileEntityCard
+                key={outcome.id ?? `${outcome.activity_type}-${index}`}
+                title={outcome.message ?? humanise(outcome.activity_type ?? "Completed activity")}
+                subtitle={outcome.created_at ? new Date(outcome.created_at).toLocaleString() : "Completed"}
+                icon={<Zap className="h-5 w-5" />}
+                meta={<MobileStatusBadge tone="success">Done</MobileStatusBadge>}
+              />
+            ))}
+          </div>
+        ) : <EmptyState title="No recent outcomes" message="Completed quick activities and schedule outcomes will appear here when available." />}
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Desktop-only planning" subtitle="Complex bookings still belong on desktop.">
+        <p className="text-sm text-muted-foreground">
+          Recording sessions, detailed rehearsals, gig booking, songwriting setup, release planning and other multi-step management flows are intentionally desktop-only. Mobile shows their scheduled status and outcomes once they exist.
+        </p>
+      </MobileSectionCard>
     </div>
   );
 }
