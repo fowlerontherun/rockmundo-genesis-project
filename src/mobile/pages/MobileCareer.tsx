@@ -1,44 +1,82 @@
-import { useNavigate } from "react-router-dom";
-import { Award, CalendarDays, Guitar, Mic2, Music, PenLine, Sparkles, Users, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Award, CalendarDays, Monitor, Zap } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
-import { QuickActionCard } from "../components/QuickActionCard";
 import { EmptyState } from "../components/EmptyState";
-import { MobileEntityCard, MobilePageShell, MobileProgressCard, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileTimeline, MobileTimelineItem } from "../components/MobilePrimitives";
+import { MobileEntityCard, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileTimeline, MobileTimelineItem } from "../components/MobilePrimitives";
 
 export default function MobileCareer() {
-  const navigate = useNavigate();
-  const { profile, skills, skillProgress, xpWallet, xpLedger, activities, activityStatus, loading, error, refetch } = useGameData();
-  const recent = activities.slice(0, 3);
-  const topSkills = Object.entries(skills ?? {}).sort((a, b) => Number(b[1]) - Number(a[1])).slice(0, 3);
-  const weeklyXp = Math.min(100, Math.round(((xpWallet as any)?.weekly_xp ?? (xpWallet as any)?.current_week_xp ?? 0) / 10));
-  const activeWriting = skillProgress.find((s: any) => String(s.skill_slug).includes("songwriting") && Number(s.current_xp ?? 0) > 0);
-  const currentActivity = activityStatus ? String((activityStatus as any).activity_type ?? (activityStatus as any).status ?? "Activity").replace(/_/g, " ") : null;
+  const { profile, activities, loading, error, refetch } = useGameData();
+  const recent = activities.slice(0, 5);
 
-  const actions = [
-    ["Practice", <Zap className="h-5 w-5" />, "/mobile/career/practice"], ["Write Song", <PenLine className="h-5 w-5" />, "/mobile/career/songwriting"],
-    [activeWriting ? "Continue Writing" : "View Songs", <Music className="h-5 w-5" />, activeWriting ? "/mobile/career/songwriting" : "/mobile/career/songs"], ["Book Rehearsal", <Users className="h-5 w-5" />, "/mobile/career/rehearsals"],
-    ["Setlist", <Guitar className="h-5 w-5" />, "/mobile/career/setlists"], ["Book Studio", <Mic2 className="h-5 w-5" />, "/mobile/career/recording"],
-    ["Skills", <Sparkles className="h-5 w-5" />, "/mobile/me/skills"], ["Band", <Users className="h-5 w-5" />, "/mobile/career/band"],
-  ] as const;
+  return (
+    <MobilePageShell>
+      <MobileSectionHeader
+        eyebrow="Career"
+        title="Career companion"
+        description="Check today's commitments and recent outcomes. Detailed career management stays on desktop."
+      />
 
-  return <MobilePageShell>
-    <MobileSectionHeader eyebrow="Career" title="Band command" description="Practice, write, rehearse and record without leaving the mobile shell." />
-    {error && <MobileSectionCard title="Partial data issue" subtitle={error} action={<button onClick={refetch} className="text-xs font-semibold text-primary">Retry</button>} />}
-    <MobileSectionCard title="Current status" subtitle={profile?.display_name || profile?.username || "Solo artist"} action={<MobileStatusBadge tone={currentActivity ? "info" : "neutral"}>{currentActivity ?? "Available"}</MobileStatusBadge>}>
-      <div className="grid grid-cols-2 gap-2">
-        <MobileProgressCard label="Weekly XP" value={weeklyXp} detail="Progress from existing XP wallet" />
-        <MobileProgressCard label="Readiness" value={topSkills[0] ? Math.min(100, Number(topSkills[0][1]) * 10) : 0} detail={topSkills[0] ? `${topSkills[0][0]} level ${topSkills[0][1]}` : "Build skills to improve"} />
-      </div>
-    </MobileSectionCard>
-    <section><h2 className="mb-2 px-1 text-[15px] font-bold">Quick actions</h2><div className="grid grid-cols-4 gap-2">{actions.map(([label, icon, to]) => <QuickActionCard key={label} label={label} icon={icon} to={to} />)}</div></section>
-    <MobileSectionCard title="Career snapshot" subtitle="Live summaries from your profile, XP and activity feed.">
-      <div className="space-y-2">
-        <MobileEntityCard title="Latest songwriting" subtitle={activeWriting ? `${activeWriting.skill_slug}: ${activeWriting.current_xp ?? 0} XP` : "No active songwriting progress found"} icon={<PenLine className="h-5 w-5" />} onPress={() => navigate("/mobile/career/songwriting")} />
-        <MobileEntityCard title="Practice activity" subtitle={currentActivity?.includes("practice") ? currentActivity : "No practice in progress"} icon={<Zap className="h-5 w-5" />} onPress={() => navigate("/mobile/career/practice")} />
-        <MobileEntityCard title="Upcoming gig / rehearsal / recording" subtitle="Open schedule for booked sessions" icon={<CalendarDays className="h-5 w-5" />} onPress={() => navigate("/mobile/career/gigs")} />
-      </div>
-    </MobileSectionCard>
-    <MobileSectionCard title="Skills progression">{topSkills.length ? <div className="space-y-2">{topSkills.map(([k, v]) => <MobileProgressCard key={k} label={k} value={Math.min(100, Number(v) * 10)} detail={`Level ${v}`} />)}</div> : <EmptyState title="No skills yet" message="Practice to start building your career." />}</MobileSectionCard>
-    <MobileSectionCard title="Recent achievements" subtitle="Recent career activity">{loading ? <EmptyState title="Loading career" /> : recent.length ? <MobileTimeline>{recent.map((a: any) => <MobileTimelineItem key={a.id} title={a.message ?? a.activity_type} detail={a.created_at ? new Date(a.created_at).toLocaleString() : undefined} badge={<Award className="h-4 w-4 text-primary" />} />)}</MobileTimeline> : <EmptyState title="No recent career activity" message="Your achievements and milestones will appear here." />}</MobileSectionCard>
-  </MobilePageShell>;
+      {error && (
+        <MobileSectionCard
+          title="Partial data issue"
+          subtitle={error}
+          action={<button onClick={refetch} className="text-xs font-semibold text-primary">Retry</button>}
+        />
+      )}
+
+      <MobileSectionCard
+        title="Today"
+        subtitle={profile?.display_name || profile?.username || "Your career"}
+        action={<MobileStatusBadge tone="info">Companion</MobileStatusBadge>}
+      >
+        <div className="space-y-2">
+          <MobileEntityCard
+            title="My Day"
+            subtitle="See gigs, rehearsals, recording sessions, work, travel and scheduled activities."
+            icon={<CalendarDays className="h-5 w-5" />}
+            href="/mobile?view=day"
+          />
+          <MobileEntityCard
+            title="Quick Practice"
+            subtitle="Schedule a lightweight practice session using the existing practice rules."
+            icon={<Zap className="h-5 w-5" />}
+            href="/mobile?view=day#practice"
+          />
+        </div>
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Recent outcomes" subtitle="Career activity and completed events.">
+        {loading ? (
+          <EmptyState title="Loading career activity" />
+        ) : recent.length ? (
+          <MobileTimeline>
+            {recent.map((a: any) => (
+              <MobileTimelineItem
+                key={a.id}
+                title={a.message ?? String(a.activity_type ?? "Career update").replace(/_/g, " ")}
+                detail={a.created_at ? new Date(a.created_at).toLocaleString() : undefined}
+                badge={<Award className="h-4 w-4 text-primary" />}
+              />
+            ))}
+          </MobileTimeline>
+        ) : (
+          <EmptyState title="No recent career outcomes" message="Completed activities and milestones will appear here." />
+        )}
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Desktop career management" subtitle="Full gameplay remains on desktop by design.">
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>Songwriting, recording setup, rehearsals, setlists, gigs, tours, releases, streaming, band management and detailed skill management are desktop-only.</p>
+          <div className="flex items-center gap-2 rounded-xl border p-3">
+            <Monitor className="h-4 w-4 shrink-0" />
+            <span>Use the desktop site when you want to configure or manage these systems in depth.</span>
+          </div>
+        </div>
+      </MobileSectionCard>
+
+      <Link to="/mobile?view=day" className="rm-tap block rounded-xl bg-primary p-3 text-center text-sm font-semibold text-primary-foreground">
+        Open My Day
+      </Link>
+    </MobilePageShell>
+  );
 }
