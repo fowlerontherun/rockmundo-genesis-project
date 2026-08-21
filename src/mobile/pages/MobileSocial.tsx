@@ -1,13 +1,14 @@
-import { FormEvent, ReactNode, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Check, ChevronLeft, Mail, MessageSquare, Monitor, Search, Send, Twitter, UserPlus, Users, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Bell, Check, ChevronLeft, Mail, MessageSquare, Monitor, Send, Twitter, UserPlus, Users, X } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
 import { useUnreadDirectMessageCount, useDirectMessages } from "@/hooks/useDirectMessages";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
+import { listConversations } from "@/features/direct-messages/services/conversations";
 import { useTwaaterExploreFeed } from "@/hooks/useTwaaterExploreFeed";
+import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { resolveCompanionPath } from "@/mobile/routeRegistry";
 import { EmptyState } from "../components/EmptyState";
 import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileStickyActionBar } from "../components/MobilePrimitives";
@@ -48,9 +49,9 @@ function Overview() {
 
   return <Shell active="overview" title="People & messages" desc="Quick communication, requests and social updates." badge={<MobileStatusBadge tone={notifications.unreadCount ? "danger" : "success"}>{notifications.unreadCount ? `${notifications.unreadCount} unread` : "Caught up"}</MobileStatusBadge>}>
     <div className="grid grid-cols-2 gap-2">
-      <MobileEntityCard title="Direct messages" subtitle="Recent conversations" icon={<MessageSquare/>} meta={<MobileStatusBadge tone={(dm.data ?? 0) > 0 ? "danger" : "neutral"}>{dm.isLoading ? "…" : dm.data ?? 0}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/messages")}/>
-      <MobileEntityCard title="Friend requests" subtitle="Incoming requests" icon={<UserPlus/>} meta={<MobileStatusBadge tone={requests.length ? "warning" : "neutral"}>{requests.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/requests")}/>
-      <MobileEntityCard title="Friends" subtitle="Your accepted contacts" icon={<Users/>} meta={<MobileStatusBadge>{accepted.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/friends")}/>
+      <MobileEntityCard title="Direct messages" subtitle="Recent conversations" icon={<MessageSquare/>} meta={<MobileStatusBadge tone={(dm.data ?? 0) > 0 ? "danger" : "neutral"}>{dm.isLoading ? "…" : dm.isError ? "!" : dm.data ?? 0}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/messages")}/>
+      <MobileEntityCard title="Friend requests" subtitle="Incoming requests" icon={<UserPlus/>} meta={<MobileStatusBadge tone={requests.length ? "warning" : "neutral"}>{friends.loading ? "…" : requests.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/requests")}/>
+      <MobileEntityCard title="Friends" subtitle="Your accepted contacts" icon={<Users/>} meta={<MobileStatusBadge>{friends.loading ? "…" : accepted.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/friends")}/>
       <MobileEntityCard title="Twaater" subtitle="Check the world feed" icon={<Twitter/>} meta={<MobileStatusBadge tone="info">Live</MobileStatusBadge>} onPress={() => navigate("/mobile/social/twaater")}/>
     </div>
 
@@ -59,7 +60,7 @@ function Overview() {
     </MobileSectionCard>
 
     <MobileSectionCard title="Recent Twaater">
-      {twaater.isError ? <MobileErrorState message="Twaater feed failed." onRetry={() => twaater.refetch()}/> : twaater.isLoading ? <MobileLoadingSkeleton/> : <div className="space-y-2">{(twaater.data ?? []).slice(0, 3).map((t: any) => <PostCard key={t.id} t={t}/>)}</div>}
+      {twaater.isError ? <MobileErrorState message="Twaater feed failed." onRetry={() => twaater.refetch()}/> : twaater.isLoading ? <MobileLoadingSkeleton/> : (twaater.data ?? []).length === 0 ? <EmptyState title="No recent Twaater posts" message="New public posts will appear here."/> : <div className="space-y-2">{(twaater.data ?? []).slice(0, 3).map((t: any) => <PostCard key={t.id} t={t}/>)}</div>}
     </MobileSectionCard>
 
     <MobileSectionCard title="Desktop-only communication" subtitle="Long-form mail management stays on desktop."><div className="flex items-center gap-3 text-sm text-muted-foreground"><Mail className="h-5 w-5"/>Compose, archive, flag and attachment-heavy mail workflows are desktop-only.</div></MobileSectionCard>
@@ -72,18 +73,33 @@ function Friends({ requestsOnly = false }: { requestsOnly?: boolean }) {
   const f = useFriendships(profileId);
   const [filter, setFilter] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const list = f.friendships.filter((x: any) => requestsOnly ? x.friendship?.status === "pending" : x.friendship?.status === "accepted").filter((x: any) => !filter || nameOf(x.otherProfile).toLowerCase().includes(filter.toLowerCase()));
+  const list = f.friendships
+    .filter((x: any) => requestsOnly
+      ? x.friendship?.status === "pending" && x.friendship?.addressee_id === profileId
+      : x.friendship?.status === "accepted")
+    .filter((x: any) => !filter || nameOf(x.otherProfile).toLowerCase().includes(filter.toLowerCase()));
   const respond = async (id: string, ok: boolean) => { setBusy(id); try { ok ? await f.acceptRequest(id) : await f.declineRequest(id); } finally { setBusy(null); } };
 
-  return <Shell active={requestsOnly ? "requests" : "friends"} title={requestsOnly ? "Friend requests" : "Friends"} desc="Quick relationship actions and messaging."><div className="flex gap-2"><input aria-label="Filter friends" value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter by name" className="min-h-11 flex-1 rounded-xl border bg-background px-3"/><Link className="rm-tap rounded-xl border px-3 py-3 text-sm" to="/mobile/social/requests">Requests</Link></div>{f.loading ? <MobileLoadingSkeleton/> : list.length === 0 ? <EmptyState title={requestsOnly ? "No friend requests" : "No friends found"} message="Your social contacts will appear here."/> : <div className="space-y-2">{list.map((x: any) => <MobileEntityCard key={x.friendship.id} title={nameOf(x.otherProfile)} subtitle={[x.otherProfile?.city_name, x.otherProfile?.bandName].filter(Boolean).join(" • ")} icon={<Users/>} meta={requestsOnly ? <span className="flex gap-1"><button disabled={busy === x.friendship.id} onClick={() => respond(x.friendship.id, true)} aria-label="Accept request" className="rm-tap rounded-full bg-primary p-2 text-primary-foreground"><Check className="h-4 w-4"/></button><button disabled={busy === x.friendship.id} onClick={() => respond(x.friendship.id, false)} aria-label="Decline request" className="rm-tap rounded-full border p-2"><X className="h-4 w-4"/></button></span> : <MobileStatusBadge tone="success">Friend</MobileStatusBadge>} onPress={() => x.otherProfile?.id && navigate(`/mobile/social/profile/${x.otherProfile.id}`)}/>)}</div>}</Shell>;
+  return <Shell active={requestsOnly ? "requests" : "friends"} title={requestsOnly ? "Friend requests" : "Friends"} desc="Quick relationship actions and messaging.">
+    <div className="flex gap-2"><input aria-label="Filter friends" value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter by name" className="min-h-11 flex-1 rounded-xl border bg-background px-3"/><Link className="rm-tap rounded-xl border px-3 py-3 text-sm" to="/mobile/social/requests">Requests</Link></div>
+    {f.error ? <MobileErrorState message="Friends could not be loaded." onRetry={() => f.refresh()}/> : f.loading ? <MobileLoadingSkeleton/> : list.length === 0 ? <EmptyState title={requestsOnly ? "No incoming friend requests" : "No friends found"} message="Your social contacts will appear here."/> : <div className="space-y-2">{list.map((x: any) => <MobileEntityCard key={x.friendship.id} title={nameOf(x.otherProfile)} subtitle={[x.otherProfile?.city_name, x.otherProfile?.bandName].filter(Boolean).join(" • ")} icon={<Users/>} meta={requestsOnly ? <span className="flex gap-1"><button disabled={busy === x.friendship.id} onClick={() => respond(x.friendship.id, true)} aria-label="Accept request" className="rm-tap rounded-full bg-primary p-2 text-primary-foreground"><Check className="h-4 w-4"/></button><button disabled={busy === x.friendship.id} onClick={() => respond(x.friendship.id, false)} aria-label="Decline request" className="rm-tap rounded-full border p-2"><X className="h-4 w-4"/></button></span> : <MobileStatusBadge tone="success">Friend</MobileStatusBadge>} onPress={() => x.otherProfile?.id && navigate(`/mobile/social/profile/${x.otherProfile.id}`)}/>)}</div>}
+  </Shell>;
 }
 
 function Messages() {
   const navigate = useNavigate();
   const { profileId } = useActiveProfile();
-  const q = useQuery({ queryKey: ["mobile-conversations", profileId], enabled: !!profileId, queryFn: async () => { const { data, error } = await (supabase as any).from("direct_messages").select("*").or(`sender_profile_id.eq.${profileId},recipient_profile_id.eq.${profileId}`).order("created_at", { ascending: false }).limit(50); if (error) throw error; return data ?? []; } });
-  const rows = useMemo(() => { const m = new Map<string, any>(); (q.data ?? []).forEach((r: any) => { const other = r.sender_profile_id === profileId ? r.recipient_profile_id : r.sender_profile_id; if (!m.has(other)) m.set(other, r); }); return [...m.entries()]; }, [q.data, profileId]);
-  return <Shell active="messages" title="Messages" desc="Quick conversations using the existing direct-message system.">{q.isError ? <MobileErrorState onRetry={() => q.refetch()}/> : q.isLoading ? <MobileLoadingSkeleton/> : rows.length === 0 ? <EmptyState title="No conversations" message="Open a friend profile to start a conversation."/> : <div className="space-y-2">{rows.map(([other, r]) => <MobileEntityCard key={other} title="Direct conversation" subtitle={r.body} icon={<MessageSquare/>} meta={<MobileStatusBadge tone={!r.read_at && r.recipient_profile_id === profileId ? "danger" : "neutral"}>{fmt(r.created_at)}</MobileStatusBadge>} onPress={() => navigate(`/mobile/social/conversation/${other}`)}/>)}</div>}<MobileStickyActionBar><Link to="/mobile/social/friends" className="rm-tap flex justify-center rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground">Choose a friend</Link></MobileStickyActionBar></Shell>;
+  const q = useQuery({
+    queryKey: ["mobile-conversations", profileId],
+    enabled: !!profileId,
+    queryFn: () => listConversations({ limit: 50 }),
+  });
+  const rows = q.data ?? [];
+
+  return <Shell active="messages" title="Messages" desc="Quick conversations using the existing direct-message system.">
+    {q.isError ? <MobileErrorState message={q.error instanceof Error ? q.error.message : "Conversations could not be loaded."} onRetry={() => q.refetch()}/> : q.isLoading ? <MobileLoadingSkeleton/> : rows.length === 0 ? <EmptyState title="No conversations" message="Open a friend profile to start a conversation."/> : <div className="space-y-2">{rows.map((conversation) => <MobileEntityCard key={conversation.conversation_id} title={conversation.other_display_name || conversation.other_username || "Player"} subtitle={conversation.last_message_preview || "No messages yet"} icon={<MessageSquare/>} meta={<MobileStatusBadge tone={conversation.unread_count > 0 ? "danger" : "neutral"}>{conversation.unread_count > 0 ? `${conversation.unread_count} unread` : fmt(conversation.last_message_at)}</MobileStatusBadge>} onPress={() => navigate(`/mobile/social/conversation/${conversation.other_profile_id}`)}/>)}</div>}
+    <MobileStickyActionBar><Link to="/mobile/social/friends" className="rm-tap flex justify-center rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground">Choose a friend</Link></MobileStickyActionBar>
+  </Shell>;
 }
 
 function Conversation() {
@@ -92,7 +108,7 @@ function Conversation() {
   const dm = useDirectMessages(profileId, id);
   const [body, setBody] = useState("");
   const send = (e: FormEvent) => { e.preventDefault(); if (!body.trim() || dm.sendMessage.isPending) return; dm.sendMessage.mutate(body.trim(), { onSuccess: () => setBody("") }); };
-  return <Shell active="conversation" title="Conversation" desc="Send a quick direct message."><Link to="/mobile/social/messages" className="rm-tap inline-flex items-center text-sm"><ChevronLeft className="h-4 w-4"/> Inbox</Link>{dm.isLoading ? <MobileLoadingSkeleton/> : <ol className="space-y-2" aria-label="Message history">{dm.messages.map(m => <li key={m.id} className={`rounded-2xl border p-3 ${m.sender_profile_id === profileId ? "ml-8 bg-primary text-primary-foreground" : "mr-8 bg-muted/50"}`}><p className="text-sm">{m.body}</p><p className="mt-1 text-[11px] opacity-70">{fmt(m.created_at)} {m.read_at ? "• read" : ""}</p></li>)}</ol>}<form onSubmit={send} className="sticky bottom-[calc(var(--m-nav-h)+var(--m-safe-b)+8px)] flex gap-2 rounded-2xl border bg-background/95 p-2"><input aria-label="Message" value={body} onChange={e => setBody(e.target.value)} className="min-h-11 flex-1 rounded-xl border bg-background px-3" placeholder={dm.sendMessage.isError ? "Send failed — edit and retry" : "Write a message"}/><button disabled={!body.trim() || dm.sendMessage.isPending} className="rm-tap rounded-xl bg-primary px-4 text-primary-foreground" aria-label="Send message"><Send className="h-4 w-4"/></button></form></Shell>;
+  return <Shell active="conversation" title="Conversation" desc="Send a quick direct message."><Link to="/mobile/social/messages" className="rm-tap inline-flex items-center text-sm"><ChevronLeft className="h-4 w-4"/> Inbox</Link>{dm.isLoading ? <MobileLoadingSkeleton/> : dm.messages.length === 0 ? <EmptyState title="No messages yet" message="Send the first message below."/> : <ol className="space-y-2" aria-label="Message history">{dm.messages.map(m => <li key={m.id} className={`rounded-2xl border p-3 ${m.sender_profile_id === profileId ? "ml-8 bg-primary text-primary-foreground" : "mr-8 bg-muted/50"}`}><p className="text-sm">{m.body}</p><p className="mt-1 text-[11px] opacity-70">{fmt(m.created_at)} {m.read_at ? "• read" : ""}</p></li>)}</ol>}<form onSubmit={send} className="sticky bottom-[calc(var(--m-nav-h)+var(--m-safe-b)+8px)] flex gap-2 rounded-2xl border bg-background/95 p-2"><input aria-label="Message" value={body} onChange={e => setBody(e.target.value)} className="min-h-11 flex-1 rounded-xl border bg-background px-3" placeholder={dm.sendMessage.isError ? "Send failed — edit and retry" : "Write a message"}/><button disabled={!body.trim() || dm.sendMessage.isPending} className="rm-tap rounded-xl bg-primary px-4 text-primary-foreground" aria-label="Send message"><Send className="h-4 w-4"/></button></form></Shell>;
 }
 
 function PostCard({ t }: { t: any }) {
@@ -101,20 +117,27 @@ function PostCard({ t }: { t: any }) {
 
 function TwaaterPage() {
   const q = useTwaaterExploreFeed();
-  return <Shell active="twaater" title="Twaater" desc="Check the world feed from mobile. Full account management stays on desktop.">{q.isError ? <MobileErrorState message="Twaater feed failed." onRetry={() => q.refetch()}/> : q.isLoading ? <MobileLoadingSkeleton/> : <div className="space-y-2">{(q.data ?? []).slice(0, 20).map((t: any) => <PostCard key={t.id} t={t}/>)}</div>}</Shell>;
+  const posts = q.data ?? [];
+  return <Shell active="twaater" title="Twaater" desc="Check the world feed from mobile. Full account management stays on desktop.">{q.isError ? <MobileErrorState message="Twaater feed failed." onRetry={() => q.refetch()}/> : q.isLoading ? <MobileLoadingSkeleton/> : posts.length === 0 ? <EmptyState title="No public posts" message="New Twaater posts will appear here."/> : <div className="space-y-2">{posts.slice(0, 20).map((t: any) => <PostCard key={t.id} t={t}/>)}</div>}</Shell>;
 }
 
 function Profile() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const q = useQuery({ queryKey: ["mobile-profile", id], enabled: !!id, queryFn: async () => { const { data, error } = await (supabase as any).from("profiles").select("id,username,display_name,avatar_url,city_name,bio").eq("id", id).maybeSingle(); if (error) throw error; return data; } });
-  return <Shell active="profile" title="Player profile" desc="A compact profile for messaging and social context.">{q.isLoading ? <MobileLoadingSkeleton/> : !q.data ? <EmptyState title="Profile unavailable" message="This player may be unavailable or private."/> : <MobileSectionCard title={nameOf(q.data)} subtitle={q.data.city_name || "City hidden"} action={<MobileStatusBadge tone="info">Player</MobileStatusBadge>}><p className="text-sm text-muted-foreground">{q.data.bio || "No public bio."}</p><button onClick={() => navigate(`/mobile/social/conversation/${id}`)} className="rm-tap mt-3 w-full rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground">Message</button></MobileSectionCard>}</Shell>;
+  const { profileId } = useActiveProfile();
+  const q = useQuery({
+    queryKey: ["mobile-profile", id, profileId],
+    enabled: !!id,
+    queryFn: () => getPublicProfileDetail(id, profileId),
+  });
+
+  return <Shell active="profile" title="Player profile" desc="A compact profile for messaging and social context.">{q.isLoading ? <MobileLoadingSkeleton/> : q.isError ? <MobileErrorState message={q.error instanceof Error ? q.error.message : "Profile could not be loaded."} onRetry={() => q.refetch()}/> : !q.data ? <EmptyState title="Profile unavailable" message="This player may be unavailable or private."/> : <MobileSectionCard title={nameOf(q.data)} subtitle={q.data.city_name || "City hidden"} action={<MobileStatusBadge tone="info">Player</MobileStatusBadge>}><p className="text-sm text-muted-foreground">{q.data.bio || "No public bio."}</p><button onClick={() => navigate(`/mobile/social/conversation/${id}`)} className="rm-tap mt-3 w-full rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground">Message</button></MobileSectionCard>}</Shell>;
 }
 
 function Notifications() {
   const navigate = useNavigate();
   const n = useNotificationsFeed();
-  return <Shell active="notifications" title="Notifications" desc="Open alerts inside the supported companion experience.">{n.isLoading ? <MobileLoadingSkeleton/> : <div className="space-y-2">{n.notifications.map(x => <MobileEntityCard key={x.id} title={x.title} subtitle={`${x.message} • ${fmt(x.created_at)}`} icon={<Bell/>} meta={<MobileStatusBadge tone={x.read_at ? "neutral" : "danger"}>{x.read_at ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { n.markRead(x.id); navigate(resolveCompanionPath(x.action_path)); }}/>)}</div>}</Shell>;
+  return <Shell active="notifications" title="Notifications" desc="Open alerts inside the supported companion experience.">{n.error ? <MobileErrorState message="Notifications could not be loaded." onRetry={() => n.refetch()}/> : n.isLoading ? <MobileLoadingSkeleton/> : n.notifications.length === 0 ? <EmptyState title="No notifications" message="New alerts will appear here."/> : <div className="space-y-2">{n.notifications.map(x => <MobileEntityCard key={x.id} title={x.title} subtitle={`${x.message} • ${fmt(x.created_at)}`} icon={<Bell/>} meta={<MobileStatusBadge tone={x.read_at ? "neutral" : "danger"}>{x.read_at ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { n.markRead(x.id); navigate(resolveCompanionPath(x.action_path)); }}/>)}</div>}</Shell>;
 }
 
 export default function MobileSocial() {

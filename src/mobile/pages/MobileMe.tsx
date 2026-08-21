@@ -73,14 +73,15 @@ function Wellness() {
 
   return <MobilePageShell>
     <MobileSectionHeader eyebrow="Me" title="Wellness" description="Check your condition and perform quick server-backed recovery actions." />
-    {state.loading ? <MobileLoadingSkeleton cards={3} /> : state.error ? <MobileErrorState message={state.error} /> : !vitals ? <MobileErrorState title="Wellness unavailable" message="Your current wellness state could not be loaded." /> : <>
+    {state.loading ? <MobileLoadingSkeleton cards={3} /> : state.error ? <MobileErrorState message={state.error} onRetry={() => state.refresh()} /> : !vitals ? <MobileErrorState title="Wellness unavailable" message="Your current wellness state could not be loaded." onRetry={() => state.refresh()} /> : <>
       <div className="grid grid-cols-3 gap-2">
         <StatCard label="Energy" value={clamp(vitals.energy)} icon={<Zap className="h-4 w-4" />} />
         <StatCard label="Health" value={clamp(vitals.health ?? vitals.physical_health)} icon={<Heart className="h-4 w-4" />} />
         <StatCard label="Mood" value={clamp(vitals.mood ?? vitals.happiness)} icon={<Moon className="h-4 w-4" />} />
       </div>
+      {state.supplementalError && <MobileSectionCard title="Some wellness details are unavailable" subtitle="Your core vitals are still current. Optional condition data can be retried without hiding them." action={<Button size="sm" variant="outline" onClick={() => state.refresh()}>Retry</Button>}><p className="text-xs text-muted-foreground">{state.supplementalError}</p></MobileSectionCard>}
       {state.blocks.length > 0 && <MobileSectionCard title="Activity blocks" action={<MobileStatusBadge tone="warning">{state.blocks.length}</MobileStatusBadge>}><div className="space-y-2">{state.blocks.map((block) => <MobileEntityCard key={block.id} title={block.reason} subtitle={`Until ${new Date(block.expires_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`} icon={<ShieldCheck className="h-5 w-5" />} />)}</div></MobileSectionCard>}
-      <MobileSectionCard title="Recover now" subtitle="Real wellness actions only."><div className="space-y-2">{recovery.length ? recovery.map((entry) => <MobileEntityCard key={entry.id} title={entry.name} subtitle={(entry as any).description || "Quick recovery action"} icon={<Activity className="h-5 w-5" />} meta={<Button size="sm" disabled={performing === entry.slug} onClick={(event) => { event.stopPropagation(); run(entry.slug); }}>{performing === entry.slug ? "Working…" : "Do now"}</Button>} />) : <p className="text-sm text-muted-foreground">No recovery actions are currently available.</p>}</div></MobileSectionCard>
+      <MobileSectionCard title="Recover now" subtitle="Real wellness actions only."><div className="space-y-2">{state.catalogError ? <MobileErrorState message="Recovery actions could not be loaded." onRetry={() => state.refresh()} /> : recovery.length ? recovery.map((entry) => <MobileEntityCard key={entry.id} title={entry.name} subtitle={(entry as any).description || "Quick recovery action"} icon={<Activity className="h-5 w-5" />} meta={<Button size="sm" disabled={performing === entry.slug} onClick={(event) => { event.stopPropagation(); run(entry.slug); }}>{performing === entry.slug ? "Working…" : "Do now"}</Button>} />) : <p className="text-sm text-muted-foreground">No recovery actions are currently available.</p>}</div></MobileSectionCard>
       <MobileSectionCard title="Desktop wellness" subtitle="Long-term lifestyle and detailed condition management remain desktop-only." />
     </>}
   </MobilePageShell>;

@@ -3,11 +3,12 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import CharacterGate from "@/components/CharacterGate";
+import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
 import { MobileShell } from "./MobileShell";
 
 /**
  * Mobile-only layout. Skips DesktopOnlyGate so small viewports can render.
- * Reuses auth + character gates so gameplay routes still require a character.
+ * Reuses the same auth and active-character gates as the desktop gameplay shell.
  */
 export default function MobileLayout() {
   const navigate = useNavigate();
@@ -31,9 +32,11 @@ export default function MobileLayout() {
 
   return (
     <MobileShell>
-      <CharacterGate>
-        <Outlet />
-      </CharacterGate>
+      <NoActiveCharacterGate>
+        <CharacterGate>
+          <Outlet />
+        </CharacterGate>
+      </NoActiveCharacterGate>
     </MobileShell>
   );
 }

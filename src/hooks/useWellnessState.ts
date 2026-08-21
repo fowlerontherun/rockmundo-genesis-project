@@ -23,9 +23,14 @@ export interface UseWellnessStateResult {
   lifestyle: LifestyleProfile | null;
   loading: boolean;
   error: string | null;
+  catalogError: string | null;
+  supplementalError: string | null;
   perform: (slug: string) => Promise<{ ok: boolean; ailments: string[] }>;
   refresh: () => Promise<void>;
 }
+
+const messageOf = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String((error as any).message) : fallback;
 
 export function useWellnessState(profileId: string | null | undefined): UseWellnessStateResult {
   const [catalog, setCatalog] = useState<WellnessCatalogEntry[]>([]);
@@ -36,11 +41,12 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
   const [lifestyle, setLifestyle] = useState<LifestyleProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [supplementalError, setSupplementalError] = useState<string | null>(null);
 
   const loadVitals = useCallback(async () => {
     if (!profileId) {
       setVitals(null);
-      setLifestyle(null);
       return;
     }
 
@@ -53,7 +59,6 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
     if (vitalsError) throw vitalsError;
     if (!data) {
       setVitals(null);
-      setLifestyle(null);
       return;
     }
 
@@ -62,7 +67,6 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
     );
     if (missingCoreVital) {
       setVitals(null);
-      setLifestyle(null);
       return;
     }
 
@@ -70,7 +74,7 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
     const energy = Number(data.energy);
     const mood = Number(data.mood);
     const stress = Number(data.stress);
-    const nextVitals: WellnessVitals = {
+    setVitals({
       health,
       energy,
       mood,
@@ -79,8 +83,14 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
       happiness: mood,
       fatigue: Math.max(0, 100 - energy),
       burnout_risk: Math.min(100, stress + Math.max(0, 100 - energy) / 2),
-    };
-    setVitals(nextVitals);
+    });
+  }, [profileId]);
+
+  const loadLifestyle = useCallback(async () => {
+    if (!profileId) {
+      setLifestyle(null);
+      return;
+    }
 
     const { data: lifestyleRow, error: lifestyleError } = await (supabase as any)
       .from("wellness_lifestyle_profiles")
@@ -141,31 +151,70 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
       setVitals(null);
       setLifestyle(null);
       setError(null);
+      setCatalogError(null);
+      setSupplementalError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
+    setCatalogError(null);
+    setSupplementalError(null);
+
     try {
-      const [c, cd, am, bl] = await Promise.all([
+      // Core vitals determine whether the wellness screen itself is usable.
+      // Optional lifestyle/auxiliary datasets must not blank truthful core stats.
+      await loadVitals();
+
+      const [catalogResult, cooldownResult, ailmentResult, blockResult, lifestyleResult] = await Promise.allSettled([
         listWellnessCatalog(),
         listCooldowns(profileId),
         listActiveAilments(profileId),
         listActiveBlocks(profileId),
+        loadLifestyle(),
       ]);
-      setCatalog(c);
-      setCooldowns(cd);
-      setAilments(am);
-      setBlocks(bl);
-      await loadVitals();
-      setError(null);
+
+      if (catalogResult.status === "fulfilled") {
+        setCatalog(catalogResult.value);
+      } else {
+        setCatalog([]);
+        setCatalogError(messageOf(catalogResult.reason, "Wellness actions could not be loaded"));
+      }
+
+      const supplementalFailures: string[] = [];
+
+      if (cooldownResult.status === "fulfilled") setCooldowns(cooldownResult.value);
+      else {
+        setCooldowns([]);
+        supplementalFailures.push(messageOf(cooldownResult.reason, "Cooldowns unavailable"));
+      }
+
+      if (ailmentResult.status === "fulfilled") setAilments(ailmentResult.value);
+      else {
+        setAilments([]);
+        supplementalFailures.push(messageOf(ailmentResult.reason, "Ailments unavailable"));
+      }
+
+      if (blockResult.status === "fulfilled") setBlocks(blockResult.value);
+      else {
+        setBlocks([]);
+        supplementalFailures.push(messageOf(blockResult.reason, "Activity blocks unavailable"));
+      }
+
+      if (lifestyleResult.status === "rejected") {
+        setLifestyle(null);
+        supplementalFailures.push(messageOf(lifestyleResult.reason, "Lifestyle data unavailable"));
+      }
+
+      setSupplementalError(supplementalFailures.length ? supplementalFailures.join(" • ") : null);
     } catch (e: any) {
       setVitals(null);
       setError(e?.message ?? "Failed to load wellness data");
     } finally {
       setLoading(false);
     }
-  }, [profileId, loadVitals]);
+  }, [profileId, loadLifestyle, loadVitals]);
 
   useEffect(() => {
     void refresh();
@@ -181,5 +230,5 @@ export function useWellnessState(profileId: string | null | undefined): UseWelln
     [profileId, refresh],
   );
 
-  return { catalog, cooldowns, ailments, blocks, vitals, lifestyle, loading, error, perform, refresh };
+  return { catalog, cooldowns, ailments, blocks, vitals, lifestyle, loading, error, catalogError, supplementalError, perform, refresh };
 }

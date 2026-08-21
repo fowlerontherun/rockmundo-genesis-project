@@ -29,11 +29,12 @@ type PracticeSkillOption = { slug: string; level: number };
 
 export default function MobileHome() {
   const navigate = useNavigate();
-  const { profile, skillProgress, activities } = useGameData();
+  const { profile, skillProgress, activities, refetch: refetchGameData } = useGameData();
   const { userId, profileId } = useActiveProfile();
   const wellness = useWellnessState(profileId ?? null);
-  const { notifications, markRead, isLoading } = useNotificationsFeed();
+  const { notifications, markRead, isLoading, error: notificationsError, refetch: refetchNotifications } = useNotificationsFeed();
   const [params, setParams] = useSearchParams();
+  const [refreshing, setRefreshing] = useState(false);
   const qc = useQueryClient();
   const today = useScheduledActivities(new Date(), userId ?? undefined);
   const mode = params.get("view") === "day" ? "day" : "home";
@@ -52,11 +53,26 @@ export default function MobileHome() {
   const hr = now.getHours();
   const greet = hr < 5 ? "Late night" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
   const vitals: any = wellness.vitals;
+  const refreshAll = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchGameData(),
+        wellness.refresh(),
+        today.refetch(),
+        refetchNotifications(),
+        qc.invalidateQueries(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (mode === "day") return <MobileDay userId={userId ?? undefined} profileId={profileId ?? undefined} skillProgress={skillProgress ?? []} activities={activities ?? []} onBack={() => setParams({}, { replace: true })} />;
 
   return <div className="space-y-4">
-    <div className="flex items-center justify-between px-1"><div><div className="text-[11px] uppercase tracking-wider text-muted-foreground">{greet}</div><div className="font-bold text-xl leading-tight">{displayName}</div></div><button onClick={() => qc.invalidateQueries()} aria-label="Refresh" className="rm-tap h-10 w-10 rounded-full hover:bg-muted flex items-center justify-center"><RefreshCw className="h-5 w-5" /></button></div>
+    <div className="flex items-center justify-between px-1"><div><div className="text-[11px] uppercase tracking-wider text-muted-foreground">{greet}</div><div className="font-bold text-xl leading-tight">{displayName}</div></div><button onClick={refreshAll} disabled={refreshing} aria-label={refreshing ? "Refreshing" : "Refresh"} className="rm-tap h-10 w-10 rounded-full hover:bg-muted flex items-center justify-center disabled:opacity-60"><RefreshCw className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`} /></button></div>
     <MobileOfflineState /><MobileUpdateBanner /><MobileReturningBriefing notifications={notifications} />
 
     {wellness.loading ? <SkeletonCard /> : wellness.error || !vitals ? <MobileSectionCard title="Vitals unavailable" subtitle="No placeholder values are shown when server wellness data cannot be loaded." action={<MobileStatusBadge tone="warning">Unavailable</MobileStatusBadge>} /> : <div className="grid grid-cols-3 gap-2">
@@ -73,8 +89,7 @@ export default function MobileHome() {
     <MobileSectionCard title="Desktop gameplay" subtitle="Deep management stays on desktop by design."><p className="text-sm text-muted-foreground">Song creation, detailed band management, releases, equipment, business management and other configuration-heavy systems are intentionally not duplicated on mobile.</p></MobileSectionCard>
 
     <section><div className="mb-2 flex items-center justify-between px-1"><h2 className="font-bold text-[15px]">Notifications</h2><button onClick={() => navigate("/mobile/social/mail")} className="text-[12px] text-primary font-semibold">Mail</button></div><div className="space-y-2">
-      {isLoading && <SkeletonCard />}{!isLoading && shown.length === 0 && <EmptyState title="All caught up" message="New activity will appear here." />}
-      {filter === "notifications" ? <MobileNotificationGroups notifications={shown} onOpen={(n) => { markRead(n.id); const target = resolveCompanionPath(n.action_path); if (target) navigate(target); }} /> : shown.map((n) => <NotificationCard key={n.id} n={n} onRead={markRead} />)}
+      {notificationsError ? <MobileErrorState message="Notifications could not be loaded." onRetry={() => refetchNotifications()} /> : <>{isLoading && <SkeletonCard />}{!isLoading && shown.length === 0 && <EmptyState title="All caught up" message="New activity will appear here." />}{filter === "notifications" ? <MobileNotificationGroups notifications={shown} onOpen={(n) => { markRead(n.id); const target = resolveCompanionPath(n.action_path); if (target) navigate(target); }} /> : shown.map((n) => <NotificationCard key={n.id} n={n} onRead={markRead} />)}</>}
     </div></section>
     <MobileInstallPrompt />
   </div>;
