@@ -1,73 +1,144 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Heart, Moon, User, Zap, Activity, Monitor, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
-import { Backpack, Bed, BookOpen, CheckCircle2, Clipboard, Download, Filter, GraduationCap, Heart, HelpCircle, Lock, MessageSquareWarning, Moon, Settings, Shield, Shirt, Sparkles, Star, Trophy, Utensils, User, Wallet, Zap } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
-import { QuickActionCard } from "../components/QuickActionCard";
+import { useWellnessState } from "@/hooks/useWellnessState";
 import { StatCard } from "../components/StatCard";
-import { MobileHelpSheet, MobileInstallPrompt, MobileQuickStartChecklist } from "../components/MobileOnboarding";
-import { MobileEntityCard, MobileErrorState, MobileHorizontalCarousel, MobileLoadingSkeleton, MobilePageShell, MobileProgressCard, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileStickyActionBar, MobileTimeline, MobileTimelineItem } from "../components/MobilePrimitives";
-import { buildFeedbackPayload, buildSafeMobileDiagnostics, trackMobileEvent, type MobileFeedbackCategory } from "../mobileDiagnostics";
+import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge } from "../components/MobilePrimitives";
 
-const sections = ["overview", "wellness", "inventory", "wardrobe", "skills", "education", "achievements", "settings"] as const;
-type Section = (typeof sections)[number];
-const labels: Record<Section, string> = { overview: "Overview", wellness: "Wellness", inventory: "Inventory", wardrobe: "Wardrobe", skills: "Skills", education: "Education", achievements: "Achievements", settings: "Settings" };
+const DESKTOP_ONLY: Record<string, { title: string; description: string }> = {
+  inventory: { title: "Inventory management", description: "Equipment, item use, repairs and inventory organisation are desktop gameplay." },
+  wardrobe: { title: "Wardrobe & avatar", description: "Detailed outfit creation and avatar customisation are desktop gameplay." },
+  skills: { title: "Skill management", description: "The full skill tree and XP spending remain desktop gameplay. Mobile practice scheduling is available from Career." },
+  education: { title: "Education management", description: "Course browsing, tutors and long-form education setup remain desktop gameplay." },
+  achievements: { title: "Achievements", description: "Detailed achievement browsing and reward management remain desktop gameplay." },
+  settings: { title: "Account settings", description: "Detailed account and character settings remain on desktop." },
+};
 
-const clamp = (v: unknown, fallback: number) => Math.max(0, Math.min(100, Number(v ?? fallback)));
-const money = (v: unknown) => `$${Number(v ?? 0).toLocaleString()}`;
+const clamp = (v: unknown, fallback = 0) => Math.max(0, Math.min(100, Number(v ?? fallback)));
 
-function useMeModel() {
-  const game: any = useGameData();
-  const profile = game.profile ?? {};
-  const xpWallet = game.xpWallet ?? {};
-  const activityStatus = game.activityStatus ?? null;
-  const displayName = profile.display_name || profile.stage_name || profile.username || "Player";
-  const wellness = { health: clamp(profile.health, 85), energy: clamp(profile.energy, 80), mood: clamp(profile.mood ?? profile.happiness, 70), stress: clamp(profile.stress, 15) };
-  const issue = wellness.health < 45 ? "Health needs attention" : wellness.energy < 35 ? "Low energy before your next activity" : wellness.stress > 70 ? "Stress is high" : wellness.mood < 40 ? "Mood is low" : "Vitals look stable";
-  return { game, profile, xpWallet, activityStatus, displayName, wellness, issue };
-}
-
-function MeTabs({ active }: { active: Section }) {
-  const navigate = useNavigate();
-  return <nav aria-label="Me sections" className="-mx-4 overflow-x-auto px-4"><div className="flex min-w-max gap-2 pb-1">{sections.map((s) => <button key={s} onClick={() => navigate(s === "overview" ? "/mobile/me" : `/mobile/me/${s}`)} className={`min-h-11 rounded-full border px-4 text-sm font-semibold ${active === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`} aria-current={active === s ? "page" : undefined}>{labels[s]}</button>)}</div></nav>;
-}
-
-function CharacterHeader() {
-  const { profile, xpWallet, activityStatus, displayName } = useMeModel();
-  return <MobileSectionCard title="Character" action={<MobileStatusBadge tone={activityStatus?.activity_type ? "info" : "success"}>{activityStatus?.activity_type ? "Busy" : "Free"}</MobileStatusBadge>}><div className="flex items-center gap-3"><Avatar className="h-16 w-16 ring-2 ring-primary/40"><AvatarImage src={profile.avatar_url} alt={displayName} /><AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0"><div className="truncate text-xl font-bold">{displayName}</div><div className="text-xs text-muted-foreground">{profile.current_city || profile.city || "Current city unknown"} · {profile.band_name || "Solo artist"}</div><div className="mt-2 flex flex-wrap gap-2"><MobileStatusBadge tone="info">Level {xpWallet.level ?? profile.level ?? 1}</MobileStatusBadge><MobileStatusBadge><Wallet className="mr-1 h-3 w-3" />{money(profile.money ?? profile.cash)}</MobileStatusBadge><MobileStatusBadge>{Number(profile.followers ?? profile.fans ?? 0).toLocaleString()} followers</MobileStatusBadge></div></div></div></MobileSectionCard>;
+function DesktopOnly({ section }: { section: string }) {
+  const item = DESKTOP_ONLY[section] ?? { title: "Desktop gameplay", description: "This area is intentionally available only on desktop." };
+  return (
+    <MobilePageShell>
+      <MobileSectionHeader eyebrow="Me" title={item.title} description={item.description} />
+      <MobileSectionCard title="Desktop required" action={<MobileStatusBadge tone="info">Desktop</MobileStatusBadge>}>
+        <div className="flex items-start gap-3">
+          <Monitor className="mt-0.5 h-6 w-6 text-primary" />
+          <div>
+            <p className="text-sm font-semibold">This is intentionally not reproduced on mobile.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Use RockMundo on desktop for deeper configuration and management. Mobile is for planning your day, checking outcomes and quick actions.</p>
+          </div>
+        </div>
+      </MobileSectionCard>
+    </MobilePageShell>
+  );
 }
 
 function Overview() {
   const navigate = useNavigate();
-  const { wellness, issue, activityStatus, profile, xpWallet } = useMeModel();
-  const actions = [["Eat", <Utensils className="h-5 w-5" />, "/mobile/me/wellness"], ["Sleep", <Moon className="h-5 w-5" />, "/mobile/me/wellness"], ["Use Item", <Backpack className="h-5 w-5" />, "/mobile/me/inventory"], ["Outfit", <Shirt className="h-5 w-5" />, "/mobile/me/wardrobe"], ["Spend XP", <Zap className="h-5 w-5" />, "/mobile/me/skills"], ["Learn", <BookOpen className="h-5 w-5" />, "/mobile/me/education"], ["Awards", <Trophy className="h-5 w-5" />, "/mobile/me/achievements"], ["Settings", <Settings className="h-5 w-5" />, "/mobile/me/settings"]] as const;
-  return <><CharacterHeader /><MobileSectionCard title="Priority" subtitle="Uses existing health, energy, mood and stress values." action={<MobileStatusBadge tone={issue.includes("stable") ? "success" : "warning"}>{issue.includes("stable") ? "OK" : "Action"}</MobileStatusBadge>}><p className="text-sm">{issue}</p><Button className="mt-3 min-h-11 w-full" onClick={() => navigate("/mobile/me/wellness")}>Review wellness</Button></MobileSectionCard><div className="grid grid-cols-2 gap-2"><StatCard label="Energy" value={wellness.energy} icon={<Zap className="h-4 w-4" />} /><StatCard label="Health" value={wellness.health} icon={<Heart className="h-4 w-4" />} /><StatCard label="Mood" value={wellness.mood} icon={<Moon className="h-4 w-4" />} /><StatCard label="Stress safe" value={100 - wellness.stress} icon={<Bed className="h-4 w-4" />} /></div><section><h2 className="mb-2 px-1 text-[15px] font-bold">Quick actions</h2><div className="grid grid-cols-4 gap-2">{actions.map(([label, icon, to]) => <QuickActionCard key={label} label={label} icon={icon} to={to} />)}</div></section><MobileSectionCard title="Progress snapshot"><div className="space-y-2"><MobileEntityCard title="Recent skill progress" subtitle={`${Number(xpWallet.skill_xp ?? xpWallet.balance ?? 0).toLocaleString()} XP available`} icon={<Sparkles className="h-5 w-5" />} onPress={() => navigate("/mobile/me/skills")} /><MobileEntityCard title="Active learning" subtitle={activityStatus?.activity_type === "education" ? "Lesson in progress" : "No active course"} icon={<GraduationCap className="h-5 w-5" />} onPress={() => navigate("/mobile/me/education")} /><MobileEntityCard title="Inventory warnings" subtitle={profile.inventory_warning || "No critical warnings"} icon={<Backpack className="h-5 w-5" />} onPress={() => navigate("/mobile/me/inventory")} /><MobileEntityCard title="Appearance" subtitle={profile.outfit_name || "Current outfit ready"} icon={<Shirt className="h-5 w-5" />} onPress={() => navigate("/mobile/me/wardrobe")} /></div></MobileSectionCard></>;
+  const { profile, activityStatus } = useGameData();
+  const p: any = profile ?? {};
+  const displayName = p.display_name || p.stage_name || p.username || "Player";
+  const energy = clamp(p.energy, 80);
+  const mood = clamp(p.mood ?? p.happiness, 70);
+  const health = clamp(p.health, 85);
+
+  return (
+    <MobilePageShell>
+      <MobileSectionHeader eyebrow="Me" title={displayName} description="Your current status and lightweight personal actions." />
+      <MobileSectionCard title="Current status" action={<MobileStatusBadge tone={activityStatus ? "info" : "success"}>{activityStatus ? "Busy" : "Available"}</MobileStatusBadge>}>
+        <MobileEntityCard
+          title={activityStatus?.activity_type ? String(activityStatus.activity_type).replaceAll("_", " ") : "No activity in progress"}
+          subtitle={activityStatus?.ends_at ? `Until ${new Date(activityStatus.ends_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Ready for an ad hoc task or scheduled activity"}
+          icon={<User className="h-5 w-5" />}
+        />
+      </MobileSectionCard>
+
+      <div className="grid grid-cols-3 gap-2">
+        <StatCard label="Energy" value={energy} icon={<Zap className="h-4 w-4" />} />
+        <StatCard label="Mood" value={mood} icon={<Moon className="h-4 w-4" />} />
+        <StatCard label="Health" value={health} icon={<Heart className="h-4 w-4" />} />
+      </div>
+
+      <MobileSectionCard title="Quick personal actions" subtitle="Actions that are useful away from desktop.">
+        <Button className="min-h-11 w-full" onClick={() => navigate("/mobile/me/wellness")}>Recover / wellness</Button>
+      </MobileSectionCard>
+
+      <MobileSectionCard title="Desktop gameplay" subtitle="Complex personal management stays on desktop.">
+        <div className="space-y-2">
+          {Object.entries(DESKTOP_ONLY).slice(0, 5).map(([key, item]) => (
+            <MobileEntityCard key={key} title={item.title} subtitle={item.description} icon={<Monitor className="h-5 w-5" />} onPress={() => navigate(`/mobile/me/${key}`)} meta={<MobileStatusBadge>Desktop</MobileStatusBadge>} />
+          ))}
+        </div>
+      </MobileSectionCard>
+    </MobilePageShell>
+  );
 }
 
-function Wellness() { const { wellness, issue } = useMeModel(); const [open,setOpen]=useState(false); return <><MobileSectionHeader eyebrow="Me" title="Wellness" description="Action-oriented recovery without duplicating wellness rules." /><MobileSectionCard title="Recommended action" action={<MobileStatusBadge tone="warning">Priority</MobileStatusBadge>}><p className="text-sm">{issue}. Confirming an action reuses the existing Wellness backend flow.</p><div className="mt-3 grid grid-cols-3 gap-2"><Button onClick={()=>setOpen(true)}><Utensils className="mr-1 h-4 w-4"/>Eat</Button><Button onClick={()=>setOpen(true)} variant="secondary">Sleep</Button><Button onClick={()=>setOpen(true)} variant="outline">Rest</Button></div></MobileSectionCard><div className="grid gap-2">{Object.entries(wellness).map(([k,v])=><MobileProgressCard key={k} label={k[0].toUpperCase()+k.slice(1)} value={k==="stress"?100-v:v} detail={k==="stress"?`${v}% stress, lower is better`:`${v}% current value`} />)}</div><MobileSectionCard title="Recovery options"><MobileEntityCard title="Recovery activity" subtitle="Checks cooldowns, daily caps and schedule conflicts server-side" icon={<Bed/>}/><MobileEntityCard title="Treatment" subtitle="Shown only when existing illness or injury data requires it" icon={<Heart/>}/></MobileSectionCard><ConfirmSheet open={open} onOpenChange={setOpen} title="Preview wellness action" body="Effects, cost, cooldowns, location rules and activity conflicts are revalidated by the existing wellness action before confirmation." /></> }
+function Wellness() {
+  const { profile } = useGameData();
+  const profileId = profile?.id ?? null;
+  const { catalog, blocks, vitals, loading, error, perform } = useWellnessState(profileId);
+  const [performing, setPerforming] = useState<string | null>(null);
+  const recovery = useMemo(() => catalog.filter((entry) => entry.category === "recovery").slice(0, 6), [catalog]);
+  const v: any = vitals ?? {};
 
-const inventory = [{name:"Acoustic Guitar",cat:"Instruments",state:"Equipped",action:"Unequip"},{name:"Energy Bar",cat:"Consumables",state:"Usable now",action:"Use"},{name:"Stage Jacket",cat:"Clothing",state:"Wardrobe",action:"Equip"},{name:"Broken Cable",cat:"Equipment",state:"Damaged",action:"Repair"}];
-function Inventory(){const [q,setQ]=useState(""); const [sheet,setSheet]=useState(""); const items=inventory.filter(i=>`${i.name} ${i.cat}`.toLowerCase().includes(q.toLowerCase())); return <><MobileSectionHeader eyebrow="Me" title="Inventory" description="Card-based items, filters and validated actions." action={<Button size="sm" variant="outline" onClick={()=>setSheet("Filters")}><Filter className="h-4 w-4"/></Button>} /><MobileSectionCard title="Summary"><div className="grid grid-cols-3 gap-2 text-center text-xs"><b>{items.length} items</b><b>1 equipped</b><b>1 damaged</b></div></MobileSectionCard><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search inventory" aria-label="Search inventory" className="min-h-11"/><div className="space-y-2">{items.map(i=><MobileEntityCard key={i.name} title={i.name} subtitle={`${i.cat} · ${i.state}`} meta={<Button size="sm" onClick={()=>setSheet(i.action)}>{i.action}</Button>} icon={<Backpack/>}/>)}</div><ConfirmSheet open={!!sheet} onOpenChange={()=>setSheet("")} title={sheet} body="This sheet shows quantity, restrictions, consequences and revalidates ownership before submit. Destructive actions require final confirmation." /></>}
-function Wardrobe(){const [sheet,setSheet]=useState(false); return <><MobileSectionHeader eyebrow="Me" title="Wardrobe" description="Mobile outfit preview using the existing avatar assets." /><MobileSectionCard title="Avatar preview"><div className="flex min-h-48 items-center justify-center rounded-2xl border bg-muted/40"><User className="h-20 w-20 text-muted-foreground"/><span className="sr-only">Avatar preview</span></div></MobileSectionCard><MobileHorizontalCarousel label="Wardrobe categories">{["Hair","Hats","Glasses","Tops","Trousers","Shoes","Accessories","Instruments"].map(c=><button key={c} className="min-h-11 snap-start rounded-full border px-4 text-sm font-semibold">{c}</button>)}</MobileHorizontalCarousel><MobileSectionCard title="Owned options"><MobileEntityCard title="Leather Jacket" subtitle="Owned · compatible" meta={<Button size="sm" onClick={()=>setSheet(true)}>Preview</Button>} icon={<Shirt/>}/><MobileEntityCard title="VIP Crown" subtitle="Locked cosmetic" meta={<Lock className="h-4 w-4"/>} icon={<Shirt/>}/></MobileSectionCard><MobileStickyActionBar><Button className="w-full" onClick={()=>setSheet(true)}>Save outfit</Button></MobileStickyActionBar><ConfirmSheet open={sheet} onOpenChange={setSheet} title="Save outfit" body="Owned items, locked cosmetics, slot conflicts and colour availability are validated by the existing wardrobe/avatar save path." /></>}
-function Skills(){const [open,setOpen]=useState(false); const {xpWallet}=useMeModel(); return <><MobileSectionHeader eyebrow="Me" title="Skills" description="Grouped progression with backend-confirmed XP spending." /><MobileSectionCard title="XP wallet" action={<MobileStatusBadge tone="info">{Number(xpWallet.skill_xp ?? xpWallet.balance ?? 0)} XP</MobileStatusBadge>}><Button onClick={()=>setOpen(true)} className="min-h-11 w-full">Preview XP spend</Button></MobileSectionCard>{["Core","Instrument","Performance","Genre","Lifestyle"].map((g,i)=><MobileSectionCard key={g} title={g}><MobileProgressCard label={`${g} skill`} value={65-i*8} detail="Prerequisites and hidden status come from existing skill definitions." /></MobileSectionCard>)}<ConfirmSheet open={open} onOpenChange={setOpen} title="Spend XP" body="Current level, proposed level, prerequisites, cost and remaining XP are checked again by the existing skill progression mutation." /></>}
-function Education(){return <><MobileSectionHeader eyebrow="Me" title="Education" description="Lessons, tutors, university and self-study entry points." /><MobileSectionCard title="Active education"><MobileEntityCard title="No active lesson" subtitle="Start a supported learning method below" icon={<BookOpen/>}/></MobileSectionCard>{["Start Lesson","Find Tutor","Browse University","Learn from Bandmate","Start Self-Study"].map(x=><MobileEntityCard key={x} title={x} subtitle="Uses existing education methods, costs, location and conflict checks" icon={<GraduationCap/>}/>)}</>}
-function Achievements(){const [open,setOpen]=useState(false); return <><MobileSectionHeader eyebrow="Me" title="Achievements" description="Recent, near-complete and grouped personal goals." /><MobileSectionCard title="Overall completion"><MobileProgressCard label="Completion" value={42} detail="Hidden achievements remain protected by existing rules." /></MobileSectionCard>{["First Gig","Social Spark","Chart Climber"].map((a,i)=><MobileEntityCard key={a} title={a} subtitle={i===0?"Unlocked · reward claimed":"Near completion · reward backend-confirmed"} meta={<Button size="sm" onClick={()=>setOpen(true)}>{i===0?"View":"Claim"}</Button>} icon={i===0?<CheckCircle2/>:<Trophy/>}/>) }<ConfirmSheet open={open} onOpenChange={setOpen} title="Achievement detail" body="Claimable rewards use backend outcomes and duplicate claims are prevented by disabling the pending action." /></>}
+  const run = async (slug: string) => {
+    setPerforming(slug);
+    try {
+      await perform(slug);
+    } finally {
+      setPerforming(null);
+    }
+  };
 
-function SupportDiagnostics(){const [copied,setCopied]=useState(false); const diagnostics=buildSafeMobileDiagnostics(); const copy=async()=>{const text=JSON.stringify(diagnostics,null,2); await navigator.clipboard?.writeText(text); setCopied(true); trackMobileEvent("mobile_diagnostics_copied", { route: diagnostics.route });}; return <MobileSectionCard title="Support diagnostics" subtitle="Safe device and route details only; no tokens, message bodies or private profile fields." action={<MobileStatusBadge tone={diagnostics.online?"success":"warning"}>{diagnostics.online?"Online":"Offline"}</MobileStatusBadge>}><dl className="grid grid-cols-2 gap-2 text-xs"><dt>Route</dt><dd className="truncate text-right">{diagnostics.route}</dd><dt>Viewport</dt><dd className="text-right">{diagnostics.viewport}</dd><dt>Browser</dt><dd className="text-right">{diagnostics.browser}</dd><dt>Mode</dt><dd className="text-right">{diagnostics.pwa}</dd><dt>Connection</dt><dd className="text-right">{diagnostics.connection}</dd><dt>Version</dt><dd className="text-right">{diagnostics.appVersion}</dd></dl><Button className="mt-3 min-h-11 w-full" variant="outline" onClick={copy}><Clipboard className="mr-2 h-4 w-4"/>{copied?"Diagnostics copied":"Copy diagnostics"}</Button></MobileSectionCard>}
-function MobileFeedback(){const [category,setCategory]=useState<MobileFeedbackCategory>("broken_layout"); const [detail,setDetail]=useState(""); const [preview,setPreview]=useState(false); const payload=buildFeedbackPayload(category,detail); const submit=()=>{trackMobileEvent("mobile_feedback_previewed", { feedbackCategory: category }); setPreview(true);}; return <MobileSectionCard title="Report a mobile issue" subtitle="Review your note before sharing. Diagnostics are coarse and privacy-safe." action={<MessageSquareWarning className="h-5 w-5 text-primary"/>}><label className="text-xs font-semibold" htmlFor="mobile-feedback-category">Issue type</label><select id="mobile-feedback-category" value={category} onChange={e=>setCategory(e.target.value as MobileFeedbackCategory)} className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"><option value="broken_layout">Broken layout</option><option value="confusing_screen">Confusing screen</option><option value="failed_action">Failed action</option><option value="slow_page">Slow page</option><option value="desktop_ui">Desktop UI appeared</option><option value="missing_data">Missing data</option><option value="navigation_problem">Navigation problem</option><option value="other">Other issue</option></select><textarea value={detail} onChange={e=>setDetail(e.target.value)} aria-label="Describe the mobile issue" placeholder="Describe what happened. Do not include passwords, private messages or payment details." className="mt-3 min-h-28 w-full rounded-xl border bg-background p-3"/><Button onClick={submit} className="mt-3 min-h-11 w-full">Preview feedback</Button>{preview&&<pre className="mt-3 max-h-48 overflow-auto rounded-xl bg-muted p-3 text-[11px]">{JSON.stringify(payload,null,2)}</pre>}</MobileSectionCard>}
-function SettingsPage(){const [help,setHelp]=useState(false); const [install,setInstall]=useState(false); return <><MobileSectionHeader eyebrow="Me" title="Settings" description="Existing account, preference, privacy and accessibility controls." /><MobileSectionCard title="Mobile guidance"><MobileEntityCard title="Reopen Quick Start" subtitle="Recover dismissed onboarding without resetting progress" icon={<HelpCircle/>}/><MobileQuickStartChecklist recover/><MobileEntityCard title="Help & Glossary" subtitle="Search common game terms and mobile guidance" icon={<BookOpen/>} onPress={()=>setHelp(true)}/><MobileEntityCard title="Install RockMundo" subtitle="Available only when this browser supports PWA install" icon={<Download/>} onPress={()=>setInstall(true)}/></MobileSectionCard><SupportDiagnostics/><MobileFeedback/>{["Account","Gameplay","Notifications","Privacy","Display","Accessibility","Audio","Data","Legal"].map((g,i)=><MobileSectionCard key={g} title={g}>{i>=4&&i<=5?<><SettingRow label="Reduced motion"/><SettingRow label="Larger text"/><SettingRow label="Stronger contrast"/></>:<MobileEntityCard title={`${g} settings`} subtitle="Persists through existing preference infrastructure" icon={<Settings/>}/>}</MobileSectionCard>)}<MobileHelpSheet open={help} onOpenChange={setHelp}/>{install && <MobileInstallPrompt force/>}<Button variant="destructive" className="min-h-11 w-full">Logout</Button></>}
-function SettingRow({label}:{label:string}){return <label className="flex min-h-11 items-center justify-between gap-3 border-b py-2 last:border-b-0"><span className="text-sm font-medium">{label}</span><Switch aria-label={label}/></label>}
-function ConfirmSheet({open,onOpenChange,title,body}:{open:boolean;onOpenChange:(v:boolean)=>void;title:string;body:string}){return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent side="bottom" className="rounded-t-2xl"><SheetHeader><SheetTitle>{title}</SheetTitle></SheetHeader><p className="mt-3 text-sm text-muted-foreground">{body}</p><Button className="mt-4 min-h-11 w-full" onClick={()=>onOpenChange(false)}>Close preview</Button></SheetContent></Sheet>}
-function StatsTimeline(){return <MobileSectionCard title="Personal timeline"><MobileTimeline><MobileTimelineItem title="Recent milestone" detail="Latest personal progression event appears here when available." badge={<Star className="h-4 w-4"/>}/><MobileTimelineItem title="Statistics" detail="Career, performances, songs, social, travel and finances are summarized without desktop tables." /></MobileTimeline></MobileSectionCard>}
+  return (
+    <MobilePageShell>
+      <MobileSectionHeader eyebrow="Me" title="Wellness" description="Check your condition and perform quick recovery actions using the same authoritative wellness system as desktop." />
+      {loading ? <MobileLoadingSkeleton cards={3} /> : error ? <MobileErrorState message={error} /> : !vitals ? (
+        <MobileErrorState title="Wellness unavailable" message="Your current wellness state could not be loaded." />
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <StatCard label="Energy" value={clamp(v.energy)} icon={<Zap className="h-4 w-4" />} />
+            <StatCard label="Health" value={clamp(v.health ?? v.physical_health)} icon={<Heart className="h-4 w-4" />} />
+            <StatCard label="Mood" value={clamp(v.mood ?? v.happiness)} icon={<Moon className="h-4 w-4" />} />
+          </div>
+
+          {blocks.length > 0 && (
+            <MobileSectionCard title="Activity blocks" action={<MobileStatusBadge tone="warning">{blocks.length}</MobileStatusBadge>}>
+              <div className="space-y-2">{blocks.map((block) => <MobileEntityCard key={block.id} title={block.reason} subtitle={`Until ${new Date(block.expires_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`} icon={<ShieldCheck className="h-5 w-5" />} />)}</div>
+            </MobileSectionCard>
+          )}
+
+          <MobileSectionCard title="Recover now" subtitle="These are real server-backed wellness actions, not mobile placeholders.">
+            {recovery.length ? (
+              <div className="space-y-2">
+                {recovery.map((entry) => (
+                  <MobileEntityCard
+                    key={entry.id}
+                    title={entry.name}
+                    subtitle={(entry as any).description || "Quick recovery action"}
+                    icon={<Activity className="h-5 w-5" />}
+                    meta={<Button size="sm" disabled={performing === entry.slug} onClick={(event) => { event.stopPropagation(); run(entry.slug); }}>{performing === entry.slug ? "Working…" : "Do now"}</Button>}
+                  />
+                ))}
+              </div>
+            ) : <p className="text-sm text-muted-foreground">No recovery actions are currently available.</p>}
+          </MobileSectionCard>
+
+          <MobileSectionCard title="Desktop wellness" subtitle="Lifestyle setup, detailed fitness/medical choices, ailments and long-term management remain on desktop." />
+        </>
+      )}
+    </MobilePageShell>
+  );
+}
 
 export default function MobileMe() {
-  const params = useParams();
-  const active = sections.includes(params.section as Section) ? (params.section as Section) : "overview";
-  const { game } = useMeModel();
-  const content: Record<Section, JSX.Element> = { overview: <><Overview/><StatsTimeline/></>, wellness: <Wellness/>, inventory: <Inventory/>, wardrobe: <Wardrobe/>, skills: <Skills/>, education: <Education/>, achievements: <Achievements/>, settings: <SettingsPage/> };
-  return <MobilePageShell><MobileSectionHeader eyebrow="Mobile Me" title={labels[active]} description="Dedicated mobile personal systems inside the mobile shell." action={<Shield className="h-5 w-5 text-primary"/>}/><MeTabs active={active}/>{game.loading ? <MobileLoadingSkeleton cards={4}/> : game.error ? <MobileErrorState message="Primary character data failed. Secondary sections stay isolated where possible."/> : content[active]}</MobilePageShell>;
+  const { section } = useParams();
+  if (!section || section === "overview") return <Overview />;
+  if (section === "wellness") return <Wellness />;
+  return <DesktopOnly section={section} />;
 }
