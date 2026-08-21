@@ -1,17 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { mobileSocialAuditFindings } from "./MobileSocial";
+import fs from "node:fs";
+import path from "node:path";
 
-describe("MobileSocial phase 6 audit", () => {
-  it("documents audited desktop fallbacks and existing realtime/query systems", () => {
-    expect(mobileSocialAuditFindings.length).toBeGreaterThanOrEqual(5);
-    expect(mobileSocialAuditFindings.join(" ")).toContain("/social/messages");
-    expect(mobileSocialAuditFindings.join(" ")).toContain("Supabase postgres_changes");
-    expect(mobileSocialAuditFindings.join(" ")).toContain("useFriendships");
+const source = fs.readFileSync(path.resolve("src/mobile/pages/MobileSocial.tsx"), "utf8");
+
+describe("Mobile Social companion contract", () => {
+  it("keeps quick communication flows on mobile", () => {
+    for (const route of ["/mobile/social/messages", "/mobile/social/friends", "/mobile/social/twaater", "/mobile/social/notifications"]) {
+      expect(source).toContain(route);
+    }
+    expect(source).toContain("useDirectMessages");
+    expect(source).toContain("useFriendships");
+    expect(source).toContain("useNotificationsFeed");
   });
 
-  it("records that mobile social must not create a parallel social system", () => {
-    const audit = mobileSocialAuditFindings.join(" ");
-    expect(audit).toContain("source of truth");
-    expect(audit).toContain("does not add a second transport");
+  it("routes notification actions through the shared companion resolver", () => {
+    expect(source).toContain('import { resolveCompanionPath } from "@/mobile/routeRegistry"');
+    expect(source).toContain("navigate(resolveCompanionPath(n.action_path))");
+    expect(source).not.toContain("location.assign(");
+  });
+
+  it("keeps long-form mail management behind a desktop boundary", () => {
+    expect(source).toContain("Desktop-only communication");
+    expect(source).toContain("Long-form mail management stays on desktop");
+    expect(source).toContain("Compose, archive, flag and attachment-heavy mail workflows are desktop-only");
   });
 });

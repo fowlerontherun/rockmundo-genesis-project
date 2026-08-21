@@ -38,6 +38,22 @@ const modeIcon = (mode: string) => {
 
 const money = (value: number) => value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
+const currentTravel = (activityStatus: any) => {
+  if (!activityStatus) return null;
+  const type = String(activityStatus.activity_type ?? "").toLowerCase();
+  const status = String(activityStatus.status ?? "").toLowerCase();
+  if (!type.includes("travel") || !["active", "in_progress"].includes(status)) return null;
+
+  const now = Date.now();
+  const start = activityStatus.started_at ? new Date(activityStatus.started_at).getTime() : NaN;
+  const end = activityStatus.ends_at ? new Date(activityStatus.ends_at).getTime() : NaN;
+  if (Number.isFinite(start) && start > now) return null;
+  if (Number.isFinite(end) && end <= now) return null;
+  return activityStatus;
+};
+
+const cashLabel = (profile: any) => profile?.cash == null ? "Unavailable" : money(Number(profile.cash));
+
 function Shell({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <MobilePageShell>
@@ -60,8 +76,9 @@ export default function MobileWorldPhase5() {
 
 function WorldOverviewMobile() {
   const { currentCity, activityStatus, profile } = useGameData();
-  const travelling = String((activityStatus as any)?.activity_type ?? "").includes("travel");
-  const endsAt = (activityStatus as any)?.ends_at;
+  const activeTravel = currentTravel(activityStatus);
+  const travelling = !!activeTravel;
+  const endsAt = activeTravel?.ends_at;
 
   return (
     <Shell title={currentCity?.name ?? "World"} description="Mobile World is intentionally lightweight: check where you are, monitor travel and book a simple journey.">
@@ -88,7 +105,7 @@ function WorldOverviewMobile() {
       </div>
 
       <MobileSectionCard title="Character funds" subtitle="Travel booking uses the same balance and conflict checks as desktop.">
-        <p className="text-2xl font-bold">{money(Number((profile as any)?.cash ?? 0))}</p>
+        <p className="text-2xl font-bold">{cashLabel(profile)}</p>
       </MobileSectionCard>
 
       <MobileSectionCard title="Desktop world gameplay" subtitle="Deliberately not duplicated on mobile.">
@@ -126,7 +143,8 @@ function TravelMobile() {
   const [booking, setBooking] = useState(false);
 
   const fromCity = currentCity as CityWithCoords | null;
-  const travelling = String((activityStatus as any)?.activity_type ?? "").includes("travel");
+  const activeTravel = currentTravel(activityStatus);
+  const travelling = !!activeTravel;
   const filtered = useMemo(() => {
     const q = term.trim().toLowerCase();
     return (cities.data ?? [])
@@ -195,7 +213,7 @@ function TravelMobile() {
         <MobileSectionCard title="Journey in progress">
           <MobileEntityCard
             title="You are currently travelling"
-            subtitle={(activityStatus as any)?.ends_at ? `Expected completion ${new Date((activityStatus as any).ends_at).toLocaleString()}` : "Your active journey is still in progress."}
+            subtitle={activeTravel?.ends_at ? `Expected completion ${new Date(activeTravel.ends_at).toLocaleString()}` : "Your active journey is still in progress."}
             icon={<Plane className="h-5 w-5" />}
             meta={<MobileStatusBadge tone="info">Active</MobileStatusBadge>}
           />
@@ -207,7 +225,7 @@ function TravelMobile() {
           title={fromCity?.name ?? "Current city unavailable"}
           subtitle={[fromCity?.country, fromCity?.region].filter(Boolean).join(" • ") || "Travel data unavailable"}
           icon={<MapPin className="h-5 w-5" />}
-          meta={<MobileStatusBadge>{money(Number((profile as any)?.cash ?? 0))}</MobileStatusBadge>}
+          meta={<MobileStatusBadge>{cashLabel(profile)}</MobileStatusBadge>}
         />
       </MobileSectionCard>
 
