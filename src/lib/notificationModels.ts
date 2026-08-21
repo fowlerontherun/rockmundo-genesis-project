@@ -123,13 +123,49 @@ function buildPrOutcomeBody(notification: PersistedNotification): string | null 
   if (sentiment !== null && sentiment !== 0) gains.push(`${signed(sentiment)} fan sentiment`);
 
   const appearance = [mediaType ? toTitleCase(mediaType) : null, outlet].filter(Boolean).join(" appearance on ");
-  const intro = appearance
-    ? `Your ${appearance} has finished.`
-    : "Your PR appearance has finished.";
+  const intro = appearance ? `Your ${appearance} has finished.` : "Your PR appearance has finished.";
   const reachText = reach !== null && reach > 0 ? ` Estimated reach: ${reach.toLocaleString()}.` : "";
   const gainsText = gains.length > 0 ? ` Outcome: ${gains.join(", ")}.` : "";
-
   return `${intro}${reachText}${gainsText}`;
+}
+
+function buildPracticeOutcomeBody(notification: PersistedNotification): string | null {
+  if (notification.type !== "practice_outcome" && notification.category !== "practice") return null;
+  const metadata = notification.metadata ?? {};
+  const skill = getString(metadata.skill) ?? getString(metadata.skill_name) ?? "your skill";
+  const xp = getNumber(metadata.xp_gained ?? metadata.xp_awarded);
+  const level = getNumber(metadata.current_level ?? metadata.level);
+  const currentXp = getNumber(metadata.current_xp);
+  const requiredXp = getNumber(metadata.required_xp);
+
+  const progress = currentXp !== null && requiredXp !== null && requiredXp > 0
+    ? ` Progress: ${currentXp.toLocaleString()}/${requiredXp.toLocaleString()} XP toward level ${(level ?? 0) + 1}.`
+    : level !== null ? ` You are now level ${level}.` : "";
+  const reward = xp !== null && xp !== 0 ? ` You gained ${signed(xp)} XP.` : "";
+  return `Your ${skill} practice session is complete.${reward}${progress}`;
+}
+
+function buildRehearsalOutcomeBody(notification: PersistedNotification): string | null {
+  if (notification.type !== "rehearsal_outcome" && notification.category !== "rehearsal" && notification.category !== "gig_result") return null;
+  const metadata = notification.metadata ?? {};
+  const chemistry = getNumber(metadata.chemistry_gain ?? metadata.chemistry_gained);
+  const xp = getNumber(metadata.xp_earned ?? metadata.xp_gained);
+  const morale = getNumber(metadata.morale_gain ?? metadata.morale_gained);
+  const duration = getNumber(metadata.duration_hours);
+  const songs = getNumber(metadata.songs_improved ?? metadata.song_count);
+  const topSong = getString(metadata.top_song ?? metadata.strongest_song);
+  const stage = getString(metadata.best_rehearsal_stage ?? metadata.rehearsal_stage);
+
+  const details: string[] = [];
+  if (xp !== null && xp !== 0) details.push(`${signed(xp)} XP each`);
+  if (chemistry !== null && chemistry !== 0) details.push(`${signed(chemistry)} chemistry`);
+  if (morale !== null && morale !== 0) details.push(`${signed(morale)} morale`);
+  if (songs !== null && songs > 0) details.push(`${songs} song${songs === 1 ? "" : "s"} improved`);
+
+  const durationText = duration !== null && duration > 0 ? ` after ${duration} hour${duration === 1 ? "" : "s"}` : "";
+  const resultText = details.length > 0 ? ` Outcome: ${details.join(", ")}.` : "";
+  const songText = topSong ? ` Strongest progress: ${topSong}${stage ? ` (${toTitleCase(stage)})` : ""}.` : "";
+  return `Your band rehearsal is complete${durationText}.${resultText}${songText}`;
 }
 
 export function getNotificationRoute(notification: PersistedNotification): string | null {
@@ -141,15 +177,10 @@ export function getNotificationRoute(notification: PersistedNotification): strin
   if (notification.type === "band_request" && bandId) {
     return hasApplication ? `/bands/${bandId}` : hasInvitation ? "/band-manager" : `/bands/${bandId}`;
   }
-
-  if (notification.action_path?.includes("?tab=applications") && bandId) {
-    return `/bands/${bandId}`;
-  }
-
-  if ((notification.type === "pr_outcome" || notification.category === "pr") && !notification.action_path) {
-    return "/pr";
-  }
-
+  if (notification.action_path?.includes("?tab=applications") && bandId) return `/bands/${bandId}`;
+  if ((notification.type === "pr_outcome" || notification.category === "pr") && !notification.action_path) return "/pr";
+  if ((notification.type === "practice_outcome" || notification.category === "practice") && !notification.action_path) return "/skills";
+  if ((notification.type === "rehearsal_outcome" || notification.category === "rehearsal") && !notification.action_path) return "/rehearsals";
   return notification.action_path;
 }
 
@@ -163,11 +194,11 @@ export function normalizeNotification(notification: PersistedNotification): Disp
   const recruitmentMeta = recruitmentStatus ? getRecruitmentStatusMeta(recruitmentStatus) : null;
   const isRecruitment = notification.type === "band_request" || Boolean(recruitmentStatus);
   const routePath = getNotificationRoute(notification);
-  const prOutcomeBody = buildPrOutcomeBody(notification);
+  const outcomeBody = buildPrOutcomeBody(notification) ?? buildPracticeOutcomeBody(notification) ?? buildRehearsalOutcomeBody(notification);
 
   return {
     ...notification,
-    body: prOutcomeBody ?? (notification.message?.trim() || "Open this update for more details."),
+    body: outcomeBody ?? (notification.message?.trim() || "Open this update for more details."),
     categoryLabel: CATEGORY_LABELS[notification.category] ?? toTitleCase(notification.category || "notification"),
     priority,
     isRead: !!notification.read_at,
