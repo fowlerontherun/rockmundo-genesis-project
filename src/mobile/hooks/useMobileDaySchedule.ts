@@ -43,7 +43,7 @@ export function activityOverlapsWindow(
 }
 
 function statusFor(value: unknown): ScheduledActivity["status"] {
-  if (value === "active") return "in_progress";
+  if (value === "active" || value === "in_progress") return "in_progress";
   if (value === "completed") return "completed";
   if (value === "cancelled") return "cancelled";
   if (value === "missed") return "missed";
@@ -52,6 +52,20 @@ function statusFor(value: unknown): ScheduledActivity["status"] {
 
 function sourceWarningMessage(source: MobileScheduleSource): MobileScheduleSource {
   return source;
+}
+
+function dedupeKey(activity: ScheduledActivity): string {
+  if (activity.linked_gig_id) return `gig:${activity.linked_gig_id}`;
+  if (activity.linked_rehearsal_id) return `rehearsal:${activity.linked_rehearsal_id}`;
+  if (activity.linked_recording_id) return `recording:${activity.linked_recording_id}`;
+  if (activity.linked_job_shift_id) return `work:${activity.linked_job_shift_id}`;
+  if (activity.activity_type === "release_manufacturing" && activity.metadata?.release_id) {
+    return `release:${activity.metadata.release_id}`;
+  }
+  if (activity.activity_type === "travel" && activity.metadata?.tour_travel_leg_id) {
+    return `tour-travel:${activity.metadata.tour_travel_leg_id}`;
+  }
+  return `${activity.activity_type}:${activity.id}`;
 }
 
 export function useMobileDaySchedule(
@@ -214,18 +228,21 @@ export function useMobileDaySchedule(
       }
 
       const externalActivities: ScheduledActivity[] = [
-        ...workRows.map((shift): ScheduledActivity => ({
-          id: `work_${shift.id}`,
-          user_id: userId,
-          profile_id: profileId,
-          activity_type: "work",
-          scheduled_start: shift.started_at,
-          scheduled_end: shift.ends_at,
-          status: statusFor(shift.status),
-          title: `Work: ${shift.metadata?.job_title || "Job"}`,
-          description: shift.metadata?.company_name ? `Working at ${shift.metadata.company_name}` : undefined,
-          metadata: { ...shift.metadata, auto_scheduled: true, from_activity_status: true },
-        })),
+        ...workRows
+          .filter((shift) => !["cancelled", "missed"].includes(String(shift.status ?? "").toLowerCase()))
+          .map((shift): ScheduledActivity => ({
+            id: `work_${shift.id}`,
+            user_id: userId,
+            profile_id: profileId,
+            activity_type: "work",
+            scheduled_start: shift.started_at,
+            scheduled_end: shift.ends_at,
+            status: statusFor(shift.status),
+            title: `Work: ${shift.metadata?.job_title || "Job"}`,
+            description: shift.metadata?.company_name ? `Working at ${shift.metadata.company_name}` : undefined,
+            linked_job_shift_id: shift.metadata?.shift_history_id ?? null,
+            metadata: { ...shift.metadata, auto_scheduled: true, from_activity_status: true, activity_status_id: shift.id },
+          })),
         ...gigs.map((gig): ScheduledActivity => {
           const starts = new Date(gig.scheduled_date);
           const ends = new Date(starts.getTime() + (4 * 60 * 60 * 1000));
@@ -279,7 +296,7 @@ export function useMobileDaySchedule(
             status: statusFor(leg.status),
             title: `Tour Travel: ${leg.from_city?.name ?? "Departure"} → ${leg.to_city?.name ?? "Destination"}`,
             location: leg.travel_mode,
-            metadata: { tour_travel_leg: true, tour_name: leg.tours?.name },
+            metadata: { tour_travel_leg: true, tour_travel_leg_id: leg.id, tour_name: leg.tours?.name },
           })),
         ...releaseRows.map((release): ScheduledActivity => {
           const starts = new Date(release.manufacturing_complete_at);
@@ -304,15 +321,9 @@ export function useMobileDaySchedule(
       const deduped = withoutDuplicateBandScheduleActivities(allActivities);
       const seen = new Set<string>();
       const unique = deduped.filter((activity) => {
-        const linkedKey = activity.linked_gig_id
-          ? `gig:${activity.linked_gig_id}`
-          : activity.linked_rehearsal_id
-            ? `rehearsal:${activity.linked_rehearsal_id}`
-            : activity.linked_recording_id
-              ? `recording:${activity.linked_recording_id}`
-              : `${activity.activity_type}:${activity.id}`;
-        if (seen.has(linkedKey)) return false;
-        seen.add(linkedKey);
+        const key = dedupeKey(activity);
+        if (seen.has(key)) return false;
+        seen.add(key);
         return true;
       });
 
