@@ -19,7 +19,7 @@ import { useUnreadInboxCount } from "@/hooks/useInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
-  History, ShoppingBag,
+  History, ShoppingBag, Newspaper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -45,6 +45,7 @@ const Navigation = () => {
     { icon: Briefcase, labelKey: "nav.careerBusiness", path: "/hub/career-business" },
     { icon: ShoppingBag, labelKey: "nav.market", path: "/song-market" },
     { icon: Music, labelKey: "nav.music", path: "/hub/music" },
+    { icon: Newspaper, labelKey: "nav.media", path: "/hub/media" },
     { icon: Users, labelKey: "nav.bandLive", path: "/hub/band-live" },
     { icon: Globe, labelKey: "nav.worldSocial", path: "/hub/world-social" },
   ];
