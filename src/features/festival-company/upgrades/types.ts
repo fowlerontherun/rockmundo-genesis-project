@@ -169,7 +169,9 @@ export const FESTIVAL_UPGRADE_MESSAGES: Record<string, string> = {
   FESTIVAL_UPGRADE_DELINQUENT:
     "Settle overdue upgrade upkeep before purchasing.",
   FESTIVAL_UPGRADE_ROLLING_LIMIT_REACHED:
-    "Two upgrades have already been purchased in the rolling 30-day window.",
+    "This Festival company has used all upgrade purchases in its rolling window.",
+  FESTIVAL_UPGRADE_WINDOW_EXHAUSTED:
+    "This Festival company has used all upgrade purchases in its rolling window.",
   FESTIVAL_UPGRADE_COMPLETE: "This category is at its maximum level.",
   FESTIVAL_UPGRADE_IDEMPOTENCY_CONFLICT:
     "This request key was already used for another purchase.",
