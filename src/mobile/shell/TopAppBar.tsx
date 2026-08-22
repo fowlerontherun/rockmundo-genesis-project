@@ -3,6 +3,7 @@ import { Bell, MessageSquare, Search } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useGameData } from "@/hooks/useGameData";
 import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
+import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 
 const DETAIL_TITLES: Record<string, string> = {
   "/mobile/career/band": "Band",
@@ -72,7 +73,7 @@ export const TopAppBar = () => {
       className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border"
       style={{ paddingTop: "var(--m-safe-t)" }}
     >
-      <div className="flex items-center gap-3 px-3" style={{ height: "var(--m-appbar-h)" }}>
+      <div className="flex items-center gap-1.5 px-3" style={{ height: "var(--m-appbar-h)" }}>
         <button
           onClick={() => navigate("/mobile/me")}
           className="rm-tap flex items-center gap-2 min-w-0"
@@ -87,6 +88,7 @@ export const TopAppBar = () => {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-none">RockMundo</div>
           <div className="font-bold text-[16px] leading-tight truncate">{title}</div>
         </div>
+        <RMRadioButton className="rm-tap h-10 w-10 shrink-0 rounded-full p-0 hover:bg-muted" />
         <button
           onClick={() => navigate("/mobile/world/travel")}
           className="rm-tap h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"
