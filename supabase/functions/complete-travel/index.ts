@@ -6,7 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Travel hazard rates by transport type
 const TRANSPORT_HAZARD_RATES: Record<string, number> = {
   bus: 0.04,
   train: 0.02,
@@ -40,7 +39,6 @@ serve(async (req) => {
 
     console.log("[complete-travel] Starting travel completion check...");
 
-    // Find all in-progress travels that have arrived
     const { data: completedTravels, error: fetchError } = await supabase
       .from("player_travel_history")
       .select(`
@@ -69,18 +67,8 @@ serve(async (req) => {
 
     for (const travel of completedTravels || []) {
       try {
-        // Update travel status to completed
-        const { error: travelError } = await supabase
-          .from("player_travel_history")
-          .update({ status: "completed" })
-          .eq("id", travel.id);
-
-        if (travelError) {
-          console.error(`[complete-travel] Error updating travel ${travel.id}:`, travelError);
-          continue;
-        }
-
-        // Update player's current character when profile_id exists; fall back for legacy rows.
+        // Move/clear the character first. If this fails, leave history in_progress so
+        // the next reconciliation run can safely retry instead of stranding the player.
         let profileUpdate = supabase
           .from("profiles")
           .update({
@@ -94,18 +82,49 @@ serve(async (req) => {
           : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
 
         const { error: profileError } = await profileUpdate;
-
         if (profileError) {
           console.error(`[complete-travel] Error updating profile for user ${travel.user_id}:`, profileError);
           continue;
         }
 
-        // Log activity
+        // Atomically claim completion. Concurrent invocations can update the profile
+        // idempotently, but only one may emit outcomes/hazards for the travel.
+        const { data: completedRow, error: travelError } = await supabase
+          .from("player_travel_history")
+          .update({ status: "completed" })
+          .eq("id", travel.id)
+          .eq("status", "in_progress")
+          .select("id")
+          .maybeSingle();
+
+        if (travelError) {
+          console.error(`[complete-travel] Error updating travel ${travel.id}:`, travelError);
+          continue;
+        }
+        if (!completedRow) {
+          console.log(`[complete-travel] Travel ${travel.id} was already reconciled`);
+          continue;
+        }
+
+        let scheduleUpdate = supabase
+          .from("player_scheduled_activities")
+          .update({ status: "completed" })
+          .contains("metadata", { travel_history_id: travel.id })
+          .in("status", ["scheduled", "in_progress"]);
+        scheduleUpdate = travel.profile_id
+          ? scheduleUpdate.eq("profile_id", travel.profile_id)
+          : scheduleUpdate.eq("user_id", travel.user_id);
+        const { error: scheduleError } = await scheduleUpdate;
+        if (scheduleError) {
+          console.warn(`[complete-travel] Could not complete schedule row for ${travel.id}:`, scheduleError);
+        }
+
         const toCityName = (travel.to_city as any)?.name || "destination";
         const fromCityName = (travel.from_city as any)?.name || "origin";
 
         await supabase.from("activity_feed").insert({
           user_id: travel.user_id,
+          profile_id: travel.profile_id ?? null,
           activity_type: "travel_complete",
           message: `Arrived in ${toCityName} from ${fromCityName}`,
           metadata: {
@@ -115,17 +134,14 @@ serve(async (req) => {
           },
         });
 
-        // === TRAVEL HAZARD ROLL ===
         const transportType = travel.transport_type || "plane";
         const durationHours = travel.travel_duration_hours || 4;
         let hazardChance = TRANSPORT_HAZARD_RATES[transportType] || 0.02;
-        // Scale hazard by duration (long journeys = slightly higher risk)
         if (durationHours > 12) hazardChance += 0.02;
         else if (durationHours > 6) hazardChance += 0.01;
 
         const hazardRoll = Math.random();
         if (hazardRoll < hazardChance) {
-          // Trigger a travel hazard condition
           const conditionDef = TRAVEL_CONDITIONS[Math.floor(Math.random() * TRAVEL_CONDITIONS.length)];
           const severityVariance = 0.8 + Math.random() * 0.4;
           const severity = Math.max(10, Math.min(100, Math.round(conditionDef.severity * severityVariance)));
@@ -143,7 +159,6 @@ serve(async (req) => {
             });
 
           if (!conditionError) {
-            // Send inbox notification
             const conditionLabel = conditionDef.name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
             await supabase.from("player_inbox").insert({
               user_id: travel.user_id,
@@ -157,7 +172,6 @@ serve(async (req) => {
 
             console.log(`[complete-travel] Travel hazard triggered for user ${travel.user_id}: ${conditionDef.name} (severity ${severity})`);
 
-            // === TRAVEL HAZARD → MORALE (v1.0.966) ===
             try {
               const { data: bm } = await supabase.from('band_members').select('band_id').eq('user_id', travel.user_id).eq('is_touring_member', false).limit(1).maybeSingle();
               if (bm?.band_id) {
@@ -187,7 +201,6 @@ serve(async (req) => {
       }
     }
 
-    // Also check for scheduled travels that should start
     const { data: scheduledTravels, error: scheduledError } = await supabase
       .from("player_travel_history")
       .select("id, user_id, profile_id, departure_time, arrival_time, scheduled_departure_time")
@@ -196,30 +209,53 @@ serve(async (req) => {
 
     if (!scheduledError && scheduledTravels) {
       for (const travel of scheduledTravels) {
-        const { error } = await supabase
+        // Write profile travelling state first so a transient failure leaves the
+        // history row scheduled and therefore retryable on the next run.
+        let profileUpdate = supabase
+          .from("profiles")
+          .update({
+            is_traveling: true,
+            travel_arrives_at: travel.arrival_time,
+          });
+
+        profileUpdate = travel.profile_id
+          ? profileUpdate.eq("id", travel.profile_id)
+          : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
+
+        const { error: profileError } = await profileUpdate;
+        if (profileError) {
+          console.error(`[complete-travel] Could not mark profile travelling for ${travel.id}:`, profileError);
+          continue;
+        }
+
+        const { data: startedRow, error } = await supabase
           .from("player_travel_history")
           .update({
             status: "in_progress",
             departure_time: travel.scheduled_departure_time,
           })
-          .eq("id", travel.id);
+          .eq("id", travel.id)
+          .eq("status", "scheduled")
+          .select("id")
+          .maybeSingle();
 
-        if (!error) {
-          // Update profile to traveling; profile_id is preferred, user_id is legacy fallback.
-          let profileUpdate = supabase
-            .from("profiles")
-            .update({
-              is_traveling: true,
-              travel_arrives_at: travel.arrival_time,
-            });
-
-          profileUpdate = travel.profile_id
-            ? profileUpdate.eq("id", travel.profile_id)
-            : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
-
-          await profileUpdate;
+        if (!error && startedRow) {
+          let scheduleUpdate = supabase
+            .from("player_scheduled_activities")
+            .update({ status: "in_progress" })
+            .contains("metadata", { travel_history_id: travel.id })
+            .eq("status", "scheduled");
+          scheduleUpdate = travel.profile_id
+            ? scheduleUpdate.eq("profile_id", travel.profile_id)
+            : scheduleUpdate.eq("user_id", travel.user_id);
+          const { error: scheduleError } = await scheduleUpdate;
+          if (scheduleError) {
+            console.warn(`[complete-travel] Could not start schedule row for ${travel.id}:`, scheduleError);
+          }
 
           console.log(`[complete-travel] Started scheduled travel ${travel.id}`);
+        } else if (error) {
+          console.error(`[complete-travel] Could not start scheduled travel ${travel.id}:`, error);
         }
       }
     }
