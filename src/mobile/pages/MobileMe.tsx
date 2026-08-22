@@ -4,8 +4,8 @@ import { Activity, Heart, Monitor, Moon, ShieldCheck, User, Zap } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useScheduledActivities } from "@/hooks/useScheduledActivities";
 import { useWellnessState } from "@/hooks/useWellnessState";
+import { useMobileDaySchedule } from "@/mobile/hooks/useMobileDaySchedule";
 import { StatCard } from "../components/StatCard";
 import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge } from "../components/MobilePrimitives";
 
@@ -33,10 +33,10 @@ function Overview() {
   const navigate = useNavigate();
   const { profile } = useGameData();
   const { userId, profileId } = useActiveProfile();
-  const today = useScheduledActivities(new Date(), userId ?? undefined);
+  const today = useMobileDaySchedule(new Date(), userId, profileId);
   const wellness = useWellnessState(profileId ?? null);
   const now = Date.now();
-  const current = (today.data ?? []).find((a) => {
+  const current = today.data.find((a) => {
     const start = new Date(a.scheduled_start).getTime();
     const end = new Date(a.scheduled_end).getTime();
     return start <= now && end > now && !["completed", "cancelled", "missed"].includes(a.status);
@@ -46,8 +46,8 @@ function Overview() {
 
   return <MobilePageShell>
     <MobileSectionHeader eyebrow="Me" title={name} description="Current status and lightweight personal actions." />
-    <MobileSectionCard title="Current status" action={<MobileStatusBadge tone={current ? "info" : "success"}>{current ? "Busy" : "Available"}</MobileStatusBadge>}>
-      {today.isLoading ? <MobileLoadingSkeleton cards={1} /> : today.isError ? <MobileErrorState title="Status unavailable" message="Your current schedule could not be checked." onRetry={() => today.refetch()} /> : <MobileEntityCard title={current?.title ?? "No activity in progress"} subtitle={current ? `Until ${new Date(current.scheduled_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Ready for an ad hoc task or scheduled activity"} icon={<User className="h-5 w-5" />} />}
+    <MobileSectionCard title="Current status" action={<MobileStatusBadge tone={current ? "info" : today.coreScheduleAvailable ? "success" : "warning"}>{current ? "Busy" : today.coreScheduleAvailable ? "Available" : "Unknown"}</MobileStatusBadge>}>
+      {today.isLoading ? <MobileLoadingSkeleton cards={1} /> : today.isError ? <MobileErrorState title="Status unavailable" message="Your current schedule could not be checked." onRetry={() => today.refetch()} /> : !today.coreScheduleAvailable && !current ? <MobileErrorState title="Status uncertain" message="The core schedule is temporarily unavailable, so mobile cannot safely say that you are free." onRetry={() => today.refetch()} /> : <MobileEntityCard title={current?.title ?? "No activity in progress"} subtitle={current ? `Until ${new Date(current.scheduled_end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Ready for an ad hoc task or scheduled activity"} icon={<User className="h-5 w-5" />} />}
     </MobileSectionCard>
 
     {wellness.loading ? <MobileLoadingSkeleton cards={1} /> : wellness.error || !vitals ? <MobileSectionCard title="Vitals unavailable" subtitle="No placeholder values are shown when the server state cannot be loaded." action={<MobileStatusBadge tone="warning">Unavailable</MobileStatusBadge>} /> : <div className="grid grid-cols-3 gap-2">

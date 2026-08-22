@@ -5,6 +5,7 @@ const source = readFileSync("src/mobile/pages/MobileMe.tsx", "utf8");
 const home = readFileSync("src/mobile/pages/MobileHome.tsx", "utf8");
 const wellness = readFileSync("src/hooks/useWellnessState.ts", "utf8");
 const mobileLayout = readFileSync("src/mobile/shell/MobileLayout.tsx", "utf8");
+const activityBar = readFileSync("src/mobile/shell/MobileActivityBar.tsx", "utf8");
 const app = readFileSync("src/App.tsx", "utf8");
 
 describe("mobile Me companion contract", () => {
@@ -14,8 +15,10 @@ describe("mobile Me companion contract", () => {
     for (const section of ["inventory", "wardrobe", "skills", "education", "achievements", "settings"]) expect(source).toContain(section);
   });
 
-  it("uses authoritative schedule and wellness state instead of fake mobile defaults", () => {
-    expect(source).toContain("useScheduledActivities");
+  it("uses one authoritative mobile day schedule and wellness state instead of fake defaults", () => {
+    expect(source).toContain("useMobileDaySchedule");
+    expect(home).toContain("useMobileDaySchedule");
+    expect(activityBar).toContain("useMobileDaySchedule");
     expect(source).toContain("useWellnessState");
     expect(source).not.toContain("80);");
     expect(source).not.toContain("70);");
@@ -23,6 +26,12 @@ describe("mobile Me companion contract", () => {
     expect(home).toContain("useWellnessState");
     expect(home).toContain("resolveCompanionPath");
     expect(home).toContain("No placeholder values are shown");
+  });
+
+  it("does not claim the character is available when the core day schedule is unavailable", () => {
+    expect(source).toContain("coreScheduleAvailable");
+    expect(source).toContain("Status uncertain");
+    expect(source).toContain("mobile cannot safely say that you are free");
   });
 
   it("keeps truthful core vitals visible when optional wellness datasets fail", () => {

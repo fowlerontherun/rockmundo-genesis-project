@@ -24,11 +24,19 @@ export interface PracticeRestrictions {
   hasSnookerConflict: boolean;
 }
 
+/**
+ * The server applies the practice cap to the UTC date of scheduled_start.
+ * Derive the client preflight from the same instant rather than rebuilding a
+ * UTC date from local calendar components (which is wrong around BST/DST midnight).
+ */
+export function practiceUtcDayKey(scheduledDate: Date): string {
+  return scheduledDate.toISOString().slice(0, 10);
+}
+
 export function useSkillPracticeRestrictions(profileId?: string, scheduledDate = new Date()) {
-  const dayStart = new Date(Date.UTC(
-    scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate(),
-  ));
-  const dateKey = dayStart.toISOString().slice(0, 10);
+  const dateKey = practiceUtcDayKey(scheduledDate);
+  const dayStart = new Date(`${dateKey}T00:00:00.000Z`);
+
   return useQuery({
     queryKey: ['skill-practice-restrictions', profileId, dateKey],
     queryFn: async (): Promise<PracticeRestrictions> => {
@@ -40,10 +48,11 @@ export function useSkillPracticeRestrictions(profileId?: string, scheduledDate =
       dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
       const nextResetAt = dayEnd.toISOString();
 
-      // Get today's scheduled activities using server-derived UTC day boundaries.
+      // Mirror schedule_skill_practice(): count practice by the UTC date of the
+      // selected start instant so the badge and server cannot disagree at DST boundaries.
       const { data: activities, error } = await supabase
         .from('player_scheduled_activities')
-        .select('*')
+        .select('activity_type, metadata, scheduled_start, status')
         .eq('profile_id', profileId)
         .gte('scheduled_start', dayStart.toISOString())
         .lt('scheduled_start', dayEnd.toISOString())
@@ -51,11 +60,10 @@ export function useSkillPracticeRestrictions(profileId?: string, scheduledDate =
 
       if (error) throw error;
 
-      // Count skill practice sessions today
       const todaysPracticeCount = activities?.filter(
-        activity => activity.activity_type === 'skill_practice' || 
-        (activity.activity_type === 'other' && 
-         typeof activity.metadata === 'object' && 
+        activity => activity.activity_type === 'skill_practice' ||
+        (activity.activity_type === 'other' &&
+         typeof activity.metadata === 'object' &&
          activity.metadata !== null &&
          'isPractice' in activity.metadata &&
          activity.metadata.isPractice === true)
@@ -84,7 +92,7 @@ export function useSkillPracticeRestrictions(profileId?: string, scheduledDate =
       };
     },
     enabled: !!profileId,
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 1000 * 30,
   });
 }
 
@@ -123,6 +131,7 @@ export function usePracticeSkill() {
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
       queryClient.invalidateQueries({ queryKey: ['week-scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['mobile-day-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['skill-practice-restrictions'] });
 
       const remaining = result?.sessions_remaining;
@@ -155,4 +164,3 @@ export function toPracticeBookingMessage(message = ''): string {
   }
   return 'The server could not schedule this practice. Please try again.';
 }
-
