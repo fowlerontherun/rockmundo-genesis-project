@@ -203,3 +203,6 @@ verify_jwt = false
 
 [functions.check-character-health-decay]
 verify_jwt = false
+
+[functions.busking-session]
+verify_jwt = true
