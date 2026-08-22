@@ -8,17 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpCircle,
+  ArrowDownCircle,
   ArrowLeftRight,
   AlertTriangle,
-  Clock,
-  CheckCircle,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -43,6 +41,7 @@ interface CompanyFinanceDialogProps {
 }
 
 const MINIMUM_BALANCE = 10_000;
+const OUTGOING_TRANSACTION_TYPES = new Set(["expense", "salary", "dividend", "transfer_out"]);
 
 export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyName }: CompanyFinanceDialogProps) {
   const [depositAmount, setDepositAmount] = useState("");
@@ -54,12 +53,11 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
   const { data: companyData, isLoading: loadingCompany } = useCompanyBalance(companyId);
   const { data: profileData } = useUserCashBalance();
   const { data: transactions = [] } = useCompanyTransactions(companyId);
-  
+
   const depositMutation = useDepositToCompany();
   const withdrawMutation = useWithdrawFromCompany();
   const transferMutation = useTransferBetweenCompanies();
 
-  // Fetch all companies owned by the user (for transfer tab)
   const { data: ownedCompanies = [] } = useQuery({
     queryKey: ["owned-companies-for-transfer", userId, companyId],
     queryFn: async () => {
@@ -77,13 +75,13 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
 
   const balance = Number(companyData?.balance ?? 0);
   const personalBalance = Number(profileData?.cash ?? 0);
-  const selectedTarget = ownedCompanies.find(c => c.id === targetCompanyId);
-  const maxTransfer = Math.max(0, balance - 10_000);
+  const selectedTarget = ownedCompanies.find((company) => company.id === targetCompanyId);
+  const maxTransfer = Math.max(0, balance - MINIMUM_BALANCE);
   const isNegative = balance < 0;
   const isBankrupt = companyData?.is_bankrupt ?? false;
   const weeklyCosts = Number(companyData?.weekly_operating_costs ?? 0);
 
-  const daysUntilBankruptcy = companyData?.negative_balance_since 
+  const daysUntilBankruptcy = companyData?.negative_balance_since
     ? Math.max(0, 7 - Math.floor((Date.now() - new Date(companyData.negative_balance_since).getTime()) / (1000 * 60 * 60 * 24)))
     : null;
 
@@ -99,49 +97,38 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
 
   const handleDeposit = async () => {
     const amount = Number(depositAmount);
-    if (!amount || amount <= 0) return;
-    if (!profileData?.id) return;
-
-    await depositMutation.mutateAsync({ 
-      companyId, 
-      amount, 
-      profileId: profileData.id 
-    });
+    if (!amount || amount <= 0 || !profileData?.id) return;
+    await depositMutation.mutateAsync({ companyId, amount, profileId: profileData.id });
     setDepositAmount("");
   };
 
   const handleWithdraw = async () => {
     const amount = Number(withdrawAmount);
-    if (!amount || amount <= 0) return;
-    if (!profileData?.id) return;
-
-    await withdrawMutation.mutateAsync({ 
-      companyId, 
-      amount, 
-      profileId: profileData.id 
-    });
+    if (!amount || amount <= 0 || !profileData?.id) return;
+    await withdrawMutation.mutateAsync({ companyId, amount, profileId: profileData.id });
     setWithdrawAmount("");
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
-  };
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
-      case 'investment':
+      case "investment":
+      case "transfer_in":
         return <ArrowUpCircle className="h-4 w-4 text-emerald-500" />;
-      case 'dividend':
+      case "dividend":
+      case "transfer_out":
         return <ArrowDownCircle className="h-4 w-4 text-amber-500" />;
-      case 'income':
+      case "income":
         return <TrendingUp className="h-4 w-4 text-emerald-500" />;
-      case 'expense':
-      case 'salary':
+      case "expense":
+      case "salary":
         return <TrendingDown className="h-4 w-4 text-red-500" />;
       default:
         return <DollarSign className="h-4 w-4 text-muted-foreground" />;
@@ -158,9 +145,7 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
             <DollarSign className="h-5 w-5" />
             {companyName} - Finances
           </DialogTitle>
-          <DialogDescription>
-            Manage company funds, view transactions, and monitor financial health
-          </DialogDescription>
+          <DialogDescription>Manage company funds, view transactions, and monitor financial health</DialogDescription>
         </DialogHeader>
 
         {loadingCompany ? (
@@ -177,8 +162,7 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
-              {/* Balance Card */}
-              <Card className={cn("border-2", health.bg, `border-${health.color.replace('text-', '')}`)}>
+              <Card className={cn("border-2", health.bg, `border-${health.color.replace("text-", "")}`)}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Company Balance</CardTitle>
@@ -186,40 +170,30 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className={cn("text-3xl font-bold", health.color)}>
-                    {formatCurrency(balance)}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Weekly costs: {formatCurrency(weeklyCosts)}
-                  </p>
-                  
+                  <p className={cn("text-3xl font-bold", health.color)}>{formatCurrency(balance)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Weekly costs: {formatCurrency(weeklyCosts)}</p>
                   {daysUntilBankruptcy !== null && daysUntilBankruptcy <= 7 && (
                     <Alert variant="destructive" className="mt-3">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        {daysUntilBankruptcy === 0 
+                        {daysUntilBankruptcy === 0
                           ? "Company is bankrupt! Inject funds immediately."
-                          : `${daysUntilBankruptcy} days until bankruptcy if balance remains negative.`
-                        }
+                          : `${daysUntilBankruptcy} days until bankruptcy if balance remains negative.`}
                       </AlertDescription>
                     </Alert>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Personal Balance */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">Your Personal Cash</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xl font-bold text-emerald-500">
-                    {formatCurrency(personalBalance)}
-                  </p>
+                  <p className="text-xl font-bold text-emerald-500">{formatCurrency(personalBalance)}</p>
                 </CardContent>
               </Card>
 
-              {/* Recent Transactions */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Recent Transactions</CardTitle>
@@ -227,35 +201,29 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
                 <CardContent>
                   <ScrollArea className="h-[200px]">
                     {transactions.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        No transactions yet
-                      </p>
+                      <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
                     ) : (
                       <div className="space-y-2">
-                        {transactions.map((tx) => (
-                          <div 
-                            key={tx.id} 
-                            className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                          >
-                            <div className="flex items-center gap-3">
-                              {getTransactionIcon(tx.transaction_type)}
-                              <div>
-                                <p className="text-sm font-medium capitalize">
-                                  {tx.transaction_type.replace('_', ' ')}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {tx.description || format(new Date(tx.created_at), "MMM d, yyyy")}
-                                </p>
+                        {transactions.map((tx) => {
+                          const outgoing = OUTGOING_TRANSACTION_TYPES.has(tx.transaction_type);
+                          const displayAmount = Math.abs(Number(tx.amount));
+                          return (
+                            <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                              <div className="flex items-center gap-3">
+                                {getTransactionIcon(tx.transaction_type)}
+                                <div>
+                                  <p className="text-sm font-medium capitalize">{tx.transaction_type.replace("_", " ")}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {tx.description || format(new Date(tx.created_at), "MMM d, yyyy")}
+                                  </p>
+                                </div>
                               </div>
+                              <p className={cn("text-sm font-medium", outgoing ? "text-red-500" : "text-emerald-500")}>
+                                {outgoing ? "-" : "+"}{formatCurrency(displayAmount)}
+                              </p>
                             </div>
-                            <p className={cn(
-                              "text-sm font-medium",
-                              tx.amount >= 0 ? "text-emerald-500" : "text-red-500"
-                            )}>
-                              {tx.amount >= 0 ? "+" : ""}{formatCurrency(tx.amount)}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </ScrollArea>
@@ -267,66 +235,29 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
               <Card>
                 <CardHeader>
                   <CardTitle>Deposit Funds</CardTitle>
-                  <CardDescription>
-                    Transfer money from your personal cash to the company
-                  </CardDescription>
+                  <CardDescription>Transfer money from your personal cash to the company</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <span className="text-sm">Your Cash:</span>
                     <span className="font-medium">{formatCurrency(personalBalance)}</span>
                   </div>
-                  
                   <div className="space-y-2">
                     <Label htmlFor="deposit">Amount to Deposit</Label>
                     <div className="flex gap-2">
-                      <Input
-                        id="deposit"
-                        type="number"
-                        placeholder="Enter amount..."
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                        min={0}
-                        max={personalBalance}
-                      />
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setDepositAmount(String(personalBalance))}
-                      >
-                        Max
-                      </Button>
+                      <Input id="deposit" type="number" placeholder="Enter amount..." value={depositAmount} onChange={(event) => setDepositAmount(event.target.value)} min={0} max={personalBalance} />
+                      <Button variant="outline" onClick={() => setDepositAmount(String(personalBalance))}>Max</Button>
                     </div>
                   </div>
-
                   <div className="flex gap-2">
                     {[10000, 50000, 100000].map((amount) => (
-                      <Button
-                        key={amount}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDepositAmount(String(Math.min(amount, personalBalance)))}
-                        disabled={personalBalance < amount}
-                      >
+                      <Button key={amount} variant="outline" size="sm" onClick={() => setDepositAmount(String(Math.min(amount, personalBalance)))} disabled={personalBalance < amount}>
                         +{formatCurrency(amount)}
                       </Button>
                     ))}
                   </div>
-
-                  <Button 
-                    className="w-full" 
-                    onClick={handleDeposit}
-                    disabled={
-                      depositMutation.isPending || 
-                      !depositAmount || 
-                      Number(depositAmount) <= 0 ||
-                      Number(depositAmount) > personalBalance
-                    }
-                  >
-                    {depositMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <ArrowUpCircle className="h-4 w-4 mr-2" />
-                    )}
+                  <Button className="w-full" onClick={handleDeposit} disabled={depositMutation.isPending || !depositAmount || Number(depositAmount) <= 0 || Number(depositAmount) > personalBalance}>
+                    {depositMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowUpCircle className="h-4 w-4 mr-2" />}
                     Deposit {depositAmount ? formatCurrency(Number(depositAmount)) : ""}
                   </Button>
                 </CardContent>
@@ -337,69 +268,34 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
               <Card>
                 <CardHeader>
                   <CardTitle>Withdraw Funds</CardTitle>
-                  <CardDescription>
-                    Transfer money from the company to your personal cash
-                  </CardDescription>
+                  <CardDescription>Transfer money from the company to your personal cash</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <span className="text-sm">Company Balance:</span>
-                    <span className={cn("font-medium", isNegative && "text-destructive")}>
-                      {formatCurrency(balance)}
-                    </span>
+                    <span className={cn("font-medium", isNegative && "text-destructive")}>{formatCurrency(balance)}</span>
                   </div>
-                  
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                      Minimum balance of {formatCurrency(MINIMUM_BALANCE)} must remain.
-                      Max withdrawal: {formatCurrency(maxWithdraw)}
+                      Minimum balance of {formatCurrency(MINIMUM_BALANCE)} must remain. Max withdrawal: {formatCurrency(maxWithdraw)}
                     </AlertDescription>
                   </Alert>
-
                   <div className="space-y-2">
                     <Label htmlFor="withdraw">Amount to Withdraw</Label>
                     <div className="flex gap-2">
-                      <Input
-                        id="withdraw"
-                        type="number"
-                        placeholder="Enter amount..."
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                        min={0}
-                        max={maxWithdraw}
-                      />
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setWithdrawAmount(String(maxWithdraw))}
-                        disabled={maxWithdraw <= 0}
-                      >
-                        Max
-                      </Button>
+                      <Input id="withdraw" type="number" placeholder="Enter amount..." value={withdrawAmount} onChange={(event) => setWithdrawAmount(event.target.value)} min={0} max={maxWithdraw} />
+                      <Button variant="outline" onClick={() => setWithdrawAmount(String(maxWithdraw))} disabled={maxWithdraw <= 0}>Max</Button>
                     </div>
                   </div>
-
-                  <Button 
-                    className="w-full" 
-                    variant="secondary"
-                    onClick={handleWithdraw}
-                    disabled={
-                      withdrawMutation.isPending || 
-                      !withdrawAmount || 
-                      Number(withdrawAmount) <= 0 ||
-                      Number(withdrawAmount) > maxWithdraw
-                    }
-                  >
-                    {withdrawMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <ArrowDownCircle className="h-4 w-4 mr-2" />
-                    )}
+                  <Button className="w-full" variant="secondary" onClick={handleWithdraw} disabled={withdrawMutation.isPending || !withdrawAmount || Number(withdrawAmount) <= 0 || Number(withdrawAmount) > maxWithdraw}>
+                    {withdrawMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowDownCircle className="h-4 w-4 mr-2" />}
                     Withdraw {withdrawAmount ? formatCurrency(Number(withdrawAmount)) : ""}
                   </Button>
                 </CardContent>
               </Card>
             </TabsContent>
+
             <TabsContent value="transfer" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -407,9 +303,7 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
                     <ArrowLeftRight className="h-5 w-5" />
                     Transfer Between Companies
                   </CardTitle>
-                  <CardDescription>
-                    Move funds between your companies
-                  </CardDescription>
+                  <CardDescription>Move funds between your companies</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
@@ -420,22 +314,18 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
                   {ownedCompanies.length === 0 ? (
                     <Alert>
                       <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        You don't have any other companies to transfer funds to.
-                      </AlertDescription>
+                      <AlertDescription>You don't have any other companies to transfer funds to.</AlertDescription>
                     </Alert>
                   ) : (
                     <>
                       <div className="space-y-2">
                         <Label>Transfer To</Label>
                         <Select value={targetCompanyId} onValueChange={setTargetCompanyId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select destination company..." />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Select destination company..." /></SelectTrigger>
                           <SelectContent>
-                            {ownedCompanies.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.name} ({formatCurrency(Number(c.balance))})
+                            {ownedCompanies.map((company) => (
+                              <SelectItem key={company.id} value={company.id}>
+                                {company.name} ({formatCurrency(Number(company.balance))})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -445,34 +335,14 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
                       <div className="space-y-2">
                         <Label htmlFor="transfer">Amount</Label>
                         <div className="flex gap-2">
-                          <Input
-                            id="transfer"
-                            type="number"
-                            placeholder="Enter amount..."
-                            value={transferAmount}
-                            onChange={(e) => setTransferAmount(e.target.value)}
-                            min={0}
-                            max={maxTransfer}
-                          />
-                          <Button
-                            variant="outline"
-                            onClick={() => setTransferAmount(String(maxTransfer))}
-                            disabled={maxTransfer <= 0}
-                          >
-                            Max
-                          </Button>
+                          <Input id="transfer" type="number" placeholder="Enter amount..." value={transferAmount} onChange={(event) => setTransferAmount(event.target.value)} min={0} max={maxTransfer} />
+                          <Button variant="outline" onClick={() => setTransferAmount(String(maxTransfer))} disabled={maxTransfer <= 0}>Max</Button>
                         </div>
                       </div>
 
                       <div className="flex gap-2">
                         {[10000, 50000, 100000].map((amount) => (
-                          <Button
-                            key={amount}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setTransferAmount(String(Math.min(amount, maxTransfer)))}
-                            disabled={maxTransfer < amount}
-                          >
+                          <Button key={amount} variant="outline" size="sm" onClick={() => setTransferAmount(String(Math.min(amount, maxTransfer)))} disabled={maxTransfer < amount}>
                             {formatCurrency(amount)}
                           </Button>
                         ))}
@@ -481,31 +351,21 @@ export function CompanyFinanceDialog({ open, onOpenChange, companyId, companyNam
                       <Button
                         className="w-full"
                         onClick={async () => {
-                          const amt = Number(transferAmount);
-                          if (!amt || amt <= 0 || !targetCompanyId) return;
+                          const amount = Number(transferAmount);
+                          if (!amount || amount <= 0 || !targetCompanyId) return;
                           await transferMutation.mutateAsync({
                             fromCompanyId: companyId,
                             toCompanyId: targetCompanyId,
-                            amount: amt,
+                            amount,
                             fromName: companyName,
                             toName: selectedTarget?.name || "Company",
                           });
                           setTransferAmount("");
                           setTargetCompanyId("");
                         }}
-                        disabled={
-                          transferMutation.isPending ||
-                          !transferAmount ||
-                          Number(transferAmount) <= 0 ||
-                          Number(transferAmount) > maxTransfer ||
-                          !targetCompanyId
-                        }
+                        disabled={transferMutation.isPending || !transferAmount || Number(transferAmount) <= 0 || Number(transferAmount) > maxTransfer || !targetCompanyId}
                       >
-                        {transferMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <ArrowLeftRight className="h-4 w-4 mr-2" />
-                        )}
+                        {transferMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowLeftRight className="h-4 w-4 mr-2" />}
                         Transfer {transferAmount ? formatCurrency(Number(transferAmount)) : ""}
                       </Button>
                     </>
