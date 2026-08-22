@@ -67,6 +67,28 @@ serve(async (req) => {
 
     for (const travel of completedTravels || []) {
       try {
+        // Move/clear the character first. If this fails, leave history in_progress so
+        // the next reconciliation run can safely retry instead of stranding the player.
+        let profileUpdate = supabase
+          .from("profiles")
+          .update({
+            current_city_id: travel.to_city_id,
+            is_traveling: false,
+            travel_arrives_at: null,
+          });
+
+        profileUpdate = travel.profile_id
+          ? profileUpdate.eq("id", travel.profile_id)
+          : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
+
+        const { error: profileError } = await profileUpdate;
+        if (profileError) {
+          console.error(`[complete-travel] Error updating profile for user ${travel.user_id}:`, profileError);
+          continue;
+        }
+
+        // Atomically claim completion. Concurrent invocations can update the profile
+        // idempotently, but only one may emit outcomes/hazards for the travel.
         const { data: completedRow, error: travelError } = await supabase
           .from("player_travel_history")
           .update({ status: "completed" })
@@ -84,7 +106,6 @@ serve(async (req) => {
           continue;
         }
 
-        // Keep My Day/current activity aligned with the authoritative travel row.
         let scheduleUpdate = supabase
           .from("player_scheduled_activities")
           .update({ status: "completed" })
@@ -96,25 +117,6 @@ serve(async (req) => {
         const { error: scheduleError } = await scheduleUpdate;
         if (scheduleError) {
           console.warn(`[complete-travel] Could not complete schedule row for ${travel.id}:`, scheduleError);
-        }
-
-        let profileUpdate = supabase
-          .from("profiles")
-          .update({
-            current_city_id: travel.to_city_id,
-            is_traveling: false,
-            travel_arrives_at: null,
-          });
-
-        profileUpdate = travel.profile_id
-          ? profileUpdate.eq("id", travel.profile_id)
-          : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
-
-        const { error: profileError } = await profileUpdate;
-
-        if (profileError) {
-          console.error(`[complete-travel] Error updating profile for user ${travel.user_id}:`, profileError);
-          continue;
         }
 
         const toCityName = (travel.to_city as any)?.name || "destination";
@@ -207,6 +209,25 @@ serve(async (req) => {
 
     if (!scheduledError && scheduledTravels) {
       for (const travel of scheduledTravels) {
+        // Write profile travelling state first so a transient failure leaves the
+        // history row scheduled and therefore retryable on the next run.
+        let profileUpdate = supabase
+          .from("profiles")
+          .update({
+            is_traveling: true,
+            travel_arrives_at: travel.arrival_time,
+          });
+
+        profileUpdate = travel.profile_id
+          ? profileUpdate.eq("id", travel.profile_id)
+          : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
+
+        const { error: profileError } = await profileUpdate;
+        if (profileError) {
+          console.error(`[complete-travel] Could not mark profile travelling for ${travel.id}:`, profileError);
+          continue;
+        }
+
         const { data: startedRow, error } = await supabase
           .from("player_travel_history")
           .update({
@@ -219,19 +240,6 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!error && startedRow) {
-          let profileUpdate = supabase
-            .from("profiles")
-            .update({
-              is_traveling: true,
-              travel_arrives_at: travel.arrival_time,
-            });
-
-          profileUpdate = travel.profile_id
-            ? profileUpdate.eq("id", travel.profile_id)
-            : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
-
-          await profileUpdate;
-
           let scheduleUpdate = supabase
             .from("player_scheduled_activities")
             .update({ status: "in_progress" })
@@ -246,6 +254,8 @@ serve(async (req) => {
           }
 
           console.log(`[complete-travel] Started scheduled travel ${travel.id}`);
+        } else if (error) {
+          console.error(`[complete-travel] Could not start scheduled travel ${travel.id}:`, error);
         }
       }
     }
