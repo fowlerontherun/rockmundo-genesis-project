@@ -101,5 +101,6 @@
   "20291218245700_reconcile_festival_setup_authority.sql",
   "20291218245800_complete_simplified_festival_lineup.sql",
   "20291218245900_finish_simplified_festival_runtime.sql",
-  "20291218245910_harden_simplified_festival_ticket_readiness.sql"
+  "20291218245910_harden_simplified_festival_ticket_readiness.sql",
+  "20291218245920_normalize_simplified_festival_running_order.sql"
 ]
