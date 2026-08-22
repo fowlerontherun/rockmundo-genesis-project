@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
+import { FestivalLineupWorkflowManager } from "@/features/festival-company/ui/FestivalLineupWorkflowManager";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
 import { FestivalAnnualPlan } from "@/features/festivals/annual-plan/FestivalAnnualPlan";
 import {
@@ -287,10 +288,16 @@ export function FestivalEditionApplications({
         editionId={editionId}
         requireEditable
       >
-        <FestivalArtistPlanner
-          festivalCompanyId={festivalCompanyId}
-          festivalEditionId={editionId}
-        />
+        <div className="space-y-4">
+          <FestivalArtistPlanner
+            festivalCompanyId={festivalCompanyId}
+            festivalEditionId={editionId}
+          />
+          <FestivalLineupWorkflowManager
+            festivalCompanyId={festivalCompanyId}
+            festivalEditionId={editionId}
+          />
+        </div>
       </EditionScope>
     </SectionShell>
   );
