@@ -7,6 +7,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 const rpc = vi.mocked((supabase as any).rpc);
+const purchaseKey = "00000000-0000-4000-8000-000000000123";
 
 describe("purchaseEquipmentAtomic", () => {
   beforeEach(() => rpc.mockReset());
@@ -17,13 +18,13 @@ describe("purchaseEquipmentAtomic", () => {
       error: null,
     });
 
-    await purchaseEquipmentAtomic("profile-1", "equipment-1", "purchase-key-123");
+    await purchaseEquipmentAtomic("profile-1", "equipment-1", purchaseKey);
 
     expect(rpc).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith("purchase_equipment_atomic", {
       p_profile_id: "profile-1",
       p_equipment_id: "equipment-1",
-      p_idempotency_key: "purchase-key-123",
+      p_idempotency_key: purchaseKey,
     });
     expect(rpc).not.toHaveBeenCalledWith("finance_debit_owner", expect.anything());
   });
@@ -35,7 +36,7 @@ describe("purchaseEquipmentAtomic", () => {
     });
 
     await expect(
-      purchaseEquipmentAtomic("profile-1", "equipment-1", "purchase-key-123"),
+      purchaseEquipmentAtomic("profile-1", "equipment-1", purchaseKey),
     ).rejects.toThrow("Insufficient funds");
   });
 });
