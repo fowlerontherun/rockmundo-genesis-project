@@ -2,11 +2,19 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const developmentSql = readFileSync(
-  "supabase/migrations/20291218252000_city_development_simulation.sql",
+  "supabase/migrations/20260822144900_city_development_simulation.sql",
   "utf8",
 );
 const gigDemandSql = readFileSync(
-  "supabase/migrations/20291218252100_city_development_gig_demand.sql",
+  "supabase/migrations/20260822144901_city_development_gig_demand.sql",
+  "utf8",
+);
+const wellnessSql = readFileSync(
+  "supabase/migrations/20260822144902_city_development_wellness_recovery.sql",
+  "utf8",
+);
+const festivalSql = readFileSync(
+  "supabase/migrations/20260822144903_city_development_festival_effects.sql",
   "utf8",
 );
 const travelHelper = readFileSync("src/utils/cityDevelopmentTravel.ts", "utf8");
@@ -81,11 +89,36 @@ describe("city development database contract", () => {
 });
 
 describe("city development gameplay wiring", () => {
-  it("uses culture/music/tourism demand in server-side progressive ticket sales", () => {
+  it("uses culture/music/tourism demand in server-side progressive gig ticket sales", () => {
     expect(gigDemandSql).toContain("public.city_gameplay_modifiers(v.city_id)");
     expect(gigDemandSql).toContain("m.audience_demand_multiplier");
     expect(gigDemandSql).toContain("COALESCE(v.capacity, 1)");
     expect(gigDemandSql).toContain("CREATE OR REPLACE FUNCTION public.advance_gig_ticket_sales");
+  });
+
+  it("uses healthcare and quality of life in the authoritative daily recovery processor", () => {
+    expect(wellnessSql).toContain("CREATE OR REPLACE FUNCTION public.process_daily_wellness");
+    expect(wellnessSql).toContain("public.city_gameplay_modifiers(p.current_city_id)");
+    expect(wellnessSql).toContain("m.recovery_multiplier");
+    expect(wellnessSql).toContain("v_ailment_recovery_step");
+    expect(wellnessSql).toContain("city_recovery_multiplier");
+  });
+
+  it("uses city culture, tourism and music scene in authoritative festival sell-through", () => {
+    expect(festivalSql).toContain("CREATE OR REPLACE FUNCTION public._festival_apply_city_development_to_ticket_plan");
+    expect(festivalSql).toContain("modifier.festival_demand_multiplier");
+    expect(festivalSql).toContain("BEFORE INSERT OR UPDATE OF expected_sell_through_basis_points");
+    expect(festivalSql).toContain("NEW.projection_source IS DISTINCT FROM 'annual_plan'");
+    expect(festivalSql).toContain("LEAST(\n    9500");
+  });
+
+  it("uses public safety and infrastructure in the live Festival crowd incident threshold", () => {
+    expect(festivalSql).toContain("CREATE OR REPLACE FUNCTION public._evaluate_festival_runtime_incidents");
+    expect(festivalSql).toContain("modifier.public_safety_rating");
+    expect(festivalSql).toContain("modifier.infrastructure_rating");
+    expect(festivalSql).toContain("v_crowd_threshold");
+    expect(festivalSql).toContain("GREATEST(\n      86");
+    expect(festivalSql).toContain("Weather remains weather-driven");
   });
 
   it("uses the average transport quality of both cities for current travel quotes", () => {
