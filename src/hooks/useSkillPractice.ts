@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { addHours } from "date-fns";
 import { SKILL_PRACTICE_CONFIG } from "@/utils/skillProgressDisplay";
+import { getActiveProfile } from "@/services/profileService";
 
 interface PracticeSkillData {
   skillSlug: string;
@@ -104,14 +105,16 @@ export function usePracticeSkill() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('You need to be signed in to book practice.');
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .single();
-
+      // Keep practice on the same active-character resolution used everywhere
+      // else. Older accounts can contain more than one is_active=true row; a
+      // direct .single() query fails in that state and broke both desktop and
+      // mobile practice booking before the RPC was even reached.
+      let profile;
+      try {
+        profile = await getActiveProfile(user.id);
+      } catch {
+        throw new Error('The active character could not be verified. Refresh and try again.');
+      }
       if (!profile) throw new Error('No active character was found. Switch or create a character first.');
 
       const scheduledEnd = addHours(scheduledStart, SKILL_PRACTICE_CONFIG.durationOptionsHours[0]);
