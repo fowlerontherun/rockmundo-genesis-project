@@ -1,4 +1,8 @@
 -- Certify the post-bootstrap Festival production-parity overlay on a disposable DB.
+\ir ../reconciliation/festival/20260822_simplified_festival_company_settlement_schema.sql
+\ir ../reconciliation/festival/20260822_simplified_festival_company_effects.sql
+\ir ../reconciliation/festival/20260822_simplified_festival_results_api.sql
+
 DO $$
 DECLARE
   result_rls boolean;
@@ -36,19 +40,68 @@ BEGIN
   END IF;
 
   IF to_regprocedure('public._complete_simplified_festival_settlement(uuid)') IS NULL
-     OR to_regprocedure('public.get_public_festival_edition_history(uuid)') IS NULL THEN
-    RAISE EXCEPTION 'simplified Festival result RPC boundary is incomplete';
+     OR to_regprocedure('public.get_public_festival_edition_history(uuid)') IS NULL
+     OR to_regprocedure('public.get_festival_edition_results(uuid,uuid)') IS NULL
+     OR to_regprocedure('public._apply_simplified_festival_company_effects(uuid)') IS NULL THEN
+    RAISE EXCEPTION 'simplified Festival Results boundary is incomplete';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'festival_simplified_edition_results'
+      AND column_name = 'settlement_applied_at'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'festival_simplified_edition_results'
+      AND column_name = 'company_transaction_id'
+  ) THEN
+    RAISE EXCEPTION 'simplified Festival company settlement audit columns are missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid = 'public.festival_simplified_edition_results'::regclass
+      AND tgname = 'festival_apply_simplified_company_effects'
+      AND NOT tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'automatic simplified Festival company settlement trigger is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'uq_company_transactions_simplified_festival_result'
+  ) THEN
+    RAISE EXCEPTION 'simplified Festival company settlement idempotency index is missing';
   END IF;
 
   IF has_function_privilege('anon', 'public._complete_simplified_festival_settlement(uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public._complete_simplified_festival_settlement(uuid)', 'EXECUTE')
      OR has_function_privilege('anon', 'public._festival_auto_settle_simplified_runtime()', 'EXECUTE')
-     OR has_function_privilege('authenticated', 'public._festival_auto_settle_simplified_runtime()', 'EXECUTE') THEN
-    RAISE EXCEPTION 'internal simplified Festival result helpers are exposed';
+     OR has_function_privilege('authenticated', 'public._festival_auto_settle_simplified_runtime()', 'EXECUTE')
+     OR has_function_privilege('anon', 'public._apply_simplified_festival_company_effects(uuid)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public._apply_simplified_festival_company_effects(uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'public._festival_apply_simplified_company_effects_trigger()', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public._festival_apply_simplified_company_effects_trigger()', 'EXECUTE') THEN
+    RAISE EXCEPTION 'internal simplified Festival settlement helpers are exposed';
   END IF;
 
-  IF NOT has_function_privilege('authenticated', 'public.get_public_festival_edition_history(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION 'authenticated users cannot read simplified Festival history';
+  IF NOT has_function_privilege('authenticated', 'public.get_public_festival_edition_history(uuid)', 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', 'public.get_festival_edition_results(uuid,uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'public.get_festival_edition_results(uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Festival Results RPC privileges are incorrect';
+  END IF;
+
+  IF position('totalRevenueMinor' in pg_get_functiondef('public.get_public_festival_edition_history(uuid)'::regprocedure)) > 0
+     OR position('netProfitMinor' in pg_get_functiondef('public.get_public_festival_edition_history(uuid)'::regprocedure)) > 0 THEN
+    RAISE EXCEPTION 'public Festival history leaks private financial values';
+  END IF;
+
+  IF position('netProfitMinor' in pg_get_functiondef('public.get_festival_edition_results(uuid,uuid)'::regprocedure)) = 0
+     OR position('companyImpact' in pg_get_functiondef('public.get_festival_edition_results(uuid,uuid)'::regprocedure)) = 0 THEN
+    RAISE EXCEPTION 'owner Festival Results RPC omits financial/company impact';
   END IF;
 
   IF to_regprocedure('public._run_simplified_festival_edition_v1(uuid,uuid,integer,uuid)') IS NOT NULL THEN
