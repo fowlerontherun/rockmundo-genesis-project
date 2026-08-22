@@ -165,18 +165,31 @@ describe("simplified company-owned Festival owner flow", () => {
     expect(migration).toContain("FROM public.bands band");
   });
 
-  it("presents live runtime as an automatic Festival simulation", () => {
+  it("runs an edition-native automatic Festival simulation", () => {
     const runtime = source(
       "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
+    );
+    const service = source("src/features/festivals/runtime/service.ts");
+    const migration = source(
+      "supabase/migrations/20291218245900_finish_simplified_festival_runtime.sql",
     );
 
     expect(runtime).toContain("Annual Festival simulation");
     expect(runtime).toContain("Automatic operations");
-    expect(runtime).toContain(
-      "These systems are simulated from company upgrades and are not",
-    );
+    expect(runtime).toContain("Run Festival");
+    expect(runtime).toContain("Ready to run");
+    expect(runtime).toContain("NPC acts");
     expect(runtime).not.toContain("Authoritative live runtime");
     expect(runtime).not.toContain("Authorised actions:");
     expect(runtime).not.toContain("Site capacity");
+
+    expect(service).toContain("get_simplified_festival_run_readiness");
+    expect(service).toContain("run_simplified_festival_edition");
+    expect(migration).toContain("schedule_source");
+    expect(migration).toContain("'simplified_generated'");
+    expect(migration).toContain("'ticketSalesSnapshot'");
+    expect(migration).toContain("festival_runtime_completion_digests");
+    expect(migration).toContain("festival_artist_bookings");
+    expect(migration).not.toContain("festival_public_legacy_bridges");
   });
 });
