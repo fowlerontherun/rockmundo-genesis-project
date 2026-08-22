@@ -14,6 +14,31 @@ import { EmptyState } from "../components/EmptyState";
 import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge } from "../components/MobilePrimitives";
 
 type DesktopSection = "venues" | "companies" | "jobs" | "marketplace" | "shops" | "charts" | "festivals" | "events" | "search" | "city" | "locations";
+type TravelDisplayStatus = "scheduled" | "in_progress";
+
+type MobileTravelRecord = {
+  id: string;
+  from_city_id: string | null;
+  to_city_id: string | null;
+  transport_type: string | null;
+  cost_paid: number | null;
+  departure_time: string | null;
+  scheduled_departure_time: string | null;
+  arrival_time: string | null;
+  status: string | null;
+  effectiveStatus: TravelDisplayStatus;
+  fromCityName?: string;
+  toCityName?: string;
+};
+
+type TravelDisplay = {
+  status: TravelDisplayStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  fromName?: string | null;
+  toName?: string | null;
+  transportType?: string | null;
+};
 
 const desktopOnly: Record<DesktopSection, { title: string; description: string }> = {
   venues: { title: "Venue management", description: "Detailed venue discovery, booking and management remain desktop gameplay." },
@@ -37,8 +62,41 @@ const modeIcon = (mode: string) => {
 };
 
 const money = (value: number) => value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const cashValue = (profile: any): number | null => {
+  if (profile?.cash == null) return null;
+  const value = Number(profile.cash);
+  return Number.isFinite(value) ? value : null;
+};
+const cashLabel = (profile: any) => {
+  const value = cashValue(profile);
+  return value == null ? "Unavailable" : money(value);
+};
 
-const currentTravel = (activityStatus: any) => {
+const formatTravelTime = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
+};
+
+export function travelDepartureInstant(date: Date, hour: number, mode: string): Date {
+  const departure = new Date(date);
+  if (mode.toLowerCase() === "private_jet") return departure;
+  departure.setHours(hour, 0, 0, 0);
+  return departure;
+}
+
+function formatTravelDeparture(date: Date, hour: number, mode: string): string {
+  if (mode.toLowerCase() !== "private_jet") return formatDepartureDateTime(date, hour);
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function legacyCurrentTravel(activityStatus: any): TravelDisplay | null {
   if (!activityStatus) return null;
   const type = String(activityStatus.activity_type ?? "").toLowerCase();
   const status = String(activityStatus.status ?? "").toLowerCase();
@@ -49,10 +107,98 @@ const currentTravel = (activityStatus: any) => {
   const end = activityStatus.ends_at ? new Date(activityStatus.ends_at).getTime() : NaN;
   if (Number.isFinite(start) && start > now) return null;
   if (Number.isFinite(end) && end <= now) return null;
-  return activityStatus;
-};
 
-const cashLabel = (profile: any) => profile?.cash == null ? "Unavailable" : money(Number(profile.cash));
+  return {
+    status: "in_progress",
+    startsAt: activityStatus.started_at,
+    endsAt: activityStatus.ends_at,
+    toName: activityStatus.metadata?.to_city_name ?? activityStatus.metadata?.destination,
+    transportType: activityStatus.metadata?.transport_type,
+  };
+}
+
+function travelFromHistory(record: MobileTravelRecord | null | undefined): TravelDisplay | null {
+  if (!record) return null;
+  return {
+    status: record.effectiveStatus,
+    startsAt: record.scheduled_departure_time ?? record.departure_time,
+    endsAt: record.arrival_time,
+    fromName: record.fromCityName,
+    toName: record.toCityName,
+    transportType: record.transport_type,
+  };
+}
+
+function resolveTravelDisplay(record: MobileTravelRecord | null | undefined, activityStatus: any): TravelDisplay | null {
+  return travelFromHistory(record) ?? legacyCurrentTravel(activityStatus);
+}
+
+function useMobileTravelState(profileId?: string | null) {
+  return useQuery({
+    queryKey: ["mobile-travel-state", profileId],
+    enabled: !!profileId,
+    staleTime: 15_000,
+    queryFn: async (): Promise<MobileTravelRecord | null> => {
+      if (!profileId) return null;
+      const now = new Date();
+      const { data, error } = await (supabase as any)
+        .from("player_travel_history")
+        .select("id,from_city_id,to_city_id,transport_type,cost_paid,departure_time,scheduled_departure_time,arrival_time,status")
+        .eq("profile_id", profileId)
+        .in("status", ["scheduled", "in_progress"])
+        .gt("arrival_time", now.toISOString())
+        .order("scheduled_departure_time", { ascending: true })
+        .limit(5);
+      if (error) throw error;
+
+      const rows = (data ?? []) as Omit<MobileTravelRecord, "effectiveStatus">[];
+      const row = rows.find((candidate) => {
+        const end = candidate.arrival_time ? new Date(candidate.arrival_time).getTime() : NaN;
+        return !Number.isFinite(end) || end > now.getTime();
+      });
+      if (!row) return null;
+
+      const startValue = row.scheduled_departure_time ?? row.departure_time;
+      const start = startValue ? new Date(startValue).getTime() : NaN;
+      const end = row.arrival_time ? new Date(row.arrival_time).getTime() : NaN;
+      const effectiveStatus: TravelDisplayStatus = Number.isFinite(start)
+        && start <= now.getTime()
+        && (!Number.isFinite(end) || end > now.getTime())
+        ? "in_progress"
+        : "scheduled";
+
+      const cityIds = Array.from(new Set([row.from_city_id, row.to_city_id].filter(Boolean))) as string[];
+      let cityMap = new Map<string, string>();
+      if (cityIds.length) {
+        const { data: cityRows, error: cityError } = await supabase
+          .from("cities")
+          .select("id,name,country")
+          .in("id", cityIds);
+        if (cityError) {
+          console.warn("[RockMundo mobile travel] city labels unavailable", cityError);
+        } else {
+          cityMap = new Map((cityRows ?? []).map((city) => [city.id, `${city.name}, ${city.country}`]));
+        }
+      }
+
+      return {
+        ...row,
+        effectiveStatus,
+        fromCityName: row.from_city_id ? cityMap.get(row.from_city_id) : undefined,
+        toCityName: row.to_city_id ? cityMap.get(row.to_city_id) : undefined,
+      };
+    },
+  });
+}
+
+function travelBookingMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("Insufficient funds")) return "You do not have enough character funds for this journey.";
+  if (message.includes("Time slot conflict")) return message;
+  if (message.includes("active character")) return "The active character could not be verified. Refresh and try again.";
+  if (message.includes("Not authenticated")) return "Your session could not be verified. Sign in again and retry.";
+  return "Travel could not be booked. Refresh your travel state and try again.";
+}
 
 function Shell({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -75,21 +221,45 @@ export default function MobileWorldPhase5() {
 }
 
 function WorldOverviewMobile() {
-  const { currentCity, activityStatus, profile } = useGameData();
-  const activeTravel = currentTravel(activityStatus);
-  const travelling = !!activeTravel;
-  const endsAt = activeTravel?.ends_at;
+  const { currentCity, activityStatus, profile, refetch: refetchGameData } = useGameData();
+  const travelState = useMobileTravelState(profile?.id);
+  const travel = resolveTravelDisplay(travelState.data, activityStatus);
+  const travelling = travel?.status === "in_progress";
+  const scheduled = travel?.status === "scheduled";
+  const locationMissing = !currentCity && !travel;
+  const travelEnd = formatTravelTime(travel?.endsAt);
+  const travelStart = formatTravelTime(travel?.startsAt);
+
+  const statusTitle = travelling
+    ? `Travelling${travel?.toName ? ` to ${travel.toName}` : ""}`
+    : scheduled
+      ? `Travel booked${travel?.toName ? ` to ${travel.toName}` : ""}`
+      : currentCity?.name ?? "Location unavailable";
+  const statusSubtitle = travelling
+    ? travelEnd ? `Journey due to finish ${travelEnd}` : "Journey in progress"
+    : scheduled
+      ? travelStart ? `Departs ${travelStart}` : "Future journey booked"
+      : [currentCity?.country, currentCity?.region].filter(Boolean).join(" • ") || "Current city unavailable";
 
   return (
     <Shell title={currentCity?.name ?? "World"} description="Mobile World is intentionally lightweight: check where you are, monitor travel and book a simple journey.">
+      {travelState.isError && <MobileErrorState title="Travel status unavailable" message="Your booked journeys could not be checked." onRetry={() => travelState.refetch()} />}
       <MobileSectionCard title="Current status">
         <MobileEntityCard
-          title={travelling ? "Travel in progress" : currentCity?.name ?? "Location unavailable"}
-          subtitle={travelling && endsAt ? `Journey due to finish ${new Date(endsAt).toLocaleString()}` : [currentCity?.country, currentCity?.region].filter(Boolean).join(" • ") || "Current city"}
-          icon={travelling ? <Plane className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
-          meta={<MobileStatusBadge tone={travelling ? "info" : "success"}>{travelling ? "Travelling" : "Available"}</MobileStatusBadge>}
+          title={statusTitle}
+          subtitle={statusSubtitle}
+          icon={travel ? <Plane className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+          meta={<MobileStatusBadge tone={travelling || scheduled ? "info" : locationMissing ? "warning" : "success"}>{travelling ? "Travelling" : scheduled ? "Booked" : locationMissing ? "Unavailable" : "Available"}</MobileStatusBadge>}
         />
       </MobileSectionCard>
+
+      {locationMissing && (
+        <MobileErrorState
+          title="Location unavailable"
+          message="Your current city could not be loaded, so travel cannot be planned safely."
+          onRetry={() => refetchGameData()}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <Link to="/mobile/world/travel" className="rm-tap rounded-2xl border p-4">
@@ -133,18 +303,21 @@ function useCities() {
 }
 
 function TravelMobile() {
-  const { currentCity, activityStatus, profile } = useGameData();
+  const { currentCity, activityStatus, profile, refetch: refetchGameData } = useGameData();
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const cities = useCities();
+  const travelState = useMobileTravelState(profileId);
   const [term, setTerm] = useState("");
   const [destination, setDestination] = useState<CityWithCoords | null>(null);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
 
   const fromCity = currentCity as CityWithCoords | null;
-  const activeTravel = currentTravel(activityStatus);
-  const travelling = !!activeTravel;
+  const travel = resolveTravelDisplay(travelState.data, activityStatus);
+  const travelling = travel?.status === "in_progress";
+  const scheduledTravel = travel?.status === "scheduled";
+  const hasTravelCommitment = travelling || scheduledTravel;
   const filtered = useMemo(() => {
     const q = term.trim().toLowerCase();
     return (cities.data ?? [])
@@ -161,6 +334,8 @@ function TravelMobile() {
 
   const chosen = options.find((option) => option.mode === selectedMode) ?? options[0] ?? null;
   const departure = chosen ? getNextAvailableDeparture(chosen.mode) : null;
+  const funds = cashValue(profile);
+  const insufficientFunds = !!chosen && funds != null && funds < chosen.cost;
 
   const chooseDestination = (city: CityWithCoords) => {
     setDestination(city);
@@ -175,9 +350,12 @@ function TravelMobile() {
   };
 
   const confirmTravel = async () => {
-    if (!profileId || !fromCity || !destination || !chosen || !departure) return;
-    const scheduledDeparture = new Date(departure.date);
-    scheduledDeparture.setHours(departure.hour, 0, 0, 0);
+    if (!profileId || !fromCity || !destination || !chosen || !departure || hasTravelCommitment || travelState.isError || travelState.isLoading) return;
+    if (insufficientFunds) {
+      toast.error("You do not have enough character funds for this journey.");
+      return;
+    }
+    const scheduledDeparture = travelDepartureInstant(departure.date, departure.hour, chosen.mode);
     setBooking(true);
     try {
       await bookTravel({
@@ -191,8 +369,13 @@ function TravelMobile() {
         comfortRating: chosen.comfort,
         scheduledDepartureTime: scheduledDeparture.toISOString(),
       });
-      toast.success(`Travel booked to ${destination.name}`);
+      toast.success(`Travel booked to ${destination.name}`, {
+        description: `Departure ${scheduledDeparture.toLocaleString()}`,
+      });
       await Promise.all([
+        refetchGameData(),
+        queryClient.invalidateQueries({ queryKey: ["mobile-travel-state"] }),
+        queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] }),
         queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
         queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] }),
         queryClient.invalidateQueries({ queryKey: ["profile"] }),
@@ -200,22 +383,30 @@ function TravelMobile() {
       ]);
       setDestination(null);
       setSelectedMode(null);
-    } catch (error: any) {
-      toast.error(error?.message ?? "Travel could not be booked");
+    } catch (error: unknown) {
+      toast.error(travelBookingMessage(error));
     } finally {
       setBooking(false);
     }
   };
 
+  const travelStart = formatTravelTime(travel?.startsAt);
+  const travelEnd = formatTravelTime(travel?.endsAt);
+
   return (
     <Shell title="Travel" description="Choose a destination, compare the available transport modes and book the next valid departure.">
-      {travelling && (
-        <MobileSectionCard title="Journey in progress">
+      {travelState.isLoading && <MobileLoadingSkeleton cards={1} />}
+      {travelState.isError && <MobileErrorState title="Travel status unavailable" message="Existing journeys could not be checked. Retry before booking another trip." onRetry={() => travelState.refetch()} />}
+
+      {travel && (
+        <MobileSectionCard title={travelling ? "Journey in progress" : "Journey booked"}>
           <MobileEntityCard
-            title="You are currently travelling"
-            subtitle={activeTravel?.ends_at ? `Expected completion ${new Date(activeTravel.ends_at).toLocaleString()}` : "Your active journey is still in progress."}
+            title={travelling ? `Travelling${travel.toName ? ` to ${travel.toName}` : ""}` : `Upcoming travel${travel.toName ? ` to ${travel.toName}` : ""}`}
+            subtitle={travelling
+              ? travelEnd ? `Expected completion ${travelEnd}` : "Your journey is in progress."
+              : [travelStart ? `Departs ${travelStart}` : null, travelEnd ? `arrives ${travelEnd}` : null].filter(Boolean).join(" · ") || "Future journey booked"}
             icon={<Plane className="h-5 w-5" />}
-            meta={<MobileStatusBadge tone="info">Active</MobileStatusBadge>}
+            meta={<MobileStatusBadge tone="info">{travelling ? "Active" : "Scheduled"}</MobileStatusBadge>}
           />
         </MobileSectionCard>
       )}
@@ -225,34 +416,51 @@ function TravelMobile() {
           title={fromCity?.name ?? "Current city unavailable"}
           subtitle={[fromCity?.country, fromCity?.region].filter(Boolean).join(" • ") || "Travel data unavailable"}
           icon={<MapPin className="h-5 w-5" />}
-          meta={<MobileStatusBadge>{cashLabel(profile)}</MobileStatusBadge>}
+          meta={<MobileStatusBadge tone={fromCity ? "neutral" : "warning"}>{fromCity ? cashLabel(profile) : "Unavailable"}</MobileStatusBadge>}
         />
       </MobileSectionCard>
 
-      <MobileSectionCard title="Find destination" subtitle="City search only; deeper world discovery remains desktop-only.">
-        <div className="flex min-h-11 items-center gap-2 rounded-xl border px-3">
-          <Search className="h-4 w-4" />
-          <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search city or country" className="min-h-11 flex-1 bg-transparent outline-none" aria-label="Search destinations" />
-        </div>
-        {cities.isLoading ? <MobileLoadingSkeleton /> : cities.isError ? (
-          <MobileErrorState message="Destinations could not be loaded." onRetry={() => cities.refetch()} />
-        ) : filtered.length ? (
-          <div className="mt-3 space-y-2">
-            {filtered.map((city) => (
-              <MobileEntityCard
-                key={city.id}
-                title={city.name}
-                subtitle={[city.country, city.region].filter(Boolean).join(" • ")}
-                icon={<MapPin className="h-5 w-5" />}
-                meta={destination?.id === city.id ? <MobileStatusBadge tone="success">Selected</MobileStatusBadge> : null}
-                onPress={() => chooseDestination(city)}
-              />
-            ))}
-          </div>
-        ) : <EmptyState title="No destinations found" message="Try another city or country." />}
-      </MobileSectionCard>
+      {!fromCity && (
+        <MobileErrorState
+          title="Current city unavailable"
+          message="A journey cannot be priced or booked safely until your current city is loaded."
+          onRetry={() => refetchGameData()}
+        />
+      )}
 
-      {destination && (
+      {hasTravelCommitment && (
+        <MobileSectionCard title="Travel already planned" subtitle="Mobile keeps one journey at a time simple and location-safe.">
+          <p className="text-sm text-muted-foreground">Check the journey in My Day. Plan another trip after this journey finishes so the next route starts from your actual city.</p>
+          <Link to="/mobile?view=day" className="rm-tap mt-3 block rounded-xl border p-3 text-center text-sm font-semibold">Open My Day</Link>
+        </MobileSectionCard>
+      )}
+
+      {fromCity && !hasTravelCommitment && !travelState.isLoading && !travelState.isError && (
+        <MobileSectionCard title="Find destination" subtitle="City search only; deeper world discovery remains desktop-only.">
+          <div className="flex min-h-11 items-center gap-2 rounded-xl border px-3">
+            <Search className="h-4 w-4" />
+            <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search city or country" className="min-h-11 flex-1 bg-transparent outline-none" aria-label="Search destinations" />
+          </div>
+          {cities.isLoading ? <MobileLoadingSkeleton /> : cities.isError ? (
+            <MobileErrorState message="Destinations could not be loaded." onRetry={() => cities.refetch()} />
+          ) : filtered.length ? (
+            <div className="mt-3 space-y-2">
+              {filtered.map((city) => (
+                <MobileEntityCard
+                  key={city.id}
+                  title={city.name}
+                  subtitle={[city.country, city.region].filter(Boolean).join(" • ")}
+                  icon={<MapPin className="h-5 w-5" />}
+                  meta={destination?.id === city.id ? <MobileStatusBadge tone="success">Selected</MobileStatusBadge> : null}
+                  onPress={() => chooseDestination(city)}
+                />
+              ))}
+            </div>
+          ) : <EmptyState title="No destinations found" message="Try another city or country." />}
+        </MobileSectionCard>
+      )}
+
+      {destination && fromCity && !hasTravelCommitment && !travelState.isError && (
         <MobileSectionCard title={`Travel to ${destination.name}`} subtitle="The cheapest available option is selected initially; choose another mode if you prefer.">
           {options.length ? (
             <div className="space-y-3">
@@ -277,12 +485,13 @@ function TravelMobile() {
               {chosen && departure && (
                 <div className="rounded-xl border bg-muted/30 p-3 text-sm">
                   <div className="font-semibold">Next departure</div>
-                  <div className="text-muted-foreground">{formatDepartureDateTime(departure.date, departure.hour)}</div>
+                  <div className="text-muted-foreground">{formatTravelDeparture(departure.date, departure.hour, chosen.mode)}</div>
                 </div>
               )}
 
-              <Button className="min-h-11 w-full" disabled={!chosen || !departure || booking || travelling} onClick={confirmTravel}>
-                {travelling ? "Finish current journey first" : booking ? "Booking…" : chosen ? `Book ${chosen.mode.replace("_", " ")} · ${money(chosen.cost)}` : "Choose transport"}
+              {insufficientFunds && <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">You need {chosen ? money(chosen.cost) : "more funds"} for this journey. Your current balance is {cashLabel(profile)}.</p>}
+              <Button className="min-h-11 w-full" disabled={!chosen || !departure || booking || insufficientFunds} onClick={confirmTravel}>
+                {booking ? "Booking…" : insufficientFunds ? "Insufficient funds" : chosen ? `Book ${chosen.mode.replace("_", " ")} · ${money(chosen.cost)}` : "Choose transport"}
               </Button>
               <p className="text-xs text-muted-foreground">Balance and schedule conflicts are rechecked by the same travel system used on desktop.</p>
             </div>
