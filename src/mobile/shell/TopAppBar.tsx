@@ -43,7 +43,13 @@ const DETAIL_TITLES: Record<string, string> = {
 };
 
 const titleFor = (pathname: string, search: string) => {
-  if (pathname === "/mobile") return new URLSearchParams(search).get("view") === "day" ? "My Day" : "Today";
+  if (pathname === "/mobile") {
+    const view = new URLSearchParams(search).get("view");
+    if (view === "day") return "My Day";
+    if (view === "book") return "Book Activity";
+    if (view === "outcomes") return "Outcomes";
+    return "Today";
+  }
   if (DETAIL_TITLES[pathname]) return DETAIL_TITLES[pathname];
   if (pathname.startsWith("/mobile/career")) return "Career";
   if (pathname.startsWith("/mobile/social")) return "Social";
