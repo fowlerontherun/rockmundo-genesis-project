@@ -51,10 +51,9 @@ function EditionCard({
   festivalCompanyId: string;
   edition: FestivalCompanyEdition;
 }) {
-  const destination = festivalRoutes.edition(
-    festivalCompanyId,
-    edition.festivalEditionId,
-  );
+  const destination = edition.editable
+    ? festivalRoutes.edition(festivalCompanyId, edition.festivalEditionId)
+    : festivalRoutes.history(festivalCompanyId, edition.festivalEditionId);
 
   return (
     <Card className="h-full">
