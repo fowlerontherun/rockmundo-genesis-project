@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const source = readFileSync("src/mobile/pages/MobileMe.tsx", "utf8");
 const home = readFileSync("src/mobile/pages/MobileHome.tsx", "utf8");
 const wellness = readFileSync("src/hooks/useWellnessState.ts", "utf8");
+const wellnessApi = readFileSync("src/lib/api/wellnessActivities.ts", "utf8");
 const mobileLayout = readFileSync("src/mobile/shell/MobileLayout.tsx", "utf8");
 const activityBar = readFileSync("src/mobile/shell/MobileActivityBar.tsx", "utf8");
 const app = readFileSync("src/App.tsx", "utf8");
@@ -26,6 +27,19 @@ describe("mobile Me companion contract", () => {
     expect(home).toContain("useWellnessState");
     expect(home).toContain("resolveCompanionPath");
     expect(home).toContain("No placeholder values are shown");
+  });
+
+  it("uses the canonical active profile on the dedicated wellness route", () => {
+    expect(source).toContain("const { profileId } = useActiveProfile();");
+    expect(source).toContain("const state = useWellnessState(profileId ?? null);");
+    expect(source).not.toContain("useWellnessState(profile?.id ?? null)");
+  });
+
+  it("does not depend on wellness compatibility objects absent from repository migrations", () => {
+    expect(wellnessApi).toContain('.from("wellness_activity_log" as any)');
+    expect(wellnessApi).toContain("const ailments = await listActiveAilments(profileId)");
+    expect(wellnessApi).not.toContain('.from("wellness_cooldowns_view"');
+    expect(wellnessApi).not.toContain('.from("wellness_blocks"');
   });
 
   it("does not claim the character is available when the core day schedule is unavailable", () => {
