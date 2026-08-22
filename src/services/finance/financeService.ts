@@ -4,7 +4,7 @@ export type FinanceOwnerType = "player" | "band" | "company" | "venue" | "city" 
 export type FinanceTransactionCategory =
   | "starting_funds" | "administrative_adjustment" | "player_to_player_transfer" | "band_contribution" | "band_withdrawal"
   | "wage_payment" | "ticket_sale" | "gig_payment" | "festival_payment" | "recording_studio_payment" | "rehearsal_payment"
-  | "travel_cost" | "accommodation_cost" | "equipment_purchase" | "equipment_sale" | "equipment_repair" | "merchandise_revenue"
+  | "travel_cost" | "travel_tax" | "accommodation_cost" | "equipment_purchase" | "equipment_sale" | "equipment_repair" | "merchandise_revenue"
   | "merchandise_production_cost" | "streaming_royalty" | "song_release_royalty" | "company_revenue" | "company_operating_expense"
   | "refund" | "tax_placeholder" | "system_fee" | "product_sale" | "service_sale" | "venue_booking_revenue" | "ticket_commission" | "studio_booking_revenue" | "rehearsal_booking_revenue" | "education_revenue" | "transport_revenue" | "management_commission" | "label_commission" | "advertising_service_revenue" | "payroll" | "utilities" | "maintenance" | "marketing" | "licence_fee" | "professional_services" | "supplier_payment" | "owner_investment" | "owner_withdrawal" | "dividend" | "asset_purchase" | "asset_sale" | "rent" | "subscription" | "education_fee" | "food_lifestyle" | "band_reimbursement" | "band_distribution" | "recurring_obligation" | "tax_withholding";
 
