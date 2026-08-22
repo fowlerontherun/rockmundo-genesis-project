@@ -67,7 +67,7 @@ CREATE OR REPLACE FUNCTION public._evaluate_festival_runtime_incidents(
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = pg_catalog, public, extensions
 AS $$
 DECLARE
   c record;
@@ -83,10 +83,12 @@ BEGIN
   FROM public.festival_runtime_sessions
   WHERE id = p_runtime_session_id;
 
-  SELECT NULLIF(snapshot.site_snapshot ->> 'cityId', '')::uuid
+  -- The public edition is created from the launch snapshot and keeps a typed,
+  -- immutable city relationship for this launch. Avoid relying on JSON key names.
+  SELECT edition.city_id
   INTO v_city_id
-  FROM public.festival_launch_snapshots snapshot
-  WHERE snapshot.id = r.launch_snapshot_id;
+  FROM public.festival_public_editions edition
+  WHERE edition.festival_launch_id = r.festival_launch_id;
 
   IF v_city_id IS NOT NULL THEN
     SELECT
@@ -141,7 +143,7 @@ BEGIN
           WHEN c.safety_pressure >= LEAST(100, v_crowd_threshold + 8) THEN 'major'
           ELSE 'moderate'
         END,
-        encode(digest(r.incident_seed || ':crowd:' || c.runtime_stage_id, 'sha256'), 'hex'),
+        encode(extensions.digest(r.incident_seed || ':crowd:' || c.runtime_stage_id, 'sha256'), 'hex'),
         'stage safety pressure threshold',
         'security and crowd management response',
         'Access to a stage is temporarily being managed.',
