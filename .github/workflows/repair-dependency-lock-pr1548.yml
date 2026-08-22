@@ -37,14 +37,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Use repository npm version
         run: npm install --global npm@10.9.2
 
-      - name: Regenerate lockfile from registry metadata
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Regenerate lockfile from clean manifest
+        shell: bash
+        run: |
+          rm -f package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Verify dependency lock
         run: npm run verify:dependency-lock
