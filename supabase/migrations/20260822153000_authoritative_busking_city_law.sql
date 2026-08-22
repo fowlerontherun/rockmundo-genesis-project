@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS public.authoritative_busking_sessions (
   gross_tips integer NOT NULL CHECK (gross_tips >= 0),
   licence_fee integer NOT NULL CHECK (licence_fee >= 0),
   net_cash_change integer NOT NULL,
-  xp_award integer NOT NULL CHECK (xp_award > 0),
+  xp_award integer NOT NULL CHECK (xp_award >= 0),
   performance_descriptor text NOT NULL,
   started_at timestamptz NOT NULL,
   ends_at timestamptz NOT NULL,
@@ -173,6 +173,19 @@ BEGIN
   jsonb_build_object('source','authoritative_busking','sessionId',session_id,'cityId',p.current_city_id,'spotKey',spot.spot_key));
  SELECT current_balance_minor INTO account_minor FROM public.financial_accounts WHERE owner_type='player' AND owner_id=p.id AND is_primary LIMIT 1;
  UPDATE public.profiles SET cash=coalesce(account_minor,0)::numeric/100.0 WHERE id=p.id;
+
+ -- Keep progression in the same transaction as finance. If the player has reached
+ -- a canonical action-XP cap, busking remains available for tips but awards 0 XP.
+ BEGIN
+  PERFORM public.progression_award_action_xp(
+   p.id,xp,'performance','busking_session',
+   jsonb_build_object('unique_event_id','busking:'||session_id::text,'source','authoritative_busking',
+    'busking_session_id',session_id,'city_id',p.current_city_id,'location_id',spot.spot_key,
+    'duration_minutes',p_duration_minutes,'cash_earned',gross,'licence_fee',fee,'performance_roll',round(roll,4))
+  );
+ EXCEPTION WHEN check_violation THEN
+  xp:=0;
+ END;
 
  INSERT INTO public.profile_activity_statuses(profile_id,status,started_at,duration_minutes,metadata)
  VALUES(p.id,'active',started,p_duration_minutes,jsonb_build_object('activity_type','busking_session','busking_session_id',session_id,'location_id',spot.spot_key,'location_name',spot.name,'city_id',p.current_city_id))
