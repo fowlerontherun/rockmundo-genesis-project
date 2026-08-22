@@ -36,6 +36,24 @@ export interface CityGameplayModifiers {
   local_talent_multiplier: number;
 }
 
+export interface CityDevelopmentHistoryEntry {
+  id: string;
+  city_id: string;
+  project_id: string | null;
+  mayor_id: string | null;
+  source: string;
+  deltas: Partial<Record<CityDevelopmentRatingKey, number>>;
+  before_state: Partial<Record<CityDevelopmentRatingKey, number>>;
+  after_state: Partial<Record<CityDevelopmentRatingKey, number>>;
+  created_at: string;
+  project?: {
+    name: string;
+    description: string | null;
+    cost: number;
+    completed_at: string | null;
+  } | null;
+}
+
 export type CityDevelopmentRatingKey =
   | "economy"
   | "infrastructure"
