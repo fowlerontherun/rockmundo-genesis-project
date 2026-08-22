@@ -27,8 +27,15 @@ export function FestivalOwnerNavigation({
     enabled: Boolean(festivalCompanyId),
   });
 
+  const currentEditionIsEditable = Boolean(
+    currentEditionId &&
+      editionsQuery.data?.editions.some(
+        (edition) =>
+          edition.editable && edition.festivalEditionId === currentEditionId,
+      ),
+  );
   const editableEditionId =
-    currentEditionId ??
+    (currentEditionIsEditable ? currentEditionId : null) ??
     editionsQuery.data?.editions
       .filter((edition) => edition.editable)
       .sort((left, right) => left.editionYear - right.editionYear)[0]
