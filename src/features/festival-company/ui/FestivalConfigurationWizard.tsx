@@ -1,9 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- compact typed step boundaries are validated by the shared domain validator */
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { useNavigate } from "react-router-dom";
+import { CalendarDays, CheckCircle2, MapPin, Sparkles, Tent } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -15,30 +12,149 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { festivalRoutes } from "@/features/festivals/routes";
 import {
   useFestivalConfiguration,
   useSaveFestivalConfiguration,
 } from "../application/useFestivalConfiguration";
+import type {
+  FestivalCatalogueOption,
+  FestivalCity,
+  FestivalConfigurationDraft,
+  FestivalScaleOption,
+} from "../domain/festivalConfiguration";
 import {
   FestivalConfigurationError,
   festivalConfigurationErrorMessage,
 } from "../domain/festivalConfigurationErrors";
 import {
-  maximumReachableStep,
   validateFestivalDraft,
   type FieldValidation,
 } from "../domain/festivalConfigurationValidation";
-import type { FestivalConfigurationDraft } from "../domain/festivalConfiguration";
-import { FestivalWizardProgress } from "./FestivalWizardProgress";
-import { FestivalSaveStatus } from "./FestivalSaveStatus";
 import { FestivalConflictAlert } from "./FestivalConflictAlert";
+import { FestivalSaveStatus } from "./FestivalSaveStatus";
 import { useFestivalConfigurationDraft } from "./useFestivalConfigurationDraft";
+
+const compactSteps = [
+  {
+    id: 1,
+    title: "Festival identity",
+    description: "Name and describe the permanent Festival company brand.",
+  },
+  {
+    id: 2,
+    title: "Festival defaults",
+    description: "Choose the usual location, month, vibe and operating style.",
+  },
+  {
+    id: 3,
+    title: "First annual Festival",
+    description: "Seed the first event with a size and date. You can refine it on Plan.",
+  },
+  {
+    id: 4,
+    title: "Review & create",
+    description: "Create the first annual edition and continue straight to Plan.",
+  },
+] as const;
+
+type CompactStep = (typeof compactSteps)[number]["id"];
+
+const compactStepFromServer = (currentStep: number): CompactStep => {
+  if (currentStep <= 1) return 1;
+  if (currentStep <= 3) return 2;
+  if (currentStep <= 5) return 3;
+  return 4;
+};
+
+const serverStepFromCompact = (step: CompactStep) =>
+  step === 1 ? 1 : step === 2 ? 3 : step === 3 ? 5 : 6;
+
+const addDays = (startDate: string, durationDays: number) => {
+  if (!startDate) return null;
+  const date = new Date(`${startDate}T12:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setUTCDate(date.getUTCDate() + Math.max(0, durationDays - 1));
+  return date.toISOString().slice(0, 10);
+};
+
+const monthName = (month: number | null) =>
+  month
+    ? new Intl.DateTimeFormat("en-GB", { month: "long" }).format(
+        new Date(Date.UTC(2026, month - 1, 1)),
+      )
+    : "Not selected";
+
+const FieldError = ({
+  state,
+  show,
+}: {
+  state: FieldValidation;
+  show: boolean;
+}) =>
+  show && !state.valid ? (
+    <p className="text-sm text-destructive">{state.message}</p>
+  ) : null;
+
+const NativeSelect = ({
+  id,
+  label,
+  value,
+  disabled,
+  placeholder,
+  options,
+  validation,
+  showError,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  disabled: boolean;
+  placeholder: string;
+  options: Array<{ value: string; label: string }>;
+  validation: FieldValidation;
+  showError: boolean;
+  onChange: (value: string) => void;
+}) => (
+  <div className="space-y-2">
+    <Label htmlFor={id}>{label}</Label>
+    <select
+      id={id}
+      className="min-h-11 w-full rounded-md border bg-background px-3 py-2 text-sm"
+      disabled={disabled}
+      value={value}
+      aria-invalid={showError && !validation.valid}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+    <FieldError state={validation} show={showError} />
+  </div>
+);
 
 export function FestivalConfigurationWizard({
   festivalCompanyId,
 }: {
   festivalCompanyId: string;
 }) {
+  const navigate = useNavigate();
   const query = useFestivalConfiguration(festivalCompanyId);
   const save = useSaveFestivalConfiguration();
   const { draft, setDraft, dirty, version, acceptCanonical } =
@@ -47,21 +163,19 @@ export function FestivalConfigurationWizard({
   const [saveFailed, setSaveFailed] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(
-    null,
-  );
-  const summaryRef = useRef<HTMLDivElement>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const requestRef = useRef<{ payload: string; key: string } | null>(null);
+
   useEffect(() => {
     const unload = (event: BeforeUnloadEvent) => {
-      if (dirty) {
-        event.preventDefault();
-        event.returnValue = "";
-      }
+      if (!dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
     };
     window.addEventListener("beforeunload", unload);
     return () => window.removeEventListener("beforeunload", unload);
   }, [dirty]);
+
   useEffect(() => {
     const click = (event: MouseEvent) => {
       const anchor = (event.target as Element | null)?.closest(
@@ -71,7 +185,7 @@ export function FestivalConfigurationWizard({
         !dirty ||
         !anchor ||
         anchor.target ||
-        anchor.origin !== location.origin
+        anchor.origin !== window.location.origin
       )
         return;
       event.preventDefault();
@@ -81,8 +195,10 @@ export function FestivalConfigurationWizard({
     document.addEventListener("click", click, true);
     return () => document.removeEventListener("click", click, true);
   }, [dirty]);
-  if (query.isLoading) return <p role="status">Loading configuration…</p>;
-  if (query.isError || !query.data || !draft)
+
+  if (query.isLoading) return <p role="status">Loading Festival setup…</p>;
+
+  if (query.isError || !query.data || !draft) {
     return (
       <Alert variant="destructive">
         <AlertDescription className="space-y-3">
@@ -99,49 +215,96 @@ export function FestivalConfigurationWizard({
         </AlertDescription>
       </Alert>
     );
+  }
 
+  const configuration = query.data;
   const validation = validateFestivalDraft(
     draft,
-    query.data.cities,
-    query.data.scales,
+    configuration.cities,
+    configuration.scales,
   );
-  const maximumStep = maximumReachableStep(validation);
-  const selectedScale = query.data.scales.find(
+  const step = compactStepFromServer(draft.currentStep);
+  const selectedScale = configuration.scales.find(
     (scale) => scale.key === draft.festivalScale,
   );
-  const canWrite = query.data.canWrite;
+  const selectedCity = configuration.cities.find(
+    (city) => city.id === draft.homeCityId,
+  );
+  const selectedVibe = configuration.vibes.find(
+    (option) => option.key === draft.vibe,
+  );
+  const selectedSite = configuration.siteTypes.find(
+    (option) => option.key === draft.siteType,
+  );
+  const selectedEnvironment = configuration.environmentalPolicies.find(
+    (option) => option.key === draft.environmentalPolicy,
+  );
+  const durationDays = validation.durationDays ?? 1;
+  const canWrite = configuration.canWrite;
+
   const patch = (values: Partial<FestivalConfigurationDraft>) =>
     setDraft({ ...draft, ...values });
-  const showErrors = (valid: boolean) => {
-    if (valid) return false;
-    setAttempted(true);
-    queueMicrotask(() => summaryRef.current?.focus());
-    return true;
+
+  const defaultsValid =
+    validation.fields.homeCityId.valid &&
+    validation.fields.annualMonth.valid &&
+    validation.fields.vibe.valid &&
+    validation.fields.siteType.valid &&
+    validation.fields.environmentalPolicy.valid;
+  const firstEditionValid =
+    validation.fields.festivalScale.valid && validation.datesValid;
+  const stepValid =
+    step === 1
+      ? validation.identityValid
+      : step === 2
+        ? defaultsValid
+        : step === 3
+          ? firstEditionValid
+          : validation.allValid;
+
+  const errorsForStep = () => {
+    const fields = validation.fields;
+    const selected =
+      step === 1
+        ? [fields.publicName, fields.shortName, fields.tagline, fields.description]
+        : step === 2
+          ? [
+              fields.homeCityId,
+              fields.annualMonth,
+              fields.vibe,
+              fields.siteType,
+              fields.environmentalPolicy,
+            ]
+          : step === 3
+            ? [fields.festivalScale, fields.plannedStartDate, fields.plannedEndDate]
+            : Object.values(fields);
+    return selected.filter((field) => !field.valid);
   };
-  const persist = (nextStep = draft.currentStep, complete = false) => {
+
+  const persist = (targetStep: CompactStep, complete = false) => {
     if (!canWrite || save.isPending) return;
-    const stepValid =
-      draft.currentStep === 1
-        ? validation.identityValid
-        : draft.currentStep === 2
-            ? validation.fields.homeCityId.valid && validation.fields.annualMonth.valid
-            : draft.currentStep === 3
-              ? validation.fields.vibe.valid && validation.fields.siteType.valid
-              : draft.currentStep === 4
-                ? validation.fields.festivalScale.valid && validation.fields.environmentalPolicy.valid
-                : draft.currentStep === 5 ? validation.datesValid : validation.allValid;
-    if (showErrors(stepValid && (!complete || validation.allValid))) return;
-    const configuration = { ...draft, currentStep: nextStep, complete };
-    const payload = JSON.stringify(configuration);
-    if (!requestRef.current || requestRef.current.payload !== payload)
+    if (!stepValid || (complete && !validation.allValid)) {
+      setAttempted(true);
+      return;
+    }
+
+    const nextDraft: FestivalConfigurationDraft = {
+      ...draft,
+      currentStep: serverStepFromCompact(targetStep),
+      complete,
+    };
+    const payload = JSON.stringify(nextDraft);
+    if (!requestRef.current || requestRef.current.payload !== payload) {
       requestRef.current = { payload, key: crypto.randomUUID() };
+    }
+
     setConflict(false);
     setSaveFailed(false);
     save.mutate(
       {
         festivalCompanyId,
         expectedVersion: version.current,
-        configuration,
+        configuration: nextDraft,
         idempotencyKey: requestRef.current.key,
       },
       {
@@ -152,61 +315,107 @@ export function FestivalConfigurationWizard({
           setSaveFailed(false);
           setAttempted(false);
           requestRef.current = null;
+
+          if (complete && canonical.festivalEditionId) {
+            navigate(
+              festivalRoutes.edition(
+                festivalCompanyId,
+                canonical.festivalEditionId,
+              ),
+            );
+          }
         },
         onError: (error) => {
           if (
             error instanceof FestivalConfigurationError &&
             error.code === "festival_configuration_stale"
-          )
+          ) {
             setConflict(true);
-          else setSaveFailed(true);
+          } else {
+            setSaveFailed(true);
+          }
         },
       },
     );
   };
+
   const reloadLatest = async () => {
     const result = await query.refetch();
-    if (result.data) {
-      acceptCanonical(result.data);
-      setConflict(false);
-      setSaveFailed(false);
-      requestRef.current = null;
-    }
+    if (!result.data) return;
+    acceptCanonical(result.data);
+    setConflict(false);
+    setSaveFailed(false);
+    requestRef.current = null;
   };
-  const errors = Object.values(validation.fields).filter(
-    (field) => !field.valid,
-  );
+
+  const progress = ((step - 1) / (compactSteps.length - 1)) * 100;
+
   return (
-    <section className="space-y-6" aria-labelledby="wizard-title">
-      <div>
-        <h2 id="wizard-title" className="text-xl font-semibold">
-          Festival configuration
-        </h2>
-        <p>
-          Build the public identity and initial schedule. This draft does not
-          announce or launch your festival.
-        </p>
+    <section className="space-y-6" aria-labelledby="festival-setup-title">
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle id="festival-setup-title" className="flex items-center gap-2">
+            <Tent className="h-5 w-5" /> Set up your Festival company
+          </CardTitle>
+          <CardDescription>
+            Set the permanent brand and sensible defaults, then seed the first
+            annual Festival. After setup you will manage each year through the
+            simpler Plan → Line-up → Tickets & budget → Run Festival → Results flow.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      {!canWrite ? (
+        <Alert>
+          <AlertDescription>
+            This setup is read-only. An authorised company owner or manager can
+            make changes.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="space-y-3" aria-label="Festival setup progress">
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-4">
+          {compactSteps.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`rounded-md border p-3 text-left text-sm transition-colors ${
+                item.id === step
+                  ? "border-primary bg-primary/10"
+                  : item.id < step
+                    ? "border-emerald-500/30 bg-emerald-500/5"
+                    : "bg-card"
+              }`}
+              disabled={item.id > step || save.isPending}
+              onClick={() =>
+                patch({ currentStep: serverStepFromCompact(item.id) })
+              }
+            >
+              <span className="flex items-center gap-2 font-medium">
+                {item.id < step ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs">
+                    {item.id}
+                  </span>
+                )}
+                {item.title}
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {item.description}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
-      {!canWrite && (
-        <Alert>
-          <AlertDescription>
-            This configuration is read-only. You can review every section, but
-            only an authorised owner or administrator can save changes.
-          </AlertDescription>
-        </Alert>
-      )}
-      {query.data.festivalEditionId && query.data.editionYear && (
-        <Alert>
-          <AlertDescription>
-            Annual edition {query.data.editionYear} was created and is ready for private planning.
-          </AlertDescription>
-        </Alert>
-      )}
-      <FestivalWizardProgress
-        currentStep={draft.currentStep}
-        maximumStep={canWrite ? (validation.allValid ? 6 : maximumStep) : 6}
-        onSelect={(currentStep) => patch({ currentStep })}
-      />
+
       <FestivalSaveStatus
         pending={save.isPending}
         conflict={conflict}
@@ -215,36 +424,37 @@ export function FestivalConfigurationWizard({
         readOnly={!canWrite}
         savedAt={savedAt}
       />
-      {conflict && (
+
+      {conflict ? (
         <FestivalConflictAlert
           loading={query.isFetching}
           onReload={reloadLatest}
           onKeep={() => setConflict(false)}
         />
-      )}
-      {saveFailed && (
+      ) : null}
+
+      {saveFailed ? (
         <Alert variant="destructive" role="alert">
           <AlertDescription>
             {festivalConfigurationErrorMessage(save.error)}
           </AlertDescription>
         </Alert>
-      )}
-      {attempted && errors.length > 0 && (
-        <div
-          ref={summaryRef}
-          tabIndex={-1}
-          role="alert"
-          className="rounded border border-destructive p-4"
-        >
-          <h3 className="font-semibold">Check the following fields</h3>
-          <ul className="list-disc pl-5">
-            {errors.map((item) => (
-              <li key={item.code}>{item.message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {draft.currentStep === 1 && (
+      ) : null}
+
+      {attempted && errorsForStep().length > 0 ? (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>
+            <p className="font-medium">Finish these fields before continuing:</p>
+            <ul className="mt-2 list-disc pl-5">
+              {errorsForStep().map((field, index) => (
+                <li key={`${field.code ?? "field"}-${index}`}>{field.message}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {step === 1 ? (
         <IdentityStep
           draft={draft}
           disabled={!canWrite}
@@ -252,53 +462,59 @@ export function FestivalConfigurationWizard({
           validation={validation.fields}
           patch={patch}
         />
-      )}
-      {draft.currentStep === 2 && (
-        <LocationStep
+      ) : null}
+
+      {step === 2 ? (
+        <DefaultsStep
           draft={draft}
           disabled={!canWrite}
           attempted={attempted}
-          configuration={query.data}
+          cities={configuration.cities}
+          vibes={configuration.vibes}
+          siteTypes={configuration.siteTypes}
+          environmentalPolicies={configuration.environmentalPolicies}
           validation={validation.fields}
           patch={patch}
         />
-      )}
-      {draft.currentStep === 3 && (
-        <VibeSiteStep draft={draft} disabled={!canWrite} attempted={attempted} configuration={query.data} validation={validation.fields} patch={patch} />
-      )}
-      {draft.currentStep === 4 && (
-        <ScalePolicyStep draft={draft} disabled={!canWrite} attempted={attempted} configuration={query.data} validation={validation.fields} patch={patch} />
-      )}
-      {draft.currentStep === 5 && (
-        <ScheduleStep
+      ) : null}
+
+      {step === 3 ? (
+        <FirstEditionStep
           draft={draft}
           disabled={!canWrite}
           attempted={attempted}
-          duration={validation.durationDays}
-          maximum={selectedScale?.maximumDurationDays}
+          scales={configuration.scales}
+          selectedScale={selectedScale}
+          durationDays={durationDays}
           validation={validation.fields}
           patch={patch}
         />
-      )}
-      {draft.currentStep === 6 && (
+      ) : null}
+
+      {step === 4 ? (
         <ReviewStep
           draft={draft}
-          legalName={query.data.legalCompanyName}
-          city={
-            query.data.cities.find((city) => city.id === draft.homeCityId)?.name
-          }
-          scale={selectedScale?.displayName}
-          duration={validation.durationDays}
-          status={query.data.setupStatus}
+          legalCompanyName={configuration.legalCompanyName}
+          city={selectedCity}
+          vibe={selectedVibe}
+          site={selectedSite}
+          environment={selectedEnvironment}
+          scale={selectedScale}
+          durationDays={durationDays}
         />
-      )}
-      {canWrite && (
-        <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:flex-wrap">
+      ) : null}
+
+      {canWrite ? (
+        <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:flex-wrap">
           <Button
             type="button"
             variant="outline"
-            disabled={draft.currentStep === 1 || save.isPending}
-            onClick={() => patch({ currentStep: draft.currentStep - 1 })}
+            disabled={step === 1 || save.isPending}
+            onClick={() =>
+              patch({
+                currentStep: serverStepFromCompact((step - 1) as CompactStep),
+              })
+            }
           >
             Back
           </Button>
@@ -306,15 +522,15 @@ export function FestivalConfigurationWizard({
             type="button"
             variant="secondary"
             disabled={save.isPending || !dirty}
-            onClick={() => persist()}
+            onClick={() => persist(step)}
           >
             Save draft
           </Button>
-          {draft.currentStep < 6 ? (
+          {step < 4 ? (
             <Button
               type="button"
               disabled={save.isPending}
-              onClick={() => persist(draft.currentStep + 1)}
+              onClick={() => persist((step + 1) as CompactStep)}
             >
               Save and continue
             </Button>
@@ -322,13 +538,14 @@ export function FestivalConfigurationWizard({
             <Button
               type="button"
               disabled={save.isPending}
-              onClick={() => persist(6, true)}
+              onClick={() => persist(4, true)}
             >
-              Complete initial setup
+              Finish setup & open Plan
             </Button>
           )}
         </div>
-      )}
+      ) : null}
+
       <AlertDialog
         open={Boolean(pendingNavigation)}
         onOpenChange={(open) => {
@@ -337,9 +554,7 @@ export function FestivalConfigurationWizard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              You have unsaved festival changes.
-            </AlertDialogTitle>
+            <AlertDialogTitle>You have unsaved Festival changes.</AlertDialogTitle>
             <AlertDialogDescription>
               Discard these changes and leave this page?
             </AlertDialogDescription>
@@ -348,7 +563,7 @@ export function FestivalConfigurationWizard({
             <AlertDialogCancel>Stay and continue editing</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (pendingNavigation) location.assign(pendingNavigation);
+                if (pendingNavigation) window.location.assign(pendingNavigation);
               }}
             >
               Discard changes
@@ -360,254 +575,441 @@ export function FestivalConfigurationWizard({
   );
 }
 
-function ErrorText({
-  id,
-  state,
-  show,
+function IdentityStep({
+  draft,
+  disabled,
+  attempted,
+  validation,
+  patch,
 }: {
-  id: string;
-  state: FieldValidation;
-  show: boolean;
+  draft: FestivalConfigurationDraft;
+  disabled: boolean;
+  attempted: boolean;
+  validation: ReturnType<typeof validateFestivalDraft>["fields"];
+  patch: (values: Partial<FestivalConfigurationDraft>) => void;
 }) {
-  return show && !state.valid ? (
-    <p id={id} className="text-sm text-destructive">
-      {state.message}
-    </p>
-  ) : null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5" /> Festival identity
+        </CardTitle>
+        <CardDescription>
+          This is the permanent public brand. Annual Festivals will inherit the
+          name but keep their own dates, line-up and results.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-5 sm:grid-cols-2">
+        <TextInput
+          id="festival-public-name"
+          label="Public Festival name"
+          value={draft.publicName}
+          maxLength={80}
+          disabled={disabled}
+          validation={validation.publicName}
+          showError={attempted}
+          onChange={(publicName) => patch({ publicName })}
+        />
+        <TextInput
+          id="festival-short-name"
+          label="Short name"
+          value={draft.shortName}
+          maxLength={24}
+          disabled={disabled}
+          validation={validation.shortName}
+          showError={attempted}
+          onChange={(shortName) => patch({ shortName })}
+        />
+        <TextInput
+          id="festival-tagline"
+          label="Tagline"
+          value={draft.tagline}
+          maxLength={120}
+          disabled={disabled}
+          validation={validation.tagline}
+          showError={attempted}
+          onChange={(tagline) => patch({ tagline })}
+        />
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="festival-description">Description</Label>
+          <Textarea
+            id="festival-description"
+            value={draft.description}
+            maxLength={1000}
+            disabled={disabled}
+            onChange={(event) => patch({ description: event.target.value })}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Describe the Festival for players and artists.</span>
+            <span>{draft.description.length}/1000</span>
+          </div>
+          <FieldError state={validation.description} show={attempted} />
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
-function TextField({
-  label,
+
+function DefaultsStep({
+  draft,
+  disabled,
+  attempted,
+  cities,
+  vibes,
+  siteTypes,
+  environmentalPolicies,
+  validation,
+  patch,
+}: {
+  draft: FestivalConfigurationDraft;
+  disabled: boolean;
+  attempted: boolean;
+  cities: FestivalCity[];
+  vibes: FestivalCatalogueOption[];
+  siteTypes: FestivalCatalogueOption[];
+  environmentalPolicies: FestivalCatalogueOption[];
+  validation: ReturnType<typeof validateFestivalDraft>["fields"];
+  patch: (values: Partial<FestivalConfigurationDraft>) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" /> Festival defaults
+        </CardTitle>
+        <CardDescription>
+          These are starting preferences for future annual Festivals, not locked
+          operating rules. Each year's Plan can change them.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-5 sm:grid-cols-2">
+        <NativeSelect
+          id="festival-home-city"
+          label="Home city"
+          value={draft.homeCityId ?? ""}
+          disabled={disabled}
+          placeholder="Choose a city"
+          options={cities.map((city) => ({
+            value: city.id,
+            label: `${city.name}, ${city.country}`,
+          }))}
+          validation={validation.homeCityId}
+          showError={attempted}
+          onChange={(homeCityId) => patch({ homeCityId: homeCityId || null })}
+        />
+        <NativeSelect
+          id="festival-annual-month"
+          label="Usual Festival month"
+          value={draft.annualMonth ? String(draft.annualMonth) : ""}
+          disabled={disabled}
+          placeholder="Choose a month"
+          options={Array.from({ length: 12 }, (_, index) => ({
+            value: String(index + 1),
+            label: monthName(index + 1),
+          }))}
+          validation={validation.annualMonth}
+          showError={attempted}
+          onChange={(annualMonth) =>
+            patch({ annualMonth: annualMonth ? Number(annualMonth) : null })
+          }
+        />
+        <NativeSelect
+          id="festival-default-vibe"
+          label="Default vibe"
+          value={draft.vibe ?? ""}
+          disabled={disabled}
+          placeholder="Choose a vibe"
+          options={vibes.map((option) => ({
+            value: option.key,
+            label: option.displayName,
+          }))}
+          validation={validation.vibe}
+          showError={attempted}
+          onChange={(vibe) =>
+            patch({ vibe: (vibe || null) as FestivalConfigurationDraft["vibe"] })
+          }
+        />
+        <NativeSelect
+          id="festival-default-site"
+          label="Default site style"
+          value={draft.siteType ?? ""}
+          disabled={disabled}
+          placeholder="Choose a site style"
+          options={siteTypes.map((option) => ({
+            value: option.key,
+            label: option.displayName,
+          }))}
+          validation={validation.siteType}
+          showError={attempted}
+          onChange={(siteType) =>
+            patch({
+              siteType: (siteType || null) as FestivalConfigurationDraft["siteType"],
+            })
+          }
+        />
+        <div className="sm:col-span-2">
+          <NativeSelect
+            id="festival-environment"
+            label="Environmental approach"
+            value={draft.environmentalPolicy ?? ""}
+            disabled={disabled}
+            placeholder="Choose an approach"
+            options={environmentalPolicies.map((option) => ({
+              value: option.key,
+              label: `${option.displayName} — ${option.description}`,
+            }))}
+            validation={validation.environmentalPolicy}
+            showError={attempted}
+            onChange={(environmentalPolicy) =>
+              patch({
+                environmentalPolicy: (environmentalPolicy ||
+                  null) as FestivalConfigurationDraft["environmentalPolicy"],
+              })
+            }
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FirstEditionStep({
+  draft,
+  disabled,
+  attempted,
+  scales,
+  selectedScale,
+  durationDays,
+  validation,
+  patch,
+}: {
+  draft: FestivalConfigurationDraft;
+  disabled: boolean;
+  attempted: boolean;
+  scales: FestivalScaleOption[];
+  selectedScale?: FestivalScaleOption;
+  durationDays: number;
+  validation: ReturnType<typeof validateFestivalDraft>["fields"];
+  patch: (values: Partial<FestivalConfigurationDraft>) => void;
+}) {
+  const maximumDuration = selectedScale?.maximumDurationDays ?? 1;
+  const currentDuration = Math.min(durationDays, maximumDuration);
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div className="space-y-4">
+      <Alert>
+        <AlertDescription>
+          This step only seeds your first annual Festival. After setup you go
+          straight to <strong>Plan</strong>, where the date, city, site style,
+          size, duration, vibe and marketing can be refined before anything is
+          launched.
+        </AlertDescription>
+      </Alert>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5" /> First annual Festival
+          </CardTitle>
+          <CardDescription>
+            Choose an initial size and date so the first annual edition can be
+            created. Detailed operations are generated automatically later.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-5 sm:grid-cols-2">
+          <NativeSelect
+            id="festival-initial-scale"
+            label="Initial Festival size"
+            value={draft.festivalScale ?? ""}
+            disabled={disabled}
+            placeholder="Choose a size"
+            options={scales.map((scale) => ({
+              value: scale.key,
+              label: `${scale.displayName} · up to ${scale.maximumCapacity.toLocaleString("en-GB")}`,
+            }))}
+            validation={validation.festivalScale}
+            showError={attempted}
+            onChange={(festivalScale) => {
+              const nextScale = scales.find((scale) => scale.key === festivalScale);
+              const nextDuration = Math.min(
+                currentDuration,
+                nextScale?.maximumDurationDays ?? 1,
+              );
+              patch({
+                festivalScale:
+                  (festivalScale || null) as FestivalConfigurationDraft["festivalScale"],
+                plannedEndDate: draft.plannedStartDate
+                  ? addDays(draft.plannedStartDate, nextDuration)
+                  : draft.plannedEndDate,
+              });
+            }}
+          />
+          <div className="space-y-2">
+            <Label htmlFor="festival-first-date">First Festival start date</Label>
+            <Input
+              id="festival-first-date"
+              type="date"
+              min={today}
+              disabled={disabled}
+              value={draft.plannedStartDate ?? ""}
+              aria-invalid={attempted && !validation.plannedStartDate.valid}
+              onChange={(event) => {
+                const plannedStartDate = event.target.value || null;
+                const month = plannedStartDate
+                  ? new Date(`${plannedStartDate}T12:00:00.000Z`).getUTCMonth() + 1
+                  : draft.annualMonth;
+                patch({
+                  plannedStartDate,
+                  annualMonth: month,
+                  plannedEndDate: plannedStartDate
+                    ? addDays(plannedStartDate, currentDuration)
+                    : null,
+                });
+              }}
+            />
+            <FieldError state={validation.plannedStartDate} show={attempted} />
+          </div>
+          <NativeSelect
+            id="festival-first-duration"
+            label="Initial duration"
+            value={String(currentDuration)}
+            disabled={disabled || !selectedScale}
+            placeholder="Choose duration"
+            options={Array.from({ length: maximumDuration }, (_, index) => ({
+              value: String(index + 1),
+              label: `${index + 1} day${index === 0 ? "" : "s"}`,
+            }))}
+            validation={validation.plannedEndDate}
+            showError={attempted}
+            onChange={(duration) =>
+              patch({
+                plannedEndDate: draft.plannedStartDate
+                  ? addDays(draft.plannedStartDate, Number(duration))
+                  : null,
+              })
+            }
+          />
+          <div className="rounded-md border bg-muted/30 p-4 text-sm">
+            <p className="font-medium">First event preview</p>
+            <p className="mt-2 text-muted-foreground">
+              {draft.plannedStartDate && draft.plannedEndDate
+                ? `${draft.plannedStartDate} → ${draft.plannedEndDate}`
+                : "Choose a start date and duration."}
+            </p>
+            {selectedScale ? (
+              <p className="mt-1 text-muted-foreground">
+                {selectedScale.displayName} · {selectedScale.minimumCapacity.toLocaleString("en-GB")}–{selectedScale.maximumCapacity.toLocaleString("en-GB")} base capacity
+              </p>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ReviewStep({
+  draft,
+  legalCompanyName,
+  city,
+  vibe,
+  site,
+  environment,
+  scale,
+  durationDays,
+}: {
+  draft: FestivalConfigurationDraft;
+  legalCompanyName: string;
+  city?: FestivalCity;
+  vibe?: FestivalCatalogueOption;
+  site?: FestivalCatalogueOption;
+  environment?: FestivalCatalogueOption;
+  scale?: FestivalScaleOption;
+  durationDays: number;
+}) {
+  const summary = [
+    ["Public Festival", draft.publicName],
+    ["Legal company", legalCompanyName],
+    ["Home city", city ? `${city.name}, ${city.country}` : "Not selected"],
+    ["Usual month", monthName(draft.annualMonth)],
+    ["Default vibe", vibe?.displayName ?? "Not selected"],
+    ["Default site", site?.displayName ?? "Not selected"],
+    ["Environmental approach", environment?.displayName ?? "Not selected"],
+    ["First Festival size", scale?.displayName ?? "Not selected"],
+    [
+      "First Festival dates",
+      draft.plannedStartDate && draft.plannedEndDate
+        ? `${draft.plannedStartDate} → ${draft.plannedEndDate} (${durationDays} day${durationDays === 1 ? "" : "s"})`
+        : "Not selected",
+    ],
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5" /> Ready to create
+          </CardTitle>
+          <CardDescription>
+            This creates the permanent Festival company setup and its first draft
+            annual edition. It does not announce or run the Festival.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {summary.map(([label, value]) => (
+            <div key={label} className="rounded-md border p-3 text-sm">
+              <p className="text-muted-foreground">{label}</p>
+              <p className="mt-1 font-medium">{value || "—"}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <Alert>
+        <AlertDescription>
+          After you finish, RockMundo opens the first annual <strong>Plan</strong>
+          screen. That is the normal place to manage this year's Festival choices;
+          you will not return to this company setup wizard for yearly planning.
+        </AlertDescription>
+      </Alert>
+    </div>
+  );
+}
+
+function TextInput({
   id,
+  label,
   value,
-  max,
+  maxLength,
   disabled,
   validation,
-  show,
+  showError,
   onChange,
 }: {
-  label: string;
   id: string;
+  label: string;
   value: string;
-  max: number;
+  maxLength: number;
   disabled: boolean;
   validation: FieldValidation;
-  show: boolean;
+  showError: boolean;
   onChange: (value: string) => void;
 }) {
-  const errorId = `${id}-error`;
   return (
-    <div>
+    <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
         value={value}
-        maxLength={max}
+        maxLength={maxLength}
         disabled={disabled}
-        aria-invalid={show && !validation.valid}
-        aria-describedby={`${id}-count${show && !validation.valid ? ` ${errorId}` : ""}`}
+        aria-invalid={showError && !validation.valid}
         onChange={(event) => onChange(event.target.value)}
       />
-      <small id={`${id}-count`}>
-        {value.length}/{max}
-      </small>
-      <ErrorText id={errorId} state={validation} show={show} />
-    </div>
-  );
-}
-function IdentityStep({ draft, disabled, attempted, validation, patch }: any) {
-  return (
-    <div className="space-y-4">
-      <p>
-        This public identity is separate from the legal Festival Company name.
-      </p>
-      <TextField
-        label="Public festival name"
-        id="public-name"
-        value={draft.publicName}
-        max={80}
-        disabled={disabled}
-        validation={validation.publicName}
-        show={attempted}
-        onChange={(publicName) => patch({ publicName })}
-      />
-      <TextField
-        label="Short name"
-        id="short-name"
-        value={draft.shortName}
-        max={24}
-        disabled={disabled}
-        validation={validation.shortName}
-        show={attempted}
-        onChange={(shortName) => patch({ shortName })}
-      />
-      <TextField
-        label="Tagline"
-        id="tagline"
-        value={draft.tagline}
-        max={120}
-        disabled={disabled}
-        validation={validation.tagline}
-        show={attempted}
-        onChange={(tagline) => patch({ tagline })}
-      />
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          maxLength={1000}
-          disabled={disabled}
-          value={draft.description}
-          aria-invalid={attempted && !validation.description.valid}
-          aria-describedby="description-count description-error"
-          onChange={(event) => patch({ description: event.target.value })}
-        />
-        <small id="description-count">{draft.description.length}/1000</small>
-        <ErrorText
-          id="description-error"
-          state={validation.description}
-          show={attempted}
-        />
+      <div className="flex justify-end text-xs text-muted-foreground">
+        {value.length}/{maxLength}
       </div>
-    </div>
-  );
-}
-function LocationStep({
-  draft,
-  disabled,
-  attempted,
-  configuration,
-  validation,
-  patch,
-}: any) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="city">Home city</Label>
-        <select
-          id="city"
-          disabled={disabled}
-          aria-invalid={attempted && !validation.homeCityId.valid}
-          aria-describedby="city-error"
-          className="min-h-11 w-full rounded border bg-background p-2"
-          value={draft.homeCityId ?? ""}
-          onChange={(event) =>
-            patch({ homeCityId: event.target.value || null })
-          }
-        >
-          <option value="">Choose a city</option>
-          {configuration.cities.map((city: any) => (
-            <option key={city.id} value={city.id}>
-              {city.name}, {city.country}
-            </option>
-          ))}
-        </select>
-        <ErrorText
-          id="city-error"
-          state={validation.homeCityId}
-          show={attempted}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div><Label htmlFor="annual-month">Recurring annual month</Label><select id="annual-month" disabled={disabled} className="min-h-11 w-full rounded border bg-background p-2" value={draft.annualMonth ?? ""} onChange={(event) => patch({ annualMonth: event.target.value ? Number(event.target.value) : null })}><option value="">Choose a month</option>{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, index, 1)))}</option>)}</select><ErrorText id="annual-month-error" state={validation.annualMonth} show={attempted} /></div>
-      </div>
-    </div>
-  );
-}
-function CatalogueSelect({ id, label, value, disabled, options, validation, attempted, onChange }: any) {
-  return <div><Label htmlFor={id}>{label}</Label><select id={id} disabled={disabled} className="min-h-11 w-full rounded border bg-background p-2" value={value ?? ""} onChange={(event) => onChange(event.target.value || null)}><option value="">Choose an option</option>{options.map((option: any) => <option key={option.key} value={option.key}>{option.displayName}</option>)}</select><ErrorText id={`${id}-error`} state={validation} show={attempted} /></div>;
-}
-function VibeSiteStep({ draft, disabled, attempted, configuration, validation, patch }: any) {
-  return <div className="grid gap-4 sm:grid-cols-2"><CatalogueSelect id="vibe" label="Festival vibe" value={draft.vibe} disabled={disabled} options={configuration.vibes} validation={validation.vibe} attempted={attempted} onChange={(vibe: string | null) => patch({ vibe })} /><CatalogueSelect id="site-type" label="Site approach" value={draft.siteType} disabled={disabled} options={configuration.siteTypes} validation={validation.siteType} attempted={attempted} onChange={(siteType: string | null) => patch({ siteType })} /></div>;
-}
-function ScalePolicyStep({ draft, disabled, attempted, configuration, validation, patch }: any) {
-  return <div className="space-y-4"><fieldset disabled={disabled} aria-describedby="scale-error"><legend className="font-medium">Festival scale and duration</legend><div className="grid gap-3 sm:grid-cols-2">{configuration.scales.map((scale: any) => <label key={scale.key} className="min-h-11 rounded border p-4"><input type="radio" name="scale" checked={draft.festivalScale === scale.key} onChange={() => patch({ festivalScale: scale.key })} /> <strong>{scale.displayName}</strong><span className="block">{scale.description} {scale.minimumCapacity.toLocaleString()}–{scale.maximumCapacity.toLocaleString()} daily capacity · 1–{scale.maximumDurationDays} days · {scale.complexity} complexity.</span></label>)}</div></fieldset><ErrorText id="scale-error" state={validation.festivalScale} show={attempted} /><CatalogueSelect id="environmental-policy" label="Environmental policy" value={draft.environmentalPolicy} disabled={disabled} options={configuration.environmentalPolicies} validation={validation.environmentalPolicy} attempted={attempted} onChange={(environmentalPolicy: string | null) => patch({ environmentalPolicy })} /></div>;
-}
-function ScheduleStep({
-  draft,
-  disabled,
-  attempted,
-  duration,
-  maximum,
-  validation,
-  patch,
-}: any) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div>
-        <Label htmlFor="start">Start date</Label>
-        <Input
-          id="start"
-          type="date"
-          disabled={disabled}
-          value={draft.plannedStartDate ?? ""}
-          aria-invalid={attempted && !validation.plannedStartDate.valid}
-          aria-describedby="start-error"
-          onChange={(event) =>
-            patch({ plannedStartDate: event.target.value || null })
-          }
-        />
-        <ErrorText
-          id="start-error"
-          state={validation.plannedStartDate}
-          show={attempted}
-        />
-      </div>
-      <div>
-        <Label htmlFor="end">End date</Label>
-        <Input
-          id="end"
-          type="date"
-          disabled={disabled}
-          value={draft.plannedEndDate ?? ""}
-          aria-invalid={attempted && !validation.plannedEndDate.valid}
-          aria-describedby="end-error"
-          onChange={(event) =>
-            patch({ plannedEndDate: event.target.value || null })
-          }
-        />
-        <ErrorText
-          id="end-error"
-          state={validation.plannedEndDate}
-          show={attempted}
-        />
-      </div>
-      <p className="sm:col-span-2">
-        Calculated inclusive duration: {duration ?? "Choose valid dates"} day(s)
-        {maximum ? `; maximum ${maximum} for this scale` : ""}. The server
-        remains authoritative.
-      </p>
-    </div>
-  );
-}
-function ReviewStep({ draft, legalName, city, scale, duration, status }: any) {
-  return (
-    <div className="space-y-3">
-      <h3 className="font-semibold">Review draft</h3>
-      <dl className="grid grid-cols-[minmax(7rem,1fr)_2fr] gap-2 break-words">
-        <dt>Public name</dt>
-        <dd>{draft.publicName}</dd>
-        <dt>Festival Company</dt>
-        <dd>{legalName}</dd>
-        <dt>Home city</dt>
-        <dd>{city ?? "Incomplete"}</dd>
-        <dt>Scale</dt>
-        <dd>{scale ?? "Incomplete"}</dd>
-        <dt>Annual pattern</dt><dd>Month {draft.annualMonth ?? "Incomplete"} · {draft.vibe ?? "Incomplete"} · {draft.siteType ?? "Incomplete"}</dd>
-        <dt>Environmental policy</dt><dd>{draft.environmentalPolicy ?? "Incomplete"}</dd>
-        <dt>Dates</dt>
-        <dd>
-          {draft.plannedStartDate ?? "Incomplete"} –{" "}
-          {draft.plannedEndDate ?? "Incomplete"}
-        </dd>
-        <dt>Duration</dt>
-        <dd>{duration ?? "Incomplete"} days</dd>
-        <dt>Status</dt>
-        <dd>{status.replaceAll("_", " ")}</dd>
-      </dl>
-      <p>
-        Completion creates a private draft annual edition. It does not announce
-        the festival or create stages, tickets, sales or bookings.
-      </p>
+      <FieldError state={validation} show={showError} />
     </div>
   );
 }
