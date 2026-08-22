@@ -4,6 +4,23 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { CityProject, CityProjectType } from "@/types/city-projects";
 
+const PROJECT_ERROR_MESSAGES: Record<string, string> = {
+  city_governance_auth_required: "You must be logged in to manage city projects.",
+  city_governance_profile_forbidden: "That character does not belong to your account.",
+  city_project_mayor_required: "Only the current mayor can manage city projects.",
+  city_project_type_not_found: "That city project is no longer available.",
+  city_project_skill_required: "Your politics skills do not meet this project's requirement.",
+  city_project_insufficient_treasury: "The city treasury does not have enough available funds.",
+  city_project_not_found: "City project not found.",
+  city_project_not_in_progress: "Only an in-progress project can be cancelled.",
+};
+
+function projectError(error: unknown): Error {
+  const raw = error instanceof Error ? error.message : String((error as any)?.message ?? error ?? "Unknown error");
+  const code = Object.keys(PROJECT_ERROR_MESSAGES).find((key) => raw.includes(key));
+  return new Error(code ? PROJECT_ERROR_MESSAGES[code] : raw);
+}
+
 // All available project types
 export function useCityProjectTypes() {
   return useQuery({
@@ -20,7 +37,7 @@ export function useCityProjectTypes() {
   });
 }
 
-// Projects for a specific city
+// Projects for a specific city. Completion is handled by the server governance tick.
 export function useCityProjects(cityId: string | undefined) {
   return useQuery({
     queryKey: ["city-projects", cityId],
@@ -35,10 +52,11 @@ export function useCityProjects(cityId: string | undefined) {
       return (data || []) as unknown as CityProject[];
     },
     enabled: !!cityId,
+    refetchInterval: 60_000,
   });
 }
 
-// Propose a new project
+// Propose a new project. The database calculates the skill discount and final price.
 export function useProposeCityProject() {
   const queryClient = useQueryClient();
   const { profileId } = useActiveProfile();
@@ -47,174 +65,52 @@ export function useProposeCityProject() {
     mutationFn: async ({
       cityId,
       projectTypeId,
-      costOverride,
     }: {
       cityId: string;
       projectTypeId: string;
-      costOverride?: number;
     }) => {
       if (!profileId) throw new Error("Must be logged in");
 
-      // Verify mayor + fetch mayor row
-      const { data: mayor, error: mayorError } = await supabase
-        .from("city_mayors")
-        .select("id")
-        .eq("city_id", cityId)
-        .eq("profile_id", profileId)
-        .eq("is_current", true)
-        .single();
-
-      if (mayorError || !mayor) throw new Error("Only the current mayor can propose projects");
-
-      // Fetch project type
-      const { data: projectType, error: ptError } = await supabase
-        .from("city_project_types")
-        .select("*")
-        .eq("id", projectTypeId)
-        .single();
-      if (ptError || !projectType) throw new Error("Project type not found");
-
-      // Check treasury
-      const { data: treasury } = await supabase
-        .from("city_treasury")
-        .select("balance, pending_commitments")
-        .eq("city_id", cityId)
-        .maybeSingle();
-
-      const cost = costOverride ?? projectType.base_cost;
-      const balance = treasury?.balance ?? 0;
-      const committed = treasury?.pending_commitments ?? 0;
-      const available = balance - committed;
-
-      if (available < cost) {
-        throw new Error(`Treasury has only $${available.toLocaleString()} available; need $${cost.toLocaleString()}`);
-      }
-
-      // Insert project
-      const completesAt = new Date(Date.now() + projectType.duration_days * 24 * 60 * 60 * 1000);
-      const { data: project, error: insertError } = await supabase
-        .from("city_projects")
-        .insert({
-          city_id: cityId,
-          mayor_id: mayor.id,
-          project_type_id: projectTypeId,
-          name: projectType.name,
-          description: projectType.description,
-          cost,
-          duration_days: projectType.duration_days,
-          status: 'in_progress',
-          completes_at: completesAt.toISOString(),
-          effects: projectType.effects,
-          approval_change: projectType.approval_change,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      // Reserve funds
-      if (treasury) {
-        await supabase
-          .from("city_treasury")
-          .update({ pending_commitments: committed + cost })
-          .eq("city_id", cityId);
-      }
-
-      // Log action
-      await supabase.from("mayor_actions_log").insert({
-        city_id: cityId,
-        mayor_id: mayor.id,
-        action_type: 'project_proposed',
-        amount: cost,
-        target_id: project.id,
-        notes: `Proposed: ${projectType.name}`,
+      const { data, error } = await (supabase as any).rpc("propose_city_project", {
+        p_city_id: cityId,
+        p_project_type_id: projectTypeId,
+        p_profile_id: profileId,
       });
-
-      return project;
+      if (error) throw projectError(error);
+      return data;
     },
     onSuccess: (_, { cityId }) => {
       queryClient.invalidateQueries({ queryKey: ["city-projects", cityId] });
       queryClient.invalidateQueries({ queryKey: ["city-treasury", cityId] });
       queryClient.invalidateQueries({ queryKey: ["mayor-actions-log", cityId] });
-      toast.success("Project proposed and funds reserved!");
+      toast.success("Project started and treasury funds reserved.");
     },
     onError: (error: Error) => toast.error(error.message),
   });
 }
 
-// Cancel a project
+// Cancel a project through the same transaction authority that settles projects.
 export function useCancelCityProject() {
   const queryClient = useQueryClient();
   const { profileId } = useActiveProfile();
 
   return useMutation({
-    mutationFn: async ({ projectId, cityId }: { projectId: string; cityId: string }) => {
+    mutationFn: async ({ projectId }: { projectId: string; cityId: string }) => {
       if (!profileId) throw new Error("Must be logged in");
 
-      const { data: project, error: pe } = await supabase
-        .from("city_projects")
-        .select("cost, status, mayor_id")
-        .eq("id", projectId)
-        .single();
-      if (pe || !project) throw new Error("Project not found");
-      if (project.status !== 'in_progress') throw new Error("Only in-progress projects can be cancelled");
-
-      const { error } = await supabase
-        .from("city_projects")
-        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
-        .eq("id", projectId);
-      if (error) throw error;
-
-      // Refund 50% to treasury, release commitments
-      const { data: treasury } = await supabase
-        .from("city_treasury")
-        .select("balance, pending_commitments")
-        .eq("city_id", cityId)
-        .maybeSingle();
-
-      if (treasury) {
-        const refund = Math.floor(project.cost * 0.5);
-        await supabase
-          .from("city_treasury")
-          .update({
-            pending_commitments: Math.max(0, (treasury.pending_commitments ?? 0) - project.cost),
-            balance: (treasury.balance ?? 0) - (project.cost - refund),
-          })
-          .eq("city_id", cityId);
-      }
-
-      // Increase corruption slightly
-      if (project.mayor_id) {
-        const { data: mayor } = await supabase
-          .from("city_mayors")
-          .select("corruption_score, approval_rating")
-          .eq("id", project.mayor_id)
-          .single();
-        if (mayor) {
-          await supabase
-            .from("city_mayors")
-            .update({
-              corruption_score: Math.min(100, (mayor.corruption_score ?? 0) + 3),
-              approval_rating: Math.max(0, (mayor.approval_rating ?? 50) - 2),
-            })
-            .eq("id", project.mayor_id);
-        }
-      }
-
-      await supabase.from("mayor_actions_log").insert({
-        city_id: cityId,
-        mayor_id: project.mayor_id,
-        action_type: 'project_cancelled',
-        amount: project.cost,
-        target_id: projectId,
-        notes: 'Cancelled in-progress project (50% refund)',
+      const { data, error } = await (supabase as any).rpc("cancel_city_project", {
+        p_project_id: projectId,
+        p_profile_id: profileId,
       });
+      if (error) throw projectError(error);
+      return data;
     },
     onSuccess: (_, { cityId }) => {
       queryClient.invalidateQueries({ queryKey: ["city-projects", cityId] });
       queryClient.invalidateQueries({ queryKey: ["city-treasury", cityId] });
       queryClient.invalidateQueries({ queryKey: ["city-mayor", cityId] });
-      toast.success("Project cancelled (50% of funds refunded)");
+      queryClient.invalidateQueries({ queryKey: ["mayor-actions-log", cityId] });
+      toast.success("Project cancelled. 50% of its cost was recorded as sunk expenditure.");
     },
     onError: (error: Error) => toast.error(error.message),
   });
