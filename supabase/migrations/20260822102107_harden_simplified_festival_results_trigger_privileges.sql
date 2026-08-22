@@ -1,0 +1,4 @@
+-- Production migration history marker.
+-- Internal simplified Results trigger helpers were removed from PUBLIC/anon/
+-- authenticated EXECUTE privileges on 2026-08-22. The clean-build overlay applies
+-- the same final privilege model.

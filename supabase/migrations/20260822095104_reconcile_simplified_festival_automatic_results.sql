@@ -1,0 +1,4 @@
+-- Production migration history marker.
+-- This was an intermediate automatic-results reconciliation applied on 2026-08-22.
+-- Its legacy-settlement-table approach was superseded immediately by 20260822095200.
+-- No DDL is intentionally replayed on clean builds.

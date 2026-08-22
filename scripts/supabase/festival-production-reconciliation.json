@@ -1,0 +1,21 @@
+{
+  "date": "2026-08-22",
+  "scope": "simplified-festival-production-reconciliation",
+  "reason": "Production had not received the inherited 2029 Festival migration chain. The live schema was reconciled forward without replaying incompatible historical migrations.",
+  "historyMarkers": [
+    ["20260822092642", "reconcile_simplified_festival_planning_foundations"],
+    ["20260822092947", "reconcile_simplified_festival_annual_plan_api"],
+    ["20260822093314", "reconcile_simplified_festival_internal_projections"],
+    ["20260822093549", "reconcile_simplified_festival_projection_read_contracts"],
+    ["20260822093811", "reconcile_simplified_festival_lineup_manager_actions"],
+    ["20260822094039", "reconcile_simplified_festival_runtime_foundations"],
+    ["20260822094158", "reconcile_simplified_festival_run_api"],
+    ["20260822094332", "fix_simplified_festival_runtime_pgcrypto_path"],
+    ["20260822095104", "reconcile_simplified_festival_automatic_results"],
+    ["20260822095200", "fix_simplified_festival_results_legacy_fk_boundary"],
+    ["20260822102107", "harden_simplified_festival_results_trigger_privileges"],
+    ["20260822102248", "defer_simplified_festival_results_until_runtime_finalised"]
+  ],
+  "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
+  "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
+}

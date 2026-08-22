@@ -1,0 +1,4 @@
+-- Production migration history marker.
+-- Results finalisation was converted to a deferred constraint trigger on 2026-08-22
+-- so immutable history freezes only after the full Run transaction is final.
+-- The clean-build overlay applies the same trigger semantics.

@@ -1,0 +1,4 @@
+-- Production migration history marker.
+-- The live database applied the pgcrypto search-path correction on 2026-08-22.
+-- The clean-build equivalent is applied after the frozen 2029 Festival sequence by
+-- supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql.

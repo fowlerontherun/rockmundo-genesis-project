@@ -1,0 +1,5 @@
+-- Production migration history marker.
+-- The live database applied this reconciliation on 2026-08-22.
+-- It is intentionally a no-op on clean builds because its prerequisites are
+-- supplied later by the repository's frozen inherited 2029 Festival sequence.
+-- See docs/festivals/FESTIVAL_PRODUCTION_RECONCILIATION_20260822.md.

@@ -1,0 +1,5 @@
+-- Production migration history marker.
+-- The live database applied this reconciliation on 2026-08-22.
+-- Clean builds obtain the canonical Run API from the frozen inherited 2029
+-- Festival sequence; the post-bootstrap overlay applies only final parity fixes.
+-- See docs/festivals/FESTIVAL_PRODUCTION_RECONCILIATION_20260822.md.
