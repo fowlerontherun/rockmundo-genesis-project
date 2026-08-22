@@ -16,9 +16,11 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useCityProjects, useCityTreasury } from "@/hooks/useCityProjects";
 import { useCityElection } from "@/hooks/useCityElections";
+import { useCityDevelopment } from "@/hooks/useCityDevelopment";
 import { buildMayorOfficePath } from "@/config/mayorOfficeNavigation";
 import { MayorPoliticsSidebar } from "@/components/city/MayorPoliticsSidebar";
 import type { MayorPoliticsState } from "@/hooks/useMayorPolitics";
+import { CITY_DEVELOPMENT_LABELS, cityRatingBand, type CityDevelopmentRatingKey } from "@/types/city-development";
 
 export interface MayorOfficeCitySummary {
   id: string;
@@ -38,10 +40,24 @@ interface Props {
 
 const money = (value: number) => `$${Math.round(value).toLocaleString()}`;
 
+const OVERVIEW_RATINGS: CityDevelopmentRatingKey[] = [
+  "economy",
+  "infrastructure",
+  "transport",
+  "public_safety",
+  "healthcare",
+  "culture",
+  "music_scene",
+  "tourism",
+  "quality_of_life",
+  "education",
+];
+
 export function MayorOfficeOverview({ city, mayor, politics }: Props) {
   const { data: treasury } = useCityTreasury(city.id);
   const { data: projects } = useCityProjects(city.id);
   const { data: election } = useCityElection(city.id);
+  const { data: development } = useCityDevelopment(city.id);
 
   const balance = Number(treasury?.balance ?? 0);
   const committed = Number(treasury?.pending_commitments ?? 0);
@@ -113,7 +129,7 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
                 />
                 <ActionCard
                   title="Development"
-                  description="Start upgrades and monitor projects already under construction."
+                  description="Invest in upgrades that permanently change city ratings."
                   to={buildMayorOfficePath(city.id, "projects")}
                 />
                 <ActionCard
@@ -127,18 +143,28 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">City performance</CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base">City development</CardTitle>
+                <Button size="sm" variant="outline" asChild>
+                  <Link to={buildMayorOfficePath(city.id, "services")}>View gameplay effects</Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {development ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  {OVERVIEW_RATINGS.map((key) => (
+                    <DevelopmentRatingCard key={key} label={CITY_DEVELOPMENT_LABELS[key]} value={development[key]} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">City development ratings are being initialised.</p>
+              )}
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <CityMetric icon={Users} label="Population" value={Number(city.population ?? 0).toLocaleString()} />
-                <CityMetric icon={Music} label="Music Scene" value={String(city.music_scene ?? 0)} />
                 <CityMetric icon={Building2} label="Venues" value={String(city.venues ?? 0)} />
-                <CityMetric icon={BarChart3} label="Local Bonus" value={String(city.local_bonus ?? 0)} />
+                <CityMetric icon={Music} label="Legacy Music Scene" value={String(city.music_scene ?? 0)} />
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                City Hall shows the authoritative city values currently affected by laws and completed projects, so you can see the state you are governing without hidden or estimated service scores.
-              </p>
             </CardContent>
           </Card>
 
@@ -183,6 +209,19 @@ function KpiCard({ icon: Icon, label, value, detail }: { icon: any; label: strin
         <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
       </CardContent>
     </Card>
+  );
+}
+
+function DevelopmentRatingCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border bg-muted/15 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <Badge variant="outline">{value}</Badge>
+      </div>
+      <Progress value={value} className="my-2 h-1.5" />
+      <div className="text-xs font-medium">{cityRatingBand(value)}</div>
+    </div>
   );
 }
 
