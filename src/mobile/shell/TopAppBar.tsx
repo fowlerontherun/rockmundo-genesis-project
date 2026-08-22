@@ -1,8 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, MessageSquare, Search } from "lucide-react";
+import { Inbox as InboxIcon, MessageSquare, Search } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useGameData } from "@/hooks/useGameData";
-import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
+import { useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 
 const DETAIL_TITLES: Record<string, string> = {
@@ -23,7 +23,7 @@ const DETAIL_TITLES: Record<string, string> = {
   "/mobile/social/friends": "Friends",
   "/mobile/social/requests": "Friend requests",
   "/mobile/social/twaater": "Twaater",
-  "/mobile/social/notifications": "Notifications",
+  "/mobile/social/notifications": "Inbox",
   "/mobile/world/travel": "Travel",
   "/mobile/world/venues": "Venues",
   "/mobile/world/companies": "Companies",
@@ -63,7 +63,7 @@ export const TopAppBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useGameData();
-  const { unreadCount } = useNotificationsFeed();
+  const unreadCount = useUnifiedInboxUnreadCount();
   const displayName = profile?.display_name || profile?.username || "Player";
   const avatarUrl = (profile as any)?.avatar_url;
   const title = titleFor(location.pathname, location.search);
@@ -106,9 +106,9 @@ export const TopAppBar = () => {
         <button
           onClick={() => navigate("/mobile/social/notifications")}
           className="rm-tap relative h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"
-          aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
+          aria-label={`Inbox${unreadCount ? `, ${unreadCount} unread` : ""}`}
         >
-          <Bell className="h-5 w-5" />
+          <InboxIcon className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
