@@ -103,6 +103,7 @@ export default function Busking() {
   const [isStartingSession, setIsStartingSession] = React.useState(false);
   const [statusLoading, setStatusLoading] = React.useState(false);
   const [lastResult, setLastResult] = React.useState<BuskingResult | null>(null);
+  const pendingRequestKeyRef = React.useRef<string | null>(null);
 
   const {
     data: buskingOptions,
@@ -194,7 +195,12 @@ export default function Busking() {
     setIsStartingSession(true);
 
     try {
-      const idempotencyKey = crypto.randomUUID();
+      // Keep the same key until the server positively confirms the outcome. If a
+      // network response is lost after commit, retrying resolves the stored session
+      // rather than charging the licence and awarding tips twice.
+      const idempotencyKey = pendingRequestKeyRef.current ?? crypto.randomUUID();
+      pendingRequestKeyRef.current = idempotencyKey;
+
       const { data, error } = await supabase.functions.invoke("busking-session", {
         body: {
           action: "start",
@@ -208,6 +214,7 @@ export default function Busking() {
       if (!data?.success || !data?.result) throw new Error(data?.error || "Unable to start busking");
 
       const result = data.result as BuskingResult;
+      pendingRequestKeyRef.current = null;
       setLastResult(result);
 
       await Promise.all([
