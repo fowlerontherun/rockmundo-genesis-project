@@ -254,12 +254,12 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       break;
 
     case 'health':
-      // Award health restoration
+      // Award health restoration to the exact character attached to this booking.
       const { data: profile } = await supabase
         .from('profiles')
         .select('id, health')
-        .eq('user_id', activity.user_id)
-        .single();
+        .eq('id', activity.profile_id)
+        .maybeSingle();
 
       if (profile) {
         const healthGain = Math.min(20 * duration, 100 - (profile.health || 0));
