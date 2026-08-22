@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   useInbox,
-  useUnreadInboxCount,
   type InboxCategory,
   type InboxMessage,
 } from "@/hooks/useInbox";
@@ -13,6 +12,25 @@ import {
 import { normalizeNotification } from "@/lib/notificationModels";
 
 const NOTIFICATION_ID_PREFIX = "notification:";
+const DEDUPE_METADATA_KEYS = [
+  "outcome_id",
+  "gig_id",
+  "activity_id",
+  "source_activity_id",
+  "rehearsal_id",
+  "recording_session_id",
+  "session_id",
+  "player_event_id",
+  "random_event_id",
+  "event_id",
+  "application_id",
+  "band_application_id",
+  "band_invitation_id",
+  "collaboration_id",
+  "offer_id",
+  "release_id",
+  "sponsorship_id",
+] as const;
 
 function notificationCategory(notification: PersistedNotification): InboxCategory {
   const category = notification.category?.toLowerCase() ?? "";
@@ -21,7 +39,7 @@ function notificationCategory(notification: PersistedNotification): InboxCategor
 
   if (combined.includes("achievement")) return "achievement";
   if (category === "random_event" || type.includes("random_event")) return "random_event";
-  if (category === "gig" || category === "gig_result" || type.includes("gig_")) return "gig_result";
+  if (category === "gig_result" || type === "gig_outcome") return "gig_result";
   if (category === "pr" || combined.includes("media")) return "pr_media";
   if (category === "label" || combined.includes("record_label")) return "record_label";
   if (category === "sponsorship" || combined.includes("sponsor")) return "sponsorship";
@@ -57,6 +75,34 @@ function notificationIdFromUnifiedId(id: string) {
     : null;
 }
 
+function dedupeKeys(message: InboxMessage) {
+  const title = message.title.trim().toLowerCase();
+  const base = `${message.category}|${title}`;
+  const keys = new Set<string>();
+
+  if (message.related_entity_id) {
+    keys.add(`${base}|entity:${message.related_entity_id}`);
+  }
+
+  for (const key of DEDUPE_METADATA_KEYS) {
+    const value = message.metadata?.[key];
+    if (typeof value === "string" && value.trim()) keys.add(`${base}|entity:${value.trim()}`);
+    if (typeof value === "number" && Number.isFinite(value)) keys.add(`${base}|entity:${value}`);
+  }
+
+  return keys;
+}
+
+function messagesRepresentSameEvent(left: InboxMessage, right: InboxMessage) {
+  const leftKeys = dedupeKeys(left);
+  if (leftKeys.size === 0) return false;
+  const rightKeys = dedupeKeys(right);
+  for (const key of leftKeys) {
+    if (rightKeys.has(key)) return true;
+  }
+  return false;
+}
+
 export function useUnifiedInbox() {
   const { profileId } = useActiveProfile();
   const inbox = useInbox();
@@ -72,29 +118,59 @@ export function useUnifiedInbox() {
     [scopedNotifications],
   );
 
-  const messages = useMemo(
-    () => [...inbox.messages, ...notificationMessages].sort(
+  const messages = useMemo(() => {
+    // Some legacy database triggers intentionally write the same event to both
+    // player_inbox and notifications. Prefer the richer player_inbox record so
+    // users see one item rather than a duplicated event.
+    const uniqueNotifications = notificationMessages.filter(
+      (notification) => !inbox.messages.some((message) => messagesRepresentSameEvent(message, notification)),
+    );
+
+    return [...inbox.messages, ...uniqueNotifications].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    ),
-    [inbox.messages, notificationMessages],
-  );
+    );
+  }, [inbox.messages, notificationMessages]);
+
+  const duplicateNotificationIds = (inboxId: string) => {
+    const message = inbox.messages.find((candidate) => candidate.id === inboxId);
+    if (!message) return [];
+    return notificationMessages
+      .filter((notification) => messagesRepresentSameEvent(message, notification))
+      .map((notification) => notificationIdFromUnifiedId(notification.id))
+      .filter((id): id is string => Boolean(id));
+  };
 
   const markAsRead = (id: string) => {
     const notificationId = notificationIdFromUnifiedId(id);
-    if (notificationId) notifications.markRead(notificationId);
-    else inbox.markAsRead(id);
+    if (notificationId) {
+      notifications.markRead(notificationId);
+      return;
+    }
+
+    inbox.markAsRead(id);
+    duplicateNotificationIds(id).forEach((duplicateId) => notifications.markRead(duplicateId));
   };
 
   const archiveMessage = (id: string) => {
     const notificationId = notificationIdFromUnifiedId(id);
-    if (notificationId) notifications.dismiss(notificationId);
-    else inbox.archiveMessage(id);
+    if (notificationId) {
+      notifications.dismiss(notificationId);
+      return;
+    }
+
+    inbox.archiveMessage(id);
+    duplicateNotificationIds(id).forEach((duplicateId) => notifications.dismiss(duplicateId));
   };
 
   const deleteMessage = (id: string) => {
     const notificationId = notificationIdFromUnifiedId(id);
-    if (notificationId) notifications.dismiss(notificationId);
-    else inbox.deleteMessage(id);
+    if (notificationId) {
+      notifications.dismiss(notificationId);
+      return;
+    }
+
+    inbox.deleteMessage(id);
+    duplicateNotificationIds(id).forEach((duplicateId) => notifications.dismiss(duplicateId));
   };
 
   const markAllAsRead = () => {
@@ -120,16 +196,5 @@ export function useUnifiedInbox() {
 }
 
 export function useUnifiedInboxUnreadCount() {
-  const { profileId } = useActiveProfile();
-  const { data: inboxUnreadCount = 0 } = useUnreadInboxCount();
-  const { notifications } = useNotificationsFeed();
-
-  const notificationUnreadCount = useMemo(
-    () => notifications.filter(
-      (notification) => !notification.read_at && (!notification.profile_id || !profileId || notification.profile_id === profileId),
-    ).length,
-    [notifications, profileId],
-  );
-
-  return (inboxUnreadCount ?? 0) + notificationUnreadCount;
+  return useUnifiedInbox().unreadCount;
 }
