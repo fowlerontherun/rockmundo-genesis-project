@@ -15,6 +15,18 @@
   --m-safe-t: env(safe-area-inset-top, 0px);
 }
 
+html.rm-mobile-root,
+html.rm-mobile-root body,
+html.rm-mobile-root body #root {
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+html.rm-mobile-root body {
+  overscroll-behavior-y: none;
+}
+
 .rm-mobile,
 .rm-mobile * {
   -webkit-tap-highlight-color: transparent;
@@ -24,12 +36,16 @@
   font-family: 'Oswald', 'Inter', system-ui, sans-serif;
   color: hsl(var(--foreground));
   background: hsl(var(--background));
+  height: 100dvh;
   min-height: 100dvh;
+  overflow: hidden;
 }
 
 .rm-mobile-scroll {
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior-y: contain;
+  touch-action: pan-x pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
