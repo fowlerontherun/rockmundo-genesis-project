@@ -93,7 +93,7 @@ function dedupeKeys(message: InboxMessage) {
   return keys;
 }
 
-function messagesRepresentSameEvent(left: InboxMessage, right: InboxMessage) {
+export function messagesRepresentSameEvent(left: InboxMessage, right: InboxMessage) {
   const leftKeys = dedupeKeys(left);
   if (leftKeys.size === 0) return false;
   const rightKeys = dedupeKeys(right);
