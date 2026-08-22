@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+
 export interface TravelRoute {
   id: string;
   from_city_id: string;
@@ -12,6 +13,8 @@ export interface TravelRoute {
 }
 
 export interface TravelBookingData {
+  // Retained for compatibility with existing desktop/mobile callers. The
+  // authoritative booking endpoint does not trust these browser-owned fields.
   profileId: string;
   fromCityId: string;
   toCityId: string;
@@ -23,6 +26,53 @@ export interface TravelBookingData {
   scheduledDepartureTime?: string;
 }
 
+export interface AuthoritativeTravelResult {
+  bookingId: string;
+  travelHistoryId: string;
+  profileId: string;
+  fromCityId: string;
+  fromCityName: string;
+  toCityId: string;
+  toCityName: string;
+  transportType: string;
+  rawFare: number;
+  fare: number;
+  travelTax: number;
+  totalCost: number;
+  rawDurationHours: number;
+  durationHours: number;
+  averageTransportRating: number;
+  transportCostMultiplier: number;
+  transportDurationMultiplier: number;
+  scheduledDepartureTime: string;
+  arrivalTime: string;
+  status: "scheduled" | "in_progress";
+  xpGained: number;
+  idempotent?: boolean;
+}
+
+export interface TravelBookingResponse extends AuthoritativeTravelResult {
+  success: true;
+  message: string;
+  newLocation: string | null;
+}
+
+const pendingTravelIdempotency = new Map<string, string>();
+
+const travelRequestKey = (bookingData: TravelBookingData) =>
+  [
+    bookingData.toCityId,
+    bookingData.transportType.toLowerCase(),
+    bookingData.scheduledDepartureTime ?? "immediate",
+  ].join("|");
+
+/**
+ * Legacy preview-only affordability helper.
+ *
+ * Kept for callers/tests that want a quick UI check, but bookTravel deliberately
+ * does not use it. The authoritative server re-resolves the active character,
+ * current city, City Hall tax, Transport modifiers and final balance atomically.
+ */
 export async function validateTravelEligibility(profileId: string, cost: number) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -31,7 +81,7 @@ export async function validateTravelEligibility(profileId: string, cost: number)
     .maybeSingle();
 
   if (profileError) {
-    console.error('Travel eligibility check failed:', profileError);
+    console.error("Travel eligibility check failed:", profileError);
     throw new Error(`Failed to fetch profile: ${profileError.message}`);
   }
 
@@ -42,181 +92,67 @@ export async function validateTravelEligibility(profileId: string, cost: number)
   return true;
 }
 
-export async function bookTravel(bookingData: TravelBookingData) {
-  const { profileId, fromCityId, toCityId, transportType, cost, durationHours, comfortRating, scheduledDepartureTime } = bookingData;
-
-  // Validate eligibility
-  await validateTravelEligibility(profileId, cost);
-
-  // Calculate times first for conflict check
-  const departureTime = scheduledDepartureTime || new Date().toISOString();
-  const departureDate = new Date(departureTime);
-  const arrivalTimeCalc = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
-
-  const { data: authResult } = await supabase.auth.getUser();
-  const authUserId = authResult.user?.id;
-  if (!authUserId) throw new Error("Not authenticated");
-
-  // Check this character's schedule before booking; profile_id is the character boundary.
-  const { data: conflictingActivity } = await (supabase as any)
-    .from('player_scheduled_activities')
-    .select('title')
-    .eq('profile_id', profileId)
-    .in('status', ['scheduled', 'in_progress'])
-    .or(`and(scheduled_start.lte.${departureDate.toISOString()},scheduled_end.gt.${departureDate.toISOString()}),and(scheduled_start.lt.${arrivalTimeCalc.toISOString()},scheduled_end.gte.${arrivalTimeCalc.toISOString()}),and(scheduled_start.gte.${departureDate.toISOString()},scheduled_end.lte.${arrivalTimeCalc.toISOString()})`)
+export async function getTravelTaxForDeparture(cityId: string, departureTime?: string): Promise<number> {
+  if (!cityId) return 0;
+  const target = departureTime ?? new Date().toISOString();
+  const { data, error } = await (supabase as any)
+    .from("city_laws")
+    .select("travel_tax,effective_from,effective_until")
+    .eq("city_id", cityId)
+    .lte("effective_from", target)
+    .or(`effective_until.is.null,effective_until.gt.${target}`)
+    .order("effective_from", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (conflictingActivity) {
-    throw new Error(
-      `Time slot conflict: You have "${conflictingActivity?.title}" scheduled during this travel time.`
-    );
+  if (error) {
+    console.warn("Travel tax preview unavailable; server will still enforce it", error);
+    return 0;
   }
 
-  // Start transaction-like operations
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, user_id, cash, display_name")
-    .eq("id", profileId)
-    .maybeSingle();
+  return Math.max(0, Math.round(Number(data?.travel_tax ?? 0)));
+}
 
-  if (profileError) {
-    console.error('Profile fetch error:', profileError);
-    throw new Error(`Failed to fetch profile: ${profileError.message}`);
-  }
-  
-  if (!profile) {
-    throw new Error("Profile not found");
+export async function bookTravel(bookingData: TravelBookingData): Promise<TravelBookingResponse> {
+  if (!bookingData.toCityId || !bookingData.transportType) {
+    throw new Error("Destination and transport mode are required");
   }
 
-  if (profile.user_id !== authUserId) {
-    throw new Error("You can only book travel for your active character.");
-  }
+  const key = travelRequestKey(bookingData);
+  const idempotencyKey = pendingTravelIdempotency.get(key) ?? crypto.randomUUID();
+  pendingTravelIdempotency.set(key, idempotencyKey);
 
-  // Determine if travel starts immediately or is scheduled for later
-  const now = new Date();
-  const startsImmediately = departureDate <= now;
-  
-  // Deduct cost and set travel status if starting immediately
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ 
-      cash: (profile.cash || 0) - cost,
-      is_traveling: startsImmediately,
-      travel_arrives_at: startsImmediately ? arrivalTimeCalc.toISOString() : null,
-    })
-    .eq("id", profileId);
-
-  if (updateError) throw updateError;
-
-  // Get city names for history
-  const { data: fromCity } = await supabase
-    .from("cities")
-    .select("name, country")
-    .eq("id", fromCityId)
-    .single();
-
-  const { data: toCity } = await supabase
-    .from("cities")
-    .select("name, country")
-    .eq("id", toCityId)
-    .single();
-
-  const fromCityName = fromCity ? `${fromCity.name}, ${fromCity.country}` : "Unknown";
-  const toCityName = toCity ? `${toCity.name}, ${toCity.country}` : "Unknown";
-
-  // Create travel history entry
-  const status = startsImmediately ? 'in_progress' : 'scheduled';
-  const travelDurationHoursStored = Math.max(1, Math.ceil(durationHours));
-  
-  const { data: travelHistory, error: historyError } = await (supabase as any)
-    .from("player_travel_history")
-    .insert({
-      user_id: authUserId,
-      profile_id: profileId,
-      from_city_id: fromCityId,
-      to_city_id: toCityId,
-      transport_type: transportType,
-      cost_paid: cost,
-      travel_duration_hours: travelDurationHoursStored,
-      departure_time: departureTime,
-      scheduled_departure_time: departureTime,
-      arrival_time: arrivalTimeCalc.toISOString(),
-      status,
-    })
-    .select()
-    .single();
-
-  if (historyError) throw historyError;
-
-  // Create scheduled activity to block the time slot
-  const { error: activityError } = await (supabase as any)
-    .from('player_scheduled_activities')
-    .insert({
-      user_id: authUserId,
-      profile_id: profileId,
-      activity_type: 'travel',
-      status: startsImmediately ? 'in_progress' : 'scheduled',
-      scheduled_start: departureDate.toISOString(),
-      scheduled_end: arrivalTimeCalc.toISOString(),
-      title: `Travel: ${fromCityName} → ${toCityName}`,
-      description: `${transportType} journey (${durationHours}h)`,
-      location: toCityName,
-      metadata: {
-        travel_history_id: travelHistory.id,
-        from_city_id: fromCityId,
-        to_city_id: toCityId,
-        transport_type: transportType,
-      },
-    });
-
-  if (activityError) {
-    console.warn('Failed to create scheduled activity for travel:', activityError);
-  }
-
-  // Log the booking truthfully. Future journeys are booked, not already completed.
-  await (supabase as any).from("activity_feed").insert({
-    profile_id: profileId,
-    activity_type: "travel",
-    message: startsImmediately
-      ? `Started travel from ${fromCityName} to ${toCityName} by ${transportType}`
-      : `Booked travel from ${fromCityName} to ${toCityName} by ${transportType}`,
-    metadata: {
-      from_city_id: fromCityId,
-      to_city_id: toCityId,
-      transport_type: transportType,
-      cost: cost,
-      duration_hours: durationHours,
-      scheduled_departure_time: departureTime,
-      travel_status: status,
+  const { data, error } = await supabase.functions.invoke("travel-booking", {
+    body: {
+      destinationCityId: bookingData.toCityId,
+      transportType: bookingData.transportType,
+      scheduledDepartureTime: bookingData.scheduledDepartureTime ?? null,
+      idempotencyKey,
     },
   });
 
-  // Award XP for travel (5 XP per travel)
-  await (supabase as any).from("experience_ledger").insert({
-    profile_id: profileId,
-    activity_type: "travel",
-    xp_amount: 5,
-    metadata: {
-      from_city: fromCityName,
-      to_city: toCityName,
-    },
-  });
+  if (error) {
+    throw new Error(data?.error || error.message || "Unable to book travel");
+  }
+  if (!data?.success || !data?.result) {
+    throw new Error(data?.error || "Unable to book travel");
+  }
+
+  const result = data.result as AuthoritativeTravelResult;
+  pendingTravelIdempotency.delete(key);
 
   return {
+    ...result,
     success: true,
-    status,
-    message: startsImmediately
-      ? `Travel started to ${toCityName}`
-      : `Travel booked to ${toCityName}`,
-    newLocation: startsImmediately ? toCityName : null,
-    scheduledDepartureTime: departureTime,
-    arrivalTime: arrivalTimeCalc.toISOString(),
+    message:
+      result.status === "in_progress"
+        ? `Travel started to ${result.toCityName}`
+        : `Travel booked to ${result.toCityName}`,
+    newLocation: result.status === "in_progress" ? result.toCityName : null,
   };
 }
 
 export function calculateTravelCost(baseCost: number, comfortRating: number): number {
-  // Higher comfort = higher cost (slight multiplier)
   const comfortMultiplier = 1 + (comfortRating - 50) / 200;
   return Math.round(baseCost * comfortMultiplier);
 }
