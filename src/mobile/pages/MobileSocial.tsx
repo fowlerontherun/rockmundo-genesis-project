@@ -1,9 +1,10 @@
 import { FormEvent, ReactNode, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Check, ChevronLeft, Mail, MessageCircle, MessageSquare, Monitor, Send, Twitter, UserPlus, Users, X } from "lucide-react";
+import { Check, ChevronLeft, Inbox as InboxIcon, Mail, MessageCircle, MessageSquare, Monitor, Send, Twitter, UserPlus, Users, X } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
+import { useUnifiedInbox, useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 import { useUnreadDirectMessageCount, useDirectMessages } from "@/hooks/useDirectMessages";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { listConversations } from "@/features/direct-messages/services/conversations";
@@ -21,7 +22,7 @@ const nav: [NavKey, string, string][] = [
   ["messages", "Messages", "/mobile/social/messages"],
   ["friends", "Friends", "/mobile/social/friends"],
   ["twaater", "Twaater", "/mobile/social/twaater"],
-  ["notifications", "Alerts", "/mobile/social/notifications"],
+  ["notifications", "Inbox", "/mobile/social/notifications"],
 ];
 const fmt = (d?: string | null) => d ? new Date(d).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Now";
 const nameOf = (p: any) => p?.display_name || p?.username || p?.characterName || p?.handle || "Player";
@@ -42,6 +43,7 @@ function Overview() {
   const navigate = useNavigate();
   const { profileId } = useActiveProfile();
   const notifications = useNotificationsFeed();
+  const inboxUnreadCount = useUnifiedInboxUnreadCount();
   const dm = useUnreadDirectMessageCount(profileId);
   const friends = useFriendships(profileId);
   const twaater = useTwaaterExploreFeed();
@@ -49,8 +51,9 @@ function Overview() {
   const accepted = friends.friendships.filter((f: any) => f.friendship?.status === "accepted");
   const socialNotifs = notifications.notifications.filter(n => ["friend", "band", "chat", "message", "social", "twaater", "mail", "invite"].some(k => `${n.category} ${n.type} ${n.title}`.toLowerCase().includes(k)));
 
-  return <Shell active="overview" title="People & messages" desc="Quick communication, requests and social updates." badge={<MobileStatusBadge tone={notifications.unreadCount ? "danger" : "success"}>{notifications.unreadCount ? `${notifications.unreadCount} unread` : "Caught up"}</MobileStatusBadge>}>
+  return <Shell active="overview" title="People & messages" desc="Quick communication, requests and social updates." badge={<MobileStatusBadge tone={inboxUnreadCount ? "danger" : "success"}>{inboxUnreadCount ? `${inboxUnreadCount} inbox` : "Caught up"}</MobileStatusBadge>}>
     <div className="grid grid-cols-2 gap-2">
+      <MobileEntityCard title="Inbox" subtitle="Game messages, alerts and outcomes" icon={<InboxIcon/>} meta={<MobileStatusBadge tone={inboxUnreadCount ? "danger" : "neutral"}>{inboxUnreadCount}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/notifications")}/>
       <MobileEntityCard title="Live chat" subtitle="World, Help, Recruit, Band and Friends" icon={<MessageCircle/>} meta={<MobileStatusBadge tone="success">Live</MobileStatusBadge>} onPress={() => navigate("/mobile/social/chat")}/>
       <MobileEntityCard title="Direct messages" subtitle="Recent conversations" icon={<MessageSquare/>} meta={<MobileStatusBadge tone={(dm.data ?? 0) > 0 ? "danger" : "neutral"}>{dm.isLoading ? "…" : dm.isError ? "!" : dm.data ?? 0}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/messages")}/>
       <MobileEntityCard title="Friend requests" subtitle="Incoming requests" icon={<UserPlus/>} meta={<MobileStatusBadge tone={requests.length ? "warning" : "neutral"}>{friends.loading ? "…" : requests.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/requests")}/>
@@ -58,8 +61,8 @@ function Overview() {
       <MobileEntityCard title="Twaater" subtitle="Check the world feed" icon={<Twitter/>} meta={<MobileStatusBadge tone="info">Live</MobileStatusBadge>} onPress={() => navigate("/mobile/social/twaater")}/>
     </div>
 
-    <MobileSectionCard title="Action needed" subtitle="Social notifications that may need a quick response.">
-      {notifications.error ? <MobileErrorState message="Notifications failed to load." onRetry={() => notifications.refetch()}/> : notifications.isLoading ? <MobileLoadingSkeleton cards={2}/> : socialNotifs.length === 0 ? <EmptyState title="Nothing needs attention" message="Friend, band, message and Twaater alerts will appear here."/> : <div className="space-y-2">{socialNotifs.slice(0, 5).map(n => <MobileEntityCard key={n.id} title={n.title} subtitle={n.message} icon={<Bell/>} meta={<MobileStatusBadge tone={n.read_at ? "neutral" : "danger"}>{n.read_at ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { notifications.markRead(n.id); navigate(resolveCompanionPath(n.action_path)); }}/>)}</div>}
+    <MobileSectionCard title="Action needed" subtitle="Social updates that may need a quick response.">
+      {notifications.error ? <MobileErrorState message="Social updates failed to load." onRetry={() => notifications.refetch()}/> : notifications.isLoading ? <MobileLoadingSkeleton cards={2}/> : socialNotifs.length === 0 ? <EmptyState title="Nothing needs attention" message="Friend, band, message and Twaater updates will appear here."/> : <div className="space-y-2">{socialNotifs.slice(0, 5).map(n => <MobileEntityCard key={n.id} title={n.title} subtitle={n.message} icon={<InboxIcon/>} meta={<MobileStatusBadge tone={n.read_at ? "neutral" : "danger"}>{n.read_at ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { notifications.markRead(n.id); navigate(resolveCompanionPath(n.action_path)); }}/>)}</div>}
     </MobileSectionCard>
 
     <MobileSectionCard title="Recent Twaater">
@@ -143,10 +146,17 @@ function Profile() {
   return <Shell active="profile" title="Player profile" desc="A compact profile for messaging and social context.">{q.isLoading ? <MobileLoadingSkeleton/> : q.isError ? <MobileErrorState message={q.error instanceof Error ? q.error.message : "Profile could not be loaded."} onRetry={() => q.refetch()}/> : !q.data ? <EmptyState title="Profile unavailable" message="This player may be unavailable or private."/> : <MobileSectionCard title={nameOf(q.data)} subtitle={q.data.city_name || "City hidden"} action={<MobileStatusBadge tone="info">Player</MobileStatusBadge>}><p className="text-sm text-muted-foreground">{q.data.bio || "No public bio."}</p><button onClick={() => navigate(`/mobile/social/conversation/${id}`)} className="rm-tap mt-3 w-full rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground">Message</button></MobileSectionCard>}</Shell>;
 }
 
-function Notifications() {
+function InboxPage() {
   const navigate = useNavigate();
-  const n = useNotificationsFeed();
-  return <Shell active="notifications" title="Notifications" desc="Open alerts inside the supported companion experience.">{n.error ? <MobileErrorState message="Notifications could not be loaded." onRetry={() => n.refetch()}/> : n.isLoading ? <MobileLoadingSkeleton/> : n.notifications.length === 0 ? <EmptyState title="No notifications" message="New alerts will appear here."/> : <div className="space-y-2">{n.notifications.map(x => <MobileEntityCard key={x.id} title={x.title} subtitle={`${x.message} • ${fmt(x.created_at)}`} icon={<Bell/>} meta={<MobileStatusBadge tone={x.read_at ? "neutral" : "danger"}>{x.read_at ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { n.markRead(x.id); navigate(resolveCompanionPath(x.action_path)); }}/>)}</div>}</Shell>;
+  const inbox = useUnifiedInbox();
+
+  return <Shell active="notifications" title="Inbox" desc="Game messages, activity outcomes and alerts in one place." badge={<MobileStatusBadge tone={inbox.unreadCount ? "danger" : "success"}>{inbox.unreadCount ? `${inbox.unreadCount} unread` : "Caught up"}</MobileStatusBadge>}>
+    {inbox.unreadCount > 0 && <div className="flex justify-end"><button className="rm-tap rounded-xl border px-3 py-2 text-xs font-semibold" onClick={inbox.markAllAsRead}>Mark all read</button></div>}
+    {inbox.error ? <MobileErrorState message="Inbox could not be loaded." onRetry={() => inbox.refetch()}/> : inbox.isLoading ? <MobileLoadingSkeleton/> : inbox.messages.length === 0 ? <EmptyState title="Inbox is clear" message="New game messages, outcomes and alerts will appear here."/> : <div className="space-y-2">{inbox.messages.map(message => {
+      const route = message.action_type === "navigate" && typeof message.action_data?.route === "string" ? message.action_data.route : null;
+      return <MobileEntityCard key={message.id} title={message.title} subtitle={`${message.message} • ${fmt(message.created_at)}`} icon={<InboxIcon/>} meta={<MobileStatusBadge tone={message.is_read ? "neutral" : "danger"}>{message.is_read ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { inbox.markAsRead(message.id); if (route) navigate(resolveCompanionPath(route)); }}/>;
+    })}</div>}
+  </Shell>;
 }
 
 export default function MobileSocial() {
@@ -159,7 +169,7 @@ export default function MobileSocial() {
   if (section === "twaater") return <TwaaterPage/>;
   if (section === "profile") return <Profile/>;
   if (section === "conversation") return <Conversation/>;
-  if (section === "notifications") return <Notifications/>;
+  if (section === "notifications") return <InboxPage/>;
   if (section === "mail") return <DesktopOnly title="Mail" reason="Long-form mail management is desktop-only."/>;
   return <Overview/>;
 }
