@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { parseEffectProgress, parseFinalisation, parsePostingResult, parsePublicHistory, parseReadiness, type EffectProgress, type FinalisationResult, type PostingResult, type SettlementReadiness, type SettlementReport } from "./model";
+import { parseSimplifiedFestivalResults, type SimplifiedFestivalResults } from "./simplifiedResults";
 
 type RpcClient={rpc(name:string,args:Record<string,unknown>):Promise<{data:unknown;error:{message:string}|null}>};
 const rpcClient:RpcClient=supabase as unknown as RpcClient;
@@ -21,5 +22,6 @@ export const settlementRepository={
  writeOffReceivable:(lineId:string,key:string)=>rpc("write_off_festival_settlement_receivable",{p_line_id:lineId,p_idempotency_key:key}),
  cancelPayable:(lineId:string,key:string)=>rpc("cancel_festival_settlement_payable",{p_line_id:lineId,p_idempotency_key:key}),
  outcomes:(companyId:string,editionId:string)=>settlementRepository.read(companyId,editionId).then(x=>x?.outcomes??[]),
+ ownerHistory:async(companyId:string,editionId:string):Promise<SimplifiedFestivalResults|null>=>parseSimplifiedFestivalResults(await rpc("get_festival_edition_results",{p_festival_company_id:companyId,p_edition_id:editionId})),
  history:async(editionId:string)=>parsePublicHistory(await rpc("get_public_festival_edition_history",{p_edition_id:editionId})),
 };
