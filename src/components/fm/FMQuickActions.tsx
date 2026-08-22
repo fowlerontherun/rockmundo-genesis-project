@@ -1,6 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Home, Search, Plus, ChevronDown } from "lucide-react";
 import { findModuleForPath } from "@/config/fmNavigation";
+import {
+  buildMayorOfficePath,
+  getMayorOfficeCityId,
+  isMayorOfficePath,
+  MAYOR_OFFICE_MODULE_LABEL,
+} from "@/config/mayorOfficeNavigation";
 import { getLastModulePath } from "@/lib/fmHistory";
 import {
   DropdownMenu,
@@ -46,7 +52,11 @@ export const FMQuickActions = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const mod = findModuleForPath(pathname);
-  const actions = mod.quickActions ?? [];
+  const mayorOffice = isMayorOfficePath(pathname);
+  const mayorCityId = getMayorOfficeCityId(pathname);
+  const actions = mayorOffice ? [] : (mod.quickActions ?? []);
+  const rootPath = mayorOffice && mayorCityId ? buildMayorOfficePath(mayorCityId) : mod.rootPath;
+  const moduleLabel = mayorOffice ? MAYOR_OFFICE_MODULE_LABEL : mod.label;
 
   const openSearch = () => {
     window.dispatchEvent(new Event("fm:open-command"));
@@ -58,8 +68,12 @@ export const FMQuickActions = () => {
       <IconBtn icon={ArrowRight} label="Forward" onClick={() => window.history.forward()} />
       <IconBtn
         icon={Home}
-        label={pathname === mod.rootPath ? "Resume last page" : `${mod.label} Hub`}
+        label={mayorOffice ? "City Hall overview" : pathname === mod.rootPath ? "Resume last page" : `${mod.label} Hub`}
         onClick={() => {
+          if (mayorOffice) {
+            navigate(rootPath);
+            return;
+          }
           if (pathname === mod.rootPath) {
             const last = getLastModulePath(mod.id);
             if (last && last !== mod.rootPath) navigate(last);
@@ -94,7 +108,7 @@ export const FMQuickActions = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 bg-fm-panel border-fm-border">
             <DropdownMenuLabel className="text-[10px] tracking-tight text-fm-fg-muted font-medium">
-              {mod.label} · Quick Actions
+              {moduleLabel} · Quick Actions
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-fm-border" />
             {actions.map((a) => {
