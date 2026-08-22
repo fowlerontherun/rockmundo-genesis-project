@@ -1,0 +1,5 @@
+-- Production migration history marker.
+-- The live database applied automatic simplified Festival company settlement on
+-- 2026-08-22. Clean builds receive the final DDL after the frozen inherited 2029
+-- Festival sequence via the post-bootstrap reconciliation SQL.
+-- See docs/festivals/FESTIVAL_PRODUCTION_RECONCILIATION_20260822.md.
