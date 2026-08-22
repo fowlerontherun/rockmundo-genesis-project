@@ -13,6 +13,7 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_settlem
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_settlement_v5_native_harness.sql 2>&1 | tee -a "$runtime_log"
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_settlement_v6_lifecycle_fixture.sql 2>&1 | tee -a "$runtime_log"
 psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_lifecycle_recovery_harness.sql 2>&1 | tee -a "$runtime_log"
+psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/simplified_festival_runtime_harness.sql 2>&1 | tee -a "$runtime_log"
 run_id=$(sed -nE 's/.*festival_runtime_summary=\{.*"runId": "([^"]+)".*/\1/p' "$runtime_log")
 [[ -n "$run_id" ]] || { echo "runtime run id was not emitted" >&2; exit 1; }
 cleanup_one=0; cleanup_two=0
