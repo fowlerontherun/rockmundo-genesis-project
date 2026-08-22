@@ -6,7 +6,12 @@ import { getFestivalCompanySetup } from "@/features/festival-company/data/festiv
 import { FestivalCompanyEligibilityCard } from "@/features/festival-company/ui/FestivalCompanyEligibilityCard";
 import { FestivalConfigurationWizard } from "@/features/festival-company/ui/FestivalConfigurationWizard";
 import { FestivalUpgradeWorkspace } from "@/features/festival-company/upgrades/FestivalUpgradeWorkspace";
+import { getFestivalCompanyUpgrades } from "@/features/festival-company/upgrades/repository";
 import { FestivalCompanyEditionsPage } from "@/features/festivals/editions/FestivalCompanyEditionsPage";
+import {
+  festivalCompanyEditionsQueryKey,
+  getFestivalCompanyEditions,
+} from "@/features/festivals/editions/repository";
 import { FestivalLiveControlRoom } from "@/features/festivals/runtime/FestivalLiveControlRoom";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
 import { resolveOwnerFestivalIdentifier, resolvePublicFestivalIdentifier } from "../resolver";
@@ -57,12 +62,20 @@ function FestivalCompanySummaryHome({
 }: {
   festivalCompanyId: string;
 }) {
-  const query = useQuery({
+  const setupQuery = useQuery({
     queryKey: festivalCompanySetupQueryKey(festivalCompanyId),
     queryFn: () => getFestivalCompanySetup(festivalCompanyId),
   });
+  const upgradesQuery = useQuery({
+    queryKey: ["festival-company-upgrades", festivalCompanyId],
+    queryFn: () => getFestivalCompanyUpgrades(festivalCompanyId),
+  });
+  const editionsQuery = useQuery({
+    queryKey: festivalCompanyEditionsQueryKey(festivalCompanyId),
+    queryFn: () => getFestivalCompanyEditions(festivalCompanyId),
+  });
 
-  if (query.isLoading) {
+  if (setupQuery.isLoading) {
     return (
       <main className="p-6" role="status">
         Loading Festival company…
@@ -70,7 +83,7 @@ function FestivalCompanySummaryHome({
     );
   }
 
-  if (query.error || !query.data) {
+  if (setupQuery.error || !setupQuery.data) {
     return (
       <RouteState
         title="Festival company unavailable"
@@ -79,7 +92,23 @@ function FestivalCompanySummaryHome({
     );
   }
 
-  const festival = query.data;
+  const festival = setupQuery.data;
+  const upgradeState = upgradesQuery.data;
+  const licence = upgradeState?.licence.current ?? null;
+  const nextLicence = upgradeState?.licence.next ?? null;
+  const currentAnnualFestival =
+    editionsQuery.data?.editions
+      .filter((edition) => edition.editable)
+      .sort((left, right) => left.editionYear - right.editionYear)[0] ?? null;
+  const currencyCode = upgradeState?.currencyCode ?? "GBP";
+  const reputation = upgradesQuery.isLoading
+    ? "Loading…"
+    : upgradeState
+      ? upgradeState.licence.currentReputation.toLocaleString("en-GB")
+      : "Unavailable";
+  const licenceName = upgradesQuery.isLoading
+    ? "Loading…"
+    : licence?.name ?? "No active licence";
 
   return (
     <main className="mx-auto max-w-6xl space-y-5 p-6">
@@ -95,20 +124,144 @@ function FestivalCompanySummaryHome({
         </p>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Summary title="Company" value={festival.legalCompanyName} />
         <Summary
           title="Company balance"
           value={new Intl.NumberFormat("en-GB", {
             style: "currency",
-            currency: "GBP",
+            currency: currencyCode,
           }).format(festival.companyBalance)}
         />
+        <Summary title="Reputation" value={reputation} />
+        <Summary title="Festival licence" value={licenceName} />
         <Summary
           title="Festival setup"
           value={festival.setupCompleted ? "Ready" : "Action required"}
         />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Current annual Festival</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {editionsQuery.isLoading ? (
+            <p role="status">Loading annual Festival…</p>
+          ) : editionsQuery.isError ? (
+            <p className="text-muted-foreground">
+              The current annual Festival could not be loaded. Your company data
+              is still available above.
+            </p>
+          ) : currentAnnualFestival ? (
+            <>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <p>
+                  <span className="block text-muted-foreground">Festival</span>
+                  <strong>{currentAnnualFestival.name}</strong>
+                </p>
+                <p>
+                  <span className="block text-muted-foreground">Game year</span>
+                  <strong>{currentAnnualFestival.editionYear}</strong>
+                </p>
+                <p>
+                  <span className="block text-muted-foreground">Status</span>
+                  <strong className="capitalize">
+                    {currentAnnualFestival.status.replaceAll("_", " ")}
+                  </strong>
+                </p>
+                <p>
+                  <span className="block text-muted-foreground">Readiness</span>
+                  <strong>{currentAnnualFestival.readinessScore}%</strong>
+                </p>
+              </div>
+              <p className="text-muted-foreground">
+                {currentAnnualFestival.startsOn && currentAnnualFestival.endsOn
+                  ? `${formatFestivalDate(currentAnnualFestival.startsOn)} – ${formatFestivalDate(
+                      currentAnnualFestival.endsOn,
+                    )}`
+                  : "Dates have not been finalised yet."}
+              </p>
+              <Link
+                className="font-medium underline"
+                to={festivalRoutes.edition(
+                  festival.festivalCompanyId,
+                  currentAnnualFestival.festivalEditionId,
+                )}
+              >
+                Continue Festival
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground">
+                No annual Festival is currently being planned for this company.
+              </p>
+              {festival.setupCompleted ? (
+                <Link
+                  className="font-medium underline"
+                  to={festivalRoutes.editions(festival.festivalCompanyId)}
+                >
+                  {editionsQuery.data?.canPlanNext
+                    ? "Plan next annual Festival"
+                    : "View annual Festivals"}
+                </Link>
+              ) : (
+                <p>Complete the initial company setup to unlock annual Festivals.</p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Licence progression</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {upgradesQuery.isLoading ? (
+            <p role="status">Loading Festival licence…</p>
+          ) : upgradesQuery.isError || !upgradeState ? (
+            <p className="text-muted-foreground">
+              Festival licence and reputation progression are temporarily
+              unavailable.
+            </p>
+          ) : (
+            <>
+              <p>
+                <strong>Current:</strong> {licence?.name ?? "No active licence"}
+                {licence?.daysRemaining !== null &&
+                licence?.daysRemaining !== undefined
+                  ? ` · ${licence.daysRemaining} day(s) remaining`
+                  : ""}
+              </p>
+              <p>
+                <strong>Next:</strong>{" "}
+                {nextLicence
+                  ? `${nextLicence.name} · ${new Intl.NumberFormat("en-GB", {
+                      style: "currency",
+                      currency: currencyCode,
+                    }).format(nextLicence.feeMinor / 100)}`
+                  : upgradeState.licence.action === "renew"
+                    ? "Renew the current licence"
+                    : "Highest available licence reached"}
+              </p>
+              {nextLicence && !upgradeState.licence.canApply ? (
+                <p className="text-muted-foreground">
+                  Improve reputation and permanent Festival upgrades to unlock
+                  the next licence tier.
+                </p>
+              ) : null}
+              <Link
+                className="font-medium underline"
+                to={festivalRoutes.upgrades(festival.festivalCompanyId)}
+              >
+                Manage licence and upgrades
+              </Link>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -187,6 +340,13 @@ export function FestivalUpgradesPage() {
   const { festivalCompanyId } = useParams();
   return <FestivalUpgradeWorkspace festivalCompanyId={festivalCompanyId!} />;
 }
+
+const formatFestivalDate = (value: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
 
 const Summary = ({ title, value }: { title: string; value: string }) => (
   <Card>
