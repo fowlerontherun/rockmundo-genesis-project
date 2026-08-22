@@ -34,7 +34,7 @@ describe("Mayor's Office navigation", () => {
       "elections",
       "history",
     ]) {
-      expect(mayorNav).toContain(`\"${section}\"`);
+      expect(mayorNav).toContain(`"${section}"`);
     }
   });
 
