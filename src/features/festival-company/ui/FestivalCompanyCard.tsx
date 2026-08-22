@@ -25,9 +25,9 @@ import { useFestivalTicketPlan } from "../application/useFestivalTicketPlan";
 import type { OwnedFestivalCompanySummary } from "../data/festivalCompanyRepository";
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("en-US", {
+  new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: "USD",
+    currency: "GBP",
     maximumFractionDigits: 0,
   }).format(amount);
 
