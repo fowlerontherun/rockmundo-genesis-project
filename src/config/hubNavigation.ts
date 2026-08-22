@@ -61,6 +61,7 @@ export const socialHubNavigation: HubNavigationItem[] = [
 export const businessHubNavigation: HubNavigationItem[] = [
   { id: "overview", label: "Overview", path: "/business", icon: Building2, matchPaths: ["/business/overview", "/hub/commerce"] },
   { id: "companies", label: "Companies", path: "/business/companies", icon: Building2, matchPaths: ["/my-companies"] },
+  { id: "festivals", label: "My Festivals", path: "/my-companies#festivals", icon: Star, matchPaths: ["/festival-company/:festivalCompanyId", "/festival-company/:festivalCompanyId/upgrades", "/festival-company/:festivalCompanyId/editions", "/festival-company/:festivalCompanyId/editions/:editionId", "/festival-company/:festivalCompanyId/editions/:editionId/applications", "/festival-company/:festivalCompanyId/editions/:editionId/finance", "/festival-company/:festivalCompanyId/editions/:editionId/live", "/festival-company/:festivalCompanyId/editions/:editionId/history"] },
   { id: "staff", label: "Staff", path: "/business/staff", icon: Users, matchPaths: ["/company/:companyId", "/security-firm/:companyId", "/merch-factory/:companyId", "/venue-business/:venueId", "/rehearsal-studio-business/:studioId", "/recording-studio-business/:studioId"] },
   { id: "recruitment", label: "Recruitment", path: "/business/recruitment", icon: Briefcase, matchPaths: ["/business/job-adverts"] },
   { id: "finances", label: "Finances", path: "/business/finances", icon: DollarSign },
