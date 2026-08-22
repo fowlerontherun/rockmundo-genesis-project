@@ -2,6 +2,7 @@
 \ir ../reconciliation/festival/20260822_simplified_festival_company_settlement_schema.sql
 \ir ../reconciliation/festival/20260822_simplified_festival_company_effects.sql
 \ir ../reconciliation/festival/20260822_simplified_festival_results_api.sql
+\ir ../reconciliation/festival/20260822_festival_owner_functional_hotfixes.sql
 
 DO $$
 DECLARE
@@ -9,6 +10,12 @@ DECLARE
   trigger_deferred boolean;
   trigger_initially_deferred boolean;
   run_config text[];
+  annual_plan_config text[];
+  artist_begin_config text[];
+  request_status_check text;
+  annual_plan_definition text;
+  upgrade_state_definition text;
+  plan_next record;
 BEGIN
   IF to_regclass('public.festival_simplified_edition_results') IS NULL THEN
     RAISE EXCEPTION 'festival_simplified_edition_results is missing';
@@ -114,6 +121,66 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'simplified Festival v1 Run function cannot resolve pgcrypto';
     END IF;
+  END IF;
+
+  SELECT proconfig, pg_get_functiondef(oid)
+  INTO annual_plan_config, annual_plan_definition
+  FROM pg_proc
+  WHERE oid = 'public.save_festival_edition_annual_plan(uuid,uuid,integer,jsonb,uuid)'::regprocedure;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM unnest(coalesce(annual_plan_config, ARRAY[]::text[])) cfg
+    WHERE cfg LIKE 'search_path=%extensions%'
+  ) THEN
+    RAISE EXCEPTION 'Festival annual Plan save cannot resolve pgcrypto';
+  END IF;
+  IF position('v_city_id' in annual_plan_definition) = 0
+     OR position('city_id = v_city_id' in annual_plan_definition) = 0 THEN
+    RAISE EXCEPTION 'Festival annual Plan save does not disambiguate city_id';
+  END IF;
+
+  SELECT proconfig INTO artist_begin_config
+  FROM pg_proc
+  WHERE oid = 'public._festival_artist_begin(uuid,text,text,uuid,uuid,jsonb)'::regprocedure;
+  IF NOT EXISTS (
+    SELECT 1 FROM unnest(coalesce(artist_begin_config, ARRAY[]::text[])) cfg
+    WHERE cfg LIKE 'search_path=%extensions%'
+  ) THEN
+    RAISE EXCEPTION 'Festival artist idempotency helper cannot resolve pgcrypto';
+  END IF;
+
+  SELECT pg_get_constraintdef(oid)
+  INTO request_status_check
+  FROM pg_constraint
+  WHERE conrelid = 'public.festival_artist_plan_requests'::regclass
+    AND conname = 'festival_artist_plan_requests_status_check';
+  IF request_status_check IS NULL
+     OR position('processing' in request_status_check) = 0
+     OR position('succeeded' in request_status_check) = 0
+     OR position('completed' in request_status_check) = 0 THEN
+    RAISE EXCEPTION 'Festival artist request ledger rejects an active terminal status';
+  END IF;
+
+  FOR plan_next IN
+    SELECT p.oid, p.proconfig
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname = 'plan_next_festival_edition'
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM unnest(coalesce(plan_next.proconfig, ARRAY[]::text[])) cfg
+      WHERE cfg LIKE 'search_path=%extensions%'
+    ) THEN
+      RAISE EXCEPTION 'Festival plan-next overload % cannot resolve pgcrypto', plan_next.oid::regprocedure;
+    END IF;
+  END LOOP;
+
+  SELECT pg_get_functiondef('public._festival_upgrade_state(uuid)'::regprocedure)
+  INTO upgrade_state_definition;
+  IF position('_festival_projection_currency' in upgrade_state_definition) = 0
+     OR position('''currencyCode'', ''USD''' in upgrade_state_definition) > 0 THEN
+    RAISE EXCEPTION 'Festival upgrades do not use the Festival home-city currency';
   END IF;
 END;
 $$;
