@@ -1,3 +1,35 @@
+-- Legacy regional catalogue seed compatibility.
+--
+-- The labels table already requires created_by by this point in a clean rebuild,
+-- while these historical INSERT statements predate that requirement. Normalise
+-- just this seed through a temporary trigger: use the canonical system catalogue
+-- owner, align IDs with the deterministic catalogue convention, and skip names
+-- already seeded by the immediately preceding catalogue migration.
+CREATE OR REPLACE FUNCTION public._normalise_legacy_regional_label_seed()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.labels existing
+    WHERE lower(trim(existing.name)) = lower(trim(NEW.name))
+  ) THEN
+    RETURN NULL;
+  END IF;
+
+  NEW.id := md5('rockmundo:system-label:' || NEW.name)::uuid;
+  NEW.created_by := '00000000-0000-0000-0000-00000000a11e'::uuid;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS normalise_legacy_regional_label_seed ON public.labels;
+CREATE TRIGGER normalise_legacy_regional_label_seed
+BEFORE INSERT ON public.labels
+FOR EACH ROW
+EXECUTE FUNCTION public._normalise_legacy_regional_label_seed();
 
 -- 20 UK labels
 INSERT INTO labels (name, description, genre_focus, reputation_score, headquarters_city, roster_slot_capacity, marketing_budget)
@@ -82,3 +114,6 @@ INSERT INTO labels (name, description, genre_focus, reputation_score, headquarte
 SELECT 'San Diego Surf Sound', 'California surf and skate punk', '{"Punk"}', 48, c.name, 5, 18000 FROM cities c WHERE c.name = 'San Diego' LIMIT 1;
 INSERT INTO labels (name, description, genre_focus, reputation_score, headquarters_city, roster_slot_capacity, marketing_budget)
 SELECT 'NYC Underground Hip-Hop', 'New York underground rap scene', '{"Hip-Hop"}', 67, c.name, 10, 52000 FROM cities c WHERE c.name = 'New York' LIMIT 1;
+
+DROP TRIGGER IF EXISTS normalise_legacy_regional_label_seed ON public.labels;
+DROP FUNCTION IF EXISTS public._normalise_legacy_regional_label_seed();
