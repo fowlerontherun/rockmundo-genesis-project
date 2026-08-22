@@ -14,8 +14,14 @@
     ["20260822095104", "reconcile_simplified_festival_automatic_results"],
     ["20260822095200", "fix_simplified_festival_results_legacy_fk_boundary"],
     ["20260822102107", "harden_simplified_festival_results_trigger_privileges"],
-    ["20260822102248", "defer_simplified_festival_results_until_runtime_finalised"]
+    ["20260822102248", "defer_simplified_festival_results_until_runtime_finalised"],
+    ["20260822104919", "complete_simplified_festival_company_settlement"]
   ],
   "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
+  "postBootstrapExtensions": [
+    "supabase/reconciliation/festival/20260822_simplified_festival_company_settlement_schema.sql",
+    "supabase/reconciliation/festival/20260822_simplified_festival_company_effects.sql",
+    "supabase/reconciliation/festival/20260822_simplified_festival_results_api.sql"
+  ],
   "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
 }
