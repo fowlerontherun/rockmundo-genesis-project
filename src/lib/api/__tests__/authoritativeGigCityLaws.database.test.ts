@@ -9,6 +9,10 @@ const financeMigration = readFileSync(
   "supabase/migrations/20260822161100_canonical_gig_city_law_finance.sql",
   "utf8",
 );
+const bookingDialog = readFileSync(
+  "src/components/gig/GigBookingDialog.tsx",
+  "utf8",
+);
 
 describe("authoritative gig City Hall law contract", () => {
   it("snapshots permit and capacity law on each newly booked gig", () => {
@@ -20,7 +24,7 @@ describe("authoritative gig City Hall law contract", () => {
     expect(financeMigration).toContain("cl.max_concert_capacity");
     expect(financeMigration).toContain("cl.effective_from <= v_start");
     expect(financeMigration).toContain("cl.effective_until IS NULL OR cl.effective_until > v_start");
-    expect(financeMigration).toContain("v_permit_fee,v_city_capacity_limit");
+    expect(financeMigration).toContain("INTO v_city_law_id, v_permit_fee, v_city_capacity_limit");
     expect(financeMigration).toContain("v_capacity, v_city_law_id");
   });
 
@@ -69,5 +73,34 @@ describe("authoritative gig City Hall law contract", () => {
     expect(financeMigration).toContain("'effective_capacity'");
     expect(financeMigration).toContain("SECURITY DEFINER");
     expect(financeMigration).toContain("TO authenticated, service_role");
+  });
+});
+
+describe("gig City Hall player preview", () => {
+  it("shows permit, mayor cap and legally sellable capacity before confirmation", () => {
+    expect(bookingDialog).toContain('useCityLaws(venue?.city_id ?? undefined)');
+    expect(bookingDialog).toContain("cityLaws?.max_concert_capacity");
+    expect(bookingDialog).toContain("cityLaws?.venue_permit_cost");
+    expect(bookingDialog).toContain("Math.min(physicalCapacity, cityCapacityLimit)");
+    expect(bookingDialog).toContain("City Hall concert rules");
+    expect(bookingDialog).toContain("Mayor capacity cap");
+    expect(bookingDialog).toContain("Sellable capacity");
+    expect(bookingDialog).toContain("City venue permit");
+    expect(bookingDialog).toContain("Est. upfront total");
+  });
+
+  it("uses permitted capacity in forecasts and ticket-operator decisions", () => {
+    expect(bookingDialog).toContain("const canUseTicketOperator = effectiveCapacity >= 200");
+    expect(bookingDialog).toContain("venueCapacity: effectiveCapacity");
+    expect(bookingDialog).toContain("Math.min(effectiveCapacity, Math.round(baseForecast.pessimistic * slotMultiplier))");
+    expect(bookingDialog).toContain("venueCapacity={effectiveCapacity}");
+  });
+
+  it("includes the permit in affordability, personal funding and payment-source display", () => {
+    expect(bookingDialog).toContain("const estimatedTotalBookingCost = estimatedBookingFee + venuePermitFee");
+    expect(bookingDialog).toContain("payment.canAfford(estimatedTotalBookingCost)");
+    expect(bookingDialog).toContain("venuePermitFee + Math.ceil(estimatedBookingFee * 1.15)");
+    expect(bookingDialog).toContain("cost={estimatedTotalBookingCost}");
+    expect(bookingDialog).toContain("the server resolves the law effective at the gig's local date and time");
   });
 });

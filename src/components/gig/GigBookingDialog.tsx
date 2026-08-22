@@ -13,13 +13,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle, Target, Star } from "lucide-react";
+import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle, Target, Star, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
 import { calculateAttendanceForecast } from "@/utils/gigPerformanceCalculator";
 import { calculateVenuePayout, getPayoutTier } from "@/utils/venuePayoutCalculator";
 import { GIG_SLOTS, getSlotBadgeVariant } from "@/utils/gigSlots";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { useBandRiders, useVenueRiderCompatibility } from "@/hooks/useBandRiders";
+import { useCityLaws } from "@/hooks/useCityLaws";
 import { checkBandLockout } from "@/utils/bandLockout";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -76,6 +77,7 @@ interface GigBookingDialogProps {
 export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, isBooking, initialDate }: GigBookingDialogProps) => {
   const { toast } = useToast();
   const payment = useBandPaymentSource(band.id);
+  const { data: cityLaws } = useCityLaws(venue?.city_id ?? undefined);
   const [selectedSetlistId, setSelectedSetlistId] = useState<string>("");
   const [ticketPrice, setTicketPrice] = useState<number>(20);
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate ? new Date(initialDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
@@ -84,8 +86,18 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
   const [selectedRiderId, setSelectedRiderId] = useState<string>("none");
 
-  // Check if venue is large enough for ticket operators (200+ capacity)
-  const canUseTicketOperator = (venue?.capacity || 0) >= 200;
+  const physicalCapacity = Math.max(1, venue?.capacity || 100);
+  const cityCapacityLimit = cityLaws?.max_concert_capacity && cityLaws.max_concert_capacity > 0
+    ? Math.max(1, Math.round(cityLaws.max_concert_capacity))
+    : null;
+  const effectiveCapacity = cityCapacityLimit
+    ? Math.min(physicalCapacity, cityCapacityLimit)
+    : physicalCapacity;
+  const venuePermitFee = Math.max(0, Math.round(Number(cityLaws?.venue_permit_cost ?? 0)));
+
+  // Ticket operators are required based on the inventory the law actually permits,
+  // not seats that cannot legally be sold for this concert.
+  const canUseTicketOperator = effectiveCapacity >= 200;
 
   // Fetch band's riders
   const { riders, ridersLoading } = useBandRiders(band?.id || null);
@@ -161,19 +173,19 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     return validateSetlistForSlot(setlistDuration.totalSeconds, selectedSlot);
   }, [setlistDuration, selectedSlot]);
 
-  // Calculate venue payout based on band stats and venue
+  // Calculate venue payout based on band stats and the legally sellable house.
   const payoutBreakdown = useMemo(() => {
     if (!venue || !selectedSlotData) return null;
     return calculateVenuePayout({
       bandFame: band.fame || 0,
       bandTotalFans: band.total_fans || 0,
-      venueCapacity: venue.capacity || 100,
+      venueCapacity: effectiveCapacity,
       venuePrestige: venue.prestige_level || 1,
       venueBasePayment: venue.base_payment || 0,
       slotPaymentMultiplier: selectedSlotData.paymentMultiplier,
       riderCost: riderCompatibility?.totalCost || 0,
     });
-  }, [band.fame, band.total_fans, venue, selectedSlotData, riderCompatibility?.totalCost]);
+  }, [band.fame, band.total_fans, venue, selectedSlotData, riderCompatibility?.totalCost, effectiveCapacity]);
 
   const { attendanceForecast, estimatedRevenue, suggestedTicketPrice, priceRating } = useMemo(() => {
     if (!venue) {
@@ -191,18 +203,18 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     const baseForecast = calculateAttendanceForecast(
       band.fame || 0,
       band.popularity || 0,
-      venue.capacity || 100,
+      effectiveCapacity,
       venue.prestige_level || 1,
       ticketPrice,
       setlistQuality
     );
 
-    // Apply slot multiplier
+    // Apply slot multiplier and never preview more people than can legally attend.
     const slotMultiplier = selectedSlotData?.attendanceMultiplier || 1.0;
     const forecast = {
-      pessimistic: Math.round(baseForecast.pessimistic * slotMultiplier),
-      realistic: Math.round(baseForecast.realistic * slotMultiplier),
-      optimistic: Math.round(baseForecast.optimistic * slotMultiplier)
+      pessimistic: Math.min(effectiveCapacity, Math.round(baseForecast.pessimistic * slotMultiplier)),
+      realistic: Math.min(effectiveCapacity, Math.round(baseForecast.realistic * slotMultiplier)),
+      optimistic: Math.min(effectiveCapacity, Math.round(baseForecast.optimistic * slotMultiplier))
     };
 
     const suggested = 15 + (venue.prestige_level || 1) * 5;
@@ -223,7 +235,12 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
       suggestedTicketPrice: suggested,
       priceRating: rating,
     };
-  }, [band.fame, band.popularity, venue, ticketPrice, selectedSlotData, selectedSetlistId, eligibleSetlists]);
+  }, [band.fame, band.popularity, venue, ticketPrice, selectedSlotData, selectedSetlistId, eligibleSetlists, effectiveCapacity]);
+
+  // Mirrors the visible portion of the server rule. The server recalculates both
+  // amounts at the gig's actual local date/time before any money moves.
+  const estimatedBookingFee = Math.max(50, Math.round(estimatedRevenue * 0.1));
+  const estimatedTotalBookingCost = estimatedBookingFee + venuePermitFee;
 
   const handleConfirm = async () => {
     if (!selectedSetlistId || !selectedSlot || !selectedDate || !venue) return;
@@ -237,26 +254,24 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
       return;
     }
 
-    // Booking fee mirrors the server rule: max($50, 10% of projected revenue).
-    const estimatedBookingFee = Math.max(50, Math.round(estimatedRevenue * 0.1));
-
-    if (!payment.canAfford(estimatedBookingFee)) {
+    if (!payment.canAfford(estimatedTotalBookingCost)) {
       toast({
         title: "Insufficient funds",
         description: payment.source === "band"
-          ? "The band cannot cover the booking fee. Switch to personal funds or top up the treasury."
-          : "Your personal funds cannot cover the booking fee.",
+          ? `The band cannot cover the estimated $${estimatedTotalBookingCost.toLocaleString()} booking and City Hall permit cost. Switch to personal funds or top up the treasury.`
+          : `Your personal funds cannot cover the estimated $${estimatedTotalBookingCost.toLocaleString()} booking and City Hall permit cost.`,
         variant: "destructive"
       });
       return;
     }
 
     try {
-      // Personal override: move money into the treasury first (with a small buffer
-      // for server-side fee rounding) so the atomic booking RPC stays unchanged.
+      // Personal override: move the estimated booking amount into the canonical
+      // band treasury first. Buffer only the revenue-derived booking fee; the
+      // City Hall permit is a fixed visible levy and is added exactly.
       await payment.prepareFunds(
-        Math.ceil(estimatedBookingFee * 1.15),
-        "Gig booking (personal funds)"
+        venuePermitFee + Math.ceil(estimatedBookingFee * 1.15),
+        "Gig booking and City Hall venue permit (personal funds)"
       );
     } catch (error) {
       toast({
@@ -283,7 +298,7 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
 
   if (!venue) return null;
 
-  // Ticket operator is mandatory for venues 200+ capacity
+  // Ticket operator is mandatory for legally sellable houses of 200+.
   const operatorRequired = canUseTicketOperator && !selectedOperatorId;
   
   const isConfirmDisabled =
@@ -317,6 +332,55 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
           </Alert>
         )}
 
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="pt-5 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 font-semibold">
+                <Landmark className="h-4 w-4" />
+                City Hall concert rules
+              </div>
+              <Badge variant="outline">Server enforced</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Physical venue</div>
+                <div className="font-medium">{physicalCapacity.toLocaleString()} capacity</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Mayor capacity cap</div>
+                <div className="font-medium">{cityCapacityLimit ? cityCapacityLimit.toLocaleString() : "No cap"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Sellable capacity</div>
+                <div className="font-medium text-primary">{effectiveCapacity.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">City venue permit</div>
+                <div className="font-medium">${venuePermitFee.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Est. booking fee</div>
+                <div className="font-medium">${estimatedBookingFee.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Est. upfront total</div>
+                <div className="font-semibold">${estimatedTotalBookingCost.toLocaleString()}</div>
+              </div>
+            </div>
+            {cityCapacityLimit && cityCapacityLimit < physicalCapacity && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  City Hall currently limits concerts here to {effectiveCapacity.toLocaleString()} attendees, so forecasts and ticket inventory use that permitted house rather than all {physicalCapacity.toLocaleString()} seats.
+                </AlertDescription>
+              </Alert>
+            )}
+            <p className="text-xs text-muted-foreground">
+              This preview uses the currently visible City Hall policy. At confirmation the server resolves the law effective at the gig's local date and time, recalculates the permit and capacity, checks the canonical band treasury, and is final authority.
+            </p>
+          </CardContent>
+        </Card>
+
         <div className="space-y-6">
           {/* Date Selection */}
           <div className="space-y-2">
@@ -342,11 +406,11 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                 {slotAvailability?.map(({ slot, isAvailable, isBooked, bookedByBand, meetsRequirements, requirementsNotMet }) => {
                   const isDisabled = !isAvailable || !meetsRequirements;
 
-                  // Calculate payout preview for this slot
+                  // Calculate payout preview for this slot using permitted capacity.
                   const slotPayout = calculateVenuePayout({
                     bandFame: band.fame || 0,
                     bandTotalFans: band.total_fans || 0,
-                    venueCapacity: venue.capacity || 100,
+                    venueCapacity: effectiveCapacity,
                     venuePrestige: venue.prestige_level || 1,
                     venueBasePayment: venue.base_payment || 0,
                     slotPaymentMultiplier: slot.paymentMultiplier,
@@ -622,7 +686,7 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Attendance Forecast</span>
-                      <Badge variant="outline">Based on your stats</Badge>
+                      <Badge variant="outline">Max {effectiveCapacity.toLocaleString()}</Badge>
                     </div>
                     
                     <div className="space-y-2">
@@ -703,6 +767,21 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                       </>
                     )}
 
+                    <div className="space-y-1 rounded-lg border p-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Estimated booking fee</span>
+                        <span>${estimatedBookingFee.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">City Hall venue permit</span>
+                        <span>${venuePermitFee.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1 font-semibold">
+                        <span>Estimated upfront cost</span>
+                        <span>${estimatedTotalBookingCost.toLocaleString()}</span>
+                      </div>
+                    </div>
+
                     <Separator />
                     <div className="flex justify-between items-center text-lg">
                       <span className="font-semibold">Total Projected Earnings</span>
@@ -712,28 +791,28 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground italic mt-4">
-                    * Conservative estimates based on your band's fame, fans, and venue prestige.
+                    * Conservative estimates based on your band's fame, fans, venue prestige and current City Hall capacity policy. The server confirms the final law and charges at booking.
                   </p>
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Ticket Operator Selection (for venues 200+ capacity) */}
+          {/* Ticket Operator Selection (for permitted houses 200+ capacity) */}
           {canUseTicketOperator && (
             <>
               <Separator />
               <TicketOperatorSelector
                 selectedOperatorId={selectedOperatorId}
                 onSelectOperator={setSelectedOperatorId}
-                venueCapacity={venue?.capacity || 0}
+                venueCapacity={effectiveCapacity}
               />
             </>
           )}
         </div>
 
         <BandPaymentSourceSelector
-          cost={Math.max(50, Math.round(estimatedRevenue * 0.1))}
+          cost={estimatedTotalBookingCost}
           source={payment.source}
           onChange={payment.setSource}
           bandBalance={payment.bandBalance}
@@ -750,7 +829,7 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
             onClick={handleConfirm}
             disabled={isConfirmDisabled}
           >
-            {isBooking ? "Booking..." : "Confirm Booking"}
+            {isBooking ? "Booking..." : `Confirm Booking · ~$${estimatedTotalBookingCost.toLocaleString()}`}
           </Button>
         </DialogFooter>
       </DialogContent>
