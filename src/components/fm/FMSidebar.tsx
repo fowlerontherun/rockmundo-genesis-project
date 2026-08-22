@@ -1,24 +1,80 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { findModuleForPath } from "@/config/fmNavigation";
-import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  buildMayorOfficePath,
+  getMayorOfficeCityId,
+  getMayorOfficeSection,
+  isMayorOfficePath,
+  MAYOR_OFFICE_MODULE_LABEL,
+  MAYOR_OFFICE_SIDEBAR,
+} from "@/config/mayorOfficeNavigation";
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/rockmundo-new-logo.png";
 
-
 const COLLAPSED_KEY = "fm-sidebar-collapsed";
+
+type SidebarItem = {
+  label: string;
+  path: string;
+  icon?: LucideIcon;
+  active: boolean;
+};
+
+type SidebarGroup = {
+  label: string;
+  items: SidebarItem[];
+};
 
 export const FMSidebar = () => {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const mod = findModuleForPath(pathname);
+  const mayorOffice = isMayorOfficePath(pathname);
+  const mayorCityId = getMayorOfficeCityId(pathname);
+  const mayorSection = getMayorOfficeSection(search);
+
+  const groups = useMemo<SidebarGroup[]>(() => {
+    if (mayorOffice && mayorCityId) {
+      return MAYOR_OFFICE_SIDEBAR.map((group) => ({
+        label: group.label,
+        items: group.items.map((item) => ({
+          label: item.label,
+          path: buildMayorOfficePath(mayorCityId, item.section),
+          icon: item.icon,
+          active: item.section === mayorSection,
+        })),
+      }));
+    }
+
+    return mod.sidebar.map((group) => ({
+      label: group.label,
+      items: group.items.map((item) => ({
+        label: item.label,
+        path: item.path,
+        icon: item.icon,
+        active: pathname === item.path || pathname.startsWith(item.path + "/"),
+      })),
+    }));
+  }, [mayorCityId, mayorOffice, mayorSection, mod.sidebar, pathname]);
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem(COLLAPSED_KEY) === "1"; } catch { return false; }
   });
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(mod.sidebar.map((g) => [g.label, true]))
+    Object.fromEntries(groups.map((g) => [g.label, true]))
   );
+
+  useEffect(() => {
+    setOpenGroups((current) => {
+      const next = { ...current };
+      for (const group of groups) {
+        if (!(group.label in next)) next[group.label] = true;
+      }
+      return next;
+    });
+  }, [groups]);
 
   const toggleCollapsed = () => {
     setCollapsed((c) => {
@@ -29,7 +85,7 @@ export const FMSidebar = () => {
   };
 
   const toggleGroup = (label: string) => setOpenGroups((g) => ({ ...g, [label]: !g[label] }));
-  const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
+  const shellLabel = mayorOffice ? MAYOR_OFFICE_MODULE_LABEL : mod.label;
 
   return (
     <aside
@@ -38,7 +94,6 @@ export const FMSidebar = () => {
         collapsed ? "w-12" : "w-56"
       )}
     >
-      {/* Brand strip */}
       <button
         onClick={() => navigate("/")}
         className="h-11 flex items-center gap-2 px-2.5 border-b border-fm-border hover:bg-fm-panel-2 transition-colors"
@@ -56,7 +111,7 @@ export const FMSidebar = () => {
       <div className="h-9 flex items-center justify-between px-3 border-b border-fm-border">
         {!collapsed && (
           <span className="text-[12px] font-medium tracking-tight text-fm-fg truncate">
-            {mod.label}
+            {shellLabel}
           </span>
         )}
         <button
@@ -70,9 +125,8 @@ export const FMSidebar = () => {
         </button>
       </div>
 
-
       <div className="flex-1 overflow-y-auto py-2">
-        {mod.sidebar.map((group) => (
+        {groups.map((group) => (
           <div key={group.label} className="mb-2">
             {!collapsed && (
               <button
@@ -88,16 +142,15 @@ export const FMSidebar = () => {
               <div className="space-y-px px-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active = isActive(item.path);
                   return (
                     <button
                       key={item.path}
                       onClick={() => navigate(item.path)}
                       title={collapsed ? item.label : undefined}
-                      aria-current={active ? "page" : undefined}
+                      aria-current={item.active ? "page" : undefined}
                       className={cn(
                         "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[12px] transition-colors",
-                        active
+                        item.active
                           ? "bg-fm-accent/15 text-fm-accent"
                           : "text-fm-fg-muted hover:text-fm-fg hover:bg-fm-panel-2",
                       )}

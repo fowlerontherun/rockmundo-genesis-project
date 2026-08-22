@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Landmark, Crown, Vote, Calendar, Clock, Users, ChevronRight, Settings } from "lucide-react";
+import { Landmark, Crown, Vote, Calendar, Clock, Users, ChevronRight } from "lucide-react";
 import { useCityMayor, useIsCurrentMayor } from "@/hooks/useMayorDashboard";
 import { useCityElection } from "@/hooks/useCityElections";
 import { useCityLaws } from "@/hooks/useCityLaws";
@@ -27,7 +27,7 @@ const ELECTION_PHASE_INFO = {
     color: "bg-primary",
   },
   campaign: {
-    label: "Campaign Phase", 
+    label: "Campaign Phase",
     description: "Candidates are campaigning",
     color: "bg-accent",
   },
@@ -50,13 +50,12 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Current Mayor Section */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Crown className="h-4 w-4" />
             Current Mayor
           </h4>
-          
+
           {isLoading ? (
             <div className="animate-pulse flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-muted" />
@@ -92,8 +91,8 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
               {isMayor && (
                 <Button size="sm" className="mt-2" asChild>
                   <Link to={`/cities/${cityId}/mayor-dashboard`}>
-                    <Settings className="h-4 w-4 mr-1" />
-                    Manage City
+                    <Crown className="h-4 w-4 mr-1" />
+                    Open City Hall
                   </Link>
                 </Button>
               )}
@@ -107,7 +106,6 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
           )}
         </div>
 
-        {/* Election Status Section */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Vote className="h-4 w-4" />
@@ -161,13 +159,12 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
               <Calendar className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-40" />
               <p className="text-sm text-muted-foreground">No active election</p>
               <p className="text-xs text-muted-foreground">
-                Elections occur annually: Nominations (Month 10), Voting (Month 12)
+                Annual cycle: nominations open 1 October and voting opens 1 December.
               </p>
             </div>
           )}
         </div>
 
-        {/* Quick Laws Summary */}
         {laws && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Key Local Laws</h4>
@@ -191,7 +188,7 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
                 <div className="text-xs text-muted-foreground">Curfew</div>
               </div>
             </div>
-            
+
             {(laws.prohibited_genres.length > 0 || laws.promoted_genres.length > 0) && (
               <div className="flex flex-wrap gap-1 pt-2">
                 {laws.promoted_genres.slice(0, 2).map((genre) => (
@@ -209,7 +206,6 @@ export function CityGovernanceSection({ cityId, cityName }: CityGovernanceSectio
           </div>
         )}
 
-        {/* Active & recent city projects (visible to everyone) */}
         <CityProjectsPublicView cityId={cityId} />
       </CardContent>
     </Card>
