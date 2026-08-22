@@ -174,17 +174,21 @@ export async function bookTravel(bookingData: TravelBookingData) {
     console.warn('Failed to create scheduled activity for travel:', activityError);
   }
 
-  // Log activity
+  // Log the booking truthfully. Future journeys are booked, not already completed.
   await (supabase as any).from("activity_feed").insert({
     profile_id: profileId,
     activity_type: "travel",
-    message: `Traveled from ${fromCityName} to ${toCityName} by ${transportType}`,
+    message: startsImmediately
+      ? `Started travel from ${fromCityName} to ${toCityName} by ${transportType}`
+      : `Booked travel from ${fromCityName} to ${toCityName} by ${transportType}`,
     metadata: {
       from_city_id: fromCityId,
       to_city_id: toCityId,
       transport_type: transportType,
       cost: cost,
       duration_hours: durationHours,
+      scheduled_departure_time: departureTime,
+      travel_status: status,
     },
   });
 
@@ -201,8 +205,13 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   return {
     success: true,
-    message: `Successfully traveled to ${toCityName}`,
-    newLocation: toCityName,
+    status,
+    message: startsImmediately
+      ? `Travel started to ${toCityName}`
+      : `Travel booked to ${toCityName}`,
+    newLocation: startsImmediately ? toCityName : null,
+    scheduledDepartureTime: departureTime,
+    arrivalTime: arrivalTimeCalc.toISOString(),
   };
 }
 
