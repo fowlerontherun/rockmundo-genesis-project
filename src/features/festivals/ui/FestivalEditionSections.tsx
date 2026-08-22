@@ -4,12 +4,9 @@ import {
   Banknote,
   BarChart3,
   Building2,
-  CalendarClock,
   Music2,
   PlayCircle,
-  Tent,
   Ticket,
-  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,13 +19,6 @@ import {
 } from "@/components/ui/card";
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
-import { FestivalSitePlanner } from "@/features/festival-company/ui/FestivalSitePlanner";
-import { FestivalOperationsPlanner } from "@/features/festival-company/ui/FestivalOperationsPlanner";
-import { FestivalSponsorshipPlanner } from "@/features/festival-company/ui/FestivalSponsorshipPlanner";
-import { FestivalTimetablePlanner } from "@/features/festival-company/ui/FestivalTimetablePlanner";
-import { FestivalLaunchManager } from "@/features/festival-company/ui/FestivalLaunchManager";
-import { FestivalPublicProfileEditor } from "@/features/festival-company/ui/FestivalPublicProfileEditor";
-import { useFestivalSalesSummary } from "@/features/festival-company/application/useFestivalLaunch";
 import { FestivalAnnualPlan } from "@/features/festivals/annual-plan/FestivalAnnualPlan";
 import {
   getFestivalCompanyEditions,
@@ -57,12 +47,12 @@ const SectionShell = ({
 
 const bindingLabels: Record<FestivalEditionPlanBindingKey, string> = {
   configuration: "company setup",
-  site: "Festival site",
+  site: "annual Festival plan",
   tickets: "ticket",
   artists: "line-up",
   operations: "automatic operations",
-  sponsorship: "commercial",
-  timetable: "running order",
+  sponsorship: "automatic commercial",
+  timetable: "automatic running order",
 };
 
 function EditionScope({
@@ -173,9 +163,9 @@ function EditionScope({
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Return to the Plan screen. The game will generate detailed operations
-            and the running order automatically once the high-level choices are
-            complete.
+            Return to the Plan screen. The game creates the site foundations,
+            stages and operating requirements automatically from your high-level
+            choices and company upgrades.
           </CardContent>
         </Card>
       ) : (
@@ -234,30 +224,9 @@ export function FestivalEditionOverview({
 
       <div className="grid gap-4 md:grid-cols-2">
         <ActionCard
-          icon={<Tent className="h-5 w-5" />}
-          title="Set up the site and stages"
-          description="Pick the site, capacity and opening hours, then add stages. Do this first — tickets and the line-up depend on it."
-          label="Plan site & stages"
-          to={festivalRoutes.site(festivalCompanyId, editionId)}
-        />
-        <ActionCard
-          icon={<Users className="h-5 w-5" />}
-          title="Staff, suppliers and sponsors"
-          description="Commit staffing and supplier budgets, then agree sponsorship packages for the event."
-          label="Plan operations"
-          to={festivalRoutes.operations(festivalCompanyId, editionId)}
-        />
-        <ActionCard
-          icon={<CalendarClock className="h-5 w-5" />}
-          title="Build the running order"
-          description="Place booked acts into stage slots, resolve conflicts and confirm readiness before announcing."
-          label="Running order"
-          to={festivalRoutes.schedule(festivalCompanyId, editionId)}
-        />
-        <ActionCard
           icon={<Music2 className="h-5 w-5" />}
           title="Choose the line-up"
-          description="Set the artist budget and decide whether to use applications, invitations or a mixture. Empty spaces can be filled automatically."
+          description="Set the artist budget, review applications and invite acts. Empty spaces can be filled automatically."
           label="Manage line-up"
           to={festivalRoutes.applications(festivalCompanyId, editionId)}
         />
@@ -271,7 +240,7 @@ export function FestivalEditionOverview({
         <ActionCard
           icon={<PlayCircle className="h-5 w-5" />}
           title="Run the Festival"
-          description="Review simple blockers and warnings, then launch. Staffing, suppliers, running order and settlement are automatic."
+          description="Review simple blockers and warnings, then launch. Staffing, suppliers and the running order are automatic."
           label="Run Festival"
           to={festivalRoutes.live(festivalCompanyId, editionId)}
         />
@@ -289,106 +258,14 @@ export function FestivalEditionOverview({
           <CardTitle>Generated automatically by the game</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
-          <p>• Capacity based on scale and company upgrades</p>
-          <p>• Stage count and running order</p>
+          <p>• Site capacity and stage count from scale and upgrades</p>
+          <p>• Stage running order and NPC fallback acts</p>
           <p>• Security, medical and welfare requirements</p>
           <p>• Staff, supplier and operating costs</p>
           <p>• Weather, transport and technical risks</p>
           <p>• Final attendance, revenue and settlement</p>
         </CardContent>
       </Card>
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionSite({
-  festivalCompanyId,
-  editionId,
-}: {
-  festivalCompanyId: string;
-  editionId: string;
-}) {
-  return (
-    <SectionShell
-      title="Site and stages"
-      description="Choose the festival site, capacity and opening times, then add the stages the line-up will be booked onto."
-    >
-      <EditionScope
-        festivalCompanyId={festivalCompanyId}
-        editionId={editionId}
-        requireEditable
-      >
-        <FestivalSitePlanner festivalCompanyId={festivalCompanyId} />
-      </EditionScope>
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionOperations({
-  festivalCompanyId,
-  editionId,
-}: {
-  festivalCompanyId: string;
-  editionId: string;
-}) {
-  return (
-    <SectionShell
-      title="Staffing and suppliers"
-      description="Plan staff, suppliers, safety coverage and contingency budgets for the event."
-    >
-      <EditionScope
-        festivalCompanyId={festivalCompanyId}
-        editionId={editionId}
-        requireEditable
-      >
-        <FestivalOperationsPlanner festivalCompanyId={festivalCompanyId} />
-      </EditionScope>
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionSponsorship({
-  festivalCompanyId,
-  editionId,
-}: {
-  festivalCompanyId: string;
-  editionId: string;
-}) {
-  return (
-    <SectionShell
-      title="Sponsors and commercial"
-      description="Agree sponsorship packages, branding and commercial partnerships for this annual Festival."
-    >
-      <EditionScope
-        festivalCompanyId={festivalCompanyId}
-        editionId={editionId}
-        requireEditable
-      >
-        <FestivalSponsorshipPlanner festivalCompanyId={festivalCompanyId} />
-      </EditionScope>
-    </SectionShell>
-  );
-}
-
-export function FestivalEditionTimetable({
-  festivalCompanyId,
-  editionId,
-}: {
-  festivalCompanyId: string;
-  editionId: string;
-}) {
-  return (
-    <SectionShell
-      title="Running order and readiness"
-      description="Build the stage running order, review conflicts and confirm the Festival is ready before announcing."
-    >
-      <EditionScope
-        festivalCompanyId={festivalCompanyId}
-        editionId={editionId}
-        requireEditable
-      >
-        <FestivalTimetablePlanner festivalCompanyId={festivalCompanyId} />
-      </EditionScope>
     </SectionShell>
   );
 }
@@ -403,7 +280,7 @@ export function FestivalEditionApplications({
   return (
     <SectionShell
       title="Line-up"
-      description="Set the overall approach and budget, then review applications, offers and confirmed acts in one place."
+      description="Set the overall approach and budget, then review applications, invite acts and track confirmed bookings in one place."
     >
       <EditionScope
         festivalCompanyId={festivalCompanyId}
@@ -411,9 +288,9 @@ export function FestivalEditionApplications({
         requireEditable
       >
         <FestivalArtistPlanner
-        festivalCompanyId={festivalCompanyId}
-        festivalEditionId={editionId}
-      />
+          festivalCompanyId={festivalCompanyId}
+          festivalEditionId={editionId}
+        />
       </EditionScope>
     </SectionShell>
   );
@@ -438,73 +315,13 @@ export function FestivalEditionFinance({
         requiredBindings={["site"]}
       >
         <FestivalTicketPlanner
-        festivalCompanyId={festivalCompanyId}
-        festivalEditionId={editionId}
-      />
+          festivalCompanyId={festivalCompanyId}
+          festivalEditionId={editionId}
+        />
       </EditionScope>
     </SectionShell>
   );
 }
-
-export function FestivalEditionLaunch({
-  festivalCompanyId,
-  editionId,
-}: {
-  festivalCompanyId: string;
-  editionId: string;
-}) {
-  const salesSummary = useFestivalSalesSummary(festivalCompanyId);
-  const summary = salesSummary.data as
-    | {
-        currency?: string;
-        ticketsSold?: number;
-        ticketsAvailable?: number;
-        grossSalesMinor?: number;
-      }
-    | undefined;
-
-  return (
-    <SectionShell
-      title="Announce and sell"
-      description="Publish the public festival page, launch the announcement and control ticket sales."
-    >
-      <EditionScope
-        festivalCompanyId={festivalCompanyId}
-        editionId={editionId}
-        requiredBindings={["site", "tickets"]}
-      >
-        <FestivalPublicProfileEditor festivalCompanyId={festivalCompanyId} />
-        <FestivalLaunchManager festivalCompanyId={festivalCompanyId} />
-        {summary ? (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Ticket sales</CardTitle>
-              <CardDescription>Live sales for the announced festival.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
-              <p>
-                Sold: <strong>{summary.ticketsSold ?? 0}</strong>
-              </p>
-              <p>
-                Available: <strong>{summary.ticketsAvailable ?? 0}</strong>
-              </p>
-              <p>
-                Gross:{" "}
-                <strong>
-                  {((summary.grossSalesMinor ?? 0) / 100).toLocaleString(undefined, {
-                    style: "currency",
-                    currency: summary.currency ?? "USD",
-                  })}
-                </strong>
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
-      </EditionScope>
-    </SectionShell>
-  );
-}
-
 
 export function FestivalEditionHistory({ editionId }: { editionId: string }) {
   const query = useQuery({
