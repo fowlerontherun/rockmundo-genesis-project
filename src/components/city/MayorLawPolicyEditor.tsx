@@ -181,8 +181,8 @@ export function MayorLawPolicyEditor({ cityId, currentLaws }: Props) {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No curfew</SelectItem>
-                    {[21, 22, 23, 24].map((hour) => (
-                      <SelectItem key={hour} value={String(hour)}>{hour === 24 ? "Midnight" : `${hour}:00`}</SelectItem>
+                    {[21, 22, 23].map((hour) => (
+                      <SelectItem key={hour} value={String(hour)}>{hour}:00</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
