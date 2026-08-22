@@ -1,17 +1,35 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { 
-  CityElection, 
-  CityCandidate, 
+import type {
+  CityElection,
+  CityCandidate,
   CityElectionVote,
   CandidateStatus,
-  ProposedPolicies 
+  ProposedPolicies,
 } from "@/types/city-governance";
-// useAuth removed — profileId sourced from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
-// Fetch current or upcoming election for a city
+const ELECTION_ERROR_MESSAGES: Record<string, string> = {
+  city_election_auth_required: "You must be logged in to take part in an election.",
+  city_election_profile_forbidden: "That character does not belong to your account.",
+  city_election_fame_required: "You need at least 100 fame to run for mayor.",
+  city_election_not_found: "This election is no longer available.",
+  city_election_nominations_closed: "Nominations are closed for this election.",
+  city_election_already_candidate: "You are already registered for this election.",
+  city_election_voting_closed: "Voting is not currently open for this election.",
+  city_election_candidate_invalid: "That candidate is not eligible in this election.",
+  city_election_residency_required: "You must be a resident of this city to vote in its election.",
+  city_election_already_voted: "You have already voted in this election.",
+};
+
+function electionError(error: unknown): Error {
+  const raw = error instanceof Error ? error.message : String((error as any)?.message ?? error ?? "Unknown error");
+  const code = Object.keys(ELECTION_ERROR_MESSAGES).find((key) => raw.includes(key));
+  return new Error(code ? ELECTION_ERROR_MESSAGES[code] : raw);
+}
+
+// Fetch the currently active election for a city.
 export function useCityElection(cityId: string | undefined) {
   return useQuery({
     queryKey: ["city-election", cityId],
@@ -31,6 +49,7 @@ export function useCityElection(cityId: string | undefined) {
       return data as CityElection | null;
     },
     enabled: !!cityId,
+    refetchInterval: 60_000,
   });
 }
 
@@ -70,8 +89,7 @@ export function useElectionCandidates(electionId: string | undefined) {
         .order("vote_count", { ascending: false });
 
       if (error) throw error;
-      
-      // Fetch profile info separately
+
       const candidatesWithProfiles = await Promise.all(
         (data || []).map(async (candidate) => {
           const { data: profile } = await supabase
@@ -79,21 +97,22 @@ export function useElectionCandidates(electionId: string | undefined) {
             .select("id, stage_name, avatar_url, fame")
             .eq("id", candidate.profile_id)
             .single();
-          
+
           return {
             ...candidate,
-            profile: profile || undefined
+            profile: profile || undefined,
           };
-        })
+        }),
       );
-      
+
       return candidatesWithProfiles as unknown as CityCandidate[];
     },
     enabled: !!electionId,
+    refetchInterval: 30_000,
   });
 }
 
-// Check if current user has voted in an election
+// Check if the active character has voted in an election.
 export function useUserVote(electionId: string | undefined) {
   const { profileId } = useActiveProfile();
 
@@ -116,7 +135,8 @@ export function useUserVote(electionId: string | undefined) {
   });
 }
 
-// Cast a vote
+// Cast a vote. Election phase, candidate validity, residency and duplicate-vote
+// checks are all repeated by the database authority.
 export function useCastVote() {
   const queryClient = useQueryClient();
   const { profileId } = useActiveProfile();
@@ -125,28 +145,19 @@ export function useCastVote() {
     mutationFn: async ({ electionId, candidateId }: { electionId: string; candidateId: string }) => {
       if (!profileId) throw new Error("Must be logged in to vote");
 
-      const { data, error } = await supabase
-        .from("city_election_votes")
-        .insert({
-          election_id: electionId,
-          voter_profile_id: profileId,
-          candidate_id: candidateId,
-        })
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc("cast_city_election_vote", {
+        p_election_id: electionId,
+        p_candidate_id: candidateId,
+        p_profile_id: profileId,
+      });
 
-      if (error) {
-        if (error.code === "23505") {
-          throw new Error("You have already voted in this election");
-        }
-        throw error;
-      }
-
-      return data;
+      if (error) throw electionError(error);
+      return data as CityElectionVote;
     },
     onSuccess: (_, { electionId }) => {
       queryClient.invalidateQueries({ queryKey: ["user-vote", electionId] });
-      queryClient.invalidateQueries({ queryKey: ["election-candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
+      queryClient.invalidateQueries({ queryKey: ["city-election"] });
       toast.success("Vote cast successfully!");
     },
     onError: (error: Error) => {
@@ -155,7 +166,8 @@ export function useCastVote() {
   });
 }
 
-// Register as a candidate
+// Register as a candidate through the server authority. Fame and nomination
+// timing can no longer be bypassed with a direct client insert.
 export function useRegisterCandidate() {
   const queryClient = useQueryClient();
   const { profileId } = useActiveProfile();
@@ -172,42 +184,15 @@ export function useRegisterCandidate() {
     }) => {
       if (!profileId) throw new Error("Must be logged in to run for mayor");
 
-      // Get profile fame
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, fame")
-        .eq("id", profileId)
-        .single();
+      const { data, error } = await (supabase as any).rpc("register_city_candidate", {
+        p_election_id: electionId,
+        p_profile_id: profileId,
+        p_slogan: slogan,
+        p_proposed_policies: proposedPolicies,
+      });
 
-      if (profileError || !profile) throw new Error("Profile not found");
-
-      // Check fame requirement
-      if ((profile.fame || 0) < 100) {
-        throw new Error("You need at least 100 fame to run for mayor");
-      }
-
-      const insertData = {
-        election_id: electionId,
-        profile_id: profile.id,
-        campaign_slogan: slogan,
-        proposed_policies: proposedPolicies as unknown as Record<string, unknown>,
-        status: "approved" as CandidateStatus,
-      };
-      
-      const { data, error } = await supabase
-        .from("city_candidates")
-        .insert(insertData as any)
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === "23505") {
-          throw new Error("You are already registered for this election");
-        }
-        throw error;
-      }
-
-      return data;
+      if (error) throw electionError(error);
+      return data as CityCandidate;
     },
     onSuccess: (_, { electionId }) => {
       queryClient.invalidateQueries({ queryKey: ["election-candidates", electionId] });
@@ -219,7 +204,7 @@ export function useRegisterCandidate() {
   });
 }
 
-// Withdraw candidacy
+// Withdrawal remains an owner-only update under the existing RLS policy.
 export function useWithdrawCandidacy() {
   const queryClient = useQueryClient();
 
