@@ -3,12 +3,12 @@ import { Loader2, List, Map as MapIcon, Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TravelFilters, TravelFiltersState, defaultFilters } from "./TravelFilters";
 import { DestinationCard } from "./DestinationCard";
 import { TravelMapSelector } from "./TravelMapSelector";
 import { getDestinationsFromCity, CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
+import { applyCityDevelopmentToTravelQuotes } from "@/utils/cityDevelopmentTravel";
 
 interface Destination {
   city: CityWithCoords;
@@ -38,7 +38,8 @@ export function TravelDestinationBrowser({
     const load = async () => {
       setLoading(true);
       try {
-        const data = await getDestinationsFromCity(currentCityId);
+        const baseQuotes = await getDestinationsFromCity(currentCityId);
+        const data = await applyCityDevelopmentToTravelQuotes(currentCityId, baseQuotes);
         setDestinations(data);
       } catch (error) {
         console.error("Error loading destinations:", error);
@@ -166,6 +167,7 @@ export function TravelDestinationBrowser({
             <CardDescription className="mt-1">
               {stats.availableCount} destinations • {stats.regionCount} regions •
               From ${stats.cheapest === Infinity ? "N/A" : stats.cheapest}
+              <span className="block mt-1">City transport investment is included in quoted journey cost and duration.</span>
             </CardDescription>
           </div>
           <div className="flex gap-2">
