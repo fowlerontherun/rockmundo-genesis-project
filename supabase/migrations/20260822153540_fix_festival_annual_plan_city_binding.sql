@@ -1,0 +1,5 @@
+-- Production migration history marker.
+-- The live database applied this Festival annual-plan binding repair on 2026-08-22.
+-- Clean builds obtain equivalent schema from the frozen inherited 2029 Festival
+-- sequence plus the post-bootstrap parity overlay/extensions.
+-- See docs/festivals/FESTIVAL_PRODUCTION_RECONCILIATION_20260822.md.
