@@ -1,0 +1,6 @@
+-- Production migration history marker.
+-- The live database aligned Festival upgrade/licence currency with the Festival
+-- company's home city on 2026-08-22.
+-- Clean builds obtain equivalent schema from the frozen inherited 2029 Festival
+-- sequence plus the post-bootstrap parity overlay/extensions.
+-- See docs/festivals/FESTIVAL_PRODUCTION_RECONCILIATION_20260822.md.
