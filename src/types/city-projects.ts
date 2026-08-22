@@ -4,12 +4,25 @@ export type CityProjectCategory = 'infrastructure' | 'culture' | 'economy' | 'qu
 export type CityProjectStatus = 'proposed' | 'in_progress' | 'completed' | 'cancelled' | 'failed';
 
 export interface CityProjectEffects {
+  // Legacy city fields retained for compatibility.
   venues?: number;
   music_scene?: number;
   local_bonus?: number;
   population?: number;
   max_concert_capacity?: number;
   weekly_budget_bonus?: number;
+
+  // Explicit city-development simulation ratings.
+  economy_rating?: number;
+  infrastructure_rating?: number;
+  transport_rating?: number;
+  public_safety_rating?: number;
+  healthcare_rating?: number;
+  culture_rating?: number;
+  music_scene_rating?: number;
+  tourism_rating?: number;
+  quality_of_life_rating?: number;
+  education_rating?: number;
 }
 
 export interface CityProjectType {
@@ -74,6 +87,25 @@ export const PROJECT_STATUS_LABELS: Record<CityProjectStatus, string> = {
   completed: 'Completed',
   cancelled: 'Cancelled',
   failed: 'Failed',
+};
+
+export const PROJECT_EFFECT_LABELS: Partial<Record<keyof CityProjectEffects, string>> = {
+  venues: 'Venues',
+  music_scene: 'Legacy music scene',
+  local_bonus: 'Legacy local bonus',
+  population: 'Population',
+  max_concert_capacity: 'Concert capacity',
+  weekly_budget_bonus: 'Weekly budget',
+  economy_rating: 'Economy',
+  infrastructure_rating: 'Infrastructure',
+  transport_rating: 'Transport',
+  public_safety_rating: 'Public Safety',
+  healthcare_rating: 'Healthcare',
+  culture_rating: 'Culture',
+  music_scene_rating: 'Music Scene',
+  tourism_rating: 'Tourism',
+  quality_of_life_rating: 'Quality of Life',
+  education_rating: 'Education',
 };
 
 // Politics skill thresholds
