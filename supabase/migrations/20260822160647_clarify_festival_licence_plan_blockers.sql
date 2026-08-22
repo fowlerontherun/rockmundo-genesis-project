@@ -1,0 +1,9 @@
+-- Production migration history marker.
+-- The live annual Festival Plan blocker messages were clarified on 2026-08-22 so
+-- licence-capacity and licence-duration failures give owners an actionable path:
+-- reduce the annual Festival choices or use Upgrades & licence to progress the
+-- permanent company licence.
+--
+-- Clean builds obtain the executable function override after the inherited 2029
+-- Festival bootstrap from:
+-- supabase/reconciliation/festival/20260822_festival_licence_plan_guidance.sql

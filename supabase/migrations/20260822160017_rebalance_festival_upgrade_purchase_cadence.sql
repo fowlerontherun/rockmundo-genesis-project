@@ -1,0 +1,11 @@
+-- Production migration history marker.
+-- The live database rebalanced Festival upgrade cadence from 2 to 20 granular
+-- level purchases per rolling 30 days on 2026-08-22 after catalogue v2 expanded
+-- every historical milestone into ten smaller levels.
+--
+-- Clean builds obtain the executable rule from the frozen inherited 2029 Festival
+-- sequence plus the post-bootstrap reconciliation extension:
+-- supabase/reconciliation/festival/20260822_festival_upgrade_cadence_rebalance.sql
+--
+-- No ownership, prices, construction, upkeep, licence requirements or purchase
+-- history were rewritten by the production change.

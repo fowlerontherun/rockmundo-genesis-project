@@ -19,14 +19,18 @@
     ["20260822153456", "fix_festival_owner_pgcrypto_search_paths"],
     ["20260822153540", "fix_festival_annual_plan_city_binding"],
     ["20260822153742", "restore_festival_artist_request_terminal_status_compatibility"],
-    ["20260822154434", "align_festival_upgrade_currency_with_home_city"]
+    ["20260822154434", "align_festival_upgrade_currency_with_home_city"],
+    ["20260822160017", "rebalance_festival_upgrade_purchase_cadence"],
+    ["20260822160647", "clarify_festival_licence_plan_blockers"]
   ],
   "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
   "postBootstrapExtensions": [
     "supabase/reconciliation/festival/20260822_simplified_festival_company_settlement_schema.sql",
     "supabase/reconciliation/festival/20260822_simplified_festival_company_effects.sql",
     "supabase/reconciliation/festival/20260822_simplified_festival_results_api.sql",
-    "supabase/reconciliation/festival/20260822_festival_owner_functional_hotfixes.sql"
+    "supabase/reconciliation/festival/20260822_festival_owner_functional_hotfixes.sql",
+    "supabase/reconciliation/festival/20260822_festival_upgrade_cadence_rebalance.sql",
+    "supabase/reconciliation/festival/20260822_festival_licence_plan_guidance.sql"
   ],
   "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
 }
