@@ -87,10 +87,15 @@ describe("festival company secure founding foundation", () => {
     expect(mutationSource).toContain("festivalCompanySetupQueryKey(result.festivalCompanyId)");
   });
 
-  it("routes card actions only to the registered setup route", () => {
-    expect(cardSource).toContain("View setup summary");
-    expect(cardSource).toContain("/companies/festivals/${festival.festivalCompanyId}/setup");
-    expect(cardSource).not.toContain("/companies/festivals/${festival.festivalCompanyId}`");
+  it("routes Festival company card actions through the canonical Festival route contract", () => {
+    expect(cardSource).toContain('import { festivalRoutes } from "@/features/festivals/routes"');
+    expect(cardSource).toContain("festivalRoutes.company(festival.festivalCompanyId)");
+    expect(cardSource).toContain("festivalRoutes.editions(festival.festivalCompanyId)");
+    expect(cardSource).toContain("festivalRoutes.edition(");
+    expect(cardSource).toContain("festivalRoutes.applications(");
+    expect(cardSource).toContain("festivalRoutes.finance(");
+    expect(cardSource).toContain("festivalRoutes.live(");
+    expect(cardSource).not.toContain("/companies/festivals/");
   });
 
   it("routes the legacy setup path into the canonical festival workspace, never a legacy gate", () => {
