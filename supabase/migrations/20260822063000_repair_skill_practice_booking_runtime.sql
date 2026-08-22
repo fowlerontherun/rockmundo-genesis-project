@@ -1,10 +1,36 @@
--- Repair skill-practice booking for the August 2026 runtime.
+-- Repair skill-practice booking/completion for the August 2026 runtime.
 --
--- The previous RPC validated practice by joining public.skill_definitions, but
--- that table is introduced by a later-dated migration in this repository. A
--- PL/pgSQL function can be created before a referenced relation exists, then
--- fail only when invoked. Use the already-live canonical per-character
--- skill_progress table for eligibility and make catalogue naming optional.
+-- The previous RPCs referenced public.skill_definitions, but that table is
+-- introduced by a later-dated migration in this repository. PL/pgSQL functions
+-- can be created before referenced relations exist and then fail only when
+-- invoked. Use the already-live per-character skill_progress table for runtime
+-- eligibility and make catalogue naming optional.
+
+CREATE TABLE IF NOT EXISTS public.skill_practice_reward_ledger (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  activity_id uuid NOT NULL REFERENCES public.player_scheduled_activities(id) ON DELETE RESTRICT,
+  profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  skill_slug text NOT NULL,
+  xp_awarded integer NOT NULL CHECK (xp_awarded > 0),
+  idempotency_key text NOT NULL,
+  awarded_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT skill_practice_reward_activity_unique UNIQUE (activity_id),
+  CONSTRAINT skill_practice_reward_idempotency_unique UNIQUE (idempotency_key)
+);
+
+ALTER TABLE public.skill_practice_reward_ledger ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Players can view their practice rewards" ON public.skill_practice_reward_ledger;
+CREATE POLICY "Players can view their practice rewards"
+  ON public.skill_practice_reward_ledger
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.profiles p
+      WHERE p.id = profile_id
+        AND p.user_id = auth.uid()
+    )
+  );
 
 CREATE OR REPLACE FUNCTION public.schedule_skill_practice(
   p_profile_id uuid,
@@ -71,12 +97,17 @@ BEGIN
       EXECUTE 'SELECT COALESCE(name, slug) FROM public.skill_catalogue_view WHERE slug = $1 LIMIT 1'
         INTO v_skill_name
         USING p_skill_slug;
-      v_skill_name := COALESCE(v_skill_name, initcap(replace(replace(p_skill_slug, '_', ' '), '-', ' ')));
+      v_skill_name := COALESCE(
+        v_skill_name,
+        initcap(replace(replace(p_skill_slug, '_', ' '), '-', ' '))
+      );
     EXCEPTION WHEN OTHERS THEN
       v_skill_name := initcap(replace(replace(p_skill_slug, '_', ' '), '-', ' '));
     END;
   END IF;
 
+  -- Serialize bookings for this character/UTC practice day so conflict and
+  -- daily-cap checks cannot race each other.
   PERFORM pg_advisory_xact_lock(
     hashtextextended(
       p_profile_id::text || ':' || (p_scheduled_start AT TIME ZONE 'UTC')::date::text,
@@ -159,5 +190,135 @@ REVOKE ALL ON FUNCTION public.schedule_skill_practice(uuid, text, timestamptz, t
 GRANT EXECUTE ON FUNCTION public.schedule_skill_practice(uuid, text, timestamptz, timestamptz) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.schedule_skill_practice(uuid, text, timestamptz, timestamptz) TO service_role;
 
--- Ensure PostgREST sees the repaired RPC immediately after migration deploy.
+CREATE OR REPLACE FUNCTION public.complete_skill_practice(p_activity_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_activity public.player_scheduled_activities%ROWTYPE;
+  v_progress public.skill_progress%ROWTYPE;
+  v_slug text;
+  v_reward constant integer := 5;
+  v_level integer;
+  v_xp integer;
+  v_required integer;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'service role required' USING ERRCODE='42501';
+  END IF;
+
+  SELECT *
+  INTO v_activity
+  FROM public.player_scheduled_activities
+  WHERE id = p_activity_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_activity.activity_type <> 'skill_practice' THEN
+    RAISE EXCEPTION 'invalid practice activity' USING ERRCODE='P0001';
+  END IF;
+
+  IF v_activity.status IN ('cancelled', 'missed') THEN
+    RAISE EXCEPTION 'practice was not completed' USING ERRCODE='P0001';
+  END IF;
+
+  IF v_activity.scheduled_end > now() THEN
+    RAISE EXCEPTION 'practice has not ended' USING ERRCODE='P0001';
+  END IF;
+
+  v_slug := COALESCE(
+    v_activity.metadata->>'skillSlug',
+    v_activity.metadata->>'skill_slug'
+  );
+
+  IF v_slug IS NULL OR btrim(v_slug) = '' THEN
+    RAISE EXCEPTION 'invalid practice skill metadata' USING ERRCODE='P0001';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.skill_practice_reward_ledger
+    WHERE activity_id = p_activity_id
+  ) THEN
+    SELECT *
+    INTO v_progress
+    FROM public.skill_progress
+    WHERE profile_id = v_activity.profile_id
+      AND skill_slug = v_slug;
+
+    RETURN jsonb_build_object(
+      'already_rewarded', true,
+      'xp_awarded', v_reward,
+      'skill_progress', to_jsonb(v_progress)
+    );
+  END IF;
+
+  SELECT *
+  INTO v_progress
+  FROM public.skill_progress
+  WHERE profile_id = v_activity.profile_id
+    AND skill_slug = v_slug
+    AND current_level >= 1
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'practiced skill is no longer unlocked' USING ERRCODE='P0001';
+  END IF;
+
+  INSERT INTO public.skill_practice_reward_ledger (
+    activity_id,
+    profile_id,
+    skill_slug,
+    xp_awarded,
+    idempotency_key
+  ) VALUES (
+    p_activity_id,
+    v_activity.profile_id,
+    v_slug,
+    v_reward,
+    'skill-practice:' || p_activity_id
+  );
+
+  v_level := v_progress.current_level;
+  v_xp := COALESCE(v_progress.current_xp, 0) + v_reward;
+  v_required := COALESCE(
+    NULLIF(v_progress.required_xp, 0),
+    public.progression_skill_required_xp(v_level)
+  );
+
+  WHILE v_xp >= v_required LOOP
+    v_xp := v_xp - v_required;
+    v_level := v_level + 1;
+    v_required := public.progression_skill_required_xp(v_level);
+  END LOOP;
+
+  UPDATE public.skill_progress
+  SET current_level = v_level,
+      current_xp = v_xp,
+      required_xp = v_required,
+      last_practiced_at = now(),
+      updated_at = now()
+  WHERE id = v_progress.id
+  RETURNING * INTO v_progress;
+
+  UPDATE public.player_scheduled_activities
+  SET status = 'completed',
+      completed_at = now(),
+      metadata = COALESCE(metadata, '{}'::jsonb)
+        || jsonb_build_object('practiceRewarded', true)
+  WHERE id = p_activity_id;
+
+  RETURN jsonb_build_object(
+    'already_rewarded', false,
+    'xp_awarded', v_reward,
+    'skill_progress', to_jsonb(v_progress)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.complete_skill_practice(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.complete_skill_practice(uuid) TO service_role;
+
+-- Ensure PostgREST sees the repaired booking RPC immediately after migration deploy.
 NOTIFY pgrst, 'reload schema';
