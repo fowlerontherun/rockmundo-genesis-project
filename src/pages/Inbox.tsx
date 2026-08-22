@@ -1,14 +1,12 @@
-import { useState, useMemo } from "react";
-import { Inbox as InboxIcon, CheckCheck, Settings } from "lucide-react";
-import { format, isToday, isYesterday, isThisWeek } from "date-fns";
+import { useMemo, useState } from "react";
+import { Inbox as InboxIcon, CheckCheck } from "lucide-react";
+import { isThisWeek, isToday, isYesterday } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  useInbox,
-  useUnreadInboxCount,
   type InboxCategory,
   type InboxMessage as InboxMessageType,
 } from "@/hooks/useInbox";
+import { useUnifiedInbox } from "@/hooks/useUnifiedInbox";
 import { InboxMessage } from "@/components/inbox/InboxMessage";
 import { InboxFilters } from "@/components/inbox/InboxFilters";
 import { InboxEmptyState } from "@/components/inbox/InboxEmptyState";
@@ -32,20 +30,26 @@ const dateGroupLabels: Record<DateGroup, string> = {
 };
 
 export default function InboxPage() {
-  const [activeFilter, setActiveFilter] = useState<InboxCategory | "all">(
-    "all",
-  );
+  const [activeFilter, setActiveFilter] = useState<InboxCategory | "all">("all");
   const {
-    messages,
+    messages: allMessages,
+    unreadCount,
     isLoading,
+    error,
     markAsRead,
     markAllAsRead,
     archiveMessage,
     deleteMessage,
-  } = useInbox(activeFilter);
-  const { data: unreadCount } = useUnreadInboxCount();
+    refetch,
+  } = useUnifiedInbox();
 
-  // Group messages by date
+  const messages = useMemo(
+    () => activeFilter === "all"
+      ? allMessages
+      : allMessages.filter((message) => message.category === activeFilter),
+    [activeFilter, allMessages],
+  );
+
   const groupedMessages = useMemo(() => {
     const groups: Record<DateGroup, InboxMessageType[]> = {
       today: [],
@@ -54,33 +58,31 @@ export default function InboxPage() {
       older: [],
     };
 
-    messages.forEach((msg) => {
-      const group = getDateGroup(msg.created_at);
-      groups[group].push(msg);
+    messages.forEach((message) => {
+      groups[getDateGroup(message.created_at)].push(message);
     });
 
     return groups;
   }, [messages]);
 
-  // Count messages per category for filter badges
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    messages.forEach((msg) => {
-      counts[msg.category] = (counts[msg.category] || 0) + 1;
+    allMessages.forEach((message) => {
+      counts[message.category] = (counts[message.category] || 0) + 1;
     });
     return counts;
-  }, [messages]);
+  }, [allMessages]);
 
   const hasMessages = messages.length > 0;
-  const hasUnread = (unreadCount || 0) > 0;
+  const hasUnread = unreadCount > 0;
 
   return (
     <FMPageScaffold
       title="Inbox"
       subtitle={
         hasUnread
-          ? `${unreadCount} unread message${unreadCount !== 1 ? "s" : ""}`
-          : undefined
+          ? `${unreadCount} unread item${unreadCount !== 1 ? "s" : ""}`
+          : "Messages, activity outcomes and game alerts in one place"
       }
       backTo="/home"
       backLabel="Back to Dashboard"
@@ -90,7 +92,7 @@ export default function InboxPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => markAllAsRead()}
+            onClick={markAllAsRead}
             className="gap-2"
           >
             <CheckCheck className="h-4 w-4" />
@@ -99,19 +101,25 @@ export default function InboxPage() {
         ) : undefined
       }
     >
-      {/* Filters */}
       <InboxFilters
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
         counts={categoryCounts}
       />
 
-      {/* Messages */}
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
           ))}
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
+          <p className="text-sm font-medium">Inbox could not be loaded.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Your messages and notifications have not been changed.</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => void refetch()}>
+            Retry
+          </Button>
         </div>
       ) : !hasMessages ? (
         <InboxEmptyState filter={activeFilter} />
