@@ -15,13 +15,18 @@
     ["20260822095200", "fix_simplified_festival_results_legacy_fk_boundary"],
     ["20260822102107", "harden_simplified_festival_results_trigger_privileges"],
     ["20260822102248", "defer_simplified_festival_results_until_runtime_finalised"],
-    ["20260822104919", "complete_simplified_festival_company_settlement"]
+    ["20260822104919", "complete_simplified_festival_company_settlement"],
+    ["20260822153456", "fix_festival_owner_pgcrypto_search_paths"],
+    ["20260822153540", "fix_festival_annual_plan_city_binding"],
+    ["20260822153742", "restore_festival_artist_request_terminal_status_compatibility"],
+    ["20260822154434", "align_festival_upgrade_currency_with_home_city"]
   ],
   "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
   "postBootstrapExtensions": [
     "supabase/reconciliation/festival/20260822_simplified_festival_company_settlement_schema.sql",
     "supabase/reconciliation/festival/20260822_simplified_festival_company_effects.sql",
-    "supabase/reconciliation/festival/20260822_simplified_festival_results_api.sql"
+    "supabase/reconciliation/festival/20260822_simplified_festival_results_api.sql",
+    "supabase/reconciliation/festival/20260822_festival_owner_functional_hotfixes.sql"
   ],
   "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
 }
