@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -20,7 +20,6 @@ import {
   useProposeCityProject,
   useCancelCityProject,
 } from "@/hooks/useCityProjects";
-import { processCompletedProjects } from "@/utils/cityProjectEffects";
 import {
   PROJECT_CATEGORY_LABELS,
   type CityProjectCategory,
@@ -28,7 +27,6 @@ import {
   type CityProjectType,
 } from "@/types/city-projects";
 import type { MayorPoliticsState } from "@/hooks/useMayorPolitics";
-import { useQueryClient } from "@tanstack/react-query";
 import { getSkillBySlug } from "@/utils/skillCatalogue";
 
 interface Props {
@@ -37,26 +35,12 @@ interface Props {
 }
 
 export function MayorProjectsTab({ cityId, politics }: Props) {
-  const queryClient = useQueryClient();
   const { data: types } = useCityProjectTypes();
   const { data: projects } = useCityProjects(cityId);
   const propose = useProposeCityProject();
   const cancel = useCancelCityProject();
 
   const [confirmType, setConfirmType] = useState<CityProjectType | null>(null);
-
-  // On mount, process any completed projects whose timer has elapsed
-  useEffect(() => {
-    if (!cityId) return;
-    processCompletedProjects(cityId).then((n) => {
-      if (n > 0) {
-        queryClient.invalidateQueries({ queryKey: ["city-projects", cityId] });
-        queryClient.invalidateQueries({ queryKey: ["city-treasury", cityId] });
-        queryClient.invalidateQueries({ queryKey: ["city-mayor", cityId] });
-        queryClient.invalidateQueries({ queryKey: ["city", cityId] });
-      }
-    });
-  }, [cityId, queryClient]);
 
   const active = useMemo(
     () => projects?.filter((p) => p.status === "in_progress") ?? [],
@@ -74,6 +58,8 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
     [projects],
   );
 
+  // Preview only. The RPC recalculates this discount and the final price before
+  // reserving any treasury funds, so a modified browser cannot change the cost.
   const discount = politics?.unlocks.projectDiscount ?? 0;
 
   const finalCost = (t: CityProjectType) =>
@@ -107,7 +93,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
           {discount > 0 && (
             <div className="text-xs text-success">
               ✓ Negotiation skill grants you a {discount}% discount on all
-              project costs.
+              project costs. The final cost is verified by City Hall when you confirm.
             </div>
           )}
           {(
@@ -163,7 +149,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                                 variant="secondary"
                                 className="text-xs"
                               >
-                                {k.replace(/_/g, "")}: +{v}
+                                {k.replace(/_/g, " ")}: +{v}
                               </Badge>
                             ))}
                           </div>
@@ -199,7 +185,6 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
               <ActiveProjectCard
                 key={p.id}
                 project={p}
-                cityId={cityId}
                 onCancel={() => cancel.mutate({ projectId: p.id, cityId })}
                 cancelling={cancel.isPending}
               />
@@ -267,7 +252,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
           {confirmType && (
             <div className="space-y-2 text-sm">
               <Row
-                label="Cost"
+                label="Estimated cost"
                 value={`$${finalCost(confirmType).toLocaleString()}`}
               />
               <Row
@@ -279,8 +264,9 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                 value={`+${confirmType.approval_change}`}
               />
               <p className="text-xs text-muted-foreground pt-2">
-                Funds will be reserved immediately. The project completes
-                automatically when its timer ends.
+                City Hall verifies the skill discount and price, then reserves the
+                funds atomically. Completion and settlement are processed by the
+                city governance worker even if no mayor has the page open.
               </p>
             </div>
           )}
@@ -295,7 +281,6 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                 await propose.mutateAsync({
                   cityId,
                   projectTypeId: confirmType.id,
-                  costOverride: finalCost(confirmType),
                 });
                 setConfirmType(null);
               }}
@@ -318,7 +303,6 @@ function ActiveProjectCard({
   cancelling,
 }: {
   project: CityProject;
-  cityId: string;
   onCancel: () => void;
   cancelling: boolean;
 }) {
@@ -329,7 +313,7 @@ function ActiveProjectCard({
   const eta =
     end > now
       ? formatDistanceToNowStrict(new Date(end), { addSuffix: true })
-      : "completing";
+      : "awaiting City Hall processing";
 
   return (
     <Card>
