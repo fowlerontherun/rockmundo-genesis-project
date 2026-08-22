@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { FestivalCompanyEdition } from "@/features/festivals/editions/repository";
 import { FestivalCompanyCard } from "./FestivalCompanyCard";
 
 const useQuery = vi.fn();
@@ -29,7 +30,7 @@ const festival = {
   managementEnabled: true,
 };
 
-const currentEdition = {
+const currentEdition: FestivalCompanyEdition = {
   festivalEditionId: "33333333-3333-4333-8333-333333333333",
   editionYear: 2026,
   name: "Shock Festival 2026",
@@ -47,7 +48,7 @@ const currentEdition = {
   marketingEmphasis: "balanced",
   expectedCapacity: 5000,
   estimatedOperatingCostMinor: 1000000,
-  planningStatus: "ready" as const,
+  planningStatus: "ready",
   readinessScore: 100,
   version: 1,
   lockedAt: null,
@@ -64,7 +65,7 @@ const currentEdition = {
   },
 };
 
-function mockEdition(edition = currentEdition) {
+function mockEdition(edition: FestivalCompanyEdition = currentEdition) {
   useQuery.mockReturnValue({
     data: {
       festivalCompanyId: festival.festivalCompanyId,
