@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
-import { FestivalCompanyEligibilityCard } from "@/features/festival-company/ui/FestivalCompanyEligibilityCard";
-import { FestivalConfigurationWizard } from "@/features/festival-company/ui/FestivalConfigurationWizard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { festivalCompanySetupQueryKey } from "@/features/festival-company/application/useFestivalCompanySetup";
 import { getFestivalCompanySetup } from "@/features/festival-company/data/festivalCompanyRepository";
+import { FestivalCompanyEligibilityCard } from "@/features/festival-company/ui/FestivalCompanyEligibilityCard";
+import { FestivalConfigurationWizard } from "@/features/festival-company/ui/FestivalConfigurationWizard";
 import { FestivalUpgradeWorkspace } from "@/features/festival-company/upgrades/FestivalUpgradeWorkspace";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FestivalCompanyEditionsPage } from "@/features/festivals/editions/FestivalCompanyEditionsPage";
 import { FestivalLiveControlRoom } from "@/features/festivals/runtime/FestivalLiveControlRoom";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
@@ -15,12 +15,7 @@ import {
   FestivalEditionApplications,
   FestivalEditionFinance,
   FestivalEditionHistory,
-  FestivalEditionLaunch,
-  FestivalEditionOperations,
   FestivalEditionOverview,
-  FestivalEditionSite,
-  FestivalEditionSponsorship,
-  FestivalEditionTimetable,
 } from "./FestivalEditionSections";
 
 export function FestivalFoundingPage() {
@@ -154,7 +149,10 @@ function FestivalCompanySummaryHome({
       </p>
 
       <div className="flex flex-wrap gap-3">
-        <Link className="underline" to={festivalRoutes.genericCompany(festival.companyId)}>
+        <Link
+          className="underline"
+          to={festivalRoutes.genericCompany(festival.companyId)}
+        >
           Company finances and staff
         </Link>
         {festival.setupCompleted ? (
@@ -201,13 +199,8 @@ const Summary = ({ title, value }: { title: string; value: string }) => (
 
 export const editionNavigation = [
   { section: "overview", label: "Plan" },
-  { section: "site", label: "Site & stages" },
-  { section: "finance", label: "Tickets & budget" },
   { section: "applications", label: "Line-up" },
-  { section: "operations", label: "Staff & suppliers" },
-  { section: "sponsorship", label: "Sponsors" },
-  { section: "schedule", label: "Running order" },
-  { section: "launch", label: "Announce & sell" },
+  { section: "finance", label: "Tickets & budget" },
   { section: "live", label: "Run Festival" },
   { section: "history", label: "Results" },
 ] as const;
@@ -222,20 +215,10 @@ function editionSectionRoute(
   switch (section) {
     case "overview":
       return festivalRoutes.edition(festivalCompanyId, editionId);
-    case "site":
-      return festivalRoutes.site(festivalCompanyId, editionId);
     case "applications":
       return festivalRoutes.applications(festivalCompanyId, editionId);
     case "finance":
       return festivalRoutes.finance(festivalCompanyId, editionId);
-    case "operations":
-      return festivalRoutes.operations(festivalCompanyId, editionId);
-    case "sponsorship":
-      return festivalRoutes.sponsorship(festivalCompanyId, editionId);
-    case "schedule":
-      return festivalRoutes.schedule(festivalCompanyId, editionId);
-    case "launch":
-      return festivalRoutes.launch(festivalCompanyId, editionId);
     case "live":
       return festivalRoutes.live(festivalCompanyId, editionId);
     case "history":
@@ -361,13 +344,6 @@ export function FestivalEditionWorkspace({ section }: { section: string }) {
           editionId={editionId}
         />
       );
-    case "launch":
-      return (
-        <FestivalEditionLaunch
-          festivalCompanyId={festivalCompanyId}
-          editionId={editionId}
-        />
-      );
     case "live":
       return (
         <FestivalLiveControlRoom
@@ -379,32 +355,22 @@ export function FestivalEditionWorkspace({ section }: { section: string }) {
       return <FestivalEditionHistory editionId={editionId} />;
     case "site":
       return (
-        <FestivalEditionSite
-          festivalCompanyId={festivalCompanyId}
-          editionId={editionId}
-        />
-      );
-    case "operations":
-      return (
-        <FestivalEditionOperations
-          festivalCompanyId={festivalCompanyId}
-          editionId={editionId}
-        />
-      );
-    case "sponsorship":
-      return (
-        <FestivalEditionSponsorship
-          festivalCompanyId={festivalCompanyId}
-          editionId={editionId}
+        <Navigate
+          replace
+          to={festivalRoutes.edition(festivalCompanyId, editionId)}
         />
       );
     case "schedule":
+    case "contracts":
       return (
-        <FestivalEditionTimetable
-          festivalCompanyId={festivalCompanyId}
-          editionId={editionId}
+        <Navigate
+          replace
+          to={festivalRoutes.applications(festivalCompanyId, editionId)}
         />
       );
+    case "operations":
+    case "sponsorship":
+    case "launch":
     case "settlement":
       return (
         <Navigate
@@ -412,7 +378,6 @@ export function FestivalEditionWorkspace({ section }: { section: string }) {
           to={festivalRoutes.live(festivalCompanyId, editionId)}
         />
       );
-    case "contracts":
     default:
       return (
         <Navigate
@@ -558,10 +523,15 @@ export function LegacyFestivalRedirect({
           query.data.festivalCompanyId,
           query.data.editionId,
         )
-      : festivalRoutes[target](
-          query.data.festivalCompanyId,
-          query.data.editionId,
-        );
+      : target === "schedule"
+        ? festivalRoutes.applications(
+            query.data.festivalCompanyId,
+            query.data.editionId,
+          )
+        : festivalRoutes.live(
+            query.data.festivalCompanyId,
+            query.data.editionId,
+          );
 
   return <Navigate replace to={`${destination}${search}`} />;
 }
