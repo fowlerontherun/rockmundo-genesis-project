@@ -6,6 +6,8 @@ const careerRoutes = readFileSync("src/mobile/pages/MobileCareerRoutes.tsx", "ut
 const careerOverview = readFileSync("src/mobile/pages/MobileCareer.tsx", "utf8");
 const topBar = readFileSync("src/mobile/shell/TopAppBar.tsx", "utf8");
 const shell = readFileSync("src/mobile/shell/MobileShell.tsx", "utf8");
+const mobileTokens = readFileSync("src/mobile/theme/tokens.css", "utf8");
+const swipeTabs = readFileSync("src/mobile/components/SwipeTabs.tsx", "utf8");
 
 describe("mobile navigation and page contracts", () => {
   it("renders a real Career overview instead of redirecting the route to itself", () => {
@@ -37,9 +39,22 @@ describe("mobile navigation and page contracts", () => {
     expect(topBar).toContain('"/mobile/me/wellness": "Wellness"');
   });
 
-  it("resets scroll between pages and honors quick-action hash targets", () => {
+  it("resets the owned mobile scroller between pages and honors quick-action hash targets", () => {
     expect(shell).toContain("location.hash");
     expect(shell).toContain("scrollIntoView");
-    expect(shell).toContain("window.scrollTo");
+    expect(shell).toContain("container.scrollTo");
+    expect(shell).not.toContain("window.scrollTo");
+  });
+
+  it("keeps one bounded vertical scroll owner on mobile", () => {
+    expect(shell).toContain('h-[100dvh] min-h-0 overflow-hidden');
+    expect(shell).toContain('rm-mobile-scroll min-h-0 flex-1 overflow-x-hidden');
+    expect(mobileTokens).toContain("html.rm-mobile-root body #root");
+    expect(mobileTokens).toContain("min-height: 0");
+    expect(mobileTokens).toContain("touch-action: pan-x pan-y pinch-zoom");
+    expect(mobileTokens).not.toContain("overscroll-behavior-y: contain");
+    expect(swipeTabs).not.toContain("rm-mobile-scroll");
+    expect(swipeTabs).toContain("overflow-x-auto overflow-y-hidden");
+    expect(swipeTabs).toContain('sticky top-0');
   });
 });

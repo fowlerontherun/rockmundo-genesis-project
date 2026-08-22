@@ -37,8 +37,8 @@ export const SwipeTabs = ({ tabs, initial }: SwipeTabsProps) => {
 
   return (
     <div>
-      <div className="sticky top-[calc(var(--m-appbar-h))] z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="flex overflow-x-auto no-scrollbar rm-mobile-scroll">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
+        <div className="flex overflow-x-auto overflow-y-hidden no-scrollbar">
           {tabs.map((t) => {
             const on = t.key === active;
             return (
