@@ -22,6 +22,7 @@ import {
   FestivalEditionHistory,
   FestivalEditionOverview,
 } from "./FestivalEditionSections";
+import { FestivalOwnerNavigation } from "./FestivalOwnerNavigation";
 
 export function FestivalFoundingPage() {
   return (
@@ -123,6 +124,11 @@ function FestivalCompanySummaryHome({
           the game from your company level and high-impact choices.
         </p>
       </header>
+
+      <FestivalOwnerNavigation
+        festivalCompanyId={festivalCompanyId}
+        currentEditionId={currentAnnualFestival?.festivalEditionId ?? null}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Summary title="Company" value={festival.legalCompanyName} />
@@ -301,29 +307,6 @@ function FestivalCompanySummaryHome({
           : "Complete the initial company setup to create the first annual Festival."}
       </p>
 
-      <div className="flex flex-wrap gap-3">
-        <Link
-          className="underline"
-          to={festivalRoutes.genericCompany(festival.companyId)}
-        >
-          Company finances and staff
-        </Link>
-        {festival.setupCompleted ? (
-          <Link
-            className="underline"
-            to={festivalRoutes.editions(festival.festivalCompanyId)}
-          >
-            Annual Festivals
-          </Link>
-        ) : null}
-        <Link
-          className="underline"
-          to={festivalRoutes.upgrades(festival.festivalCompanyId)}
-        >
-          Festival upgrades
-        </Link>
-      </div>
-
       {!festival.setupCompleted ? (
         <section
           className="rounded-lg border p-4 md:p-6"
@@ -437,6 +420,11 @@ export function FestivalEditionShell() {
           Festival {query.data.editionYear ?? ""}
         </h1>
       </header>
+
+      <FestivalOwnerNavigation
+        festivalCompanyId={festivalCompanyId!}
+        currentEditionId={editionId!}
+      />
 
       <nav
         className="-mx-1 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
