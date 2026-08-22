@@ -1,5 +1,6 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { CalendarDays, Monitor } from "lucide-react";
+import MobileCareer from "./MobileCareer";
 import { MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge } from "../components/MobilePrimitives";
 
 const scheduleSections = new Set(["gigs", "rehearsals", "recording"]);
@@ -22,8 +23,9 @@ const labels: Record<string, string> = {
 export default function MobileCareerRoutes() {
   const { section } = useParams();
 
-  if (!section) return <Navigate to="/mobile/career" replace />;
+  if (!section || section === "overview") return <MobileCareer />;
   if (section === "practice") return <Navigate to="/mobile?view=day#practice" replace />;
+  if (section === "schedule") return <Navigate to="/mobile?view=day" replace />;
 
   const label = labels[section] ?? "Career management";
   const canCheckSchedule = scheduleSections.has(section);

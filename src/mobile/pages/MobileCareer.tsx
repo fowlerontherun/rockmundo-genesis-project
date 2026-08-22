@@ -1,8 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Award, CalendarDays, Monitor, Zap } from "lucide-react";
+import { Award, CalendarDays, Disc3, Guitar, Mic2, Monitor, Music2, Radio, Zap } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { EmptyState } from "../components/EmptyState";
 import { MobileEntityCard, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileTimeline, MobileTimelineItem } from "../components/MobilePrimitives";
+
+const careerAreas = [
+  { title: "Gigs", subtitle: "Check booked gigs in My Day; booking and setup stay on desktop.", to: "/mobile/career/gigs", icon: Guitar, schedule: true },
+  { title: "Rehearsals", subtitle: "Check rehearsal commitments; detailed setup stays on desktop.", to: "/mobile/career/rehearsals", icon: Music2, schedule: true },
+  { title: "Recording", subtitle: "Check studio bookings; recording setup stays on desktop.", to: "/mobile/career/recording", icon: Mic2, schedule: true },
+  { title: "Band", subtitle: "Full band management remains desktop-only.", to: "/mobile/career/band", icon: Guitar, schedule: false },
+  { title: "Songs", subtitle: "Song library and songwriting management remain desktop-only.", to: "/mobile/career/songs", icon: Disc3, schedule: false },
+  { title: "Releases & streaming", subtitle: "Release planning and streaming management remain desktop-only.", to: "/mobile/career/releases", icon: Radio, schedule: false },
+] as const;
 
 export default function MobileCareer() {
   const navigate = useNavigate();
@@ -14,7 +23,7 @@ export default function MobileCareer() {
       <MobileSectionHeader
         eyebrow="Career"
         title="Career companion"
-        description="Check today's commitments and recent outcomes. Detailed career management stays on desktop."
+        description="Plan and check your career from mobile. Detailed creation, booking and management stay on desktop."
       />
 
       {error && (
@@ -46,6 +55,21 @@ export default function MobileCareer() {
         </div>
       </MobileSectionCard>
 
+      <MobileSectionCard title="Career areas" subtitle="Every option stays inside the companion experience.">
+        <div className="space-y-2">
+          {careerAreas.map(({ title, subtitle, to, icon: Icon, schedule }) => (
+            <MobileEntityCard
+              key={to}
+              title={title}
+              subtitle={subtitle}
+              icon={<Icon className="h-5 w-5" />}
+              meta={<MobileStatusBadge tone={schedule ? "info" : "neutral"}>{schedule ? "My Day" : "Desktop"}</MobileStatusBadge>}
+              onPress={() => navigate(to)}
+            />
+          ))}
+        </div>
+      </MobileSectionCard>
+
       <MobileSectionCard title="Recent outcomes" subtitle="Career activity and completed events.">
         {loading ? (
           <EmptyState title="Loading career activity" />
@@ -66,12 +90,9 @@ export default function MobileCareer() {
       </MobileSectionCard>
 
       <MobileSectionCard title="Desktop career management" subtitle="Full gameplay remains on desktop by design.">
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>Songwriting, recording setup, rehearsals, setlists, gigs, tours, releases, streaming, band management and detailed skill management are desktop-only.</p>
-          <div className="flex items-center gap-2 rounded-xl border p-3">
-            <Monitor className="h-4 w-4 shrink-0" />
-            <span>Use the desktop site when you want to configure or manage these systems in depth.</span>
-          </div>
+        <div className="flex items-center gap-2 rounded-xl border p-3 text-sm text-muted-foreground">
+          <Monitor className="h-4 w-4 shrink-0" />
+          <span>Use desktop when you want to create songs, configure bookings, manage releases, edit setlists or make other detailed career changes.</span>
         </div>
       </MobileSectionCard>
 

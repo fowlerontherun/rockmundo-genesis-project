@@ -1,4 +1,4 @@
-import { useEffect, ReactNode } from "react";
+import { useEffect, useRef, ReactNode } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import "../theme/tokens.css";
 import { TopAppBar } from "./TopAppBar";
@@ -9,6 +9,7 @@ import { detectDesktopFallback, trackMobileEvent } from "../mobileDiagnostics";
 
 export const MobileShell = ({ children }: { children?: ReactNode }) => {
   const location = useLocation();
+  const scrollRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.add("rm-mobile-root");
@@ -32,6 +33,32 @@ export const MobileShell = ({ children }: { children?: ReactNode }) => {
   }, [location.pathname]);
 
   useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    if (!location.hash) {
+      container.scrollTo({ top: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+
+    const targetId = decodeURIComponent(location.hash.slice(1));
+    let attempts = 0;
+    let timer = 0;
+    const findAndScroll = () => {
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.scrollIntoView({ block: "start", behavior: "auto" });
+        return;
+      }
+      attempts += 1;
+      if (attempts < 6) timer = window.setTimeout(findAndScroll, 50);
+    };
+    timer = window.setTimeout(findAndScroll, 0);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, location.search, location.hash]);
+
+  useEffect(() => {
     const offline = () => trackMobileEvent("mobile_connection_lost", { category: "connection" });
     const online = () => trackMobileEvent("mobile_connection_restored", { category: "connection" });
     window.addEventListener("offline", offline);
@@ -46,6 +73,7 @@ export const MobileShell = ({ children }: { children?: ReactNode }) => {
     <div className="rm-mobile min-h-[100dvh] flex flex-col">
       <TopAppBar />
       <main
+        ref={scrollRef}
         className="rm-mobile-scroll flex-1"
         style={{ paddingBottom: "calc(var(--m-nav-h) + var(--m-safe-b) + 120px)" }}
       >
