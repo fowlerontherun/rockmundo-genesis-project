@@ -10,7 +10,7 @@ export interface CompanyFundTransferResult {
   personalCash: number;
   sourceBalance: number;
   destinationBalance: number | null;
-  financialTransactionId: string;
+  financialTransactionId: string | null;
   idempotent: boolean;
 }
 
