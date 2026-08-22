@@ -5,6 +5,8 @@ import path from "node:path";
 const source = fs.readFileSync(path.resolve("src/mobile/pages/MobileWorldPhase5.tsx"), "utf8");
 const travelSystem = fs.readFileSync(path.resolve("src/utils/travelSystem.ts"), "utf8");
 const completeTravel = fs.readFileSync(path.resolve("supabase/functions/complete-travel/index.ts"), "utf8");
+const lifecycleRefresh = fs.readFileSync(path.resolve("src/mobile/hooks/useTravelLifecycleRefresh.ts"), "utf8");
+const mobileLayout = fs.readFileSync(path.resolve("src/mobile/shell/MobileLayout.tsx"), "utf8");
 
 describe("Mobile World companion contract", () => {
   it("keeps only overview and travel as first-class mobile World flows", () => {
@@ -81,5 +83,16 @@ describe("Mobile World companion contract", () => {
     expect(completeTravel).toContain('.from("player_scheduled_activities")');
     expect(completeTravel).toContain('.contains("metadata", { travel_history_id: travel.id })');
     expect(completeTravel).toContain('profile_id: travel.profile_id ?? null');
+    expect(completeTravel).toContain("leave history in_progress");
+    expect(completeTravel).toContain("only one may emit outcomes/hazards");
+  });
+
+  it("refreshes an open mobile session when the server changes travel state", () => {
+    expect(mobileLayout).toContain("useTravelLifecycleRefresh(profileId, refetchGameData)");
+    expect(lifecycleRefresh).toContain('queryKey: ["mobile-travel-lifecycle", profileId]');
+    expect(lifecycleRefresh).toContain("refetchInterval: 30_000");
+    expect(lifecycleRefresh).toContain('.eq("profile_id", profileId)');
+    expect(lifecycleRefresh).toContain('.in("status", ["scheduled", "in_progress"])');
+    expect(lifecycleRefresh).toContain('queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] })');
   });
 });
