@@ -1,11 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Award, CalendarDays, Disc3, Guitar, Mic2, Monitor, Music2, Radio, Zap } from "lucide-react";
+import { Award, CalendarDays, CalendarPlus, Disc3, Guitar, Mic2, Monitor, Music2, Radio, Zap } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { EmptyState } from "../components/EmptyState";
 import { MobileEntityCard, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileTimeline, MobileTimelineItem } from "../components/MobilePrimitives";
 
 const careerAreas = [
-  { title: "Gigs", subtitle: "Check booked gigs in My Day; booking and setup stay on desktop.", to: "/mobile/career/gigs", icon: Guitar, schedule: true },
+  { title: "Gigs", subtitle: "Check booked gigs in My Day; detailed gig booking and setup stay on desktop.", to: "/mobile/career/gigs", icon: Guitar, schedule: true },
   { title: "Rehearsals", subtitle: "Check rehearsal commitments; detailed setup stays on desktop.", to: "/mobile/career/rehearsals", icon: Music2, schedule: true },
   { title: "Recording", subtitle: "Check studio bookings; recording setup stays on desktop.", to: "/mobile/career/recording", icon: Mic2, schedule: true },
   { title: "Band", subtitle: "Full band management remains desktop-only.", to: "/mobile/career/band", icon: Guitar, schedule: false },
@@ -23,7 +23,7 @@ export default function MobileCareer() {
       <MobileSectionHeader
         eyebrow="Career"
         title="Career companion"
-        description="Plan and check your career from mobile. Detailed creation, booking and management stay on desktop."
+        description="Book lightweight daily activities, check commitments and review outcomes. Detailed career configuration stays on desktop."
       />
 
       {error && (
@@ -41,10 +41,22 @@ export default function MobileCareer() {
       >
         <div className="space-y-2">
           <MobileEntityCard
+            title="Book activity"
+            subtitle="Practice, travel, wellness and scheduled recovery."
+            icon={<CalendarPlus className="h-5 w-5" />}
+            onPress={() => navigate("/mobile?view=book")}
+          />
+          <MobileEntityCard
             title="My Day"
             subtitle="See gigs, rehearsals, recording sessions, work, travel and scheduled activities."
             icon={<CalendarDays className="h-5 w-5" />}
             onPress={() => navigate("/mobile?view=day")}
+          />
+          <MobileEntityCard
+            title="Outcomes"
+            subtitle="Review completed activities and recent rewards."
+            icon={<Award className="h-5 w-5" />}
+            onPress={() => navigate("/mobile?view=outcomes")}
           />
           <MobileEntityCard
             title="Quick Practice"
@@ -92,12 +104,12 @@ export default function MobileCareer() {
       <MobileSectionCard title="Desktop career management" subtitle="Full gameplay remains on desktop by design.">
         <div className="flex items-center gap-2 rounded-xl border p-3 text-sm text-muted-foreground">
           <Monitor className="h-4 w-4 shrink-0" />
-          <span>Use desktop when you want to create songs, configure bookings, manage releases, edit setlists or make other detailed career changes.</span>
+          <span>Use desktop when you want to create songs, configure detailed gigs, recordings or rehearsals, manage releases, edit setlists or make other complex career changes.</span>
         </div>
       </MobileSectionCard>
 
-      <Link to="/mobile?view=day" className="rm-tap block rounded-xl bg-primary p-3 text-center text-sm font-semibold text-primary-foreground">
-        Open My Day
+      <Link to="/mobile?view=book" className="rm-tap block rounded-xl bg-primary p-3 text-center text-sm font-semibold text-primary-foreground">
+        Book an activity
       </Link>
     </MobilePageShell>
   );
