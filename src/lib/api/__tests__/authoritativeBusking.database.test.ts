@@ -38,6 +38,14 @@ describe("authoritative busking database contract", () => {
     expect(migration).toContain("demand:=greatest(.85,least(1.15");
     expect(migration).toContain("IF FOUND AND coalesce(activity.status");
   });
+
+  it("awards progression inside the same transaction and permits cash-only sessions at XP caps", () => {
+    expect(migration).toContain("PERFORM public.progression_award_action_xp(");
+    expect(migration).toContain("'unique_event_id','busking:'||session_id::text");
+    expect(migration).toContain("EXCEPTION WHEN check_violation THEN");
+    expect(migration).toContain("xp:=0;");
+    expect(migration).toContain("xp_award integer NOT NULL CHECK (xp_award >= 0)");
+  });
 });
 
 describe("authoritative busking edge boundary", () => {
@@ -48,11 +56,10 @@ describe("authoritative busking edge boundary", () => {
     expect(config).toContain("[functions.busking-session]\nverify_jwt = true");
   });
 
-  it("awards XP through canonical progression with a session-scoped duplicate key", () => {
-    expect(edgeFunction).toContain('service.rpc("progression_award_action_xp"');
-    expect(edgeFunction).toContain("const uniqueEventId = `busking:${result.sessionId}`");
-    expect(edgeFunction).toContain("unique_event_id: uniqueEventId");
-    expect(edgeFunction).toContain("duplicate progression event");
+  it("is only an authenticated wrapper around the single atomic busking RPC", () => {
+    expect(edgeFunction).toContain('service.rpc(\n      "perform_authoritative_busking"');
+    expect(edgeFunction).toContain("Finance, city treasury, progression, activity and the immutable outcome");
+    expect(edgeFunction).not.toContain('service.rpc("progression_award_action_xp"');
   });
 });
 
@@ -67,6 +74,13 @@ describe("busking player UI contract", () => {
     expect(page).not.toContain("awardActionXp");
     expect(page).not.toContain("updateProfile({ cash");
     expect(page).not.toContain("startActivity({");
+  });
+
+  it("reuses the same request key until the authoritative outcome is confirmed", () => {
+    expect(page).toContain("const pendingRequestKeyRef = React.useRef<string | null>(null)");
+    expect(page).toContain("pendingRequestKeyRef.current ?? crypto.randomUUID()");
+    expect(page).toContain("pendingRequestKeyRef.current = idempotencyKey");
+    expect(page).toContain("pendingRequestKeyRef.current = null");
   });
 
   it("surfaces mayor licence cost and authoritative net outcome to the player", () => {
