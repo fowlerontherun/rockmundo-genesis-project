@@ -27,7 +27,8 @@ describe("practice booking error messages", () => {
 
   it("uses the canonical active-character resolver before scheduling practice", () => {
     expect(practiceSource).toContain('import { getActiveProfile } from "@/services/profileService"');
-    expect(practiceSource).toContain("const profile = await getActiveProfile(user.id)");
+    expect(practiceSource).toContain("profile = await getActiveProfile(user.id)");
+    expect(practiceSource).toContain("The active character could not be verified. Refresh and try again.");
     expect(practiceSource).not.toContain(".eq('is_active', true)\n        .is('died_at', null)\n        .single()");
 
     // The canonical resolver is deliberately tolerant of legacy accounts with
