@@ -68,6 +68,12 @@ jobs:
               '''  const currentEditionIsEditable = Boolean(\n    currentEditionId &&\n      editionsQuery.data?.editions.some(\n        (edition) =>\n          edition.editable && edition.festivalEditionId === currentEditionId,\n      ),\n  );\n  const editableEditionId =\n    (currentEditionIsEditable ? currentEditionId : null) ??\n    editionsQuery.data?.editions\n      .filter((edition) => edition.editable)\n      .sort((left, right) => left.editionYear - right.editionYear)[0]\n      ?.festivalEditionId ??\n    null;''',
           )
 
+          replace_once(
+              "src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts",
+              'edition.editable ? "Plan Festival" : "View result"',
+              'edition.editable ? "Continue Festival" : "View result"',
+          )
+
           Path("src/features/festivals/ui/FestivalOwnerNavigation.contract.test.ts").write_text('''import { readFileSync } from "node:fs";\nimport { resolve } from "node:path";\nimport { describe, expect, it } from "vitest";\n\nconst source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");\n\ndescribe("Festival owner management navigation", () => {\n  it("keeps one persistent company-management strip across owner surfaces", () => {\n    const navigation = source("src/features/festivals/ui/FestivalOwnerNavigation.tsx");\n    const routes = source("src/features/festivals/ui/CanonicalFestivalRoutes.tsx");\n    const editions = source("src/features/festivals/editions/FestivalCompanyEditionsPage.tsx");\n    const upgrades = source("src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx");\n\n    for (const label of [\n      "Overview",\n      "Current Festival",\n      "Upgrades & licence",\n      "Festival history",\n      "Company finances",\n    ]) {\n      expect(navigation).toContain(label);\n    }\n\n    expect(routes.match(/<FestivalOwnerNavigation/g)?.length ?? 0).toBeGreaterThanOrEqual(2);\n    expect(editions).toContain("<FestivalOwnerNavigation");\n    expect(upgrades).toContain("<FestivalOwnerNavigation");\n    expect(editions).toContain("Continue Festival");\n    expect(editions).toContain('id="festival-history"');\n  });\n\n  it("never treats a historical result as the current editable Festival", () => {\n    const navigation = source("src/features/festivals/ui/FestivalOwnerNavigation.tsx");\n    expect(navigation).toContain("currentEditionIsEditable");\n    expect(navigation).toContain("edition.editable && edition.festivalEditionId === currentEditionId");\n  });\n});\n''')
           PY
       - name: Refresh active Festival inventory
@@ -84,6 +90,7 @@ jobs:
           git add src/features/festivals/ui/CanonicalFestivalRoutes.tsx \
             src/features/festivals/ui/FestivalOwnerNavigation.tsx \
             src/features/festivals/ui/FestivalOwnerNavigation.contract.test.ts \
+            src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts \
             docs/festivals/festival-active-callers.json
           if git diff --cached --quiet; then
             echo "Owner navigation already finished."
