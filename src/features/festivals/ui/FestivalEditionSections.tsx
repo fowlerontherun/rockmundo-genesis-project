@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   Banknote,
   BarChart3,
@@ -330,20 +330,39 @@ export function FestivalEditionFinance({
   );
 }
 
+const formatMoney = (minor: number, currencyCode: string) =>
+  new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: currencyCode,
+  }).format(minor / 100);
+
 export function FestivalEditionHistory({ editionId }: { editionId: string }) {
+  const { festivalCompanyId } = useParams();
   const query = useQuery({
-    queryKey: ["festival-edition-history", editionId],
-    queryFn: () => settlementRepository.history(editionId),
+    queryKey: ["festival-edition-owner-results", festivalCompanyId, editionId],
+    queryFn: () => settlementRepository.ownerHistory(festivalCompanyId!, editionId),
+    enabled: Boolean(festivalCompanyId),
   });
+
+  const result = query.data;
 
   return (
     <SectionShell
       title="Annual Festival results"
-      description="The game freezes these results after automatic settlement."
+      description="The game automatically settles the Festival into the company and freezes this annual result."
     >
       {query.isLoading ? (
         <p role="status">Loading Festival results…</p>
-      ) : !query.data ? (
+      ) : query.isError ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Results unavailable</CardTitle>
+            <CardDescription>
+              The completed Festival result could not be loaded for this company.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : !result ? (
         <Card>
           <CardHeader>
             <CardTitle>No result yet</CardTitle>
@@ -354,35 +373,86 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <HistoryStat
-            label="Dates"
-            value={`${query.data.dates?.startsOn ?? "—"} – ${
-              query.data.dates?.endsOn ?? "—"
-            }`}
-          />
-          <HistoryStat
-            label="Attendance"
-            value={(query.data.attendance ?? 0).toLocaleString("en-GB")}
-          />
-          <HistoryStat
-            label="Audience rating"
-            value={`${query.data.audienceScore ?? "—"}/100`}
-          />
-          <HistoryStat
-            label="Company result"
-            value={query.data.profitabilityBand.replaceAll("_", " ")}
-          />
-          <HistoryStat
-            label="Headliners"
-            value={query.data.headliners.map(String).join(", ") || "—"}
-          />
-          <HistoryStat
-            label="Reputation change"
-            value={`${query.data.reputationChange >= 0 ? "+" : ""}${
-              query.data.reputationChange
-            }`}
-          />
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <HistoryStat
+              label="Dates"
+              value={`${result.dates?.startsOn ?? "—"} – ${result.dates?.endsOn ?? "—"}`}
+            />
+            <HistoryStat
+              label="Attendance"
+              value={result.attendance.toLocaleString("en-GB")}
+            />
+            <HistoryStat
+              label="Audience rating"
+              value={`${result.audienceScore}/100`}
+            />
+            <HistoryStat
+              label="Company result"
+              value={result.profitabilityBand.replaceAll("_", " ")}
+            />
+            <HistoryStat
+              label="Headliners"
+              value={result.headliners.map(String).join(", ") || "—"}
+            />
+            <HistoryStat
+              label="Reputation change"
+              value={`${result.companyImpact.reputationChange >= 0 ? "+" : ""}${result.companyImpact.reputationChange}`}
+            />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Banknote className="h-5 w-5" /> Festival finances
+              </CardTitle>
+              <CardDescription>
+                Final revenue and operating costs from this annual Festival.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <ResultValue label="Ticket revenue" value={formatMoney(result.financials.ticketRevenueMinor, result.currencyCode)} />
+              <ResultValue label="Food & drink" value={formatMoney(result.financials.foodAndDrinkRevenueMinor, result.currencyCode)} />
+              <ResultValue label="Merchandise" value={formatMoney(result.financials.merchandiseRevenueMinor, result.currencyCode)} />
+              <ResultValue label="Total revenue" value={formatMoney(result.financials.totalRevenueMinor, result.currencyCode)} />
+              <ResultValue label="Operating cost" value={formatMoney(result.financials.operatingCostMinor, result.currencyCode)} />
+              <ResultValue label="Tax" value={formatMoney(result.financials.taxMinor, result.currencyCode)} />
+              <ResultValue
+                label="Net result"
+                value={formatMoney(result.financials.netProfitMinor, result.currencyCode)}
+                emphasis
+              />
+            </CardContent>
+          </Card>
+
+          <Card className={result.companyImpact.settlementApplied ? "border-primary/30 bg-primary/5" : "border-amber-500/40 bg-amber-500/5"}>
+            <CardHeader>
+              <CardTitle>Company impact</CardTitle>
+              <CardDescription>
+                {result.companyImpact.settlementApplied
+                  ? "The financial result and reputation change have been posted automatically to the Festival company."
+                  : "The Festival completed, but the company settlement has not been confirmed."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <ResultValue
+                label="Balance before"
+                value={result.companyImpact.balanceBeforeMinor === null ? "—" : formatMoney(result.companyImpact.balanceBeforeMinor, result.currencyCode)}
+              />
+              <ResultValue
+                label="Balance after"
+                value={result.companyImpact.balanceAfterMinor === null ? "—" : formatMoney(result.companyImpact.balanceAfterMinor, result.currencyCode)}
+              />
+              <ResultValue
+                label="Reputation before"
+                value={result.companyImpact.reputationBefore?.toString() ?? "—"}
+              />
+              <ResultValue
+                label="Reputation after"
+                value={result.companyImpact.reputationAfter?.toString() ?? "—"}
+              />
+            </CardContent>
+          </Card>
         </div>
       )}
     </SectionShell>
@@ -434,4 +504,19 @@ const HistoryStat = ({ label, value }: { label: string; value: string }) => (
       </Badge>
     </CardContent>
   </Card>
+);
+
+const ResultValue = ({
+  label,
+  value,
+  emphasis = false,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}) => (
+  <div className="rounded-lg border bg-background/60 p-3">
+    <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+    <p className={emphasis ? "mt-1 text-lg font-bold" : "mt-1 font-semibold"}>{value}</p>
+  </div>
 );
