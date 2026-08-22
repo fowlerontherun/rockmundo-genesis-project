@@ -3,7 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const source = fs.readFileSync(path.resolve("src/mobile/pages/MobileSocial.tsx"), "utf8");
-const chatSelector = fs.readFileSync(path.resolve("src/components/dashboard/ChatChannelSelector.tsx"), "utf8");
+const mobileChat = fs.readFileSync(path.resolve("src/mobile/components/MobileInstantChat.tsx"), "utf8");
+const desktopChat = fs.readFileSync(path.resolve("src/components/fm/chat/FMChatDock.tsx"), "utf8");
+const roomView = fs.readFileSync(path.resolve("src/components/fm/chat/ChatRoomView.tsx"), "utf8");
 
 describe("Mobile Social companion contract", () => {
   it("keeps quick communication flows on mobile", () => {
@@ -15,17 +17,26 @@ describe("Mobile Social companion contract", () => {
     expect(source).toContain("useNotificationsFeed");
   });
 
-  it("exposes the existing realtime web-chat channels as a first-class mobile flow", () => {
-    expect(source).toContain('import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector"');
+  it("mirrors the current desktop instant-chat rooms instead of the legacy dashboard chat", () => {
+    expect(source).toContain('import { MobileInstantChat } from "../components/MobileInstantChat"');
+    expect(source).not.toContain("ChatChannelSelector");
+    expect(source).not.toContain("useVipStatus");
+    expect(source).toContain("World, Help, Recruit, Band and Friends");
     expect(source).toContain('if (section === "chat") return <ChatPage/>');
-    expect(source).toContain("<ChatChannelSelector isVip={vip.data?.isVip === true} />");
-    expect(source).toContain("General, support and city channels");
-    expect(chatSelector).toContain('{ key: "general", label: "General"');
-    expect(chatSelector).toContain('{ key: "support", label: "Support"');
-    expect(chatSelector).toContain('{ key: "newbies", label: "Newbies"');
-    expect(chatSelector).toContain('{ key: "vip", label: "VIP"');
-    expect(chatSelector).toContain('key: `city:${city.id}`');
-    expect(chatSelector).toContain("RealtimeChatPanel");
+
+    for (const room of ["world", "help", "recruit", "band", "friends"]) {
+      expect(mobileChat).toContain(`id: \"${room}\" as RoomId`);
+      expect(desktopChat).toContain(`id: \"${room}\" as RoomId`);
+    }
+
+    expect(mobileChat).toContain('channelKey="world"');
+    expect(mobileChat).toContain('channelKey="help"');
+    expect(mobileChat).toContain('channelKey="recruit"');
+    expect(mobileChat).toContain('channelKey={bandId ? `band:${bandId}` : null}');
+    expect(desktopChat).toContain('channelKey={bandId ? `band:${bandId}` : null}');
+    expect(mobileChat).toContain('import { ChatRoomView } from "@/components/fm/chat/ChatRoomView"');
+    expect(roomView).toContain('import { useChatRoom } from "./useChatRoom"');
+    expect(mobileChat).toContain('navigate(`/mobile/social/conversation/${other.id}`)');
   });
 
   it("uses authoritative conversation and public-profile services", () => {
