@@ -4,6 +4,7 @@ import path from "node:path";
 
 const source = fs.readFileSync(path.resolve("src/mobile/pages/MobileWorldPhase5.tsx"), "utf8");
 const travelSystem = fs.readFileSync(path.resolve("src/utils/travelSystem.ts"), "utf8");
+const completeTravel = fs.readFileSync(path.resolve("supabase/functions/complete-travel/index.ts"), "utf8");
 
 describe("Mobile World companion contract", () => {
   it("keeps only overview and travel as first-class mobile World flows", () => {
@@ -70,5 +71,15 @@ describe("Mobile World companion contract", () => {
     expect(travelSystem).toContain("`Booked travel from ${fromCityName} to ${toCityName} by ${transportType}`");
     expect(travelSystem).toContain("`Travel booked to ${toCityName}`");
     expect(travelSystem).toContain("newLocation: startsImmediately ? toCityName : null");
+  });
+
+  it("keeps the authoritative travel lifecycle and My Day schedule status aligned", () => {
+    expect(completeTravel).toContain('.update({ status: "completed" })');
+    expect(completeTravel).toContain('.eq("status", "in_progress")');
+    expect(completeTravel).toContain('.update({ status: "in_progress" })');
+    expect(completeTravel).toContain('.eq("status", "scheduled")');
+    expect(completeTravel).toContain('.from("player_scheduled_activities")');
+    expect(completeTravel).toContain('.contains("metadata", { travel_history_id: travel.id })');
+    expect(completeTravel).toContain('profile_id: travel.profile_id ?? null');
   });
 });
