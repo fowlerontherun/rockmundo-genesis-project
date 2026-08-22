@@ -1,0 +1,4 @@
+-- Production migration history marker.
+-- The live database moved simplified Results onto a dedicated immutable v2-edition
+-- table on 2026-08-22. Clean builds receive the final form from the post-bootstrap
+-- Festival parity overlay rather than replaying the production hotfix ordering.

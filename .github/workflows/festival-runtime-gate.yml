@@ -5,8 +5,10 @@ on:
   pull_request:
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/reconciliation/**'
       - 'supabase/tests/**'
       - 'scripts/festivals/**'
+      - 'scripts/supabase/festival-production-reconciliation.json'
       - 'src/features/festival-company/**'
       - 'src/testing/**'
       - 'src/integrations/supabase/types.ts'
@@ -148,6 +150,10 @@ jobs:
           mkdir -p festival-runtime-diagnostics
           set -o pipefail
           supabase db reset 2>&1 | tee festival-runtime-diagnostics/migration-reset.log
+      - name: Apply and certify Festival production parity overlay
+        run: |
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_simplified_production_overlay_regression.sql
       - name: Run Festival upgrade post-deployment diagnostic
         run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/diagnostics/festival_upgrade_v2_postdeploy.sql
       - name: Run authenticated Festival upgrade database gate
@@ -172,6 +178,10 @@ jobs:
         run: |
           set -o pipefail
           supabase db reset 2>&1 | tee festival-runtime-diagnostics/migration-reset-second.log
+      - name: Reapply and certify Festival production parity overlay
+        run: |
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_simplified_production_overlay_regression.sql
       - name: Rerun authenticated Festival upgrade database gate
         run: |
           set -o pipefail
