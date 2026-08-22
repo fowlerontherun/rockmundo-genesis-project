@@ -4,6 +4,7 @@
 \ir ../reconciliation/festival/20260822_simplified_festival_results_api.sql
 \ir ../reconciliation/festival/20260822_festival_owner_functional_hotfixes.sql
 \ir ../reconciliation/festival/20260822_festival_upgrade_cadence_rebalance.sql
+\ir ../reconciliation/festival/20260822_festival_licence_plan_guidance.sql
 
 DO $$
 DECLARE
@@ -18,6 +19,7 @@ DECLARE
   upgrade_state_definition text;
   legacy_upgrade_window_definition text;
   canonical_upgrade_window_definition text;
+  licence_blockers_definition text;
   plan_next record;
 BEGIN
   IF to_regclass('public.festival_simplified_edition_results') IS NULL THEN
@@ -198,6 +200,14 @@ BEGIN
      OR position('interval ''30 days''' in legacy_upgrade_window_definition) = 0
      OR position('interval ''30 days''' in canonical_upgrade_window_definition) = 0 THEN
     RAISE EXCEPTION 'Festival upgrade cadence is not 20 purchases per rolling 30 days';
+  END IF;
+
+  SELECT pg_get_functiondef('public._festival_annual_plan_blockers(uuid,public.festival_editions_v2)'::regprocedure)
+  INTO licence_blockers_definition;
+  IF position('Reduce Festival size or open Upgrades & licence' in licence_blockers_definition) = 0
+     OR position('Reduce the duration or open Upgrades & licence' in licence_blockers_definition) = 0
+     OR position('Open Upgrades & licence to apply for one' in licence_blockers_definition) = 0 THEN
+    RAISE EXCEPTION 'Festival annual Plan licence blockers are not actionable';
   END IF;
 END;
 $$;
