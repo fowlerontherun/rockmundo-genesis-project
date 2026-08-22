@@ -137,7 +137,7 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
                 <CityMetric icon={BarChart3} label="Local Bonus" value={String(city.local_bonus ?? 0)} />
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
-                These are the city attributes currently changed by completed projects. The next development layer can build more explicit transport, safety, healthcare, tourism and economy ratings on top of this command centre.
+                City Hall shows the authoritative city values currently affected by laws and completed projects, so you can see the state you are governing without hidden or estimated service scores.
               </p>
             </CardContent>
           </Card>
@@ -156,7 +156,7 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
                     ? election.status === "nomination"
                       ? `Nominations close ${format(new Date(election.nomination_end), "d MMM yyyy")}`
                       : `Voting closes ${format(new Date(election.voting_end), "d MMM yyyy")}`
-                    : "Annual elections are created and advanced automatically by the governance worker."}
+                    : "The annual election cycle will open nominations automatically on 1 October."}
                 </div>
               </div>
               <Button size="sm" variant="outline" asChild>
