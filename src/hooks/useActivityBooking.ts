@@ -3,6 +3,7 @@ import { toast } from "@/hooks/use-toast";
 import { evaluateGate } from "@/lib/api/wellnessActivities";
 import type { ActivityType } from "./useScheduledActivities";
 import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
+import { getActiveProfile } from "@/services/profileService";
 
 // Map our ActivityType union → the wellness gate's activity_type vocabulary.
 // `null` = intentionally bypass the gate (wellness/recovery actions themselves,
@@ -148,15 +149,7 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
     userId = user.id;
   }
 
-  // Fetch the active profile for this user
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .is('died_at', null)
-    .maybeSingle();
-
+  const profileData = await getActiveProfile(userId);
   const profileId = profileData?.id;
   if (!profileId) {
     throw new Error('Player profile not found. Please complete onboarding first.');
