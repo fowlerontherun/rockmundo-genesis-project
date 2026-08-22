@@ -3,15 +3,29 @@ import fs from "node:fs";
 import path from "node:path";
 
 const source = fs.readFileSync(path.resolve("src/mobile/pages/MobileSocial.tsx"), "utf8");
+const chatSelector = fs.readFileSync(path.resolve("src/components/dashboard/ChatChannelSelector.tsx"), "utf8");
 
 describe("Mobile Social companion contract", () => {
   it("keeps quick communication flows on mobile", () => {
-    for (const route of ["/mobile/social/messages", "/mobile/social/friends", "/mobile/social/twaater", "/mobile/social/notifications"]) {
+    for (const route of ["/mobile/social/chat", "/mobile/social/messages", "/mobile/social/friends", "/mobile/social/twaater", "/mobile/social/notifications"]) {
       expect(source).toContain(route);
     }
     expect(source).toContain("useDirectMessages");
     expect(source).toContain("useFriendships");
     expect(source).toContain("useNotificationsFeed");
+  });
+
+  it("exposes the existing realtime web-chat channels as a first-class mobile flow", () => {
+    expect(source).toContain('import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector"');
+    expect(source).toContain('if (section === "chat") return <ChatPage/>');
+    expect(source).toContain("<ChatChannelSelector isVip={vip.data?.isVip === true} />");
+    expect(source).toContain("General, support and city channels");
+    expect(chatSelector).toContain('{ key: "general", label: "General"');
+    expect(chatSelector).toContain('{ key: "support", label: "Support"');
+    expect(chatSelector).toContain('{ key: "newbies", label: "Newbies"');
+    expect(chatSelector).toContain('{ key: "vip", label: "VIP"');
+    expect(chatSelector).toContain('key: `city:${city.id}`');
+    expect(chatSelector).toContain("RealtimeChatPanel");
   });
 
   it("uses authoritative conversation and public-profile services", () => {

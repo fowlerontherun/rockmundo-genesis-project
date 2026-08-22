@@ -1,21 +1,24 @@
 import { FormEvent, ReactNode, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Check, ChevronLeft, Mail, MessageSquare, Monitor, Send, Twitter, UserPlus, Users, X } from "lucide-react";
+import { Bell, Check, ChevronLeft, Mail, MessageCircle, MessageSquare, Monitor, Send, Twitter, UserPlus, Users, X } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
 import { useUnreadDirectMessageCount, useDirectMessages } from "@/hooks/useDirectMessages";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { listConversations } from "@/features/direct-messages/services/conversations";
 import { useTwaaterExploreFeed } from "@/hooks/useTwaaterExploreFeed";
+import { useVipStatus } from "@/hooks/useVipStatus";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
+import { ChatChannelSelector } from "@/components/dashboard/ChatChannelSelector";
 import { resolveCompanionPath } from "@/mobile/routeRegistry";
 import { EmptyState } from "../components/EmptyState";
 import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileStickyActionBar } from "../components/MobilePrimitives";
 
-type NavKey = "overview" | "messages" | "friends" | "twaater" | "notifications" | "profile" | "conversation" | "requests" | "desktop";
+type NavKey = "overview" | "chat" | "messages" | "friends" | "twaater" | "notifications" | "profile" | "conversation" | "requests" | "desktop";
 const nav: [NavKey, string, string][] = [
   ["overview", "Overview", "/mobile/social"],
+  ["chat", "Live chat", "/mobile/social/chat"],
   ["messages", "Messages", "/mobile/social/messages"],
   ["friends", "Friends", "/mobile/social/friends"],
   ["twaater", "Twaater", "/mobile/social/twaater"],
@@ -49,6 +52,7 @@ function Overview() {
 
   return <Shell active="overview" title="People & messages" desc="Quick communication, requests and social updates." badge={<MobileStatusBadge tone={notifications.unreadCount ? "danger" : "success"}>{notifications.unreadCount ? `${notifications.unreadCount} unread` : "Caught up"}</MobileStatusBadge>}>
     <div className="grid grid-cols-2 gap-2">
+      <MobileEntityCard title="Live chat" subtitle="General, support and city channels" icon={<MessageCircle/>} meta={<MobileStatusBadge tone="success">Live</MobileStatusBadge>} onPress={() => navigate("/mobile/social/chat")}/>
       <MobileEntityCard title="Direct messages" subtitle="Recent conversations" icon={<MessageSquare/>} meta={<MobileStatusBadge tone={(dm.data ?? 0) > 0 ? "danger" : "neutral"}>{dm.isLoading ? "…" : dm.isError ? "!" : dm.data ?? 0}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/messages")}/>
       <MobileEntityCard title="Friend requests" subtitle="Incoming requests" icon={<UserPlus/>} meta={<MobileStatusBadge tone={requests.length ? "warning" : "neutral"}>{friends.loading ? "…" : requests.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/requests")}/>
       <MobileEntityCard title="Friends" subtitle="Your accepted contacts" icon={<Users/>} meta={<MobileStatusBadge>{friends.loading ? "…" : accepted.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/friends")}/>
@@ -64,6 +68,16 @@ function Overview() {
     </MobileSectionCard>
 
     <MobileSectionCard title="Desktop-only communication" subtitle="Long-form mail management stays on desktop."><div className="flex items-center gap-3 text-sm text-muted-foreground"><Mail className="h-5 w-5"/>Compose, archive, flag and attachment-heavy mail workflows are desktop-only.</div></MobileSectionCard>
+  </Shell>;
+}
+
+function ChatPage() {
+  const vip = useVipStatus();
+  return <Shell active="chat" title="Live chat" desc="Instant RockMundo channels using the same realtime chat as desktop." badge={<MobileStatusBadge tone="success">Realtime</MobileStatusBadge>}>
+    {vip.isError && <MobileSectionCard title="VIP status unavailable" subtitle="General, support, newbie and city channels are still available. VIP chat will appear once subscription status can be verified." />}
+    <div className="min-h-[60vh] min-w-0 overflow-hidden">
+      <ChatChannelSelector isVip={vip.data?.isVip === true} />
+    </div>
   </Shell>;
 }
 
@@ -142,6 +156,7 @@ function Notifications() {
 
 export default function MobileSocial() {
   const { section, id } = useParams();
+  if (section === "chat") return <ChatPage/>;
   if (section === "messages" && id) return <Conversation/>;
   if (section === "messages") return <Messages/>;
   if (section === "friends") return <Friends/>;

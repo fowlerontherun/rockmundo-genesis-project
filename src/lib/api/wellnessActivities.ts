@@ -36,6 +36,7 @@ export interface PlayerAilment {
   severity: number;
   contracted_at: string;
   resolved_at: string | null;
+  expected_recovery_at?: string | null;
   treatment_required_slug: string | null;
   blocks_activity_types: string[];
   description: string | null;
@@ -46,7 +47,7 @@ export interface WellnessBlock {
   reason: string;
   blocks_activity_types: string[];
   suggestion_slug: string | null;
-  expires_at: string;
+  expires_at: string | null;
 }
 
 export interface WellnessVitals {
@@ -80,12 +81,26 @@ export async function listWellnessCatalog(): Promise<WellnessCatalogEntry[]> {
 }
 
 export async function listCooldowns(profileId: string): Promise<WellnessCooldown[]> {
+  // wellness_cooldowns_view was referenced by older clients but is not created
+  // by the repository migrations. The activity log is the authoritative source
+  // written by perform_wellness_activity, so derive current cooldowns from it.
   const { data, error } = await supabase
-    .from("wellness_cooldowns_view" as any)
-    .select("catalog_slug, cooldown_until")
-    .eq("profile_id", profileId);
+    .from("wellness_activity_log" as any)
+    .select("catalog_slug, cooldown_until, performed_at")
+    .eq("profile_id", profileId)
+    .gt("cooldown_until", new Date().toISOString())
+    .order("performed_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as any;
+
+  const latestBySlug = new Map<string, WellnessCooldown>();
+  for (const row of (data ?? []) as any[]) {
+    if (!row?.catalog_slug || !row?.cooldown_until || latestBySlug.has(row.catalog_slug)) continue;
+    latestBySlug.set(row.catalog_slug, {
+      catalog_slug: String(row.catalog_slug),
+      cooldown_until: String(row.cooldown_until),
+    });
+  }
+  return Array.from(latestBySlug.values());
 }
 
 export async function listActiveAilments(profileId: string): Promise<PlayerAilment[]> {
@@ -100,13 +115,19 @@ export async function listActiveAilments(profileId: string): Promise<PlayerAilme
 }
 
 export async function listActiveBlocks(profileId: string): Promise<WellnessBlock[]> {
-  const { data, error } = await supabase
-    .from("wellness_blocks" as any)
-    .select("*")
-    .eq("profile_id", profileId)
-    .gt("expires_at", new Date().toISOString());
-  if (error) throw error;
-  return (data ?? []) as any;
+  // wellness_blocks is documented by older wellness code but no migration in
+  // this repository creates it. Blocking truth already lives on unresolved
+  // ailments, so derive the compact mobile block list from that canonical data.
+  const ailments = await listActiveAilments(profileId);
+  return ailments
+    .filter((ailment) => Array.isArray(ailment.blocks_activity_types) && ailment.blocks_activity_types.length > 0)
+    .map((ailment) => ({
+      id: `ailment:${ailment.id}`,
+      reason: ailment.description?.trim() || `${ailment.name} is limiting some activities`,
+      blocks_activity_types: ailment.blocks_activity_types,
+      suggestion_slug: ailment.treatment_required_slug,
+      expires_at: ailment.expected_recovery_at ?? null,
+    }));
 }
 
 export async function performWellnessActivity(profileId: string, catalogSlug: string) {

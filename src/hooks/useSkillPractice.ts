@@ -49,8 +49,6 @@ export function useSkillPracticeRestrictions(profileId?: string, scheduledDate =
       dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
       const nextResetAt = dayEnd.toISOString();
 
-      // Mirror schedule_skill_practice(): count practice by the UTC date of the
-      // selected start instant so the badge and server cannot disagree at DST boundaries.
       const { data: activities, error } = await supabase
         .from('player_scheduled_activities')
         .select('activity_type, metadata, scheduled_start, status')
@@ -105,10 +103,6 @@ export function usePracticeSkill() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('You need to be signed in to book practice.');
 
-      // Keep practice on the same active-character resolution used everywhere
-      // else. Older accounts can contain more than one is_active=true row; a
-      // direct .single() query fails in that state and broke both desktop and
-      // mobile practice booking before the RPC was even reached.
       let profile;
       try {
         profile = await getActiveProfile(user.id);
@@ -125,9 +119,8 @@ export function usePracticeSkill() {
         p_scheduled_end: scheduledEnd.toISOString(),
       });
       if (error) {
-        throw new Error(toPracticeBookingMessage(
-          [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | '),
-        ));
+        const diagnostic = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | ');
+        throw new Error(toPracticeBookingMessage(diagnostic));
       }
       return data as { sessions_remaining?: number } | null;
     },
@@ -162,8 +155,18 @@ export function toPracticeBookingMessage(message = ''): string {
   if (message.includes('PRACTICE_WELLNESS')) return 'Your current wellness prevents training. Visit Wellness to recover.';
   if (message.includes('PRACTICE_SKILL')) return 'This skill is locked or no longer available.';
   if (message.includes('PRACTICE_PROFILE')) return 'The active character could not be verified.';
+
+  // A July 2026 activity-type constraint accidentally removed skill_practice.
+  // Surface that deployment/schema drift distinctly instead of hiding it behind
+  // a generic booking failure, so mobile and desktop report the same diagnosis.
+  if (message.includes('player_scheduled_activities_activity_type_check') || message.includes('23514')) {
+    return 'Practice scheduling needs the latest database update. The selected slot has not been booked.';
+  }
+  if (message.includes('skill_definitions') || message.includes('evaluate_wellness_gate')) {
+    return 'Practice scheduling is still using an older server function. The selected slot has not been booked.';
+  }
   if (message.includes('schedule_skill_practice') || message.includes('PGRST202') || message.includes('does not exist')) {
-    return 'Practice booking is temporarily unavailable on the server. Please try again shortly.';
+    return 'Practice scheduling is not deployed on the server yet. The selected slot has not been booked.';
   }
   return 'The server could not schedule this practice. Please try again.';
 }

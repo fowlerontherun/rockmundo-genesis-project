@@ -5,6 +5,7 @@ import { practiceUtcDayKey, toPracticeBookingMessage } from "../useSkillPractice
 
 const practiceSource = fs.readFileSync(path.resolve("src/hooks/useSkillPractice.ts"), "utf8");
 const profileServiceSource = fs.readFileSync(path.resolve("src/services/profileService.ts"), "utf8");
+const runtimeRepair = fs.readFileSync(path.resolve("supabase/migrations/20260822070000_repair_activity_type_constraint_and_practice.sql"), "utf8");
 
 describe("practice booking error messages", () => {
   it.each([
@@ -15,6 +16,21 @@ describe("practice booking error messages", () => {
     ["PRACTICE_SKILL", "This skill is locked or no longer available."],
     ["PRACTICE_PROFILE", "The active character could not be verified."],
   ])("maps %s safely", (code, expected) => expect(toPracticeBookingMessage(code)).toBe(expected));
+
+  it("identifies the activity-type constraint regression without exposing raw SQL", () => {
+    const message = toPracticeBookingMessage('23514 | violates check constraint "player_scheduled_activities_activity_type_check"');
+    expect(message).toBe("Practice scheduling needs the latest database update. The selected slot has not been booked.");
+    expect(message).not.toContain("23514");
+  });
+
+  it("identifies stale or missing practice RPC deployments", () => {
+    expect(toPracticeBookingMessage("relation skill_definitions does not exist")).toBe(
+      "Practice scheduling is still using an older server function. The selected slot has not been booked.",
+    );
+    expect(toPracticeBookingMessage("PGRST202 schedule_skill_practice")).toBe(
+      "Practice scheduling is not deployed on the server yet. The selected slot has not been booked.",
+    );
+  });
 
   it("does not expose an unknown database error", () => {
     expect(toPracticeBookingMessage("relation secret_table does not exist")).not.toContain("secret_table");
@@ -31,10 +47,16 @@ describe("practice booking error messages", () => {
     expect(practiceSource).toContain("The active character could not be verified. Refresh and try again.");
     expect(practiceSource).not.toContain(".eq('is_active', true)\n        .is('died_at', null)\n        .single()");
 
-    // The canonical resolver is deliberately tolerant of legacy accounts with
-    // duplicate active rows and deterministically picks the newest active one.
     expect(profileServiceSource).toContain('.order("updated_at", { ascending: false');
     expect(profileServiceSource).toContain('.limit(1)');
     expect(profileServiceSource).toContain('.maybeSingle()');
+  });
+
+  it("restores practice and wellness activity types removed by the July constraint rewrite", () => {
+    for (const activityType of ["skill_practice", "wellness_recovery", "wellness_medical", "jam_session", "festival_performance", "release_manufacturing"]) {
+      expect(runtimeRepair).toContain(`'${activityType}'`);
+    }
+    expect(runtimeRepair).toContain("CREATE OR REPLACE FUNCTION public.schedule_skill_practice");
+    expect(runtimeRepair).toContain("NOTIFY pgrst, 'reload schema'");
   });
 });
