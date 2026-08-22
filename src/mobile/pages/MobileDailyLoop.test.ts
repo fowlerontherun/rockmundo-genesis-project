@@ -8,6 +8,7 @@ const outcomes = fs.readFileSync(path.resolve("src/mobile/components/MobileOutco
 const booking = fs.readFileSync(path.resolve("src/hooks/useActivityBooking.ts"), "utf8");
 const stipend = fs.readFileSync(path.resolve("src/components/attributes/DailyStipendCard.tsx"), "utf8");
 const topBar = fs.readFileSync(path.resolve("src/mobile/shell/TopAppBar.tsx"), "utf8");
+const scheduledProcessor = fs.readFileSync(path.resolve("supabase/functions/process-scheduled-activities/index.ts"), "utf8");
 
 describe("mobile daily loop", () => {
   it("makes booking and outcomes first-class mobile home views", () => {
@@ -44,6 +45,12 @@ describe("mobile daily loop", () => {
     expect(booking).toContain('import { getActiveProfile } from "@/services/profileService"');
     expect(booking).toContain('const profileData = await getActiveProfile(userId)');
     expect(booking).not.toContain(".eq('is_active', true)\n    .is('died_at', null)\n    .maybeSingle()");
+  });
+
+  it("completes scheduled recovery against the exact booked character", () => {
+    expect(scheduledProcessor).toContain("case 'health':");
+    expect(scheduledProcessor).toContain(".eq('id', activity.profile_id)");
+    expect(scheduledProcessor).not.toContain(".eq('user_id', activity.user_id)\n        .single()");
   });
 
   it("shows authoritative completed schedule items and activity-feed rewards", () => {
