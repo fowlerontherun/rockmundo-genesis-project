@@ -3,6 +3,7 @@
 \ir ../reconciliation/festival/20260822_simplified_festival_company_effects.sql
 \ir ../reconciliation/festival/20260822_simplified_festival_results_api.sql
 \ir ../reconciliation/festival/20260822_festival_owner_functional_hotfixes.sql
+\ir ../reconciliation/festival/20260822_festival_upgrade_cadence_rebalance.sql
 
 DO $$
 DECLARE
@@ -15,6 +16,8 @@ DECLARE
   request_status_check text;
   annual_plan_definition text;
   upgrade_state_definition text;
+  legacy_upgrade_window_definition text;
+  canonical_upgrade_window_definition text;
   plan_next record;
 BEGIN
   IF to_regclass('public.festival_simplified_edition_results') IS NULL THEN
@@ -181,6 +184,20 @@ BEGIN
   IF position('_festival_projection_currency' in upgrade_state_definition) = 0
      OR position('''currencyCode'', ''USD''' in upgrade_state_definition) > 0 THEN
     RAISE EXCEPTION 'Festival upgrades do not use the Festival home-city currency';
+  END IF;
+
+  SELECT pg_get_functiondef('public._festival_upgrade_window(uuid)'::regprocedure)
+  INTO legacy_upgrade_window_definition;
+  SELECT pg_get_functiondef('public._festival_upgrade_purchase_window(uuid,timestamptz)'::regprocedure)
+  INTO canonical_upgrade_window_definition;
+
+  IF position('''limit'', 20' in legacy_upgrade_window_definition) = 0
+     OR position('used >= 20' in legacy_upgrade_window_definition) = 0
+     OR position('''limit'', 20' in canonical_upgrade_window_definition) = 0
+     OR position('used >= 20' in canonical_upgrade_window_definition) = 0
+     OR position('interval ''30 days''' in legacy_upgrade_window_definition) = 0
+     OR position('interval ''30 days''' in canonical_upgrade_window_definition) = 0 THEN
+    RAISE EXCEPTION 'Festival upgrade cadence is not 20 purchases per rolling 30 days';
   END IF;
 END;
 $$;
