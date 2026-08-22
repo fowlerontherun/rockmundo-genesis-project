@@ -17,6 +17,10 @@ const festivalSql = readFileSync(
   "supabase/migrations/20260822144903_city_development_festival_effects.sql",
   "utf8",
 );
+const festivalHardeningSql = readFileSync(
+  "supabase/migrations/20260822144904_city_development_festival_runtime_hardening.sql",
+  "utf8",
+);
 const travelHelper = readFileSync("src/utils/cityDevelopmentTravel.ts", "utf8");
 const projectTypes = readFileSync("src/types/city-projects.ts", "utf8");
 const cityServices = readFileSync("src/components/city/MayorCityServicesTab.tsx", "utf8");
@@ -113,12 +117,15 @@ describe("city development gameplay wiring", () => {
   });
 
   it("uses public safety and infrastructure in the live Festival crowd incident threshold", () => {
-    expect(festivalSql).toContain("CREATE OR REPLACE FUNCTION public._evaluate_festival_runtime_incidents");
-    expect(festivalSql).toContain("modifier.public_safety_rating");
-    expect(festivalSql).toContain("modifier.infrastructure_rating");
-    expect(festivalSql).toContain("v_crowd_threshold");
-    expect(festivalSql).toContain("GREATEST(\n      86");
-    expect(festivalSql).toContain("Weather remains weather-driven");
+    expect(festivalHardeningSql).toContain("CREATE OR REPLACE FUNCTION public._evaluate_festival_runtime_incidents");
+    expect(festivalHardeningSql).toContain("modifier.public_safety_rating");
+    expect(festivalHardeningSql).toContain("modifier.infrastructure_rating");
+    expect(festivalHardeningSql).toContain("festival_public_editions edition");
+    expect(festivalHardeningSql).toContain("edition.festival_launch_id = r.festival_launch_id");
+    expect(festivalHardeningSql).toContain("v_crowd_threshold");
+    expect(festivalHardeningSql).toContain("GREATEST(\n      86");
+    expect(festivalHardeningSql).toContain("SET search_path = pg_catalog, public, extensions");
+    expect(festivalHardeningSql).toContain("extensions.digest");
   });
 
   it("uses the average transport quality of both cities for current travel quotes", () => {
