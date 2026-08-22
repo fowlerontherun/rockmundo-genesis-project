@@ -22,8 +22,10 @@ import {
 } from "@/hooks/useCityProjects";
 import {
   PROJECT_CATEGORY_LABELS,
+  PROJECT_EFFECT_LABELS,
   type CityProjectCategory,
   type CityProject,
+  type CityProjectEffects,
   type CityProjectType,
 } from "@/types/city-projects";
 import type { MayorPoliticsState } from "@/hooks/useMayorPolitics";
@@ -32,6 +34,29 @@ import { getSkillBySlug } from "@/utils/skillCatalogue";
 interface Props {
   cityId: string;
   politics: MayorPoliticsState | undefined;
+}
+
+const LEGACY_DUPLICATE_EFFECTS = new Set<keyof CityProjectEffects>(["music_scene", "local_bonus"]);
+
+function visibleEffects(effects: CityProjectEffects) {
+  return Object.entries(effects).filter(([key]) => {
+    const typedKey = key as keyof CityProjectEffects;
+    if (!LEGACY_DUPLICATE_EFFECTS.has(typedKey)) return true;
+    if (typedKey === "music_scene" && effects.music_scene_rating != null) return false;
+    if (typedKey === "local_bonus" && Object.keys(effects).some((candidate) => candidate.endsWith("_rating"))) return false;
+    return true;
+  });
+}
+
+function effectLabel(key: string) {
+  return PROJECT_EFFECT_LABELS[key as keyof CityProjectEffects] ?? key.replace(/_/g, " ");
+}
+
+function effectValue(key: string, value: number) {
+  if (key === "weekly_budget_bonus") return `+$${Number(value).toLocaleString()}/week`;
+  if (key === "max_concert_capacity") return `${Number(value).toLocaleString()} capacity`;
+  if (key === "population") return `+${Number(value).toLocaleString()}`;
+  return `${value >= 0 ? "+" : ""}${value}`;
 }
 
 export function MayorProjectsTab({ cityId, politics }: Props) {
@@ -90,6 +115,9 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
         </TabsList>
 
         <TabsContent value="catalog" className="space-y-3 mt-4">
+          <div className="rounded-lg border bg-muted/15 p-3 text-xs text-muted-foreground">
+            Completed projects now permanently improve explicit city ratings. A rating of 50 is neutral; higher ratings create bounded gameplay advantages shown in City Services.
+          </div>
           {discount > 0 && (
             <div className="text-xs text-success">
               ✓ Negotiation skill grants you a {discount}% discount on all
@@ -143,13 +171,13 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                             <Badge variant="secondary">
                               +{t.approval_change} approval
                             </Badge>
-                            {Object.entries(t.effects).map(([k, v]) => (
+                            {visibleEffects(t.effects).map(([key, value]) => (
                               <Badge
-                                key={k}
+                                key={key}
                                 variant="secondary"
                                 className="text-xs"
                               >
-                                {k.replace(/_/g, " ")}: +{v}
+                                {effectLabel(key)}: {effectValue(key, Number(value))}
                               </Badge>
                             ))}
                           </div>
@@ -250,7 +278,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
             <DialogDescription>{confirmType?.description}</DialogDescription>
           </DialogHeader>
           {confirmType && (
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm">
               <Row
                 label="Estimated cost"
                 value={`$${finalCost(confirmType).toLocaleString()}`}
@@ -263,7 +291,17 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                 label="Approval impact"
                 value={`+${confirmType.approval_change}`}
               />
-              <p className="text-xs text-muted-foreground pt-2">
+              <div className="rounded-lg border p-3">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">City effects on completion</div>
+                <div className="flex flex-wrap gap-1">
+                  {visibleEffects(confirmType.effects).map(([key, value]) => (
+                    <Badge key={key} variant="secondary">
+                      {effectLabel(key)}: {effectValue(key, Number(value))}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
                 City Hall verifies the skill discount and price, then reserves the
                 funds atomically. Completion and settlement are processed by the
                 city governance worker even if no mayor has the page open.
