@@ -3,10 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FestivalCompanyEdition } from "@/features/festivals/editions/repository";
 import { FestivalCompanyCard } from "./FestivalCompanyCard";
 
-const useQuery = vi.fn();
-const useFestivalArtistProgramme = vi.fn();
-const useFestivalTicketPlan = vi.fn();
-const navigate = vi.fn();
+const {
+  useQuery,
+  useFestivalArtistProgramme,
+  useFestivalTicketPlan,
+  navigate,
+} = vi.hoisted(() => ({
+  useQuery: vi.fn(),
+  useFestivalArtistProgramme: vi.fn(),
+  useFestivalTicketPlan: vi.fn(),
+  navigate: vi.fn(),
+}));
 
 vi.mock("@tanstack/react-query", () => ({ useQuery }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));
@@ -149,5 +156,11 @@ describe("FestivalCompanyCard owner next action", () => {
 
     expect(screen.getByRole("button", { name: "Run Festival" })).toBeInTheDocument();
     expect(screen.getByText(/planning, line-up and tickets are ready/i)).toBeInTheDocument();
+  });
+
+  it("shows the Festival company balance in GBP", () => {
+    render(<FestivalCompanyCard festival={festival} />);
+
+    expect(screen.getByText("£250,000")).toBeInTheDocument();
   });
 });
