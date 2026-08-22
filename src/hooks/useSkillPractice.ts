@@ -109,7 +109,12 @@ export function usePracticeSkill() {
       // else. Older accounts can contain more than one is_active=true row; a
       // direct .single() query fails in that state and broke both desktop and
       // mobile practice booking before the RPC was even reached.
-      const profile = await getActiveProfile(user.id);
+      let profile;
+      try {
+        profile = await getActiveProfile(user.id);
+      } catch {
+        throw new Error('The active character could not be verified. Refresh and try again.');
+      }
       if (!profile) throw new Error('No active character was found. Switch or create a character first.');
 
       const scheduledEnd = addHours(scheduledStart, SKILL_PRACTICE_CONFIG.durationOptionsHours[0]);
