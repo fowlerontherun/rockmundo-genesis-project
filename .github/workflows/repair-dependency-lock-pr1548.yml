@@ -8,14 +8,24 @@ on:
       - .github/workflows/repair-dependency-lock-pr1548.yml
       - package.json
       - package-lock.json
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/repair-dependency-lock-pr1548.yml
+      - package.json
+      - package-lock.json
 
 permissions:
   contents: write
 
 jobs:
   regenerate-lock:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'agent/fix-skill-practice-booking')
     runs-on: ubuntu-24.04
+    concurrency:
+      group: repair-dependency-lock-pr1548
+      cancel-in-progress: true
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
