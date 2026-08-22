@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { CityDevelopment, CityGameplayModifiers } from "@/types/city-development";
+import type {
+  CityDevelopment,
+  CityDevelopmentHistoryEntry,
+  CityGameplayModifiers,
+} from "@/types/city-development";
 
 export function useCityDevelopment(cityId: string | undefined) {
   return useQuery<CityDevelopment | null>({
@@ -30,6 +34,24 @@ export function useCityGameplayModifiers(cityId: string | undefined) {
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       return (row ?? null) as CityGameplayModifiers | null;
+    },
+    enabled: !!cityId,
+  });
+}
+
+export function useCityDevelopmentHistory(cityId: string | undefined, limit = 50) {
+  return useQuery<CityDevelopmentHistoryEntry[]>({
+    queryKey: ["city-development-history", cityId, limit],
+    queryFn: async () => {
+      if (!cityId) return [];
+      const { data, error } = await (supabase as any)
+        .from("city_development_history")
+        .select("*, project:city_projects(name, description, cost, completed_at)")
+        .eq("city_id", cityId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as CityDevelopmentHistoryEntry[];
     },
     enabled: !!cityId,
   });
