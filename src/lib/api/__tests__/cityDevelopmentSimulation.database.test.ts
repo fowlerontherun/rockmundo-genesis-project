@@ -2,11 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const developmentSql = readFileSync(
-  "supabase/migrations/20291218252000_city_development_simulation.sql",
+  "supabase/migrations/20260822144900_city_development_simulation.sql",
   "utf8",
 );
 const gigDemandSql = readFileSync(
-  "supabase/migrations/20291218252100_city_development_gig_demand.sql",
+  "supabase/migrations/20260822144901_city_development_gig_demand.sql",
+  "utf8",
+);
+const wellnessSql = readFileSync(
+  "supabase/migrations/20260822144902_city_development_wellness_recovery.sql",
   "utf8",
 );
 const travelHelper = readFileSync("src/utils/cityDevelopmentTravel.ts", "utf8");
@@ -86,6 +90,14 @@ describe("city development gameplay wiring", () => {
     expect(gigDemandSql).toContain("m.audience_demand_multiplier");
     expect(gigDemandSql).toContain("COALESCE(v.capacity, 1)");
     expect(gigDemandSql).toContain("CREATE OR REPLACE FUNCTION public.advance_gig_ticket_sales");
+  });
+
+  it("uses healthcare and quality of life in the authoritative daily recovery processor", () => {
+    expect(wellnessSql).toContain("CREATE OR REPLACE FUNCTION public.process_daily_wellness");
+    expect(wellnessSql).toContain("public.city_gameplay_modifiers(p.current_city_id)");
+    expect(wellnessSql).toContain("m.recovery_multiplier");
+    expect(wellnessSql).toContain("v_ailment_recovery_step");
+    expect(wellnessSql).toContain("city_recovery_multiplier");
   });
 
   it("uses the average transport quality of both cities for current travel quotes", () => {
