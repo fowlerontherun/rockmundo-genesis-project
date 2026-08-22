@@ -98,5 +98,6 @@
   "20291218245400_festival_simplified_annual_plan_security.sql",
   "20291218245500_festival_edition_internal_projections.sql",
   "20291218245600_festival_licence_and_manager_authority.sql",
-  "20291218245700_reconcile_festival_setup_authority.sql"
+  "20291218245700_reconcile_festival_setup_authority.sql",
+  "20291218245800_complete_simplified_festival_lineup.sql"
 ]

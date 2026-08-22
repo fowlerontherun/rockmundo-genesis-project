@@ -11,10 +11,16 @@ import {
 } from "@/features/festival-company/domain/festivalTicketPlan";
 import {
   parseFestivalArtistProgrammeResult,
+  type ArtistIdentity,
   type FestivalApplicationWindow,
   type FestivalArtistProgramme,
   type FestivalArtistProgrammeResult,
 } from "@/features/festival-company/domain/festivalArtistProgramme";
+import {
+  parseFestivalArtistActionResult,
+  parseFestivalArtistCandidates,
+  type FestivalArtistActionResult,
+} from "@/features/festival-company/domain/festivalArtistWorkflows";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -201,4 +207,166 @@ export async function saveFestivalEditionArtistProgramme(input: {
     ]);
   }
   return parseFestivalArtistProgrammeResult(data);
+}
+
+export async function searchFestivalEditionArtistCandidates(input: {
+  festivalCompanyId: string;
+  festivalEditionId: string;
+  query?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  assertIdentity(input.festivalCompanyId, input.festivalEditionId);
+  const { data, error } = await projectionRpc(
+    "search_festival_edition_artist_candidates",
+    {
+      p_festival_company_id: input.festivalCompanyId,
+      p_festival_edition_id: input.festivalEditionId,
+      p_query: input.query?.trim() || null,
+      p_limit: input.limit ?? 25,
+      p_offset: input.offset ?? 0,
+    },
+  );
+  if (error) {
+    throw normalize(error, [
+      "festival_artist_action_forbidden",
+      "festival_artist_programme_incomplete",
+      "festival_edition_not_found",
+    ]);
+  }
+  return parseFestivalArtistCandidates(data);
+}
+
+export async function sendFestivalEditionArtistInvitation(input: {
+  festivalCompanyId: string;
+  festivalEditionId: string;
+  identity: ArtistIdentity;
+  suggestedFeeMinor: number;
+  suggestedSetMinutes: number;
+  suggestedDates: string[];
+  responseDeadline: string;
+  message?: string;
+  idempotencyKey: string;
+}): Promise<FestivalArtistActionResult> {
+  assertIdentity(input.festivalCompanyId, input.festivalEditionId);
+  if (!UUID.test(input.idempotencyKey)) {
+    throw new Error("festival_artist_invitation_invalid");
+  }
+  const { data, error } = await projectionRpc(
+    "send_festival_edition_artist_invitation",
+    {
+      p_festival_company_id: input.festivalCompanyId,
+      p_festival_edition_id: input.festivalEditionId,
+      p_artist_type: input.identity.type,
+      p_artist_profile_id:
+        input.identity.type === "solo" ? input.identity.artistProfileId : null,
+      p_band_id: input.identity.type === "band" ? input.identity.bandId : null,
+      p_suggested_fee_minor: input.suggestedFeeMinor,
+      p_suggested_set_minutes: input.suggestedSetMinutes,
+      p_suggested_dates: toJson(input.suggestedDates),
+      p_response_deadline: input.responseDeadline,
+      p_message: input.message ?? null,
+      p_idempotency_key: input.idempotencyKey,
+    },
+  );
+  if (error) {
+    throw normalize(error, [
+      "festival_artist_action_forbidden",
+      "festival_artist_programme_incomplete",
+      "festival_artist_invitation_invalid",
+      "festival_artist_invitation_duplicate",
+    ]);
+  }
+  return parseFestivalArtistActionResult(data);
+}
+
+export async function createFestivalEditionArtistOffer(input: {
+  festivalCompanyId: string;
+  festivalEditionId: string;
+  identity: ArtistIdentity;
+  applicationId?: string | null;
+  invitationId?: string | null;
+  feeMinor: number;
+  setMinutes: number;
+  preferredDate?: string | null;
+  billingPosition?: string;
+  responseDeadline: string;
+  message?: string;
+  idempotencyKey: string;
+}): Promise<FestivalArtistActionResult> {
+  assertIdentity(input.festivalCompanyId, input.festivalEditionId);
+  if (!UUID.test(input.idempotencyKey)) {
+    throw new Error("festival_artist_offer_invalid");
+  }
+  const terms = {
+    feeMinor: input.feeMinor,
+    setMinutes: input.setMinutes,
+    performanceCount: 1,
+    preferredDate: input.preferredDate ?? null,
+    preferredStageId: null,
+    billingPosition: input.billingPosition ?? "support",
+    travelSupportMinor: 0,
+    accommodationSupportMinor: 0,
+    merchShareBasisPoints: 0,
+    responseDeadline: input.responseDeadline,
+    message: input.message ?? null,
+  };
+  const { data, error } = await projectionRpc(
+    "create_festival_edition_artist_offer",
+    {
+      p_festival_company_id: input.festivalCompanyId,
+      p_festival_edition_id: input.festivalEditionId,
+      p_application_id: input.applicationId ?? null,
+      p_invitation_id: input.invitationId ?? null,
+      p_artist_type: input.identity.type,
+      p_artist_profile_id:
+        input.identity.type === "solo" ? input.identity.artistProfileId : null,
+      p_band_id: input.identity.type === "band" ? input.identity.bandId : null,
+      p_terms: toJson(terms),
+      p_idempotency_key: input.idempotencyKey,
+    },
+  );
+  if (error) {
+    throw normalize(error, [
+      "festival_artist_action_forbidden",
+      "festival_artist_programme_incomplete",
+      "festival_artist_offer_invalid",
+      "festival_artist_offer_duplicate",
+    ]);
+  }
+  return parseFestivalArtistActionResult(data);
+}
+
+export async function sendFestivalEditionArtistOffer(input: {
+  festivalCompanyId: string;
+  festivalEditionId: string;
+  offerId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+}): Promise<FestivalArtistActionResult> {
+  assertIdentity(input.festivalCompanyId, input.festivalEditionId);
+  if (!UUID.test(input.offerId) || !UUID.test(input.idempotencyKey)) {
+    throw new Error("festival_artist_offer_invalid");
+  }
+  const { data, error } = await projectionRpc(
+    "send_festival_edition_artist_offer",
+    {
+      p_festival_company_id: input.festivalCompanyId,
+      p_festival_edition_id: input.festivalEditionId,
+      p_offer_id: input.offerId,
+      p_expected_version: input.expectedVersion,
+      p_idempotency_key: input.idempotencyKey,
+    },
+  );
+  if (error) {
+    throw normalize(error, [
+      "festival_artist_action_forbidden",
+      "festival_artist_programme_incomplete",
+      "festival_artist_offer_invalid",
+      "festival_artist_offer_stale",
+      "festival_artist_offer_invalid_transition",
+      "festival_artist_offer_budget_exceeded",
+    ]);
+  }
+  return parseFestivalArtistActionResult(data);
 }
