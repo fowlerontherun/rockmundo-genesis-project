@@ -7,7 +7,6 @@ import { MapPin, Clock, Music, DollarSign, Calendar, AlertCircle, ArrowRight } f
 import { supabase } from "@/integrations/supabase/client";
 import { TicketSalesDisplay } from "@/components/gig/TicketSalesDisplay";
 import { useQuery } from "@tanstack/react-query";
-import { calculateDailySalesRate } from "@/utils/ticketSalesSimulation";
 import { useNavigate } from "react-router-dom";
 
 interface GigDetailsDialogProps {
@@ -20,7 +19,9 @@ interface GigDetailsDialogProps {
 export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialogProps) {
   const navigate = useNavigate();
 
-  // Fetch gig details
+  // Fetch gig details. Ticket sales are authoritative server-side state, so this
+  // query must render the persisted prediction rather than recalculating a second
+  // client-only forecast that can disagree with the daily sales simulation.
   const { data: gig, isLoading: gigLoading } = useQuery({
     queryKey: ['gig-details', gigId],
     queryFn: async () => {
@@ -28,8 +29,7 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
         .from('gigs')
         .select(`
           *,
-          venues!gigs_venue_id_fkey(id, name, location, capacity, prestige_level, city_id),
-          bands!gigs_band_id_fkey(id, name, fame, total_fans)
+          venues!gigs_venue_id_fkey(id, name, location, capacity, prestige_level, city_id)
         `)
         .eq('id', gigId)
         .single();
@@ -38,30 +38,21 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
       return data;
     },
     enabled: open && !!gigId,
+    refetchInterval: open ? 60_000 : false,
   });
 
   if (!open) return null;
 
   const venue = gig?.venues;
-  const band = gig?.bands;
   const scheduledDate = gig?.scheduled_date ? new Date(gig.scheduled_date) : new Date();
   const daysUntilGig = differenceInDays(scheduledDate, new Date());
-  const ticketsSold = gig?.tickets_sold || 0;
-  const venueCapacity = venue?.capacity || 100;
-
-  // Calculate predicted sales
-  let predictedSales = 0;
-  if (band && venue) {
-    const salesResult = calculateDailySalesRate({
-      bandFame: band.fame || 0,
-      bandTotalFans: band.total_fans || 0,
-      venueCapacity: venueCapacity,
-      daysUntilGig: Math.max(1, daysUntilGig),
-      daysBooked: 14, // Assume 2 weeks advance booking
-      ticketPrice: gig?.ticket_price || 20,
-    });
-    predictedSales = salesResult.expectedTotalSales;
-  }
+  const ticketsSold = Number(gig?.tickets_sold || 0);
+  const venueCapacity = Number(venue?.capacity || 100);
+  const storedPrediction = Number(gig?.predicted_tickets || gig?.estimated_attendance || 0);
+  const predictedSales = Math.min(
+    venueCapacity,
+    Math.max(ticketsSold, Number.isFinite(storedPrediction) ? storedPrediction : ticketsSold),
+  );
 
   const handleGoToPerform = () => {
     onOpenChange(false);

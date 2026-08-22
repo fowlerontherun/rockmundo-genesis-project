@@ -24,7 +24,7 @@ export const TicketSalesDisplay: React.FC<TicketSalesDisplayProps> = ({
       <div className="flex items-center gap-2 text-sm">
         <Ticket className="h-4 w-4 text-primary" />
         <span className="font-medium">{ticketsSold.toLocaleString()}</span>
-        <span className="text-muted-foreground">/ {predictedTickets.toLocaleString()} predicted</span>
+        <span className="text-muted-foreground">/ {predictedTickets.toLocaleString()} estimated final</span>
         {ticketsSold >= venueCapacity && (
           <Badge variant="default" className="bg-green-600">SOLD OUT</Badge>
         )}
@@ -53,7 +53,7 @@ export const TicketSalesDisplay: React.FC<TicketSalesDisplayProps> = ({
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-muted-foreground">
           <TrendingUp className="h-3 w-3" />
-          <span>Predicted: {predictedTickets.toLocaleString()}</span>
+          <span>Estimated final: {predictedTickets.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-1 text-muted-foreground">
           <Users className="h-3 w-3" />
