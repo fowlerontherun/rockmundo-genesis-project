@@ -71,7 +71,7 @@ BEGIN
     v_local_end_time := NEW.slot_end_time;
 
     v_effective_end := (
-      v_local_show_date::timestamp
+      v_local_show_date
       + v_local_end_time
       + CASE
           WHEN v_local_end_time <= v_local_start_time THEN interval '1 day'
