@@ -15,6 +15,16 @@ describe("Mobile Social companion contract", () => {
     expect(source).toContain("useDirectMessages");
     expect(source).toContain("useFriendships");
     expect(source).toContain("useNotificationsFeed");
+    expect(source).toContain("useUnifiedInbox");
+  });
+
+  it("uses one Inbox surface for game messages, outcomes and alerts", () => {
+    expect(source).toContain('["notifications", "Inbox", "/mobile/social/notifications"]');
+    expect(source).toContain('title="Inbox"');
+    expect(source).toContain("Game messages, activity outcomes and alerts in one place.");
+    expect(source).toContain("inbox.messages.map");
+    expect(source).toContain("inbox.markAllAsRead");
+    expect(source).not.toContain('title="Notifications"');
   });
 
   it("mirrors the current desktop instant-chat rooms instead of the legacy dashboard chat", () => {
@@ -56,13 +66,15 @@ describe("Mobile Social companion contract", () => {
   it("routes notification actions through the shared companion resolver", () => {
     expect(source).toContain('import { resolveCompanionPath } from "@/mobile/routeRegistry"');
     expect(source).toContain("navigate(resolveCompanionPath(n.action_path))");
+    expect(source).toContain("navigate(resolveCompanionPath(route))");
     expect(source).not.toContain("location.assign(");
   });
 
   it("shows explicit failure and empty states rather than blank mobile panels", () => {
     expect(source).toContain("Friends could not be loaded.");
     expect(source).toContain("Conversations could not be loaded.");
-    expect(source).toContain("Notifications could not be loaded.");
+    expect(source).toContain("Inbox could not be loaded.");
+    expect(source).toContain("Inbox is clear");
     expect(source).toContain("No public posts");
   });
 
