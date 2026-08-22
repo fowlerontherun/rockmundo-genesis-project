@@ -2,8 +2,10 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import CharacterGate from "@/components/CharacterGate";
 import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
+import { useTravelLifecycleRefresh } from "@/mobile/hooks/useTravelLifecycleRefresh";
 import { MobileShell } from "./MobileShell";
 
 /**
@@ -13,8 +15,13 @@ import { MobileShell } from "./MobileShell";
 export default function MobileLayout() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { loading: dataLoading } = useGameData();
+  const { loading: dataLoading, refetch: refetchGameData } = useGameData();
+  const { profileId } = useActiveProfile();
   const devGuestBypass = import.meta.env.DEV;
+
+  // The server owns travel departure/arrival transitions. This lightweight
+  // watcher only refreshes mobile state when that authoritative row changes.
+  useTravelLifecycleRefresh(profileId, refetchGameData);
 
   useEffect(() => {
     if (!authLoading && !user && !devGuestBypass) navigate("/auth");
