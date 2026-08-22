@@ -1,0 +1,78 @@
+name: Minimal dependency lock repair for PR 1548
+
+on:
+  push:
+    branches:
+      - agent/fix-skill-practice-booking
+    paths:
+      - .github/workflows/repair-dependency-lock-minimal-pr1548.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/repair-dependency-lock-minimal-pr1548.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair-lock:
+    if: github.actor != 'github-actions[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'agent/fix-skill-practice-booking')
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: minimal-dependency-lock-repair-pr1548
+      cancel-in-progress: true
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/fix-skill-practice-booking
+          fetch-depth: 0
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+
+      - name: Restore main lockfile and repair only incomplete registry metadata
+        shell: bash
+        run: |
+          git checkout origin/main -- package-lock.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const path = 'package-lock.json';
+          const lock = JSON.parse(fs.readFileSync(path, 'utf8'));
+          for (const name of ['@axe-core/playwright', '@testing-library/dom']) {
+            const entry = lock.packages[`node_modules/${name}`];
+            if (!entry?.version) throw new Error(`Missing lock entry/version for ${name}`);
+            const raw = execFileSync('npm', ['view', `${name}@${entry.version}`, 'dist.integrity', '--json'], { encoding: 'utf8' }).trim();
+            const integrity = JSON.parse(raw);
+            if (typeof integrity !== 'string' || !integrity.startsWith('sha512-')) throw new Error(`Invalid registry integrity for ${name}@${entry.version}`);
+            entry.integrity = integrity;
+            console.log(`${name}@${entry.version}: ${integrity}`);
+          }
+          fs.writeFileSync(path, `${JSON.stringify(lock, null, 2)}\n`);
+          NODE
+          git diff --stat -- package-lock.json
+
+      - name: Verify dependency lock
+        run: npm run verify:dependency-lock
+
+      - name: Verify clean install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify dependency tree
+        run: npm run verify:dependencies
+
+      - name: Commit minimal lockfile repair
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Repair dependency lock integrity metadata"
+          git push origin HEAD:agent/fix-skill-practice-booking
