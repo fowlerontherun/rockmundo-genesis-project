@@ -38,7 +38,6 @@ export const MobileShell = ({ children }: { children?: ReactNode }) => {
 
     if (!location.hash) {
       container.scrollTo({ top: 0, behavior: "auto" });
-      window.scrollTo({ top: 0, behavior: "auto" });
       return;
     }
 
@@ -70,11 +69,11 @@ export const MobileShell = ({ children }: { children?: ReactNode }) => {
   }, []);
 
   return (
-    <div className="rm-mobile min-h-[100dvh] flex flex-col">
+    <div className="rm-mobile h-[100dvh] min-h-0 overflow-hidden flex flex-col">
       <TopAppBar />
       <main
         ref={scrollRef}
-        className="rm-mobile-scroll flex-1"
+        className="rm-mobile-scroll min-h-0 flex-1 overflow-x-hidden"
         style={{ paddingBottom: "calc(var(--m-nav-h) + var(--m-safe-b) + 120px)" }}
       >
         <div className="px-3 pt-3 pb-6 space-y-3">
