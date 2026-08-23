@@ -3,9 +3,9 @@
 **Status:** Active living plan  
 **Created:** 23 August 2026  
 **Last updated:** 23 August 2026  
-**Baseline:** `main` after merged PR #1621  
+**Baseline:** `main` after merged PR #1623  
 **Overall completion:** In progress  
-**Current Festival PR:** #1623 — Festival clock + basic day planner  
+**Current Festival PR:** #1624 — planner merge/certification cleanup  
 **Next planned slice:** Festival condition stats + Eat/Drink/Explore/Rest
 
 > This is the single source of truth for completing RockMundo Festivals. Every Festival PR must update this file and the PR Progress Register until the final certification gate passes.
@@ -190,9 +190,9 @@ Production cron:
 
 A manual production batch check returned zero rows examined/completed, which matches the zero live attendee rows at introduction. Supabase security advisors returned no findings after the migration. Performance-advisor output remains existing project-wide policy/index debt and introduced no identified Festival-specific blocker.
 
-### PR #1623 — Festival clock + basic day planner — in progress
+### PR #1623 — Festival clock + basic day planner — merged
 
-This slice adds:
+This slice added:
 
 - authoritative Festival-local clock/day metadata derived server-side;
 - a persistent `festival_attendee_plan_items` timeline tied to the active attendee/edition/profile;
@@ -219,6 +219,8 @@ Canonical migrations:
 - `20291218255500_festival_day_planner_indexes.sql`
 
 This slice intentionally does not award XP/AP, mutate Festival condition stats, charge attendee funds, resolve watched performances, or create food/drink/random-event outcomes.
+
+Certification note: the temporary lint diagnostics used while certifying #1623 showed no Festival planner lint errors; the repository-wide ESLint count had independently drifted 12 errors above its stored baseline. The local Festival database lifecycle also surfaced a migration named `20291218194417_festival_track_ownership.sql`, but that file is absent from both the exact failing commit tree and current `main`, so it is treated as generated/local migration-state debt rather than a committed #1623 migration.
 
 ---
 
@@ -319,7 +321,7 @@ Add diagnostics/recovery/balance controls, maintain active-caller inventory, ret
 1. **Check-in / leave authority** — #1616 merged.
 2. **Festival Mode shell + schedule lock/unlock** — #1618 merged.
 3. **Automatic attendee completion + stale-state/reconnect recovery** — #1620 merged.
-4. **Festival clock + basic day planner** — #1623 in progress.
+4. **Festival clock + basic day planner** — #1623 merged.
 5. **Condition stats + Eat/Drink/Explore/Rest** — next.
 6. **Watch Band + timetable integration + inspiration**.
 7. **Food/drink/merch authoritative economy**.
@@ -383,9 +385,10 @@ Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule
 - Some older scheduling subsystems may not yet use the canonical schedule table consistently; later integration certification must find remaining bypasses.
 - Finance must be verified against ledgers through final settlement rather than trusted from forecasts alone.
 - Ticket consumption currently uses status/update timestamp; dedicated `used_at` can be considered during ticket-lifecycle hardening.
-- Planner categories are intention only until their server-authoritative activity resolvers are implemented; this PR must not be mistaken for completed Eat/Drink/Watch gameplay.
+- Planner categories are intention only until their server-authoritative activity resolvers are implemented; #1623 must not be mistaken for completed Eat/Drink/Watch gameplay.
 - Real-player engagement/reward multipliers require explicit caps before rollout.
 - Project-wide Supabase performance-advisor warnings pre-date the attendee programme and should be handled separately unless a Festival-specific regression appears.
+- Festival CI currently sees a non-tree migration `20291218194417_festival_track_ownership.sql` during local Supabase startup; its generation/source must be fixed separately because it is absent from the exact checked-in failing tree and cannot be corrected by a later planner migration.
 
 ---
 
@@ -401,7 +404,8 @@ Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule
 | #1618 | Merged | Festival Mode + schedule reservation | Reduced attendee shell + server-owned schedule lock |
 | #1620 | Merged | Automatic completion + reconnect recovery | Server completion, safe stale-state repair and reconnect convergence |
 | #1621 | Merged | Tracker reconciliation | Plan aligned after #1620 merged ahead of its documentation commit |
-| #1623 | **In progress** | Festival clock + basic day planner | Authoritative Festival clock, persistent My Day timeline and conflict-safe planning |
+| #1623 | Merged | Festival clock + basic day planner | Authoritative Festival clock, persistent My Day timeline and conflict-safe planning |
+| #1624 | **In progress** | Planner merge/certification cleanup | Restore normal lint wrapper and reconcile tracker after #1623 merged during diagnostics |
 
 Every later Festival PR must update this register.
 
