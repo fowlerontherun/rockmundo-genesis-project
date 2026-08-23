@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, AlertTriangle, Sparkles, Star, Zap, DollarSign, Users, Lightbulb } from "lucide-react";
+import { Loader2, AlertTriangle, Sparkles, Star, Zap, DollarSign, Users, Lightbulb, ShieldCheck } from "lucide-react";
+import { fetchNightclubPolicy } from "@/hooks/useNightlifeEvents";
 import {
   STANCE_CONFIGS,
   getStanceRiskColor,
-  getOutcomeVariant,
   type NightlifeStance,
   type NightlifeOutcomeDetail,
 } from "@/utils/nightlifeRiskLayer";
@@ -29,8 +31,15 @@ export const NightlifeStanceSelector = ({
   onDismissOutcome,
   addictionWarning,
 }: NightlifeStanceSelectorProps) => {
+  const { clubId } = useParams<{ clubId: string }>();
   const [selectedStance, setSelectedStance] = useState<NightlifeStance | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const { data: policy } = useQuery({
+    queryKey: ["nightclub-policy", clubId],
+    queryFn: () => fetchNightclubPolicy(clubId!),
+    enabled: Boolean(clubId),
+    staleTime: 60_000,
+  });
 
   const handleSelect = (stance: NightlifeStance) => {
     setSelectedStance(stance);
@@ -49,12 +58,20 @@ export const NightlifeStanceSelector = ({
   return (
     <>
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Sparkles className="h-4 w-4 text-primary" />
-          Choose Your Approach
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Choose Your Approach
+          </div>
+          {policy && (
+            <Badge variant="outline" className="gap-1 capitalize">
+              <ShieldCheck className="h-3 w-3" />
+              {policy.drugPolicy} city drug policy · alcohol age {policy.alcoholLegalAge}
+            </Badge>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
-          How do you want to spend the night at {clubName}? Each stance carries different risks and rewards.
+          How do you want to spend the night at {clubName}? The server resolves outcomes using your stance plus the active City Hall alcohol and drug policy.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {stances.map((config) => (
@@ -78,9 +95,7 @@ export const NightlifeStanceSelector = ({
                 </div>
                 <p className="text-xs text-muted-foreground">{config.description}</p>
                 <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">
-                  <span className={getStanceRiskColor(config.riskLevel)}>
-                    Fame ×{config.fameMultiplier}
-                  </span>
+                  <span className={getStanceRiskColor(config.riskLevel)}>Fame ×{config.fameMultiplier}</span>
                   <span>Energy ×{config.energyCostMultiplier}</span>
                   <span>Cost ×{config.cashMultiplier}</span>
                 </div>
@@ -90,7 +105,6 @@ export const NightlifeStanceSelector = ({
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
       <Dialog open={confirming} onOpenChange={setConfirming}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -102,27 +116,15 @@ export const NightlifeStanceSelector = ({
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-md border border-border p-2 text-center">
-                <div className="font-semibold">Fame</div>
-                <div className="text-muted-foreground">×{selectedConfig?.fameMultiplier}</div>
-              </div>
-              <div className="rounded-md border border-border p-2 text-center">
-                <div className="font-semibold">Energy</div>
-                <div className="text-muted-foreground">×{selectedConfig?.energyCostMultiplier}</div>
-              </div>
-              <div className="rounded-md border border-border p-2 text-center">
-                <div className="font-semibold">Cost</div>
-                <div className="text-muted-foreground">×{selectedConfig?.cashMultiplier}</div>
-              </div>
-              <div className="rounded-md border border-border p-2 text-center">
-                <div className="font-semibold">Scandal</div>
-                <div className="text-muted-foreground">{Math.round((selectedConfig?.scandalChance ?? 0) * 100)}%</div>
-              </div>
+              <div className="rounded-md border border-border p-2 text-center"><div className="font-semibold">Fame</div><div className="text-muted-foreground">×{selectedConfig?.fameMultiplier}</div></div>
+              <div className="rounded-md border border-border p-2 text-center"><div className="font-semibold">Energy</div><div className="text-muted-foreground">×{selectedConfig?.energyCostMultiplier}</div></div>
+              <div className="rounded-md border border-border p-2 text-center"><div className="font-semibold">Cost</div><div className="text-muted-foreground">×{selectedConfig?.cashMultiplier}</div></div>
+              <div className="rounded-md border border-border p-2 text-center"><div className="font-semibold">City policy</div><div className="text-muted-foreground capitalize">{policy?.drugPolicy ?? "Loading"}</div></div>
             </div>
             {selectedConfig?.addictionRiskMultiplier && selectedConfig.addictionRiskMultiplier > 0 && (
               <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                <span>Addiction risk multiplier: ×{selectedConfig.addictionRiskMultiplier}</span>
+                <span>Risk is resolved server-side. City drug policy changes exposure and enforcement, and under-age characters cannot receive alcohol.</span>
               </div>
             )}
             <Button className="w-full" onClick={handleConfirm} disabled={isProcessing}>
@@ -133,76 +135,27 @@ export const NightlifeStanceSelector = ({
         </DialogContent>
       </Dialog>
 
-      {/* Outcome Dialog */}
       <Dialog open={!!outcome} onOpenChange={(open) => !open && onDismissOutcome()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="text-2xl">{outcome?.emoji}</span>
-              {outcome?.label}
-            </DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><span className="text-2xl">{outcome?.emoji}</span>{outcome?.label}</DialogTitle>
             <DialogDescription>Your night at {clubName}</DialogDescription>
           </DialogHeader>
           {outcome && (
             <div className="space-y-4">
-              <div className="rounded-lg border border-border bg-card p-3">
-                <p className="text-sm text-muted-foreground">{outcome.description}</p>
-              </div>
-
+              <div className="rounded-lg border border-border bg-card p-3"><p className="text-sm text-muted-foreground">{outcome.description}</p></div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Star className="h-4 w-4 text-yellow-400" />
-                  <div>
-                    <div className={`text-sm font-medium ${outcome.fameChange >= 0 ? "" : "text-destructive"}`}>
-                      {outcome.fameChange >= 0 ? "+" : ""}{outcome.fameChange}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">Fame</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Zap className="h-4 w-4 text-purple-400" />
-                  <div>
-                    <div className="text-sm font-medium text-destructive">{outcome.energyChange}</div>
-                    <div className="text-[10px] text-muted-foreground">Energy</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <DollarSign className="h-4 w-4 text-green-400" />
-                  <div>
-                    <div className="text-sm font-medium text-destructive">{outcome.cashChange}</div>
-                    <div className="text-[10px] text-muted-foreground">Cash</div>
-                  </div>
-                </div>
+                <div className="flex items-center gap-2 rounded-md border border-border p-2"><Star className="h-4 w-4 text-yellow-400" /><div><div className={`text-sm font-medium ${outcome.fameChange >= 0 ? "" : "text-destructive"}`}>{outcome.fameChange >= 0 ? "+" : ""}{outcome.fameChange}</div><div className="text-[10px] text-muted-foreground">Fame</div></div></div>
+                <div className="flex items-center gap-2 rounded-md border border-border p-2"><Zap className="h-4 w-4 text-purple-400" /><div><div className="text-sm font-medium text-destructive">{outcome.energyChange}</div><div className="text-[10px] text-muted-foreground">Energy</div></div></div>
+                <div className="flex items-center gap-2 rounded-md border border-border p-2"><DollarSign className="h-4 w-4 text-green-400" /><div><div className="text-sm font-medium text-destructive">{outcome.cashChange}</div><div className="text-[10px] text-muted-foreground">Cash</div></div></div>
               </div>
-
-              {/* Special outcome badges */}
               <div className="flex flex-wrap gap-2">
-                {outcome.inspirationGained && (
-                  <Badge variant="default" className="gap-1">
-                    <Lightbulb className="h-3 w-3" /> Inspiration gained
-                  </Badge>
-                )}
-                {outcome.contactGained && (
-                  <Badge variant="default" className="gap-1">
-                    <Users className="h-3 w-3" /> New contact
-                  </Badge>
-                )}
-                {outcome.scandalTriggered && (
-                  <Badge variant="destructive" className="gap-1">
-                    <AlertTriangle className="h-3 w-3" /> Scandal
-                  </Badge>
-                )}
+                {outcome.inspirationGained && <Badge variant="default" className="gap-1"><Lightbulb className="h-3 w-3" /> Inspiration gained</Badge>}
+                {outcome.contactGained && <Badge variant="default" className="gap-1"><Users className="h-3 w-3" /> New contact</Badge>}
+                {outcome.scandalTriggered && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Scandal</Badge>}
               </div>
-
-              {addictionWarning && (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                  ⚠️ {addictionWarning}
-                </div>
-              )}
-
-              <Button className="w-full" onClick={onDismissOutcome}>
-                Close
-              </Button>
+              {addictionWarning && <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">⚠️ {addictionWarning}</div>}
+              <Button className="w-full" onClick={onDismissOutcome}>Close</Button>
             </div>
           )}
         </DialogContent>
