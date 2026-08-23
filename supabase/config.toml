@@ -209,3 +209,6 @@ verify_jwt = true
 
 [functions.travel-booking]
 verify_jwt = true
+
+[functions.nightclub-session]
+verify_jwt = true
