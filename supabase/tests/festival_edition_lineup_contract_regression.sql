@@ -33,7 +33,7 @@ BEGIN
     RAISE EXCEPTION 'Festival line-up save uses the wrong production authority';
   END IF;
 
-  IF position('p_complete AND active_bookings=0' IN regexp_replace(v_save,'\s+',' ','g'))=0 THEN
+  IF v_save !~* 'p_complete\s+AND\s+active_bookings\s*=\s*0' THEN
     RAISE EXCEPTION 'Festival line-up save can complete without a confirmed booking';
   END IF;
 
