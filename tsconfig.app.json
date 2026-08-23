@@ -17,6 +17,9 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "paths": {
+      "@/hooks/useRecordingData": [
+        "./src/hooks/useRecordingDataAtomic.tsx"
+      ],
       "@/*": [
         "./src/*"
       ]

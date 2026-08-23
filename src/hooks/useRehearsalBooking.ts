@@ -1,20 +1,17 @@
-import { useState } from 'react';
-import { financeService } from "@/services/finance/financeService";
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
-import { logGameActivity } from '@/hooks/useGameActivityLog';
-import { 
-  createBandScheduledActivities, 
-  checkBandAvailability, 
-  formatConflictMessage,
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { logGameActivity } from "@/hooks/useGameActivityLog";
+import {
+  createBandScheduledActivities,
+  checkBandAvailability,
   notifyAbsentBandMembers,
   BandUnavailableError,
   isBandUnavailableError,
-} from '@/utils/bandActivityScheduling';
-import { validateFutureTime } from '@/utils/timeSlotValidation';
-import { calculateRehearsalEfficiency } from '@/utils/skillRehearsalEfficiency';
-import type { SkillProgressEntry } from '@/utils/skillGearPerformance';
+} from "@/utils/bandActivityScheduling";
+import { validateFutureTime } from "@/utils/timeSlotValidation";
+import { consumeAtomicRehearsalPaymentSource } from "@/hooks/useBandPaymentSource";
 
 interface BookRehearsalParams {
   bandId: string;
@@ -23,6 +20,8 @@ interface BookRehearsalParams {
   songId: string | null;
   setlistId: string | null;
   scheduledStart: Date;
+  // Kept for compatibility with the existing page/dialog contract. The server
+  // now recalculates all of these values authoritatively.
   totalCost: number;
   chemistryGain: number;
   xpEarned: number;
@@ -35,75 +34,41 @@ interface BookRehearsalParams {
   skipProfileIds?: string[];
 }
 
-// Helper to manually complete rehearsal with skill efficiency
-async function completeRehearsalDirectly(
-  rehearsalId: string,
-  bandId: string,
-  songId: string | null,
-  durationMinutes: number
-) {
-  if (!songId) return;
-
-  // Fetch band members' skill progress for efficiency calculation
-  let efficiencyMultiplier = 1.0;
-  try {
-    const { data: members } = await supabase
-      .from('band_members')
-      .select('profile_id, instrument_role')
-      .eq('band_id', bandId)
-      .eq('is_touring_member', false);
-
-    if (members && members.length > 0) {
-      const profileIds = members.map(m => m.profile_id).filter(Boolean) as string[];
-      const roles = members.map(m => m.instrument_role || 'Vocals');
-
-      if (profileIds.length > 0) {
-        const { data: skillData } = await supabase
-          .from('skill_progress')
-          .select('skill_slug, current_level')
-          .in('profile_id', profileIds);
-
-        const efficiency = calculateRehearsalEfficiency(
-          (skillData || []) as SkillProgressEntry[],
-          roles
-        );
-        efficiencyMultiplier = efficiency.multiplier;
-        console.log(`Rehearsal efficiency: ${efficiencyMultiplier.toFixed(2)}x (instrument: +${efficiency.instrumentBonus}, theory: +${efficiency.theoryBonus})`);
-      }
-    }
-  } catch (e) {
-    console.warn('Could not calculate rehearsal efficiency, using baseline:', e);
-  }
-
-  // Apply efficiency multiplier to effective minutes
-  const effectiveMinutes = Math.round(durationMinutes * efficiencyMultiplier);
-  
-  // Fetch existing familiarity
-  const { data: existing } = await supabase
-    .from('band_song_familiarity')
-    .select('familiarity_minutes')
-    .eq('band_id', bandId)
-    .eq('song_id', songId)
-    .maybeSingle();
-  
-  const currentMinutes = existing?.familiarity_minutes || 0;
-  const newMinutes = currentMinutes + effectiveMinutes;
-  
-  // Upsert familiarity record
-  await supabase
-    .from('band_song_familiarity')
-    .upsert({
-      band_id: bandId,
-      song_id: songId,
-      familiarity_minutes: newMinutes,
-      last_rehearsed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, {
-      onConflict: 'band_id,song_id',
-    });
-    
-  console.log(`Updated familiarity for song ${songId}: ${currentMinutes} -> ${newMinutes} minutes (${durationMinutes}min × ${efficiencyMultiplier.toFixed(2)}x efficiency)`);
+interface AtomicRehearsalResult {
+  idempotent?: boolean;
+  bookingId: string;
+  totalCost: number;
+  paymentSource: "band" | "personal";
+  payerBalanceAfterMinor?: number;
+  chemistryGain?: number;
+  xpEarned?: number;
+  familiarityGained?: number;
 }
+
+const readableBookingError = (message: string) => {
+  if (message.includes("insufficient_band_funds")) {
+    return "The band treasury does not have enough available funds for this rehearsal.";
+  }
+  if (message.includes("insufficient_personal_funds")) {
+    return "You do not have enough personal funds for this rehearsal.";
+  }
+  if (message.includes("band_treasury_missing")) {
+    return "The band treasury is not ready yet. Open Band Finances and try again.";
+  }
+  if (message.includes("rehearsal_room_unavailable")) {
+    return "That rehearsal room has just been booked for this time. Choose another slot.";
+  }
+  if (message.includes("band_unavailable")) {
+    return "The band already has a rehearsal or recording during this time.";
+  }
+  if (message.includes("rehearsal_must_be_in_future")) {
+    return "Rehearsals must be booked for a future time.";
+  }
+  if (message.includes("not_band_member")) {
+    return "Only an active member of this band can book its rehearsal.";
+  }
+  return message || "Unable to book the rehearsal.";
+};
 
 export function useRehearsalBooking() {
   const { toast } = useToast();
@@ -112,9 +77,8 @@ export function useRehearsalBooking() {
 
   const bookRehearsal = async (params: BookRehearsalParams) => {
     setIsBooking(true);
-    
+
     try {
-      // Validate that the time is in the future
       const timeValidation = validateFutureTime(params.scheduledStart);
       if (!timeValidation.valid) {
         throw new Error(timeValidation.message);
@@ -123,157 +87,169 @@ export function useRehearsalBooking() {
       const scheduledEnd = new Date(params.scheduledStart);
       scheduledEnd.setHours(scheduledEnd.getHours() + params.duration);
 
-      // Check availability for ALL band members before booking
+      // Preserve the broader player-schedule conflict experience in the client.
+      // The RPC independently protects room/band booking races and the payment.
       const { available, conflicts } = await checkBandAvailability(
         params.bandId,
         params.scheduledStart,
-        scheduledEnd
+        scheduledEnd,
       );
 
       const skipSet = new Set(params.skipProfileIds || []);
-      const blockingConflicts = conflicts.filter(c => !c.profileId || !skipSet.has(c.profileId));
-      const excludedConflicts = conflicts.filter(c => c.profileId && skipSet.has(c.profileId));
+      const blockingConflicts = conflicts.filter(
+        (conflict) => !conflict.profileId || !skipSet.has(conflict.profileId),
+      );
+      const excludedConflicts = conflicts.filter(
+        (conflict) => conflict.profileId && skipSet.has(conflict.profileId),
+      );
 
       if (!available && blockingConflicts.length > 0) {
+        // Do not consume the selected payer yet: the leader may retry from the
+        // conflict dialog without reopening the booking form.
         throw new BandUnavailableError(blockingConflicts);
       }
 
-      // Create rehearsal record
-      const { data: rehearsalData, error: rehearsalError } = await supabase
-        .from('band_rehearsals')
-        .insert({
-          band_id: params.bandId,
-          rehearsal_room_id: params.roomId,
-          duration_hours: params.duration,
-          total_cost: params.totalCost,
-          scheduled_start: params.scheduledStart.toISOString(),
-          scheduled_end: scheduledEnd.toISOString(),
-          selected_song_id: params.songId,
-          setlist_id: params.setlistId,
-          status: 'scheduled',
-          chemistry_gain: params.chemistryGain,
-          xp_earned: params.xpEarned,
-          familiarity_gained: params.familiarityGained,
-        })
-        .select()
-        .single();
-
-      if (rehearsalError) throw rehearsalError;
-
-      await financeService.debit(
-        "band",
+      const paymentSource = consumeAtomicRehearsalPaymentSource(params.bandId);
+      const idempotencyKey = [
+        "rehearsal",
         params.bandId,
-        params.totalCost,
-        "rehearsal_payment",
-        `Rehearsal booking: ${params.roomName}`,
-        `rehearsal-booking-${rehearsalData.id}`,
-        params.profileId,
+        params.roomId,
+        params.scheduledStart.toISOString(),
+        params.duration,
+      ].join(":");
+
+      const { data, error } = await (supabase as any).rpc(
+        "confirm_rehearsal_booking_atomic",
+        {
+          p_band_id: params.bandId,
+          p_room_id: params.roomId,
+          p_duration_hours: params.duration,
+          p_song_id: params.songId,
+          p_setlist_id: params.setlistId,
+          p_scheduled_start: params.scheduledStart.toISOString(),
+          p_payment_source: paymentSource,
+          p_idempotency_key: idempotencyKey,
+        },
       );
 
-      // Compatibility mirror while legacy bands.band_balance remains deprecated.
-      const { data: bandData } = await supabase
-        .from('bands')
-        .select('band_balance')
-        .eq('id', params.bandId)
-        .single();
-
-      if (bandData) {
-        await supabase
-          .from('bands')
-          .update({ band_balance: (bandData.band_balance || 0) - params.totalCost })
-          .eq('id', params.bandId);
+      if (error) {
+        throw new Error(readableBookingError(error.message || ""));
       }
 
-      // Create scheduled activity entries for ALL band members
-      await createBandScheduledActivities({
-        bandId: params.bandId,
-        activityType: 'rehearsal',
-        scheduledStart: params.scheduledStart,
-        scheduledEnd,
-        title: `Band Rehearsal - ${params.roomName}`,
-        location: params.roomLocation,
-        linkedRehearsalId: rehearsalData.id,
-        skipProfileIds: params.skipProfileIds,
-        metadata: {
-          rehearsalId: rehearsalData.id,
-          roomId: params.roomId,
-          songId: params.songId,
-          setlistId: params.setlistId,
-        },
-      });
+      const booking = data as AtomicRehearsalResult | null;
+      if (!booking?.bookingId) {
+        throw new Error("The rehearsal booking authority returned no booking id.");
+      }
 
-      // Log activity - use the profile context from band membership
-      // logGameActivity accepts userId which maps to profile in character-isolated context
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Get active profile for activity logging
-        const { data: activeProfile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .is("died_at", null)
-          .maybeSingle();
+      // Booking/payment are already committed atomically. Scheduled-activity rows
+      // remain a projection, so make this follow-up retry-safe as well.
+      const { count: existingActivityCount } = await (supabase as any)
+        .from("player_scheduled_activities")
+        .select("id", { count: "exact", head: true })
+        .eq("linked_rehearsal_id", booking.bookingId)
+        .neq("status", "cancelled");
 
-        if (activeProfile) {
-          logGameActivity({
-            userId: activeProfile.id,
+      if (!existingActivityCount) {
+        await createBandScheduledActivities({
+          bandId: params.bandId,
+          activityType: "rehearsal",
+          scheduledStart: params.scheduledStart,
+          scheduledEnd,
+          title: `Band Rehearsal - ${params.roomName}`,
+          location: params.roomLocation,
+          linkedRehearsalId: booking.bookingId,
+          skipProfileIds: params.skipProfileIds,
+          metadata: {
+            rehearsalId: booking.bookingId,
+            roomId: params.roomId,
+            songId: params.songId,
+            setlistId: params.setlistId,
+          },
+        });
+      }
+
+      if (!booking.idempotent) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: activeProfile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .is("died_at", null)
+            .maybeSingle();
+
+          if (activeProfile) {
+            void logGameActivity({
+              userId: activeProfile.id,
+              bandId: params.bandId,
+              activityType: "rehearsal_booked",
+              activityCategory: "rehearsal",
+              description: `Booked ${params.duration}-hour rehearsal at ${params.roomName}`,
+              amount: -Number(booking.totalCost || 0),
+              metadata: {
+                rehearsalId: booking.bookingId,
+                roomId: params.roomId,
+                songId: params.songId,
+                setlistId: params.setlistId,
+                duration: params.duration,
+                paymentSource: booking.paymentSource,
+                chemistryGain: booking.chemistryGain,
+                xpEarned: booking.xpEarned,
+              },
+            });
+          }
+        }
+
+        if (excludedConflicts.length > 0) {
+          await notifyAbsentBandMembers({
             bandId: params.bandId,
-            activityType: 'rehearsal_booked',
-            activityCategory: 'rehearsal',
-            description: `Booked ${params.duration}-hour rehearsal at ${params.roomName}`,
-            amount: -params.totalCost,
-            metadata: {
-              rehearsalId: rehearsalData.id,
-              roomId: params.roomId,
-              songId: params.songId,
-              setlistId: params.setlistId,
-              duration: params.duration,
-              chemistryGain: params.chemistryGain,
-              xpEarned: params.xpEarned
-            }
+            bandName: params.bandName ?? null,
+            activityType: "rehearsal",
+            activityLabel: `Band Rehearsal - ${params.roomName}`,
+            scheduledStart: params.scheduledStart,
+            scheduledEnd,
+            location: params.roomLocation,
+            conflicts: excludedConflicts,
+            linkedRehearsalId: booking.bookingId,
+            actionPath: "/rehearsals",
           });
         }
       }
 
-      if (excludedConflicts.length > 0) {
-        await notifyAbsentBandMembers({
-          bandId: params.bandId,
-          bandName: params.bandName ?? null,
-          activityType: 'rehearsal',
-          activityLabel: `Band Rehearsal - ${params.roomName}`,
-          scheduledStart: params.scheduledStart,
-          scheduledEnd,
-          location: params.roomLocation,
-          conflicts: excludedConflicts,
-          linkedRehearsalId: rehearsalData.id,
-          actionPath: '/rehearsals',
-        });
-      }
-
       toast({
-        title: excludedConflicts.length > 0 ? 'Rehearsal booked without some members' : 'Rehearsal Booked!',
-        description: excludedConflicts.length > 0
-          ? `${params.duration}-hour rehearsal at ${params.roomName}. ${excludedConflicts.length} member(s) were notified they are not booked in.`
-          : `${params.duration}-hour rehearsal scheduled at ${params.roomName}`,
+        title:
+          excludedConflicts.length > 0
+            ? "Rehearsal booked without some members"
+            : "Rehearsal Booked!",
+        description:
+          excludedConflicts.length > 0
+            ? `${params.duration}-hour rehearsal at ${params.roomName}. ${excludedConflicts.length} member(s) were notified they are not booked in.`
+            : `${params.duration}-hour rehearsal scheduled at ${params.roomName} using ${booking.paymentSource} funds.`,
       });
 
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['all-rehearsals'] });
-      queryClient.invalidateQueries({ queryKey: ['user-bands'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["all-rehearsals"] }),
+        queryClient.invalidateQueries({ queryKey: ["user-bands"] }),
+        queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["band-payment-source-band", params.bandId] }),
+        queryClient.invalidateQueries({ queryKey: ["band-payment-source-profile"] }),
+      ]);
 
-      return rehearsalData.id;
+      return booking.bookingId;
     } catch (error) {
-      console.error('Failed to book rehearsal:', error);
+      console.error("Failed to book rehearsal:", error);
       if (isBandUnavailableError(error)) {
-        // Surfaced by the caller's conflict dialog instead of a generic toast.
         throw error;
       }
       toast({
-        title: 'Booking Failed',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
+        title: "Booking Failed",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
       });
       throw error;
     } finally {
