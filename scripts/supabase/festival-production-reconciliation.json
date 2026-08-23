@@ -22,7 +22,8 @@
     ["20260822154434", "align_festival_upgrade_currency_with_home_city"],
     ["20260822160017", "rebalance_festival_upgrade_purchase_cadence"],
     ["20260822160647", "clarify_festival_licence_plan_blockers"],
-    ["20260823084238", "repair_festival_edition_directory_contract"]
+    ["20260823084238", "repair_festival_edition_directory_contract"],
+    ["20260823085909", "enforce_festival_licence_capacity_caps_v2"]
   ],
   "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
   "postBootstrapExtensions": [
@@ -32,7 +33,8 @@
     "supabase/reconciliation/festival/20260822_festival_owner_functional_hotfixes.sql",
     "supabase/reconciliation/festival/20260822_festival_upgrade_cadence_rebalance.sql",
     "supabase/reconciliation/festival/20260822_festival_licence_plan_guidance.sql",
-    "supabase/reconciliation/festival/20260823_festival_edition_directory_contract.sql"
+    "supabase/reconciliation/festival/20260823_festival_edition_directory_contract.sql",
+    "supabase/reconciliation/festival/20260823_festival_licence_capacity_ceiling.sql"
   ],
   "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
 }
