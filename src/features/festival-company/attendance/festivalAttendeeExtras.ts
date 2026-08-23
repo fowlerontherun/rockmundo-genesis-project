@@ -106,6 +106,7 @@ export const parseFestivalCheckInEligibility = (value: unknown): FestivalCheckIn
       blockReason === null ||
       (typeof blockReason === "string" && BLOCK_REASONS.has(blockReason as FestivalCheckInBlockReason))
     ) ||
+    value.canCheckIn !== (blockReason === null) ||
     !isNullableString(value.startsOn) ||
     !isNullableString(value.endsOn) ||
     !isNullableUuid(value.cityId) ||
