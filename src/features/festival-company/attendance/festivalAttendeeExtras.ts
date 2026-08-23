@@ -34,6 +34,27 @@ export interface FestivalCheckInEligibility {
   wristbandIssued: boolean;
 }
 
+export interface FestivalCheckInResult {
+  attendanceId: string;
+  festivalLaunchId: string;
+  festivalEditionId: string;
+  status: "attending";
+  checkedInAt: string;
+  ticketStatus: "used";
+  wristbandIssued: boolean;
+  alreadyCheckedIn: boolean;
+}
+
+export interface FestivalLeaveEarlyResult {
+  attendanceId: string;
+  festivalLaunchId: string;
+  festivalEditionId: string;
+  status: "left_early";
+  checkedInAt: string;
+  leftAt: string;
+  alreadyLeft: boolean;
+}
+
 export interface FestivalMemorabiliaItem {
   id: string;
   festivalLaunchId: string;
@@ -148,6 +169,58 @@ export const parseFestivalCheckInEligibility = (value: unknown): FestivalCheckIn
 export const parseFestivalCheckInEligibilityList = (value: unknown): FestivalCheckInEligibility[] => {
   if (!Array.isArray(value)) throw new Error("malformed_festival_check_in_eligibility");
   return value.map(parseFestivalCheckInEligibility);
+};
+
+export const parseFestivalCheckInResult = (value: unknown): FestivalCheckInResult => {
+  if (
+    !isRecord(value) ||
+    !isUuid(value.attendanceId) ||
+    !isUuid(value.festivalLaunchId) ||
+    !isUuid(value.festivalEditionId) ||
+    value.status !== "attending" ||
+    typeof value.checkedInAt !== "string" ||
+    value.ticketStatus !== "used" ||
+    typeof value.wristbandIssued !== "boolean" ||
+    typeof value.alreadyCheckedIn !== "boolean"
+  ) {
+    throw new Error("malformed_festival_check_in_result");
+  }
+
+  return {
+    attendanceId: value.attendanceId,
+    festivalLaunchId: value.festivalLaunchId,
+    festivalEditionId: value.festivalEditionId,
+    status: "attending",
+    checkedInAt: value.checkedInAt,
+    ticketStatus: "used",
+    wristbandIssued: value.wristbandIssued,
+    alreadyCheckedIn: value.alreadyCheckedIn,
+  };
+};
+
+export const parseFestivalLeaveEarlyResult = (value: unknown): FestivalLeaveEarlyResult => {
+  if (
+    !isRecord(value) ||
+    !isUuid(value.attendanceId) ||
+    !isUuid(value.festivalLaunchId) ||
+    !isUuid(value.festivalEditionId) ||
+    value.status !== "left_early" ||
+    typeof value.checkedInAt !== "string" ||
+    typeof value.leftAt !== "string" ||
+    typeof value.alreadyLeft !== "boolean"
+  ) {
+    throw new Error("malformed_festival_leave_result");
+  }
+
+  return {
+    attendanceId: value.attendanceId,
+    festivalLaunchId: value.festivalLaunchId,
+    festivalEditionId: value.festivalEditionId,
+    status: "left_early",
+    checkedInAt: value.checkedInAt,
+    leftAt: value.leftAt,
+    alreadyLeft: value.alreadyLeft,
+  };
 };
 
 export const parseFestivalMemorabiliaItem = (value: unknown): FestivalMemorabiliaItem => {

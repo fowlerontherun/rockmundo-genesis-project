@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   parseFestivalCheckInEligibility,
   parseFestivalCheckInEligibilityList,
+  parseFestivalCheckInResult,
+  parseFestivalLeaveEarlyResult,
   parseFestivalMemorabiliaItem,
   parseFestivalMemorabiliaList,
 } from "../attendance/festivalAttendeeExtras";
@@ -31,6 +33,27 @@ const eligibility = {
   launchStatus: "sales_closed",
   editionStatus: "live",
   wristbandIssued: false,
+};
+
+const checkInResult = {
+  attendanceId,
+  festivalLaunchId: launchId,
+  festivalEditionId: editionId,
+  status: "attending",
+  checkedInAt: "2030-07-01T10:00:00Z",
+  ticketStatus: "used",
+  wristbandIssued: true,
+  alreadyCheckedIn: false,
+};
+
+const leaveResult = {
+  attendanceId,
+  festivalLaunchId: launchId,
+  festivalEditionId: editionId,
+  status: "left_early",
+  checkedInAt: "2030-07-01T10:00:00Z",
+  leftAt: "2030-07-01T22:00:00Z",
+  alreadyLeft: false,
 };
 
 const wristband = {
@@ -86,6 +109,38 @@ describe("Festival check-in readiness contracts", () => {
       canCheckIn: true,
       blockReason: "wrong_city",
     })).toThrow("malformed_festival_check_in_eligibility");
+  });
+});
+
+describe("Festival attendee mutation contracts", () => {
+  it("accepts an authoritative successful check-in", () => {
+    expect(parseFestivalCheckInResult(checkInResult)).toMatchObject({
+      status: "attending",
+      ticketStatus: "used",
+      wristbandIssued: true,
+    });
+  });
+
+  it("rejects a checked-in result that leaves the ticket reusable", () => {
+    expect(() => parseFestivalCheckInResult({ ...checkInResult, ticketStatus: "valid" }))
+      .toThrow("malformed_festival_check_in_result");
+  });
+
+  it("rejects a check-in result that did not enter attending state", () => {
+    expect(() => parseFestivalCheckInResult({ ...checkInResult, status: "ticketed" }))
+      .toThrow("malformed_festival_check_in_result");
+  });
+
+  it("accepts an authoritative leave-early result", () => {
+    expect(parseFestivalLeaveEarlyResult(leaveResult)).toMatchObject({
+      status: "left_early",
+      alreadyLeft: false,
+    });
+  });
+
+  it("rejects leave responses without a departure timestamp", () => {
+    expect(() => parseFestivalLeaveEarlyResult({ ...leaveResult, leftAt: null }))
+      .toThrow("malformed_festival_leave_result");
   });
 });
 
