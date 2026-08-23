@@ -22,6 +22,8 @@ export const festivalRunReadinessSchema = z.object({
   confirmedActs: z.number().int().nonnegative(),
   npcFillEnabled: z.boolean(),
   activeLicence: z.record(z.unknown()).nullable(),
+  licensedStageLimit: z.number().int().positive().nullable().optional(),
+  licensedActsPerDay: z.number().int().positive().nullable().optional(),
   alreadyRun: z.boolean(),
   canRun: z.boolean(),
   blockers: z.array(runBlockerSchema),

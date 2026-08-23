@@ -125,11 +125,29 @@ export function FestivalLiveControlRoom({
                     ready={readiness.confirmedActs > 0}
                   />
                   <ReadinessMetric
-                    label="Generated stages"
-                    value={readiness.stageCount.toString()}
+                    label="Active stages"
+                    value={
+                      readiness.licensedStageLimit
+                        ? `${readiness.stageCount} / ${readiness.licensedStageLimit}`
+                        : readiness.stageCount.toString()
+                    }
                     ready={readiness.stageCount > 0}
                   />
                 </div>
+
+                {readiness.licensedStageLimit || readiness.licensedActsPerDay ? (
+                  <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    Your active licence currently permits
+                    {readiness.licensedStageLimit
+                      ? ` ${readiness.licensedStageLimit} active stage${readiness.licensedStageLimit === 1 ? "" : "s"}`
+                      : " the generated stages"}
+                    {readiness.licensedActsPerDay
+                      ? ` and up to ${readiness.licensedActsPerDay} acts per day`
+                      : ""}
+                    . Permanent Festival upgrades can be built beyond these limits;
+                    the extra capability becomes usable after the licence is upgraded.
+                  </div>
+                ) : null}
 
                 {readiness.scheduledFor ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
