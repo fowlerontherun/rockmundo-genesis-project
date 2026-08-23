@@ -3,10 +3,10 @@
 **Status:** Active living plan  
 **Created:** 23 August 2026  
 **Last updated:** 23 August 2026  
-**Baseline:** `main` after merged PR #1617  
+**Baseline:** `main` after merged PR #1618  
 **Overall completion:** In progress  
-**Current Festival PR:** #1618 — Festival Mode shell + schedule reservation  
-**Next planned slice:** Automatic attendee completion + stale-state/reconnect recovery
+**Current Festival PR:** #1620 — automatic attendee completion + reconnect recovery  
+**Next planned slice:** Festival clock + basic day planner
 
 > This is the single source of truth for completing RockMundo Festivals. Every Festival PR must update this file and the PR Progress Register until the final certification gate passes.
 
@@ -82,8 +82,9 @@ Festival attendance should feel like a temporary mini-game inside RockMundo, not
 - [x] PR #1618: leaving early releases the Festival schedule reservation.
 - [x] PR #1618: `attending` globally activates a reduced responsive Festival Mode shell.
 - [x] PR #1618: refresh/back/mobile/desktop paths remain inside Festival Mode while authoritative state is `attending`.
-- [ ] Automatic `attending → completed` transition after Festival end.
-- [ ] Stale/missing lock or wristband state can self-repair safely.
+- [x] PR #1620: automatic `attending → completed` transition after the Festival-local event window ends.
+- [x] PR #1620: stale/missing schedule lock or wristband state can self-repair safely for a genuinely checked-in character.
+- [x] PR #1620: reconnect/focus/open-session reconciliation returns the UI to authoritative attendance state.
 - [ ] Festival Home evolves to show live Festival day/time and next activity.
 - [ ] My Day/Stages/Food & Drink/Activities/Social/Campsite/Map/Character become functional views.
 - [ ] Day planner supports 30/60/90-minute blocks and conflict-safe changes.
@@ -119,7 +120,7 @@ Festival attendance should feel like a temporary mini-game inside RockMundo, not
 ### Admin / operations / quality
 
 - [ ] Admin can inspect Festival company/edition/readiness/tickets/attendees/bookings/runtime/settlement.
-- [ ] Safe audited stuck-state recovery exists.
+- [ ] Safe audited admin stuck-state recovery exists.
 - [ ] Key Festival balance parameters are configurable.
 - [ ] Legacy routes/RPCs/tables are retired, archived or explicitly retained with reason.
 - [ ] Mobile Festival experience is fully usable.
@@ -134,9 +135,9 @@ Festival attendance should feel like a temporary mini-game inside RockMundo, not
 
 The modern replacement already has Festival company ownership, annual editions, upgrades/licence ceilings, simplified planning, server-driven ticket demand, sponsorship/budget forecasting, player-act booking, NPC filler, simplified permits, edition-aware currency, public launch/ticketing, attendee lifecycle, readiness, wristbands and authoritative check-in/leave.
 
-### PR #1618 — Festival Mode + schedule reservation
+### PR #1618 — Festival Mode + schedule reservation — merged
 
-This slice adds:
+This slice added:
 
 - global Festival Mode when the active character is `attending`;
 - a responsive reduced shell shared by desktop/mobile;
@@ -160,17 +161,46 @@ Canonical migrations:
 
 At introduction production had zero attendee rows and zero existing Festival schedule reservation rows.
 
+### PR #1620 — automatic completion + reconnect recovery — in progress
+
+This slice adds:
+
+- server-authoritative completion at midnight immediately after `edition.ends_on` in the Festival city timezone;
+- a five-minute `pg_cron` job so completion does not depend on a player browser/Vercel process;
+- idempotent completion of the shared Festival schedule reservation;
+- current-character reconciliation on attendance reads;
+- reconnect/window-focus/60-second foreground refresh so an open Festival Mode session converges quickly after completion;
+- one-way ticket repair (`valid → used`) only for an authoritative checked-in attendee;
+- safe wristband restoration without replaying check-in;
+- safe reattachment/recreation of a missing Festival schedule reservation only when no normal commitment conflicts;
+- duplicate Festival reservation retirement without deleting history;
+- strict frontend parsing of reconciliation responses.
+
+Production migration:
+
+- `20260823185743_festival_attendee_completion_recovery`
+
+Canonical migration:
+
+- `20291218255200_festival_attendee_completion_recovery.sql`
+
+Production cron:
+
+- `festival-attendee-completion` — `*/5 * * * *`
+
+A manual production batch check returned zero rows examined/completed, which matches the current zero live attendee rows. Supabase security advisors returned no findings after the migration. Performance-advisor output remains existing project-wide policy/index debt and introduced no identified Festival-specific blocker.
+
 ---
 
 ## 5. Remaining workstreams
 
 ### A. Attendance lifecycle + recovery
 
-- Automatic completion when the Festival-local date passes the edition end.
-- Mark schedule reservation completed/released at completion.
-- Reconcile inconsistent `attending` rows with missing lock/wristband/ticket state.
-- Preserve idempotency and immutable historical timestamps.
-- Keep refresh/relogin driven by server state.
+- [x] Automatic completion when the Festival-local event window ends. **PR #1620**
+- [x] Mark schedule reservation completed/released at completion. **PR #1620**
+- [x] Reconcile safe inconsistent `attending` state with missing lock/wristband/used-ticket marker. **PR #1620**
+- [x] Preserve authoritative historical check-in/completion timestamps and idempotent completion. **PR #1620**
+- [x] Keep refresh/relogin/focus driven by server reconciliation rather than browser date calculations. **PR #1620**
 
 ### B. Festival clock + day planner
 
@@ -256,9 +286,9 @@ Add diagnostics/recovery/balance controls, maintain active-caller inventory, ret
 ## 6. Logical Festival completion PR sequence
 
 1. **Check-in / leave authority** — #1616 merged.
-2. **Festival Mode shell + schedule lock/unlock** — #1618 in progress.
-3. **Automatic attendee completion + stale-state/reconnect recovery** — next.
-4. **Festival clock + basic day planner**.
+2. **Festival Mode shell + schedule lock/unlock** — #1618 merged.
+3. **Automatic attendee completion + stale-state/reconnect recovery** — #1620 in progress.
+4. **Festival clock + basic day planner** — next.
 5. **Condition stats + Eat/Drink/Explore/Rest**.
 6. **Watch Band + timetable integration + inspiration**.
 7. **Food/drink/merch authoritative economy**.
@@ -284,8 +314,9 @@ Do not jump to rewards/random events before attendance lifecycle, Festival Mode,
 - Ticket purchase/check-in/activity/reward/settlement mutations are server authoritative.
 - Financial mutations are idempotent and ledger-backed.
 - One attendee lifecycle and one wristband per character/edition.
-- Admission ticket is consumed once.
+- Admission ticket is consumed once; recovery may only move `valid → used`, never restore reusable admission.
 - Festival schedule reservation cannot be forged/deleted by the player.
+- Recovery never cancels unrelated normal commitments to recreate a Festival lock.
 - Real audience counts unique eligible attendees once per performance.
 - Engagement/rewards have per-attendee/event/day caps and diminishing returns where needed.
 - Owners receive aggregate engagement, not unrestricted private attendee state.
@@ -308,7 +339,7 @@ Attend → own Festival slot appears → canonical gig performance → return to
 Plan → player act confirmed → tickets → launch → NPC/real attendees → runtime → settlement → engagement/progression → immutable history → next annual edition.
 
 ### Failure/abuse
-Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule conflict; duplicate check-in; direct RPC against another attendee; direct overlapping schedule insert; duplicate rewards; finance retry; relog mid-event; settlement retry.
+Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule conflict; duplicate check-in; direct RPC against another attendee; direct overlapping schedule insert; stale missing Festival lock; missing wristband; relog/reconnect at Festival end; duplicate completion; duplicate rewards; finance retry; settlement retry.
 
 ---
 
@@ -320,6 +351,7 @@ Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule
 - Finance must be verified against ledgers through final settlement rather than trusted from forecasts alone.
 - Ticket consumption currently uses status/update timestamp; dedicated `used_at` can be considered during ticket-lifecycle hardening.
 - Real-player engagement/reward multipliers require explicit caps before rollout.
+- Project-wide Supabase performance-advisor warnings pre-date PR #1620 and should be handled separately from the Festival completion programme unless a Festival-specific regression appears.
 
 ---
 
@@ -332,7 +364,8 @@ Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule
 | #1615 | Merged | Living completion plan | Programme tracker created |
 | #1616 | Merged | Authoritative check-in / leave | First writable attendee lifecycle boundary |
 | #1617 | Merged | Tracker reconciliation | Plan aligned after #1616 |
-| #1618 | **In progress** | Festival Mode + schedule reservation | Reduced attendee shell + server-owned schedule lock |
+| #1618 | Merged | Festival Mode + schedule reservation | Reduced attendee shell + server-owned schedule lock |
+| #1620 | **In progress** | Automatic completion + reconnect recovery | Server completion, safe stale-state repair and reconnect convergence |
 
 Every later Festival PR must update this register.
 
@@ -340,20 +373,23 @@ Every later Festival PR must update this register.
 
 ## 11. Next planned slice
 
-### Festival Completion PR 3 — automatic completion + recovery
+### Festival Completion PR 4 — Festival clock + basic day planner
 
 Target scope:
 
-- Server-authoritative transition from `attending` to `completed` once the Festival-local event window has ended.
-- Release/complete the associated `festival_attendance` schedule reservation.
-- Preserve `checked_in_at`; set `completed_at` exactly once.
-- Reconcile/repair safe stale state such as missing schedule reservation or wristband for a genuinely attending character.
-- Never recreate a valid admission ticket after it has been consumed.
-- Ensure refresh/relogin after completion returns to normal RockMundo UI.
-- Add focused lifecycle/recovery tests.
+- Expose authoritative Festival-local date/time/day inside Festival Mode.
+- Create the persistent attendee day-plan model against the active Festival edition.
+- Support 30/60/90-minute plan blocks.
+- Add functional **My Day** navigation and timeline.
+- Add a useful Festival Home next-activity panel.
+- Validate activities against the edition/day window and prevent overlapping plan blocks.
+- Support safe future-plan changes without rewriting completed history.
+- Define missed-activity and multi-day rollover rules.
+- Keep activity outcomes/rewards out of this slice except where needed to prove planner state transitions.
+- Add focused planner/timezone/concurrency tests.
 - Update this plan/register in the same PR.
 
-No day planner or rewards in that slice.
+No condition simulation, food/drink economy, random events or XP/AP rewards in that slice.
 
 ---
 
