@@ -3,9 +3,9 @@
 **Status:** Active living plan  
 **Created:** 23 August 2026  
 **Last updated:** 23 August 2026  
-**Baseline:** `main` after merged PR #1615  
+**Baseline:** `main` after merged PR #1616  
 **Overall completion:** In progress  
-**Current Festival PR:** #1616 — authoritative attendee check-in / leave  
+**Current Festival PR:** #1617 — tracker reconciliation after #1616  
 **Next planned slice:** Festival Mode shell + schedule lock/unlock
 
 > This is the single source of truth for completing RockMundo Festivals. Every Festival PR must update this document and the PR Progress Register until the final certification gate passes.
@@ -142,10 +142,11 @@ The attendee experience should feel like a temporary **Festival mini-game inside
 - Character attendee lifecycle from issued admission tickets.
 - Server-derived check-in readiness.
 - Wristband keepsakes in Inventory Manager.
+- Authoritative attendee check-in and early-leave mutations.
 
-### Current implementation — PR #1616
+### Latest completed implementation — PR #1616
 
-PR #1616 establishes the first writable attendee lifecycle boundary:
+PR #1616 established the first writable attendee lifecycle boundary:
 
 - `check_in_to_festival(uuid)` is server authoritative.
 - Active character ownership is revalidated.
@@ -173,7 +174,7 @@ Canonical repository migration:
 
 ### A — Attendance authority + Festival Mode
 
-- Check-in / leave authority. **PR #1616**
+- Check-in / leave authority. **Completed in PR #1616**
 - Automatic completion after Festival end.
 - Schedule block/unblock.
 - Festival Mode route/layout/nav.
@@ -290,8 +291,8 @@ Owner effects may include reputation, next-edition demand, sponsor/vendor appeal
 
 Logical sequence; scopes may be split further if needed.
 
-1. **Check-in / leave authority** — **PR #1616, in progress**.
-2. **Festival Mode shell + schedule lock/unlock**.
+1. **Check-in / leave authority** — **PR #1616, merged**.
+2. **Festival Mode shell + schedule lock/unlock** — next.
 3. **Automatic attendee completion + reconnect recovery**.
 4. **Festival clock + basic day planner**.
 5. **Condition stats + basic Eat/Drink/Explore/Rest**.
@@ -377,7 +378,7 @@ Plan annual edition → confirm player act → tickets → launch → real/NPC a
 - Production-first Festival migrations require repository reconciliation discipline.
 - Global repo CI sometimes exposes unrelated stale touring/migration assertions; Festival failures must be separated from unrelated debt, not hidden.
 - Finance must be certified against ledger entries through final settlement, not inferred from UI forecasts.
-- `festival_issued_tickets` currently tracks consumption through `status`/`updated_at`; a dedicated use timestamp can be considered in the later full ticket-lifecycle hardening if useful.
+- `festival_issued_tickets` currently tracks consumption through `status`/`updated_at`; a dedicated use timestamp can be considered in later ticket-lifecycle hardening if useful.
 - Real-player engagement/reward systems will need explicit caps before rollout.
 
 ---
@@ -389,15 +390,14 @@ Plan annual edition → confirm player act → tickets → launch → real/NPC a
 | #1613 | Merged | Character attendee foundation | Added ticketed attendee lifecycle |
 | #1614 | Merged | Check-in readiness + wristband keepsakes | Added eligibility + memorabilia |
 | #1615 | Merged | Living Festival completion plan | Established this programme tracker |
-| #1616 | **In progress** | Authoritative check-in / leave | Completes first attendee mutation boundary |
+| #1616 | **Merged** | Authoritative check-in / leave | Completed first attendee mutation boundary |
+| #1617 | **In progress** | Tracker reconciliation | Brings living plan in line with merged #1616 |
 
 Every later Festival PR must add/update its row here.
 
 ---
 
 ## 12. Next planned slice
-
-After #1616 is merged and certified:
 
 ### Festival Completion PR 2 — Festival Mode shell + schedule lock/unlock
 
