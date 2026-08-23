@@ -1,15 +1,16 @@
 name: Temporary Festival Runtime Currency Patch
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/festival-runtime-currency
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch-and-certify:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check out Festival branch
