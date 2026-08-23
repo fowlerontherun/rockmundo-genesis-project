@@ -40,12 +40,41 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
     queryKey: ["band-payment-source-band", bandId],
     queryFn: async () => {
       if (!bandId) return null;
-      const { data } = await supabase
-        .from("bands")
-        .select("id, name, band_balance")
-        .eq("id", bandId)
-        .maybeSingle();
-      return data;
+
+      const [bandResult, dashboardResult] = await Promise.all([
+        supabase
+          .from("bands")
+          .select("id, name, band_balance")
+          .eq("id", bandId)
+          .maybeSingle(),
+        (supabase as any).rpc("get_band_treasury_dashboard", {
+          p_band_id: bandId,
+        }),
+      ]);
+
+      const band = bandResult.data;
+      if (!band) return null;
+
+      const dashboard = dashboardResult.data as any;
+      const treasuries = Array.isArray(dashboard?.treasuries)
+        ? dashboard.treasuries
+        : [];
+      const primaryTreasury =
+        treasuries.find((treasury: any) => treasury?.isPrimary) ?? treasuries[0];
+
+      // Spending checks must use the same available treasury balance that the
+      // atomic server RPC uses (balance minus reservations), not the deprecated
+      // bands.band_balance compatibility mirror. Fall back only for bands whose
+      // treasury has not yet been seeded.
+      const treasuryAvailable =
+        dashboard?.status === "ok" && primaryTreasury
+          ? Number(primaryTreasury.availableBalanceMinor ?? 0) / 100
+          : null;
+
+      return {
+        ...band,
+        treasury_available: treasuryAvailable,
+      };
     },
     enabled: !!bandId,
     staleTime: 15_000,
@@ -66,7 +95,9 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
     staleTime: 15_000,
   });
 
-  const bandBalance = Number(bandRow?.band_balance ?? 0);
+  const bandBalance = Number(
+    bandRow?.treasury_available ?? bandRow?.band_balance ?? 0,
+  );
   const personalBalance = Number(profileRow?.cash ?? 0);
 
   const canAfford = useCallback(
@@ -118,13 +149,24 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["band-payment-source-band", bandId] }),
-        queryClient.invalidateQueries({ queryKey: ["band-payment-source-profile", profileId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["band-payment-source-band", bandId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["band-payment-source-profile", profileId],
+        }),
       ]);
 
       return topUp;
     },
-    [bandId, source, bandBalance, personalBalance, profileId, queryClient],
+    [
+      bandId,
+      source,
+      bandBalance,
+      personalBalance,
+      profileId,
+      queryClient,
+    ],
   );
 
   return useMemo(
@@ -137,6 +179,13 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
       canAfford,
       prepareFunds,
     }),
-    [source, bandRow?.name, bandBalance, personalBalance, canAfford, prepareFunds],
+    [
+      source,
+      bandRow?.name,
+      bandBalance,
+      personalBalance,
+      canAfford,
+      prepareFunds,
+    ],
   );
 }
