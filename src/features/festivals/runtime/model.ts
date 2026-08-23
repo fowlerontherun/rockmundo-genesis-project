@@ -13,6 +13,7 @@ export const runtimeTransitionTargets: Record<FestivalRuntimeState, readonly Fes
 const readiness = z.object({ ready: z.number().int().nonnegative(), total: z.number().int().nonnegative() });
 export const runtimeProjectionSchema = z.object({
   runtimeId: z.string().uuid(), festivalCompanyId: z.string().uuid(), editionId: z.string().uuid(),
+  currencyCode: z.string().trim().length(3).transform((value) => value.toUpperCase()),
   state: z.enum(runtimeStates), version: z.number().int().positive(), simulatedTime: z.string(),
   gates: z.object({ status: z.enum(["closed", "open", "paused"]), queueSize: z.number().int().nonnegative(), waitMinutes: z.number().nonnegative() }),
   attendance: z.object({ expected: z.number().int().nonnegative(), admitted: z.number().int().nonnegative(), onsite: z.number().int().nonnegative(), departed: z.number().int().nonnegative(), capacity: z.number().int().nonnegative() }),
