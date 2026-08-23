@@ -1,3 +1,195 @@
-import {useState} from "react";import {useParams} from "react-router-dom";import {usePublicFestival,usePurchaseFestivalTickets} from "../application/useFestivalLaunch";import {formatFestivalLaunchMoney} from "../domain/festivalLaunch";import {Badge} from "@/components/ui/badge";import {Button} from "@/components/ui/button";import {Card,CardContent,CardHeader,CardTitle} from "@/components/ui/card";import {Tabs,TabsContent,TabsList,TabsTrigger} from "@/components/ui/tabs";
-const Countdown=({target}:{target:string})=>{const remaining=Math.max(0,Date.parse(target)-Date.now());if(!remaining)return <p className="font-semibold">Festival opening is scheduled now.</p>;const minutes=Math.floor(remaining/60000);return <p aria-label="Festival countdown" className="text-xl font-bold">{Math.floor(minutes/1440)} days {Math.floor(minutes%1440/60)} hours {minutes%60} minutes</p>};
-export default function PublicFestivalPage(){const {festivalCompanyIdentifier}=useParams();const {data:f,isLoading,isError}=usePublicFestival(festivalCompanyIdentifier);const buy=usePurchaseFestivalTickets();const [quantity,setQuantity]=useState(1);if(isLoading)return <main className="p-8" role="status">Loading Festival…</main>;if(isError||!f)return <main className="p-8" role="alert">Festival not found.</main>;return <main><header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12"><div className="mx-auto max-w-6xl"><Badge>{f.launchStatus.replaceAll("_"," ")}</Badge><h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1><p className="mt-3 max-w-3xl text-lg">{f.tagline}</p><p className="mt-5">{f.city}, {f.country} · {new Date(f.startsAt).toLocaleDateString("en-GB")}–{new Date(f.endsAt).toLocaleDateString("en-GB")}</p><div className="mt-5"><Countdown target={f.countdownTarget}/><span className="text-xs">Festival local time: {f.timezone}</span></div></div></header><div className="mx-auto max-w-6xl p-4 md:p-8"><Tabs defaultValue="overview"><TabsList className="h-auto flex-wrap"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="lineup">Line-up</TabsTrigger><TabsTrigger value="timetable">Timetable</TabsTrigger><TabsTrigger value="tickets">Tickets</TabsTrigger><TabsTrigger value="information">Information</TabsTrigger></TabsList><TabsContent value="overview"><Card><CardContent className="pt-6"><p>{f.description}</p><h2 className="mt-6 text-2xl font-bold">Sponsors</h2><div className="mt-3 flex flex-wrap gap-3">{f.sponsors.map(s=><Badge key={s.id} variant="outline">{s.name} · {s.relationshipLabel}</Badge>)}</div></CardContent></Card></TabsContent><TabsContent value="lineup"><section className="grid gap-3 sm:grid-cols-2">{f.timetable.map(x=><Card key={x.id}><CardHeader><CardTitle>{x.artistName} {x.headline&&<Badge>Headliner</Badge>}</CardTitle></CardHeader><CardContent>{x.stageName} · {new Date(x.startsAt).toLocaleString("en-GB",{timeZone:f.timezone})}</CardContent></Card>)}</section></TabsContent><TabsContent value="timetable"><div className="space-y-2">{f.timetable.map(x=><article key={x.id} className="grid grid-cols-[5rem_1fr] rounded-lg border p-3"><time>{new Date(x.startsAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:f.timezone})}</time><div><strong>{x.artistName}</strong><p className="text-sm text-muted-foreground">{x.stageName}</p></div></article>)}</div></TabsContent><TabsContent value="tickets"><section className="grid gap-4 md:grid-cols-2">{f.ticketProducts.map(p=><Card key={p.id}><CardHeader><CardTitle>{p.name}</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-2xl font-bold">{formatFestivalLaunchMoney(p.totalMinor,p.currency)}</p><p>{p.accessStartDate}–{p.accessEndDate} · {p.availableQuantity} available</p>{p.productClass!=="admission"&&<p className="text-sm text-amber-600">This is an add-on or upgrade and does not grant Festival admission.</p>}<label className="block">Quantity <input aria-label={`Quantity for ${p.name}`} className="ml-2 w-16 rounded border bg-background p-2" type="number" min={1} max={p.purchaseLimit} value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label><Button disabled={buy.isPending||p.availableQuantity===0||f.launchStatus!=="tickets_on_sale"} onClick={()=>buy.mutate({festivalLaunchId:f.id,ticketProductId:p.id,quantity,idempotencyKey:crypto.randomUUID()})}>{buy.isPending?"Completing purchase…":p.availableQuantity===0?"Sold out":"Confirm purchase"}</Button>{buy.isError&&<p role="alert">{buy.error.message.replaceAll("_"," ")}</p>}{buy.isSuccess&&<p role="status">Purchase complete. {buy.data.tickets.length} ticket(s) issued.</p>}</CardContent></Card>)}</section></TabsContent><TabsContent value="information"><dl className="grid gap-5 md:grid-cols-2">{Object.entries(f.information).map(([k,v])=><div key={k}><dt className="font-bold capitalize">{k.replace(/([A-Z])/g," $1")}</dt><dd>{v||"Information coming soon."}</dd></div>)}</dl></TabsContent></Tabs></div></main>}
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth-context";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMyFestivalAttendance } from "../attendance/useFestivalAttendance";
+import { usePublicFestival, usePurchaseFestivalTickets } from "../application/useFestivalLaunch";
+import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
+
+const Countdown = ({ target }: { target: string }) => {
+  const remaining = Math.max(0, Date.parse(target) - Date.now());
+  if (!remaining) return <p className="font-semibold">Festival opening is scheduled now.</p>;
+  const minutes = Math.floor(remaining / 60000);
+  return (
+    <p aria-label="Festival countdown" className="text-xl font-bold">
+      {Math.floor(minutes / 1440)} days {Math.floor((minutes % 1440) / 60)} hours {minutes % 60} minutes
+    </p>
+  );
+};
+
+export default function PublicFestivalPage() {
+  const { festivalCompanyIdentifier } = useParams();
+  const { user } = useAuth();
+  const { data: f, isLoading, isError } = usePublicFestival(festivalCompanyIdentifier);
+  const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
+  const buy = usePurchaseFestivalTickets();
+  const [quantity, setQuantity] = useState(1);
+
+  if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
+  if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
+
+  const myAttendance = attendance.find(
+    (item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded",
+  );
+
+  return (
+    <main>
+      <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
+        <div className="mx-auto max-w-6xl">
+          <Badge>{f.launchStatus.replaceAll("_", " ")}</Badge>
+          <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
+          <p className="mt-3 max-w-3xl text-lg">{f.tagline}</p>
+          <p className="mt-5">
+            {f.city}, {f.country} · {new Date(f.startsAt).toLocaleDateString("en-GB")}–
+            {new Date(f.endsAt).toLocaleDateString("en-GB")}
+          </p>
+          <div className="mt-5">
+            <Countdown target={f.countdownTarget} />
+            <span className="text-xs">Festival local time: {f.timezone}</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl p-4 md:p-8">
+        {myAttendance && (
+          <Card className="mb-4 border-emerald-500/40 bg-emerald-500/5">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">You&apos;re attending</Badge>
+                  <span className="text-sm capitalize text-muted-foreground">
+                    {myAttendance.status.replaceAll("_", " ")}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Admission ticket {myAttendance.ticketReference}
+                  {myAttendance.includesCamping ? " · Camping included" : ""}
+                  {myAttendance.includesVipArea ? " · VIP access" : ""}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs defaultValue="overview">
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="lineup">Line-up</TabsTrigger>
+            <TabsTrigger value="timetable">Timetable</TabsTrigger>
+            <TabsTrigger value="tickets">Tickets</TabsTrigger>
+            <TabsTrigger value="information">Information</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview">
+            <Card>
+              <CardContent className="pt-6">
+                <p>{f.description}</p>
+                <h2 className="mt-6 text-2xl font-bold">Sponsors</h2>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {f.sponsors.map((s) => (
+                    <Badge key={s.id} variant="outline">{s.name} · {s.relationshipLabel}</Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="lineup">
+            <section className="grid gap-3 sm:grid-cols-2">
+              {f.timetable.map((x) => (
+                <Card key={x.id}>
+                  <CardHeader>
+                    <CardTitle>{x.artistName} {x.headline && <Badge>Headliner</Badge>}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {x.stageName} · {new Date(x.startsAt).toLocaleString("en-GB", { timeZone: f.timezone })}
+                  </CardContent>
+                </Card>
+              ))}
+            </section>
+          </TabsContent>
+
+          <TabsContent value="timetable">
+            <div className="space-y-2">
+              {f.timetable.map((x) => (
+                <article key={x.id} className="grid grid-cols-[5rem_1fr] rounded-lg border p-3">
+                  <time>
+                    {new Date(x.startsAt).toLocaleTimeString("en-GB", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: f.timezone,
+                    })}
+                  </time>
+                  <div>
+                    <strong>{x.artistName}</strong>
+                    <p className="text-sm text-muted-foreground">{x.stageName}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tickets">
+            <section className="grid gap-4 md:grid-cols-2">
+              {f.ticketProducts.map((p) => (
+                <Card key={p.id}>
+                  <CardHeader><CardTitle>{p.name}</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-2xl font-bold">{formatFestivalLaunchMoney(p.totalMinor, p.currency)}</p>
+                    <p>{p.accessStartDate}–{p.accessEndDate} · {p.availableQuantity} available</p>
+                    {p.productClass !== "admission" && (
+                      <p className="text-sm text-amber-600">
+                        This is an add-on or upgrade and does not grant Festival admission.
+                      </p>
+                    )}
+                    <label className="block">
+                      Quantity
+                      <input
+                        aria-label={`Quantity for ${p.name}`}
+                        className="ml-2 w-16 rounded border bg-background p-2"
+                        type="number"
+                        min={1}
+                        max={p.purchaseLimit}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Number(e.target.value))}
+                      />
+                    </label>
+                    <Button
+                      disabled={buy.isPending || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale"}
+                      onClick={() => buy.mutate({
+                        festivalLaunchId: f.id,
+                        ticketProductId: p.id,
+                        quantity,
+                        idempotencyKey: crypto.randomUUID(),
+                      })}
+                    >
+                      {buy.isPending ? "Completing purchase…" : p.availableQuantity === 0 ? "Sold out" : "Confirm purchase"}
+                    </Button>
+                    {buy.isError && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
+                    {buy.isSuccess && (
+                      <p role="status">Purchase complete. {buy.data.tickets.length} ticket(s) issued.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </section>
+          </TabsContent>
+
+          <TabsContent value="information">
+            <dl className="grid gap-5 md:grid-cols-2">
+              {Object.entries(f.information).map(([k, v]) => (
+                <div key={k}>
+                  <dt className="font-bold capitalize">{k.replace(/([A-Z])/g, " $1")}</dt>
+                  <dd>{v || "Information coming soon."}</dd>
+                </div>
+              ))}
+            </dl>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </main>
+  );
+}
