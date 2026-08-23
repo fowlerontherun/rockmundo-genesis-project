@@ -57,8 +57,22 @@ describe("festival company strict RPC parsers", () => {
       configurationComplete: false,
       firstEditionExists: false,
       companyBalance: 0,
+      currencyCode: "GBP",
       managementEnabled: true,
     })).toBe(true);
+    expect(isOwnedFestivalCompanySummary({
+      festivalCompanyId: uuid,
+      companyId: uuid2,
+      publicName: "Runtime Fest",
+      legalCompanyName: "Runtime LLC",
+      setupStatus: "setup_required",
+      setupCompleted: false,
+      configurationComplete: false,
+      firstEditionExists: false,
+      companyBalance: 0,
+      currencyCode: "GB",
+      managementEnabled: true,
+    })).toBe(false);
     expect(isOwnedFestivalCompanySummary({ festivalCompanyId: uuid, companyId: uuid2, publicName: "Runtime Fest", legalCompanyName: "Runtime LLC" })).toBe(false);
   });
 });
