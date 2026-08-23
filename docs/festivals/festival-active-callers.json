@@ -765,6 +765,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -824,6 +825,7 @@
         "src/components/onboarding/steps/StartingCityStep.tsx",
         "src/hooks/useCityDevelopment.ts",
         "src/hooks/useCityElections.ts",
+        "src/hooks/useCityFestivalPermits.ts",
         "src/hooks/useCityLaws.ts",
         "src/hooks/useCityProjects.ts",
         "src/hooks/useDjPerformance.ts",
@@ -840,6 +842,8 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.ts",
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -866,8 +870,10 @@
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
+        "src/lib/api/__tests__/promotedGenreGigDemand.database.test.ts",
         "src/utils/bandFame.ts",
         "src/utils/bandRivalry.ts",
         "src/utils/charterFlight.ts",
@@ -921,6 +927,7 @@
         "src/pages/hubs/EventsHub.tsx",
         "src/components/HowToPlayDialog.tsx",
         "src/components/admin/AdminNav.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/festivals/FestivalBrowser.tsx",
         "src/components/festivals/FestivalCard.tsx",
         "src/components/ui/Breadcrumbs.tsx",
@@ -1275,7 +1282,21 @@
       "importers": [
         "src/pages/MayorDashboard.tsx",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/components/city/MayorFestivalPermitQueue.tsx",
+      "kind": "module",
+      "importers": [
+        "src/components/city/MayorCityServicesTab.tsx",
+        "src/hooks/useCityFestivalPermits.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
@@ -1721,6 +1742,19 @@
       "writes": []
     },
     {
+      "file": "src/hooks/useCityFestivalPermits.ts",
+      "kind": "hook",
+      "importers": [
+        "src/components/city/MayorFestivalPermitQueue.tsx",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
       "file": "src/hooks/useCityLaws.ts",
       "kind": "hook",
       "importers": [
@@ -2123,6 +2157,7 @@
         "src/features/festivals/booking/__tests__/useStableMutationIdempotencyKey.test.tsx",
         "src/features/festival-company/__tests__/festivalRuntime.test.ts",
         "src/lib/companyRecruitmentLifecycle.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/utils/__tests__/marketplaceFramework.test.ts"
       ],
@@ -2311,9 +2346,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -2356,6 +2393,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -3100,6 +3138,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -3613,6 +3652,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -3646,6 +3686,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -3848,9 +3889,11 @@
         "src/features/festivals/legacyResolver.ts",
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -3893,6 +3936,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -4328,6 +4372,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -4371,6 +4417,7 @@
       "kind": "module",
       "importers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -4418,6 +4465,7 @@
         "src/components/band/BandApplicationsList.tsx",
         "src/components/band/BandSettings.tsx",
         "src/components/band/BandSettingsTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/company/CompanyRecruitmentLifecycle.tsx",
         "src/components/festivals/admin/FestivalBulkReviewPanel.tsx",
         "src/hooks/useFestivalSlotApplications.ts",
@@ -4430,6 +4478,7 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festivals/ui/simplifiedFestivalCompanyHome.test.ts",
@@ -5006,6 +5055,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -5737,9 +5787,11 @@
         "src/hooks/__tests__/useCompanyShareOffers.authority.test.ts",
         "src/hooks/__tests__/useFinances.authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/FestivalBudgetForecast.tsx",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -5807,6 +5859,7 @@
         "src/lib/api/__tests__/charityDonations.database.test.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
         "src/utils/gearModifiers.ts",
@@ -6343,6 +6396,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -6856,6 +6910,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -6889,6 +6944,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -7141,6 +7197,8 @@
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
         "src/features/festivals/booking/useResolvedFestivalEdition.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -7279,6 +7337,7 @@
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/booking/components/CanonicalOrganiserBookingWorkspace.tsx",
@@ -7693,6 +7752,7 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/migration.test.ts",
         "src/features/festivals/annual-plan/model.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.ts",
         "src/features/festivals/performance/model.ts",
@@ -7866,6 +7926,7 @@
         "src/lib/band-permissions.ts",
         "src/lib/managerRecommendations.ts",
         "src/lib/wellnessSystem.ts",
+        "src/lib/api/__tests__/promotedGenreGigDemand.database.test.ts",
         "src/lib/api/__tests__/setlistPerformanceItemMigration.database.test.ts",
         "src/lib/api/__tests__/setlistPerformancePolicyMigration.database.test.ts",
         "src/utils/gigExecution.ts",
@@ -7925,6 +7986,150 @@
       "writes": []
     },
     {
+      "file": "src/features/festivals/budget/FestivalBudgetForecast.tsx",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/model.ts",
+        "src/features/festivals/budget/repository.ts",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
+        "src/features/festival-company/application/useFestivalTicketPlan.ts",
+        "src/features/festival-company/ui/FestivalTicketPlanner.tsx"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/budget/automaticSponsorship.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/budget/model.ts",
+      "kind": "module",
+      "importers": [
+        "src/pages/Modeling.tsx",
+        "src/pages/NewSocialActivity.tsx",
+        "src/pages/OffersDashboard.tsx",
+        "src/pages/PersonalVehicles.tsx",
+        "src/pages/ProgressionPanel.tsx",
+        "src/pages/VersionHistory.tsx",
+        "src/pages/admin/AISongGeneration.tsx",
+        "src/pages/admin/BandAvatarsAdmin.tsx",
+        "src/pages/festivals/FestivalLegacyPage.tsx",
+        "src/pages/hubs/CareerBusinessHub.tsx",
+        "src/pages/hubs/CareerHub.tsx",
+        "src/components/avatar-system/ReadyPlayerMeAvatar.tsx",
+        "src/components/avatar-system/SharedRpmAvatar.tsx",
+        "src/components/bands/BandRolesTab.tsx",
+        "src/components/events/EventAnalytics.tsx",
+        "src/components/events/EventPricingStrategy.tsx",
+        "src/components/modeling/ModelingCareerProgress.tsx",
+        "src/components/modeling/ModelingOffersPanel.tsx",
+        "src/components/recording-studio-business/RecordingStudioEquipmentManager.tsx",
+        "src/components/wellness/CareerStageLongevityPanel.tsx",
+        "src/components/wellness/TimeAwayLongevityPanel.tsx",
+        "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/annual-plan/model.test.ts",
+        "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
+        "src/features/festivals/editions/repository.test.ts",
+        "src/features/festivals/outcomes/components.tsx",
+        "src/features/festivals/outcomes/hooks.ts",
+        "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/outcomes/mappers.ts",
+        "src/features/festivals/outcomes/model.ts",
+        "src/features/festivals/outcomes/service.ts",
+        "src/features/festivals/outcomes/types.ts",
+        "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/performance/service.ts",
+        "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/service.ts",
+        "src/features/festivals/scheduling/schedulingModel.test.ts",
+        "src/features/festivals/scheduling/service.ts",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
+        "src/features/festivals/settlement/model.test.ts",
+        "src/features/festivals/settlement/repository.ts",
+        "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
+        "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
+        "src/features/festivals/legacy/__tests__/model.test.ts",
+        "src/features/festivals/outcomes/__tests__/model.test.ts",
+        "src/features/festivals/performance/__tests__/model.test.ts",
+        "src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx",
+        "src/lib/cityEconomy.test.ts",
+        "src/lib/foodWellness.test.ts",
+        "src/lib/songwritingResilientLoader.test.ts",
+        "src/lib/api/__tests__/defaultAdminSeedSecurity.database.test.ts",
+        "src/utils/clothingXpRewards.ts",
+        "src/utils/gearImages.ts",
+        "src/utils/modelingOfferGenerator.ts",
+        "src/utils/skillLearningMultiplier.ts",
+        "src/config/fmNavigation.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/budget/repository.ts",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
+        "src/features/festivals/certification/routeIdentifiers.ts",
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/features/festivals/editions/repository.test.ts",
+        "src/features/festivals/projections/migration.test.ts",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
+        "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/FestivalOwnerNavigation.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
+        "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
+        "src/features/festival-company/application/useFestivalArtistProgramme.ts",
+        "src/features/festival-company/application/useFestivalArtistWorkflows.ts",
+        "src/features/festival-company/application/useFestivalLaunch.ts",
+        "src/features/festival-company/application/useFestivalSitePlan.ts",
+        "src/features/festival-company/application/useFestivalTicketPlan.ts",
+        "src/features/festival-company/application/useFestivalTimetable.ts",
+        "src/features/festival-company/ui/FestivalCompanyCard.test.tsx",
+        "src/features/festival-company/ui/FestivalCompanyCard.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/licenceCompletion.test.ts",
+        "src/lib/api/wellnessActivities.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": [
+        {
+          "target": "get_festival_edition_budget_forecast",
+          "operation": "rpc"
+        }
+      ]
+    },
+    {
+      "file": "src/features/festivals/budget/useFestivalBudgetForecast.ts",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/budget/FestivalBudgetForecast.tsx",
+        "src/features/festival-company/application/useFestivalTicketPlan.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
       "file": "src/features/festivals/certification/routeIdentifiers.ts",
       "kind": "module",
       "importers": [],
@@ -7940,7 +8145,8 @@
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/ui/FestivalOwnerNavigation.contract.test.ts",
-        "src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts"
+        "src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
@@ -7961,6 +8167,7 @@
       "kind": "module",
       "importers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -8017,6 +8224,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -8163,9 +8372,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -8208,6 +8419,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -9070,6 +9282,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -9802,8 +10015,10 @@
         "src/hooks/__tests__/useFinances.authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/booking/components.tsx",
+        "src/features/festivals/budget/FestivalBudgetForecast.tsx",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -9871,6 +10086,7 @@
         "src/lib/api/__tests__/charityDonations.database.test.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
         "src/utils/gearModifiers.ts",
@@ -10211,6 +10427,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -10724,6 +10941,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -10757,6 +10975,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -10939,6 +11158,7 @@
         "src/hooks/__tests__/useCompanyShares.profit-distribution-authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/booking/bookingTypes.ts",
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
         "src/features/festivals/ui/retiredFestivalOwnerUi.test.ts",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -10975,6 +11195,9 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
+        "src/lib/api/__tests__/cleanRadioCountryBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingRepairBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingSongBackfillBootstrap.database.test.ts",
         "src/lib/api/__tests__/duplicateLeaderboardPrototypeMigration.database.test.ts",
         "src/lib/api/__tests__/migrationVersion17090000Consolidation.database.test.ts",
         "src/lib/api/__tests__/personalBanking.database.test.ts",
@@ -11045,6 +11268,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -11195,9 +11420,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -11240,6 +11467,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -11936,6 +12164,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -12449,6 +12678,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -12482,6 +12712,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -12535,6 +12766,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -12669,9 +12902,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -12714,6 +12949,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -12734,6 +12970,27 @@
       "writes": []
     },
     {
+      "file": "src/features/festivals/permits/FestivalCityPermitCard.tsx",
+      "kind": "module",
+      "importers": [
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/projections/editionLineupContract.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
       "file": "src/features/festivals/projections/migration.test.ts",
       "kind": "test",
       "importers": [],
@@ -12747,6 +13004,7 @@
       "kind": "module",
       "importers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -12771,6 +13029,15 @@
         "src/lib/api/wellnessActivities.ts"
       ],
       "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/projections/ticketDemandAuthority.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
       "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": false,
       "writes": []
@@ -12825,6 +13092,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -12959,9 +13228,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -13004,6 +13275,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -13346,6 +13618,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -13859,6 +14132,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -13892,6 +14166,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -13945,6 +14220,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -14088,9 +14365,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -14133,6 +14412,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -14484,6 +14764,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -14997,6 +15278,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -15030,6 +15312,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -15110,6 +15393,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -15237,6 +15522,7 @@
       "kind": "module",
       "importers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -15361,9 +15647,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -15406,6 +15694,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -15834,6 +16123,7 @@
       "file": "src/features/festivals/ui/FestivalEditionSections.tsx",
       "kind": "module",
       "importers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/projections/migration.test.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
@@ -16746,6 +17036,7 @@
         "src/hooks/__tests__/useCompanyShares.profit-distribution-authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/booking/bookingTypes.ts",
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
         "src/features/festivals/ui/retiredFestivalOwnerUi.test.ts",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -16782,6 +17073,9 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
+        "src/lib/api/__tests__/cleanRadioCountryBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingRepairBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingSongBackfillBootstrap.database.test.ts",
         "src/lib/api/__tests__/duplicateLeaderboardPrototypeMigration.database.test.ts",
         "src/lib/api/__tests__/migrationVersion17090000Consolidation.database.test.ts",
         "src/lib/api/__tests__/personalBanking.database.test.ts",
@@ -16997,6 +17291,7 @@
         "src/hooks/__tests__/useCompanyShares.profit-distribution-authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/booking/bookingTypes.ts",
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
         "src/features/festivals/ui/retiredFestivalOwnerUi.test.ts",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -17033,6 +17328,9 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
+        "src/lib/api/__tests__/cleanRadioCountryBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingRepairBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingSongBackfillBootstrap.database.test.ts",
         "src/lib/api/__tests__/duplicateLeaderboardPrototypeMigration.database.test.ts",
         "src/lib/api/__tests__/migrationVersion17090000Consolidation.database.test.ts",
         "src/lib/api/__tests__/personalBanking.database.test.ts",
@@ -17423,6 +17721,7 @@
       "file": "src/features/festival-company/application/useFestivalTicketPlan.ts",
       "kind": "module",
       "importers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festival-company/ui/FestivalCompanyCard.test.tsx",
         "src/features/festival-company/ui/FestivalCompanyCard.tsx",
         "src/features/festival-company/ui/FestivalTicketPlanner.tsx"
@@ -17646,6 +17945,7 @@
       "importers": [
         "src/pages/MyCompanies.test.tsx",
         "src/pages/MyCompanies.tsx",
+        "src/hooks/useCityFestivalPermits.ts",
         "src/hooks/useCompanies.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/resolver.ts",
@@ -17654,6 +17954,11 @@
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/model.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/FestivalBudgetForecast.tsx",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/model.ts",
+        "src/features/festivals/budget/repository.ts",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/editions/repository.ts",
@@ -18091,6 +18396,7 @@
       "file": "src/features/festival-company/ui/FestivalLineupWorkflowManager.tsx",
       "kind": "module",
       "importers": [
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
@@ -18179,12 +18485,14 @@
       "kind": "module",
       "importers": [
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/projections/migration.test.ts",
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts",
         "src/features/festivals/ui/FestivalEditionSections.tsx"
       ],
       "status": "canonical_active",
       "directDatabaseWriter": false,
-      "browserAuthoritativeCalculation": false,
+      "browserAuthoritativeCalculation": true,
       "writes": []
     },
     {
@@ -18287,6 +18595,7 @@
       "kind": "module",
       "importers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -19034,6 +19343,11 @@
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityPerformanceLaws.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
+        "src/lib/api/__tests__/cleanLabelCatalogueBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanRadioCountryBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanRegionalLabelBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingRepairBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingSongBackfillBootstrap.database.test.ts",
         "src/lib/api/__tests__/defaultAdminSeedSecurity.database.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/labelSchemaCompatibilityMigration.database.test.ts",
@@ -19106,6 +19420,24 @@
     },
     {
       "file": "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
       "kind": "test",
       "importers": [],
       "status": "unused_or_dynamic",
@@ -19773,6 +20105,12 @@
       "classification": "canonical_rpc"
     },
     {
+      "file": "src/features/festivals/budget/repository.ts",
+      "target": "get_festival_edition_budget_forecast",
+      "operation": "rpc",
+      "classification": "canonical_rpc"
+    },
+    {
       "file": "src/features/festivals/settlement/service.ts",
       "target": "festival_edition_settlement_readiness",
       "operation": "rpc",
@@ -20172,17 +20510,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -20218,17 +20561,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -20405,17 +20753,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -24087,17 +24440,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -24116,17 +24474,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -24145,17 +24508,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -24174,17 +24542,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -25130,17 +25503,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -25159,17 +25537,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -25188,17 +25571,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -25217,17 +25605,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -25780,7 +26173,8 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
-        "supabase/tests/festival_artist_applications_bookings_harness.sql"
+        "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -25794,7 +26188,8 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
-        "supabase/tests/festival_artist_applications_bookings_harness.sql"
+        "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -25809,6 +26204,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "replacement": null,
@@ -25838,6 +26234,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "replacement": null,
@@ -25995,7 +26392,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -26383,17 +26782,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -26426,17 +26830,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -26469,17 +26878,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -27175,6 +27589,7 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql"
       ],
@@ -27190,7 +27605,9 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
@@ -27385,6 +27802,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_upgrade_harness.sql"
       ],
       "replacement": null,
@@ -27467,17 +27885,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -27797,17 +28220,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -27826,17 +28254,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -28305,17 +28738,22 @@
       "rls": "not_applicable",
       "harnessCovered": [
         "supabase/tests/festival_admin_catalogue_warning_arrays_harness.sql",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql",
         "supabase/tests/festival_company_financial_correctness_harness.sql",
         "supabase/tests/festival_company_founding_foundation_harness.sql",
         "supabase/tests/festival_creation_phase1_harness.sql",
         "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_london_test_fixture.sql",
         "supabase/tests/festival_performance_sessions_harness.sql",
         "supabase/tests/festival_settlement_v4_semantic_harness.sql",
         "supabase/tests/festival_settlement_v6_lifecycle_fixture.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql",
         "supabase/tests/festival_site_stage_planning_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/live_performance_progression_harness.sql",
@@ -32599,7 +33037,8 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
-        "supabase/tests/festival_artist_applications_bookings_harness.sql"
+        "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -32613,7 +33052,8 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
-        "supabase/tests/festival_artist_applications_bookings_harness.sql"
+        "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -32628,6 +33068,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "replacement": null,
@@ -32657,6 +33098,7 @@
       "rls": "inspect policies",
       "harnessCovered": [
         "supabase/tests/festival_artist_applications_bookings_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "replacement": null,
@@ -32990,7 +33432,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -40977,6 +41421,7 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql"
       ],
@@ -41004,7 +41449,9 @@
       "publiclyExecutable": false,
       "rls": "inspect policies",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/festival_simplified_annual_plan_harness.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
@@ -41225,6 +41672,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_upgrade_harness.sql"
       ],
       "replacement": null,
@@ -43146,6 +43594,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_upgrade_harness.sql"
       ],
       "replacement": null,
@@ -43198,6 +43647,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_upgrade_harness.sql"
       ],
       "replacement": null,
@@ -43278,6 +43728,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "replacement": null,
@@ -43430,6 +43881,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "replacement": null,
@@ -43456,6 +43908,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "replacement": null,
@@ -43557,7 +44010,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -43582,7 +44037,8 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
-        "supabase/tests/festival_edition_internal_projections_harness.sql"
+        "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -43608,7 +44064,9 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
-        "supabase/tests/festival_licence_completion_harness.sql"
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -43798,6 +44256,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "replacement": null,
@@ -43812,7 +44271,9 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
-        "supabase/tests/festival_licence_completion_harness.sql"
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
       ],
       "replacement": null,
       "retirementStatus": "investigate"
@@ -43905,7 +44366,9 @@
       "acceptsWrites": false,
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
-      "harnessCovered": [],
+      "harnessCovered": [
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql"
+      ],
       "replacement": null,
       "retirementStatus": "investigate"
     },
@@ -43980,6 +44443,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "replacement": null,
@@ -44059,6 +44523,7 @@
       "publiclyExecutable": "inspect grants",
       "rls": "not_applicable",
       "harnessCovered": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "replacement": null,
@@ -44088,6 +44553,388 @@
         "supabase/tests/festival_simplified_production_overlay_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_annual_plan_potential_capacity",
+      "migration": "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_active_licence_capacity",
+      "migration": "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_annual_plan_capacity",
+      "migration": "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
+        "supabase/tests/festival_licence_completion_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_upgrade_purchase_preview",
+      "migration": "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
+        "supabase/tests/festival_upgrade_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_active_licence_max_stages",
+      "migration": "supabase/migrations/20291218250100_festival_licence_operating_ceilings.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_active_licence_max_acts_per_day",
+      "migration": "supabase/migrations/20291218250100_festival_licence_operating_ceilings.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_simplified_festival_run_readiness",
+      "migration": "supabase/migrations/20291218250100_festival_licence_operating_ceilings.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
+        "supabase/tests/simplified_festival_runtime_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_ticket_demand_basis_points",
+      "migration": "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "save_festival_edition_ticket_plan",
+      "migration": "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_internal_projections_harness.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_automatic_sponsorship_minor",
+      "migration": "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_edition_budget_forecast",
+      "migration": "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_complete_simplified_festival_settlement",
+      "migration": "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_edition_results",
+      "migration": "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_edition_artist_programme_result",
+      "migration": "supabase/migrations/20291218250500_repair_festival_edition_lineup_contract.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "save_festival_edition_artist_programme",
+      "migration": "supabase/migrations/20291218250500_repair_festival_edition_lineup_contract.sql",
+      "ownerDomain": "festival-company",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [
+        "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
+      ],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "table",
+      "name": "city_festival_permits",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "inspect policies",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "index",
+      "name": "city_festival_permits_city_status",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "index",
+      "name": "city_festival_permits_edition",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "policy",
+      "name": "city_festival_permits_authorized_read",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_city_permit_edition",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_city_law_for_edition",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_city_permit_status",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_for_festival_city_permit",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_city_festival_permit_queue",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "decide_city_festival_permit",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "enforce_city_festival_permit_on_launch",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "trigger",
+      "name": "enforce_city_festival_permit_before_launch",
+      "migration": "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": false,
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "get_festival_city_permit_status_for_edition",
+      "migration": "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "apply_for_festival_city_permit_for_edition",
+      "migration": "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
     }
@@ -44248,6 +45095,20 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "_complete_simplified_festival_settlement",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
+      ],
+      "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "_deny_festival_legacy_mutation",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -44314,11 +45175,51 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "_festival_active_licence_capacity",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql"
+      ],
+      "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_active_licence_max_acts_per_day",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218250100_festival_licence_operating_ceilings.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql"
+      ],
+      "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_active_licence_max_stages",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218250100_festival_licence_operating_ceilings.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql"
+      ],
+      "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "_festival_annual_plan_blockers",
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218245300_festival_simplified_annual_plan.sql",
-        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql"
+        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql",
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -44335,11 +45236,13 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20291218245300_festival_simplified_annual_plan.sql",
-        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql"
+        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql",
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
       ],
       "workerCallers": [],
       "testCallers": [
         "src/features/festivals/annual-plan/migration.test.ts",
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "classification": "active_canonical",
@@ -44352,7 +45255,8 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20291218245300_festival_simplified_annual_plan.sql",
-        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql"
+        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql",
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -44360,6 +45264,19 @@
         "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_annual_plan_potential_capacity",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql"
+      ],
+      "classification": "test_only",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -44383,7 +45300,8 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20291218245300_festival_simplified_annual_plan.sql",
-        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql"
+        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql",
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -44627,6 +45545,22 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "_festival_automatic_sponsorship_minor",
+      "typescriptCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
+      ],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "_festival_calculated_evidence_immutable",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -44670,6 +45604,29 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218245910_harden_simplified_festival_ticket_readiness.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_city_law_for_edition",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_city_permit_edition",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -44727,6 +45684,8 @@
     {
       "name": "_festival_company_manager_authorized",
       "typescriptCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festival-company/__tests__/festivalSetupAuthority.test.ts",
         "src/features/festival-company/upgrades/licenceCompletion.test.ts"
       ],
@@ -44734,13 +45693,22 @@
         "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql",
         "supabase/migrations/20291218245700_reconcile_festival_setup_authority.sql",
         "supabase/migrations/20291218245800_complete_simplified_festival_lineup.sql",
-        "supabase/migrations/20291218245900_finish_simplified_festival_runtime.sql"
+        "supabase/migrations/20291218245900_finish_simplified_festival_runtime.sql",
+        "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql",
+        "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql",
+        "supabase/migrations/20291218250500_repair_festival_edition_lineup_contract.sql",
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql"
       ],
       "workerCallers": [],
       "testCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festival-company/__tests__/festivalSetupAuthority.test.ts",
         "src/features/festival-company/upgrades/licenceCompletion.test.ts",
-        "supabase/tests/festival_licence_completion_harness.sql"
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
+        "supabase/tests/festival_licence_completion_harness.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
       ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
@@ -44839,11 +45807,14 @@
       "name": "_festival_edition_artist_programme_result",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql"
+        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql",
+        "supabase/migrations/20291218250500_repair_festival_edition_lineup_contract.sql"
       ],
       "workerCallers": [],
-      "testCallers": [],
-      "classification": "no_known_runtime_callers",
+      "testCallers": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
+      ],
+      "classification": "test_only",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -44949,7 +45920,8 @@
       "name": "_festival_edition_ticket_plan_result",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql"
+        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql",
+        "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -45525,6 +46497,7 @@
     {
       "name": "_festival_projection_authorized",
       "typescriptCallers": [
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festival-company/upgrades/licenceCompletion.test.ts"
       ],
       "sqlCallers": [
@@ -45533,7 +46506,9 @@
       ],
       "workerCallers": [],
       "testCallers": [
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festival-company/upgrades/licenceCompletion.test.ts",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql",
         "supabase/tests/festival_licence_completion_harness.sql"
       ],
       "classification": "active_canonical",
@@ -45558,7 +46533,8 @@
         "src/features/festivals/projections/migration.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql"
+        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql",
+        "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -46202,6 +47178,21 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "_festival_ticket_demand_basis_points",
+      "typescriptCallers": [
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts"
+      ],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "_festival_ticket_plan_result",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -46276,7 +47267,8 @@
       "sqlCallers": [
         "supabase/migrations/20260804062951_9bd9680e-9a37-4fc3-b333-155159587def.sql",
         "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
-        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql"
+        "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
+        "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -46301,7 +47293,8 @@
       "name": "_festival_upgrade_eligibility",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218245200_festival_upgrade_v2_hardening.sql"
+        "supabase/migrations/20291218245200_festival_upgrade_v2_hardening.sql",
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
       ],
       "workerCallers": [
         "scripts/festivals/festival-upgrade-catalogue.test.mjs"
@@ -46595,11 +47588,14 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218245900_finish_simplified_festival_runtime.sql",
-        "supabase/migrations/20291218245910_harden_simplified_festival_ticket_readiness.sql"
+        "supabase/migrations/20291218245910_harden_simplified_festival_ticket_readiness.sql",
+        "supabase/migrations/20291218250100_festival_licence_operating_ceilings.sql"
       ],
       "workerCallers": [],
-      "testCallers": [],
-      "classification": "no_known_runtime_callers",
+      "testCallers": [
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql"
+      ],
+      "classification": "test_only",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -47485,6 +48481,37 @@
         "supabase/functions/process-festival-settlement-effects/dispatcher.ts"
       ],
       "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "apply_for_festival_city_permit",
+      "typescriptCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
+      ],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "apply_for_festival_city_permit_for_edition",
+      "typescriptCallers": [
+        "src/hooks/useCityFestivalPermits.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -48521,6 +49548,24 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "decide_city_festival_permit",
+      "typescriptCallers": [
+        "src/hooks/useCityFestivalPermits.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "classification": "active_legacy",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "decide_festival_overtime",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -48573,6 +49618,21 @@
         "supabase/tests/festival_settlement_v7_reconciliation_harness.sql"
       ],
       "classification": "test_only",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "enforce_city_festival_permit_on_launch",
+      "typescriptCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
+      ],
+      "classification": "active_legacy",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -50040,6 +51100,24 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "get_city_festival_permit_queue",
+      "typescriptCallers": [
+        "src/hooks/useCityFestivalPermits.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "classification": "active_legacy",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "get_effective_festival_staff_overtime_decision",
       "typescriptCallers": [],
       "sqlCallers": [
@@ -50089,6 +51167,33 @@
       ],
       "workerCallers": [],
       "testCallers": [],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "get_festival_city_permit_status",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "get_festival_city_permit_status_for_edition",
+      "typescriptCallers": [
+        "src/hooks/useCityFestivalPermits.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -50164,7 +51269,8 @@
         "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
         "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
         "supabase/migrations/20291218245200_festival_upgrade_v2_hardening.sql",
-        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql"
+        "supabase/migrations/20291218245600_festival_licence_and_manager_authority.sql",
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -50243,16 +51349,36 @@
       "dynamicCallerReviewRequired": true
     },
     {
+      "name": "get_festival_edition_budget_forecast",
+      "typescriptCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts"
+      ],
+      "sqlCallers": [
+        "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
+      ],
+      "classification": "active_canonical",
+      "dynamicCallerReviewRequired": true
+    },
+    {
       "name": "get_festival_edition_results",
       "typescriptCallers": [
         "src/features/festivals/settlement/repository.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts"
       ],
-      "sqlCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218250400_simplified_festival_automatic_sponsorship_budget.sql"
+      ],
       "workerCallers": [],
       "testCallers": [
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
-        "supabase/tests/festival_simplified_production_overlay_regression.sql"
+        "supabase/tests/festival_simplified_production_overlay_regression.sql",
+        "supabase/tests/festival_simplified_sponsorship_budget_regression.sql"
       ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
@@ -50771,12 +51897,14 @@
         "supabase/migrations/20260804062951_9bd9680e-9a37-4fc3-b333-155159587def.sql",
         "supabase/migrations/20291218233000_canonical_festival_upgrades.sql",
         "supabase/migrations/20291218245100_festival_upgrade_catalogue_v2_realign.sql",
-        "supabase/migrations/20291218245200_festival_upgrade_v2_hardening.sql"
+        "supabase/migrations/20291218245200_festival_upgrade_v2_hardening.sql",
+        "supabase/migrations/20291218250000_festival_licence_capacity_ceiling.sql"
       ],
       "workerCallers": [
         "scripts/festivals/festival-upgrade-catalogue.test.mjs"
       ],
       "testCallers": [
+        "supabase/tests/festival_licence_capacity_ceiling_regression.sql",
         "supabase/tests/festival_upgrade_harness.sql",
         "scripts/festivals/festival-upgrade-catalogue.test.mjs"
       ],
@@ -50803,10 +51931,13 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20260803155805_426b5fa3-db30-4cc0-84ca-0ef61f0556a4.sql",
-        "supabase/migrations/20291217151000_complete_festival_artist_workflows.sql"
+        "supabase/migrations/20291217151000_complete_festival_artist_workflows.sql",
+        "supabase/migrations/20291218250600_harden_festival_artist_opportunities_privileges.sql"
       ],
       "workerCallers": [],
-      "testCallers": [],
+      "testCallers": [
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
+      ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
@@ -51349,12 +52480,16 @@
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql"
+        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql",
+        "supabase/migrations/20291218250100_festival_licence_operating_ceilings.sql",
+        "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql",
+        "supabase/migrations/20291218250500_repair_festival_edition_lineup_contract.sql"
       ],
       "workerCallers": [],
       "testCallers": [
         "src/features/festivals/projections/migration.test.ts",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
+        "supabase/tests/festival_licence_operating_ceiling_regression.sql",
         "supabase/tests/simplified_festival_runtime_harness.sql"
       ],
       "classification": "active_canonical",
@@ -52819,16 +53954,20 @@
     {
       "name": "save_festival_edition_artist_programme",
       "typescriptCallers": [
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/projections/migration.test.ts",
         "src/features/festivals/projections/repository.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql"
+        "supabase/migrations/20291218245500_festival_edition_internal_projections.sql",
+        "supabase/migrations/20291218250500_repair_festival_edition_lineup_contract.sql"
       ],
       "workerCallers": [],
       "testCallers": [
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/projections/migration.test.ts",
-        "supabase/tests/festival_edition_internal_projections_harness.sql"
+        "supabase/tests/festival_edition_internal_projections_harness.sql",
+        "supabase/tests/festival_edition_lineup_contract_regression.sql"
       ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
@@ -52841,7 +53980,8 @@
       ],
       "sqlCallers": [
         "supabase/migrations/20291218245500_festival_edition_internal_projections.sql",
-        "supabase/migrations/20291218245910_harden_simplified_festival_ticket_readiness.sql"
+        "supabase/migrations/20291218245910_harden_simplified_festival_ticket_readiness.sql",
+        "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -53041,11 +54181,13 @@
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218245800_complete_simplified_festival_lineup.sql"
+        "supabase/migrations/20291218245800_complete_simplified_festival_lineup.sql",
+        "supabase/migrations/20291218250200_festival_artist_candidate_fee_bigint.sql"
       ],
       "workerCallers": [],
       "testCallers": [
-        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
+        "supabase/tests/festival_artist_candidate_fee_overflow_regression.sql"
       ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
@@ -53943,6 +55085,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -54002,6 +55145,7 @@
         "src/components/onboarding/steps/StartingCityStep.tsx",
         "src/hooks/useCityDevelopment.ts",
         "src/hooks/useCityElections.ts",
+        "src/hooks/useCityFestivalPermits.ts",
         "src/hooks/useCityLaws.ts",
         "src/hooks/useCityProjects.ts",
         "src/hooks/useDjPerformance.ts",
@@ -54018,6 +55162,8 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.ts",
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -54044,8 +55190,10 @@
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
+        "src/lib/api/__tests__/promotedGenreGigDemand.database.test.ts",
         "src/utils/bandFame.ts",
         "src/utils/bandRivalry.ts",
         "src/utils/charterFlight.ts",
@@ -54103,6 +55251,7 @@
         "src/pages/hubs/EventsHub.tsx",
         "src/components/HowToPlayDialog.tsx",
         "src/components/admin/AdminNav.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/festivals/FestivalBrowser.tsx",
         "src/components/festivals/FestivalCard.tsx",
         "src/components/ui/Breadcrumbs.tsx",
@@ -54507,7 +55656,23 @@
       "currentCallers": [
         "src/pages/MayorDashboard.tsx",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/components/city/MayorFestivalPermitQueue.tsx",
+      "currentCallers": [
+        "src/components/city/MayorCityServicesTab.tsx",
+        "src/hooks/useCityFestivalPermits.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
@@ -55012,6 +56177,21 @@
       "category": "remove_after_route_migration"
     },
     {
+      "candidate": "src/hooks/useCityFestivalPermits.ts",
+      "currentCallers": [
+        "src/components/city/MayorFestivalPermitQueue.tsx",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
       "candidate": "src/hooks/useCityLaws.ts",
       "currentCallers": [
         "src/pages/MayorDashboard.tsx",
@@ -55356,6 +56536,7 @@
         "src/features/festivals/booking/__tests__/useStableMutationIdempotencyKey.test.tsx",
         "src/features/festival-company/__tests__/festivalRuntime.test.ts",
         "src/lib/companyRecruitmentLifecycle.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/utils/__tests__/marketplaceFramework.test.ts"
       ],
@@ -55550,9 +56731,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -55595,6 +56778,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -56342,6 +57526,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -56855,6 +58040,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -56888,6 +58074,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -57098,9 +58285,11 @@
         "src/features/festivals/legacyResolver.ts",
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -57143,6 +58332,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -57588,6 +58778,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -57633,6 +58825,7 @@
       "candidate": "src/features/festivals/annual-plan/repository.ts",
       "currentCallers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -57682,6 +58875,7 @@
         "src/components/band/BandApplicationsList.tsx",
         "src/components/band/BandSettings.tsx",
         "src/components/band/BandSettingsTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/company/CompanyRecruitmentLifecycle.tsx",
         "src/components/festivals/admin/FestivalBulkReviewPanel.tsx",
         "src/hooks/useFestivalSlotApplications.ts",
@@ -57694,6 +58888,7 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/ui/FestivalEditionSections.tsx",
         "src/features/festivals/ui/simplifiedFestivalCompanyHome.test.ts",
@@ -58257,6 +59452,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -58988,9 +60184,11 @@
         "src/hooks/__tests__/useCompanyShareOffers.authority.test.ts",
         "src/hooks/__tests__/useFinances.authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/FestivalBudgetForecast.tsx",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -59058,6 +60256,7 @@
         "src/lib/api/__tests__/charityDonations.database.test.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
         "src/utils/gearModifiers.ts",
@@ -59589,6 +60788,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -60102,6 +61302,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -60135,6 +61336,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -60391,6 +61593,8 @@
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
         "src/features/festivals/booking/useResolvedFestivalEdition.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -60531,6 +61735,7 @@
         "src/features/festivals/__tests__/festivalFeatureRegistry.test.ts",
         "src/features/festivals/booking/bookingTypes.ts",
         "src/features/festivals/booking/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/booking/components/CanonicalOrganiserBookingWorkspace.tsx",
@@ -60930,6 +62135,7 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/migration.test.ts",
         "src/features/festivals/annual-plan/model.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.ts",
         "src/features/festivals/performance/model.ts",
@@ -61107,6 +62313,7 @@
         "src/lib/band-permissions.ts",
         "src/lib/managerRecommendations.ts",
         "src/lib/wellnessSystem.ts",
+        "src/lib/api/__tests__/promotedGenreGigDemand.database.test.ts",
         "src/lib/api/__tests__/setlistPerformanceItemMigration.database.test.ts",
         "src/lib/api/__tests__/setlistPerformancePolicyMigration.database.test.ts",
         "src/utils/gigExecution.ts",
@@ -61156,6 +62363,155 @@
       "category": "remove_after_route_migration"
     },
     {
+      "candidate": "src/features/festivals/budget/FestivalBudgetForecast.tsx",
+      "currentCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/model.ts",
+        "src/features/festivals/budget/repository.ts",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
+        "src/features/festival-company/application/useFestivalTicketPlan.ts",
+        "src/features/festival-company/ui/FestivalTicketPlanner.tsx"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/budget/automaticSponsorship.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
+    },
+    {
+      "candidate": "src/features/festivals/budget/model.ts",
+      "currentCallers": [
+        "src/pages/Modeling.tsx",
+        "src/pages/NewSocialActivity.tsx",
+        "src/pages/OffersDashboard.tsx",
+        "src/pages/PersonalVehicles.tsx",
+        "src/pages/ProgressionPanel.tsx",
+        "src/pages/VersionHistory.tsx",
+        "src/pages/admin/AISongGeneration.tsx",
+        "src/pages/admin/BandAvatarsAdmin.tsx",
+        "src/pages/festivals/FestivalLegacyPage.tsx",
+        "src/pages/hubs/CareerBusinessHub.tsx",
+        "src/pages/hubs/CareerHub.tsx",
+        "src/components/avatar-system/ReadyPlayerMeAvatar.tsx",
+        "src/components/avatar-system/SharedRpmAvatar.tsx",
+        "src/components/bands/BandRolesTab.tsx",
+        "src/components/events/EventAnalytics.tsx",
+        "src/components/events/EventPricingStrategy.tsx",
+        "src/components/modeling/ModelingCareerProgress.tsx",
+        "src/components/modeling/ModelingOffersPanel.tsx",
+        "src/components/recording-studio-business/RecordingStudioEquipmentManager.tsx",
+        "src/components/wellness/CareerStageLongevityPanel.tsx",
+        "src/components/wellness/TimeAwayLongevityPanel.tsx",
+        "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/annual-plan/model.test.ts",
+        "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
+        "src/features/festivals/editions/repository.test.ts",
+        "src/features/festivals/outcomes/components.tsx",
+        "src/features/festivals/outcomes/hooks.ts",
+        "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/outcomes/mappers.ts",
+        "src/features/festivals/outcomes/model.ts",
+        "src/features/festivals/outcomes/service.ts",
+        "src/features/festivals/outcomes/types.ts",
+        "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/performance/service.ts",
+        "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/service.ts",
+        "src/features/festivals/scheduling/schedulingModel.test.ts",
+        "src/features/festivals/scheduling/service.ts",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
+        "src/features/festivals/settlement/model.test.ts",
+        "src/features/festivals/settlement/repository.ts",
+        "src/features/festivals/admin/__tests__/ownerOperationsDashboard.test.ts",
+        "src/features/festivals/admin/components/FestivalEditionDashboard.tsx",
+        "src/features/festivals/legacy/__tests__/model.test.ts",
+        "src/features/festivals/outcomes/__tests__/model.test.ts",
+        "src/features/festivals/performance/__tests__/model.test.ts",
+        "src/features/festivals/scheduling/components/FestivalScheduleWorkspace.tsx",
+        "src/lib/cityEconomy.test.ts",
+        "src/lib/foodWellness.test.ts",
+        "src/lib/songwritingResilientLoader.test.ts",
+        "src/lib/api/__tests__/defaultAdminSeedSecurity.database.test.ts",
+        "src/utils/clothingXpRewards.ts",
+        "src/utils/gearImages.ts",
+        "src/utils/modelingOfferGenerator.ts",
+        "src/utils/skillLearningMultiplier.ts",
+        "src/config/fmNavigation.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/budget/repository.ts",
+      "currentCallers": [
+        "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
+        "src/features/festivals/certification/routeIdentifiers.ts",
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/features/festivals/editions/repository.test.ts",
+        "src/features/festivals/projections/migration.test.ts",
+        "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
+        "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
+        "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
+        "src/features/festivals/ui/FestivalEditionSections.tsx",
+        "src/features/festivals/ui/FestivalOwnerNavigation.tsx",
+        "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
+        "src/features/festival-company/__tests__/festivalCompanyFoundation.test.ts",
+        "src/features/festival-company/application/useFestivalArtistProgramme.ts",
+        "src/features/festival-company/application/useFestivalArtistWorkflows.ts",
+        "src/features/festival-company/application/useFestivalLaunch.ts",
+        "src/features/festival-company/application/useFestivalSitePlan.ts",
+        "src/features/festival-company/application/useFestivalTicketPlan.ts",
+        "src/features/festival-company/application/useFestivalTimetable.ts",
+        "src/features/festival-company/ui/FestivalCompanyCard.test.tsx",
+        "src/features/festival-company/ui/FestivalCompanyCard.tsx",
+        "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx",
+        "src/features/festival-company/upgrades/licenceCompletion.test.ts",
+        "src/lib/api/wellnessActivities.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/budget/useFestivalBudgetForecast.ts",
+      "currentCallers": [
+        "src/features/festivals/budget/FestivalBudgetForecast.tsx",
+        "src/features/festival-company/application/useFestivalTicketPlan.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
       "candidate": "src/features/festivals/certification/routeIdentifiers.ts",
       "currentCallers": [],
       "replacement": null,
@@ -61172,7 +62528,8 @@
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/ui/FestivalOwnerNavigation.contract.test.ts",
-        "src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts"
+        "src/features/festivals/ui/simplifiedFestivalArtistFlow.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
@@ -61197,6 +62554,7 @@
       "candidate": "src/features/festivals/editions/repository.ts",
       "currentCallers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -61255,6 +62613,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -61405,9 +62765,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -61450,6 +62812,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -62316,6 +63679,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -63048,8 +64412,10 @@
         "src/hooks/__tests__/useFinances.authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/booking/components.tsx",
+        "src/features/festivals/budget/FestivalBudgetForecast.tsx",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/index.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -63117,6 +64483,7 @@
         "src/lib/api/__tests__/charityDonations.database.test.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
         "src/utils/gearModifiers.ts",
@@ -63459,6 +64826,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -63972,6 +65340,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -64005,6 +65374,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -64189,6 +65559,7 @@
         "src/hooks/__tests__/useCompanyShares.profit-distribution-authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/booking/bookingTypes.ts",
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
         "src/features/festivals/ui/retiredFestivalOwnerUi.test.ts",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -64225,6 +65596,9 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
+        "src/lib/api/__tests__/cleanRadioCountryBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingRepairBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingSongBackfillBootstrap.database.test.ts",
         "src/lib/api/__tests__/duplicateLeaderboardPrototypeMigration.database.test.ts",
         "src/lib/api/__tests__/migrationVersion17090000Consolidation.database.test.ts",
         "src/lib/api/__tests__/personalBanking.database.test.ts",
@@ -64299,6 +65673,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -64453,9 +65829,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -64498,6 +65876,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -65198,6 +66577,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -65711,6 +67091,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -65744,6 +67125,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -65799,6 +67181,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -65935,9 +67319,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -65980,6 +67366,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -66003,6 +67390,31 @@
       "category": "remove_after_route_migration"
     },
     {
+      "candidate": "src/features/festivals/permits/FestivalCityPermitCard.tsx",
+      "currentCallers": [
+        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+      ],
+      "replacement": "festival-company domain",
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/projections/editionLineupContract.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
+    },
+    {
       "candidate": "src/features/festivals/projections/migration.test.ts",
       "currentCallers": [],
       "replacement": null,
@@ -66017,6 +67429,7 @@
       "candidate": "src/features/festivals/projections/repository.ts",
       "currentCallers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -66047,6 +67460,17 @@
       "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/projections/ticketDemandAuthority.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
     },
     {
       "candidate": "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
@@ -66101,6 +67525,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -66237,9 +67663,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -66282,6 +67710,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -66626,6 +68055,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -67139,6 +68569,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -67172,6 +68603,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -67227,6 +68659,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -67374,9 +68808,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -67419,6 +68855,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -67774,6 +69211,7 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
+        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -68287,6 +69725,7 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
+        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -68320,6 +69759,7 @@
         "src/lib/wellnessLifestyle.ts",
         "src/lib/wellnessSystem.ts",
         "src/lib/api/__tests__/cityDevelopmentHistory.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/lib/api/__tests__/profileActivityEndTimes.database.test.ts",
         "src/lib/api/__tests__/tourCatchUpHook.contract.test.ts",
@@ -68406,6 +69846,8 @@
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.test.ts",
         "src/features/festivals/annual-plan/repository.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
+        "src/features/festivals/budget/repository.ts",
         "src/features/festivals/editions/repository.test.ts",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/hooks.ts",
@@ -68530,6 +69972,7 @@
       "candidate": "src/features/festivals/settlement/repository.ts",
       "currentCallers": [
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+        "src/features/festivals/budget/useFestivalBudgetForecast.ts",
         "src/features/festivals/certification/routeIdentifiers.ts",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/editions/repository.test.ts",
@@ -68656,9 +70099,11 @@
         "src/features/festivals/admin/hooks.ts",
         "src/features/festivals/admin/service.ts",
         "src/features/festivals/booking/mode.ts",
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/outcomes/hooks.ts",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/performance/hooks.ts",
+        "src/features/festivals/projections/editionLineupContract.test.ts",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/scheduling/hooks.ts",
         "src/features/festivals/settlement/hooks.ts",
@@ -68701,6 +70146,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts",
@@ -69106,6 +70552,7 @@
     {
       "candidate": "src/features/festivals/ui/FestivalEditionSections.tsx",
       "currentCallers": [
+        "src/features/festivals/budget/automaticSponsorship.test.ts",
         "src/features/festivals/projections/migration.test.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
@@ -70128,6 +71575,7 @@
         "src/hooks/__tests__/useCompanyShares.profit-distribution-authority.test.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/booking/bookingTypes.ts",
+        "src/features/festivals/projections/ticketDemandAuthority.test.ts",
         "src/features/festivals/settlement/simplifiedResults.contract.test.ts",
         "src/features/festivals/ui/retiredFestivalOwnerUi.test.ts",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -70164,6 +71612,9 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
+        "src/lib/api/__tests__/cleanRadioCountryBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingRepairBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingSongBackfillBootstrap.database.test.ts",
         "src/lib/api/__tests__/duplicateLeaderboardPrototypeMigration.database.test.ts",
         "src/lib/api/__tests__/migrationVersion17090000Consolidation.database.test.ts",
         "src/lib/api/__tests__/personalBanking.database.test.ts",
@@ -70894,6 +72345,11 @@
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityPerformanceLaws.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
+        "src/lib/api/__tests__/cleanLabelCatalogueBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanRadioCountryBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanRegionalLabelBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingRepairBootstrap.database.test.ts",
+        "src/lib/api/__tests__/cleanSongwritingSongBackfillBootstrap.database.test.ts",
         "src/lib/api/__tests__/defaultAdminSeedSecurity.database.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/labelSchemaCompatibilityMigration.database.test.ts",
@@ -70973,6 +72429,28 @@
     },
     {
       "candidate": "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
+    },
+    {
+      "candidate": "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
+    },
+    {
+      "candidate": "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
       "currentCallers": [],
       "replacement": null,
       "dataMigrationRequirement": "none for source file; preserve data tables",
