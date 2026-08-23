@@ -16,7 +16,7 @@ jobs:
       - name: Check out Festival branch
         uses: actions/checkout@v4
         with:
-          ref: agent/festival-runtime-currency
+          ref: agent/finish-festival-runtime-currency
           fetch-depth: 0
 
       - name: Patch live Festival currency formatting
@@ -74,5 +74,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/temp-festival-runtime-currency.yml
           git add src/features/festivals/runtime/FestivalLiveControlRoom.tsx docs/festivals/festival-active-callers.json
-          git commit -m "Use edition currency in Festival runtime"
-          git push origin HEAD:agent/festival-runtime-currency
+          git commit -m "Finish Festival runtime currency fix"
+          git push origin HEAD:agent/finish-festival-runtime-currency
