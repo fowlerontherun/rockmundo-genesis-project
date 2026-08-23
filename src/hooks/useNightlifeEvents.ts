@@ -52,6 +52,26 @@ const invokeNightclubSession = async <T>(body: Record<string, unknown>): Promise
   return data as T;
 };
 
+const resolveClubId = async (clubId: string | undefined, clubName: string) => {
+  if (clubId) return clubId;
+  const { data, error } = await supabase
+    .from("city_night_clubs")
+    .select("id")
+    .eq("name", clubName)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.id) throw new Error("Nightclub is required");
+  return data.id;
+};
+
+const LEGACY_ACTIVITY_STANCE: Partial<Record<NightlifeActivityType, NightlifeStance>> = {
+  guest_visit: "stay_sober",
+  bar_crawl: "party_hard",
+  vip_clubbing: "network",
+  afterparty: "party_hard",
+};
+
 export const fetchNightclubPolicy = (clubId: string) =>
   invokeNightclubSession<NightclubPolicySnapshot>({ clubId, actionType: "policy" });
 
@@ -80,24 +100,26 @@ export function useNightlifeEvents() {
   const [lastAddictionWarning, setLastAddictionWarning] = useState<string | null>(null);
 
   const nightlifeEventMutation = useMutation({
-    mutationFn: async ({ activityType, clubId, stance }: {
+    mutationFn: async ({ activityType, clubName, clubId, stance }: {
       activityType: NightlifeActivityType;
       clubName: string;
       clubId?: string;
       stance?: NightlifeStance;
       venueQuality?: number;
     }): Promise<NightlifeOutcome> => {
-      if (activityType !== "stance_night" || !stance) {
-        throw new Error("This nightlife action has not been moved to the authoritative session yet");
+      if (activityType === "dj_slot") {
+        throw new Error("DJ sets use the dedicated DJ performance flow");
       }
-      if (!clubId) throw new Error("Nightclub is required");
+      const authoritativeClubId = await resolveClubId(clubId, clubName);
+      const authoritativeStance = activityType === "stance_night" ? stance : LEGACY_ACTIVITY_STANCE[activityType];
+      if (!authoritativeStance) throw new Error("Nightlife stance is required");
 
-      const retryKey = `stance:${clubId}:${stance}`;
+      const retryKey = `stance:${authoritativeClubId}:${authoritativeStance}`;
       const idempotencyKey = getPendingKey(retryKey);
       const result = await invokeNightclubSession<NightlifeOutcome>({
-        clubId,
+        clubId: authoritativeClubId,
         actionType: "stance",
-        stance,
+        stance: authoritativeStance,
         idempotencyKey,
       });
       pendingKeys.delete(retryKey);
