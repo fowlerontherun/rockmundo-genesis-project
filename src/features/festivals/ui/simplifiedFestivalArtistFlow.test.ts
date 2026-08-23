@@ -49,6 +49,6 @@ describe("simplified Festival artist flow", () => {
     expect(editions).toMatch(
       /edition\.editable[\s\S]*festivalRoutes\.edition\([\s\S]*festivalRoutes\.history\(/,
     );
-    expect(editions).toContain('edition.editable ? "Plan Festival" : "View result"');
+    expect(editions).toContain('edition.editable ? "Continue Festival" : "View result"');
   });
 });

@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import {
   BadgeCheck,
   CalendarClock,
@@ -18,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { festivalRoutes } from "@/features/festivals/routes";
+import { FestivalOwnerNavigation } from "@/features/festivals/ui/FestivalOwnerNavigation";
 import {
   applyFestivalCompanyLicence,
   getFestivalCompanyUpgrades,
@@ -170,12 +169,7 @@ export function FestivalUpgradeWorkspace({
 
   return (
     <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
-      <Link
-        className="underline"
-        to={festivalRoutes.company(festivalCompanyId)}
-      >
-        ← Festival company
-      </Link>
+      <FestivalOwnerNavigation festivalCompanyId={festivalCompanyId} />
       <div>
         <h1 className="text-3xl font-bold">Upgrades and licence</h1>
         <p>
