@@ -26,10 +26,10 @@ import {
   runSimplifiedFestival,
 } from "./service";
 
-const money = (minor: number) =>
+const money = (minor: number, currencyCode: string) =>
   new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: "GBP",
+    currency: currencyCode,
   }).format(minor / 100);
 
 const stateLabel = (state: string) => state.replaceAll("_", " ");
@@ -306,6 +306,7 @@ export function FestivalLiveControlRoom({
           title="Extra sales"
           value={money(
             runtime.sales.foodAndDrinkMinor + runtime.sales.merchandiseMinor,
+            runtime.currencyCode,
           )}
           detail="Food, drink and merchandise"
         />
