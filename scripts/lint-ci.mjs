@@ -25,16 +25,4 @@ console.log(`ESLint baseline errors: ${baselineErrors}`);
 console.log(`ESLint current errors: ${currentErrors}`);
 console.log(`ESLint new errors: ${newErrors}`);
 
-for (const file of report) {
-  const isFestivalPlannerFile =
-    file.filePath.includes("/src/features/festival-company/attendance/") ||
-    file.filePath.endsWith("/src/features/festival-company/__tests__/festivalDayPlanner.test.ts");
-  if (!isFestivalPlannerFile || file.errorCount === 0) continue;
-
-  console.log(`Festival planner lint diagnostics: ${file.filePath}`);
-  for (const message of file.messages.filter((candidate) => candidate.severity === 2)) {
-    console.log(`  ${message.line}:${message.column} ${message.ruleId || "eslint"} ${message.message}`);
-  }
-}
-
 if (newErrors > 0) process.exit(1);
