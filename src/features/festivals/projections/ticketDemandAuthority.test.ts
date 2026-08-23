@@ -44,11 +44,12 @@ describe("Festival ticket demand authority", () => {
   });
 
   it("backfills open forecasts without consuming an owner planning version", () => {
-    expect(migration).toMatch(/WHERE e\.status = 'draft'/i);
-    expect(migration).toContain("expected_sell_through_basis_points");
-    expect(migration).not.toMatch(
-      /SET[\s\S]*planning_version\s*=\s*planning_version\s*\+\s*1[\s\S]*FROM recalculated/i,
+    const backfill = migration.slice(
+      migration.indexOf("-- Existing open annual editions"),
     );
+    expect(backfill).toContain("WHERE e.status = 'draft'");
+    expect(backfill).toContain("expected_sell_through_basis_points");
+    expect(backfill).not.toContain("planning_version");
   });
 
   it("shows demand as a read-only forecast in the simplified owner flow", () => {
