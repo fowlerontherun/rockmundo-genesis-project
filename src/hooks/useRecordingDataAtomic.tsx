@@ -1,13 +1,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createScheduledActivity } from "@/hooks/useActivityBooking";
+import {
+  checkTimeSlotAvailable,
+  createScheduledActivity,
+} from "@/hooks/useActivityBooking";
 import {
   BandUnavailableError,
   checkBandAvailability,
   createBandScheduledActivities,
   notifyAbsentBandMembers,
 } from "@/utils/bandActivityScheduling";
+import {
+  confirmRecordingSessionAtomic,
+  hasScheduledBookingProjection,
+  insertBookingInboxMessages,
+  type BookingInboxMessage,
+} from "@/services/finance/atomicBookingClient";
 
 // Keep every existing recording export available. This module only replaces the
 // create-session mutation so the large recording UI can move to server-authority
@@ -32,19 +41,6 @@ interface CreateRecordingSessionInput {
   scheduled_end?: string;
   payment_source?: "band" | "personal";
   skip_profile_ids?: string[];
-}
-
-interface AtomicRecordingResult {
-  idempotent?: boolean;
-  bookingId: string;
-  totalCost: number;
-  studioCost?: number;
-  producerCost?: number;
-  orchestraCost?: number;
-  paymentSource: "band" | "personal";
-  payerBalanceAfterMinor?: number;
-  qualityImprovement?: number;
-  labelStudioFree?: boolean;
 }
 
 const readableRecordingError = (message: string) => {
@@ -72,7 +68,25 @@ const readableRecordingError = (message: string) => {
   if (message.includes("not_band_member")) {
     return "Only an active member of this band can book its recording session.";
   }
+  if (
+    message.includes("song_not_recordable_by_caller") ||
+    message.includes("song_not_recordable")
+  ) {
+    return "That song is not available to this character or band for recording.";
+  }
+  if (message.includes("song_not_found")) {
+    return "That song could not be found. Return to the song selector and choose it again.";
+  }
   return message || "Unable to book the recording session.";
+};
+
+const unknownErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return String(error);
 };
 
 export const useCreateRecordingSession = () => {
@@ -125,19 +139,19 @@ export const useCreateRecordingSession = () => {
             throw new BandUnavailableError(blockingConflicts);
           }
         } else {
-          const { data: hasConflict } = await (supabase as any).rpc(
-            "check_scheduling_conflict",
-            {
-              p_user_id: user.id,
-              p_start: scheduledStart.toISOString(),
-              p_end: scheduledEnd.toISOString(),
-              p_exclude_id: null,
-            },
-          );
+          const { available, conflictingActivity } =
+            await checkTimeSlotAvailable(
+              user.id,
+              scheduledStart,
+              scheduledEnd,
+            );
 
-          if (hasConflict) {
+          if (!available) {
+            const conflictTitle = conflictingActivity?.title
+              ? ` “${String(conflictingActivity.title)}”`
+              : "";
             throw new Error(
-              "You have another activity scheduled during this time. Please check your schedule.",
+              `You have another activity${conflictTitle} scheduled during this time. Please check your schedule.`,
             );
           }
         }
@@ -155,31 +169,27 @@ export const useCreateRecordingSession = () => {
         ].join(":");
 
         stage = "confirming payment and recording session";
-        const { data, error } = await (supabase as any).rpc(
-          "confirm_recording_session_atomic",
-          {
-            p_band_id: input.band_id ?? null,
-            p_studio_id: input.studio_id,
-            p_producer_id: input.producer_id ?? "self-produce",
-            p_song_id: input.song_id,
-            p_duration_hours: input.duration_hours,
-            // Empty string is the explicit no-orchestra value accepted by the RPC.
-            p_orchestra_size: input.orchestra_size ?? "",
-            p_recording_version: input.recording_version ?? "standard",
-            p_recording_type: input.recording_type ?? "professional",
-            p_rehearsal_bonus: input.rehearsal_bonus ?? 0,
-            p_scheduled_start: scheduledStart.toISOString(),
-            p_scheduled_end: scheduledEnd.toISOString(),
-            p_payment_source: paymentSource,
-            p_idempotency_key: idempotencyKey,
-          },
-        );
+        const { data: booking, error } = await confirmRecordingSessionAtomic({
+          bandId: input.band_id ?? null,
+          studioId: input.studio_id,
+          producerId: input.producer_id ?? "self-produce",
+          songId: input.song_id,
+          durationHours: input.duration_hours,
+          // Empty string is the explicit no-orchestra value accepted by the RPC.
+          orchestraSize: input.orchestra_size ?? "",
+          recordingVersion: input.recording_version ?? "standard",
+          recordingType: input.recording_type ?? "professional",
+          rehearsalBonus: input.rehearsal_bonus ?? 0,
+          scheduledStart: scheduledStart.toISOString(),
+          scheduledEnd: scheduledEnd.toISOString(),
+          paymentSource,
+          idempotencyKey,
+        });
 
         if (error) {
           throw new Error(readableRecordingError(error.message || ""));
         }
 
-        const booking = data as AtomicRecordingResult | null;
         if (!booking?.bookingId) {
           throw new Error(
             "The recording booking authority returned no booking id.",
@@ -213,13 +223,12 @@ export const useCreateRecordingSession = () => {
         const songTitle = songData?.title || "a song";
 
         stage = "scheduling the session for everyone involved";
-        const { count: existingActivityCount } = await (supabase as any)
-          .from("player_scheduled_activities")
-          .select("id", { count: "exact", head: true })
-          .eq("linked_recording_id", booking.bookingId)
-          .neq("status", "cancelled");
+        const hasProjection = await hasScheduledBookingProjection(
+          "linked_recording_id",
+          booking.bookingId,
+        );
 
-        if (!existingActivityCount) {
+        if (!hasProjection) {
           if (input.band_id) {
             await createBandScheduledActivities({
               bandId: input.band_id,
@@ -273,7 +282,11 @@ export const useCreateRecordingSession = () => {
 
           try {
             const [{ data: bandInfo }, { data: members }] = await Promise.all([
-              supabase.from("bands").select("name").eq("id", input.band_id).single(),
+              supabase
+                .from("bands")
+                .select("name")
+                .eq("id", input.band_id)
+                .single(),
               supabase
                 .from("band_members")
                 .select("user_id")
@@ -282,27 +295,30 @@ export const useCreateRecordingSession = () => {
             ]);
             const bandName = bandInfo?.name || "Your band";
             const startLabel = scheduledStart.toLocaleString();
-            const inboxRows = (members || [])
-              .map((member: any) => member.user_id)
-              .filter(Boolean)
-              .map((userId: string) => ({
+            const memberUserIds = (members ?? [])
+              .map((member) => member.user_id)
+              .filter(
+                (userId): userId is string =>
+                  typeof userId === "string" && userId.length > 0,
+              );
+            const inboxRows: BookingInboxMessage[] = memberUserIds.map(
+              (userId) => ({
                 user_id: userId,
-                category: "system" as any,
-                priority: "normal" as any,
+                category: "system",
+                priority: "normal",
                 title: `Recording session booked: ${songTitle}`,
                 message: `${bandName} has a recording session for "${songTitle}" at ${studioName} starting ${startLabel} (${input.duration_hours}h).`,
                 action_type: "view_recording_session",
-                action_data: { session_id: booking.bookingId } as any,
+                action_data: { session_id: booking.bookingId },
                 metadata: {
                   source: "recording_booking",
                   session_id: booking.bookingId,
                   band_id: input.band_id,
                   payment_source: booking.paymentSource,
-                } as any,
-              }));
-            if (inboxRows.length > 0) {
-              await supabase.from("player_inbox").insert(inboxRows as any);
-            }
+                },
+              }),
+            );
+            await insertBookingInboxMessages(inboxRows);
           } catch (notifyError) {
             console.error(
               "Failed to notify band members of recording booking:",
@@ -311,20 +327,22 @@ export const useCreateRecordingSession = () => {
           }
         } else if (!booking.idempotent) {
           try {
-            await supabase.from("player_inbox").insert({
-              user_id: input.user_id,
-              category: "system" as any,
-              priority: "normal" as any,
-              title: `Recording session booked: ${songTitle}`,
-              message: `Your recording session for "${songTitle}" at ${studioName} starts ${scheduledStart.toLocaleString()} (${input.duration_hours}h).`,
-              action_type: "view_recording_session",
-              action_data: { session_id: booking.bookingId } as any,
-              metadata: {
-                source: "recording_booking",
-                session_id: booking.bookingId,
-                payment_source: booking.paymentSource,
-              } as any,
-            } as any);
+            await insertBookingInboxMessages([
+              {
+                user_id: input.user_id,
+                category: "system",
+                priority: "normal",
+                title: `Recording session booked: ${songTitle}`,
+                message: `Your recording session for "${songTitle}" at ${studioName} starts ${scheduledStart.toLocaleString()} (${input.duration_hours}h).`,
+                action_type: "view_recording_session",
+                action_data: { session_id: booking.bookingId },
+                metadata: {
+                  source: "recording_booking",
+                  session_id: booking.bookingId,
+                  payment_source: booking.paymentSource,
+                },
+              },
+            ]);
           } catch (notifyError) {
             console.error(
               "Failed to notify artist of recording booking:",
@@ -340,11 +358,7 @@ export const useCreateRecordingSession = () => {
           `[recording-booking] failed during stage "${stage}"`,
           bookingError,
         );
-        const detail =
-          bookingError instanceof Error
-            ? bookingError.message
-            : String((bookingError as any)?.message ?? bookingError);
-        throw new Error(`${detail} (while ${stage})`);
+        throw new Error(`${unknownErrorMessage(bookingError)} (while ${stage})`);
       }
     },
     onSuccess: () => {

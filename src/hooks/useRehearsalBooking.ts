@@ -12,6 +12,10 @@ import {
 } from "@/utils/bandActivityScheduling";
 import { validateFutureTime } from "@/utils/timeSlotValidation";
 import { consumeAtomicRehearsalPaymentSource } from "@/hooks/useBandPaymentSource";
+import {
+  confirmRehearsalBookingAtomic,
+  hasScheduledBookingProjection,
+} from "@/services/finance/atomicBookingClient";
 
 interface BookRehearsalParams {
   bandId: string;
@@ -32,17 +36,6 @@ interface BookRehearsalParams {
   bandName?: string;
   /** Members (profile ids) the leader chose to book without. */
   skipProfileIds?: string[];
-}
-
-interface AtomicRehearsalResult {
-  idempotent?: boolean;
-  bookingId: string;
-  totalCost: number;
-  paymentSource: "band" | "personal";
-  payerBalanceAfterMinor?: number;
-  chemistryGain?: number;
-  xpEarned?: number;
-  familiarityGained?: number;
 }
 
 const readableBookingError = (message: string) => {
@@ -118,38 +111,33 @@ export function useRehearsalBooking() {
         params.duration,
       ].join(":");
 
-      const { data, error } = await (supabase as any).rpc(
-        "confirm_rehearsal_booking_atomic",
-        {
-          p_band_id: params.bandId,
-          p_room_id: params.roomId,
-          p_duration_hours: params.duration,
-          p_song_id: params.songId,
-          p_setlist_id: params.setlistId,
-          p_scheduled_start: params.scheduledStart.toISOString(),
-          p_payment_source: paymentSource,
-          p_idempotency_key: idempotencyKey,
-        },
-      );
+      const { data: booking, error } = await confirmRehearsalBookingAtomic({
+        bandId: params.bandId,
+        roomId: params.roomId,
+        durationHours: params.duration,
+        songId: params.songId,
+        setlistId: params.setlistId,
+        scheduledStart: params.scheduledStart.toISOString(),
+        paymentSource,
+        idempotencyKey,
+      });
 
       if (error) {
         throw new Error(readableBookingError(error.message || ""));
       }
 
-      const booking = data as AtomicRehearsalResult | null;
       if (!booking?.bookingId) {
         throw new Error("The rehearsal booking authority returned no booking id.");
       }
 
       // Booking/payment are already committed atomically. Scheduled-activity rows
       // remain a projection, so make this follow-up retry-safe as well.
-      const { count: existingActivityCount } = await (supabase as any)
-        .from("player_scheduled_activities")
-        .select("id", { count: "exact", head: true })
-        .eq("linked_rehearsal_id", booking.bookingId)
-        .neq("status", "cancelled");
+      const hasProjection = await hasScheduledBookingProjection(
+        "linked_rehearsal_id",
+        booking.bookingId,
+      );
 
-      if (!existingActivityCount) {
+      if (!hasProjection) {
         await createBandScheduledActivities({
           bandId: params.bandId,
           activityType: "rehearsal",
