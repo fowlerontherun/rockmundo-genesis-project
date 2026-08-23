@@ -3,11 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
+import type { FestivalExecutableActivityType } from "./festivalConditions";
 import type { FestivalPlanActivityType } from "./festivalDayPlanner";
+import { FestivalConditionPanel } from "./FestivalConditionPanel";
 import {
   useCancelFestivalDayPlanItem,
   useCreateFestivalDayPlanItem,
   useMyFestivalDayPlan,
+  useResolveFestivalPlanActivity,
 } from "./useFestivalDayPlanner";
 
 const activityOptions: Array<{ value: FestivalPlanActivityType; label: string; defaultTitle: string }> = [
@@ -17,6 +20,7 @@ const activityOptions: Array<{ value: FestivalPlanActivityType; label: string; d
   { value: "explore", label: "Explore", defaultTitle: "Explore the festival" },
   { value: "rest", label: "Rest", defaultTitle: "Take a break" },
 ];
+const executableTypes = new Set<FestivalExecutableActivityType>(["eat", "drink", "explore", "rest"]);
 
 const formatFestivalDate = (value: string) =>
   new Date(`${value}T12:00:00`).toLocaleDateString("en-GB", {
@@ -39,6 +43,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
   const { data: plan, isLoading, isError, error } = useMyFestivalDayPlan(attendance.id);
   const createItem = useCreateFestivalDayPlanItem();
   const cancelItem = useCancelFestivalDayPlanItem(attendance.id);
+  const resolver = useResolveFestivalPlanActivity(attendance.id);
   const [selectedDate, setSelectedDate] = useState("");
   const [localStart, setLocalStart] = useState("12:00");
   const [durationMinutes, setDurationMinutes] = useState<30 | 60 | 90>(60);
@@ -89,6 +94,8 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
     );
   }
 
+  const serverNow = Date.parse(plan.serverNow);
+
   return (
     <div className="space-y-4">
       <section className="rounded-2xl bg-gradient-to-br from-violet-950 to-fuchsia-900 p-5 text-white md:p-7">
@@ -107,6 +114,8 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
           </div>
         </div>
       </section>
+
+      <FestivalConditionPanel attendanceId={attendance.id} />
 
       <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Festival days">
         {plan.days.map((day) => (
@@ -133,39 +142,68 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
                 Nothing planned yet. Add your first block for this day.
               </div>
             ) : (
-              selectedItems.map((item) => (
-                <article key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold tabular-nums">
-                        {formatFestivalTime(item.startsAt, plan.timezone)}–{formatFestivalTime(item.endsAt, plan.timezone)}
-                      </span>
-                      <Badge variant={item.status === "planned" ? "secondary" : "outline"} className="capitalize">
-                        {item.status}
-                      </Badge>
+              selectedItems.map((item) => {
+                const startsAt = Date.parse(item.startsAt);
+                const endsAt = Date.parse(item.endsAt);
+                const executable = executableTypes.has(item.activityType as FestivalExecutableActivityType);
+                const active = item.status === "planned" && serverNow >= startsAt && serverNow < endsAt;
+                const removable = item.status === "planned" && serverNow < startsAt;
+
+                return (
+                  <article key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold tabular-nums">
+                          {formatFestivalTime(item.startsAt, plan.timezone)}–{formatFestivalTime(item.endsAt, plan.timezone)}
+                        </span>
+                        <Badge variant={item.status === "completed" ? "default" : item.status === "planned" ? "secondary" : "outline"} className="capitalize">
+                          {item.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 font-medium">{item.title}</p>
+                      <p className="text-xs capitalize text-muted-foreground">
+                        {item.activityType.replaceAll("_", " ")} · {item.durationMinutes} min
+                      </p>
                     </div>
-                    <p className="mt-1 font-medium">{item.title}</p>
-                    <p className="text-xs capitalize text-muted-foreground">
-                      {item.activityType.replaceAll("_", " ")} · {item.durationMinutes} min
-                    </p>
-                  </div>
-                  {item.status === "planned" && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={cancelItem.isPending}
-                      onClick={() => cancelItem.mutate({ itemId: item.id })}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </article>
-              ))
+                    <div className="flex gap-2">
+                      {item.status === "planned" && executable && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={!active || resolver.isPending}
+                          onClick={() => resolver.mutate({ planItemId: item.id })}
+                        >
+                          {resolver.isPending ? "Doing…" : active ? "Do now" : serverNow < startsAt ? "Not started" : "Window passed"}
+                        </Button>
+                      )}
+                      {removable && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={cancelItem.isPending}
+                          onClick={() => cancelItem.mutate({ itemId: item.id })}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
             )}
 
             {cancelItem.isError && (
               <p className="text-sm text-destructive" role="alert">{errorText(cancelItem.error)}</p>
+            )}
+            {resolver.isError && (
+              <p className="text-sm text-destructive" role="alert">{errorText(resolver.error)}</p>
+            )}
+            {resolver.data?.status === "completed" && (
+              <p className="text-sm text-emerald-600" role="status">Activity completed and your Festival condition was updated.</p>
+            )}
+            {resolver.data?.status === "missed" && (
+              <p className="text-sm text-amber-600" role="status">That activity window passed before completion and is recorded as missed.</p>
             )}
           </CardContent>
         </Card>
@@ -243,7 +281,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
       </div>
 
       <p className="text-xs text-muted-foreground">
-        These blocks plan your day only. Activity outcomes, spending, condition effects and rewards are added in later Festival phases.
+        Eat, Drink, Explore and Rest resolve only during their planned window and update temporary Festival condition. Watch Act remains planning-only until the real Festival timetable is connected.
       </p>
     </div>
   );
