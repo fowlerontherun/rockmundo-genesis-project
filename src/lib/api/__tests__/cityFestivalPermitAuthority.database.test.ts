@@ -2,36 +2,60 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const migrationPath = path.resolve(
-  process.cwd(),
+const read = (file: string) => fs.readFileSync(path.resolve(process.cwd(), file), "utf8");
+
+const historicalPermitSql = read(
   "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
 );
-const sql = fs.readFileSync(migrationPath, "utf8");
+const simplifiedPermitSql = read(
+  "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql",
+);
+const reconciliationSql = read(
+  "supabase/reconciliation/festival/20260823_simplify_festival_permits_to_automatic_simulation.sql",
+);
 
-describe("city Festival permit authority", () => {
-  it("creates an edition-scoped permit lifecycle with owner and mayor authorities", () => {
-    expect(sql).toContain("CREATE TABLE IF NOT EXISTS public.city_festival_permits");
-    expect(sql).toContain("festival_edition_id uuid NOT NULL REFERENCES public.festival_editions_v2(id)");
-    expect(sql).toContain("apply_for_festival_city_permit");
-    expect(sql).toContain("get_city_festival_permit_queue");
-    expect(sql).toContain("decide_city_festival_permit");
-    expect(sql).toContain("cm.city_id=permit.city_id AND profile_id=actor AND is_current");
-    expect(sql).toContain("status IN ('pending','approved','rejected','revoked')");
+describe("simplified Festival permit authority", () => {
+  it("retires the historical owner/mayor permit approval workflow", () => {
+    expect(historicalPermitSql).toContain("apply_for_festival_city_permit");
+    expect(historicalPermitSql).toContain("get_city_festival_permit_queue");
+    expect(historicalPermitSql).toContain("decide_city_festival_permit");
+
+    expect(simplifiedPermitSql).toContain(
+      "DROP FUNCTION IF EXISTS public.apply_for_festival_city_permit_for_edition(uuid, uuid, text)",
+    );
+    expect(simplifiedPermitSql).toContain(
+      "DROP FUNCTION IF EXISTS public.get_city_festival_permit_queue(uuid)",
+    );
+    expect(simplifiedPermitSql).toContain(
+      "DROP FUNCTION IF EXISTS public.decide_city_festival_permit(uuid, text, text, uuid)",
+    );
   });
 
-  it("uses the law effective for the Festival date rather than the current wall-clock law", () => {
-    expect(sql).toContain("effective_at := edition.starts_on::timestamptz");
-    expect(sql).toContain("effective_from <= effective_at");
-    expect(sql).toContain("effective_until IS NULL OR effective_until > effective_at");
-    expect(sql).toContain("festival_permit_required");
+  it("removes the launch-time mayor approval gate but preserves the city-law input", () => {
+    expect(historicalPermitSql).toContain("enforce_city_festival_permit_before_launch");
+    expect(historicalPermitSql).toContain("festival_permit_required");
+
+    expect(simplifiedPermitSql).toContain(
+      "DROP TRIGGER IF EXISTS enforce_city_festival_permit_before_launch ON public.festival_launches",
+    );
+    expect(simplifiedPermitSql).toContain(
+      "DROP FUNCTION IF EXISTS public.enforce_city_festival_permit_on_launch()",
+    );
+    expect(simplifiedPermitSql).toContain("Keep public._festival_city_law_for_edition(uuid)");
   });
 
-  it("enforces the approved permit on the launch table itself", () => {
-    expect(sql).toContain("enforce_city_festival_permit_on_launch");
-    expect(sql).toContain("BEFORE INSERT OR UPDATE OF launch_status ON public.festival_launches");
-    expect(sql).toContain("FROM public.festival_timetable_plans tp");
-    expect(sql).toContain("tp.festival_edition_id");
-    expect(sql).toContain("p.status='approved'");
-    expect(sql).toContain("festival_city_permit_required");
+  it("keeps compatibility permit rows private if the old table exists", () => {
+    expect(simplifiedPermitSql).toContain(
+      "REVOKE ALL ON TABLE public.city_festival_permits FROM PUBLIC, anon, authenticated",
+    );
+    expect(simplifiedPermitSql).toContain(
+      "GRANT ALL ON TABLE public.city_festival_permits TO service_role",
+    );
+    expect(reconciliationSql).toContain(
+      "DROP FUNCTION IF EXISTS public.apply_for_festival_city_permit_for_edition(uuid, uuid, text)",
+    );
+    expect(reconciliationSql).toContain(
+      "REVOKE ALL ON TABLE public.city_festival_permits FROM PUBLIC, anon, authenticated",
+    );
   });
 });
