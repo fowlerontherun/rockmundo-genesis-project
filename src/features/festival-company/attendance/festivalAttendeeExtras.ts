@@ -48,6 +48,27 @@ export interface FestivalMemorabiliaItem {
   issuedAt: string;
 }
 
+export interface FestivalCheckInResult {
+  attendanceId: string;
+  festivalLaunchId: string;
+  festivalEditionId: string;
+  status: "attending";
+  checkedInAt: string | null;
+  ticketStatus: "used";
+  wristbandIssued: boolean;
+  alreadyCheckedIn: boolean;
+}
+
+export interface FestivalLeaveEarlyResult {
+  attendanceId: string;
+  festivalLaunchId: string;
+  festivalEditionId: string;
+  status: "left_early";
+  checkedInAt: string | null;
+  leftAt: string | null;
+  alreadyLeft: boolean;
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ATTENDANCE_STATUSES = new Set<FestivalAttendanceStatus>([
   "ticketed",
@@ -90,6 +111,11 @@ const isNullableString = (value: unknown): value is string | null =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const hasMutationIdentity = (value: Record<string, unknown>) =>
+  isUuid(value.attendanceId) &&
+  isUuid(value.festivalLaunchId) &&
+  isUuid(value.festivalEditionId);
 
 export const parseFestivalCheckInEligibility = (value: unknown): FestivalCheckInEligibility => {
   if (!isRecord(value)) throw new Error("malformed_festival_check_in_eligibility");
@@ -188,4 +214,35 @@ export const parseFestivalMemorabiliaItem = (value: unknown): FestivalMemorabili
 export const parseFestivalMemorabiliaList = (value: unknown): FestivalMemorabiliaItem[] => {
   if (!Array.isArray(value)) throw new Error("malformed_festival_memorabilia");
   return value.map(parseFestivalMemorabiliaItem);
+};
+
+export const parseFestivalCheckInResult = (value: unknown): FestivalCheckInResult => {
+  if (
+    !isRecord(value) ||
+    !hasMutationIdentity(value) ||
+    value.status !== "attending" ||
+    !isNullableString(value.checkedInAt) ||
+    value.ticketStatus !== "used" ||
+    typeof value.wristbandIssued !== "boolean" ||
+    typeof value.alreadyCheckedIn !== "boolean"
+  ) {
+    throw new Error("malformed_festival_check_in_result");
+  }
+
+  return value as unknown as FestivalCheckInResult;
+};
+
+export const parseFestivalLeaveEarlyResult = (value: unknown): FestivalLeaveEarlyResult => {
+  if (
+    !isRecord(value) ||
+    !hasMutationIdentity(value) ||
+    value.status !== "left_early" ||
+    !isNullableString(value.checkedInAt) ||
+    !isNullableString(value.leftAt) ||
+    typeof value.alreadyLeft !== "boolean"
+  ) {
+    throw new Error("malformed_festival_leave_result");
+  }
+
+  return value as unknown as FestivalLeaveEarlyResult;
 };
