@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  fundBandFromWallet,
+  getBandTreasuryDashboard,
+} from "@/services/finance/atomicBookingClient";
 
 export type BandPaymentSource = "band" | "personal";
 
@@ -41,26 +45,21 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
     queryFn: async () => {
       if (!bandId) return null;
 
-      const [bandResult, dashboardResult] = await Promise.all([
+      const [bandResult, dashboard] = await Promise.all([
         supabase
           .from("bands")
           .select("id, name, band_balance")
           .eq("id", bandId)
           .maybeSingle(),
-        (supabase as any).rpc("get_band_treasury_dashboard", {
-          p_band_id: bandId,
-        }),
+        getBandTreasuryDashboard(bandId),
       ]);
 
       const band = bandResult.data;
       if (!band) return null;
 
-      const dashboard = dashboardResult.data as any;
-      const treasuries = Array.isArray(dashboard?.treasuries)
-        ? dashboard.treasuries
-        : [];
       const primaryTreasury =
-        treasuries.find((treasury: any) => treasury?.isPrimary) ?? treasuries[0];
+        dashboard?.treasuries.find((treasury) => treasury.isPrimary) ??
+        dashboard?.treasuries[0];
 
       // Spending checks must use the same available treasury balance that the
       // atomic server RPC uses (balance minus reservations), not the deprecated
@@ -68,7 +67,7 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
       // treasury has not yet been seeded.
       const treasuryAvailable =
         dashboard?.status === "ok" && primaryTreasury
-          ? Number(primaryTreasury.availableBalanceMinor ?? 0) / 100
+          ? primaryTreasury.availableBalanceMinor / 100
           : null;
 
       return {
@@ -132,14 +131,11 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
         );
       }
 
-      const { error } = await (supabase as any).rpc("fund_my_band", {
-        p_band_id: bandId,
-        p_source_kind: "wallet",
-        p_source_account_id: null,
-        p_amount_minor: topUp * 100,
-        p_note: note ?? "Personal funds used for band activity",
-        p_idempotency_key: crypto.randomUUID(),
-      });
+      const { error } = await fundBandFromWallet(
+        bandId,
+        topUp * 100,
+        note ?? "Personal funds used for band activity",
+      );
       if (error) {
         throw new Error(
           error.message?.includes("insufficient")
