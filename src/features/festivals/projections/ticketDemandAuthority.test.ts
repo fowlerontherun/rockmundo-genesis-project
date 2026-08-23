@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync(
-  "supabase/migrations/20260823094830_festival_server_authoritative_ticket_demand.sql",
+  "supabase/migrations/20291218250300_festival_server_authoritative_ticket_demand.sql",
+  "utf8",
+);
+const reconciliation = readFileSync(
+  "supabase/reconciliation/festival/20260823_festival_server_ticket_demand.sql",
   "utf8",
 );
 const ticketPlanner = readFileSync(
@@ -12,12 +16,16 @@ const ticketPlanner = readFileSync(
 
 describe("Festival ticket demand authority", () => {
   it("calculates demand on the server from game-owned inputs", () => {
-    expect(migration).toContain("_festival_ticket_demand_basis_points");
-    expect(migration).toContain("marketingDemandBasisPoints");
-    expect(migration).toContain("reputation_score");
-    expect(migration).toContain("marketing_media");
-    expect(migration).toContain("v_benchmark_price_minor");
-    expect(migration).toMatch(/RETURN greatest\(\s*2500,[\s\S]*least\(\s*9800,/i);
+    for (const source of [migration, reconciliation]) {
+      expect(source).toContain("_festival_ticket_demand_basis_points");
+      expect(source).toContain("marketingDemandBasisPoints");
+      expect(source).toContain("reputation_score");
+      expect(source).toContain("marketing_media");
+      expect(source).toContain("v_benchmark_price_minor");
+      expect(source).toMatch(
+        /RETURN greatest\(\s*2500,[\s\S]*least\(\s*9800,/i,
+      );
+    }
   });
 
   it("does not read a client supplied sell-through percentage in the save RPC", () => {
@@ -31,10 +39,15 @@ describe("Festival ticket demand authority", () => {
 
   it("keeps the demand helper private", () => {
     expect(migration).toMatch(
-      /REVOKE ALL ON FUNCTION public\._festival_ticket_demand_basis_points\(uuid, uuid, bigint\) FROM PUBLIC/i,
+      /REVOKE ALL ON FUNCTION public\._festival_ticket_demand_basis_points\(uuid, uuid, bigint\)[\s\S]*FROM PUBLIC, anon, authenticated/i,
     );
-    expect(migration).toMatch(
-      /REVOKE ALL ON FUNCTION public\._festival_ticket_demand_basis_points\(uuid, uuid, bigint\) FROM authenticated/i,
+  });
+
+  it("backfills open forecasts without consuming an owner planning version", () => {
+    expect(migration).toMatch(/WHERE e\.status = 'draft'/i);
+    expect(migration).toContain("expected_sell_through_basis_points");
+    expect(migration).not.toMatch(
+      /SET[\s\S]*planning_version\s*=\s*planning_version\s*\+\s*1[\s\S]*FROM recalculated/i,
     );
   });
 
