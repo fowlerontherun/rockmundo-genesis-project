@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.701",
+    date: "2026-08-23",
+    changes: [
+      { type: 'feature', description: "Seeded 60 new TV shows across existing networks, with varied formats, time slots, viewer reach and fame requirements." },
+      { type: 'feature', description: "Seeded 50 new podcasts with hosts, listener bases and country spread, plus 40 new film productions across the existing studios." },
+      { type: 'feature', description: "Seeded 40 new magazines and 40 new newspapers with fresh readership, quality and interview reward ranges." },
+      { type: 'feature', description: "Seeded 40 new sponsorship brands and 25 new merchandise brand partners covering indie through luxury tiers." },
+    ],
+  },
+  {
+
     version: "1.1.700",
     date: "2026-08-18",
     changes: [
