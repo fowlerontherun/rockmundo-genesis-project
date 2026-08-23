@@ -765,7 +765,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -825,7 +824,6 @@
         "src/components/onboarding/steps/StartingCityStep.tsx",
         "src/hooks/useCityDevelopment.ts",
         "src/hooks/useCityElections.ts",
-        "src/hooks/useCityFestivalPermits.ts",
         "src/hooks/useCityLaws.ts",
         "src/hooks/useCityProjects.ts",
         "src/hooks/useDjPerformance.ts",
@@ -842,8 +840,6 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.ts",
-        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -927,7 +923,6 @@
         "src/pages/hubs/EventsHub.tsx",
         "src/components/HowToPlayDialog.tsx",
         "src/components/admin/AdminNav.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/festivals/FestivalBrowser.tsx",
         "src/components/festivals/FestivalCard.tsx",
         "src/components/ui/Breadcrumbs.tsx",
@@ -1284,19 +1279,6 @@
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts"
-      ],
-      "status": "legacy_active_or_cross_domain",
-      "directDatabaseWriter": false,
-      "browserAuthoritativeCalculation": false,
-      "writes": []
-    },
-    {
-      "file": "src/components/city/MayorFestivalPermitQueue.tsx",
-      "kind": "module",
-      "importers": [
-        "src/components/city/MayorCityServicesTab.tsx",
-        "src/hooks/useCityFestivalPermits.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
@@ -1742,19 +1724,6 @@
       "writes": []
     },
     {
-      "file": "src/hooks/useCityFestivalPermits.ts",
-      "kind": "hook",
-      "importers": [
-        "src/components/city/MayorFestivalPermitQueue.tsx",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
-      ],
-      "status": "legacy_active_or_cross_domain",
-      "directDatabaseWriter": false,
-      "browserAuthoritativeCalculation": false,
-      "writes": []
-    },
-    {
       "file": "src/hooks/useCityLaws.ts",
       "kind": "hook",
       "importers": [
@@ -2157,7 +2126,6 @@
         "src/features/festivals/booking/__tests__/useStableMutationIdempotencyKey.test.tsx",
         "src/features/festival-company/__tests__/festivalRuntime.test.ts",
         "src/lib/companyRecruitmentLifecycle.test.ts",
-        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/utils/__tests__/marketplaceFramework.test.ts"
       ],
@@ -2393,6 +2361,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -3138,7 +3107,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -3652,7 +3620,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -3936,6 +3903,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -4465,7 +4433,6 @@
         "src/components/band/BandApplicationsList.tsx",
         "src/components/band/BandSettings.tsx",
         "src/components/band/BandSettingsTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/company/CompanyRecruitmentLifecycle.tsx",
         "src/components/festivals/admin/FestivalBulkReviewPanel.tsx",
         "src/hooks/useFestivalSlotApplications.ts",
@@ -5055,7 +5022,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -5791,7 +5757,6 @@
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -6396,7 +6361,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -6910,7 +6874,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -8419,6 +8382,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -9282,7 +9246,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -10018,7 +9981,6 @@
         "src/features/festivals/budget/FestivalBudgetForecast.tsx",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/index.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -10427,7 +10389,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -10941,7 +10902,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -11467,6 +11427,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -12164,7 +12125,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -12678,7 +12638,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -12949,6 +12908,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -12963,18 +12923,6 @@
         "src/utils/__tests__/atomicGigBookingMigration.test.ts",
         "src/utils/__tests__/gigBookingErrors.test.ts",
         "src/config/mayorOfficeNavigation.ts"
-      ],
-      "status": "legacy_active_or_cross_domain",
-      "directDatabaseWriter": false,
-      "browserAuthoritativeCalculation": false,
-      "writes": []
-    },
-    {
-      "file": "src/features/festivals/permits/FestivalCityPermitCard.tsx",
-      "kind": "module",
-      "importers": [
-        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "status": "legacy_active_or_cross_domain",
       "directDatabaseWriter": false,
@@ -13275,6 +13223,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -13618,7 +13567,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -14132,7 +14080,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -14412,6 +14359,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -14764,7 +14712,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -15278,7 +15225,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -15694,6 +15640,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -17945,7 +17892,6 @@
       "importers": [
         "src/pages/MyCompanies.test.tsx",
         "src/pages/MyCompanies.tsx",
-        "src/hooks/useCityFestivalPermits.ts",
         "src/hooks/useCompanies.ts",
         "src/features/festivals/festivalFeatureRegistry.ts",
         "src/features/festivals/resolver.ts",
@@ -45612,21 +45558,27 @@
     },
     {
       "name": "_festival_city_law_for_edition",
-      "typescriptCallers": [],
+      "typescriptCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
+      ],
       "sqlCallers": [
         "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
-        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql"
+        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
-      "testCallers": [],
-      "classification": "no_known_runtime_callers",
+      "testCallers": [
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
+      ],
+      "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
     },
     {
       "name": "_festival_city_permit_edition",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -48490,7 +48442,8 @@
         "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -48502,15 +48455,15 @@
     {
       "name": "apply_for_festival_city_permit_for_edition",
       "typescriptCallers": [
-        "src/hooks/useCityFestivalPermits.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql"
+        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
       "testCallers": [
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "classification": "active_canonical",
       "dynamicCallerReviewRequired": true
@@ -49550,17 +49503,15 @@
     {
       "name": "decide_city_festival_permit",
       "typescriptCallers": [
-        "src/hooks/useCityFestivalPermits.ts",
-        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
       "testCallers": [
-        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "classification": "active_legacy",
       "dynamicCallerReviewRequired": true
@@ -49626,7 +49577,8 @@
         "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
       "testCallers": [
@@ -51102,17 +51054,15 @@
     {
       "name": "get_city_festival_permit_queue",
       "typescriptCallers": [
-        "src/hooks/useCityFestivalPermits.ts",
-        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "sqlCallers": [
-        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
       "testCallers": [
-        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts"
       ],
       "classification": "active_legacy",
       "dynamicCallerReviewRequired": true
@@ -51174,7 +51124,8 @@
       "name": "get_festival_city_permit_status",
       "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218252000_city_festival_permit_authority.sql"
+        "supabase/migrations/20291218252000_city_festival_permit_authority.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -51183,18 +51134,14 @@
     },
     {
       "name": "get_festival_city_permit_status_for_edition",
-      "typescriptCallers": [
-        "src/hooks/useCityFestivalPermits.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
-      ],
+      "typescriptCallers": [],
       "sqlCallers": [
-        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql"
+        "supabase/migrations/20291218252100_city_festival_permit_edition_api.sql",
+        "supabase/migrations/20291218252200_simplify_festival_permits_to_automatic_simulation.sql"
       ],
       "workerCallers": [],
-      "testCallers": [
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
-      ],
-      "classification": "active_canonical",
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
       "dynamicCallerReviewRequired": true
     },
     {
@@ -55085,7 +55032,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -55145,7 +55091,6 @@
         "src/components/onboarding/steps/StartingCityStep.tsx",
         "src/hooks/useCityDevelopment.ts",
         "src/hooks/useCityElections.ts",
-        "src/hooks/useCityFestivalPermits.ts",
         "src/hooks/useCityLaws.ts",
         "src/hooks/useCityProjects.ts",
         "src/hooks/useDjPerformance.ts",
@@ -55162,8 +55107,6 @@
         "src/features/festivals/admin/types.ts",
         "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
         "src/features/festivals/annual-plan/model.ts",
-        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -55251,7 +55194,6 @@
         "src/pages/hubs/EventsHub.tsx",
         "src/components/HowToPlayDialog.tsx",
         "src/components/admin/AdminNav.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/festivals/FestivalBrowser.tsx",
         "src/components/festivals/FestivalCard.tsx",
         "src/components/ui/Breadcrumbs.tsx",
@@ -55658,21 +55600,6 @@
         "src/lib/api/__tests__/cityDevelopmentSimulation.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/mayorOfficeNavigation.test.ts"
-      ],
-      "replacement": "festival-company domain",
-      "dataMigrationRequirement": "none for source file; preserve data tables",
-      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
-      "recommendedRetirementPr": "festival-route-migration",
-      "risk": "medium",
-      "verification": "npm run test:festivals:active-callers",
-      "category": "remove_after_route_migration"
-    },
-    {
-      "candidate": "src/components/city/MayorFestivalPermitQueue.tsx",
-      "currentCallers": [
-        "src/components/city/MayorCityServicesTab.tsx",
-        "src/hooks/useCityFestivalPermits.ts",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
@@ -56177,21 +56104,6 @@
       "category": "remove_after_route_migration"
     },
     {
-      "candidate": "src/hooks/useCityFestivalPermits.ts",
-      "currentCallers": [
-        "src/components/city/MayorFestivalPermitQueue.tsx",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
-      ],
-      "replacement": "festival-company domain",
-      "dataMigrationRequirement": "none for source file; preserve data tables",
-      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
-      "recommendedRetirementPr": "festival-route-migration",
-      "risk": "medium",
-      "verification": "npm run test:festivals:active-callers",
-      "category": "remove_after_route_migration"
-    },
-    {
       "candidate": "src/hooks/useCityLaws.ts",
       "currentCallers": [
         "src/pages/MayorDashboard.tsx",
@@ -56536,7 +56448,6 @@
         "src/features/festivals/booking/__tests__/useStableMutationIdempotencyKey.test.tsx",
         "src/features/festival-company/__tests__/festivalRuntime.test.ts",
         "src/lib/companyRecruitmentLifecycle.test.ts",
-        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityGovernanceAuthority.database.test.ts",
         "src/utils/__tests__/marketplaceFramework.test.ts"
       ],
@@ -56778,6 +56689,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -57526,7 +57438,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -58040,7 +57951,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -58332,6 +58242,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -58875,7 +58786,6 @@
         "src/components/band/BandApplicationsList.tsx",
         "src/components/band/BandSettings.tsx",
         "src/components/band/BandSettingsTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/company/CompanyRecruitmentLifecycle.tsx",
         "src/components/festivals/admin/FestivalBulkReviewPanel.tsx",
         "src/hooks/useFestivalSlotApplications.ts",
@@ -59452,7 +59362,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -60188,7 +60097,6 @@
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/components.tsx",
         "src/features/festivals/outcomes/index.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -60788,7 +60696,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -61302,7 +61209,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -62812,6 +62718,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -63679,7 +63586,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -64415,7 +64321,6 @@
         "src/features/festivals/budget/FestivalBudgetForecast.tsx",
         "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
         "src/features/festivals/outcomes/index.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
         "src/features/festivals/settlement/EditionSettlementWorkspace.tsx",
         "src/features/festivals/settlement/model.ts",
@@ -64826,7 +64731,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -65340,7 +65244,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -65876,6 +65779,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -66577,7 +66481,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -67091,7 +66994,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -67366,6 +67268,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -67380,20 +67283,6 @@
         "src/utils/__tests__/atomicGigBookingMigration.test.ts",
         "src/utils/__tests__/gigBookingErrors.test.ts",
         "src/config/mayorOfficeNavigation.ts"
-      ],
-      "replacement": "festival-company domain",
-      "dataMigrationRequirement": "none for source file; preserve data tables",
-      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
-      "recommendedRetirementPr": "festival-route-migration",
-      "risk": "medium",
-      "verification": "npm run test:festivals:active-callers",
-      "category": "remove_after_route_migration"
-    },
-    {
-      "candidate": "src/features/festivals/permits/FestivalCityPermitCard.tsx",
-      "currentCallers": [
-        "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
-        "src/lib/api/__tests__/cityFestivalPermitUi.test.ts"
       ],
       "replacement": "festival-company domain",
       "dataMigrationRequirement": "none for source file; preserve data tables",
@@ -67710,6 +67599,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -68055,7 +67945,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -68569,7 +68458,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -68855,6 +68743,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
@@ -69211,7 +69100,6 @@
         "src/components/city/MayorBudgetTab.tsx",
         "src/components/city/MayorCityServicesTab.tsx",
         "src/components/city/MayorElectionTermTab.tsx",
-        "src/components/city/MayorFestivalPermitQueue.tsx",
         "src/components/city/MayorHistoryTab.tsx",
         "src/components/city/MayorLawPolicyEditor.tsx",
         "src/components/city/MayorOfficeOverview.tsx",
@@ -69725,7 +69613,6 @@
         "src/hooks/__tests__/useTourTravelRepair.test.tsx",
         "src/features/festivals/outcomes/index.ts",
         "src/features/festivals/outcomes/realtime.ts",
-        "src/features/festivals/permits/FestivalCityPermitCard.tsx",
         "src/features/festivals/admin/components/AdminFestivalCatalogue.tsx",
         "src/features/festivals/admin/components/FestivalAuditLog.tsx",
         "src/features/festivals/admin/components/FestivalCreationWizard.tsx",
@@ -70146,6 +70033,7 @@
         "src/lib/api/__tests__/authoritativeBusking.database.test.ts",
         "src/lib/api/__tests__/authoritativeGigCityLaws.database.test.ts",
         "src/lib/api/__tests__/authoritativeTravel.database.test.ts",
+        "src/lib/api/__tests__/cityFestivalPermitAuthority.database.test.ts",
         "src/lib/api/__tests__/cityFestivalPermitUi.test.ts",
         "src/lib/api/__tests__/financeCommandCenter.database.test.ts",
         "src/lib/api/__tests__/financialTransferIdempotency.database.test.ts",
