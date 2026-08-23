@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   parseFestivalCheckInEligibility,
   parseFestivalCheckInEligibilityList,
+  parseFestivalCheckInResult,
+  parseFestivalLeaveEarlyResult,
   parseFestivalMemorabiliaItem,
   parseFestivalMemorabiliaList,
 } from "../attendance/festivalAttendeeExtras";
@@ -109,5 +111,64 @@ describe("Festival memorabilia contracts", () => {
   it("rejects malformed memorabilia metadata", () => {
     expect(() => parseFestivalMemorabiliaItem({ ...wristband, metadata: [] }))
       .toThrow("malformed_festival_memorabilia");
+  });
+});
+
+describe("Festival attendee mutation contracts", () => {
+  it("accepts an authoritative check-in result", () => {
+    expect(parseFestivalCheckInResult({
+      attendanceId,
+      festivalLaunchId: launchId,
+      festivalEditionId: editionId,
+      status: "attending",
+      checkedInAt: "2030-07-01T10:00:00Z",
+      ticketStatus: "used",
+      wristbandIssued: true,
+      alreadyCheckedIn: false,
+    })).toMatchObject({
+      status: "attending",
+      ticketStatus: "used",
+      wristbandIssued: true,
+    });
+  });
+
+  it("rejects a check-in response that leaves admission reusable", () => {
+    expect(() => parseFestivalCheckInResult({
+      attendanceId,
+      festivalLaunchId: launchId,
+      festivalEditionId: editionId,
+      status: "attending",
+      checkedInAt: "2030-07-01T10:00:00Z",
+      ticketStatus: "valid",
+      wristbandIssued: true,
+      alreadyCheckedIn: false,
+    })).toThrow("malformed_festival_check_in_result");
+  });
+
+  it("accepts an authoritative early-leave result", () => {
+    expect(parseFestivalLeaveEarlyResult({
+      attendanceId,
+      festivalLaunchId: launchId,
+      festivalEditionId: editionId,
+      status: "left_early",
+      checkedInAt: "2030-07-01T10:00:00Z",
+      leftAt: "2030-07-01T18:00:00Z",
+      alreadyLeft: false,
+    })).toMatchObject({
+      status: "left_early",
+      alreadyLeft: false,
+    });
+  });
+
+  it("rejects a client-invented completed leave result", () => {
+    expect(() => parseFestivalLeaveEarlyResult({
+      attendanceId,
+      festivalLaunchId: launchId,
+      festivalEditionId: editionId,
+      status: "completed",
+      checkedInAt: "2030-07-01T10:00:00Z",
+      leftAt: "2030-07-01T18:00:00Z",
+      alreadyLeft: false,
+    })).toThrow("malformed_festival_leave_result");
   });
 });
