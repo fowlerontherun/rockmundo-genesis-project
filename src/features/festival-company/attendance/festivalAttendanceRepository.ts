@@ -5,8 +5,12 @@ import {
 } from "./festivalAttendance";
 import {
   parseFestivalCheckInEligibilityList,
+  parseFestivalCheckInResult,
+  parseFestivalLeaveEarlyResult,
   parseFestivalMemorabiliaList,
   type FestivalCheckInEligibility,
+  type FestivalCheckInResult,
+  type FestivalLeaveEarlyResult,
   type FestivalMemorabiliaItem,
 } from "./festivalAttendeeExtras";
 
@@ -33,4 +37,20 @@ export const getMyFestivalMemorabilia = async (): Promise<FestivalMemorabiliaIte
   const { data, error } = await attendanceRpc("get_my_festival_memorabilia");
   if (error) throw new Error(error.message || "festival_memorabilia_unavailable");
   return parseFestivalMemorabiliaList(data);
+};
+
+export const checkInToFestival = async (attendanceId: string): Promise<FestivalCheckInResult> => {
+  const { data, error } = await attendanceRpc("check_in_to_festival", {
+    p_attendance_id: attendanceId,
+  });
+  if (error) throw new Error(error.message || "festival_check_in_failed");
+  return parseFestivalCheckInResult(data);
+};
+
+export const leaveFestivalEarly = async (attendanceId: string): Promise<FestivalLeaveEarlyResult> => {
+  const { data, error } = await attendanceRpc("leave_festival_early", {
+    p_attendance_id: attendanceId,
+  });
+  if (error) throw new Error(error.message || "festival_leave_failed");
+  return parseFestivalLeaveEarlyResult(data);
 };
