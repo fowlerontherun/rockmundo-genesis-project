@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useMyFestivalAttendance } from "../attendance/useFestivalAttendance";
+import {
+  useMyFestivalAttendance,
+  useMyFestivalCheckInEligibility,
+} from "../attendance/useFestivalAttendance";
+import type { FestivalCheckInEligibility } from "../attendance/festivalAttendeeExtras";
 import { usePublicFestival, usePurchaseFestivalTickets } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 
@@ -20,11 +24,44 @@ const Countdown = ({ target }: { target: string }) => {
   );
 };
 
+const checkInMessage = (eligibility: FestivalCheckInEligibility) => {
+  if (eligibility.canCheckIn) {
+    return `You are in ${eligibility.cityName || "the festival city"} and eligible to check in.`;
+  }
+
+  switch (eligibility.blockReason) {
+    case "festival_not_started":
+      return eligibility.startsOn
+        ? `Check-in opens when the festival starts on ${new Date(`${eligibility.startsOn}T12:00:00`).toLocaleDateString("en-GB")}.`
+        : "Festival check-in has not opened yet.";
+    case "wrong_city":
+      return `Travel to ${eligibility.cityName || "the festival city"} before checking in.`;
+    case "character_traveling":
+      return "Finish your current journey before checking in.";
+    case "ticket_invalid":
+      return "Your admission ticket is no longer valid for check-in.";
+    case "festival_cancelled":
+      return "This festival has been cancelled, so check-in is unavailable.";
+    case "festival_finished":
+      return "This festival has finished and check-in is closed.";
+    case "festival_dates_unavailable":
+    case "festival_city_unavailable":
+      return "Festival check-in information is not complete yet.";
+    case "already_attending":
+      return "You are already checked in to this festival.";
+    case "attendance_closed":
+      return "This festival attendance has already ended.";
+    default:
+      return "Festival check-in is not available yet.";
+  }
+};
+
 export default function PublicFestivalPage() {
   const { festivalCompanyIdentifier } = useParams();
   const { user } = useAuth();
   const { data: f, isLoading, isError } = usePublicFestival(festivalCompanyIdentifier);
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
+  const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
   const buy = usePurchaseFestivalTickets();
   const [quantity, setQuantity] = useState(1);
 
@@ -34,6 +71,9 @@ export default function PublicFestivalPage() {
   const myAttendance = attendance.find(
     (item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded",
   );
+  const myCheckInEligibility = myAttendance
+    ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
+    : undefined;
 
   return (
     <main>
@@ -58,17 +98,28 @@ export default function PublicFestivalPage() {
           <Card className="mb-4 border-emerald-500/40 bg-emerald-500/5">
             <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">You&apos;re attending</Badge>
                   <span className="text-sm capitalize text-muted-foreground">
                     {myAttendance.status.replaceAll("_", " ")}
                   </span>
+                  {myCheckInEligibility?.canCheckIn && (
+                    <Badge className="bg-emerald-600">Ready to check in</Badge>
+                  )}
+                  {myCheckInEligibility?.wristbandIssued && (
+                    <Badge variant="outline">Wristband collected</Badge>
+                  )}
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Admission ticket {myAttendance.ticketReference}
                   {myAttendance.includesCamping ? " · Camping included" : ""}
                   {myAttendance.includesVipArea ? " · VIP access" : ""}
                 </p>
+                {myCheckInEligibility && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {checkInMessage(myCheckInEligibility)}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
