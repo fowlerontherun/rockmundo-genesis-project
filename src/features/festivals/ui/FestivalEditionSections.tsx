@@ -313,7 +313,7 @@ export function FestivalEditionFinance({
   return (
     <SectionShell
       title="Tickets and budget"
-      description="Set a standard ticket price, tickets available and expected demand. Detailed products and release phases are not required."
+      description="Set a standard ticket price and tickets available. The game calculates demand, automatic sponsorship and the projected Festival result."
     >
       <EditionScope
         festivalCompanyId={festivalCompanyId}
@@ -412,6 +412,7 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <ResultValue label="Ticket revenue" value={formatMoney(result.financials.ticketRevenueMinor, result.currencyCode)} />
+              <ResultValue label="Sponsorship" value={formatMoney(result.financials.sponsorshipRevenueMinor, result.currencyCode)} />
               <ResultValue label="Food & drink" value={formatMoney(result.financials.foodAndDrinkRevenueMinor, result.currencyCode)} />
               <ResultValue label="Merchandise" value={formatMoney(result.financials.merchandiseRevenueMinor, result.currencyCode)} />
               <ResultValue label="Total revenue" value={formatMoney(result.financials.totalRevenueMinor, result.currencyCode)} />
