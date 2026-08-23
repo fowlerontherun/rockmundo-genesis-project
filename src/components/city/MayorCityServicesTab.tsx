@@ -6,7 +6,6 @@ import { useCityProjects } from "@/hooks/useCityProjects";
 import { useCityDevelopment, useCityGameplayModifiers } from "@/hooks/useCityDevelopment";
 import type { CityLaws } from "@/types/city-governance";
 import type { MayorOfficeCitySummary } from "@/components/city/MayorOfficeOverview";
-import { MayorFestivalPermitQueue } from "@/components/city/MayorFestivalPermitQueue";
 import { CITY_DEVELOPMENT_LABELS, cityRatingBand, type CityDevelopmentRatingKey } from "@/types/city-development";
 
 interface Props {
@@ -67,8 +66,6 @@ export function MayorCityServicesTab({ city, laws }: Props) {
           </CardContent>
         </Card>
       )}
-
-      <MayorFestivalPermitQueue cityId={city.id} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <ServiceCard
