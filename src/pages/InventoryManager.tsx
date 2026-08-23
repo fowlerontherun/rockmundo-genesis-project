@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, KeyRound, Home, Guitar, DollarSign, Store } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock, Package, Zap, Sparkles, Heart, Star, KeyRound, Home, Guitar, DollarSign, Store, Ticket } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useUnderworldInventory, type InventoryItem } from "@/hooks/useUnderworldInventory";
 import { ItemDetailDialog } from "@/components/inventory/ItemDetailDialog";
@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // useAuth removed — profileId from useActiveProfile
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
+import { useMyFestivalMemorabilia } from "@/features/festival-company/attendance/useFestivalAttendance";
 
 const categoryIcons: Record<string, React.ElementType> = {
   consumable: Zap,
@@ -37,6 +38,10 @@ const InventoryManager = () => {
   const [detailOpen, setDetailOpen] = useState(false);
 
   const { inventoryItems, inventoryLoading, useItem } = useUnderworldInventory();
+  const {
+    data: festivalMemorabilia = [],
+    isLoading: festivalMemorabiliaLoading,
+  } = useMyFestivalMemorabilia(Boolean(profileId));
 
   // Personal instruments / gear (e.g. from blind boxes)
   const { data: personalGear = [], isLoading: gearLoading } = useQuery({
@@ -133,7 +138,7 @@ const InventoryManager = () => {
   return (
     <FMPageScaffold
       title="Inventory Manager"
-      subtitle="Manage your items, books, equipment, and property keys."
+      subtitle="Manage your items, memorabilia, books, equipment, and property keys."
       icon={Store}
       backTo="/hub/career-business"
       backLabel="Back to Career & Business"
@@ -141,12 +146,19 @@ const InventoryManager = () => {
 
 
       <Tabs defaultValue="instruments" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:w-auto lg:inline-flex">
           <TabsTrigger value="instruments" className="gap-2">
             <Guitar className="h-4 w-4" />
             Instruments
             {personalGear.length > 0 && (
               <Badge variant="secondary" className="ml-1">{personalGear.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="festival" className="gap-2">
+            <Ticket className="h-4 w-4" />
+            Festival Keepsakes
+            {festivalMemorabilia.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{festivalMemorabilia.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="underworld" className="gap-2">
@@ -242,6 +254,68 @@ const InventoryManager = () => {
                       </Card>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Festival Keepsakes Tab */}
+        <TabsContent value="festival" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-primary" />
+                Festival Keepsakes
+              </CardTitle>
+              <CardDescription>
+                Souvenirs earned by your character through festival attendance. Wristbands are collected when you physically check in.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!profileId ? (
+                <p className="text-sm text-muted-foreground">Sign in to view your festival keepsakes.</p>
+              ) : festivalMemorabiliaLoading ? (
+                <p className="text-sm text-muted-foreground">Loading festival keepsakes...</p>
+              ) : festivalMemorabilia.length === 0 ? (
+                <div className="text-center py-8">
+                  <Ticket className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No festival keepsakes yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Buy admission, travel to the festival and check in to collect your first wristband.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {festivalMemorabilia.map((item) => (
+                    <Card key={item.id} className={`overflow-hidden border-2 ${rarityStyles[item.rarity] || "border-muted"}`}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="rounded-lg bg-primary/10 p-2">
+                              <Ticket className="h-5 w-5 text-primary" />
+                            </div>
+                            <CardTitle className="text-base">{item.displayName}</CardTitle>
+                          </div>
+                          <Badge variant="outline" className="capitalize text-xs">
+                            {item.rarity}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground">{item.description}</p>
+                        )}
+                        <Badge variant="secondary" className="capitalize">
+                          {item.itemType.replaceAll("_", " ")}
+                        </Badge>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>Collected {new Date(item.issuedAt).toLocaleDateString("en-GB")}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </CardContent>
