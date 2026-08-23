@@ -32,7 +32,7 @@ interface InsertResult {
   error: RpcError;
 }
 
-interface InsertQuery extends PromiseLike<InsertResult> {}
+type InsertQuery = PromiseLike<InsertResult>;
 
 interface InsertTable {
   insert(values: Record<string, unknown> | Record<string, unknown>[]): InsertQuery;
