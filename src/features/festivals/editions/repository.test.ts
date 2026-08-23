@@ -169,6 +169,43 @@ describe("festival edition directory SQL boundary", () => {
   });
 });
 
+describe("production Festival edition-directory reconciliation", () => {
+  const reconciliation = readFileSync(
+    "supabase/reconciliation/festival/20260823_festival_edition_directory_contract.sql",
+    "utf8",
+  );
+
+  it("reasserts all seven frontend plan-binding keys", () => {
+    for (const binding of [
+      "configuration",
+      "site",
+      "tickets",
+      "artists",
+      "operations",
+      "sponsorship",
+      "timetable",
+    ]) {
+      expect(reconciliation).toContain(`'${binding}'`);
+    }
+  });
+
+  it("uses the production-real operations, sponsorship and timetable relations", () => {
+    expect(reconciliation).toContain("FROM public.festival_operations_plans op");
+    expect(reconciliation).toContain("JOIN public.festival_artist_programmes ap");
+    expect(reconciliation).toContain("FROM public.festival_sponsorships s");
+    expect(reconciliation).toContain("s.festival_id = e.id");
+    expect(reconciliation).toContain("FROM public.festival_stage_slots s");
+    expect(reconciliation).toContain("s.edition_id = e.id");
+  });
+
+  it("does not offer another annual edition while an editable edition is open", () => {
+    expect(reconciliation).toContain("has_open_edition boolean := false");
+    expect(reconciliation).toContain(
+      "company.status = 'active' AND company.setup_completed AND NOT has_open_edition",
+    );
+  });
+});
+
 describe("canonical Festival owner route", () => {
   const source = readFileSync(
     "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
