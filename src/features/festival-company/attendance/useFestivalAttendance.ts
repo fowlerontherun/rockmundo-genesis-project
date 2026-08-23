@@ -1,8 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  checkInToFestival,
   getMyFestivalAttendance,
   getMyFestivalCheckInEligibility,
   getMyFestivalMemorabilia,
+  leaveFestivalEarly,
 } from "./festivalAttendanceRepository";
 
 export const festivalPlayerAttendanceKey = ["festival-player-attendance"] as const;
@@ -32,3 +34,29 @@ export const useMyFestivalMemorabilia = (enabled = true) =>
     enabled,
     staleTime: 30_000,
   });
+
+const useInvalidateFestivalAttendeeState = () => {
+  const queryClient = useQueryClient();
+  return () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: festivalPlayerAttendanceKey }),
+    queryClient.invalidateQueries({ queryKey: festivalCheckInEligibilityKey }),
+    queryClient.invalidateQueries({ queryKey: festivalMemorabiliaKey }),
+    queryClient.invalidateQueries({ queryKey: ["festival-ticket-wallet"] }),
+  ]);
+};
+
+export const useFestivalCheckIn = () => {
+  const invalidate = useInvalidateFestivalAttendeeState();
+  return useMutation({
+    mutationFn: checkInToFestival,
+    onSuccess: invalidate,
+  });
+};
+
+export const useLeaveFestivalEarly = () => {
+  const invalidate = useInvalidateFestivalAttendeeState();
+  return useMutation({
+    mutationFn: leaveFestivalEarly,
+    onSuccess: invalidate,
+  });
+};
