@@ -7,6 +7,7 @@ import {
   getFestivalEditionTicketPlan,
   saveFestivalEditionTicketPlan,
 } from "@/features/festivals/projections/repository";
+import { festivalBudgetForecastQueryKey } from "@/features/festivals/budget/useFestivalBudgetForecast";
 import type { FestivalTicketPlanDraft } from "../domain/festivalTicketPlan";
 
 export const festivalTicketPlanQueryKey = (
@@ -79,6 +80,14 @@ export const useSaveFestivalTicketPlan = () => {
             data.festivalCompanyId,
             input.festivalEditionId ?? "company",
           ],
+          ...(input.festivalEditionId
+            ? [
+                festivalBudgetForecastQueryKey(
+                  data.festivalCompanyId,
+                  input.festivalEditionId,
+                ),
+              ]
+            : []),
         ].map((queryKey) => client.invalidateQueries({ queryKey })),
       );
     },
