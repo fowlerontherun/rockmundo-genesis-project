@@ -4,6 +4,7 @@ import {
   annualPlanToDraft,
   calculateAnnualPlanEndDate,
   festivalAnnualPlanSchema,
+  getAnnualPlanCapacityProjection,
   type FestivalAnnualPlan,
 } from "./model";
 
@@ -30,12 +31,16 @@ const validPlan: FestivalAnnualPlan = {
   vibe: "alternative",
   environmentalPolicy: "responsible",
   marketingEmphasis: "digital_buzz",
-  expectedCapacity: 4200,
+  expectedCapacity: 2500,
   estimatedOperatingCostMinor: 18500000,
   planningStatus: "ready",
   readinessScore: 100,
   planningEffects: {
-    capacity: 4200,
+    capacity: 2500,
+    potentialCapacity: 4200,
+    licensedCapacity: 2500,
+    licenceCapacityLimit: 2500,
+    capacityRestrictedByLicence: true,
     marketingDemandBasisPoints: 11250,
   },
   blockers: [],
@@ -147,5 +152,46 @@ describe("simplified annual plan draft", () => {
     expect(draft.cityId).toBe(validPlan.cities[0].id);
     expect(draft.festivalScale).toBe("small");
     expect(draft.marketingEmphasis).toBe("digital_buzz");
+  });
+});
+
+describe("Festival annual capacity projection", () => {
+  it("separates built capacity from currently licensed usable capacity", () => {
+    expect(getAnnualPlanCapacityProjection(validPlan)).toEqual({
+      potentialCapacity: 4200,
+      licensedCapacity: 2500,
+      licenceCapacityLimit: 2500,
+      capacityRestrictedByLicence: true,
+      reservedUntilLicenceUpgrade: 1700,
+    });
+  });
+
+  it("falls back to expected capacity for older annual-plan payloads", () => {
+    const projection = getAnnualPlanCapacityProjection({
+      expectedCapacity: 1800,
+      planningEffects: {},
+    });
+
+    expect(projection).toEqual({
+      potentialCapacity: 1800,
+      licensedCapacity: 1800,
+      licenceCapacityLimit: null,
+      capacityRestrictedByLicence: false,
+      reservedUntilLicenceUpgrade: 0,
+    });
+  });
+
+  it("detects a licence restriction even if an older payload omits the flag", () => {
+    const projection = getAnnualPlanCapacityProjection({
+      expectedCapacity: 2500,
+      planningEffects: {
+        potentialCapacity: 5150,
+        licensedCapacity: 2500,
+        licenceCapacityLimit: 2500,
+      },
+    });
+
+    expect(projection.capacityRestrictedByLicence).toBe(true);
+    expect(projection.reservedUntilLicenceUpgrade).toBe(2650);
   });
 });

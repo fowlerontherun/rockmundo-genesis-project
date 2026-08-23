@@ -83,6 +83,59 @@ export type FestivalAnnualPlanDraft = {
   marketingEmphasis: string;
 };
 
+export type FestivalCapacityProjection = {
+  potentialCapacity: number | null;
+  licensedCapacity: number | null;
+  licenceCapacityLimit: number | null;
+  capacityRestrictedByLicence: boolean;
+  reservedUntilLicenceUpgrade: number;
+};
+
+const planningEffectNumber = (
+  effects: Record<string, unknown>,
+  key: string,
+): number | null => {
+  const value = effects[key];
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+};
+
+export function getAnnualPlanCapacityProjection(
+  plan: Pick<FestivalAnnualPlan, "expectedCapacity" | "planningEffects">,
+): FestivalCapacityProjection {
+  const potentialCapacity =
+    planningEffectNumber(plan.planningEffects, "potentialCapacity") ??
+    plan.expectedCapacity;
+  const licensedCapacity =
+    planningEffectNumber(plan.planningEffects, "licensedCapacity") ??
+    planningEffectNumber(plan.planningEffects, "capacity") ??
+    plan.expectedCapacity;
+  const licenceCapacityLimit = planningEffectNumber(
+    plan.planningEffects,
+    "licenceCapacityLimit",
+  );
+  const explicitRestriction =
+    plan.planningEffects.capacityRestrictedByLicence === true;
+  const capacityRestrictedByLicence = Boolean(
+    explicitRestriction ||
+      (potentialCapacity !== null &&
+        licensedCapacity !== null &&
+        potentialCapacity > licensedCapacity),
+  );
+
+  return {
+    potentialCapacity,
+    licensedCapacity,
+    licenceCapacityLimit,
+    capacityRestrictedByLicence,
+    reservedUntilLicenceUpgrade:
+      potentialCapacity !== null && licensedCapacity !== null
+        ? Math.max(0, potentialCapacity - licensedCapacity)
+        : 0,
+  };
+}
+
 export const annualPlanToDraft = (
   plan: FestivalAnnualPlan,
 ): FestivalAnnualPlanDraft => ({
