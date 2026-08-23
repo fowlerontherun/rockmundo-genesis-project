@@ -11,7 +11,8 @@ export type FestivalCheckInBlockReason =
   | "festival_not_started"
   | "festival_finished"
   | "character_traveling"
-  | "wrong_city";
+  | "wrong_city"
+  | "schedule_conflict";
 
 export interface FestivalCheckInEligibility {
   attendanceId: string;
@@ -91,6 +92,7 @@ const BLOCK_REASONS = new Set<FestivalCheckInBlockReason>([
   "festival_finished",
   "character_traveling",
   "wrong_city",
+  "schedule_conflict",
 ]);
 const RARITIES = new Set<FestivalMemorabiliaItem["rarity"]>([
   "common",
