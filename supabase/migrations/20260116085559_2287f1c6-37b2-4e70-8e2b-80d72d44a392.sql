@@ -30,14 +30,16 @@ USING (
   )
 );
 
--- Policy: Song owners can insert ownership records
+-- Policy: Song owners can insert ownership records.
+-- songs.artist_id is the canonical auth-user owner column in the baseline schema;
+-- songs.user_id was a short-lived legacy assumption and is not present on clean databases.
 CREATE POLICY "Song owners can insert ownership records"
 ON band_song_ownership FOR INSERT
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM songs s
     WHERE s.id = song_id
-    AND (s.user_id = auth.uid() OR s.original_writer_id = auth.uid())
+    AND (s.artist_id = auth.uid() OR s.original_writer_id = auth.uid())
   )
 );
 
