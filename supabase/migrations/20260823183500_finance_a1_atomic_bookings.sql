@@ -1,14 +1,14 @@
 -- Finance backlog A1: atomic rehearsal and recording bookings.
 --
--- Production currently has the band treasury model (`band_treasuries`) but not the
--- later `financial_accounts` Phase 8B schema. This migration deliberately targets
--- the live treasury/wallet model so browser booking flows no longer depend on
--- missing finance RPCs or split payment + booking transactions.
+-- Production has the `band_treasuries` model but not the later
+-- `financial_accounts` Phase 8B schema. This migration therefore targets the
+-- live treasury/wallet model and removes the split browser-side payment + booking
+-- sequence for rehearsals and recording sessions.
 
 BEGIN;
 
 -- ---------------------------------------------------------------------------
--- Payment audit / refund anchor
+-- Payment audit / future refund anchor
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.booking_payments (
@@ -48,7 +48,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS recording_sessions_funding_idempotency_key_uq
   WHERE funding_idempotency_key IS NOT NULL;
 
 -- Bands created before the treasury rollout may only have the compatibility
--- mirror. Seed only missing treasuries; never overwrite an existing treasury.
+-- mirror. Seed only missing treasuries; existing treasury balances are never
+-- overwritten.
 INSERT INTO public.band_treasuries (
   band_id,
   currency_code,
@@ -93,7 +94,7 @@ DECLARE
   v_currency text := 'USD';
   v_cash bigint;
 BEGIN
-  IF p_payment_source NOT IN ('band', 'personal') THEN
+  IF p_payment_source IS NULL OR p_payment_source NOT IN ('band', 'personal') THEN
     RAISE EXCEPTION 'invalid_payment_source';
   END IF;
 
@@ -122,42 +123,47 @@ BEGIN
       RAISE EXCEPTION 'band_treasury_missing';
     END IF;
 
+    v_currency := v_treasury.currency_code;
+
     IF (v_treasury.balance_minor - v_treasury.reserved_balance_minor) < p_amount_minor THEN
       RAISE EXCEPTION 'insufficient_band_funds';
     END IF;
 
-    UPDATE public.band_treasuries
-       SET balance_minor = balance_minor - p_amount_minor,
-           updated_at = now()
-     WHERE id = v_treasury.id
-     RETURNING balance_minor, currency_code
-          INTO v_balance_after_minor, v_currency;
+    IF p_amount_minor = 0 THEN
+      v_balance_after_minor := v_treasury.balance_minor;
+    ELSE
+      UPDATE public.band_treasuries
+         SET balance_minor = balance_minor - p_amount_minor,
+             updated_at = now()
+       WHERE id = v_treasury.id
+       RETURNING balance_minor INTO v_balance_after_minor;
 
-    INSERT INTO public.band_treasury_transactions (
-      band_id,
-      treasury_id,
-      profile_id,
-      direction,
-      amount_minor,
-      currency_code,
-      source_kind,
-      category,
-      note,
-      idempotency_key,
-      balance_after_minor
-    ) VALUES (
-      p_band_id,
-      v_treasury.id,
-      p_profile_id,
-      'debit',
-      p_amount_minor,
-      v_currency,
-      'booking',
-      p_category,
-      p_note,
-      p_idempotency_key || ':treasury',
-      v_balance_after_minor
-    );
+      INSERT INTO public.band_treasury_transactions (
+        band_id,
+        treasury_id,
+        profile_id,
+        direction,
+        amount_minor,
+        currency_code,
+        source_kind,
+        category,
+        note,
+        idempotency_key,
+        balance_after_minor
+      ) VALUES (
+        p_band_id,
+        v_treasury.id,
+        p_profile_id,
+        'debit',
+        p_amount_minor,
+        v_currency,
+        'booking',
+        p_category,
+        p_note,
+        p_idempotency_key || ':treasury',
+        v_balance_after_minor
+      );
+    END IF;
 
     -- Compatibility mirror only. New booking authority reads the treasury.
     IF v_treasury.is_primary THEN
@@ -181,10 +187,14 @@ BEGIN
       RAISE EXCEPTION 'insufficient_personal_funds';
     END IF;
 
-    UPDATE public.profiles
-       SET cash = cash - (p_amount_minor / 100)
-     WHERE id = p_profile_id
-     RETURNING cash * 100 INTO v_balance_after_minor;
+    IF p_amount_minor = 0 THEN
+      v_balance_after_minor := v_cash * 100;
+    ELSE
+      UPDATE public.profiles
+         SET cash = cash - (p_amount_minor / 100)
+       WHERE id = p_profile_id
+       RETURNING cash * 100 INTO v_balance_after_minor;
+    END IF;
   END IF;
 
   RETURN jsonb_build_object(
@@ -196,7 +206,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public._debit_atomic_booking_payment(uuid, uuid, text, bigint, text, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public._debit_atomic_booking_payment(uuid, uuid, text, bigint, text, text, text)
+  FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Rehearsal booking authority
@@ -256,7 +267,10 @@ BEGIN
       'idempotent', true,
       'bookingId', v_existing.id,
       'totalCost', v_existing.total_cost,
-      'paymentSource', v_existing.payment_source
+      'paymentSource', v_existing.payment_source,
+      'chemistryGain', v_existing.chemistry_gain,
+      'xpEarned', v_existing.xp_earned,
+      'familiarityGained', v_existing.familiarity_gained
     );
   END IF;
 
@@ -268,7 +282,7 @@ BEGIN
     RAISE EXCEPTION 'rehearsal_must_be_in_future';
   END IF;
 
-  -- Serialize bookings for the band and the room so two concurrent browser calls
+  -- Serialize bookings for the band and the room so concurrent browser calls
   -- cannot both pass the overlap checks.
   PERFORM b.id FROM public.bands b WHERE b.id = p_band_id FOR UPDATE;
   IF NOT FOUND THEN
@@ -317,8 +331,12 @@ BEGIN
   END IF;
 
   v_total_cost := GREATEST(0, COALESCE(v_room.hourly_rate, 0) * p_duration_hours);
-  v_chemistry_gain := floor((COALESCE(v_room.quality_rating, 0)::numeric / 10) * p_duration_hours)::integer;
-  v_xp_earned := floor(75 * p_duration_hours * (COALESCE(v_room.equipment_quality, 0)::numeric / 100))::integer;
+  v_chemistry_gain := floor(
+    (COALESCE(v_room.quality_rating, 0)::numeric / 10) * p_duration_hours
+  )::integer;
+  v_xp_earned := floor(
+    75 * p_duration_hours * (COALESCE(v_room.equipment_quality, 0)::numeric / 100)
+  )::integer;
   v_familiarity_gain := p_duration_hours * 60;
 
   v_payment := public._debit_atomic_booking_payment(
@@ -415,8 +433,12 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.confirm_rehearsal_booking_atomic(uuid, uuid, integer, uuid, uuid, timestamptz, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.confirm_rehearsal_booking_atomic(uuid, uuid, integer, uuid, uuid, timestamptz, text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.confirm_rehearsal_booking_atomic(
+  uuid, uuid, integer, uuid, uuid, timestamptz, text, text
+) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.confirm_rehearsal_booking_atomic(
+  uuid, uuid, integer, uuid, uuid, timestamptz, text, text
+) TO authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Recording booking authority
@@ -504,11 +526,13 @@ BEGIN
     RAISE EXCEPTION 'invalid_recording_duration';
   END IF;
 
-  IF p_recording_type NOT IN ('demo', 'professional') THEN
+  IF p_recording_type IS NULL OR p_recording_type NOT IN ('demo', 'professional') THEN
     RAISE EXCEPTION 'invalid_recording_type';
   END IF;
 
-  IF p_recording_version IS NOT NULL AND p_recording_version NOT IN ('standard', 'remix', 'acoustic') THEN
+  IF p_recording_version IS NOT NULL
+     AND p_recording_version <> ''
+     AND p_recording_version NOT IN ('standard', 'remix', 'acoustic') THEN
     RAISE EXCEPTION 'invalid_recording_version';
   END IF;
 
@@ -520,7 +544,10 @@ BEGIN
     RAISE EXCEPTION 'invalid_recording_window';
   END IF;
 
-  IF abs(extract(epoch FROM (p_scheduled_end - p_scheduled_start)) - (p_duration_hours * 3600)) > 120 THEN
+  IF abs(
+    extract(epoch FROM (p_scheduled_end - p_scheduled_start))
+    - (p_duration_hours * 3600)
+  ) > 120 THEN
     RAISE EXCEPTION 'recording_window_duration_mismatch';
   END IF;
 
@@ -560,7 +587,8 @@ BEGIN
          AND s.status IN ('scheduled', 'in_progress')
          AND s.scheduled_start < p_scheduled_end
          AND s.scheduled_end > p_scheduled_start
-    ) OR EXISTS (
+    )
+    OR EXISTS (
       SELECT 1
         FROM public.band_rehearsals r
        WHERE r.band_id = p_band_id
@@ -576,12 +604,13 @@ BEGIN
     INTO v_song_quality
     FROM public.songs s
    WHERE s.id = p_song_id;
-
   IF NOT FOUND THEN
     RAISE EXCEPTION 'song_not_found';
   END IF;
 
-  IF p_producer_id IS NOT NULL AND p_producer_id <> '' AND p_producer_id <> 'self-produce' THEN
+  IF p_producer_id IS NOT NULL
+     AND p_producer_id <> ''
+     AND p_producer_id <> 'self-produce' THEN
     BEGIN
       v_producer_id := p_producer_id::uuid;
     EXCEPTION WHEN invalid_text_representation THEN
@@ -593,35 +622,31 @@ BEGIN
       FROM public.recording_producers rp
      WHERE rp.id = v_producer_id
        AND rp.is_available = true;
-
     IF NOT FOUND THEN
       RAISE EXCEPTION 'producer_not_available';
     END IF;
   END IF;
 
-  CASE p_orchestra_size
-    WHEN 'chamber' THEN
-      v_orchestra_cost := 1500;
-      v_orchestra_bonus := 10;
-      v_orchestra_musicians := 15;
-    WHEN 'small' THEN
-      v_orchestra_cost := 4000;
-      v_orchestra_bonus := 17;
-      v_orchestra_musicians := 30;
-    WHEN 'full' THEN
-      v_orchestra_cost := 12000;
-      v_orchestra_bonus := 25;
-      v_orchestra_musicians := 80;
-    WHEN NULL THEN
-      NULL;
-    WHEN '' THEN
-      NULL;
-    ELSE
-      RAISE EXCEPTION 'invalid_orchestra_size';
-  END CASE;
+  IF p_orchestra_size IS NULL OR p_orchestra_size = '' THEN
+    NULL;
+  ELSIF p_orchestra_size = 'chamber' THEN
+    v_orchestra_cost := 1500;
+    v_orchestra_bonus := 10;
+    v_orchestra_musicians := 15;
+  ELSIF p_orchestra_size = 'small' THEN
+    v_orchestra_cost := 4000;
+    v_orchestra_bonus := 17;
+    v_orchestra_musicians := 30;
+  ELSIF p_orchestra_size = 'full' THEN
+    v_orchestra_cost := 12000;
+    v_orchestra_bonus := 25;
+    v_orchestra_musicians := 80;
+  ELSE
+    RAISE EXCEPTION 'invalid_orchestra_size';
+  END IF;
 
   -- A studio owned by the artist's active label is free, matching the visible
-  -- booking UI. The producer/orchestra remain chargeable.
+  -- booking UI. Producer/orchestra costs remain chargeable.
   IF v_studio.company_id IS NOT NULL THEN
     v_label_owned := EXISTS (
       SELECT 1
@@ -647,8 +672,8 @@ BEGIN
   v_producer_cost := COALESCE(v_producer_cost_per_hour, 0) * p_duration_hours;
   v_total_cost := GREATEST(0, v_studio_cost + v_producer_cost + v_orchestra_cost);
 
-  -- Preserve the current recording quality calculation, but calculate it on the
-  -- server rather than trusting the browser-created session row.
+  -- Preserve the existing booking-time quality calculation, but calculate it on
+  -- the server rather than trusting a browser-created session row.
   IF p_duration_hours = 4 THEN
     v_duration_multiplier := 1.05;
   END IF;
@@ -658,13 +683,22 @@ BEGIN
       * (1 + (COALESCE(v_studio.quality_rating, 0)::numeric / 100) * 0.2)
       * (1 + (v_producer_quality_bonus::numeric / 100))
       * v_duration_multiplier
-      * CASE WHEN v_orchestra_bonus > 0 THEN (1 + v_orchestra_bonus::numeric / 100) ELSE 1 END
-      * CASE WHEN COALESCE(p_rehearsal_bonus, 0) <> 0 THEN (1 + GREATEST(-20, LEAST(10, p_rehearsal_bonus))::numeric / 100) ELSE 1 END;
+      * CASE
+          WHEN v_orchestra_bonus > 0 THEN 1 + v_orchestra_bonus::numeric / 100
+          ELSE 1
+        END
+      * CASE
+          WHEN COALESCE(p_rehearsal_bonus, 0) <> 0
+            THEN 1 + GREATEST(-20, LEAST(10, p_rehearsal_bonus))::numeric / 100
+          ELSE 1
+        END;
 
   IF v_raw_quality <= 600 THEN
     v_final_quality := round(v_raw_quality)::integer;
   ELSE
-    v_final_quality := round(600 + ((v_raw_quality - 600) * 600) / v_raw_quality)::integer;
+    v_final_quality := round(
+      600 + ((v_raw_quality - 600) * 600) / v_raw_quality
+    )::integer;
   END IF;
 
   v_final_quality := GREATEST(0, LEAST(1000, v_final_quality));
@@ -777,7 +811,7 @@ BEGIN
     reference_id
   ) VALUES (
     p_studio_id,
-    'booking_revenue',
+    'session_revenue',
     v_studio_cost,
     'Recording session booking',
     v_recording_id
@@ -798,7 +832,13 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.confirm_recording_session_atomic(uuid, uuid, text, uuid, integer, text, text, text, integer, timestamptz, timestamptz, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.confirm_recording_session_atomic(uuid, uuid, text, uuid, integer, text, text, text, integer, timestamptz, timestamptz, text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.confirm_recording_session_atomic(
+  uuid, uuid, text, uuid, integer, text, text, text, integer,
+  timestamptz, timestamptz, text, text
+) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.confirm_recording_session_atomic(
+  uuid, uuid, text, uuid, integer, text, text, text, integer,
+  timestamptz, timestamptz, text, text
+) TO authenticated;
 
 COMMIT;
