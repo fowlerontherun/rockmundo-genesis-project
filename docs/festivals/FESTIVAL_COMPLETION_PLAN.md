@@ -3,10 +3,10 @@
 **Status:** Active living plan  
 **Created:** 23 August 2026  
 **Last updated:** 23 August 2026  
-**Baseline:** `main` after merged PR #1623  
+**Baseline:** `main` after merged PR #1624  
 **Overall completion:** In progress  
-**Current Festival PR:** #1624 — planner merge/certification cleanup  
-**Next planned slice:** Festival condition stats + Eat/Drink/Explore/Rest
+**Current Festival PR:** #1625 — Festival condition stats + Eat/Drink/Explore/Rest  
+**Next planned slice:** Watch Band + timetable integration + inspiration
 
 > This is the single source of truth for completing RockMundo Festivals. Every Festival PR must update this file and the PR Progress Register until the final certification gate passes.
 
@@ -86,11 +86,14 @@ Festival attendance should feel like a temporary mini-game inside RockMundo, not
 - [x] PR #1620: stale/missing schedule lock or wristband state can self-repair safely for a genuinely checked-in character.
 - [x] PR #1620: reconnect/focus/open-session reconciliation returns the UI to authoritative attendance state.
 - [x] PR #1623: Festival Home shows authoritative Festival-local day/time and next planned activity.
-- [ ] My Day/Stages/Food & Drink/Activities/Social/Campsite/Map/Character become functional views. **My Day is functional in PR #1623; remaining views are intentionally deferred.**
 - [x] PR #1623: Day planner supports 30/60/90-minute blocks, overlap-safe changes, missed-plan history and multi-day planning.
+- [x] PR #1625: temporary Festival condition state exists for Energy, Hunger, Hydration, Mood, Intoxication and Social.
+- [x] PR #1625: Eat/Drink/Explore/Rest resolve server-side only during their planned time window.
+- [x] PR #1625: successful activity resolution is exact-once and persists before/effect/after state.
+- [x] PR #1625: completed blocks continue to occupy timeline time and cannot be overlap-stacked.
+- [x] PR #1625: Food & Drink and Activities are functional Festival Mode destinations.
+- [ ] My Day/Stages/Food & Drink/Activities/Social/Campsite/Map/Character become functional views. **My Day, Food & Drink and Activities are functional; remaining views are intentionally deferred.**
 - [ ] Watching an act resolves against the real Festival timetable.
-- [ ] Eat/drink/explore/socialise/rest/camp/after-party activities work.
-- [ ] Festival condition stats work: Energy, Hunger, Hydration, Mood, Intoxication, Social.
 - [ ] Camping quality affects recovery.
 - [ ] Festival random events support choices/consequences.
 - [ ] Alcohol connects to wellness/lifestyle trade-offs.
@@ -133,94 +136,74 @@ Festival attendance should feel like a temporary mini-game inside RockMundo, not
 
 ### Stable foundations
 
-The modern replacement already has Festival company ownership, annual editions, upgrades/licence ceilings, simplified planning, server-driven ticket demand, sponsorship/budget forecasting, player-act booking, NPC filler, simplified permits, edition-aware currency, public launch/ticketing, attendee lifecycle, readiness, wristbands and authoritative check-in/leave.
+The modern replacement already has Festival company ownership, annual editions, upgrades/licence ceilings, simplified planning, server-driven ticket demand, sponsorship/budget forecasting, player-act booking, NPC filler, simplified permits, edition-aware currency, public launch/ticketing, attendee lifecycle, readiness, wristbands, authoritative check-in/leave, Festival Mode and an authoritative day planner.
 
 ### PR #1618 — Festival Mode + schedule reservation — merged
 
-This slice added:
-
-- global Festival Mode when the active character is `attending`;
-- a responsive reduced shell shared by desktop/mobile;
-- Festival Home and visible-but-disabled future Festival navigation areas;
-- one canonical `player_scheduled_activities.activity_type = 'festival_attendance'` reservation for the remaining event window;
-- check-in blocker `schedule_conflict` rather than silently cancelling existing commitments;
-- matching Festival-performance exception so the attendee's own Festival set can later coexist;
-- RLS preventing direct creation/update/delete of Festival reservation rows;
-- table-boundary trigger preventing direct overlapping normal schedule writes;
-- early-leave cancellation of the reservation.
+Added the reduced Festival shell and server-owned shared-calendar reservation.
 
 Production migrations:
-
 - `20260823173737_festival_mode_schedule_lock`
 - `20260823174030_enforce_festival_schedule_reservation`
 
 Canonical migrations:
-
 - `20291218255000_festival_mode_schedule_lock.sql`
 - `20291218255100_enforce_festival_schedule_reservation.sql`
 
-At introduction production had zero attendee rows and zero existing Festival schedule reservation rows.
-
 ### PR #1620 — automatic completion + reconnect recovery — merged
 
-This slice added:
-
-- server-authoritative completion at midnight immediately after `edition.ends_on` in the Festival city timezone;
-- a five-minute `pg_cron` job so completion does not depend on a player browser/Vercel process;
-- idempotent completion of the shared Festival schedule reservation;
-- current-character reconciliation on attendance reads;
-- reconnect/window-focus/60-second foreground refresh so an open Festival Mode session converges quickly after completion;
-- one-way ticket repair (`valid → used`) only for an authoritative checked-in attendee;
-- safe wristband restoration without replaying check-in;
-- safe reattachment/recreation of a missing Festival schedule reservation only when no normal commitment conflicts;
-- duplicate Festival reservation retirement without deleting history;
-- strict frontend parsing of reconciliation responses.
+Added Festival-local completion, five-minute cron reconciliation, safe stale-state repair and reconnect/focus recovery.
 
 Production migration:
-
 - `20260823175735_festival_attendee_completion_recovery`
 
 Canonical migration:
-
 - `20291218255200_festival_attendee_completion_recovery.sql`
 
 Production cron:
-
 - `festival-attendee-completion` — `*/5 * * * *`
-
-A manual production batch check returned zero rows examined/completed, which matches the zero live attendee rows at introduction. Supabase security advisors returned no findings after the migration. Performance-advisor output remains existing project-wide policy/index debt and introduced no identified Festival-specific blocker.
 
 ### PR #1623 — Festival clock + basic day planner — merged
 
-This slice added:
-
-- authoritative Festival-local clock/day metadata derived server-side;
-- a persistent `festival_attendee_plan_items` timeline tied to the active attendee/edition/profile;
-- 30/60/90-minute activity blocks aligned to the half-hour grid;
-- supported plan categories for Watch Act, Eat, Drink, Explore and Rest without resolving their gameplay outcomes yet;
-- idempotent and concurrency-safe plan creation;
-- database-side edition-window, past-time and overlap rejection;
-- missed-plan reconciliation that preserves history rather than deleting past intent;
-- explicit cancellation of future planned blocks while keeping historical rows;
-- functional **My Day** Festival Mode navigation with multi-day tabs and ordered timeline;
-- Festival Home live Festival time/day plus next-plan summary;
-- focused planner/timezone/concurrency regression coverage;
-- a dedicated index covering the new edition foreign key.
+Added Festival-local time/day metadata, persistent 30/60/90-minute My Day blocks, conflict-safe planning, missed/cancelled history and multi-day UI.
 
 Production migrations:
-
 - `20260823180812_festival_day_planner`
 - `20260823190432_festival_day_planner_indexes`
 
 Canonical migrations:
-
 - `20291218255300_festival_day_planner.sql`
 - `20291218255400_harden_festival_day_planner.sql`
 - `20291218255500_festival_day_planner_indexes.sql`
 
-This slice intentionally does not award XP/AP, mutate Festival condition stats, charge attendee funds, resolve watched performances, or create food/drink/random-event outcomes.
+Certification note: temporary diagnostics showed no Festival planner lint errors; unrelated repository-wide lint baseline drift and a generated/local Supabase migration-state issue remain separate debt.
 
-Certification note: the temporary lint diagnostics used while certifying #1623 showed no Festival planner lint errors; the repository-wide ESLint count had independently drifted 12 errors above its stored baseline. The local Festival database lifecycle also surfaced a migration named `20291218194417_festival_track_ownership.sql`, but that file is absent from both the exact failing commit tree and current `main`, so it is treated as generated/local migration-state debt rather than a committed #1623 migration.
+### PR #1625 — condition stats + Eat/Drink/Explore/Rest — in progress
+
+This slice adds:
+
+- one temporary server-authoritative condition overlay per attendee/edition;
+- Energy, Hunger, Hydration, Mood, Intoxication and Social values, all bounded 0–100;
+- compatibility seeding from permanent profile wellness without requiring the newer production `profiles.hydration` column;
+- server-side condition evolution in 30-minute elapsed-time ticks;
+- exact-once Eat/Drink/Explore/Rest resolution during the activity's own live planner window;
+- immutable before/effect/after activity result records;
+- `completed` planner history;
+- consumed-time protection so completed blocks still prevent overlap stacking;
+- Festival Home condition display;
+- functional Food & Drink and Activities destinations;
+- My Day `Do now` execution for active executable blocks;
+- strict frontend parsers and focused regression tests.
+
+Production migration:
+- `20260823201547_festival_condition_activities`
+
+Canonical migration:
+- `20291218255600_festival_condition_activities.sql`
+
+At introduction production had 205 profiles, one modern Festival edition, zero attendee rows and zero planner rows. After migration there are zero condition/resolution rows, as expected. New direct table grants to `anon`/`authenticated` are absent; public RPC execute is limited to authenticated/service-role callers and internal helpers are not browser-callable.
+
+The `Drink` activity in this slice represents basic hydration only. It does not purchase alcohol or increase Intoxication; commercial drink choices and permanent lifestyle effects remain a later bounded slice.
 
 ---
 
@@ -241,21 +224,26 @@ Certification note: the temporary lint diagnostics used while certifying #1623 s
 - [x] Timeline / next activity / safe future-plan changes. **PR #1623**
 - [x] Missed activity state/history rules. **PR #1623**
 - [x] Multi-day planning/rollover representation. **PR #1623**
-- [ ] `Go Now`/activity resolution is added only when the destination/activity systems are authoritative.
+- [x] Eat/Drink/Explore/Rest activity resolution. **PR #1625**
+- [ ] Watch Act resolution waits for timetable authority.
 
 ### C. Locations + activities
 
 Locations: actual edition stages, food court, bars, market/merch, campsite, VIP, after-party and medical.
 
-Activities: watch act, eat, drink, explore, socialise, rest, sleep/camp, campfire/music and after-party.
-
-Initial Festival Map is clickable navigation, not a walking simulator.
+- [x] Basic Food & Drink destination for planned Eat/Drink execution. **PR #1625**
+- [x] Basic Activities destination for planned Explore/Rest execution. **PR #1625**
+- [ ] Stage timetable destination.
+- [ ] Campsite/VIP/after-party/medical destinations.
+- [ ] Initial clickable Festival Map.
 
 ### D. Temporary Festival condition simulation
 
-Authoritative stats: Energy, Hunger, Hydration, Mood, Intoxication, Social.
-
-Reuse existing wellness/lifestyle effects where practical instead of duplicating permanent health systems.
+- [x] Energy, Hunger, Hydration, Mood, Intoxication and Social temporary state. **PR #1625**
+- [x] Server-side elapsed-time drift. **PR #1625**
+- [x] Bounded Eat/Drink/Explore/Rest effects. **PR #1625**
+- [ ] Camping/sleep recovery.
+- [ ] Alcohol/lifestyle integration.
 
 ### E. Music + performer integration
 
@@ -271,7 +259,7 @@ Reuse existing wellness/lifestyle effects where practical instead of duplicating
 
 - Festival vendor catalogue/quality/queues from setup/upgrades.
 - Exact-once attendee debit and Festival/company revenue/commission.
-- Condition effects.
+- Condition effects from concrete purchased items.
 - Spend contributes to engagement/results.
 
 ### G. Social + random events
@@ -322,8 +310,8 @@ Add diagnostics/recovery/balance controls, maintain active-caller inventory, ret
 2. **Festival Mode shell + schedule lock/unlock** — #1618 merged.
 3. **Automatic attendee completion + stale-state/reconnect recovery** — #1620 merged.
 4. **Festival clock + basic day planner** — #1623 merged.
-5. **Condition stats + Eat/Drink/Explore/Rest** — next.
-6. **Watch Band + timetable integration + inspiration**.
+5. **Condition stats + Eat/Drink/Explore/Rest** — #1625 in progress.
+6. **Watch Band + timetable integration + inspiration** — next.
 7. **Food/drink/merch authoritative economy**.
 8. **Camping + sleep/recovery**.
 9. **Social attendee actions + relationships**.
@@ -347,11 +335,15 @@ Do not jump to rewards/random events before attendance lifecycle, Festival Mode,
 - Ticket purchase/check-in/activity/reward/settlement mutations are server authoritative.
 - Financial mutations are idempotent and ledger-backed.
 - One attendee lifecycle and one wristband per character/edition.
+- One temporary Festival condition row per attendee/edition.
+- One immutable activity resolution per executable planner item.
 - Admission ticket is consumed once; recovery may only move `valid → used`, never restore reusable admission.
 - Festival schedule reservation cannot be forged/deleted by the player.
 - Recovery never cancels unrelated normal commitments to recreate a Festival lock.
 - Festival plan creation/cancellation is server-authoritative and scoped to the active character's own attending lifecycle.
 - Plan retries are idempotent; overlapping planned blocks cannot be created concurrently.
+- Completed blocks continue to consume their original timeline window.
+- Activity resolution cannot run before a block starts and cannot apply effects after its block ends.
 - Real audience counts unique eligible attendees once per performance.
 - Engagement/rewards have per-attendee/event/day caps and diminishing returns where needed.
 - Owners receive aggregate engagement, not unrestricted private attendee state.
@@ -362,7 +354,7 @@ Do not jump to rewards/random events before attendance lifecycle, Festival Mode,
 ## 8. Required end-to-end journeys
 
 ### Attendee happy path
-Discover → buy admission → travel → eligibility → check in → ticket used → wristband → schedule reserved → Festival Mode → plan/watch/eat/drink/socialise/camp → complete → recap/history → normal UI restored.
+Discover → buy admission → travel → eligibility → check in → ticket used → wristband → schedule reserved → Festival Mode → plan → execute Eat/Drink/Explore/Rest → later watch/socialise/camp → complete → recap/history → normal UI restored.
 
 ### Leave early
 Check in → complete some Festival activity → Leave early → confirm → Festival reservation released → future Festival plans cancelled → completed rewards retained → completion reward reduced/withheld → normal UI restored.
@@ -374,7 +366,7 @@ Attend → own Festival slot appears → canonical gig performance → return to
 Plan → player act confirmed → tickets → launch → NPC/real attendees → runtime → settlement → engagement/progression → immutable history → next annual edition.
 
 ### Failure/abuse
-Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule conflict; duplicate check-in; direct RPC against another attendee; direct overlapping schedule insert; stale missing Festival lock; missing wristband; relog/reconnect at Festival end; duplicate completion; duplicate rewards; overlapping/concurrent planner writes; plan outside Festival window; finance retry; settlement retry.
+Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule conflict; duplicate check-in; direct RPC against another attendee; direct overlapping schedule insert; stale missing Festival lock; missing wristband; relog/reconnect at Festival end; duplicate completion; duplicate rewards; overlapping/concurrent planner writes; completed-block overlap stacking; execute activity early; execute after window; duplicate activity resolution; plan outside Festival window; finance retry; settlement retry.
 
 ---
 
@@ -385,10 +377,13 @@ Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule
 - Some older scheduling subsystems may not yet use the canonical schedule table consistently; later integration certification must find remaining bypasses.
 - Finance must be verified against ledgers through final settlement rather than trusted from forecasts alone.
 - Ticket consumption currently uses status/update timestamp; dedicated `used_at` can be considered during ticket-lifecycle hardening.
-- Planner categories are intention only until their server-authoritative activity resolvers are implemented; #1623 must not be mistaken for completed Eat/Drink/Watch gameplay.
+- Production permanent wellness is not fully synchronized with repository wellness migrations: `profiles.hydration` is currently absent. PR #1625 intentionally tolerates this rather than coupling Festival Mode to an unrelated rollout.
+- Basic Eat/Drink effects are non-commercial placeholders; the later Festival economy must replace/extend them with concrete vendor choices without double-applying effects.
+- Intoxication exists now for a stable condition contract, but PR #1625 intentionally provides no alcohol source.
 - Real-player engagement/reward multipliers require explicit caps before rollout.
 - Project-wide Supabase performance-advisor warnings pre-date the attendee programme and should be handled separately unless a Festival-specific regression appears.
-- Festival CI currently sees a non-tree migration `20291218194417_festival_track_ownership.sql` during local Supabase startup; its generation/source must be fixed separately because it is absent from the exact checked-in failing tree and cannot be corrected by a later planner migration.
+- The repository-wide ESLint error count recently drifted above its stored baseline outside Festival planner files; this remains separate cleanup debt.
+- Festival database lifecycle CI has surfaced a generated/local migration named `20291218194417_festival_track_ownership.sql` that is absent from the checked-in failing tree and current `main`; do not patch unrelated Festival migrations to compensate for it.
 
 ---
 
@@ -405,7 +400,8 @@ Wrong city; travelling; not started/finished/cancelled; invalid ticket; schedule
 | #1620 | Merged | Automatic completion + reconnect recovery | Server completion, safe stale-state repair and reconnect convergence |
 | #1621 | Merged | Tracker reconciliation | Plan aligned after #1620 merged ahead of its documentation commit |
 | #1623 | Merged | Festival clock + basic day planner | Authoritative Festival clock, persistent My Day timeline and conflict-safe planning |
-| #1624 | **In progress** | Planner merge/certification cleanup | Restore normal lint wrapper and reconcile tracker after #1623 merged during diagnostics |
+| #1624 | Merged | Planner merge/certification cleanup | Restored normal lint wrapper and reconciled #1623 tracker state |
+| #1625 | **In progress** | Festival conditions + basic activities | Temporary condition simulation and exact-once Eat/Drink/Explore/Rest |
 
 Every later Festival PR must update this register.
 
@@ -413,22 +409,23 @@ Every later Festival PR must update this register.
 
 ## 11. Next planned slice
 
-### Festival Completion PR 5 — condition stats + Eat/Drink/Explore/Rest
+### Festival Completion PR 6 — Watch Band + timetable integration + inspiration
 
 Target scope:
 
-- Add authoritative temporary Festival condition state for Energy, Hunger, Hydration, Mood, Intoxication and Social.
-- Define bounded server-side decay/recovery rules using Festival-local elapsed time rather than browser timers.
-- Turn Eat, Drink, Explore and Rest from planner intentions into authoritative executable activity outcomes.
-- Keep direct client control away from condition deltas/outcome values.
-- Preserve idempotent activity resolution so retries cannot duplicate effects.
-- Integrate completed/missed/cancelled planner items without rewriting history.
-- Add the first functional Festival activity destination surfaces required for these actions.
-- Keep actual food/drink purchasing and Festival-company revenue out of this slice unless required for a minimal certified free/basic activity; authoritative commercial economy remains a later PR.
-- Add focused condition, elapsed-time, idempotency and activity-resolution tests.
+- Expose the authoritative Festival timetable/stages to attendees.
+- Bind `watch_act` planner blocks to a real scheduled Festival performance rather than free text.
+- Reject impossible watch blocks that do not overlap the selected performance window.
+- Resolve a watched act exactly once against the authoritative booking/performance identity.
+- Feed the watch outcome into Festival Mood/Social/Energy/Hydration with bounded server-owned effects.
+- Add genre exposure/familiarity and a capped inspiration/temporary-learning chance without introducing general XP/AP rewards yet.
+- Distinguish real player acts from NPC filler while preserving one timetable model.
+- Add the functional Stages Festival Mode destination.
+- Preserve compatibility with a future attendee-performing-own-set path.
+- Add focused timetable, identity, overlap, idempotency and inspiration-cap tests.
 - Update this plan/register in the same PR.
 
-No XP/AP rewards, random events, social relationships, performer audience bonuses or owner engagement multipliers in that slice.
+No commercial F&B/merch economy, random events, social relationship progression, after-parties, broad XP/AP rewards, owner engagement multipliers or performer audience bonuses in that slice.
 
 ---
 
