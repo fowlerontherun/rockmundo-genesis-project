@@ -18,6 +18,10 @@ export const useMyFestivalAttendance = (enabled = true) =>
     queryFn: getMyFestivalAttendance,
     enabled,
     staleTime: 30_000,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
 export const useMyFestivalCheckInEligibility = (enabled = true) =>
