@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  useFestivalCheckIn,
+  useLeaveFestivalEarly,
   useMyFestivalAttendance,
   useMyFestivalCheckInEligibility,
 } from "../attendance/useFestivalAttendance";
 import type { FestivalCheckInEligibility } from "../attendance/festivalAttendeeExtras";
+import type { FestivalPlayerAttendance } from "../attendance/festivalAttendance";
 import { usePublicFestival, usePurchaseFestivalTickets } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 
@@ -48,12 +51,35 @@ const checkInMessage = (eligibility: FestivalCheckInEligibility) => {
     case "festival_city_unavailable":
       return "Festival check-in information is not complete yet.";
     case "already_attending":
-      return "You are already checked in to this festival.";
+      return "You are checked in and currently attending this festival.";
     case "attendance_closed":
       return "This festival attendance has already ended.";
     default:
       return "Festival check-in is not available yet.";
   }
+};
+
+const attendanceLabel = (attendance: FestivalPlayerAttendance) => {
+  switch (attendance.status) {
+    case "attending":
+      return "Checked in";
+    case "left_early":
+      return "Left festival";
+    case "completed":
+      return "Festival completed";
+    default:
+      return "You’re attending";
+  }
+};
+
+const mutationErrorMessage = (message: string) => {
+  if (message.includes("festival_wrong_city")) return "Travel to the festival city before checking in.";
+  if (message.includes("festival_character_traveling")) return "Finish your current journey before checking in.";
+  if (message.includes("festival_not_started")) return "Festival check-in has not opened yet.";
+  if (message.includes("festival_finished")) return "This festival has finished and check-in is closed.";
+  if (message.includes("festival_ticket_invalid")) return "Your admission ticket is no longer valid.";
+  if (message.includes("festival_cancelled")) return "This festival has been cancelled.";
+  return message.replaceAll("_", " ");
 };
 
 export default function PublicFestivalPage() {
@@ -63,6 +89,8 @@ export default function PublicFestivalPage() {
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
   const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
   const buy = usePurchaseFestivalTickets();
+  const checkIn = useFestivalCheckIn();
+  const leaveEarly = useLeaveFestivalEarly();
   const [quantity, setQuantity] = useState(1);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
@@ -96,10 +124,10 @@ export default function PublicFestivalPage() {
       <div className="mx-auto max-w-6xl p-4 md:p-8">
         {myAttendance && (
           <Card className="mb-4 border-emerald-500/40 bg-emerald-500/5">
-            <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
-              <div>
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">You&apos;re attending</Badge>
+                  <Badge variant="secondary">{attendanceLabel(myAttendance)}</Badge>
                   <span className="text-sm capitalize text-muted-foreground">
                     {myAttendance.status.replaceAll("_", " ")}
                   </span>
@@ -119,6 +147,46 @@ export default function PublicFestivalPage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {checkInMessage(myCheckInEligibility)}
                   </p>
+                )}
+                {checkIn.isError && (
+                  <p className="mt-2 text-sm text-destructive" role="alert">
+                    {mutationErrorMessage(checkIn.error.message)}
+                  </p>
+                )}
+                {leaveEarly.isError && (
+                  <p className="mt-2 text-sm text-destructive" role="alert">
+                    {mutationErrorMessage(leaveEarly.error.message)}
+                  </p>
+                )}
+                {checkIn.isSuccess && (
+                  <p className="mt-2 text-sm text-emerald-700" role="status">
+                    Checked in. Your admission ticket was used and your festival wristband was collected.
+                  </p>
+                )}
+                {leaveEarly.isSuccess && (
+                  <p className="mt-2 text-sm text-muted-foreground" role="status">
+                    You have left the festival early. Your wristband remains in your keepsakes.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {myCheckInEligibility?.canCheckIn && myAttendance.status !== "attending" && (
+                  <Button
+                    disabled={checkIn.isPending}
+                    onClick={() => checkIn.mutate(myAttendance.id)}
+                  >
+                    {checkIn.isPending ? "Checking in…" : "Check in to festival"}
+                  </Button>
+                )}
+                {myAttendance.status === "attending" && (
+                  <Button
+                    variant="outline"
+                    disabled={leaveEarly.isPending}
+                    onClick={() => leaveEarly.mutate(myAttendance.id)}
+                  >
+                    {leaveEarly.isPending ? "Leaving…" : "Leave festival early"}
+                  </Button>
                 )}
               </div>
             </CardContent>
