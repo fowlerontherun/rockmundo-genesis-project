@@ -2,7 +2,9 @@ DO $$
 DECLARE
   community_days integer;
   capacity_definition text;
-  gated_levels integer := 0;
+  preview_definition text;
+  purchase_gated_levels integer := 0;
+  usage_gated_levels integer := 0;
 BEGIN
   SELECT max_days INTO community_days
   FROM public.festival_licence_tiers
@@ -31,22 +33,39 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'festival_upgrade_levels'
-      AND column_name = 'minimum_licence_tier'
+      AND column_name = 'usage_licence_tier'
   ) THEN
-    EXECUTE 'SELECT count(*) FROM public.festival_upgrade_levels WHERE minimum_licence_tier > 1'
-      INTO gated_levels;
+    SELECT count(*) FILTER (WHERE minimum_licence_tier > 1),
+           count(*) FILTER (WHERE usage_licence_tier > 1)
+    INTO purchase_gated_levels, usage_gated_levels
+    FROM public.festival_upgrade_levels;
   ELSIF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'festival_upgrade_levels'
-      AND column_name = 'minimum_licence_rank'
+      AND column_name = 'usage_licence_rank'
   ) THEN
-    EXECUTE 'SELECT count(*) FROM public.festival_upgrade_levels WHERE minimum_licence_rank > 1'
-      INTO gated_levels;
+    SELECT count(*) FILTER (WHERE minimum_licence_rank > 1),
+           count(*) FILTER (WHERE usage_licence_rank > 1)
+    INTO purchase_gated_levels, usage_gated_levels
+    FROM public.festival_upgrade_levels;
+  ELSE
+    RAISE EXCEPTION 'Festival upgrade usage licence metadata is missing';
   END IF;
 
-  IF gated_levels <> 0 THEN
+  IF purchase_gated_levels <> 0 THEN
     RAISE EXCEPTION 'Festival upgrades are still blocked by higher licence tiers';
+  END IF;
+  IF usage_gated_levels = 0 THEN
+    RAISE EXCEPTION 'Festival upgrade usage licence thresholds were not preserved';
+  END IF;
+
+  SELECT pg_get_functiondef('public.get_festival_upgrade_purchase_preview(uuid,text)'::regprocedure)
+  INTO preview_definition;
+
+  IF position('usage_licence_' in preview_definition) = 0
+     OR position('attendance remains capped' in preview_definition) = 0 THEN
+    RAISE EXCEPTION 'Festival upgrade preview does not explain the licence usage ceiling';
   END IF;
 END;
 $$;

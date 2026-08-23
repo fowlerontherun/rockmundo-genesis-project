@@ -6,27 +6,16 @@ UPDATE public.festival_licence_tiers
 SET max_days = 2
 WHERE key = 'community';
 
--- Normalise upgrade licence requirements to the entry licence. Higher infrastructure
--- can be purchased in advance; the active licence determines usable Festival capacity.
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'festival_upgrade_levels'
-      AND column_name = 'minimum_licence_tier'
-  ) THEN
-    EXECUTE 'UPDATE public.festival_upgrade_levels SET minimum_licence_tier = 1 WHERE minimum_licence_tier > 1';
-  ELSIF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'festival_upgrade_levels'
-      AND column_name = 'minimum_licence_rank'
-  ) THEN
-    EXECUTE 'UPDATE public.festival_upgrade_levels SET minimum_licence_rank = 1 WHERE minimum_licence_rank > 1';
-  END IF;
-END;
-$$;
+-- Preserve the historical tier threshold as usage metadata, then make every upgrade
+-- purchasable from the entry licence. Capacity is constrained separately at use time.
+ALTER TABLE public.festival_upgrade_levels
+  ADD COLUMN IF NOT EXISTS usage_licence_tier smallint;
+
+UPDATE public.festival_upgrade_levels
+SET usage_licence_tier = coalesce(usage_licence_tier, minimum_licence_tier),
+    minimum_licence_tier = 1
+WHERE minimum_licence_tier > 1
+   OR usage_licence_tier IS NULL;
 
 CREATE OR REPLACE FUNCTION public._festival_annual_plan_potential_capacity(
   p_festival_company_id uuid,
@@ -93,6 +82,87 @@ AS $$
     ELSE least(potential_capacity, licence_capacity)
   END
   FROM capacity;
+$$;
+
+-- Licence threshold is now informational for upgrades. The quote remains eligible when
+-- other requirements pass, while telling the player that the extra Festival capacity is
+-- waiting for a higher licence.
+CREATE OR REPLACE FUNCTION public.get_festival_upgrade_purchase_preview(
+  p_festival_company_id uuid,
+  p_category_key text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  state jsonb;
+  category jsonb;
+  eligibility jsonb;
+  usage_tier integer := 1;
+  licence_rank integer := 0;
+  implications jsonb := '[]'::jsonb;
+BEGIN
+  state := public.get_festival_company_upgrades(p_festival_company_id);
+  SELECT item INTO category
+  FROM jsonb_array_elements(state->'categories') item
+  WHERE item->>'key' = p_category_key;
+
+  IF category IS NULL THEN
+    RAISE EXCEPTION 'FESTIVAL_UPGRADE_CATEGORY_NOT_FOUND' USING ERRCODE = 'P0001';
+  END IF;
+
+  eligibility := public._festival_upgrade_eligibility(
+    p_festival_company_id,
+    p_category_key,
+    (category->>'nextLevel')::integer,
+    (state->>'catalogueVersion')::integer,
+    (state->>'companyVersion')::integer,
+    now()
+  );
+
+  IF category->>'nextLevel' IS NOT NULL THEN
+    SELECT coalesce(level.usage_licence_tier, level.minimum_licence_tier, 1)
+    INTO usage_tier
+    FROM public.festival_upgrade_levels level
+    WHERE level.catalogue_version = (state->>'catalogueVersion')::integer
+      AND level.category_key = p_category_key
+      AND level.level = (category->>'nextLevel')::integer;
+
+    SELECT coalesce(max(tier.rank), 0)
+    INTO licence_rank
+    FROM public.festival_company_licences licence
+    JOIN public.festival_licence_tiers tier ON tier.key = licence.tier_key
+    WHERE licence.festival_company_id = p_festival_company_id
+      AND licence.status = 'active'
+      AND coalesce(licence.valid_from, '-infinity'::timestamptz) <= now()
+      AND coalesce(licence.valid_until, 'infinity'::timestamptz) > now();
+
+    IF usage_tier > licence_rank THEN
+      implications := implications || jsonb_build_array(
+        'You can build this upgrade now, but Festival attendance remains capped by your active licence until the licence is upgraded.'
+      );
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'category', category,
+    'catalogueVersion', state->'catalogueVersion',
+    'companyVersion', state->'companyVersion',
+    'purchaseWindow', eligibility->'purchaseWindow',
+    'balanceMinor', state->'availableBalanceMinor',
+    'remainingBalanceMinor', greatest(
+      0,
+      (state->>'availableBalanceMinor')::bigint
+        - coalesce((category->>'nextCostMinor')::bigint, 0)
+    ),
+    'eligible', eligibility->'eligible',
+    'reasonCodes', eligibility->'reasonCodes',
+    'licenceImplications', implications
+  );
+END;
 $$;
 
 -- Recalculate editable annual editions so downstream site/ticket projections inherit
