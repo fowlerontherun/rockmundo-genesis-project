@@ -22,6 +22,7 @@ import { Progress } from "@/components/ui/progress";
 import { planNextFestivalEdition } from "@/features/festival-company/data/festivalCompanyRepository";
 import { FestivalCityPermitCard } from "@/features/festivals/permits/FestivalCityPermitCard";
 import { festivalRoutes } from "@/features/festivals/routes";
+import { FestivalOwnerNavigation } from "@/features/festivals/ui/FestivalOwnerNavigation";
 import {
   festivalCompanyEditionsQueryKey,
   getFestivalCompanyEditions,
@@ -139,7 +140,7 @@ function EditionCard({
             variant={edition.editable ? "default" : "outline"}
           >
             <Link to={destination}>
-              {edition.editable ? "Plan Festival" : "View result"}
+              {edition.editable ? "Continue Festival" : "View result"}
             </Link>
           </Button>
         </CardContent>
@@ -217,6 +218,9 @@ export function FestivalCompanyEditionsPage({
   const historicalFestivals = data.editions.filter(
     (edition) => !edition.editable,
   );
+  const currentEditionId = activeFestivals
+    .sort((left, right) => left.editionYear - right.editionYear)[0]
+    ?.festivalEditionId;
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -229,6 +233,11 @@ export function FestivalCompanyEditionsPage({
         </Link>
         {" / Annual Festivals"}
       </nav>
+
+      <FestivalOwnerNavigation
+        festivalCompanyId={festivalCompanyId}
+        currentEditionId={currentEditionId}
+      />
 
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
@@ -286,7 +295,11 @@ export function FestivalCompanyEditionsPage({
         )}
       </section>
 
-      <section className="space-y-3" aria-labelledby="festival-history-heading">
+      <section
+        id="festival-history"
+        className="scroll-mt-24 space-y-3"
+        aria-labelledby="festival-history-heading"
+      >
         <h2
           id="festival-history-heading"
           className="flex items-center gap-2 text-xl font-semibold"
