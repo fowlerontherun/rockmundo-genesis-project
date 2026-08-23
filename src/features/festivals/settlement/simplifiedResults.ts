@@ -1,5 +1,6 @@
 export interface SimplifiedFestivalFinancials {
   ticketRevenueMinor: number;
+  sponsorshipRevenueMinor: number;
   foodAndDrinkRevenueMinor: number;
   merchandiseRevenueMinor: number;
   operatingCostMinor: number;
@@ -98,6 +99,7 @@ export function parseSimplifiedFestivalResults(value: unknown): SimplifiedFestiv
     currencyCode: requiredString(result, "currencyCode"),
     financials: {
       ticketRevenueMinor: requiredNumber(financials, "ticketRevenueMinor"),
+      sponsorshipRevenueMinor: requiredNumber(financials, "sponsorshipRevenueMinor"),
       foodAndDrinkRevenueMinor: requiredNumber(financials, "foodAndDrinkRevenueMinor"),
       merchandiseRevenueMinor: requiredNumber(financials, "merchandiseRevenueMinor"),
       operatingCostMinor: requiredNumber(financials, "operatingCostMinor"),

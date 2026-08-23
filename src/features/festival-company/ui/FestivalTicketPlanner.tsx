@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FestivalBudgetForecast } from "@/features/festivals/budget/FestivalBudgetForecast";
 import { useFestivalSitePlan } from "../application/useFestivalSitePlan";
 import {
   useFestivalTicketPlan,
@@ -346,6 +347,13 @@ export function FestivalTicketPlanner({
           )}
         />
       </div>
+
+      {festivalEditionId ? (
+        <FestivalBudgetForecast
+          festivalCompanyId={festivalCompanyId}
+          festivalEditionId={festivalEditionId}
+        />
+      ) : null}
 
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
