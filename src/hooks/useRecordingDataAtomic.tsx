@@ -68,6 +68,15 @@ const readableRecordingError = (message: string) => {
   if (message.includes("not_band_member")) {
     return "Only an active member of this band can book its recording session.";
   }
+  if (
+    message.includes("song_not_recordable_by_caller") ||
+    message.includes("song_not_recordable")
+  ) {
+    return "That song is not available to this character or band for recording.";
+  }
+  if (message.includes("song_not_found")) {
+    return "That song could not be found. Return to the song selector and choose it again.";
+  }
   return message || "Unable to book the recording session.";
 };
 
