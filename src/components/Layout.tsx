@@ -37,6 +37,9 @@ import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
 import { hasGigViewerDemoTestAccess } from "@/lib/gigViewerDemoTestAccess";
+import { useMyFestivalAttendance } from "@/features/festival-company/attendance/useFestivalAttendance";
+import { FestivalModeShell } from "@/features/festival-company/attendance/FestivalModeShell";
+import { FestivalModeHome } from "@/features/festival-company/attendance/FestivalModeHome";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -45,12 +48,15 @@ const Layout = () => {
   const { profileId } = useActiveProfile();
   const isMobile = useIsMobileDevice();
   const location = useLocation();
-
-
+  const {
+    data: festivalAttendance = [],
+    isLoading: festivalAttendanceLoading,
+  } = useMyFestivalAttendance(Boolean(user && profileId));
+  const activeFestivalAttendance = festivalAttendance.find((attendance) => attendance.status === "attending");
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
-  
+
   // Global auto-complete for rehearsals - get pending report for UI display
   const { pendingReport, clearPendingReport } = useAutoRehearsalCompletion(user?.id || null);
 
@@ -83,6 +89,8 @@ const Layout = () => {
 
   // Global game calendar for seasonal effects
   const { data: calendar } = useGameCalendar();
+  void profile;
+  void calendar;
 
   // Dev-only guest bypass: in `vite dev` we skip the /auth redirect and the
   // unauthenticated null-render so pages can be inspected without logging in.
@@ -96,10 +104,11 @@ const Layout = () => {
     }
   }, [user, authLoading, navigate, devGuestBypass, gigViewerDemoTestAccess]);
 
-  // Removed automatic redirect to /my-character
-  // Users can access character creation page directly if needed
-
-  if (authLoading || (dataLoading && user)) {
+  if (
+    authLoading ||
+    (dataLoading && user) ||
+    (Boolean(user && profileId) && festivalAttendanceLoading)
+  ) {
     return (
       <div className={isMobile ? "rm-mobile flex min-h-[100dvh] items-center justify-center bg-background" : "flex h-screen items-center justify-center bg-gradient-stage"} role="status" aria-live="polite" aria-busy="true">
         <div className="text-center">
@@ -112,6 +121,17 @@ const Layout = () => {
 
   if (!user && !devGuestBypass && !gigViewerDemoTestAccess) {
     return null;
+  }
+
+  // Festival Mode is driven solely by authoritative attendee state. It sits
+  // above both desktop and mobile shells so navigation/back/refresh cannot
+  // escape the reduced experience while the active character is attending.
+  if (activeFestivalAttendance) {
+    return (
+      <FestivalModeShell attendance={activeFestivalAttendance}>
+        <FestivalModeHome attendance={activeFestivalAttendance} />
+      </FestivalModeShell>
+    );
   }
 
   if (isMobile) {
@@ -137,7 +157,6 @@ const Layout = () => {
       return null;
     })();
 
-
     return (
       <MobileShell>
         <NoActiveCharacterGate>
@@ -149,43 +168,38 @@ const Layout = () => {
     );
   }
 
-
-
-
-
   return (
     <ConditionalDesktopGate bypass={isMobile}>
-    <FMShell>
+      <FMShell>
+        {profileError && (
+          <Alert variant="destructive" className="mb-4 max-w-2xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Profile error</AlertTitle>
+            <AlertDescription>{profileError}</AlertDescription>
+          </Alert>
+        )}
+        <MaintenanceBanner />
+        <NoActiveCharacterGate>
+          <CharacterGate>
+            <Breadcrumbs />
+            <Outlet />
+          </CharacterGate>
+        </NoActiveCharacterGate>
+        <TutorialTooltip />
 
-      {profileError && (
-        <Alert variant="destructive" className="mb-4 max-w-2xl">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Profile error</AlertTitle>
-          <AlertDescription>{profileError}</AlertDescription>
-        </Alert>
-      )}
-      <MaintenanceBanner />
-      <NoActiveCharacterGate>
-        <CharacterGate>
-          <Breadcrumbs />
-          <Outlet />
-        </CharacterGate>
-      </NoActiveCharacterGate>
-      <TutorialTooltip />
-
-      <EventNotificationModal />
-      <InterviewModal />
-      {pendingReport && (
-        <RehearsalCompletionReport
-          open={!!pendingReport}
-          onClose={clearPendingReport}
-          results={pendingReport.results}
-          chemistryGain={pendingReport.chemistryGain}
-          xpGained={pendingReport.xpGained}
-          durationHours={pendingReport.durationHours}
-        />
-      )}
-    </FMShell>
+        <EventNotificationModal />
+        <InterviewModal />
+        {pendingReport && (
+          <RehearsalCompletionReport
+            open={!!pendingReport}
+            onClose={clearPendingReport}
+            results={pendingReport.results}
+            chemistryGain={pendingReport.chemistryGain}
+            xpGained={pendingReport.xpGained}
+            durationHours={pendingReport.durationHours}
+          />
+        )}
+      </FMShell>
     </ConditionalDesktopGate>
   );
 };
