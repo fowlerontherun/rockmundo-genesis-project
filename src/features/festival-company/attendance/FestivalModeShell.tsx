@@ -1,19 +1,22 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLeaveFestivalEarly } from "./useFestivalAttendance";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
+import { FestivalModeMyDay } from "./FestivalModeMyDay";
+
+export type FestivalModeSection = "home" | "my-day";
 
 const festivalSections = [
-  "Festival Home",
-  "My Day",
-  "Stages",
-  "Food & Drink",
-  "Activities",
-  "Social",
-  "Campsite",
-  "Festival Map",
-  "My Character",
+  { id: "home", label: "Festival Home", enabled: true },
+  { id: "my-day", label: "My Day", enabled: true },
+  { id: "stages", label: "Stages", enabled: false },
+  { id: "food-drink", label: "Food & Drink", enabled: false },
+  { id: "activities", label: "Activities", enabled: false },
+  { id: "social", label: "Social", enabled: false },
+  { id: "campsite", label: "Campsite", enabled: false },
+  { id: "map", label: "Festival Map", enabled: false },
+  { id: "character", label: "My Character", enabled: false },
 ] as const;
 
 export const FestivalModeShell = ({
@@ -24,6 +27,7 @@ export const FestivalModeShell = ({
   children: ReactNode;
 }) => {
   const leaveEarly = useLeaveFestivalEarly();
+  const [activeSection, setActiveSection] = useState<FestivalModeSection>("home");
 
   const confirmLeave = () => {
     const confirmed = window.confirm(
@@ -61,23 +65,33 @@ export const FestivalModeShell = ({
       <div className="mx-auto grid max-w-7xl gap-4 p-3 md:grid-cols-[220px_minmax(0,1fr)] md:p-5">
         <nav aria-label="Festival navigation" className="rounded-xl border bg-card p-2">
           <div className="grid grid-cols-3 gap-1 md:grid-cols-1">
-            {festivalSections.map((section, index) => (
-              <button
-                key={section}
-                type="button"
-                disabled={index !== 0}
-                aria-current={index === 0 ? "page" : undefined}
-                className={[
-                  "rounded-lg px-3 py-2 text-left text-sm transition",
-                  index === 0
-                    ? "bg-primary text-primary-foreground"
-                    : "cursor-not-allowed text-muted-foreground opacity-60",
-                ].join(" ")}
-                title={index === 0 ? undefined : "This Festival area is added in a later implementation phase"}
-              >
-                {section}
-              </button>
-            ))}
+            {festivalSections.map((section) => {
+              const isCurrent = section.enabled && section.id === activeSection;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  disabled={!section.enabled}
+                  aria-current={isCurrent ? "page" : undefined}
+                  onClick={() => {
+                    if (section.id === "home" || section.id === "my-day") {
+                      setActiveSection(section.id);
+                    }
+                  }}
+                  className={[
+                    "rounded-lg px-3 py-2 text-left text-sm transition",
+                    isCurrent
+                      ? "bg-primary text-primary-foreground"
+                      : section.enabled
+                        ? "hover:bg-muted"
+                        : "cursor-not-allowed text-muted-foreground opacity-60",
+                  ].join(" ")}
+                  title={section.enabled ? undefined : "This Festival area is added in a later implementation phase"}
+                >
+                  {section.label}
+                </button>
+              );
+            })}
           </div>
           <p className="mt-3 hidden px-2 text-xs text-muted-foreground md:block">
             While checked in, RockMundo is intentionally reduced to Festival gameplay.
@@ -90,7 +104,7 @@ export const FestivalModeShell = ({
               {leaveEarly.error.message.replaceAll("_", " ")}
             </p>
           )}
-          {children}
+          {activeSection === "my-day" ? <FestivalModeMyDay attendance={attendance} /> : children}
         </main>
       </div>
     </div>
