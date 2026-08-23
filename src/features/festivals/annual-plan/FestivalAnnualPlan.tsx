@@ -35,6 +35,7 @@ import {
   annualPlanDraftIsComplete,
   annualPlanToDraft,
   calculateAnnualPlanEndDate,
+  getAnnualPlanCapacityProjection,
   type FestivalAnnualPlanDraft,
 } from "./model";
 import {
@@ -55,6 +56,9 @@ const money = (minor: number) =>
     currency: "GBP",
     maximumFractionDigits: 0,
   }).format(minor / 100);
+
+const capacity = (value: number | null) =>
+  value === null ? "Save to calculate" : value.toLocaleString("en-GB");
 
 export function FestivalAnnualPlan({
   festivalCompanyId,
@@ -122,6 +126,9 @@ export function FestivalAnnualPlan({
   const selectedMarketing = data.marketingEmphases.find(
     (option) => option.key === draft.marketingEmphasis,
   );
+  const selectedEnvironmentalPolicy = data.environmentalPolicies.find(
+    (option) => option.key === draft.environmentalPolicy,
+  );
   const endDate = calculateAnnualPlanEndDate(
     draft.startsOn,
     draft.durationDays,
@@ -136,13 +143,14 @@ export function FestivalAnnualPlan({
   );
 
   const localPreview = selectedScale
-  ? {
-      capacityRange: `${selectedScale.minimumCapacity.toLocaleString("en-GB")}–${selectedScale.maximumCapacity.toLocaleString("en-GB")}`,
-      demandEffect: selectedMarketing
-        ? Math.round((selectedMarketing.demandBasisPoints - 10000) / 100)
-        : 0,
-    }
-  : null;
+    ? {
+        capacityRange: `${selectedScale.minimumCapacity.toLocaleString("en-GB")}–${selectedScale.maximumCapacity.toLocaleString("en-GB")}`,
+        demandEffect: selectedMarketing
+          ? Math.round((selectedMarketing.demandBasisPoints - 10000) / 100)
+          : 0,
+      }
+    : null;
+  const capacityProjection = getAnnualPlanCapacityProjection(data);
 
   const persist = () => {
     if (!complete || !dirty || save.isPending || !data.canWrite) return;
@@ -390,6 +398,35 @@ export function FestivalAnnualPlan({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="festival-environment">Environmental policy</Label>
+              <Select
+                value={draft.environmentalPolicy}
+                disabled={!data.editable}
+                onValueChange={(environmentalPolicy) =>
+                  setDraft((current) =>
+                    current ? { ...current, environmentalPolicy } : current,
+                  )
+                }
+              >
+                <SelectTrigger id="festival-environment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {data.environmentalPolicies.map((policy) => (
+                    <SelectItem key={policy.key} value={policy.key}>
+                      {policy.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedEnvironmentalPolicy ? (
+                <p className="text-xs text-muted-foreground">
+                  {selectedEnvironmentalPolicy.description}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="festival-marketing">Marketing emphasis</Label>
               <Select
                 value={draft.marketingEmphasis}
@@ -423,6 +460,54 @@ export function FestivalAnnualPlan({
         <div className="space-y-4">
           <Card>
             <CardHeader>
+              <CardTitle>Capacity &amp; licence</CardTitle>
+              <CardDescription>
+                Permanent upgrades can build beyond the current licence. The
+                licence only caps what this annual Festival can use.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Projection
+                icon={<Users className="h-4 w-4" />}
+                label="Built capacity"
+                value={capacity(capacityProjection.potentialCapacity)}
+              />
+              <Projection
+                icon={<Users className="h-4 w-4" />}
+                label="Usable this Festival"
+                value={capacity(capacityProjection.licensedCapacity)}
+              />
+              <Projection
+                icon={<Users className="h-4 w-4" />}
+                label="Current licence ceiling"
+                value={capacity(capacityProjection.licenceCapacityLimit)}
+              />
+              {capacityProjection.capacityRestrictedByLicence ? (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Your infrastructure supports{" "}
+                    <strong>
+                      {capacityProjection.potentialCapacity?.toLocaleString("en-GB")}
+                    </strong>{" "}
+                    attendees, but the current licence permits{" "}
+                    <strong>
+                      {capacityProjection.licensedCapacity?.toLocaleString("en-GB")}
+                    </strong>{" "}
+                    for this Festival. The extra{" "}
+                    <strong>
+                      {capacityProjection.reservedUntilLicenceUpgrade.toLocaleString("en-GB")}
+                    </strong>{" "}
+                    capacity remains built and becomes usable after the licence is
+                    upgraded.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Server projection</CardTitle>
               <CardDescription>
                 Recalculated after saving from the permanent company upgrades and
@@ -430,14 +515,6 @@ export function FestivalAnnualPlan({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Projection
-                icon={<Users className="h-4 w-4" />}
-                label="Expected capacity"
-                value={
-                  data.expectedCapacity?.toLocaleString("en-GB") ??
-                  "Save to calculate"
-                }
-              />
               <Projection
                 icon={<WalletCards className="h-4 w-4" />}
                 label="Estimated operating cost"
@@ -482,7 +559,8 @@ export function FestivalAnnualPlan({
               <Progress value={data.readinessScore} />
               <p className="text-sm text-muted-foreground">
                 Upgrade levels influence capacity and reduce operating cost.
-                Licence limits can still block launch without blocking planning.
+                Licence limits cap what this annual Festival can use without
+                blocking permanent upgrades from being built ahead.
               </p>
             </CardContent>
           </Card>
