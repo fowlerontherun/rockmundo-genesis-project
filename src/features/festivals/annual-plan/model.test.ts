@@ -25,6 +25,7 @@ const validPlan: FestivalAnnualPlan = {
     country: "United Kingdom",
     timezone: "Europe/London",
   },
+  currencyCode: "GBP",
   siteType: "outdoor",
   festivalScale: "small",
   durationDays: 3,
@@ -102,6 +103,13 @@ const validPlan: FestivalAnnualPlan = {
 describe("festivalAnnualPlanSchema", () => {
   it("accepts the exact-edition annual planning contract", () => {
     expect(festivalAnnualPlanSchema.parse(validPlan)).toEqual(validPlan);
+  });
+
+  it("normalizes the authoritative ISO currency code", () => {
+    expect(
+      festivalAnnualPlanSchema.parse({ ...validPlan, currencyCode: "usd" })
+        .currencyCode,
+    ).toBe("USD");
   });
 
   it("rejects out-of-range readiness and malformed edition identity", () => {
