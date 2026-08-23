@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 const nullableDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable();
+const currencyCode = z
+  .string()
+  .trim()
+  .length(3)
+  .transform((value) => value.toUpperCase());
 const catalogueOptionSchema = z.object({
   key: z.string().min(1),
   displayName: z.string().min(1),
@@ -45,6 +50,7 @@ export const festivalAnnualPlanSchema = z.object({
   endsOn: nullableDate,
   preferredMonth: z.number().int().min(1).max(12).nullable(),
   city: annualPlanCitySchema.nullable(),
+  currencyCode,
   siteType: z.string().nullable(),
   festivalScale: z.string().nullable(),
   durationDays: z.number().int().min(1).max(7).nullable(),
