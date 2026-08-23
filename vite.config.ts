@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => ({
 
   resolve: {
     alias: {
+      "@/hooks/useRecordingData": path.resolve(__dirname, "./src/hooks/useRecordingDataAtomic.tsx"),
       "@": path.resolve(__dirname, "./src"),
     },
   },
