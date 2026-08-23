@@ -1,0 +1,55 @@
+name: Temporary Festival Next Round Finalizer
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.ref == 'agent/festival-launch-authority-and-currency-cleanup'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/festival-launch-authority-and-currency-cleanup
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Apply Festival repair patches
+        run: python scripts/festivals/temp-finalize-owner-currency.py
+      - name: Run focused Festival regressions
+        run: >-
+          npx vitest run
+          src/features/festivals/runtime/runtimeLaunchAuthority.test.ts
+          src/features/festivals/runtime/runtimeCurrency.test.ts
+          src/lib/api/__tests__/festivalOwnerCurrencyConsistency.database.test.ts
+          src/features/festivals/annual-plan/model.test.ts
+          src/features/festival-company/__tests__/festivalCompanyParsers.test.ts
+          src/features/festival-company/ui/FestivalCompanyCard.test.tsx
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Repository lint gate
+        run: npm run lint
+      - name: Regenerate Festival active inventory
+        run: npm run test:festivals:active-callers
+      - name: Build
+        run: npm run build
+      - name: Commit final changes and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-festival-next-round.yml
+          git rm scripts/festivals/temp-finalize-owner-currency.py
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Finalize Festival launch authority and currency cleanup"
+          git push origin HEAD:agent/festival-launch-authority-and-currency-cleanup
