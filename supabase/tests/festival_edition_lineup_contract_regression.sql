@@ -44,5 +44,13 @@ BEGIN
   IF NOT has_function_privilege('authenticated','public.save_festival_edition_artist_programme(uuid,uuid,integer,jsonb,jsonb,uuid,boolean)','EXECUTE') THEN
     RAISE EXCEPTION 'authenticated owners cannot execute Festival line-up save';
   END IF;
+
+  IF has_function_privilege('anon','public.get_my_festival_artist_opportunities()','EXECUTE') THEN
+    RAISE EXCEPTION 'anon can execute Festival artist opportunity inbox';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated','public.get_my_festival_artist_opportunities()','EXECUTE') THEN
+    RAISE EXCEPTION 'authenticated artists cannot execute Festival artist opportunity inbox';
+  END IF;
 END;
 $$;
