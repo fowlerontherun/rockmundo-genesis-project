@@ -5,13 +5,27 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type BandPaymentSource = "band" | "personal";
 
+// Rehearsal booking used to top up the band before the booking hook ran. The
+// atomic rehearsal RPC now charges the selected payer itself, but the existing
+// dialog and page are intentionally kept stable in this PR. Preserve that payer
+// choice in-memory across the dialog -> page -> hook boundary and consume it once.
+const pendingAtomicRehearsalSources = new Map<string, BandPaymentSource>();
+
+export function consumeAtomicRehearsalPaymentSource(
+  bandId: string,
+): BandPaymentSource {
+  const source = pendingAtomicRehearsalSources.get(bandId) ?? "band";
+  pendingAtomicRehearsalSources.delete(bandId);
+  return source;
+}
+
 /**
  * Shared payer resolution for band activities that cost money.
  *
- * Band funds are always the default. When the player overrides with their own
- * personal wallet, the money is routed into the band treasury first (an ordinary
- * band contribution) so that the underlying booking engines — which are
- * band-authoritative — remain unchanged and auditable.
+ * Band funds are always the default. Legacy band-authoritative activities may
+ * still top up the treasury when the player chooses personal funds. Rehearsals
+ * are different: their new atomic booking RPC debits the selected payer directly,
+ * so `prepareFunds` only records the payer for that flow and does not move money.
  */
 export function useBandPaymentSource(bandId: string | null | undefined) {
   const { profileId } = useActiveProfile();
@@ -62,11 +76,19 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
   );
 
   /**
-   * Ensures the band treasury holds enough money for `cost`.
+   * Ensures legacy band-authoritative activities have enough treasury funds.
    * Returns the amount (if any) moved from the player's wallet.
+   *
+   * Rehearsal bookings are server-atomic and therefore deliberately skip the
+   * pre-funding step. The selected payer is consumed by `useRehearsalBooking`.
    */
   const prepareFunds = useCallback(
     async (cost: number, note?: string) => {
+      if (bandId && note?.startsWith("Rehearsal booking")) {
+        pendingAtomicRehearsalSources.set(bandId, source);
+        return 0;
+      }
+
       if (!bandId || source !== "personal" || cost <= 0) return 0;
 
       const shortfall = Math.max(0, cost - bandBalance);
