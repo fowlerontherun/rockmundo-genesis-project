@@ -52,7 +52,10 @@ BEGIN
     RAISE EXCEPTION 'Festival sponsorship is not driven by canonical progression inputs';
   END IF;
 
-  IF position('actual_ticket_net+sponsorship+food+merch' IN replace(v_settlement, ' ', '')) = 0 THEN
+  IF position(
+    'actual_ticket_net+sponsorship+food+merch'
+    IN regexp_replace(v_settlement, '\s+', '', 'g')
+  ) = 0 THEN
     RAISE EXCEPTION 'Festival settlement does not include sponsorship revenue';
   END IF;
 
