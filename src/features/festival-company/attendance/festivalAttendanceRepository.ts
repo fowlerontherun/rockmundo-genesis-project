@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
-  parseFestivalPlayerAttendanceList,
+  parseFestivalAttendanceReconciliation,
   type FestivalPlayerAttendance,
 } from "./festivalAttendance";
 import {
@@ -22,9 +22,9 @@ type UntypedRpc = (
 const attendanceRpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
 
 export const getMyFestivalAttendance = async (): Promise<FestivalPlayerAttendance[]> => {
-  const { data, error } = await attendanceRpc("get_my_festival_attendance");
+  const { data, error } = await attendanceRpc("reconcile_my_festival_attendance");
   if (error) throw new Error(error.message || "festival_attendance_unavailable");
-  return parseFestivalPlayerAttendanceList(data);
+  return parseFestivalAttendanceReconciliation(data).attendance;
 };
 
 export const getMyFestivalCheckInEligibility = async (): Promise<FestivalCheckInEligibility[]> => {
