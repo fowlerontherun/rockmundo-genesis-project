@@ -34,6 +34,7 @@ const festival = {
   configurationComplete: true,
   firstEditionExists: true,
   companyBalance: 250000,
+  currencyCode: "GBP",
   managementEnabled: true,
 };
 
@@ -47,6 +48,7 @@ const currentEdition: FestivalCompanyEdition = {
   preferredMonth: 9,
   countryCode: "GB",
   cityId: "44444444-4444-4444-8444-444444444444",
+  currencyCode: "GBP",
   vibe: "mainstream",
   siteType: "outdoor",
   durationDays: 2,
@@ -158,7 +160,7 @@ describe("FestivalCompanyCard owner next action", () => {
     expect(screen.getByText(/planning, line-up and tickets are ready/i)).toBeInTheDocument();
   });
 
-  it("shows the Festival company balance in GBP", () => {
+  it("shows the Festival company balance in its authoritative currency", () => {
     render(<FestivalCompanyCard festival={festival} />);
 
     expect(screen.getByText("£250,000")).toBeInTheDocument();

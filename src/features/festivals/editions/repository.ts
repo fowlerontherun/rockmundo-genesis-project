@@ -3,6 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 const nullableString = z.string().nullable();
 const nullableNumber = z.number().nullable();
+const currencyCode = z
+  .string()
+  .trim()
+  .length(3)
+  .transform((value) => value.toUpperCase());
 
 type FestivalRpc = (
   functionName: string,
@@ -34,6 +39,7 @@ export const festivalCompanyEditionSchema = z.object({
   preferredMonth: nullableNumber.optional().default(null),
   countryCode: nullableString,
   cityId: z.string().uuid().nullable(),
+  currencyCode,
   vibe: nullableString,
   siteType: nullableString,
   durationDays: nullableNumber,
