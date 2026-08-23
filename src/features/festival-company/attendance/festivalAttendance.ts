@@ -42,6 +42,9 @@ const ATTENDANCE_STATUSES = new Set<FestivalAttendanceStatus>([
 const isUuid = (value: unknown): value is string =>
   typeof value === "string" && UUID_RE.test(value);
 
+const isNullableUuid = (value: unknown): value is string | null =>
+  value === null || isUuid(value);
+
 const isNullableString = (value: unknown): value is string | null =>
   value === null || typeof value === "string";
 
@@ -61,7 +64,7 @@ export const parseFestivalPlayerAttendance = (value: unknown): FestivalPlayerAtt
     typeof candidate.festivalSlug !== "string" ||
     !isNullableString(candidate.startsOn) ||
     !isNullableString(candidate.endsOn) ||
-    !(candidate.cityId === null || isUuid(candidate.cityId)) ||
+    !isNullableUuid(candidate.cityId) ||
     !isUuid(candidate.admissionTicketId) ||
     typeof candidate.ticketReference !== "string" ||
     typeof candidate.ticketType !== "string" ||
