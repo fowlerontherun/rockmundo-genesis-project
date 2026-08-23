@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  useCheckInToFestival,
+  useLeaveFestivalEarly,
   useMyFestivalAttendance,
   useMyFestivalCheckInEligibility,
 } from "../attendance/useFestivalAttendance";
@@ -56,6 +58,19 @@ const checkInMessage = (eligibility: FestivalCheckInEligibility) => {
   }
 };
 
+const attendanceLabel = (status: string) => {
+  switch (status) {
+    case "attending":
+      return "Checked in";
+    case "left_early":
+      return "Left festival";
+    case "completed":
+      return "Festival completed";
+    default:
+      return "You’re attending";
+  }
+};
+
 export default function PublicFestivalPage() {
   const { festivalCompanyIdentifier } = useParams();
   const { user } = useAuth();
@@ -63,6 +78,8 @@ export default function PublicFestivalPage() {
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
   const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
   const buy = usePurchaseFestivalTickets();
+  const checkIn = useCheckInToFestival();
+  const leaveEarly = useLeaveFestivalEarly();
   const [quantity, setQuantity] = useState(1);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
@@ -74,6 +91,14 @@ export default function PublicFestivalPage() {
   const myCheckInEligibility = myAttendance
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
+
+  const confirmLeaveEarly = () => {
+    if (!myAttendance || myAttendance.status !== "attending") return;
+    const confirmed = window.confirm(
+      "Leave this festival early? Your completed activity progress will remain, but this attendance will end and future festival activities will no longer be available.",
+    );
+    if (confirmed) leaveEarly.mutate({ attendanceId: myAttendance.id });
+  };
 
   return (
     <main>
@@ -96,10 +121,10 @@ export default function PublicFestivalPage() {
       <div className="mx-auto max-w-6xl p-4 md:p-8">
         {myAttendance && (
           <Card className="mb-4 border-emerald-500/40 bg-emerald-500/5">
-            <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">You&apos;re attending</Badge>
+                  <Badge variant="secondary">{attendanceLabel(myAttendance.status)}</Badge>
                   <span className="text-sm capitalize text-muted-foreground">
                     {myAttendance.status.replaceAll("_", " ")}
                   </span>
@@ -119,6 +144,36 @@ export default function PublicFestivalPage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {checkInMessage(myCheckInEligibility)}
                   </p>
+                )}
+                {checkIn.isError && (
+                  <p className="mt-2 text-sm text-destructive" role="alert">
+                    {checkIn.error.message.replaceAll("_", " ")}
+                  </p>
+                )}
+                {leaveEarly.isError && (
+                  <p className="mt-2 text-sm text-destructive" role="alert">
+                    {leaveEarly.error.message.replaceAll("_", " ")}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {myCheckInEligibility?.canCheckIn && (
+                  <Button
+                    disabled={checkIn.isPending || leaveEarly.isPending}
+                    onClick={() => checkIn.mutate({ attendanceId: myAttendance.id })}
+                  >
+                    {checkIn.isPending ? "Checking in…" : "Check in to festival"}
+                  </Button>
+                )}
+                {myAttendance.status === "attending" && (
+                  <Button
+                    variant="outline"
+                    disabled={checkIn.isPending || leaveEarly.isPending}
+                    onClick={confirmLeaveEarly}
+                  >
+                    {leaveEarly.isPending ? "Leaving…" : "Leave festival early"}
+                  </Button>
                 )}
               </div>
             </CardContent>
