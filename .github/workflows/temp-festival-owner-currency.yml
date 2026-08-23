@@ -1,0 +1,182 @@
+name: Temporary Festival Owner Currency Finalizer
+
+on:
+  push:
+    branches:
+      - agent/festival-currency-consistency
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/festival-currency-consistency
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Patch Festival owner currency surfaces
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import shutil
+
+          def patch(path, old, new, count=1):
+              p = Path(path)
+              text = p.read_text()
+              actual = text.count(old)
+              assert actual >= count, f"{path}: expected at least {count} occurrence(s), found {actual}: {old!r}"
+              text = text.replace(old, new, count)
+              p.write_text(text)
+
+          # Annual Plan: display the exact-edition currency returned by the server.
+          patch(
+              "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+              '''const money = (minor: number) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: "GBP",\n    maximumFractionDigits: 0,\n  }).format(minor / 100);''',
+              '''const money = (minor: number, currencyCode: string) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: currencyCode,\n    maximumFractionDigits: 0,\n  }).format(minor / 100);''',
+          )
+          patch(
+              "src/features/festivals/annual-plan/FestivalAnnualPlan.tsx",
+              "money(data.estimatedOperatingCostMinor)",
+              "money(data.estimatedOperatingCostMinor, data.currencyCode)",
+          )
+
+          # Annual Festival directory: each edition owns its financial currency.
+          patch(
+              "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+              '''const money = (minor: number) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: "GBP",\n    maximumFractionDigits: 0,\n  }).format(minor / 100);''',
+              '''const money = (minor: number, currencyCode: string) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: currencyCode,\n    maximumFractionDigits: 0,\n  }).format(minor / 100);''',
+          )
+          patch(
+              "src/features/festivals/editions/FestivalCompanyEditionsPage.tsx",
+              "money(edition.estimatedOperatingCostMinor)",
+              "money(edition.estimatedOperatingCostMinor, edition.currencyCode)",
+          )
+
+          # Company dashboard summary: expose and use the Festival company's home currency.
+          repo = "src/features/festival-company/data/festivalCompanyRepository.ts"
+          patch(
+              repo,
+              '''  companyBalance: number;\n  managementEnabled: boolean;''',
+              '''  companyBalance: number;\n  currencyCode: string;\n  managementEnabled: boolean;''',
+          )
+          patch(
+              repo,
+              '''    && isFiniteNonNegative(candidate.companyBalance)\n    && typeof candidate.managementEnabled === "boolean";''',
+              '''    && isFiniteNonNegative(candidate.companyBalance)\n    && typeof candidate.currencyCode === "string"\n    && /^[A-Z]{3}$/.test(candidate.currencyCode)\n    && typeof candidate.managementEnabled === "boolean";''',
+          )
+
+          card = "src/features/festival-company/ui/FestivalCompanyCard.tsx"
+          patch(
+              card,
+              '''const formatCurrency = (amount: number) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: "GBP",\n    maximumFractionDigits: 0,\n  }).format(amount);''',
+              '''const formatCurrency = (amount: number, currencyCode: string) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: currencyCode,\n    maximumFractionDigits: 0,\n  }).format(amount);''',
+          )
+          patch(
+              card,
+              "formatCurrency(festival.companyBalance)",
+              "formatCurrency(festival.companyBalance, festival.currencyCode)",
+          )
+
+          # Upgrades already receive currencyCode from their server contract; use it everywhere.
+          upgrades = "src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx"
+          patch(
+              upgrades,
+              '''const money = (minor: number) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: "GBP",\n  }).format(minor / 100);''',
+              '''const money = (minor: number, currencyCode: string) =>\n  new Intl.NumberFormat("en-GB", {\n    style: "currency",\n    currency: currencyCode,\n  }).format(minor / 100);''',
+          )
+          patch(upgrades, "{money(query.data.availableBalanceMinor)}.", "{money(query.data.availableBalanceMinor, query.data.currencyCode)}.")
+          patch(upgrades, '''      <Licence\n        data={query.data.licence}''', '''      <Licence\n        data={query.data.licence}\n        currencyCode={query.data.currencyCode}''')
+          patch(upgrades, '''              category={category}\n              selected={isSelected}''', '''              category={category}\n              currencyCode={query.data.currencyCode}\n              selected={isSelected}''')
+          patch(upgrades, '''interface UpgradeCardProps {\n  category: FestivalUpgradeCategory;''', '''interface UpgradeCardProps {\n  category: FestivalUpgradeCategory;\n  currencyCode: string;''')
+          patch(upgrades, '''export function UpgradeCard({\n  category,\n  selected,''', '''export function UpgradeCard({\n  category,\n  currencyCode,\n  selected,''')
+          patch(upgrades, "Current upkeep: {money(category.currentUpkeepMinor)} per week.", "Current upkeep: {money(category.currentUpkeepMinor, currencyCode)} per week.")
+          patch(upgrades, "{money(category.nextCostMinor!)} ·", "{money(category.nextCostMinor!, currencyCode)} ·")
+          patch(upgrades, "upkeep {money(category.nextUpkeepMinor!)} weekly", "upkeep {money(category.nextUpkeepMinor!, currencyCode)} weekly")
+          patch(upgrades, "Balance after purchase: {money(preview.remainingBalanceMinor)}.", "Balance after purchase: {money(preview.remainingBalanceMinor, currencyCode)}.")
+          patch(upgrades, '''function Licence({\n  data,\n  pending,''', '''function Licence({\n  data,\n  currencyCode,\n  pending,''')
+          patch(upgrades, '''}: {\n  data: FestivalLicenceProgress;\n  pending: boolean;''', '''}: {\n  data: FestivalLicenceProgress;\n  currencyCode: string;\n  pending: boolean;''')
+          patch(upgrades, '<Badge variant="outline">{money(target.feeMinor)}</Badge>', '<Badge variant="outline">{money(target.feeMinor, currencyCode)}</Badge>')
+          patch(upgrades, "Available company funds: {money(data.availableBalanceMinor)}", "Available company funds: {money(data.availableBalanceMinor, currencyCode)}")
+
+          # Production reconciliation overlays mirror the canonical forward migrations.
+          shutil.copyfile(
+              "supabase/migrations/20291218252400_festival_owner_currency_consistency.sql",
+              "supabase/reconciliation/festival/20260823_festival_owner_currency_consistency.sql",
+          )
+          shutil.copyfile(
+              "supabase/migrations/20291218252500_harden_festival_upgrade_internal_helpers.sql",
+              "supabase/reconciliation/festival/20260823_harden_festival_upgrade_internal_helpers.sql",
+          )
+
+          manifest_path = Path("scripts/supabase/festival-production-reconciliation.json")
+          manifest = json.loads(manifest_path.read_text())
+          for marker in [
+              ["20260823141846", "festival_owner_currency_consistency"],
+              ["20260823142037", "harden_festival_upgrade_internal_helpers"],
+          ]:
+              if marker not in manifest["historyMarkers"]:
+                  manifest["historyMarkers"].append(marker)
+          for extension in [
+              "supabase/reconciliation/festival/20260823_festival_owner_currency_consistency.sql",
+              "supabase/reconciliation/festival/20260823_harden_festival_upgrade_internal_helpers.sql",
+          ]:
+              if extension not in manifest["postBootstrapExtensions"]:
+                  manifest["postBootstrapExtensions"].append(extension)
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+      - name: Run focused Festival regressions
+        run: >-
+          npx vitest run
+          src/features/festivals/annual-plan/model.test.ts
+          src/features/festival-company/__tests__/festivalCompanyParsers.test.ts
+          src/lib/api/__tests__/festivalOwnerCurrencyConsistency.database.test.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint changed Festival sources
+        run: >-
+          npx eslint
+          src/features/festivals/annual-plan/FestivalAnnualPlan.tsx
+          src/features/festivals/annual-plan/model.ts
+          src/features/festivals/annual-plan/model.test.ts
+          src/features/festivals/editions/FestivalCompanyEditionsPage.tsx
+          src/features/festivals/editions/repository.ts
+          src/features/festival-company/data/festivalCompanyRepository.ts
+          src/features/festival-company/ui/FestivalCompanyCard.tsx
+          src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx
+          src/features/festival-company/__tests__/festivalCompanyParsers.test.ts
+          src/lib/api/__tests__/festivalOwnerCurrencyConsistency.database.test.ts
+
+      - name: Regenerate Festival active inventory
+        run: node scripts/festivals/certify-active-system.mjs
+
+      - name: Commit final currency consistency changes and self-remove
+        run: |
+          git config user.name "rockmundo-festival-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/temp-festival-owner-currency.yml
+          git add \
+            src/features/festivals/annual-plan/FestivalAnnualPlan.tsx \
+            src/features/festivals/editions/FestivalCompanyEditionsPage.tsx \
+            src/features/festival-company/data/festivalCompanyRepository.ts \
+            src/features/festival-company/ui/FestivalCompanyCard.tsx \
+            src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx \
+            supabase/reconciliation/festival/20260823_festival_owner_currency_consistency.sql \
+            supabase/reconciliation/festival/20260823_harden_festival_upgrade_internal_helpers.sql \
+            scripts/supabase/festival-production-reconciliation.json \
+            docs/festivals/festival-active-callers.json
+          git commit -m "Use authoritative currency across Festival owner flow"
+          git pull --rebase origin agent/festival-currency-consistency
+          git push origin HEAD:agent/festival-currency-consistency
