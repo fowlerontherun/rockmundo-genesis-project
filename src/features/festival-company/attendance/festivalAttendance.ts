@@ -28,6 +28,13 @@ export interface FestivalPlayerAttendance {
   createdAt: string;
 }
 
+export interface FestivalAttendanceReconciliation {
+  attendance: FestivalPlayerAttendance[];
+  completedCount: number;
+  repairedCount: number;
+  attentionCount: number;
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ATTENDANCE_STATUSES = new Set<FestivalAttendanceStatus>([
   "ticketed",
@@ -51,8 +58,13 @@ const isNullableString = (value: unknown): value is string | null =>
 const isAttendanceStatus = (value: unknown): value is FestivalAttendanceStatus =>
   typeof value === "string" && ATTENDANCE_STATUSES.has(value as FestivalAttendanceStatus);
 
+const isNonNegativeInteger = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
+
 export const parseFestivalPlayerAttendance = (value: unknown): FestivalPlayerAttendance => {
-  if (!value || typeof value !== "object") throw new Error("malformed_festival_attendance");
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("malformed_festival_attendance");
+  }
 
   const candidate = value as Record<string, unknown>;
 
@@ -104,4 +116,30 @@ export const parseFestivalPlayerAttendance = (value: unknown): FestivalPlayerAtt
 export const parseFestivalPlayerAttendanceList = (value: unknown): FestivalPlayerAttendance[] => {
   if (!Array.isArray(value)) throw new Error("malformed_festival_attendance");
   return value.map(parseFestivalPlayerAttendance);
+};
+
+export const parseFestivalAttendanceReconciliation = (
+  value: unknown,
+): FestivalAttendanceReconciliation => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("malformed_festival_attendance_reconciliation");
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  if (
+    !Array.isArray(candidate.attendance) ||
+    !isNonNegativeInteger(candidate.completedCount) ||
+    !isNonNegativeInteger(candidate.repairedCount) ||
+    !isNonNegativeInteger(candidate.attentionCount)
+  ) {
+    throw new Error("malformed_festival_attendance_reconciliation");
+  }
+
+  return {
+    attendance: parseFestivalPlayerAttendanceList(candidate.attendance),
+    completedCount: candidate.completedCount,
+    repairedCount: candidate.repairedCount,
+    attentionCount: candidate.attentionCount,
+  };
 };
