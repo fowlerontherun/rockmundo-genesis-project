@@ -194,6 +194,9 @@ export function FestivalTicketPlanner({
   );
   const savedDraft = simpleDraftFromResult(data);
   const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft);
+  const forecastSellThrough = Math.round(
+    draft.ticketPlan.expectedSellThroughBasisPoints / 100,
+  );
 
   const updateAdmission = (patch: Partial<FestivalTicketProduct>) => {
     setDraft((current) => {
@@ -264,8 +267,8 @@ export function FestivalTicketPlanner({
                 <Ticket className="h-5 w-5" /> Standard Festival ticket
               </CardTitle>
               <CardDescription>
-                One price and one availability figure. The game handles release
-                timing, taxes, fees and demand calculations.
+                Choose one price and one availability figure. The game calculates
+                demand from price, marketing, reputation and company upgrades.
               </CardDescription>
             </div>
             <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium">
@@ -303,37 +306,15 @@ export function FestivalTicketPlanner({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="festival-expected-demand">
-              Expected sell-through (%)
-            </Label>
-            <Input
-              id="festival-expected-demand"
-              type="number"
-              min={0}
-              max={100}
-              value={Math.round(
-                draft.ticketPlan.expectedSellThroughBasisPoints / 100,
-              )}
-              onChange={(event) => {
-                const percentage = Math.min(
-                  100,
-                  Math.max(0, Number(event.target.value)),
-                );
-                setDraft((current) =>
-                  current
-                    ? {
-                        ...current,
-                        ticketPlan: {
-                          ...current.ticketPlan,
-                          expectedSellThroughBasisPoints: Math.round(
-                            percentage * 100,
-                          ),
-                        },
-                      }
-                    : current,
-                );
-              }}
-            />
+            <Label>Forecast sell-through</Label>
+            <div className="flex min-h-10 items-center rounded-md border bg-muted/40 px-3 text-lg font-semibold">
+              {forecastSellThrough}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {dirty
+                ? "Save your price and availability to recalculate demand."
+                : "Calculated by the game from price, marketing, reputation and upgrades."}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -400,7 +381,7 @@ export function FestivalTicketPlanner({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
         <span role="status" className="text-sm text-muted-foreground">
           {save.isPending
-            ? "Saving…"
+            ? "Saving and recalculating demand…"
             : dirty
               ? "Unsaved ticket choices"
               : data.ready

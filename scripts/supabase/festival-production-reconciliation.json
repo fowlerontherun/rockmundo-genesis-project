@@ -26,7 +26,9 @@
     ["20260823085909", "enforce_festival_licence_capacity_caps_v2"],
     ["20260823090510", "preserve_festival_upgrade_usage_licence_metadata"],
     ["20260823091544", "enforce_festival_licence_operating_ceilings"],
-    ["20260823092038", "fix_festival_artist_candidate_fee_overflow"]
+    ["20260823092038", "fix_festival_artist_candidate_fee_overflow"],
+    ["20260823094830", "festival_server_authoritative_ticket_demand"],
+    ["20260823095244", "recalculate_open_festival_ticket_demand"]
   ],
   "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
   "postBootstrapExtensions": [
@@ -39,7 +41,8 @@
     "supabase/reconciliation/festival/20260823_festival_edition_directory_contract.sql",
     "supabase/reconciliation/festival/20260823_festival_licence_capacity_ceiling.sql",
     "supabase/reconciliation/festival/20260823_festival_licence_operating_ceilings.sql",
-    "supabase/reconciliation/festival/20260823_festival_artist_candidate_fee_bigint.sql"
+    "supabase/reconciliation/festival/20260823_festival_artist_candidate_fee_bigint.sql",
+    "supabase/reconciliation/festival/20260823_festival_server_ticket_demand.sql"
   ],
   "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
 }
