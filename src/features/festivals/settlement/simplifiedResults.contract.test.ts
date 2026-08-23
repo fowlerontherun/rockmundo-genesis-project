@@ -12,10 +12,12 @@ describe("simplified Festival Results contract", () => {
 
     expect(repository).toContain("get_festival_edition_results");
     expect(repository).toContain("ownerHistory");
+    expect(results).toContain("sponsorshipRevenueMinor");
     expect(results).toContain("netProfitMinor");
     expect(results).toContain("balanceAfterMinor");
     expect(results).toContain("reputationAfter");
     expect(ui).toContain("Festival finances");
+    expect(ui).toContain('label="Sponsorship"');
     expect(ui).toContain("Company impact");
     expect(ui).toContain("Balance before");
     expect(ui).toContain("Balance after");
