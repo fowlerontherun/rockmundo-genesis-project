@@ -18,7 +18,7 @@ jobs:
           ref: agent/complete-festival-lineup-inventory
           fetch-depth: 0
 
-      - name: Regenerate Festival inventory
+      - name: Regenerate Festival inventory from current branch
         run: node scripts/festivals/certify-active-system.mjs
 
       - name: Commit generated inventory when changed
