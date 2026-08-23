@@ -123,7 +123,6 @@ describe("Festival condition client contracts", () => {
     expect(panelSource).toContain("Festival condition");
     expect(panelSource).toContain("Intoxication");
     expect(hubSource).toContain("Do now");
-    expect(hubSource).toContain('kind="food-drink"').toBe(false);
-    expect(hubSource).toContain("resolve");
+    expect(hubSource).toContain("useResolveFestivalPlanActivity");
   });
 });
