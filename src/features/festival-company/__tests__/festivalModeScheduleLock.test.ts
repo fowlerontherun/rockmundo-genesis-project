@@ -74,7 +74,7 @@ describe("Festival Mode shell and schedule authority", () => {
   it("enforces the reservation at the schedule table boundary", () => {
     expect(boundaryMigration).toContain("BEFORE INSERT OR UPDATE OF");
     expect(boundaryMigration).toContain("festival_attendance_schedule_locked");
-    expect(boundaryMigration).toContain("activity.activity_type");
+    expect(boundaryMigration).toContain("lock.activity_type = 'festival_attendance'");
     expect(boundaryMigration).toContain("NEW.activity_type IN ('festival_performance', 'gig')");
   });
 
