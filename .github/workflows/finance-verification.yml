@@ -14,8 +14,12 @@ jobs:
   finance-verification:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      SUPABASE_STARTED: 'false'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -30,23 +34,44 @@ jobs:
         run: |
           node --version
           npm --version
+          supabase --version
       - name: Verify dependency lock
         run: npm run verify:dependency-lock
       - name: Install dependencies
         run: npm ci
       - name: Verify dependency tree
         run: npm run verify:dependencies
-      - run: supabase db start
-      - run: supabase db reset
-      - run: supabase db lint
-      - run: supabase test db
-      - run: |
+      - name: Verify Docker
+        run: |
+          command -v docker
+          docker info
+      - name: Start local Supabase stack
+        run: |
+          mkdir -p finance-verification-diagnostics
+          supabase stop --no-backup || true
+          set -o pipefail
+          supabase start --debug 2>&1 | tee finance-verification-diagnostics/supabase-start.log
+          echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
+      - name: Reset migrated test database
+        run: |
+          set -o pipefail
+          supabase db reset 2>&1 | tee finance-verification-diagnostics/migration-reset.log
+      - name: Lint database
+        run: supabase db lint
+      - name: Run database tests
+        run: supabase test db
+      - name: Verify generated Supabase types
+        run: |
           supabase gen types typescript --local > /tmp/supabase-types.ts
           diff -u src/integrations/supabase/types.ts /tmp/supabase-types.ts
-      - run: npm run typecheck
-      - run: npm run lint:ci
-      - run: npm run test -- --run
-      - run: npm run build
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint frontend
+        run: npm run lint:ci
+      - name: Unit tests
+        run: npm run test -- --run
+      - name: Build
+        run: npm run build
       - name: Browser E2E availability
         run: |
           if [ ! -f tests/finance/rehearsal-funding.spec.ts ]; then
@@ -55,3 +80,13 @@ jobs:
           fi
           npx playwright install --with-deps chromium
           npx playwright test tests/finance/rehearsal-funding.spec.ts --project=chromium
+      - name: Upload Finance verification diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finance-verification-diagnostics
+          path: finance-verification-diagnostics/**
+          if-no-files-found: ignore
+      - name: Stop local Supabase stack
+        if: always() && env.SUPABASE_STARTED == 'true'
+        run: supabase stop --no-backup || true
