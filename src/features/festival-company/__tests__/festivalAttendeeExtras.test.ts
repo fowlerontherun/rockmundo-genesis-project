@@ -79,6 +79,14 @@ describe("Festival check-in readiness contracts", () => {
       blockReason: "skip_the_queue",
     })).toThrow("malformed_festival_check_in_eligibility");
   });
+
+  it("rejects inconsistent canCheckIn and blockReason values", () => {
+    expect(() => parseFestivalCheckInEligibility({
+      ...eligibility,
+      canCheckIn: true,
+      blockReason: "wrong_city",
+    })).toThrow("malformed_festival_check_in_eligibility");
+  });
 });
 
 describe("Festival memorabilia contracts", () => {
