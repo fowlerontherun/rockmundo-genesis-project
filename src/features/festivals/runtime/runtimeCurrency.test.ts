@@ -13,7 +13,7 @@ describe("Festival runtime currency contract", () => {
       expect(sql).toContain("public.festival_ticket_plans");
       expect(sql).toContain("tp.festival_edition_id = r.edition_id");
       expect(sql).toContain("coalesce(tp.currency_code, 'GBP')");
-      expect(sql).toContain("'currencyCode', v_currency");
+      expect(sql).toMatch(/'currencyCode'\s*,\s*v_currency/);
     }
   });
 
