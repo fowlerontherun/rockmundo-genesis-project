@@ -41,6 +41,20 @@ interface InsertTable {
 type UntypedInsertFrom = (table: string) => InsertTable;
 const insertFrom = supabase.from.bind(supabase) as unknown as UntypedInsertFrom;
 
+interface LookupResult {
+  data: unknown;
+  error: RpcError;
+}
+
+interface LookupQuery {
+  select(columns: string): LookupQuery;
+  eq(column: string, value: unknown): LookupQuery;
+  maybeSingle(): Promise<LookupResult>;
+}
+
+type UntypedLookupFrom = (table: string) => LookupQuery;
+const lookupFrom = supabase.from.bind(supabase) as unknown as UntypedLookupFrom;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -150,6 +164,72 @@ const parseAtomicRecordingResult = (
   };
 };
 
+const parseRecoveredRehearsal = (
+  data: unknown,
+): AtomicRehearsalResult | null => {
+  if (!isRecord(data)) return null;
+
+  const bookingId = stringValue(data.id);
+  const totalCost = numberValue(data.total_cost);
+  const paymentSource = parsePaymentSource(data.payment_source);
+  if (!bookingId || totalCost === null || !paymentSource) return null;
+
+  return {
+    idempotent: true,
+    bookingId,
+    totalCost,
+    paymentSource,
+    chemistryGain: numberValue(data.chemistry_gain) ?? undefined,
+    xpEarned: numberValue(data.xp_earned) ?? undefined,
+    familiarityGained: numberValue(data.familiarity_gained) ?? undefined,
+  };
+};
+
+const parseRecoveredRecording = (
+  data: unknown,
+): AtomicRecordingResult | null => {
+  if (!isRecord(data)) return null;
+
+  const bookingId = stringValue(data.id);
+  const totalCost = numberValue(data.total_cost);
+  const paymentSource = parsePaymentSource(data.payment_source);
+  if (!bookingId || totalCost === null || !paymentSource) return null;
+
+  return {
+    idempotent: true,
+    bookingId,
+    totalCost,
+    paymentSource,
+    qualityImprovement: numberValue(data.quality_improvement) ?? undefined,
+  };
+};
+
+async function recoverRehearsalByIdempotencyKey(
+  idempotencyKey: string,
+): Promise<AtomicRehearsalResult | null> {
+  const { data, error } = await lookupFrom("band_rehearsals")
+    .select(
+      "id,total_cost,payment_source,chemistry_gain,xp_earned,familiarity_gained",
+    )
+    .eq("funding_idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (error) return null;
+  return parseRecoveredRehearsal(data);
+}
+
+async function recoverRecordingByIdempotencyKey(
+  idempotencyKey: string,
+): Promise<AtomicRecordingResult | null> {
+  const { data, error } = await lookupFrom("recording_sessions")
+    .select("id,total_cost,payment_source,quality_improvement")
+    .eq("funding_idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (error) return null;
+  return parseRecoveredRecording(data);
+}
+
 export async function getBandTreasuryDashboard(
   bandId: string,
 ): Promise<BandTreasuryDashboard | null> {
@@ -216,6 +296,16 @@ export async function confirmRehearsalBookingAtomic(args: {
     p_idempotency_key: args.idempotencyKey,
   });
 
+  if (
+    error?.message?.includes("rehearsal_room_unavailable") ||
+    error?.message?.includes("band_unavailable")
+  ) {
+    const recovered = await recoverRehearsalByIdempotencyKey(
+      args.idempotencyKey,
+    );
+    if (recovered) return { data: recovered, error: null };
+  }
+
   return { data: parseAtomicRehearsalResult(data), error };
 }
 
@@ -249,6 +339,16 @@ export async function confirmRecordingSessionAtomic(args: {
     p_payment_source: args.paymentSource,
     p_idempotency_key: args.idempotencyKey,
   });
+
+  if (
+    error?.message?.includes("recording_studio_unavailable") ||
+    error?.message?.includes("band_unavailable")
+  ) {
+    const recovered = await recoverRecordingByIdempotencyKey(
+      args.idempotencyKey,
+    );
+    if (recovered) return { data: recovered, error: null };
+  }
 
   return { data: parseAtomicRecordingResult(data), error };
 }
