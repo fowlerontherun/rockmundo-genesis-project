@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLeaveFestivalEarly } from "./useFestivalAttendance";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
+import { FestivalModeMyDay } from "./FestivalModeMyDay";
 
 export type FestivalModeSection = "home" | "my-day";
 
@@ -20,16 +21,13 @@ const festivalSections = [
 
 export const FestivalModeShell = ({
   attendance,
-  activeSection,
-  onSectionChange,
   children,
 }: {
   attendance: FestivalPlayerAttendance;
-  activeSection: FestivalModeSection;
-  onSectionChange: (section: FestivalModeSection) => void;
   children: ReactNode;
 }) => {
   const leaveEarly = useLeaveFestivalEarly();
+  const [activeSection, setActiveSection] = useState<FestivalModeSection>("home");
 
   const confirmLeave = () => {
     const confirmed = window.confirm(
@@ -77,7 +75,7 @@ export const FestivalModeShell = ({
                   aria-current={isCurrent ? "page" : undefined}
                   onClick={() => {
                     if (section.id === "home" || section.id === "my-day") {
-                      onSectionChange(section.id);
+                      setActiveSection(section.id);
                     }
                   }}
                   className={[
@@ -106,7 +104,7 @@ export const FestivalModeShell = ({
               {leaveEarly.error.message.replaceAll("_", " ")}
             </p>
           )}
-          {children}
+          {activeSection === "my-day" ? <FestivalModeMyDay attendance={attendance} /> : children}
         </main>
       </div>
     </div>
