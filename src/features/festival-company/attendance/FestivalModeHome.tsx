@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
+import { FestivalConditionPanel } from "./FestivalConditionPanel";
 import { useMyFestivalDayPlan } from "./useFestivalDayPlanner";
 
 const formatDate = (value: string | null) =>
@@ -42,6 +43,8 @@ export const FestivalModeHome = ({ attendance }: { attendance: FestivalPlayerAtt
           You are inside the festival. Your normal RockMundo schedule is reserved for the remaining festival window, so incompatible activities cannot be booked until you leave or the festival completes.
         </p>
       </section>
+
+      <FestivalConditionPanel attendanceId={attendance.id} />
 
       <section className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -90,8 +93,8 @@ export const FestivalModeHome = ({ attendance }: { attendance: FestivalPlayerAtt
           <CardTitle>Festival Mode</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>My Day is now active: you can plan future 30, 60 or 90-minute blocks across each Festival day.</p>
-          <p>Stages, food and drink, activities, social, campsite and the Festival map remain visible but disabled until their authoritative gameplay systems are added.</p>
+          <p>My Day supports future 30, 60 or 90-minute blocks across each Festival day.</p>
+          <p>Eat, Drink, Explore and Rest now resolve during their planned time window and update temporary Festival condition stats. Stages, social, campsite and the Festival map remain disabled until their authoritative systems arrive.</p>
         </CardContent>
       </Card>
     </div>
