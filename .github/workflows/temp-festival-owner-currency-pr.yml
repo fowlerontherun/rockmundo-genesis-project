@@ -1,0 +1,76 @@
+name: Temporary Festival Owner Currency PR Finalizer
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/festival-currency-consistency'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/festival-currency-consistency
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Apply owner currency patch
+        run: python scripts/festivals/temp-finalize-owner-currency.py
+
+      - name: Run focused Festival regressions
+        run: >-
+          npx vitest run
+          src/features/festivals/annual-plan/model.test.ts
+          src/features/festival-company/__tests__/festivalCompanyParsers.test.ts
+          src/lib/api/__tests__/festivalOwnerCurrencyConsistency.database.test.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint changed Festival sources
+        run: >-
+          npx eslint
+          src/features/festivals/annual-plan/FestivalAnnualPlan.tsx
+          src/features/festivals/annual-plan/model.ts
+          src/features/festivals/annual-plan/model.test.ts
+          src/features/festivals/editions/FestivalCompanyEditionsPage.tsx
+          src/features/festivals/editions/repository.ts
+          src/features/festival-company/data/festivalCompanyRepository.ts
+          src/features/festival-company/ui/FestivalCompanyCard.tsx
+          src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx
+          src/features/festival-company/__tests__/festivalCompanyParsers.test.ts
+          src/lib/api/__tests__/festivalOwnerCurrencyConsistency.database.test.ts
+
+      - name: Regenerate Festival active inventory
+        run: node scripts/festivals/certify-active-system.mjs
+
+      - name: Commit final changes and self-remove
+        run: |
+          git config user.name "rockmundo-festival-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/temp-festival-owner-currency-pr.yml
+          git rm scripts/festivals/temp-finalize-owner-currency.py
+          git add \
+            src/features/festivals/annual-plan/FestivalAnnualPlan.tsx \
+            src/features/festivals/editions/FestivalCompanyEditionsPage.tsx \
+            src/features/festival-company/data/festivalCompanyRepository.ts \
+            src/features/festival-company/ui/FestivalCompanyCard.tsx \
+            src/features/festival-company/upgrades/FestivalUpgradeWorkspace.tsx \
+            supabase/reconciliation/festival/20260823_festival_owner_currency_consistency.sql \
+            supabase/reconciliation/festival/20260823_harden_festival_upgrade_internal_helpers.sql \
+            scripts/supabase/festival-production-reconciliation.json \
+            docs/festivals/festival-active-callers.json
+          git commit -m "Use authoritative currency across Festival owner flow"
+          git pull --rebase origin agent/festival-currency-consistency
+          git push origin HEAD:agent/festival-currency-consistency
