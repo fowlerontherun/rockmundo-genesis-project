@@ -4353,6 +4353,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -7173,6 +7174,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -8014,6 +8016,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -8200,6 +8203,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -11240,6 +11244,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -12738,6 +12743,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -12995,6 +13001,7 @@
       "kind": "module",
       "importers": [
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
@@ -13053,6 +13060,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -13076,6 +13084,15 @@
         "src/config/fmNavigation.ts"
       ],
       "status": "legacy_active_or_cross_domain",
+      "directDatabaseWriter": false,
+      "browserAuthoritativeCalculation": false,
+      "writes": []
+    },
+    {
+      "file": "src/features/festivals/runtime/runtimeCurrency.test.ts",
+      "kind": "test",
+      "importers": [],
+      "status": "unused_or_dynamic",
       "directDatabaseWriter": false,
       "browserAuthoritativeCalculation": false,
       "writes": []
@@ -14180,6 +14197,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -15352,6 +15370,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -44883,6 +44902,18 @@
       "harnessCovered": [],
       "replacement": null,
       "retirementStatus": "investigate"
+    },
+    {
+      "type": "function",
+      "name": "_festival_runtime_projection",
+      "migration": "supabase/migrations/20291218252300_festival_runtime_currency_code.sql",
+      "ownerDomain": "legacy_or_compatibility",
+      "acceptsWrites": false,
+      "publiclyExecutable": "inspect grants",
+      "rls": "not_applicable",
+      "harnessCovered": [],
+      "replacement": null,
+      "retirementStatus": "investigate"
     }
   ],
   "rpcs": [
@@ -46630,6 +46661,17 @@
       "typescriptCallers": [],
       "sqlCallers": [
         "supabase/migrations/20291218010000_festival_cross_phase_contracts.sql"
+      ],
+      "workerCallers": [],
+      "testCallers": [],
+      "classification": "no_known_runtime_callers",
+      "dynamicCallerReviewRequired": true
+    },
+    {
+      "name": "_festival_runtime_projection",
+      "typescriptCallers": [],
+      "sqlCallers": [
+        "supabase/migrations/20291218252300_festival_runtime_currency_code.sql"
       ],
       "workerCallers": [],
       "testCallers": [],
@@ -58702,6 +58744,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -61512,6 +61555,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -62337,6 +62381,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -62532,6 +62577,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -65588,6 +65634,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -67096,6 +67143,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -67365,6 +67413,7 @@
       "candidate": "src/features/festivals/runtime/FestivalLiveControlRoom.tsx",
       "currentCallers": [
         "src/features/festivals/festivalFeatureRegistry.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/ui/CanonicalFestivalRoutes.tsx",
         "src/features/festivals/ui/simplifiedFestivalOwnerFlow.test.ts"
       ],
@@ -67427,6 +67476,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -67456,6 +67506,17 @@
       "risk": "medium",
       "verification": "npm run test:festivals:active-callers",
       "category": "remove_after_route_migration"
+    },
+    {
+      "candidate": "src/features/festivals/runtime/runtimeCurrency.test.ts",
+      "currentCallers": [],
+      "replacement": null,
+      "dataMigrationRequirement": "none for source file; preserve data tables",
+      "safeRemovalPrerequisite": "route/import/dynamic-reference smoke proof",
+      "recommendedRetirementPr": "festival-route-migration",
+      "risk": "medium",
+      "verification": "npm run test:festivals:active-callers",
+      "category": "investigate"
     },
     {
       "candidate": "src/features/festivals/runtime/service.ts",
@@ -68560,6 +68621,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
@@ -69746,6 +69808,7 @@
         "src/features/festivals/performance/hooks.ts",
         "src/features/festivals/performance/service.ts",
         "src/features/festivals/runtime/model.test.ts",
+        "src/features/festivals/runtime/runtimeCurrency.test.ts",
         "src/features/festivals/runtime/service.ts",
         "src/features/festivals/scheduling/schedulingModel.test.ts",
         "src/features/festivals/scheduling/service.ts",
