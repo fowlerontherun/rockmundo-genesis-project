@@ -33,7 +33,8 @@
     ["20260823102319", "repair_festival_edition_lineup_contract"],
     ["20260823102448", "repair_festival_edition_lineup_save_authority"],
     ["20260823103133", "harden_festival_artist_opportunities_privileges"],
-    ["20260823120848", "simplify_festival_permits_to_automatic_simulation"]
+    ["20260823120848", "simplify_festival_permits_to_automatic_simulation"],
+    ["20260823122134", "add_festival_runtime_currency_code"]
   ],
   "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
   "postBootstrapExtensions": [
@@ -51,7 +52,8 @@
     "supabase/reconciliation/festival/20260823_simplified_festival_automatic_sponsorship_budget.sql",
     "supabase/reconciliation/festival/20260823_festival_edition_lineup_contract.sql",
     "supabase/reconciliation/festival/20260823_harden_festival_artist_opportunities_privileges.sql",
-    "supabase/reconciliation/festival/20260823_simplify_festival_permits_to_automatic_simulation.sql"
+    "supabase/reconciliation/festival/20260823_simplify_festival_permits_to_automatic_simulation.sql",
+    "supabase/reconciliation/festival/20260823_festival_runtime_currency_code.sql"
   ],
   "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
 }
