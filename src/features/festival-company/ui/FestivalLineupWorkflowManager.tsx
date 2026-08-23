@@ -41,11 +41,31 @@ export function FestivalLineupWorkflowManager({
     );
   }
 
+  const requiresConfirmedAct = query.data.issues.some(
+    (issue) =>
+      issue.blocking && issue.code === "festival_lineup_requires_confirmed_act",
+  );
+
   return (
-    <SimplifiedFestivalLineupManager
-      festivalCompanyId={festivalCompanyId}
-      festivalEditionId={festivalEditionId}
-      data={query.data}
-    />
+    <div className="space-y-4">
+      {requiresConfirmedAct ? (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle>Confirm at least one act</CardTitle>
+            <CardDescription>
+              Invite an act or review an application, send a performance offer
+              and wait for it to be accepted. Once one act is confirmed, the
+              game can fill the remaining Festival slots with suitable NPC acts.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
+
+      <SimplifiedFestivalLineupManager
+        festivalCompanyId={festivalCompanyId}
+        festivalEditionId={festivalEditionId}
+        data={query.data}
+      />
+    </div>
   );
 }
