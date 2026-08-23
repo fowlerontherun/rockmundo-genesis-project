@@ -6,6 +6,12 @@ import {
   type FestivalDayPlan,
   type FestivalPlanMutationResult,
 } from "./festivalDayPlanner";
+import {
+  parseFestivalActivityResolution,
+  parseFestivalConditions,
+  type FestivalActivityResolution,
+  type FestivalConditions,
+} from "./festivalConditions";
 
 type UntypedRpc = (
   name: string,
@@ -25,7 +31,7 @@ const parseMutationResult = (value: unknown): FestivalPlanMutationResult => {
     typeof candidate.id !== "string" ||
     !UUID_RE.test(candidate.id) ||
     typeof candidate.status !== "string" ||
-    !["planned", "missed", "cancelled"].includes(candidate.status)
+    !["planned", "completed", "missed", "cancelled"].includes(candidate.status)
   ) {
     throw new Error("malformed_festival_plan_mutation");
   }
@@ -76,4 +82,20 @@ export const cancelFestivalDayPlanItem = async (itemId: string): Promise<Festiva
   });
   if (error) throw new Error(error.message || "festival_day_plan_cancel_failed");
   return parseMutationResult(data);
+};
+
+export const getMyFestivalConditions = async (attendanceId: string): Promise<FestivalConditions> => {
+  const { data, error } = await plannerRpc("get_my_festival_conditions", {
+    p_attendance_id: attendanceId,
+  });
+  if (error) throw new Error(error.message || "festival_conditions_unavailable");
+  return parseFestivalConditions(data);
+};
+
+export const resolveFestivalPlanActivity = async (planItemId: string): Promise<FestivalActivityResolution> => {
+  const { data, error } = await plannerRpc("resolve_festival_plan_activity", {
+    p_plan_item_id: planItemId,
+  });
+  if (error) throw new Error(error.message || "festival_activity_resolution_failed");
+  return parseFestivalActivityResolution(data);
 };
