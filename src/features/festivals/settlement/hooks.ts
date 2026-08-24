@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { applyFestivalSettlementBatch, getFestivalSettlementReadiness, getFestivalSettlementReport, prepareFestivalEditionSettlement } from './service';
+import { applyFestivalSettlementBatch, getFestivalEditionSettlementReconciliation, getFestivalSettlementReadiness, getFestivalSettlementReport, prepareFestivalEditionSettlement, settleFestivalEdition } from './service';
 import { festivalSettlementQueryKeys } from './queryKeys';
 
 export const useFestivalSettlementReadiness = (editionId: string) => useQuery({ queryKey: festivalSettlementQueryKeys.readiness(editionId), queryFn: () => getFestivalSettlementReadiness(editionId), enabled: Boolean(editionId) });
 export const useFestivalSettlementReport = (settlementId: string) => useQuery({ queryKey: festivalSettlementQueryKeys.report(settlementId), queryFn: () => getFestivalSettlementReport(settlementId), enabled: Boolean(settlementId) });
+export const useFestivalEditionSettlementReconciliation = (editionId: string) => useQuery({ queryKey: [...festivalSettlementQueryKeys.edition(editionId), 'reconciliation'], queryFn: () => getFestivalEditionSettlementReconciliation(editionId), enabled: Boolean(editionId) });
 
 export const usePrepareFestivalSettlement = (editionId: string) => {
   const queryClient = useQueryClient();
@@ -13,4 +14,12 @@ export const usePrepareFestivalSettlement = (editionId: string) => {
 export const useApplyFestivalSettlementBatch = () => {
   const queryClient = useQueryClient();
   return useMutation({ mutationFn: (input: { settlementId: string; idempotencyKey: string }) => applyFestivalSettlementBatch(input.settlementId, input.idempotencyKey), onSuccess: (_data, variables) => queryClient.invalidateQueries({ queryKey: festivalSettlementQueryKeys.report(variables.settlementId) }) });
+};
+
+export const useSettleFestivalEdition = (editionId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { expectedReadinessHash: string | null; idempotencyKey: string; adminOverrideReason?: string }) => settleFestivalEdition(editionId, input.expectedReadinessHash, input.idempotencyKey, input.adminOverrideReason),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: festivalSettlementQueryKeys.edition(editionId) }),
+  });
 };

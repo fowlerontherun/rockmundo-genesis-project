@@ -26,6 +26,23 @@ export const applyFestivalSettlementBatch = async (settlementId: string, idempot
   return data;
 };
 
+export const settleFestivalEdition = async (editionId: string, expectedReadinessHash: string | null, idempotencyKey: string, adminOverrideReason?: string) => {
+  const { data, error } = await settlementClient.rpc('settle_festival_edition', {
+    p_edition_id: editionId,
+    p_expected_readiness_hash: expectedReadinessHash,
+    p_idempotency_key: idempotencyKey,
+    p_admin_override_reason: adminOverrideReason ?? null,
+  });
+  if (error) throw error;
+  return data;
+};
+
+export const getFestivalEditionSettlementReconciliation = async (editionId: string) => {
+  const { data, error } = await settlementClient.rpc('get_festival_edition_settlement_reconciliation', { p_edition_id: editionId });
+  if (error) throw error;
+  return data;
+};
+
 export const getFestivalSettlementReport = async (settlementId: string): Promise<SettlementReport> => {
   const { data, error } = await settlementClient.rpc('festival_settlement_report', { p_settlement_id: settlementId });
   if (error) throw error;

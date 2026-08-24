@@ -17,3 +17,12 @@ export const completeFestivalPerformance = (sessionId: string, idempotencyKey: s
 export const cancelFestivalPerformanceSession = (sessionId: string, reason: string, status: string, idempotencyKey: string) => rpc<FestivalSession>("cancel_festival_performance_session", { p_session_id: sessionId, p_reason: reason, p_cancel_status: status, p_idempotency_key: idempotencyKey });
 export const listPublicFestivalPerformanceSessions = (editionId?: string) => rpc<FestivalPublicSession[]>("public_festival_performance_sessions", { p_edition_id: editionId ?? null });
 export const getFestivalPerformanceSession = (sessionId: string) => rpc<FestivalSession | null>("get_festival_performance_session", { p_session_id: sessionId });
+
+export const settleFestivalEdition = (editionId: string, expectedReadinessHash: string | null, idempotencyKey: string, adminOverrideReason?: string) => rpc<Json>("settle_festival_edition", {
+  p_edition_id: editionId,
+  p_expected_readiness_hash: expectedReadinessHash,
+  p_idempotency_key: idempotencyKey,
+  p_admin_override_reason: adminOverrideReason ?? null,
+});
+export const getFestivalPerformanceSettlementBreakdown = (sessionId: string) => rpc<Json>("get_festival_performance_settlement_breakdown", { p_session_id: sessionId });
+export const getFestivalEditionSettlementReconciliation = (editionId: string) => rpc<Json>("get_festival_edition_settlement_reconciliation", { p_edition_id: editionId });
