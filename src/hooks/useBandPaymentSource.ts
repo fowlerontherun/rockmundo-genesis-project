@@ -11,8 +11,8 @@ export type BandPaymentSource = "band" | "personal";
 
 // Rehearsal booking used to top up the band before the booking hook ran. The
 // atomic rehearsal RPC now charges the selected payer itself, but the existing
-// dialog and page are intentionally kept stable in this PR. Preserve that payer
-// choice in-memory across the dialog -> page -> hook boundary and consume it once.
+// dialog and page are intentionally kept stable. Preserve that payer choice
+// in-memory across the dialog -> page -> hook boundary and consume it once.
 const pendingAtomicRehearsalSources = new Map<string, BandPaymentSource>();
 
 export function consumeAtomicRehearsalPaymentSource(
@@ -26,10 +26,10 @@ export function consumeAtomicRehearsalPaymentSource(
 /**
  * Shared payer resolution for band activities that cost money.
  *
- * Band funds are always the default. Legacy band-authoritative activities may
- * still top up the treasury when the player chooses personal funds. Rehearsals
- * are different: their new atomic booking RPC debits the selected payer directly,
- * so `prepareFunds` only records the payer for that flow and does not move money.
+ * Band funds are always the default. Spendability is read from the canonical
+ * band treasury dashboard (available balance = balance minus reservations).
+ * We deliberately do not fall back to bands.band_balance for booking decisions:
+ * that column is only a compatibility mirror for legacy screens.
  */
 export function useBandPaymentSource(bandId: string | null | undefined) {
   const { profileId } = useActiveProfile();
@@ -40,7 +40,7 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
     setSource("band");
   }, [bandId]);
 
-  const { data: bandRow } = useQuery({
+  const { data: bandRow, isLoading: isBandFundingLoading } = useQuery({
     queryKey: ["band-payment-source-band", bandId],
     queryFn: async () => {
       if (!bandId) return null;
@@ -48,7 +48,7 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
       const [bandResult, dashboard] = await Promise.all([
         supabase
           .from("bands")
-          .select("id, name, band_balance")
+          .select("id, name")
           .eq("id", bandId)
           .maybeSingle(),
         getBandTreasuryDashboard(bandId),
@@ -61,10 +61,6 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
         dashboard?.treasuries.find((treasury) => treasury.isPrimary) ??
         dashboard?.treasuries[0];
 
-      // Spending checks must use the same available treasury balance that the
-      // atomic server RPC uses (balance minus reservations), not the deprecated
-      // bands.band_balance compatibility mirror. Fall back only for bands whose
-      // treasury has not yet been seeded.
       const treasuryAvailable =
         dashboard?.status === "ok" && primaryTreasury
           ? primaryTreasury.availableBalanceMinor / 100
@@ -73,13 +69,14 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
       return {
         ...band,
         treasury_available: treasuryAvailable,
+        treasury_status: dashboard?.status ?? "treasury_missing",
       };
     },
     enabled: !!bandId,
     staleTime: 15_000,
   });
 
-  const { data: profileRow } = useQuery({
+  const { data: profileRow, isLoading: isPersonalFundingLoading } = useQuery({
     queryKey: ["band-payment-source-profile", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -94,15 +91,25 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
     staleTime: 15_000,
   });
 
-  const bandBalance = Number(
-    bandRow?.treasury_available ?? bandRow?.band_balance ?? 0,
-  );
+  const treasuryMissing =
+    !!bandId && !isBandFundingLoading && bandRow?.treasury_status !== "ok";
+
+  // -1 is an intentional UI sentinel for a missing treasury. It keeps legacy
+  // consumers fail-closed while allowing BandPaymentSourceSelector to show a
+  // recovery action instead of pretending a missing treasury is simply £/$0.
+  const bandBalance = treasuryMissing
+    ? -1
+    : Number(bandRow?.treasury_available ?? 0);
   const personalBalance = Number(profileRow?.cash ?? 0);
 
   const canAfford = useCallback(
-    (cost: number) =>
-      source === "band" ? bandBalance >= cost : personalBalance >= cost,
-    [source, bandBalance, personalBalance],
+    (cost: number) => {
+      if (source === "band") {
+        return !treasuryMissing && bandBalance >= cost;
+      }
+      return personalBalance >= cost;
+    },
+    [source, treasuryMissing, bandBalance, personalBalance],
   );
 
   /**
@@ -121,7 +128,10 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
 
       if (!bandId || source !== "personal" || cost <= 0) return 0;
 
-      const shortfall = Math.max(0, cost - bandBalance);
+      // Missing treasury behaves as a zero balance here. fundBandFromWallet is
+      // the approved recovery path and creates the treasury before crediting it.
+      const availableBandBalance = Math.max(0, bandBalance);
+      const shortfall = Math.max(0, cost - availableBandBalance);
       const topUp = Math.ceil(shortfall);
       if (topUp <= 0) return 0;
 
@@ -172,14 +182,21 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
       bandName: bandRow?.name ?? null,
       bandBalance,
       personalBalance,
+      treasuryMissing,
+      treasuryStatus: bandRow?.treasury_status ?? null,
+      isLoading: isBandFundingLoading || isPersonalFundingLoading,
       canAfford,
       prepareFunds,
     }),
     [
       source,
       bandRow?.name,
+      bandRow?.treasury_status,
       bandBalance,
       personalBalance,
+      treasuryMissing,
+      isBandFundingLoading,
+      isPersonalFundingLoading,
       canAfford,
       prepareFunds,
     ],
