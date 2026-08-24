@@ -266,10 +266,10 @@ The booking/contracts foundation exists. The next work should complete canonical
 
 ---
 
-## PR B4 — Festival settlement and career effects
+## PR B4 — Festival settlement and career effects ([#1638](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1638))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -288,6 +288,15 @@ The booking/contracts foundation exists. The next work should complete canonical
 ### Dependencies
 
 - PR B3 and Finance Programme A.
+
+### Implementation notes
+
+- Added one replay-safe `settle_festival_edition` boundary that prepares, applies and reconciles the edition settlement before completion.
+- Artist guarantees, performance bonuses, agreed `merch_share_percent`, organiser cancellation kill fees and applicable band cancellation/no-show deposit refunds now post through canonical Finance transactions with stable idempotency keys.
+- Finalised performance proposals now mutate bounded band fame/fan state, festival reputation, sponsor health and relevant checked-in performer XP exactly once, with before/after application evidence retained.
+- Added permission-checked player performance settlement and organiser edition reconciliation projections, while removing raw settlement tables from the broad authenticated read surface.
+- Added settlement-source immutability, completed-request replay hardening and a Vitest database-contract regression suite covering finance authority, signed terms, career idempotency and permissions.
+- Settlement deliberately fails closed for non-USD editions until the shared Finance journal supports correct multi-currency posting; ticket bonuses remain neutral until canonical per-band ticket-bonus evidence exists.
 
 ---
 
