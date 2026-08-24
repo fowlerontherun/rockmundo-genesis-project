@@ -4,6 +4,12 @@ import path from 'node:path';
 
 const read = (file: string) => fs.readFileSync(path.resolve(process.cwd(), file), 'utf8');
 
+const expectNoAuthoritySchemaError = async (page: import('@playwright/test').Page) => {
+  await expect(page.locator('body')).toBeVisible();
+  await expect(page.locator('body')).not.toContainText('Could not find the function public.');
+  await expect(page.locator('body')).not.toContainText('schema cache');
+};
+
 test.describe('finance booking and recovery browser gate', () => {
   test('rehearsal booking exposes authoritative payer and recovery UX', async ({ page }) => {
     const selector = read('src/components/bands/BandPaymentSourceSelector.tsx');
@@ -19,17 +25,29 @@ test.describe('finance booking and recovery browser gate', () => {
     expect(booking).toContain('band_treasury_missing');
 
     await page.goto('/rehearsals');
-    await expect(page.locator('body')).toBeVisible();
-    await expect(page.locator('body')).not.toContainText('Could not find the function public.confirm_rehearsal_booking_atomic');
+    await expectNoAuthoritySchemaError(page);
   });
 
-  test('recording uses the atomic booking authority and readable finance failures', async () => {
+  test('recording uses the atomic booking authority and readable finance failures', async ({ page }) => {
     const recording = read('src/hooks/useRecordingDataAtomic.tsx');
     const client = read('src/services/finance/atomicBookingClient.ts');
 
     expect(recording).toContain('confirmRecordingBookingAtomic');
     expect(client).toContain('confirm_recording_booking_atomic');
     expect(client).toContain('cancel_recording_session_atomic');
+
+    await page.goto('/recording-studios');
+    await expectNoAuthoritySchemaError(page);
+  });
+
+  test('loan application route loads without missing finance authority', async ({ page }) => {
+    await page.goto('/finance/banking/apply');
+    await expectNoAuthoritySchemaError(page);
+  });
+
+  test('mortgage dashboard route loads without missing finance authority', async ({ page }) => {
+    await page.goto('/finance/mortgages');
+    await expectNoAuthoritySchemaError(page);
   });
 
   test('refunds are source-aware and replay-safe', async () => {
