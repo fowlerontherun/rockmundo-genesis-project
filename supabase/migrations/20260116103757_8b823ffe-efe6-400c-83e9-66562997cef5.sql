@@ -7,9 +7,17 @@ ALTER TABLE jam_sessions
   ADD COLUMN IF NOT EXISTS synergy_score INTEGER DEFAULT 50,
   ADD COLUMN IF NOT EXISTS gifted_song_id UUID REFERENCES songs(id);
 
--- Add instrument skill slug to participants
-ALTER TABLE jam_session_participants
-  ADD COLUMN IF NOT EXISTS instrument_skill_slug TEXT;
+-- Historical environments did not all create the participant table before this
+-- migration. Only extend it when present; the later canonical participant
+-- migration owns table creation on clean installs.
+DO $$
+BEGIN
+  IF to_regclass('public.jam_session_participants') IS NOT NULL THEN
+    ALTER TABLE public.jam_session_participants
+      ADD COLUMN IF NOT EXISTS instrument_skill_slug TEXT;
+  END IF;
+END
+$$;
 
 -- Create jam_session_outcomes table for detailed per-participant results
 CREATE TABLE IF NOT EXISTS jam_session_outcomes (
