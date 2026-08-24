@@ -24,6 +24,7 @@ export function FestivalSettlementManagement({ editionId }: { editionId: string 
   const readiness = asObject(readinessQuery.data);
   const reconciliation = asObject(reconciliationPayload.reconciliation);
   const reportData = report.data;
+  const financialResult = asObject(reportData?.financialResult);
   const ready = Boolean(readiness.ready_for_settlement ?? readiness.is_eligible ?? readiness.ready);
   const readinessHash = text(readiness.readiness_hash, "");
   const completed = text(settlement.status) === "completed";
@@ -103,7 +104,7 @@ export function FestivalSettlementManagement({ editionId }: { editionId: string 
             <>
               <p>Career effects: {reportData.effects.length}</p>
               <p>Contract instructions: {reportData.contracts.length}</p>
-              <p>Financial result: {money(reportData.financialResult?.net_profit_cents)}</p>
+              <p>Financial result: {money(typeof financialResult.net_profit_cents === "number" ? financialResult.net_profit_cents : null)}</p>
               <p>Settlement events: {reportData.events.length}</p>
             </>
           )}
