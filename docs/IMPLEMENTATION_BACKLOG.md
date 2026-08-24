@@ -174,7 +174,7 @@ The booking/contracts foundation exists. The next work should complete canonical
 ## PR B1 — Canonical festival performance sessions
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -189,6 +189,13 @@ The booking/contracts foundation exists. The next work should complete canonical
 - Every confirmed canonical slot can resolve to one authoritative performance session.
 - Legacy participant tables are not used as new write authority.
 - Session creation is idempotent.
+
+### Implementation notes
+
+- Enforced one canonical session per stage slot in addition to the existing one-session-per-contract constraint.
+- Session creation now snapshots canonical active band members immediately and keeps the lock-based constructor private.
+- Added a permission-checked player/organiser projection that omits private readiness and contract-economic data.
+- Extended the database harness to cover the read API, slot uniqueness, and internal-constructor privileges.
 
 ---
 
