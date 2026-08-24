@@ -1,0 +1,1 @@
+Finance A4 is implementation-complete but remains gated on the pull-request Finance verification workflow. Do not mark the consolidated backlog item COMPLETE until that workflow succeeds on this branch.
