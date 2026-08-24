@@ -76,9 +76,10 @@ export function FestivalLifecycleControls({
   const confirmationWord = selected?.targetState.replaceAll("_", " ") ?? "";
   const reasonNeeded = Boolean(selected?.reasonRequired || override);
   const destructiveConfirmed = selected?.severity !== "destructive" || typedConfirmation === confirmationWord;
+  const transitionAllowed = Boolean(selected?.available || (override && selected?.adminOverrideAllowed));
   const canSubmit = Boolean(
     selected &&
-      selected.available &&
+      transitionAllowed &&
       (!reasonNeeded || reason.trim()) &&
       (!override || selected.adminOverrideAllowed) &&
       destructiveConfirmed &&
@@ -106,34 +107,38 @@ export function FestivalLifecycleControls({
         <CardTitle>Lifecycle controls</CardTitle>
         <CardDescription>
           Current status is {status}. Server-projected transitions, blockers,
-          confirmations and overrides are shown before submission.
+          confirmations and blackout overrides are shown before submission.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {lifecycleOptions.isLoading && <p className="text-sm text-muted-foreground">Loading server-projected lifecycle options…</p>}
         {lifecycleOptions.error && <p className="text-sm text-destructive">Lifecycle options could not be loaded from the server.</p>}
         <div className="grid gap-3 md:grid-cols-2">
-          {options.map((option) => (
-            <button
-              key={option.targetState}
-              type="button"
-              disabled={!option.available}
-              onClick={() => {
-                setSelected(option);
-                setReason("");
-                setOverride(false);
-                setTypedConfirmation("");
-                setOperationKey(newOperationKey());
-              }}
-              className={`rounded border p-3 text-left ${option.available ? "hover:bg-muted" : "opacity-70"} ${option.severity === "destructive" ? "border-destructive" : option.severity === "warning" ? "border-amber-500" : ""}`}
-            >
-              <div className="font-medium capitalize">{option.targetState.replaceAll("_", " ")}</div>
-              <p className="text-sm text-muted-foreground">{option.explanation}</p>
-              {option.blockers.length > 0 && <p className="mt-2 text-sm text-destructive">Blockers: {option.blockers.join(", ")}</p>}
-              {option.warnings.length > 0 && <p className="mt-2 text-sm text-amber-600">Warnings: {option.warnings.join(", ")}</p>}
-              {option.confirmationRequired && <p className="mt-2 text-xs uppercase tracking-wide">Confirmation required</p>}
-            </button>
-          ))}
+          {options.map((option) => {
+            const selectable = option.available || option.adminOverrideAllowed;
+            return (
+              <button
+                key={option.targetState}
+                type="button"
+                disabled={!selectable}
+                onClick={() => {
+                  setSelected(option);
+                  setReason("");
+                  setOverride(false);
+                  setTypedConfirmation("");
+                  setOperationKey(newOperationKey());
+                }}
+                className={`rounded border p-3 text-left ${selectable ? "hover:bg-muted" : "opacity-70"} ${option.severity === "destructive" ? "border-destructive" : option.severity === "warning" ? "border-amber-500" : ""}`}
+              >
+                <div className="font-medium capitalize">{option.targetState.replaceAll("_", " ")}</div>
+                <p className="text-sm text-muted-foreground">{option.explanation}</p>
+                {option.blockers.length > 0 && <p className="mt-2 text-sm text-destructive">Blockers: {option.blockers.join(", ")}</p>}
+                {option.warnings.length > 0 && <p className="mt-2 text-sm text-amber-600">Warnings: {option.warnings.join(", ")}</p>}
+                {!option.available && option.adminOverrideAllowed && <p className="mt-2 text-xs font-medium uppercase tracking-wide text-amber-600">Administrator blackout override available</p>}
+                {option.confirmationRequired && <p className="mt-2 text-xs uppercase tracking-wide">Confirmation required</p>}
+              </button>
+            );
+          })}
         </div>
         {mutation.error && <p className="text-sm text-destructive">The lifecycle transition could not be completed. No records were changed.</p>}
       </CardContent>
@@ -153,7 +158,7 @@ export function FestivalLifecycleControls({
             {selected?.adminOverrideAllowed && (
               <Label className="flex items-center gap-2">
                 <Checkbox checked={override} onCheckedChange={(checked) => setOverride(Boolean(checked))} />
-                Use administrator override
+                Override the regional blackout with this administrator decision
               </Label>
             )}
             {(reasonNeeded || selected?.confirmationRequired) && (
@@ -172,7 +177,7 @@ export function FestivalLifecycleControls({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={mutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={!canSubmit} onClick={(event) => { event.preventDefault(); mutation.mutate(); }}>
-              {mutation.isPending ? "Updating…" : override ? "Confirm override" : "Confirm transition"}
+              {mutation.isPending ? "Updating…" : override ? "Confirm blackout override" : "Confirm transition"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
