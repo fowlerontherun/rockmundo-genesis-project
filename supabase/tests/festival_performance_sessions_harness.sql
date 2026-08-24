@@ -1,6 +1,6 @@
 -- Festival performance session behavioural harness. Run inside a rollback transaction.
 begin;
-select plan(21);
+select plan(24);
 select has_table('public','festival_performance_sessions','canonical session table exists');
 select has_table('public','festival_performance_attendance','attendance table exists');
 select has_table('public','festival_session_equipment','equipment table exists');
@@ -8,6 +8,9 @@ select has_table('public','festival_session_crew','crew table exists');
 select has_table('public','festival_performance_incidents','incident table exists');
 select has_table('public','festival_performance_session_events','event stream exists');
 select has_function('public','ensure_festival_performance_session',ARRAY['uuid','text'],'active contract creates one idempotent session via RPC');
+select has_function('public','get_festival_performance_session',ARRAY['uuid'],'permission-checked player and organiser session projection exists');
+select has_index('public','festival_performance_sessions','uq_festival_performance_sessions_stage_slot','one canonical session is enforced per confirmed slot');
+select function_privs_are('public','_ensure_festival_performance_session',ARRAY['uuid','text'],'authenticated',ARRAY[]::text[],'internal session constructor is not player callable');
 select has_function('public','check_in_festival_performer',ARRAY['uuid','text'],'performer self check-in RPC exists and rejects unrelated players');
 select has_function('public','festival_session_arrival_status',ARRAY['uuid'],'whole-band arrival projection exists');
 select has_function('public','festival_equipment_preflight',ARRAY['uuid'],'equipment blockers and remedies projection exists');
