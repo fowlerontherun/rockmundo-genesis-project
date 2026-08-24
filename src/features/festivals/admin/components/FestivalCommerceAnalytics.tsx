@@ -29,7 +29,7 @@ export function FestivalCommerceAnalytics({ editionId }: { editionId: string }) 
 
   const products = data?.tickets?.products ?? [];
   const stalls = data?.vendors?.stalls ?? [];
-  const currency = data?.settlement?.currencyCode ?? stalls[0]?.currencyCode ?? "USD";
+  const currency = data?.tickets?.currencyCode ?? data?.settlement?.currencyCode ?? stalls[0]?.currencyCode ?? "USD";
   const [selectedProductId, setSelectedProductId] = useState("");
   const [ruleName, setRuleName] = useState("Demand pricing");
   const [fromPercent, setFromPercent] = useState("70");
