@@ -20,6 +20,13 @@ The `Finance verification` workflow now requires:
 - production build;
 - a dedicated finance Playwright browser/contract suite.
 
+The finance-only portions can also be reproduced locally with:
+
+- `npm run test:finance:db` after a local Supabase reset and `SUPABASE_DB_URL` export;
+- `npm run test:e2e:finance` for the dedicated Playwright suite.
+
+The database runner treats both SQL exceptions and a false (`f`) contract assertion as failures, so the older finance harnesses cannot silently pass by returning an unsuccessful boolean row.
+
 ## Reconciliation checks
 
 `supabase/tests/finance_a4_reconciliation_gate.sql` fails the release gate if it finds:
@@ -31,6 +38,9 @@ The `Finance verification` workflow now requires:
 - duplicate open debts for one obligation schedule line;
 - invalid negative obligation aggregate state;
 - stale active mortgage obligation schedule versions.
+- loan line component overpayments and invalid payment aggregates;
+- loan outstanding principal that differs from the active contract schedule;
+- provider receivable, income, fee, or settlement-clearing ledger differences.
 
 ## Browser/contract checks
 
