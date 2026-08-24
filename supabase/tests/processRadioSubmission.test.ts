@@ -499,7 +499,7 @@ describe("process_radio_submission simulation", () => {
 describe("process_radio_submission SQL definition", () => {
   it("exposes the expected failure hooks", () => {
     const sqlPath = path.resolve(
-      "supabase/migrations/20290603110000_create_process_radio_submission_function.sql"
+      "supabase/migrations/20250603110000_create_process_radio_submission_function.sql"
     );
     const sql = readFileSync(sqlPath, "utf-8");
     const markers: FailurePoint[] = [

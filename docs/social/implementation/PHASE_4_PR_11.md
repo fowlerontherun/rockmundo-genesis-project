@@ -2,13 +2,13 @@
 
 ## P0 defect
 
-PR 10's release-gate finding is confirmed by static migration order review. Supabase applies migration filenames lexicographically, so `20260711090000_rehearsal_self_response_mvp.sql` runs before `20290711030000_rehearsal_attendance_gig_lineups.sql`. The earlier migration alters `public.band_rehearsal_participants`; the later migration was the first creator of that table. A clean reset would therefore stop at the first `ALTER TABLE public.band_rehearsal_participants` with a missing relation error.
+PR 10's release-gate finding is confirmed by static migration order review. Supabase applies migration filenames lexicographically, so `20260711090000_rehearsal_self_response_mvp.sql` runs before `20250711030000_rehearsal_attendance_gig_lineups.sql`. The earlier migration alters `public.band_rehearsal_participants`; the later migration was the first creator of that table. A clean reset would therefore stop at the first `ALTER TABLE public.band_rehearsal_participants` with a missing relation error.
 
 ## Dependency graph
 
-- `band_contribution_events`: first created by `20260711010000_create_band_contribution_events.sql`; later constrained/indexed and helper-replaced by `20260711020000_contribution_source_adapters_bootstrap.sql` and the preserved `20290711020000_contribution_source_adapters.sql`; correction columns are added by `20260711110000_rehearsal_attendance_corrections.sql` before correction resolution can void contribution rows.
-- `band_rehearsal_participants`: now first created by `20260711030000_rehearsal_attendance_gig_lineups_bootstrap.sql`; later altered by `20260711090000_rehearsal_self_response_mvp.sql`, `20260711100000_rehearsal_attendance_finalisation.sql`, `20260711110000_rehearsal_attendance_corrections.sql`, and `20260711120000_rehearsal_attendance_correction_hardening.sql`; the preserved `20290711030000_rehearsal_attendance_gig_lineups.sql` is now idempotent against the earlier table/policy definitions.
-- `gig_performers`: now first created by `20260711030000_rehearsal_attendance_gig_lineups_bootstrap.sql`; later referenced by gig contribution adapter functions in the same bootstrap and the preserved `20290711030000_rehearsal_attendance_gig_lineups.sql`.
+- `band_contribution_events`: first created by `20260711010000_create_band_contribution_events.sql`; later constrained/indexed and helper-replaced by `20260711020000_contribution_source_adapters_bootstrap.sql` and the preserved `20250711020000_contribution_source_adapters.sql`; correction columns are added by `20260711110000_rehearsal_attendance_corrections.sql` before correction resolution can void contribution rows.
+- `band_rehearsal_participants`: now first created by `20260711030000_rehearsal_attendance_gig_lineups_bootstrap.sql`; later altered by `20260711090000_rehearsal_self_response_mvp.sql`, `20260711100000_rehearsal_attendance_finalisation.sql`, `20260711110000_rehearsal_attendance_corrections.sql`, and `20260711120000_rehearsal_attendance_correction_hardening.sql`; the preserved `20250711030000_rehearsal_attendance_gig_lineups.sql` is now idempotent against the earlier table/policy definitions.
+- `gig_performers`: now first created by `20260711030000_rehearsal_attendance_gig_lineups_bootstrap.sql`; later referenced by gig contribution adapter functions in the same bootstrap and the preserved `20250711030000_rehearsal_attendance_gig_lineups.sql`.
 - RSVP helpers: `rehearsal_rsvp_lock_interval`, `rehearsal_rsvp_deadline`, `is_rehearsal_participant_final`, `is_rehearsal_response_open`, and `respond_to_rehearsal_invitation` are created after the participant table exists; PR 11 also adds the harness-compatible `respond_to_rehearsal_participation` wrapper after its dependency exists.
 - Finalisation RPC: `finalise_rehearsal_attendance` is created after participant tables, status constraints, contribution helpers, audit enum values, and notification indexes exist.
 - Correction requests/resolution: `rehearsal_attendance_correction_requests`, correction read helper, request RPC, resolution RPC, voiding columns, pending uniqueness, and RLS are created after participant/contribution/audit foundations exist.
@@ -35,7 +35,7 @@ The repair is non-destructive. It does not drop participant, performer, contribu
 - Created `supabase/migrations/20260711020000_contribution_source_adapters_bootstrap.sql` from the existing contribution-source adapter migration so `is_band_member_at_time` and idempotent contribution helpers exist before participant validators.
 - Created `supabase/migrations/20260711030000_rehearsal_attendance_gig_lineups_bootstrap.sql` from the existing participant/lineup foundation migration so participant and performer tables exist before RSVP/finalisation/correction migrations.
 - Edited `supabase/migrations/20260711090000_rehearsal_self_response_mvp.sql` to add the `respond_to_rehearsal_participation(uuid,text)` compatibility RPC expected by the release-gate harness.
-- Edited `supabase/migrations/20290711030000_rehearsal_attendance_gig_lineups.sql` to drop/recreate the two select policies safely when the earlier bootstrap already created them.
+- Edited `supabase/migrations/20250711030000_rehearsal_attendance_gig_lineups.sql` to drop/recreate the two select policies safely when the earlier bootstrap already created them.
 
 ## Clean reset result
 

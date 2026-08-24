@@ -56,7 +56,7 @@ No historical backfill is included. Existing inferred contribution events remain
 
 ## Files changed
 
-- `supabase/migrations/20290711030000_rehearsal_attendance_gig_lineups.sql`
+- `supabase/migrations/20250711030000_rehearsal_attendance_gig_lineups.sql`
 - `supabase/tests/rehearsal_gig_participants_harness.sql`
 - `docs/social/implementation/PHASE_4_PR_03.md`
 - `docs/social/SOCIAL_SYSTEM_AUDIT.md`

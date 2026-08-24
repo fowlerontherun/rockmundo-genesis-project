@@ -155,28 +155,28 @@ Generated against live schema on 2026-07-16. Total pending migrations: **127**.
 ### `20271115090000_create_songwriting_draft_tables.sql` (1135B)
 - **CREATE (conflict):** songwriting_draft_revisions, songwriting_drafts
 
-### `20290602120001_create_personal_loadouts.sql` (15776B)
+### `20250602120001_create_personal_loadouts.sql` (15776B)
 - **CREATE (conflict):** personal_loadout_items, personal_loadout_pedal_slots, personal_loadouts
 - CREATE (new): gear_items
 
-### `20290602130000_extend_personal_loadouts_with_slots.sql` (4982B)
+### `20250602130000_extend_personal_loadouts_with_slots.sql` (4982B)
 - **CREATE (conflict):** personal_loadout_slots
 
-### `20290603100000_create_music_video_release_tables.sql` (2977B)
+### `20250603100000_create_music_video_release_tables.sql` (2977B)
 - **CREATE (conflict):** music_video_configs, music_video_metrics
 
-### `20290701090000_enhance_equipment_purchase_and_gear_pool.sql` (13639B)
+### `20250701090000_enhance_equipment_purchase_and_gear_pool.sql` (13639B)
 - **CREATE (conflict):** player_equipment_ownership_history, player_gear_pool
 - CREATE (new): gear_slot_catalog
 - ALTER `player_equipment` ADD: available_for_loadout
 
-### `20290702100000_create_story_narrative_tables.sql` (2620B)
+### `20250702100000_create_story_narrative_tables.sql` (2620B)
 - **CREATE (conflict):** story_choices, story_states
 
-### `20291012090000_create_casting_calls_workflow.sql` (3762B)
+### `20251012090000_create_casting_calls_workflow.sql` (3762B)
 - **CREATE (conflict):** casting_call_roles, casting_calls, casting_reviews, casting_submissions
 
-### `20291115090000_create_eurovision_tables.sql` (1667B)
+### `20251115090000_create_eurovision_tables.sql` (1667B)
 - **CREATE (conflict):** eurovision_entries, eurovision_votes
 - CREATE (new): eurovision_winners, eurovision_years
 
@@ -291,17 +291,17 @@ Generated against live schema on 2026-07-16. Total pending migrations: **127**.
 - ALTER `songwriting_projects` ADD: estimated_completion_sessions
 - ALTER `songs` ADD: estimated_completion_sessions
 
-### `20290601120000_add_avatar_and_location_to_profiles.sql` (280B)
+### `20250601120000_add_avatar_and_location_to_profiles.sql` (280B)
 - ALTER `profiles` ADD: avatar_url
 
-### `20290602110000_ensure_auto_clock_in_column.sql` (314B)
+### `20250602110000_ensure_auto_clock_in_column.sql` (314B)
 - ALTER `player_employment` ADD: auto_clock_in
 
-### `20290620120000_enhance_music_video_configs.sql` (1339B)
+### `20250620120000_enhance_music_video_configs.sql` (1339B)
 - ALTER `music_video_configs` ADD: status
 - ALTER `music_video_metrics` ADD: platform
 
-### `20290702010000_extend_label_financials.sql` (977B)
+### `20250702010000_extend_label_financials.sql` (977B)
 - ALTER `labels` ADD: operating_budget
 - ALTER `artist_label_contracts` ADD: lifetime_gross_revenue
 - ALTER `label_releases` ADD: streaming_revenue
@@ -321,19 +321,19 @@ Generated against live schema on 2026-07-16. Total pending migrations: **127**.
 ### `20270602100000_create_education_band_sessions.sql` (1833B)
 - CREATE (new): education_band_sessions
 
-### `20290702010000_create_community_feed_tables.sql` (2521B)
+### `20250702010000_create_community_feed_tables.sql` (2521B)
 - CREATE (new): community_post_reactions, community_posts
 
-### `20290702095000_create_community_charity_tables.sql` (2796B)
+### `20250702095000_create_community_charity_tables.sql` (2796B)
 - CREATE (new): community_charity_campaigns, community_charity_donations, community_charity_impact_metrics
 
-### `20290702120000_create_band_membership_management.sql` (3133B)
+### `20250702120000_create_band_membership_management.sql` (3133B)
 - CREATE (new): band_membership_roles, band_membership_status_history
 
-### `20290705090000_create_side_hustle_progress_tables.sql` (2870B)
+### `20250705090000_create_side_hustle_progress_tables.sql` (2870B)
 - CREATE (new): side_hustle_minigame_attempts, side_hustle_progress
 
-### `20290711030000_rehearsal_attendance_gig_lineups.sql` (12066B)
+### `20250711030000_rehearsal_attendance_gig_lineups.sql` (12066B)
 - CREATE (new): band_rehearsal_participants, gig_performers
 
 ### `20291202090000_beta_rls_hardening.sql` (5933B)
@@ -403,15 +403,15 @@ Generated against live schema on 2026-07-16. Total pending migrations: **127**.
 
 ### `20270702100000_fix_admin_cron_monitor_access.sql` (1323B)
 
-### `20290602130000_expand_equipment_categories_and_currency.sql` (5746B)
+### `20250602130000_expand_equipment_categories_and_currency.sql` (5746B)
 - CREATE (new): gear_categories
 - ALTER `equipment_items` ADD: gear_category_id
 
-### `20290602130000_seed_more_achievements_and_unlock_xp.sql` (4074B)
+### `20250602130000_seed_more_achievements_and_unlock_xp.sql` (4074B)
 
-### `20290603110000_create_process_radio_submission_function.sql` (6256B)
+### `20250603110000_create_process_radio_submission_function.sql` (6256B)
 
-### `20290711020000_contribution_source_adapters.sql` (5501B)
+### `20250711020000_contribution_source_adapters.sql` (5501B)
 
 ### `20291208090000_complete_festival_booking_workspaces.sql` (13228B)
 
@@ -446,9 +446,9 @@ Of the 65 pending migrations that CREATE tables, **59 use `IF NOT EXISTS`** — 
 
 - `20260923110000_normalize_skills.sql` — unguarded creates: skill_definitions, skill_relationships, profile_skill_progress, profile_skill_unlocks
 - `20261101100000_create_friendships_table.sql` — unguarded creates: friendships
-- `20290603100000_create_music_video_release_tables.sql` — unguarded creates: music_video_configs, music_video_metrics
-- `20290702100000_create_story_narrative_tables.sql` — unguarded creates: story_states, story_choices
-- `20290705090000_create_side_hustle_progress_tables.sql` — unguarded creates: side_hustle_progress, side_hustle_minigame_attempts
+- `20250603100000_create_music_video_release_tables.sql` — unguarded creates: music_video_configs, music_video_metrics
+- `20250702100000_create_story_narrative_tables.sql` — unguarded creates: story_states, story_choices
+- `20250705090000_create_side_hustle_progress_tables.sql` — unguarded creates: side_hustle_progress, side_hustle_minigame_attempts
 - `20291206090000_festival_booking_contracts.sql` — unguarded creates: festival_applications, festival_contract_offers, festival_offer_revisions, festival_contracts, festival_contract_signatures, festival_contract_setlists, festival_contract_setlist_items, festival_application_events, festival_contract_events
 
 ## Recommended deployment order
