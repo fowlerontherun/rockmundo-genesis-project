@@ -48,7 +48,7 @@ test.describe('finance booking and recovery browser gate', () => {
 
     expect(a2).toContain('process_financial_obligation_payment_guarded');
     expect(a2).toContain('next_retry_at');
-    expect(a2).toContain('sync_mortgage_financial_obligation');
+    expect(a2).toContain('sync_mortgage_financial_obligation_schedule');
     expect(a2).toContain('source_schedule_version');
   });
 
