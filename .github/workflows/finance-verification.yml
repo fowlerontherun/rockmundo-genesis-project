@@ -6,6 +6,7 @@ on:
       - 'supabase/**'
       - 'src/**'
       - 'tests/finance/**'
+      - 'docs/finance/**'
       - 'playwright.finance.config.ts'
       - 'package.json'
       - 'package-lock.json'
