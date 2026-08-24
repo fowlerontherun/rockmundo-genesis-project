@@ -25,8 +25,13 @@ BEGIN
   ORDER BY is_primary DESC, created_at ASC
   LIMIT 1;
 
+  -- The compatibility projection deliberately reflects spendable funds rather
+  -- than gross treasury cash so old booking screens cannot over-promise money
+  -- that is already reserved.
   UPDATE public.bands
-  SET band_balance = COALESCE((v_primary.balance_minor / 100)::integer, 0)
+  SET band_balance = COALESCE((
+    (v_primary.balance_minor - v_primary.reserved_balance_minor) / 100
+  )::integer, 0)
   WHERE id = v_band_id;
 
   IF TG_OP = 'DELETE' THEN
@@ -46,10 +51,10 @@ FOR EACH ROW
 EXECUTE FUNCTION public.sync_band_balance_projection_from_treasury();
 
 -- Repair the compatibility mirror immediately so legacy recording UI displays
--- the same current treasury balance that the atomic booking RPC will debit.
+-- the same spendable treasury balance that the atomic booking RPC will debit.
 UPDATE public.bands b
 SET band_balance = COALESCE((
-  SELECT (t.balance_minor / 100)::integer
+  SELECT ((t.balance_minor - t.reserved_balance_minor) / 100)::integer
   FROM public.band_treasuries t
   WHERE t.band_id = b.id
   ORDER BY t.is_primary DESC, t.created_at ASC
