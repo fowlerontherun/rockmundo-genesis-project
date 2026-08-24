@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.702",
+    date: "2026-08-24",
+    changes: [
+      { type: 'feature', description: "Seeded 200 new sponsorship/commercial brands across 40+ categories including automotive, fashion, technology, travel, finance, gaming, sports, beauty, wellness, alcohol, energy drinks, music gear, entertainment, retail, streetwear, food & beverage, hotels, airlines, jewellery, watches, eyewear, luggage, footwear, home audio, instruments, cycling, outdoors, fitness, cosmetics, skincare, haircare, electronics, cameras, software and apps." },
+      { type: 'improvement', description: "Brands span indie through premium tiers with varied wealth scores, available budgets and fame requirements so players of all career stages see relevant sponsorship opportunities." },
+    ],
+  },
+  {
     version: "1.1.701",
     date: "2026-08-23",
     changes: [
