@@ -13,7 +13,11 @@ DECLARE
   v_band_id uuid;
   v_primary public.band_treasuries;
 BEGIN
-  v_band_id := COALESCE(NEW.band_id, OLD.band_id);
+  IF TG_OP = 'DELETE' THEN
+    v_band_id := OLD.band_id;
+  ELSE
+    v_band_id := NEW.band_id;
+  END IF;
 
   SELECT * INTO v_primary
   FROM public.band_treasuries
@@ -25,7 +29,10 @@ BEGIN
   SET band_balance = COALESCE((v_primary.balance_minor / 100)::integer, 0)
   WHERE id = v_band_id;
 
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $$;
 
@@ -41,21 +48,13 @@ EXECUTE FUNCTION public.sync_band_balance_projection_from_treasury();
 -- Repair the compatibility mirror immediately so legacy recording UI displays
 -- the same current treasury balance that the atomic booking RPC will debit.
 UPDATE public.bands b
-SET band_balance = COALESCE((x.balance_minor / 100)::integer, 0)
-FROM LATERAL (
-  SELECT t.balance_minor
+SET band_balance = COALESCE((
+  SELECT (t.balance_minor / 100)::integer
   FROM public.band_treasuries t
   WHERE t.band_id = b.id
   ORDER BY t.is_primary DESC, t.created_at ASC
   LIMIT 1
-) x;
-
--- Bands without a treasury must not retain a stale positive compatibility value.
-UPDATE public.bands b
-SET band_balance = 0
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.band_treasuries t WHERE t.band_id = b.id
-);
+), 0);
 
 -- Explicit recovery helper used by finance/support surfaces. It creates a zero
 -- treasury only for active members of the band; funding remains a separate,
