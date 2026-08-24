@@ -1,6 +1,6 @@
 -- Festival performance session behavioural harness. Run inside a rollback transaction.
 begin;
-select plan(33);
+select plan(43);
 select has_table('public','festival_performance_sessions','canonical session table exists');
 select has_table('public','festival_performance_attendance','attendance table exists');
 select has_table('public','festival_session_equipment','equipment table exists');
@@ -34,5 +34,15 @@ select function_privs_are('public','resolve_festival_late_arrival',ARRAY['uuid',
 select like(pg_get_functiondef('public.start_festival_performance(uuid,text)'::regprocedure),'%evaluate_festival_performance_readiness%','start re-evaluates readiness instead of trusting a stale lock');
 select like(pg_get_functiondef('public.start_festival_performance(uuid,text)'::regprocedure),'%unmet hard requirements%','start fails closed when blockers remain');
 select like(pg_get_functiondef('public.resolve_festival_late_arrival(uuid,text)'::regprocedure),'%no_show_resolved%','no-show resolution emits canonical audit evidence');
+select has_table('public','festival_performance_resolution_receipts','one-shot resolution receipt table exists');
+select has_function('public','resolve_festival_performance',ARRAY['uuid','text'],'worker resolution RPC exists');
+select function_privs_are('public','resolve_festival_performance',ARRAY['uuid','text'],'authenticated',ARRAY[]::text[],'players cannot resolve outcomes');
+select function_privs_are('public','resolve_festival_performance',ARRAY['uuid','text'],'service_role',ARRAY['EXECUTE'],'trusted worker can resolve outcomes');
+select function_privs_are('public','_calculate_festival_performance_outcome',ARRAY['uuid','text'],'authenticated',ARRAY[]::text[],'legacy calculator is no longer browser callable');
+select function_privs_are('public','advance_festival_performance',ARRAY['uuid','integer','text','jsonb','text'],'authenticated',ARRAY[]::text[],'browser mini-game cannot mutate canonical progression');
+select like(pg_get_functiondef('public.resolve_festival_performance(uuid,text)'::regprocedure),'%Canonical performance audience snapshot required%','resolution requires canonical audience facts');
+select like(pg_get_functiondef('public.resolve_festival_performance(uuid,text)'::regprocedure),'%festival_performance_resolution_receipts%','resolution is protected by a one-per-session receipt');
+select has_trigger('public','festival_performance_resolution_receipts','tg_festival_resolution_receipt_immutable','resolution receipts are immutable');
+select has_trigger('public','festival_song_performance_outcomes','tg_final_outcome_child_immutable','finalised song evidence is immutable');
 select * from finish();
 rollback;

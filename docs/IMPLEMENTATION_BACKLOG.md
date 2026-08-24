@@ -237,7 +237,7 @@ The booking/contracts foundation exists. The next work should complete canonical
 ## PR B3 — Canonical festival performance resolution
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -256,6 +256,12 @@ The booking/contracts foundation exists. The next work should complete canonical
 ### Dependencies
 
 - PRs B1–B2.
+
+### Implementation notes
+
+- Moved outcome resolution behind a service-role-only, one-shot RPC and removed the browser mutation surface.
+- Resolution now requires a canonical audience snapshot and records a digest-backed snapshot of authoritative readiness, attendance, incidents, setlist progression, and audience facts.
+- Finalised outcome rows and their song, fan, media, sponsor, highlight, publication, and proposed-effect evidence are immutable.
 
 ---
 
