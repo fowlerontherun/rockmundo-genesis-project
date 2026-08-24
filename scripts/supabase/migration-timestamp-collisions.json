@@ -122,13 +122,13 @@
     "20270615120000_expand_youtube_skills.sql",
     "20270615120000_handle_new_user_username_retry.sql"
   ],
-  "20290602130000": [
-    "20290602130000_expand_equipment_categories_and_currency.sql",
-    "20290602130000_extend_personal_loadouts_with_slots.sql",
-    "20290602130000_seed_more_achievements_and_unlock_xp.sql"
+  "20250602130000": [
+    "20250602130000_expand_equipment_categories_and_currency.sql",
+    "20250602130000_extend_personal_loadouts_with_slots.sql",
+    "20250602130000_seed_more_achievements_and_unlock_xp.sql"
   ],
-  "20290702010000": [
-    "20290702010000_create_community_feed_tables.sql",
-    "20290702010000_extend_label_financials.sql"
+  "20250702010000": [
+    "20250702010000_create_community_feed_tables.sql",
+    "20250702010000_extend_label_financials.sql"
   ]
 }

@@ -17,7 +17,7 @@ PR 10 follows the PR 09 recommendation to run the rehearsal attendance correctio
 - `supabase start` was not run because the Supabase CLI is not installed.
 - `supabase db reset` was not run because the Supabase CLI is not installed.
 - `npm run test:corrections:db` failed before database access with exit 127 because the script requires the Supabase CLI.
-- Static migration-order review found a release-gate blocker: `20260711090000_rehearsal_self_response_mvp.sql`, `20260711100000_rehearsal_attendance_finalisation.sql`, `20260711110000_rehearsal_attendance_corrections.sql`, and `20260711120000_rehearsal_attendance_correction_hardening.sql` reference `band_rehearsal_participants`, while `20290711030000_rehearsal_attendance_gig_lineups.sql` creates that table and sorts later.
+- Static migration-order review found a release-gate blocker: `20260711090000_rehearsal_self_response_mvp.sql`, `20260711100000_rehearsal_attendance_finalisation.sql`, `20260711110000_rehearsal_attendance_corrections.sql`, and `20260711120000_rehearsal_attendance_correction_hardening.sql` reference `band_rehearsal_participants`, while `20250711030000_rehearsal_attendance_gig_lineups.sql` creates that table and sorts later.
 - Expected database failure if migrations are applied lexicographically: the first Phase 4 attendance migration that alters `public.band_rehearsal_participants` will fail with a missing relation error before later tests can run.
 - Because no clean reset could be run here, no historical migration was edited and no corrective migration was added.
 
