@@ -38,11 +38,13 @@ CREATE POLICY "Service role can manage sponsorship entities"
   USING (true)
   WITH CHECK (true);
 
--- Create sponsorship_notifications table if not exists
+-- Create sponsorship_notifications before sponsorship_offers exists in the
+-- historical migration sequence. The FK is added by the migration that later
+-- creates sponsorship_offers.
 CREATE TABLE IF NOT EXISTS public.sponsorship_notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   entity_id UUID REFERENCES sponsorship_entities(id) ON DELETE CASCADE,
-  offer_id UUID REFERENCES sponsorship_offers(id) ON DELETE CASCADE,
+  offer_id UUID,
   notification_type TEXT NOT NULL,
   message TEXT NOT NULL,
   metadata JSONB DEFAULT '{}',

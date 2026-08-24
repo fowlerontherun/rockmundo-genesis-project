@@ -50,12 +50,31 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_offers (
 CREATE TABLE IF NOT EXISTS public.sponsorship_notifications (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   entity_id uuid REFERENCES public.sponsorship_entities(id) ON DELETE CASCADE,
-  offer_id uuid REFERENCES public.sponsorship_offers(id) ON DELETE CASCADE,
+  offer_id uuid,
   notification_type text NOT NULL,
   message text NOT NULL,
   metadata jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Earlier migration history can create sponsorship_notifications before
+-- sponsorship_offers exists. Add the intended relationship once both tables
+-- are present, while remaining safe on databases where it already exists.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'sponsorship_notifications_offer_id_fkey'
+      AND conrelid = 'public.sponsorship_notifications'::regclass
+  ) THEN
+    ALTER TABLE public.sponsorship_notifications
+      ADD CONSTRAINT sponsorship_notifications_offer_id_fkey
+      FOREIGN KEY (offer_id)
+      REFERENCES public.sponsorship_offers(id)
+      ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- Helpful indexes
 CREATE INDEX IF NOT EXISTS sponsorship_offers_status_idx ON public.sponsorship_offers(status);
