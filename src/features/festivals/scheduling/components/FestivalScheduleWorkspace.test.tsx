@@ -58,6 +58,13 @@ vi.mock("../hooks", () => ({
   }),
 }));
 
+// The accepted-booking finaliser has its own React Query behaviour and contract
+// tests. Keep these schedule-workspace tests focused on the timeline/manual-slot
+// surface instead of requiring an application QueryClientProvider.
+vi.mock("./FestivalArtistScheduleFinaliser", () => ({
+  FestivalArtistScheduleFinaliser: () => <div>Accepted artist bookings</div>,
+}));
+
 afterEach(() => {
   upsertItem.mutate.mockClear();
   publish.mutate.mockClear();
@@ -70,6 +77,7 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
     render(<FestivalScheduleWorkspace editionId="edition-1" />);
 
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
+    expect(screen.getByText("Accepted artist bookings")).toBeInTheDocument();
     expect(screen.getAllByText("Main Stage").length).toBeGreaterThan(0);
     expect(screen.getByText("Second Stage")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Sunset opener/i }).length).toBeGreaterThan(0);

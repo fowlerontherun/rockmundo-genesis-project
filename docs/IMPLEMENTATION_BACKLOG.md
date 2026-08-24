@@ -300,10 +300,10 @@ The booking/contracts foundation exists. The next work should complete canonical
 
 ---
 
-## PR B5 — Festival organiser lifecycle and audit hardening
+## PR B5 — Festival organiser lifecycle and audit hardening ([#1639](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1639))
 
 **Priority:** P1  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
@@ -323,6 +323,16 @@ The booking/contracts foundation exists. The next work should complete canonical
 ### Dependencies
 
 - PRs B1–B4 for final lifecycle integration.
+
+### Implementation notes
+
+- Added server-enforced regional blackout rules for city, region and country windows, with platform-admin override restricted to otherwise-legal lifecycle transitions and a mandatory recorded reason.
+- Lifecycle options now derive from the same canonical transition validator used by mutation; direct status writes are guarded so browser, worker and admin paths cannot skip the edition state graph.
+- Postponement moves affected contracts to amendment-required state and pauses live ticket sales; cancellation releases reservations, marks contracts for settlement, cancels public launch artefacts, queues eligible refund obligations and notifies ticket holders and performers.
+- Added server-side application eligibility checks for artist type, fame limits, genre rules and active band-member counts.
+- Added a replay-safe accepted band booking finaliser that creates the canonical active contract, immutable version, confirmed stage slot and reservation, together with an organiser scheduling queue/UI. Solo/NPC accepted bookings remain visible but fail closed until the canonical performance-contract model supports non-band artists.
+- Consolidated organiser/admin evidence into an immutable festival audit stream with a permission-checked edition projection and before/after inspection UI.
+- Added regression coverage for lifecycle graph parity, blackout override safety, cancellation/refund consequences, application rules, contract/slot propagation and organiser surfaces; the existing schedule-workspace tests isolate the finaliser so its React Query boundary cannot break unrelated timeline tests.
 
 ---
 
