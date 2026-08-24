@@ -22,10 +22,15 @@ The `Finance verification` workflow now requires:
 
 The finance-only portions can also be reproduced locally with:
 
+- `npm run test:finance:contract` to verify that the workflow, SQL runner, and browser suite retain every required release check;
 - `npm run test:finance:db` after a local Supabase reset and `SUPABASE_DB_URL` export;
 - `npm run test:e2e:finance` for the dedicated Playwright suite.
 
 The database runner treats both SQL exceptions and a false (`f`) contract assertion as failures, so the older finance harnesses cannot silently pass by returning an unsuccessful boolean row.
+
+The lightweight workflow contract runs before Docker startup. It protects the required command
+ordering, A1–A4 harness list, false-assertion detection, browser-route coverage, retry diagnostics,
+and unconditional Supabase cleanup from accidental CI configuration drift.
 
 ## Reconciliation checks
 
