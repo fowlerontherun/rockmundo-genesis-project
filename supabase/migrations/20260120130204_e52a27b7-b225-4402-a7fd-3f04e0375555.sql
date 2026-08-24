@@ -48,24 +48,21 @@ SET is_vip = EXISTS (
     AND v.expires_at > NOW()
 );
 
--- 3. Add missing columns to sponsorship_brands
-ALTER TABLE public.sponsorship_brands 
-ADD COLUMN IF NOT EXISTS cooldown_until timestamptz DEFAULT NULL;
-
-ALTER TABLE public.sponsorship_brands 
-ADD COLUMN IF NOT EXISTS available_budget numeric DEFAULT 100000;
-
-ALTER TABLE public.sponsorship_brands 
-ADD COLUMN IF NOT EXISTS wealth_score integer DEFAULT 50;
-
-ALTER TABLE public.sponsorship_brands 
-ADD COLUMN IF NOT EXISTS targeting_flags text[] DEFAULT ARRAY[]::text[];
-
-ALTER TABLE public.sponsorship_brands 
-ADD COLUMN IF NOT EXISTS min_fame_threshold integer DEFAULT 0;
-
-ALTER TABLE public.sponsorship_brands 
-ADD COLUMN IF NOT EXISTS exclusivity_pref boolean DEFAULT false;
+-- 3. Add missing columns to sponsorship_brands when the table is present.
+-- Some clean-replay histories create sponsorship_brands later, so this legacy
+-- enrichment must not abort an otherwise valid fresh migration replay.
+DO $$
+BEGIN
+  IF to_regclass('public.sponsorship_brands') IS NOT NULL THEN
+    ALTER TABLE public.sponsorship_brands
+      ADD COLUMN IF NOT EXISTS cooldown_until timestamptz DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS available_budget numeric DEFAULT 100000,
+      ADD COLUMN IF NOT EXISTS wealth_score integer DEFAULT 50,
+      ADD COLUMN IF NOT EXISTS targeting_flags text[] DEFAULT ARRAY[]::text[],
+      ADD COLUMN IF NOT EXISTS min_fame_threshold integer DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS exclusivity_pref boolean DEFAULT false;
+  END IF;
+END $$;
 
 -- 4. Add chart achievements for #1 positions (using DO block to check existence)
 DO $$
