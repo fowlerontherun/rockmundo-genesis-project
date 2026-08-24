@@ -1,9 +1,19 @@
 -- Phase 1: Clear existing jam session data and update schema
 
--- Clear existing jam session data (in correct order due to foreign keys)
+-- Clear existing jam session data (in correct order due to foreign keys).
+-- Some clean migration paths do not create the legacy participant/message
+-- tables before this historical migration, so guard those compatibility rows.
 DELETE FROM jam_session_outcomes;
-DELETE FROM jam_session_participants;
-DELETE FROM jam_session_messages;
+DO $$
+BEGIN
+  IF to_regclass('public.jam_session_participants') IS NOT NULL THEN
+    EXECUTE 'DELETE FROM public.jam_session_participants';
+  END IF;
+  IF to_regclass('public.jam_session_messages') IS NOT NULL THEN
+    EXECUTE 'DELETE FROM public.jam_session_messages';
+  END IF;
+END
+$$;
 DELETE FROM jam_sessions;
 
 -- Add new columns to jam_sessions for venue booking and cost tracking
@@ -17,12 +27,18 @@ ADD COLUMN IF NOT EXISTS creator_profile_id UUID REFERENCES profiles(id),
 ADD COLUMN IF NOT EXISTS cost_per_participant INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS city_id UUID REFERENCES cities(id);
 
--- Add new columns to jam_session_participants for cost and participation tracking
-ALTER TABLE jam_session_participants 
-ADD COLUMN IF NOT EXISTS cost_paid INTEGER DEFAULT 0,
-ADD COLUMN IF NOT EXISTS left_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS participation_percentage INTEGER DEFAULT 100,
-ADD COLUMN IF NOT EXISTS reward_multiplier NUMERIC(3,2) DEFAULT 1.00;
+-- Add new columns to the legacy participant table only when it already exists.
+DO $$
+BEGIN
+  IF to_regclass('public.jam_session_participants') IS NOT NULL THEN
+    ALTER TABLE public.jam_session_participants 
+      ADD COLUMN IF NOT EXISTS cost_paid INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS left_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS participation_percentage INTEGER DEFAULT 100,
+      ADD COLUMN IF NOT EXISTS reward_multiplier NUMERIC(3,2) DEFAULT 1.00;
+  END IF;
+END
+$$;
 
 -- Create jam_session_chat table for dedicated session chat
 CREATE TABLE IF NOT EXISTS jam_session_chat (
@@ -49,27 +65,38 @@ CREATE TABLE IF NOT EXISTS jam_session_commentary (
 ALTER TABLE jam_session_chat ENABLE ROW LEVEL SECURITY;
 ALTER TABLE jam_session_commentary ENABLE ROW LEVEL SECURITY;
 
--- RLS policies for jam_session_chat (using correct column name jam_session_id)
-CREATE POLICY "Users can view chat in sessions they participate in"
-ON jam_session_chat FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM jam_session_participants jsp
-    WHERE jsp.jam_session_id = jam_session_chat.session_id
-    AND jsp.profile_id = auth.uid()
-  )
-);
-
-CREATE POLICY "Users can send messages in sessions they participate in"
-ON jam_session_chat FOR INSERT
-WITH CHECK (
-  auth.uid() = profile_id
-  AND EXISTS (
-    SELECT 1 FROM jam_session_participants jsp
-    WHERE jsp.jam_session_id = jam_session_chat.session_id
-    AND jsp.profile_id = auth.uid()
-  )
-);
+-- The old participant-backed chat policies are only valid when that legacy
+-- table exists at this point in the migration chain. Later canonical jam
+-- migrations own participant access rules on clean installs.
+DO $$
+BEGIN
+  IF to_regclass('public.jam_session_participants') IS NOT NULL THEN
+    EXECUTE $policy$
+      CREATE POLICY "Users can view chat in sessions they participate in"
+      ON public.jam_session_chat FOR SELECT
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.jam_session_participants jsp
+          WHERE jsp.jam_session_id = jam_session_chat.session_id
+          AND jsp.profile_id = auth.uid()
+        )
+      )
+    $policy$;
+    EXECUTE $policy$
+      CREATE POLICY "Users can send messages in sessions they participate in"
+      ON public.jam_session_chat FOR INSERT
+      WITH CHECK (
+        auth.uid() = profile_id
+        AND EXISTS (
+          SELECT 1 FROM public.jam_session_participants jsp
+          WHERE jsp.jam_session_id = jam_session_chat.session_id
+          AND jsp.profile_id = auth.uid()
+        )
+      )
+    $policy$;
+  END IF;
+END
+$$;
 
 -- RLS policies for jam_session_commentary
 CREATE POLICY "Anyone can view session commentary"
