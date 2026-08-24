@@ -12610,6 +12610,250 @@ export type Database = {
           },
         ]
       }
+      festival_attendee_activity_resolutions: {
+        Row: {
+          activity_type: string
+          after_state: Json
+          attendance_id: string
+          before_state: Json
+          created_at: string
+          duration_minutes: number
+          effect: Json
+          festival_edition_id: string
+          id: string
+          plan_item_id: string
+          profile_id: string
+          resolved_at: string
+        }
+        Insert: {
+          activity_type: string
+          after_state: Json
+          attendance_id: string
+          before_state: Json
+          created_at?: string
+          duration_minutes: number
+          effect: Json
+          festival_edition_id: string
+          id?: string
+          plan_item_id: string
+          profile_id: string
+          resolved_at: string
+        }
+        Update: {
+          activity_type?: string
+          after_state?: Json
+          attendance_id?: string
+          before_state?: Json
+          created_at?: string
+          duration_minutes?: number
+          effect?: Json
+          festival_edition_id?: string
+          id?: string
+          plan_item_id?: string
+          profile_id?: string
+          resolved_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_attendee_activity_resolutions_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "festival_player_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_activity_resolutions_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_activity_resolutions_plan_item_id_fkey"
+            columns: ["plan_item_id"]
+            isOneToOne: true
+            referencedRelation: "festival_attendee_plan_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_activity_resolutions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_activity_resolutions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_attendee_conditions: {
+        Row: {
+          attendance_id: string
+          created_at: string
+          energy: number
+          festival_edition_id: string
+          hunger: number
+          hydration: number
+          id: string
+          intoxication: number
+          last_activity_at: string | null
+          last_evolved_at: string
+          mood: number
+          profile_id: string
+          social: number
+          updated_at: string
+        }
+        Insert: {
+          attendance_id: string
+          created_at?: string
+          energy: number
+          festival_edition_id: string
+          hunger: number
+          hydration: number
+          id?: string
+          intoxication?: number
+          last_activity_at?: string | null
+          last_evolved_at: string
+          mood: number
+          profile_id: string
+          social?: number
+          updated_at?: string
+        }
+        Update: {
+          attendance_id?: string
+          created_at?: string
+          energy?: number
+          festival_edition_id?: string
+          hunger?: number
+          hydration?: number
+          id?: string
+          intoxication?: number
+          last_activity_at?: string | null
+          last_evolved_at?: string
+          mood?: number
+          profile_id?: string
+          social?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_attendee_conditions_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: true
+            referencedRelation: "festival_player_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_conditions_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_conditions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_conditions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_attendee_plan_items: {
+        Row: {
+          activity_type: string
+          attendance_id: string
+          created_at: string
+          duration_minutes: number
+          ends_at: string
+          festival_date: string
+          festival_edition_id: string
+          id: string
+          idempotency_key: string
+          profile_id: string
+          resolved_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_type: string
+          attendance_id: string
+          created_at?: string
+          duration_minutes: number
+          ends_at: string
+          festival_date: string
+          festival_edition_id: string
+          id?: string
+          idempotency_key: string
+          profile_id: string
+          resolved_at?: string | null
+          starts_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: string
+          attendance_id?: string
+          created_at?: string
+          duration_minutes?: number
+          ends_at?: string
+          festival_date?: string
+          festival_edition_id?: string
+          id?: string
+          idempotency_key?: string
+          profile_id?: string
+          resolved_at?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_attendee_plan_items_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "festival_player_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_plan_items_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_plan_items_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_attendee_plan_items_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_audience_cohorts: {
         Row: {
           actual_arrivals: number
@@ -18090,6 +18334,178 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_player_attendance: {
+        Row: {
+          admission_ticket_id: string
+          checked_in_at: string | null
+          completed_at: string | null
+          created_at: string
+          festival_edition_id: string
+          festival_launch_id: string
+          id: string
+          left_at: string | null
+          profile_id: string
+          schedule_activity_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admission_ticket_id: string
+          checked_in_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          festival_edition_id: string
+          festival_launch_id: string
+          id?: string
+          left_at?: string | null
+          profile_id: string
+          schedule_activity_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admission_ticket_id?: string
+          checked_in_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          festival_edition_id?: string
+          festival_launch_id?: string
+          id?: string
+          left_at?: string | null
+          profile_id?: string
+          schedule_activity_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_player_attendance_admission_ticket_id_fkey"
+            columns: ["admission_ticket_id"]
+            isOneToOne: true
+            referencedRelation: "festival_issued_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_attendance_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_attendance_festival_launch_id_fkey"
+            columns: ["festival_launch_id"]
+            isOneToOne: false
+            referencedRelation: "festival_launches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_attendance_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_attendance_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_attendance_schedule_activity_id_fkey"
+            columns: ["schedule_activity_id"]
+            isOneToOne: false
+            referencedRelation: "player_scheduled_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_player_memorabilia: {
+        Row: {
+          attendance_id: string
+          created_at: string
+          description: string | null
+          display_name: string
+          festival_edition_id: string
+          festival_launch_id: string
+          id: string
+          issued_at: string
+          item_key: string
+          item_type: string
+          metadata: Json
+          profile_id: string
+          rarity: string
+        }
+        Insert: {
+          attendance_id: string
+          created_at?: string
+          description?: string | null
+          display_name: string
+          festival_edition_id: string
+          festival_launch_id: string
+          id?: string
+          issued_at?: string
+          item_key: string
+          item_type: string
+          metadata?: Json
+          profile_id: string
+          rarity?: string
+        }
+        Update: {
+          attendance_id?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          festival_edition_id?: string
+          festival_launch_id?: string
+          id?: string
+          issued_at?: string
+          item_key?: string
+          item_type?: string
+          metadata?: Json
+          profile_id?: string
+          rarity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_player_memorabilia_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "festival_player_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_memorabilia_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_memorabilia_festival_launch_id_fkey"
+            columns: ["festival_launch_id"]
+            isOneToOne: false
+            referencedRelation: "festival_launches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_memorabilia_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_player_memorabilia_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -49821,6 +50237,15 @@ export type Database = {
         Args: { p_company: string }
         Returns: Json
       }
+      _festival_attendee_has_schedule_conflict: {
+        Args: {
+          p_festival_edition_id: string
+          p_profile_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: boolean
+      }
       _festival_automatic_sponsorship_minor: {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: number
@@ -49833,8 +50258,16 @@ export type Database = {
         Args: { p_actor_profile_id: string; p_festival_company_id: string }
         Returns: boolean
       }
+      _festival_complete_attendance_if_expired: {
+        Args: { p_attendance_id: string }
+        Returns: string
+      }
       _festival_configuration_result: {
         Args: { p_company_id: string }
+        Returns: Json
+      }
+      _festival_day_plan_context: {
+        Args: { p_attendance_id: string }
         Returns: Json
       }
       _festival_edition_artist_programme_result: {
@@ -49865,6 +50298,60 @@ export type Database = {
       _festival_effective_level: {
         Args: { active: number; missed: number; owned: number }
         Returns: number
+      }
+      _festival_ensure_attendance_wristband: {
+        Args: { p_attendance_id: string }
+        Returns: boolean
+      }
+      _festival_ensure_attendee_conditions: {
+        Args: { p_attendance_id: string }
+        Returns: {
+          attendance_id: string
+          created_at: string
+          energy: number
+          festival_edition_id: string
+          hunger: number
+          hydration: number
+          id: string
+          intoxication: number
+          last_activity_at: string | null
+          last_evolved_at: string
+          mood: number
+          profile_id: string
+          social: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_attendee_conditions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _festival_evolve_attendee_conditions: {
+        Args: { p_as_of?: string; p_attendance_id: string }
+        Returns: {
+          attendance_id: string
+          created_at: string
+          energy: number
+          festival_edition_id: string
+          hunger: number
+          hydration: number
+          id: string
+          intoxication: number
+          last_activity_at: string | null
+          last_evolved_at: string
+          mood: number
+          profile_id: string
+          social: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "festival_attendee_conditions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       _festival_generate_settlement_lines: {
         Args: { p_edition_id: string; p_settlement_id: string }
@@ -49898,6 +50385,14 @@ export type Database = {
           p_tax_basis_points?: number
         }
         Returns: Json
+      }
+      _festival_repair_attendance_schedule_lock: {
+        Args: { p_attendance_id: string }
+        Returns: string
+      }
+      _festival_repair_attendance_ticket_used: {
+        Args: { p_attendance_id: string }
+        Returns: string
       }
       _festival_runtime_projection: {
         Args: { p_actor: string; p_runtime_id: string }
@@ -51108,6 +51603,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_festival_day_plan_item: {
+        Args: { p_item_id: string }
+        Returns: Json
+      }
       cancel_festival_performance_session: {
         Args: {
           p_cancel_status?: string
@@ -51221,6 +51720,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      check_in_to_festival: { Args: { p_attendance_id: string }; Returns: Json }
       check_marriage_eligibility: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -51264,6 +51764,7 @@ export type Database = {
         Returns: Json
       }
       complete_company_shift: { Args: { p_claim_id: string }; Returns: Json }
+      complete_expired_festival_attendance: { Args: never; Returns: Json }
       complete_festival_performance: {
         Args: { p_idempotency_key?: string; p_session_id: string }
         Returns: {
@@ -51588,6 +52089,18 @@ export type Database = {
           p_response_deadline?: string
           p_set_minutes?: number
           p_travel_support_minor?: number
+        }
+        Returns: Json
+      }
+      create_festival_day_plan_item: {
+        Args: {
+          p_activity_type: string
+          p_attendance_id: string
+          p_duration_minutes: number
+          p_festival_date: string
+          p_idempotency_key: string
+          p_local_start: string
+          p_title: string
         }
         Returns: Json
       }
@@ -52840,6 +53353,17 @@ export type Database = {
         }[]
       }
       get_my_festival_artist_opportunities: { Args: never; Returns: Json }
+      get_my_festival_attendance: { Args: never; Returns: Json }
+      get_my_festival_check_in_eligibility: { Args: never; Returns: Json }
+      get_my_festival_conditions: {
+        Args: { p_attendance_id: string }
+        Returns: Json
+      }
+      get_my_festival_day_plan: {
+        Args: { p_attendance_id: string }
+        Returns: Json
+      }
+      get_my_festival_memorabilia: { Args: never; Returns: Json }
       get_my_festival_tickets: { Args: never; Returns: Json }
       get_my_finance_command_center: {
         Args: { p_transaction_limit?: number }
@@ -53140,6 +53664,7 @@ export type Database = {
         }
         Returns: Json
       }
+      leave_festival_early: { Args: { p_attendance_id: string }; Returns: Json }
       link_label_to_company: {
         Args: { p_company_id: string; p_label_id: string }
         Returns: undefined
@@ -53698,6 +54223,7 @@ export type Database = {
         Args: { p_settlement_id: string }
         Returns: Json
       }
+      reconcile_my_festival_attendance: { Args: never; Returns: Json }
       record_festival_soundcheck_issue: {
         Args: {
           p_category: string
@@ -53851,6 +54377,10 @@ export type Database = {
           migration_issue_id: string
           resolution_status: string
         }[]
+      }
+      resolve_festival_plan_activity: {
+        Args: { p_plan_item_id: string }
+        Returns: Json
       }
       resolve_festival_soundcheck_issue: {
         Args: {
