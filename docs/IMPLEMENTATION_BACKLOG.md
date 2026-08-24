@@ -134,7 +134,7 @@ Finance completion is a dependency for rehearsals, recording, bands, companies, 
 ## PR A4 — Finance executable verification and E2E closure
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** PARTIAL
 
 ### Scope
 
@@ -154,6 +154,13 @@ Finance completion is a dependency for rehearsals, recording, bands, companies, 
 ### Dependencies
 
 - PRs A1–A3.
+
+### Implementation progress
+
+- Added a repeatable finance database gate covering the A1–A4 behavioural and reconciliation harnesses.
+- Added loan schedule and banking-provider ledger reconciliation to the release checks.
+- Wired named database and browser commands into the Finance verification workflow.
+- Clean reset, lint, generated-type parity, full browser journeys, and CI closure still require verification.
 
 ---
 

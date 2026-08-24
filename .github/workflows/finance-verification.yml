@@ -6,6 +6,7 @@ on:
       - 'supabase/**'
       - 'src/**'
       - 'tests/finance/**'
+      - 'scripts/finance/**'
       - 'docs/finance/**'
       - 'playwright.finance.config.ts'
       - 'package.json'
@@ -69,7 +70,7 @@ jobs:
       - name: Run database tests
         run: supabase test db
       - name: Run finance reconciliation gate
-        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/finance_a4_reconciliation_gate.sql
+        run: npm run test:finance:db
       - name: Verify generated Supabase types
         run: |
           supabase gen types typescript --local > /tmp/supabase-types.ts
@@ -85,7 +86,7 @@ jobs:
       - name: Finance browser gate
         run: |
           npx playwright install --with-deps chromium
-          npx playwright test --config=playwright.finance.config.ts --project=chromium
+          npm run test:e2e:finance
       - name: Upload Finance verification diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
