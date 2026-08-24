@@ -26,6 +26,10 @@ const festivalSettlementV2ExecutionContinuation = "20291218040000_execute_festiv
 const festivalSettlementV2NativeContinuation = "20291218050000_native_festival_settlement_v2.sql";
 const festivalSettlementV2AuditContinuation = "20291218060000_auditable_festival_settlement_v2.sql";
 const festivalSettlementV2CompletionContinuation = "20291218070000_complete_festival_settlement_v2.sql";
+const festivalBacklogB5LifecycleContinuation = "20291219040000_festival_organiser_lifecycle_audit.sql";
+const festivalBacklogB5HardeningContinuation = "20291219040100_festival_organiser_lifecycle_hardening.sql";
+const festivalBacklogB5QueueContinuation = "20291219040200_festival_artist_schedule_queue_fix.sql";
+const festivalBacklogB6CommerceContinuation = "20291219050000_festival_ticket_vendor_analytics_closure.sql";
 // PR #1517 may already have been applied. Preserve that exact immutable filename;
 // all corrections live in a current, forward migration.
 const deployedReleaseFinanceException = "20291218245800_release_finance_consistency.sql";
@@ -39,6 +43,8 @@ const documentedFestivalSequence = new Set([
   festivalCrossPhaseContinuation, festivalRuntimeV2HardeningContinuation, festivalSettlementV2Continuation,
   festivalSettlementV2ExecutionContinuation, festivalSettlementV2NativeContinuation,
   festivalSettlementV2AuditContinuation, festivalSettlementV2CompletionContinuation,
+  festivalBacklogB5LifecycleContinuation, festivalBacklogB5HardeningContinuation,
+  festivalBacklogB5QueueContinuation, festivalBacklogB6CommerceContinuation,
 ]);
 const legacySequenceNames = new Set(["085_jam_sessions_core.sql", "086_band_member_locks.sql", "087_bands_add_chemistry_cohesion.sql"]);
 const today = new Date();
