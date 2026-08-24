@@ -4,6 +4,7 @@ import { parseFestivalDayPlan } from "../attendance/festivalDayPlanner";
 
 const foundation = readFileSync("supabase/migrations/20291218255300_festival_day_planner.sql", "utf8");
 const hardening = readFileSync("supabase/migrations/20291218255400_harden_festival_day_planner.sql", "utf8");
+const conditionMigration = readFileSync("supabase/migrations/20291218255600_festival_condition_activities.sql", "utf8");
 const shellSource = readFileSync("src/features/festival-company/attendance/FestivalModeShell.tsx", "utf8");
 const myDaySource = readFileSync("src/features/festival-company/attendance/FestivalModeMyDay.tsx", "utf8");
 const homeSource = readFileSync("src/features/festival-company/attendance/FestivalModeHome.tsx", "utf8");
@@ -94,18 +95,18 @@ describe("Festival day planner authority", () => {
     expect(hardening).toContain("festival_plan_idempotency_conflict");
   });
 
-  it("marks expired unresolved blocks missed and preserves cancelled history", () => {
+  it("marks expired unresolved blocks missed and preserves completed/cancelled history", () => {
     expect(hardening).toContain("SET status = 'missed'");
     expect(foundation).toContain("SET status = 'cancelled'");
+    expect(conditionMigration).toContain("'planned', 'completed', 'missed', 'cancelled'");
+    expect(conditionMigration).toContain("other.status IN ('planned', 'completed')");
     expect(foundation).not.toContain("DELETE FROM public.festival_attendee_plan_items");
   });
 
-  it("does not add reward, finance or condition authority in the planner migration", () => {
+  it("does not add reward or finance authority in the planner migration", () => {
     expect(foundation).not.toContain("experience_points");
     expect(foundation).not.toContain("action_points");
     expect(foundation).not.toContain("finance_debit");
-    expect(foundation).not.toContain("hydration");
-    expect(foundation).not.toContain("intoxication");
   });
 });
 
@@ -119,37 +120,51 @@ describe("Festival day planner client", () => {
     });
   });
 
-  it("rejects malformed day counts and unsupported activity types", () => {
+  it("accepts completed history but rejects invented states and activity types", () => {
+    expect(parseFestivalDayPlan({
+      ...dayPlan,
+      items: [{ ...dayPlan.items[0], status: "completed", resolvedAt: "2030-07-01T12:35:00Z" }],
+    }).items[0].status).toBe("completed");
     expect(() => parseFestivalDayPlan({ ...dayPlan, totalFestivalDays: 2 }))
       .toThrow("malformed_festival_day_plan");
     expect(() => parseFestivalDayPlan({
       ...dayPlan,
       items: [{ ...dayPlan.items[0], activityType: "free_xp" }],
     })).toThrow("malformed_festival_day_plan");
+    expect(() => parseFestivalDayPlan({
+      ...dayPlan,
+      items: [{ ...dayPlan.items[0], status: "rewarded" }],
+    })).toThrow("malformed_festival_day_plan");
   });
 
-  it("uses only RPCs for planner reads and writes", () => {
+  it("uses only RPCs for planner, condition and activity reads/writes", () => {
     expect(repositorySource).toContain('plannerRpc("get_my_festival_day_plan"');
     expect(repositorySource).toContain('plannerRpc("create_festival_day_plan_item"');
     expect(repositorySource).toContain('plannerRpc("cancel_festival_day_plan_item"');
+    expect(repositorySource).toContain('plannerRpc("get_my_festival_conditions"');
+    expect(repositorySource).toContain('plannerRpc("resolve_festival_plan_activity"');
     expect(repositorySource).not.toContain('.from("festival_attendee_plan_items")');
+    expect(repositorySource).not.toContain('.from("festival_attendee_conditions")');
   });
 
-  it("keeps server clock/missed state fresh during Festival Mode", () => {
+  it("keeps server clock and temporary conditions fresh during Festival Mode", () => {
     expect(hookSource).toContain("refetchInterval: 30_000");
     expect(hookSource).toContain('refetchOnWindowFocus: "always"');
     expect(hookSource).toContain('refetchOnReconnect: "always"');
+    expect(hookSource).toContain("festivalConditionsKey");
   });
 
-  it("enables My Day while keeping later gameplay areas disabled", () => {
+  it("enables My Day, Food & Drink and Activities while later areas stay disabled", () => {
     expect(shellSource).toContain('{ id: "my-day", label: "My Day", enabled: true }');
+    expect(shellSource).toContain('{ id: "food-drink", label: "Food & Drink", enabled: true }');
+    expect(shellSource).toContain('{ id: "activities", label: "Activities", enabled: true }');
     expect(shellSource).toContain('{ id: "stages", label: "Stages", enabled: false }');
     expect(shellSource).toContain("<FestivalModeMyDay attendance={attendance} />");
     expect(myDaySource).toContain("30 minutes");
     expect(myDaySource).toContain("60 minutes");
     expect(myDaySource).toContain("90 minutes");
-    expect(myDaySource).toContain("Activity outcomes, spending, condition effects and rewards are added in later Festival phases");
+    expect(myDaySource).toContain("Do now");
+    expect(homeSource).toContain("FestivalConditionPanel");
     expect(homeSource).toContain("Next plan");
-    expect(homeSource).toContain("festivalLocalTime");
   });
 });

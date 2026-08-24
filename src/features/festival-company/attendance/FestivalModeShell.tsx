@@ -3,16 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLeaveFestivalEarly } from "./useFestivalAttendance";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
+import { FestivalModeActivityHub } from "./FestivalModeActivityHub";
 import { FestivalModeMyDay } from "./FestivalModeMyDay";
 
-export type FestivalModeSection = "home" | "my-day";
+export type FestivalModeSection = "home" | "my-day" | "food-drink" | "activities";
 
 const festivalSections = [
   { id: "home", label: "Festival Home", enabled: true },
   { id: "my-day", label: "My Day", enabled: true },
   { id: "stages", label: "Stages", enabled: false },
-  { id: "food-drink", label: "Food & Drink", enabled: false },
-  { id: "activities", label: "Activities", enabled: false },
+  { id: "food-drink", label: "Food & Drink", enabled: true },
+  { id: "activities", label: "Activities", enabled: true },
   { id: "social", label: "Social", enabled: false },
   { id: "campsite", label: "Campsite", enabled: false },
   { id: "map", label: "Festival Map", enabled: false },
@@ -35,6 +36,19 @@ export const FestivalModeShell = ({
     );
     if (confirmed) leaveEarly.mutate({ attendanceId: attendance.id });
   };
+
+  const content = (() => {
+    switch (activeSection) {
+      case "my-day":
+        return <FestivalModeMyDay attendance={attendance} />;
+      case "food-drink":
+        return <FestivalModeActivityHub attendance={attendance} kind="food-drink" />;
+      case "activities":
+        return <FestivalModeActivityHub attendance={attendance} kind="activities" />;
+      default:
+        return children;
+    }
+  })();
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground">
@@ -74,8 +88,8 @@ export const FestivalModeShell = ({
                   disabled={!section.enabled}
                   aria-current={isCurrent ? "page" : undefined}
                   onClick={() => {
-                    if (section.id === "home" || section.id === "my-day") {
-                      setActiveSection(section.id);
+                    if (section.enabled && ["home", "my-day", "food-drink", "activities"].includes(section.id)) {
+                      setActiveSection(section.id as FestivalModeSection);
                     }
                   }}
                   className={[
@@ -104,7 +118,7 @@ export const FestivalModeShell = ({
               {leaveEarly.error.message.replaceAll("_", " ")}
             </p>
           )}
-          {activeSection === "my-day" ? <FestivalModeMyDay attendance={attendance} /> : children}
+          {content}
         </main>
       </div>
     </div>

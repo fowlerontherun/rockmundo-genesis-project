@@ -1,5 +1,5 @@
 export type FestivalPlanActivityType = "watch_act" | "eat" | "drink" | "explore" | "rest";
-export type FestivalPlanItemStatus = "planned" | "missed" | "cancelled";
+export type FestivalPlanItemStatus = "planned" | "completed" | "missed" | "cancelled";
 
 export interface FestivalPlanDay {
   date: string;
@@ -32,6 +32,16 @@ export interface FestivalNextPlanItem {
   status: "planned";
 }
 
+export interface CreateFestivalPlanItemInput {
+  attendanceId: string;
+  festivalDate: string;
+  localStart: string;
+  durationMinutes: 30 | 60 | 90;
+  activityType: FestivalPlanActivityType;
+  title: string;
+  idempotencyKey: string;
+}
+
 export interface FestivalDayPlan {
   attendanceId: string;
   festivalEditionId: string;
@@ -51,16 +61,6 @@ export interface FestivalDayPlan {
   serverNow: string;
 }
 
-export interface CreateFestivalPlanItemInput {
-  attendanceId: string;
-  festivalDate: string;
-  localStart: string;
-  durationMinutes: 30 | 60 | 90;
-  activityType: FestivalPlanActivityType;
-  title: string;
-  idempotencyKey: string;
-}
-
 export interface FestivalPlanMutationResult {
   id: string;
   status: FestivalPlanItemStatus;
@@ -74,7 +74,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}:\d{2}$/;
 const ACTIVITY_TYPES = new Set<FestivalPlanActivityType>(["watch_act", "eat", "drink", "explore", "rest"]);
-const ITEM_STATUSES = new Set<FestivalPlanItemStatus>(["planned", "missed", "cancelled"]);
+const ITEM_STATUSES = new Set<FestivalPlanItemStatus>(["planned", "completed", "missed", "cancelled"]);
 const DURATIONS = new Set([30, 60, 90]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
