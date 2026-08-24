@@ -5,6 +5,9 @@ on:
     paths:
       - 'supabase/**'
       - 'src/**'
+      - 'tests/finance/**'
+      - 'docs/finance/**'
+      - 'playwright.finance.config.ts'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/finance-verification.yml'
@@ -52,6 +55,11 @@ jobs:
           set -o pipefail
           supabase start --debug 2>&1 | tee finance-verification-diagnostics/supabase-start.log
           echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
+      - name: Export local database URL
+        run: |
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL=//p' | tr -d '"')"
+          test -n "$DB_URL"
+          echo "SUPABASE_DB_URL=$DB_URL" >> "$GITHUB_ENV"
       - name: Reset migrated test database
         run: |
           set -o pipefail
@@ -60,6 +68,8 @@ jobs:
         run: supabase db lint
       - name: Run database tests
         run: supabase test db
+      - name: Run finance reconciliation gate
+        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/finance_a4_reconciliation_gate.sql
       - name: Verify generated Supabase types
         run: |
           supabase gen types typescript --local > /tmp/supabase-types.ts
@@ -72,20 +82,19 @@ jobs:
         run: npm run test -- --run
       - name: Build
         run: npm run build
-      - name: Browser E2E availability
+      - name: Finance browser gate
         run: |
-          if [ ! -f tests/finance/rehearsal-funding.spec.ts ]; then
-            echo "Required finance rehearsal E2E spec is missing." >&2
-            exit 1
-          fi
           npx playwright install --with-deps chromium
-          npx playwright test tests/finance/rehearsal-funding.spec.ts --project=chromium
+          npx playwright test --config=playwright.finance.config.ts --project=chromium
       - name: Upload Finance verification diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: finance-verification-diagnostics
-          path: finance-verification-diagnostics/**
+          path: |
+            finance-verification-diagnostics/**
+            playwright-report-finance/**
+            test-results/finance/**
           if-no-files-found: ignore
       - name: Stop local Supabase stack
         if: always() && env.SUPABASE_STARTED == 'true'
