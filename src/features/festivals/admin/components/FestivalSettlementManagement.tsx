@@ -10,19 +10,19 @@ import {
 import { asArray, asObject, money, text, WorkflowState } from "./workflowUtils";
 
 export function FestivalSettlementManagement({ editionId }: { editionId: string }) {
-  const { data: readinessData, isLoading, error } = useFestivalSettlementReadiness(editionId);
+  const readinessQuery = useFestivalSettlementReadiness(editionId);
   const reconciliationQuery = useFestivalEditionSettlementReconciliation(editionId);
   const settle = useSettleFestivalEdition(editionId);
-
-  if (isLoading) return <WorkflowState title="Loading settlement" message="Loading canonical settlement readiness hash…" />;
-  if (error) return <WorkflowState title="Settlement unavailable" message={String(error)} variant="destructive" />;
-
-  const readiness = asObject(readinessData);
   const reconciliationPayload = asObject(reconciliationQuery.data);
-  const reconciliation = asObject(reconciliationPayload.reconciliation);
   const settlement = asObject(reconciliationPayload.settlement);
   const settlementId = text(settlement.id, "");
   const report = useFestivalSettlementReport(settlementId);
+
+  if (readinessQuery.isLoading) return <WorkflowState title="Loading settlement" message="Loading canonical settlement readiness hash…" />;
+  if (readinessQuery.error) return <WorkflowState title="Settlement unavailable" message={String(readinessQuery.error)} variant="destructive" />;
+
+  const readiness = asObject(readinessQuery.data);
+  const reconciliation = asObject(reconciliationPayload.reconciliation);
   const reportData = report.data;
   const ready = Boolean(readiness.ready_for_settlement ?? readiness.is_eligible ?? readiness.ready);
   const readinessHash = text(readiness.readiness_hash, "");
