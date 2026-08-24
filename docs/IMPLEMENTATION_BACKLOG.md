@@ -79,10 +79,10 @@ Finance completion is a dependency for rehearsals, recording, bands, companies, 
 
 ---
 
-## PR A2 — Atomic booking commits, refunds, mortgage and obligation repair
+## PR A2 — Atomic booking commits, refunds, mortgage and obligation repair ([implementation](https://github.com/fowlerontherun/rockmundo-genesis-project/commit/51f2b1994be295ff3021f92c99a6728bc1a47d0a))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
