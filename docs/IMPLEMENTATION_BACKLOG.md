@@ -106,10 +106,10 @@ Finance completion is a dependency for rehearsals, recording, bands, companies, 
 
 ---
 
-## PR A3 — Band treasury and insufficient-funds UX
+## PR A3 — Band treasury and insufficient-funds UX ([implementation](https://github.com/fowlerontherun/rockmundo-genesis-project/commit/7243711a887fa75d3a0cd96b792be97037f05dee))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
