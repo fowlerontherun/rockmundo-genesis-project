@@ -1,12 +1,13 @@
 -- Festival performance session behavioural harness. Run inside a rollback transaction.
 begin;
-select plan(24);
+select plan(33);
 select has_table('public','festival_performance_sessions','canonical session table exists');
 select has_table('public','festival_performance_attendance','attendance table exists');
 select has_table('public','festival_session_equipment','equipment table exists');
 select has_table('public','festival_session_crew','crew table exists');
 select has_table('public','festival_performance_incidents','incident table exists');
 select has_table('public','festival_performance_session_events','event stream exists');
+select has_table('public','festival_performance_requirements','authoritative readiness requirement ledger exists');
 select has_function('public','ensure_festival_performance_session',ARRAY['uuid','text'],'active contract creates one idempotent session via RPC');
 select has_function('public','get_festival_performance_session',ARRAY['uuid'],'permission-checked player and organiser session projection exists');
 select has_index('public','festival_performance_sessions','uq_festival_performance_sessions_stage_slot','one canonical session is enforced per confirmed slot');
@@ -16,14 +17,22 @@ select has_function('public','festival_session_arrival_status',ARRAY['uuid'],'wh
 select has_function('public','festival_equipment_preflight',ARRAY['uuid'],'equipment blockers and remedies projection exists');
 select has_function('public','festival_crew_preflight',ARRAY['uuid'],'crew preflight projection exists');
 select has_function('public','festival_session_readiness',ARRAY['uuid'],'server readiness projection exists');
+select has_function('public','evaluate_festival_performance_readiness',ARRAY['uuid'],'authoritative readiness evaluation exists');
+select has_function('public','festival_performance_countdown',ARRAY['uuid'],'server-derived soundcheck and performance countdown exists');
 select has_function('public','lock_festival_session_readiness',ARRAY['uuid','text'],'readiness lock exists');
 select has_function('public','call_festival_band_to_stage',ARRAY['uuid','text'],'stage call requires readiness RPC exists');
 select has_function('public','start_festival_performance',ARRAY['uuid','text'],'authoritative start RPC exists');
 select has_function('public','advance_festival_performance',ARRAY['uuid','integer','text','jsonb','text'],'stale-position guarded progression RPC exists');
 select has_function('public','cancel_festival_performance_session',ARRAY['uuid','text','text','text'],'cancellation/no-show evidence RPC exists');
+select has_function('public','resolve_festival_late_arrival',ARRAY['uuid','text'],'operator no-show resolution RPC exists');
 select has_function('public','complete_festival_performance',ARRAY['uuid','text'],'settlement-pending completion RPC exists');
 select has_function('public','public_festival_performance_sessions',ARRAY['uuid'],'privacy-safe public projection exists');
 select ok(public.festival_session_can_transition('ready','stage_call') and not public.festival_session_can_transition('scheduled','in_progress'),'transition graph blocks direct start');
 select isnt((public.festival_session_timing('2030-01-01 20:00+00','2030-01-01 21:00+00')->>'arrival_deadline_at'), null, 'timing windows are deterministic');
+select function_privs_are('public','resolve_festival_late_arrival',ARRAY['uuid','text'],'anon',ARRAY[]::text[],'anonymous callers cannot resolve no-shows');
+select function_privs_are('public','resolve_festival_late_arrival',ARRAY['uuid','text'],'authenticated',ARRAY['EXECUTE'],'authenticated operators can resolve no-shows through permission checks');
+select like(pg_get_functiondef('public.start_festival_performance(uuid,text)'::regprocedure),'%evaluate_festival_performance_readiness%','start re-evaluates readiness instead of trusting a stale lock');
+select like(pg_get_functiondef('public.start_festival_performance(uuid,text)'::regprocedure),'%unmet hard requirements%','start fails closed when blockers remain');
+select like(pg_get_functiondef('public.resolve_festival_late_arrival(uuid,text)'::regprocedure),'%no_show_resolved%','no-show resolution emits canonical audit evidence');
 select * from finish();
 rollback;
