@@ -69,6 +69,7 @@
     "test:festivals:performance-effects": "node --test scripts/festivals/certify-performance-effects-harness.test.mjs && vitest run --config vitest.settlement.config.ts supabase/functions/_shared/__tests__/live-performance-progression.test.ts supabase/functions/process-festival-settlement-effects/dispatcher.test.ts",
     "test:festivals:performance-effects:db": "bash scripts/festivals/run-performance-effects-db-gate.sh",
     "test:festivals:upgrades:db": "bash scripts/festivals/run-upgrade-db-gate.sh",
+    "test:finance:contract": "node --test scripts/finance/finance-verification-workflow.test.mjs",
     "test:finance:db": "bash scripts/finance/run-db-gate.sh",
     "test:e2e:finance": "playwright test --config=playwright.finance.config.ts --project=chromium"
   },
