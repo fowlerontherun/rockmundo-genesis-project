@@ -1,6 +1,6 @@
 # RockMundo Consolidated Implementation Backlog
 
-_Last updated: 2026-08-23_
+_Last updated: 2026-08-24_
 
 ## Purpose
 
@@ -50,10 +50,10 @@ Every PR in this backlog should follow these rules unless a domain-specific plan
 
 Finance completion is a dependency for rehearsals, recording, bands, companies, festivals, and other paid gameplay actions.
 
-## PR A1 — Rehearsal and recording booking finance integration
+## PR A1 — Rehearsal and recording booking finance integration ([#1619](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1619))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
