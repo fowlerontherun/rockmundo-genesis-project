@@ -51,11 +51,13 @@ SET
   discovery_hint = 'A drum master in Sydney teaches the secrets of speed on Mondays...'
 WHERE name = 'Tommy Beats';
 
--- Auto-discover Marcus Stone for all existing players
+-- Auto-discover Marcus Stone for all existing players only when that mentor
+-- exists in this database's seed history.
 INSERT INTO player_master_discoveries (profile_id, mentor_id, discovery_method, discovery_metadata)
-SELECT p.id, '1006ea78-2490-43ff-8265-486d9dcd70c6', 'admin_grant', '{"reason": "Starter master - auto-discovered"}'::jsonb
+SELECT p.id, m.id, 'admin_grant', '{"reason": "Starter master - auto-discovered"}'::jsonb
 FROM profiles p
+JOIN education_mentors m ON m.id = '1006ea78-2490-43ff-8265-486d9dcd70c6'
 WHERE NOT EXISTS (
   SELECT 1 FROM player_master_discoveries d 
-  WHERE d.profile_id = p.id AND d.mentor_id = '1006ea78-2490-43ff-8265-486d9dcd70c6'
+  WHERE d.profile_id = p.id AND d.mentor_id = m.id
 );
