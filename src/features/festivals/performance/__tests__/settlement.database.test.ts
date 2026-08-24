@@ -10,6 +10,10 @@ const hardening = readFileSync(
   "utf8",
 );
 const service = readFileSync("src/features/festivals/performance/service.ts", "utf8");
+const organiserSettlement = readFileSync(
+  "src/features/festivals/admin/components/FestivalSettlementManagement.tsx",
+  "utf8",
+);
 
 describe("canonical festival settlement database contract", () => {
   it("posts contract money through Finance with stable idempotency keys", () => {
@@ -46,6 +50,15 @@ describe("canonical festival settlement database contract", () => {
     expect(settlement).toContain("GRANT EXECUTE ON FUNCTION public.settle_festival_edition");
     expect(service).toContain('rpc<Json>("get_festival_performance_settlement_breakdown"');
     expect(service).toContain('rpc<Json>("get_festival_edition_settlement_reconciliation"');
+  });
+
+  it("surfaces one-shot organiser settlement and reconciliation controls", () => {
+    expect(organiserSettlement).toContain("useSettleFestivalEdition");
+    expect(organiserSettlement).toContain("useFestivalEditionSettlementReconciliation");
+    expect(organiserSettlement).toContain("Settle edition");
+    expect(organiserSettlement).toContain("Edition reconciliation");
+    expect(organiserSettlement).toContain("Artist payouts:");
+    expect(organiserSettlement).toContain("Refresh reconciliation");
   });
 
   it("makes completed requests replay-safe and freezes child outcome evidence", () => {
