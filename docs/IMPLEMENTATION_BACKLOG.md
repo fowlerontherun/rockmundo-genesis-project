@@ -237,7 +237,7 @@ The booking/contracts foundation exists. The next work should complete canonical
 ## PR B3 — Canonical festival performance resolution
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -256,6 +256,13 @@ The booking/contracts foundation exists. The next work should complete canonical
 ### Dependencies
 
 - PRs B1–B2.
+
+### Implementation notes
+
+- Replaced the browser-callable calculator with a permission-checked operator/worker resolution boundary.
+- Resolution serialises on the canonical session, freezes audience, readiness, setlist, crew, gear and incident evidence, and converges retries or multiple tabs on one live outcome.
+- Unsupported rivalry, sponsor, media and presentation inputs remain explicitly neutral rather than accepting client-provided score modifiers.
+- Final outcomes, per-song outcomes, audience snapshots and the resolution input ledger are immutable; the canonical event stream records the input hash and resolved outcome.
 
 ---
 
