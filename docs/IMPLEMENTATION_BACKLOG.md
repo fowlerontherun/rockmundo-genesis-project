@@ -202,7 +202,7 @@ The booking/contracts foundation exists. The next work should complete canonical
 ## PR B2 — Festival performance readiness and arrival authority
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -225,6 +225,12 @@ The booking/contracts foundation exists. The next work should complete canonical
 ### Dependencies
 
 - PR B1.
+
+### Implementation notes
+
+- Added a server-authoritative requirement ledger with explicit advisory and blocking outcomes.
+- Re-evaluate arrival, equipment/rider compatibility, soundcheck, changeover, performer and crew conflicts at the point a performance starts, so a stale readiness lock cannot bypass blockers.
+- Added permission-checked countdowns and an idempotent operator/worker no-show resolver that records settlement-facing penalty evidence in the canonical event stream.
 
 ---
 
