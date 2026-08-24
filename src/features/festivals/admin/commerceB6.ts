@@ -44,6 +44,23 @@ export type FestivalVendorStall = {
   version: number;
 };
 
+export type FestivalVendorRuntimeSale = {
+  id: string;
+  runtimeDayId: string;
+  category: string;
+  productName: string;
+  currencyCode: string;
+  openingStock: number;
+  remainingStock: number;
+  unitsSold: number;
+  grossRevenueMinor: number;
+  taxLiabilityMinor: number;
+  costBasisMinor: number;
+  status: "open" | "closed";
+  version: number;
+  vendorStallAssignmentId: string | null;
+};
+
 export type FestivalCommerceAnalytics = {
   editionId: string;
   festivalId?: string;
@@ -54,6 +71,7 @@ export type FestivalCommerceAnalytics = {
   runtimeSessionId?: string | null;
   asOf?: string;
   tickets?: {
+    currencyCode: string;
     capacity: number;
     reserved: number;
     sold: number;
@@ -77,6 +95,7 @@ export type FestivalCommerceAnalytics = {
     sharePaidMinor: number;
     shareOutstandingMinor: number;
     stalls: FestivalVendorStall[];
+    sales: FestivalVendorRuntimeSale[];
   };
   attendance?: { uniqueAttendees: number; totalAdmissions: number; peakOnsite: number };
   satisfaction?: { averageScore: number | null };
@@ -107,6 +126,24 @@ export type FestivalCommerceAnalytics = {
 
 type RpcError = { message?: string; code?: string; details?: string };
 
+type PublicTicketProduct = { currency?: string | null };
+type RuntimeVendorSaleRow = {
+  id: string;
+  runtime_day_id: string;
+  category: string;
+  product_name: string;
+  currency_code: string;
+  opening_stock: number;
+  remaining_stock: number;
+  units_sold: number;
+  gross_revenue_minor: number;
+  tax_liability_minor: number;
+  cost_basis_minor: number;
+  status: "open" | "closed";
+  version: number;
+  vendor_stall_assignment_id?: string | null;
+};
+
 async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(name as never, args as never);
   if (error) {
@@ -116,10 +153,56 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
-export function fetchFestivalCommerceAnalytics(editionId: string) {
-  return rpc<FestivalCommerceAnalytics>("get_festival_edition_commerce_analytics", {
+const mapRuntimeVendorSale = (row: RuntimeVendorSaleRow): FestivalVendorRuntimeSale => ({
+  id: row.id,
+  runtimeDayId: row.runtime_day_id,
+  category: row.category,
+  productName: row.product_name,
+  currencyCode: row.currency_code,
+  openingStock: Number(row.opening_stock ?? 0),
+  remainingStock: Number(row.remaining_stock ?? 0),
+  unitsSold: Number(row.units_sold ?? 0),
+  grossRevenueMinor: Number(row.gross_revenue_minor ?? 0),
+  taxLiabilityMinor: Number(row.tax_liability_minor ?? 0),
+  costBasisMinor: Number(row.cost_basis_minor ?? 0),
+  status: row.status,
+  version: Number(row.version ?? 1),
+  vendorStallAssignmentId: row.vendor_stall_assignment_id ?? null,
+});
+
+export async function fetchFestivalCommerceAnalytics(editionId: string) {
+  const analytics = await rpc<FestivalCommerceAnalytics>("get_festival_edition_commerce_analytics", {
     p_edition_id: editionId,
   });
+  if (!analytics.linked || !analytics.festivalLaunchId) return analytics;
+
+  const [publicProducts, runtimeSales] = await Promise.all([
+    rpc<PublicTicketProduct[]>("get_public_festival_ticket_products", {
+      p_festival_launch_id: analytics.festivalLaunchId,
+    }),
+    analytics.runtimeSessionId
+      ? rpc<RuntimeVendorSaleRow[]>("get_festival_vendor_sales", {
+          p_runtime_session_id: analytics.runtimeSessionId,
+        })
+      : Promise.resolve([]),
+  ]);
+  const sales = (runtimeSales ?? []).map(mapRuntimeVendorSale);
+  const currencyCode =
+    publicProducts?.find((product) => product.currency)?.currency ??
+    sales[0]?.currencyCode ??
+    analytics.settlement?.currencyCode ??
+    analytics.vendors?.stalls[0]?.currencyCode ??
+    "USD";
+
+  return {
+    ...analytics,
+    tickets: analytics.tickets
+      ? { ...analytics.tickets, currencyCode }
+      : analytics.tickets,
+    vendors: analytics.vendors
+      ? { ...analytics.vendors, sales }
+      : analytics.vendors,
+  };
 }
 
 export type PricingRuleInput = {
@@ -226,6 +309,14 @@ export function useSaveFestivalVendorAssignment(editionId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: saveFestivalVendorAssignment,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: analyticsKey(editionId) }),
+  });
+}
+
+export function useAssignFestivalRuntimeVendorSale(editionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: assignFestivalRuntimeVendorSale,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: analyticsKey(editionId) }),
   });
 }
