@@ -1,8 +1,8 @@
 -- Update Marcus Stone to be the easy-to-find starter mentor
--- Located in London, available every day (null = any day), not discoverable (auto-discovered)
+-- Resolve cities by canonical name rather than brittle environment-specific UUIDs.
 UPDATE education_mentors 
 SET 
-  city_id = '9f26ad86-51ed-4477-856d-610f14979310', -- London
+  city_id = (SELECT id FROM public.cities WHERE lower(name) = lower('London') LIMIT 1),
   available_day = NULL, -- Available any day
   is_discoverable = false, -- Auto-discovered for all players
   lore_biography = 'A legendary fingerstyle guitarist who trained some of the biggest names in British rock. Known for his patient teaching style and encyclopedic knowledge of music theory.',
@@ -17,7 +17,7 @@ WHERE id = '1006ea78-2490-43ff-8265-486d9dcd70c6';
 -- Update other mentors with city/day assignments
 UPDATE education_mentors 
 SET 
-  city_id = '2a518758-067c-4d34-8ff6-666a31169fe7', -- Nashville
+  city_id = (SELECT id FROM public.cities WHERE lower(name) = lower('Nashville') LIMIT 1),
   available_day = 3, -- Wednesday
   cost = 25000,
   lore_biography = 'The greatest songwriter of our generation. His melodies have topped charts in 40 countries.',
@@ -26,7 +26,7 @@ WHERE name = 'Burt Backache';
 
 UPDATE education_mentors 
 SET 
-  city_id = '8215d23e-5714-478e-9ac8-b7b82994fdc6', -- Austin
+  city_id = (SELECT id FROM public.cities WHERE lower(name) = lower('Austin') LIMIT 1),
   available_day = 5, -- Friday
   cost = 35000,
   lore_biography = 'Punk rock pioneer who invented the Austin sound. Still rocking at 70.',
@@ -35,7 +35,7 @@ WHERE name = 'Eddie Van Bumdem';
 
 UPDATE education_mentors 
 SET 
-  city_id = '0c9c8a7e-c6b4-4927-932a-8491c2b40a06', -- Rio de Janeiro
+  city_id = (SELECT id FROM public.cities WHERE lower(name) = lower('Rio de Janeiro') LIMIT 1),
   available_day = 6, -- Saturday
   cost = 20000,
   lore_biography = 'The groove master from Rio who pioneered the fusion of funk and samba.',
@@ -44,7 +44,7 @@ WHERE name = 'Groove Master D';
 
 UPDATE education_mentors 
 SET 
-  city_id = '06a16e6b-5888-4046-90d8-dfca01eda238', -- Sydney
+  city_id = (SELECT id FROM public.cities WHERE lower(name) = lower('Sydney') LIMIT 1),
   available_day = 1, -- Monday
   cost = 30000,
   lore_biography = 'Australian drum legend known for impossibly fast double bass technique.',
