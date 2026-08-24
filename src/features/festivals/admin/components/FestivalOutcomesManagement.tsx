@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFestivalEditionOperations } from "../hooks";
 import { FestivalCommerceAnalytics } from "./FestivalCommerceAnalytics";
+import { FestivalRuntimeVendorAssignments } from "./FestivalRuntimeVendorAssignments";
 import { asArray, asObject, text, WorkflowState } from "./workflowUtils";
 
 export function FestivalOutcomesManagement({
@@ -23,6 +24,7 @@ export function FestivalOutcomesManagement({
   return (
     <div className="space-y-4">
       <FestivalCommerceAnalytics editionId={editionId} />
+      <FestivalRuntimeVendorAssignments editionId={editionId} />
       <Card>
         <CardHeader>
           <CardTitle>Edition outcomes</CardTitle>
