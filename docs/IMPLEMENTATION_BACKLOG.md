@@ -332,7 +332,7 @@ The booking/contracts foundation exists. The next work should complete canonical
 - Added server-side application eligibility checks for artist type, fame limits, genre rules and active band-member counts.
 - Added a replay-safe accepted band booking finaliser that creates the canonical active contract, immutable version, confirmed stage slot and reservation, together with an organiser scheduling queue/UI. Solo/NPC accepted bookings remain visible but fail closed until the canonical performance-contract model supports non-band artists.
 - Consolidated organiser/admin evidence into an immutable festival audit stream with a permission-checked edition projection and before/after inspection UI.
-- Added regression coverage for lifecycle graph parity, blackout override safety, cancellation/refund consequences, application rules, contract/slot propagation and organiser surfaces.
+- Added regression coverage for lifecycle graph parity, blackout override safety, cancellation/refund consequences, application rules, contract/slot propagation and organiser surfaces; the existing schedule-workspace tests isolate the finaliser so its React Query boundary cannot break unrelated timeline tests.
 
 ---
 
