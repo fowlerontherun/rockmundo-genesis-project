@@ -418,10 +418,10 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 ---
 
-## PR C2 — Festival check-in, readiness and leave lifecycle
+## PR C2 — Festival check-in, readiness and leave lifecycle ([#1646](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1646))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -436,6 +436,15 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 - Browser clients cannot directly mutate attendee lifecycle rows.
 - Invalid, refunded, or wrong-edition tickets cannot check in.
 - State transitions are idempotent and audited.
+
+### Implementation notes
+
+- Added a forward-only attendee lifecycle synchronizer that persists `ready_to_check_in` from canonical admission, Festival-local date, current city/travel state, edition and schedule-conflict authorities.
+- Existing server-authoritative check-in, early-leave and expiry-completion RPCs remain the transition boundaries; direct browser lifecycle mutations remain revoked.
+- Ticket refunds/transfers/cancellations and Festival launch/edition cancellation now propagate into terminal attendee state and release only Festival-owned schedule reservations.
+- Added immutable, versioned attendee lifecycle audit events so real status transitions are recorded once while retries remain idempotent.
+- Attendance, eligibility and check-in projections now reconcile lifecycle state before use, while C1 admission-issued wristbands remain unchanged.
+- Added focused C2 regression coverage for readiness, invalid/wrong-edition admission, terminal propagation, audit idempotency and the C1 wristband contract.
 
 ### Dependencies
 
