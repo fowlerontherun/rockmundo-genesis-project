@@ -2,13 +2,18 @@ import type { FestivalPlanActivityType } from "./festivalDayPlanner";
 
 export type FestivalExecutableActivityType = Exclude<FestivalPlanActivityType, "watch_act">;
 
-export interface FestivalConditionValues {
+export interface FestivalActivityConditionValues {
   energy: number;
   hunger: number;
   hydration: number;
   mood: number;
   intoxication: number;
   social: number;
+}
+
+export interface FestivalConditionValues extends FestivalActivityConditionValues {
+  comfort: number;
+  inspiration: number;
 }
 
 export interface FestivalConditions extends FestivalConditionValues {
@@ -25,9 +30,9 @@ export interface FestivalCompletedActivityResolution {
   activityType: FestivalExecutableActivityType;
   durationMinutes: 30 | 60 | 90;
   status: "completed";
-  before: FestivalConditionValues;
-  effect: FestivalConditionValues;
-  after: FestivalConditionValues;
+  before: FestivalActivityConditionValues;
+  effect: FestivalActivityConditionValues;
+  after: FestivalActivityConditionValues;
   resolvedAt: string;
   duplicate: boolean;
 }
@@ -64,7 +69,7 @@ const isConditionValue = (value: unknown): value is number =>
 const isEffectValue = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= -100 && value <= 100;
 
-const parseValues = (value: unknown, effect = false): FestivalConditionValues => {
+const parseActivityValues = (value: unknown, effect = false): FestivalActivityConditionValues => {
   if (!isRecord(value)) throw new Error("malformed_festival_conditions");
   const valid = effect ? isEffectValue : isConditionValue;
   if (
@@ -84,6 +89,17 @@ const parseValues = (value: unknown, effect = false): FestivalConditionValues =>
     mood: value.mood,
     intoxication: value.intoxication,
     social: value.social,
+  };
+};
+
+const parseValues = (value: unknown): FestivalConditionValues => {
+  if (!isRecord(value) || !isConditionValue(value.comfort) || !isConditionValue(value.inspiration)) {
+    throw new Error("malformed_festival_conditions");
+  }
+  return {
+    ...parseActivityValues(value),
+    comfort: value.comfort,
+    inspiration: value.inspiration,
   };
 };
 
@@ -147,9 +163,9 @@ export const parseFestivalActivityResolution = (value: unknown): FestivalActivit
     activityType: value.activityType,
     durationMinutes: value.durationMinutes,
     status: "completed",
-    before: parseValues(value.before),
-    effect: parseValues(value.effect, true),
-    after: parseValues(value.after),
+    before: parseActivityValues(value.before),
+    effect: parseActivityValues(value.effect, true),
+    after: parseActivityValues(value.after),
     resolvedAt: value.resolvedAt,
     duplicate: value.duplicate,
   };
