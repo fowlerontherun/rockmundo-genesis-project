@@ -6,7 +6,7 @@ type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
 type FriendProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 export interface SendFriendRequestParams {
-  requestorProfileId: string;
+  requestorProfileId?: string;
   addresseeProfileId: string;
 }
 
@@ -118,14 +118,10 @@ export const sendFriendRequest = async ({
   addresseeProfileId,
 }: SendFriendRequestParams): Promise<FriendshipRow> => {
   const targetProfileId = validateFriendRequestInput(addresseeProfileId);
-  if (!requestorProfileId || !UUID_RE.test(requestorProfileId)) {
-    throw new Error(friendlyFriendRequestError("active player profile required"));
-  }
-  if (requestorProfileId === targetProfileId) {
-    throw new Error("You cannot send a friend request to yourself.");
-  }
 
-  // Try the RPC first if it exists; fall back to a direct insert (RLS enforces requestor ownership).
+  // The RPC is authoritative and resolves the current active profile from the
+  // authenticated session. Do not require a client-supplied requestor id before
+  // trying it; newer callers intentionally leave that identity server-controlled.
   const rpcAttempt = await (supabase as any).rpc("send_friend_request", {
     target_profile_id: targetProfileId,
   });
@@ -142,6 +138,15 @@ export const sendFriendRequest = async ({
 
   if (rpcAttempt.error && !rpcMissing) {
     throw new Error(friendlyFriendRequestError(rpcAttempt.error.message));
+  }
+
+  // Legacy fallback only: direct writes need an explicit requestor profile id so
+  // RLS can enforce ownership if the server RPC is unavailable.
+  if (!requestorProfileId || !UUID_RE.test(requestorProfileId)) {
+    throw new Error(friendlyFriendRequestError("active player profile required"));
+  }
+  if (requestorProfileId === targetProfileId) {
+    throw new Error("You cannot send a friend request to yourself.");
   }
 
   // Check for an existing friendship in either direction so we don't hit the unique constraint blindly.
