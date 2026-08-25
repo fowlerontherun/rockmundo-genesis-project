@@ -56,7 +56,7 @@ export function FestivalDirectInvitations({
               idempotencyKey: createStableMutationIdempotencyKey(
                 `festival-invitation-${response}`,
                 invitation.invitationId,
-                invitation.version,
+                String(invitation.version),
               ),
             },
             {
