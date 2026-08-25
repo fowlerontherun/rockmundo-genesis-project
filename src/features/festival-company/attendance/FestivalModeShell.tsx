@@ -6,11 +6,12 @@ import { BugReportButton } from "@/components/bug-report/BugReportButton";
 import { useLeaveFestivalEarly } from "./useFestivalAttendance";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
 import { FestivalModeActivityHub } from "./FestivalModeActivityHub";
+import { FestivalModeMoments } from "./FestivalModeMoments";
 import { FestivalModeMyDay } from "./FestivalModeMyDay";
 import { FestivalModeStageSchedule } from "./FestivalModeStageSchedule";
 import { isFestivalModeSupportPath } from "./festivalModeRouting";
 
-export type FestivalModeSection = "home" | "my-day" | "stages" | "food-drink" | "activities";
+export type FestivalModeSection = "home" | "my-day" | "stages" | "food-drink" | "activities" | "moments";
 
 const festivalSections: Array<{ id: FestivalModeSection; label: string; mobileLabel: string }> = [
   { id: "home", label: "Festival Home", mobileLabel: "Home" },
@@ -18,9 +19,10 @@ const festivalSections: Array<{ id: FestivalModeSection; label: string; mobileLa
   { id: "stages", label: "Stages", mobileLabel: "Stages" },
   { id: "food-drink", label: "Food & Drink", mobileLabel: "Food" },
   { id: "activities", label: "Activities", mobileLabel: "Do" },
+  { id: "moments", label: "Moments", mobileLabel: "Moments" },
 ];
 
-const futureSections = ["Social", "Festival Map"];
+const futureSections = ["Festival Map"];
 
 const supportLinks = [
   { to: "/inbox", label: "Inbox" },
@@ -119,6 +121,8 @@ export const FestivalModeShell = ({
         return <FestivalModeActivityHub attendance={attendance} kind="food-drink" />;
       case "activities":
         return <FestivalModeActivityHub attendance={attendance} kind="activities" />;
+      case "moments":
+        return <FestivalModeMoments attendance={attendance} />;
       default:
         return children;
     }
@@ -153,7 +157,7 @@ export const FestivalModeShell = ({
           aria-label="Festival navigation"
           className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur"
         >
-          <div className="mx-auto grid max-w-3xl grid-cols-6 gap-1">
+          <div className="mx-auto grid max-w-3xl grid-cols-7 gap-1">
             {festivalSections.map((section) => {
               const isCurrent = !supportRoute && section.id === activeSection;
               return (
