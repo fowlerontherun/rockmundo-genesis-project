@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Outlet, useNavigate, Navigate, useLocation } from "react-router-dom";
 import CharacterGate from "@/components/CharacterGate";
 import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
@@ -40,6 +40,12 @@ import { hasGigViewerDemoTestAccess } from "@/lib/gigViewerDemoTestAccess";
 import { useMyFestivalAttendance } from "@/features/festival-company/attendance/useFestivalAttendance";
 import { FestivalModeShell } from "@/features/festival-company/attendance/FestivalModeShell";
 import { FestivalModeHome } from "@/features/festival-company/attendance/FestivalModeHome";
+import {
+  clearFestivalModeReturnPath,
+  isFestivalModeSupportPath,
+  readFestivalModeReturnPath,
+  rememberFestivalModeReturnPath,
+} from "@/features/festival-company/attendance/festivalModeRouting";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -51,8 +57,11 @@ const Layout = () => {
   const {
     data: festivalAttendance = [],
     isLoading: festivalAttendanceLoading,
+    isError: festivalAttendanceError,
   } = useMyFestivalAttendance(Boolean(user && profileId));
   const activeFestivalAttendance = festivalAttendance.find((attendance) => attendance.status === "attending");
+  const festivalSupportRoute = isFestivalModeSupportPath(location.pathname);
+  const wasFestivalModeRef = useRef(false);
 
   // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
@@ -104,6 +113,44 @@ const Layout = () => {
     }
   }, [user, authLoading, navigate, devGuestBypass, gigViewerDemoTestAccess]);
 
+  // Capture the route that Festival Mode interrupted once per authoritative
+  // attending session. Support routes never replace that return target. When
+  // the server moves the attendee to left/completed/cancelled/refunded, restore
+  // the captured route and clear the session marker.
+  useEffect(() => {
+    if (!profileId || festivalAttendanceLoading || festivalAttendanceError) return;
+
+    if (activeFestivalAttendance) {
+      if (!wasFestivalModeRef.current) {
+        rememberFestivalModeReturnPath(window.sessionStorage, profileId, {
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash,
+        });
+        wasFestivalModeRef.current = true;
+      }
+      return;
+    }
+
+    if (!wasFestivalModeRef.current) return;
+
+    const returnPath = readFestivalModeReturnPath(window.sessionStorage, profileId) ?? "/home";
+    wasFestivalModeRef.current = false;
+    clearFestivalModeReturnPath(window.sessionStorage, profileId);
+
+    const currentPath = `${location.pathname}${location.search}${location.hash}`;
+    if (currentPath !== returnPath) navigate(returnPath, { replace: true });
+  }, [
+    activeFestivalAttendance,
+    festivalAttendanceError,
+    festivalAttendanceLoading,
+    location.hash,
+    location.pathname,
+    location.search,
+    navigate,
+    profileId,
+  ]);
+
   if (
     authLoading ||
     (dataLoading && user) ||
@@ -128,9 +175,33 @@ const Layout = () => {
   // escape the reduced experience while the active character is attending.
   if (activeFestivalAttendance) {
     return (
-      <FestivalModeShell attendance={activeFestivalAttendance}>
+      <FestivalModeShell
+        attendance={activeFestivalAttendance}
+        isMobile={isMobile}
+        supportContent={festivalSupportRoute ? <Outlet /> : undefined}
+      >
         <FestivalModeHome attendance={activeFestivalAttendance} />
       </FestivalModeShell>
+    );
+  }
+
+  // If a refresh/reconnect cannot yet re-confirm attendance but this tab was
+  // already in Festival Mode, fail closed instead of exposing normal gameplay.
+  if (
+    festivalAttendanceError &&
+    profileId &&
+    readFestivalModeReturnPath(window.sessionStorage, profileId)
+  ) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6" role="status" aria-live="polite">
+        <div className="max-w-md rounded-xl border bg-card p-6 text-center shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Festival Mode</p>
+          <h1 className="mt-2 text-xl font-bold">Reconnecting to the festival…</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We could not confirm your attendee state yet. Normal gameplay stays locked until RockMundo reconnects to the authoritative festival session.
+          </p>
+        </div>
+      </div>
     );
   }
 
