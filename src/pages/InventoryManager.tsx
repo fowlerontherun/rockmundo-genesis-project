@@ -269,7 +269,7 @@ const InventoryManager = () => {
                 Festival Keepsakes
               </CardTitle>
               <CardDescription>
-                Souvenirs earned by your character through festival attendance. Wristbands are collected when you physically check in.
+                Festival keepsakes linked to your character's festival history. Wristbands are issued automatically with valid admission.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -282,7 +282,7 @@ const InventoryManager = () => {
                   <Ticket className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">No festival keepsakes yet.</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Buy admission, travel to the festival and check in to collect your first wristband.
+                    Buy a valid festival admission ticket to receive your first wristband automatically.
                   </p>
                 </div>
               ) : (
@@ -311,7 +311,7 @@ const InventoryManager = () => {
                         </Badge>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          <span>Collected {new Date(item.issuedAt).toLocaleDateString("en-GB")}</span>
+                          <span>Issued {new Date(item.issuedAt).toLocaleDateString("en-GB")}</span>
                         </div>
                       </CardContent>
                     </Card>

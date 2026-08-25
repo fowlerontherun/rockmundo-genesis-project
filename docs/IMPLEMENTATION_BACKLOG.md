@@ -1,6 +1,6 @@
 # RockMundo Consolidated Implementation Backlog
 
-_Last updated: 2026-08-24_
+_Last updated: 2026-08-25_
 
 ## Purpose
 
@@ -336,10 +336,10 @@ The booking/contracts foundation exists. The next work should complete canonical
 
 ---
 
-## PR B6 — Festival ticket tiers, vendors and operational analytics closure
+## PR B6 — Festival ticket tiers, vendors and operational analytics closure ([#1641](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1641))
 
 **Priority:** P1  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
@@ -361,10 +361,10 @@ The booking/contracts foundation exists. The next work should complete canonical
 
 ---
 
-## PR B7 — Festival performer collaboration, invitations and fan voting
+## PR B7 — Festival performer collaboration, invitations and fan voting ([#1644](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1644))
 
 **Priority:** P2  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
@@ -391,10 +391,10 @@ The booking/contracts foundation exists. The next work should complete canonical
 
 This programme extends the modern ticket system. It must not reuse the legacy attendee model as write authority.
 
-## PR C1 — Festival wristbands and memorabilia inventory
+## PR C1 — Festival wristbands and memorabilia inventory ([#1645](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1645))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -407,6 +407,14 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 - Buying a valid admission ticket creates exactly one attendee lifecycle and one eligible wristband representation.
 - Add-ons do not create duplicate attendee lifecycles/wristbands.
+
+### Implementation notes
+
+- Wristband issuance now follows canonical admission-backed attendance creation rather than waiting for check-in.
+- Memorabilia links directly to the authoritative admission ticket, edition, launch, and attendance row, with uniqueness at attendee/edition and ticket/item boundaries.
+- Existing ticketed attendees are reconciled; add-ons/upgrades cannot create attendance or wristbands.
+- The existing Inventory → Festival Keepsakes surface shows the same collectible projected into the festival ticket wallet.
+- Purchase success invalidates ticket, attendance, check-in, and memorabilia caches together, and focused regression coverage protects the C1 authority contract.
 
 ---
 
