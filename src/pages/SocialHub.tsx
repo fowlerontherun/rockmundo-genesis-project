@@ -5,11 +5,12 @@ import { socialHubNavigation } from "@/config/hubNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarPlus, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
+import { CalendarPlus, FileSignature, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { MessagesTab } from "@/features/social-hub/components/MessagesTab";
 import { InvitesInbox } from "@/features/social-hub/components/InvitesInbox";
+import { SocialContractsPanel } from "@/features/social-hub/components/SocialContractsPanel";
 import { useIncomingInvites, useInviteRealtime } from "@/hooks/useSocialInvites";
 import { useTwaaterTrending } from "@/hooks/useTwaaterTrending";
 
@@ -53,6 +54,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
           <Button asChild><Link to="/social/players"><Compass className="mr-2 h-4 w-4" />Find players</Link></Button>
           <Button asChild variant="outline"><Link to="/social/messages"><MessageSquare className="mr-2 h-4 w-4" />Open messages</Link></Button>
           <Button asChild variant="outline"><Link to="/social/friends"><Users className="mr-2 h-4 w-4" />View friends</Link></Button>
+          <Button asChild variant="outline"><Link to="/social/contracts"><FileSignature className="mr-2 h-4 w-4" />Contracts</Link></Button>
           <Button asChild variant="outline"><Link to="/social/twaater"><Newspaper className="mr-2 h-4 w-4" />Open Twaater</Link></Button>
           <Button asChild variant="outline"><Link to="/social/recruitment"><Music2 className="mr-2 h-4 w-4" />Browse recruitment</Link></Button>
           <Button asChild variant="outline"><Link to="/social/activities"><CalendarPlus className="mr-2 h-4 w-4" />Plan activity</Link></Button>
@@ -95,6 +97,7 @@ export default function SocialHub() {
       players: "/social/players",
       invites: "/social/invitations",
       invitations: "/social/invitations",
+      contracts: "/social/contracts",
     };
     legacyParams.delete("tab");
     const preservedSearch = legacyParams.toString();
@@ -107,13 +110,14 @@ export default function SocialHub() {
     : child === "messages" ? <MessagesTab myProfileId={profileId} />
     : child === "players" ? <Suspense fallback={<Fallback />}><PlayerSearch /></Suspense>
     : child === "invitations" ? <InvitesInbox profileId={profileId} />
+    : child === "contracts" ? <SocialContractsPanel />
     : child === "recruitment" ? <Suspense fallback={<Fallback />}><BandFinder /></Suspense>
     : <SocialOverview profileId={profileId} />;
 
   return (
     <HubLayout
       title="Social"
-      description="Find players, maintain friendships, message contacts, follow Twaater and discover recruitment opportunities."
+      description="Find players, maintain friendships, message contacts, manage contracts, follow Twaater and discover recruitment opportunities."
       icon={Users}
       overviewPath="/social"
       navigation={socialHubNavigation}
