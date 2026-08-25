@@ -41,7 +41,7 @@ describe("Festival C1 wristband inventory authority", () => {
     expect(migration).toContain("CREATE TRIGGER festival_attendance_issue_wristband_on_ticket");
     expect(migration).toContain("AFTER INSERT ON public.festival_player_attendance");
     expect(migration).toContain("v_product_class <> 'admission'");
-    expect(migration).toContain("v_ticket.status NOT IN ('valid', 'used')");
+    expect(migration).toContain("v_ticket_status NOT IN ('valid', 'used')");
     expect(migration).toContain("ON CONFLICT (attendance_id, item_type) DO UPDATE");
   });
 
