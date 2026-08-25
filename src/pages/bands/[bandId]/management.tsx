@@ -5,14 +5,16 @@ import { BandRosterTab } from "@/components/bands/BandRosterTab";
 import { BandRehearsalsTab } from "@/components/bands/BandRehearsalsTab";
 import { BandFinancesTab } from "@/components/bands/BandFinancesTab";
 import { BandContributionsTab } from "@/components/bands/BandContributionsTab";
+import { BandObjectivesLineupsTab } from "@/components/bands/BandObjectivesLineupsTab";
 import { BandRolesTab } from "@/components/bands/BandRolesTab";
 import { Card, CardContent } from "@/components/ui/card";
 
 const tabConfig = [
-  { value: "roster", label: "Roster", description: "Manage lineup, roles, and leadership readiness." },
-  { value: "rehearsals", label: "Rehearsals", description: "Oversee rehearsal cadence, costs, and preparation." },
+  { value: "roster", label: "Roster", description: "Manage members, roles, and leadership readiness." },
+  { value: "rehearsals", label: "Rehearsals", description: "Oversee rehearsal cadence, attendance, costs, and preparation." },
+  { value: "objectives-lineups", label: "Objectives & lineups", description: "Set shared goals, finalise gig lineups, and review chemistry/cohesion changes." },
   { value: "finances", label: "Finances", description: "Track band earnings, balance, and transactions." },
-  { value: "contributions", label: "Contributions", description: "Review recent participation history without rewards or rankings." },
+  { value: "contributions", label: "Contributions", description: "Review verified participation history and its source." },
   { value: "roles", label: "Roles & permissions", description: "Inspect leadership, responsibilities, risk levels, and approval foundations." },
 ] as const;
 
@@ -31,8 +33,7 @@ export default function BandManagementPage() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Band management</h1>
         <p className="text-muted-foreground">
-          Operate your band with clarity—monitor who is on the roster, how rehearsals are progressing, and where the
-          finances stand.
+          Operate your band with clarity—manage members, shared goals, authoritative lineups, rehearsals, and finances.
         </p>
       </div>
 
@@ -62,6 +63,10 @@ export default function BandManagementPage() {
 
         <TabsContent value="rehearsals" className="space-y-6">
           <BandRehearsalsTab bandId={bandId} />
+        </TabsContent>
+
+        <TabsContent value="objectives-lineups" className="space-y-6">
+          <BandObjectivesLineupsTab bandId={bandId} />
         </TabsContent>
 
         <TabsContent value="finances" className="space-y-6">
