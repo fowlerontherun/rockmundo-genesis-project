@@ -3,8 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
-export type CoverPurpose = "live" | "recording" | "both";
-
 export interface CoverableSong {
   song_id: string;
   title: string;
@@ -17,11 +15,16 @@ export interface CoverableSong {
   owner_band_name: string | null;
   owner_profile_id: string | null;
   cover_royalty_percentage: number;
-  cover_flat_fee: number;
   cover_auto_approve: boolean;
+  recording_requests_open: boolean;
   gig_play_count: number;
   release_date: string | null;
+  in_repertoire: boolean;
+  familiarity_percentage: number;
+  recording_license_status: string | null;
+  recording_license_royalty_percentage: number | null;
   existing_request_status: string | null;
+  covering_band_count: number;
 }
 
 export interface CoverRequestRow {
@@ -53,7 +56,8 @@ export const useMyBandIds = () => {
       const { data, error } = await supabase
         .from("band_members")
         .select("band_id, bands(name)")
-        .eq("profile_id", profileId!);
+        .eq("profile_id", profileId!)
+        .eq("member_status", "active");
       if (error) throw error;
       return (data ?? []).map((row: any) => ({
         bandId: row.band_id as string,
@@ -63,6 +67,7 @@ export const useMyBandIds = () => {
   });
 };
 
+/** Finished songs by other bands, including repertoire + licence state for this band. */
 export const useCoverableSongs = (params: {
   search?: string;
   genre?: string;
@@ -71,12 +76,13 @@ export const useCoverableSongs = (params: {
   const { search, genre, bandId } = params;
 
   return useQuery({
-    queryKey: ["coverable-songs", search ?? "", genre ?? "all", bandId ?? ""],
+    queryKey: ["cover-song-catalog", search ?? "", genre ?? "all", bandId ?? ""],
+    enabled: !!bandId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("get_coverable_songs", {
+      const { data, error } = await (supabase as any).rpc("get_cover_song_catalog", {
+        p_band_id: bandId,
         p_search: search?.trim() ? search.trim() : null,
         p_genre: genre && genre !== "all" ? genre : null,
-        p_exclude_band_id: bandId ?? null,
         p_limit: 100,
       });
       if (error) throw error;
@@ -92,7 +98,7 @@ const requestSelect = `
   owner_band:owner_band_id (name)
 `;
 
-/** Requests my bands have sent out. */
+/** Recording-cover requests my bands have sent. */
 export const useOutgoingCoverRequests = (bandIds: string[]) =>
   useQuery({
     queryKey: ["cover-requests-outgoing", bandIds.join(",")],
@@ -102,13 +108,14 @@ export const useOutgoingCoverRequests = (bandIds: string[]) =>
         .from("song_cover_requests")
         .select(requestSelect)
         .in("requesting_band_id", bandIds)
+        .in("purpose", ["recording", "both"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CoverRequestRow[];
     },
   });
 
-/** Requests waiting on my bands / my songs. */
+/** Recording requests waiting on my bands / my songs. */
 export const useIncomingCoverRequests = (bandIds: string[]) => {
   const { profileId } = useActiveProfile();
 
@@ -123,6 +130,7 @@ export const useIncomingCoverRequests = (bandIds: string[]) => {
         .from("song_cover_requests")
         .select(requestSelect)
         .or(filters.join(","))
+        .in("purpose", ["recording", "both"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as CoverRequestRow[];
@@ -130,30 +138,54 @@ export const useIncomingCoverRequests = (bandIds: string[]) => {
   });
 };
 
+export const useAddSongToRepertoire = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { songId: string; bandId: string }) => {
+      const { data, error } = await (supabase as any).rpc("add_song_to_band_repertoire", {
+        p_song_id: input.songId,
+        p_band_id: input.bandId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Song added to the live repertoire");
+      queryClient.invalidateQueries({ queryKey: ["cover-song-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["band-repertoire-songs"] });
+      queryClient.invalidateQueries({ queryKey: ["band-songs"] });
+      queryClient.invalidateQueries({ queryKey: ["band-songs-optimized"] });
+    },
+    onError: (error: any) => toast.error(error?.message ?? "Could not add the song to the repertoire"),
+  });
+};
+
+/** Recording permission is separate from permission to learn/play a song live. */
 export const useRequestSongCover = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { songId: string; bandId: string; purpose: CoverPurpose; message?: string }) => {
+    mutationFn: async (input: { songId: string; bandId: string; message?: string }) => {
       const { data, error } = await (supabase as any).rpc("request_song_cover", {
         p_song_id: input.songId,
         p_band_id: input.bandId,
-        p_purpose: input.purpose,
+        p_purpose: "recording",
         p_message: input.message ?? null,
       });
       if (error) throw error;
-      return data as { status: string; royalty_percentage: number };
+      return data as { status: string; royalty_percentage: number; license_id?: string };
     },
     onSuccess: (result) => {
       toast.success(
         result?.status === "approved"
-          ? `Cover licensed automatically at ${result.royalty_percentage}% royalties`
-          : "Cover request sent to the songwriters",
+          ? `Recording licence approved at ${Number(result.royalty_percentage ?? 0)}% writer royalties`
+          : "Recording licence request sent to the songwriters",
       );
-      queryClient.invalidateQueries({ queryKey: ["coverable-songs"] });
+      queryClient.invalidateQueries({ queryKey: ["cover-song-catalog"] });
       queryClient.invalidateQueries({ queryKey: ["cover-requests-outgoing"] });
     },
-    onError: (error: any) => toast.error(error?.message ?? "Could not send cover request"),
+    onError: (error: any) => toast.error(error?.message ?? "Could not request a recording licence"),
   });
 };
 
@@ -177,12 +209,32 @@ export const useRespondToCoverRequest = () => {
       return data;
     },
     onSuccess: (_data, variables) => {
-      toast.success(variables.approve ? "Cover approved" : "Cover request declined");
+      toast.success(variables.approve ? "Recording licence approved" : "Recording licence request declined");
       queryClient.invalidateQueries({ queryKey: ["cover-requests-incoming"] });
+      queryClient.invalidateQueries({ queryKey: ["cover-song-catalog"] });
     },
     onError: (error: any) => toast.error(error?.message ?? "Could not answer the request"),
   });
 };
+
+/** Creates/reuses the covering band's own pre-recording master after a licence is approved. */
+export const useGetOrCreateCoverMaster = () =>
+  useMutation({
+    mutationFn: async (input: { originalSongId: string; bandId: string }) => {
+      const { data, error } = await (supabase as any).rpc("get_or_create_cover_master", {
+        p_original_song_id: input.originalSongId,
+        p_band_id: input.bandId,
+      });
+      if (error) throw error;
+      return data as {
+        cover_master_id: string;
+        original_song_id: string;
+        license_id: string;
+        royalty_percentage: number;
+        status: string;
+      };
+    },
+  });
 
 export const useUpdateSongCoverSettings = () => {
   const queryClient = useQueryClient();
@@ -205,11 +257,11 @@ export const useUpdateSongCoverSettings = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Cover licensing updated");
+      toast.success("Recording-cover terms updated");
       queryClient.invalidateQueries({ queryKey: ["user-songs"] });
-      queryClient.invalidateQueries({ queryKey: ["coverable-songs"] });
+      queryClient.invalidateQueries({ queryKey: ["cover-song-catalog"] });
     },
-    onError: (error: any) => toast.error(error?.message ?? "Could not update cover licensing"),
+    onError: (error: any) => toast.error(error?.message ?? "Could not update recording-cover terms"),
   });
 };
 
