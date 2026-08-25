@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, User, Music, Star, MapPin, Clock, Users, UserPlus, MessageSquare, Check } from "lucide-react";
+import { Search, User, Music, Star, MapPin, Clock, Users, UserPlus, MessageSquare, Check, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
@@ -26,7 +26,7 @@ export default function PlayerSearch() {
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [dmTarget, setDmTarget] = useState<{ profileId: string; displayName: string } | null>(null);
   const { profile } = useGameData();
-  const { friendships, sendRequest, acceptRequest } = useFriendships(profile?.id);
+  const { friendships, sendRequest, acceptRequest, removeFriend } = useFriendships(profile?.id);
   const { toast } = useToast();
 
   const { data: players, isLoading, isError, error } = useQuery({
@@ -87,6 +87,15 @@ export default function PlayerSearch() {
     }
   };
 
+  const handleWithdraw = async (friendshipId: string) => {
+    try {
+      await removeFriend(friendshipId);
+      toast({ title: "Friend request withdrawn" });
+    } catch {
+      toast({ title: "Failed to withdraw request", variant: "destructive" });
+    }
+  };
+
   const getFriendState = (playerId: string): { state: FriendState; friendshipId: string } => {
     return friendStateMap.get(playerId) ?? { state: "none", friendshipId: "" };
   };
@@ -99,8 +108,6 @@ export default function PlayerSearch() {
       backTo="/social"
       backLabel="Back to Social"
     >
-
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -178,7 +185,6 @@ export default function PlayerSearch() {
                         )}
                       </div>
 
-                      {/* Stats row */}
                       <div className="flex flex-wrap gap-2">
                         <Badge variant="secondary" className="text-xs flex items-center gap-1">
                           <Star className="h-3 w-3" />
@@ -217,7 +223,6 @@ export default function PlayerSearch() {
                     </div>
                   </div>
 
-                  {/* Action buttons */}
                   <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border">
                     <Link to={`/player/${player.id}`}>
                       <Button variant="outline" size="sm">
@@ -238,9 +243,13 @@ export default function PlayerSearch() {
                           </Button>
                         )}
                         {friendState === "pending_sent" && (
-                          <Button variant="outline" size="sm" disabled>
-                            <Clock className="mr-1 h-4 w-4" />
-                            Request Sent
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleWithdraw(friendshipId)}
+                          >
+                            <X className="mr-1 h-4 w-4" />
+                            Withdraw Invite
                           </Button>
                         )}
                         {friendState === "pending_received" && (
@@ -280,7 +289,6 @@ export default function PlayerSearch() {
         </div>
       )}
 
-      {/* DM Dialog */}
       <Dialog open={!!dmTarget} onOpenChange={(open) => !open && setDmTarget(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
