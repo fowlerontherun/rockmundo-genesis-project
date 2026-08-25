@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Phone, SendHorizontal, X } from "lucide-react";
 import { format } from "date-fns";
 import { useDirectMessages } from "@/hooks/useDirectMessages";
+import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 import { DirectVoiceChat } from "./DirectVoiceChat";
 
 interface Props {
@@ -91,6 +92,17 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
                       <p className="mt-1 text-right text-[10px] opacity-70">
                         {format(new Date(m.created_at), "MMM d, HH:mm")}
                       </p>
+                      {!isSelf && (
+                        <div className="mt-1 flex justify-end">
+                          <ReportSocialTargetDialog
+                            reportedProfileId={m.sender_profile_id}
+                            targetType="direct_message"
+                            targetId={m.id}
+                            triggerLabel="Report message"
+                            context={{ surface: "direct_message_thread" }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

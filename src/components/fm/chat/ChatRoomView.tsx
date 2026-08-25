@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 import { useChatRoom } from "./useChatRoom";
 
 interface ChatRoomViewProps {
@@ -78,6 +79,15 @@ export function ChatRoomView({
                     })}
                   </span>
                   <div className="break-words text-fm-fg">{msg.message}</div>
+                  {!mine && (
+                    <ReportSocialTargetDialog
+                      reportedProfileId={msg.profile_id}
+                      targetType="chat_message"
+                      targetId={msg.id}
+                      triggerLabel="Report message"
+                      context={{ surface: "fm_room_chat", channel: msg.channel }}
+                    />
+                  )}
                 </div>
               );
             })
