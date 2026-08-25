@@ -28,8 +28,10 @@ import { createStableMutationIdempotencyKey } from "../useStableMutationIdempote
 import { ApplicationStatusCard } from "./ApplicationStatusCard";
 import { ContractWorkspace } from "./ContractWorkspace";
 import { FestivalApplicationDialog } from "./FestivalApplicationDialog";
+import { FestivalDirectInvitations } from "./FestivalDirectInvitations";
 import { FestivalSetlistEditorCanonical } from "./FestivalSetlistEditor";
 import { OfferRevisionCard } from "./OfferRevisionCard";
+
 export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
   const [applyEdition, setApplyEdition] =
     useState<PublicFestivalEdition | null>(null);
@@ -41,28 +43,31 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
   const offers = useFestivalOffers(bandId);
   const contracts = useFestivalContracts(bandId);
   const { withdrawApplication } = useFestivalApplicationActions(bandId);
+  const allEditions =
+    (editions.data as PublicFestivalEdition[] | undefined) ?? [];
   const visibleEditions = useMemo(
     () =>
-      ((editions.data as PublicFestivalEdition[] | undefined) ?? []).filter(
-        (e) =>
-          [
-            "accepting_applications",
-            "booking",
-            "announced",
-            "on_sale",
-            "preparing",
-            "live",
-            "completed",
-          ].includes(e.status ?? ""),
+      allEditions.filter((e) =>
+        [
+          "accepting_applications",
+          "booking",
+          "announced",
+          "on_sale",
+          "preparing",
+          "live",
+          "completed",
+        ].includes(e.status ?? ""),
       ),
-    [editions.data],
+    [allEditions],
   );
+
   return (
     <div className="space-y-4">
       <Tabs defaultValue="discover">
-        <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
           <TabsTrigger value="discover">Discover</TabsTrigger>
           <TabsTrigger value="applications">My Applications</TabsTrigger>
+          <TabsTrigger value="invitations">Invitations</TabsTrigger>
           <TabsTrigger value="offers">Offers</TabsTrigger>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="prep">Preparation</TabsTrigger>
@@ -140,6 +145,9 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
           ) : (
             <p>No applications yet.</p>
           )}
+        </TabsContent>
+        <TabsContent value="invitations" className="space-y-3">
+          <FestivalDirectInvitations bandId={bandId} editions={allEditions} />
         </TabsContent>
         <TabsContent value="offers" className="space-y-3">
           {(offers.data ?? []).length ? (
