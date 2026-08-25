@@ -132,7 +132,13 @@ const Layout = () => {
       return;
     }
 
-    if (!wasFestivalModeRef.current) return;
+    // A successful non-attending refresh is authoritative proof that any old
+    // session marker is stale, even if this component remounted after the
+    // Festival session had already ended.
+    if (!wasFestivalModeRef.current) {
+      clearFestivalModeReturnPath(window.sessionStorage, profileId);
+      return;
+    }
 
     const returnPath = readFestivalModeReturnPath(window.sessionStorage, profileId) ?? "/home";
     wasFestivalModeRef.current = false;
