@@ -10,9 +10,14 @@ import {
   useLeaveFestivalEarly,
   useMyFestivalAttendance,
   useMyFestivalCheckInEligibility,
+  useMyFestivalMemorabilia,
 } from "../attendance/useFestivalAttendance";
 import type { FestivalCheckInEligibility } from "../attendance/festivalAttendeeExtras";
-import { usePublicFestival, usePurchaseFestivalTickets } from "../application/useFestivalLaunch";
+import {
+  useMyFestivalTickets,
+  usePublicFestival,
+  usePurchaseFestivalTickets,
+} from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 
 const Countdown = ({ target }: { target: string }) => {
@@ -77,6 +82,8 @@ export default function PublicFestivalPage() {
   const { data: f, isLoading, isError } = usePublicFestival(festivalCompanyIdentifier);
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
   const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
+  const { data: festivalMemorabilia = [] } = useMyFestivalMemorabilia(Boolean(user));
+  const { data: ticketWallet = [] } = useMyFestivalTickets(Boolean(user));
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
@@ -91,6 +98,11 @@ export default function PublicFestivalPage() {
   const myCheckInEligibility = myAttendance
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
+  const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
+  const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id);
+  const hasAdmissionTicket = myFestivalTickets.some(
+    (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
+  );
 
   const confirmLeaveEarly = () => {
     if (!myAttendance || myAttendance.status !== "attending") return;
@@ -131,8 +143,8 @@ export default function PublicFestivalPage() {
                   {myCheckInEligibility?.canCheckIn && (
                     <Badge className="bg-emerald-600">Ready to check in</Badge>
                   )}
-                  {myCheckInEligibility?.wristbandIssued && (
-                    <Badge variant="outline">Wristband collected</Badge>
+                  {myWristband && (
+                    <Badge variant="outline">Wristband issued</Badge>
                   )}
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -239,6 +251,56 @@ export default function PublicFestivalPage() {
           </TabsContent>
 
           <TabsContent value="tickets">
+            {user && (
+              <Card className="mb-4">
+                <CardHeader>
+                  <CardTitle>My Festival Wallet</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {myFestivalTickets.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      You do not have tickets for this festival yet. A valid admission ticket automatically issues one festival wristband to your character inventory.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {myFestivalTickets.map((ticket) => (
+                        <div key={ticket.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                          <div>
+                            <p className="font-medium capitalize">{ticket.ticketType.replaceAll("_", " ")}</p>
+                            <p className="text-xs text-muted-foreground">{ticket.ticketReference}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary" className="capitalize">{ticket.productClass.replaceAll("_", " ")}</Badge>
+                            <Badge variant="outline" className="capitalize">{ticket.status}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {myWristband ? (
+                    <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className="bg-emerald-600">Wristband issued</Badge>
+                        <strong>{myWristband.displayName}</strong>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Issued automatically with your admission. It is also stored in Inventory → Festival Keepsakes.
+                      </p>
+                    </div>
+                  ) : hasAdmissionTicket ? (
+                    <p className="text-sm text-muted-foreground" role="status">
+                      Your admission is valid. The festival wristband is being reconciled to your inventory.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Add-ons and upgrades do not issue extra wristbands; one wristband is linked to the character’s admission for this festival edition.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <section className="grid gap-4 md:grid-cols-2">
               {f.ticketProducts.map((p) => (
                 <Card key={p.id}>
