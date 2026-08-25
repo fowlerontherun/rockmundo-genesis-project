@@ -1,0 +1,54 @@
+name: Temporary C1 Festival Wristband Finalizer
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.ref == 'codex/backlog-c1-festival-wristbands'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/backlog-c1-festival-wristbands
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Apply C1 final corrections
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python scripts/festivals/temp-finalize-c1.py
+      - name: Run focused C1 regressions
+        run: >-
+          npx vitest run
+          src/features/festival-company/__tests__/festivalWristbandInventoryC1.test.ts
+          src/features/festival-company/__tests__/festivalAttendeeCheckInAuthority.test.ts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Repository lint gate
+        run: npm run lint:ci
+      - name: Migration timestamp verification
+        run: npm run verify:migration-timestamps
+      - name: Build
+        run: npm run build
+      - name: Commit final changes and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-finalize-c1.yml
+          git rm scripts/festivals/temp-finalize-c1.py
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Finalize backlog C1 festival wristband inventory"
+          git push origin HEAD:codex/backlog-c1-festival-wristbands
