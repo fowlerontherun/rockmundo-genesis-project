@@ -7,15 +7,15 @@ export function usePlayerConnection(targetProfileId?: string | null) {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const queryKey = ["player-connection", profileId, targetProfileId];
-  const state = useQuery({ queryKey, queryFn: () => getConnectionState(targetProfileId!), enabled: !!profileId && !!targetProfileId });
+  const state = useQuery({ queryKey, queryFn: () => getConnectionState(targetProfileId!, profileId), enabled: !!profileId && !!targetProfileId });
   const invalidate = () => { queryClient.invalidateQueries({ queryKey }); queryClient.invalidateQueries({ queryKey: ["friendships"] }); queryClient.invalidateQueries({ queryKey: ["friend-request-counts"] }); };
-  const send = useMutation({ mutationFn: () => sendConnectionRequest(targetProfileId!), onSuccess: () => { toast.success("Friend request sent"); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
+  const send = useMutation({ mutationFn: () => sendConnectionRequest(targetProfileId!, profileId), onSuccess: () => { toast.success("Friend request sent"); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
   return { ...state, send, isSelf: profileId === targetProfileId };
 }
 
 export function useFriendRequests() {
   const { profileId } = useActiveProfile();
-  const counts = useQuery({ queryKey: ["friend-request-counts", profileId], queryFn: getFriendRequestCounts, enabled: !!profileId });
+  const counts = useQuery({ queryKey: ["friend-request-counts", profileId], queryFn: () => getFriendRequestCounts(profileId), enabled: !!profileId });
   return { counts };
 }
 
