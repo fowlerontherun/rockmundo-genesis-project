@@ -2,6 +2,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
+const socialMessageError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String((error as { message?: string } | null)?.message ?? "");
+  if (/row-level security|permission denied|blocked|unavailable/i.test(message)) {
+    return "This account is unavailable for direct messages.";
+  }
+  return "We couldn't complete that message action. Please try again.";
+};
+
 export const useTwaaterMessages = (accountId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -33,7 +41,6 @@ export const useTwaaterMessages = (accountId?: string) => {
 
       const [lower, higher] = [accountId, otherAccountId].sort();
 
-      // Check if conversation exists
       const { data: existing } = await supabase
         .from("twaater_conversations")
         .select("*")
@@ -43,7 +50,6 @@ export const useTwaaterMessages = (accountId?: string) => {
 
       if (existing) return existing;
 
-      // Create new conversation
       const { data, error } = await supabase
         .from("twaater_conversations")
         .insert({
@@ -53,7 +59,7 @@ export const useTwaaterMessages = (accountId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) throw new Error(socialMessageError(error));
       return data;
     },
     onSuccess: () => {
@@ -110,9 +116,10 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
       queryClient.invalidateQueries({ queryKey: ["twaater-messages", conversationId] });
       queryClient.invalidateQueries({ queryKey: ["twaater-conversations"] });
     },
-    onError: () => {
+    onError: (error: unknown) => {
       toast({
         title: "Failed to send message",
+        description: socialMessageError(error),
         variant: "destructive",
       });
     },
