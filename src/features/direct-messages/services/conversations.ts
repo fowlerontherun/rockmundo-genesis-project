@@ -50,16 +50,22 @@ export interface ConversationContextAttachment {
 }
 
 function normalizeSummary(row: any): ConversationSummary {
+  const conversationId = row.conversationId ?? row.conversation_id;
+  const isGroup = row.type === "group";
+  const title = row.title ?? row.other_display_name ?? null;
   return {
-    conversation_id: row.conversationId ?? row.conversation_id,
+    conversation_id: conversationId,
     type: row.type,
-    title: row.title ?? row.other_display_name ?? null,
+    title,
     context_type: row.contextType ?? row.context_type ?? null,
     context_id: row.contextId ?? row.context_id ?? null,
-    other_profile_id: row.otherProfileId ?? row.other_profile_id ?? null,
-    other_display_name: row.otherDisplayName ?? row.other_display_name ?? null,
-    other_username: row.otherUsername ?? row.other_username ?? null,
-    other_avatar_url: row.otherAvatarUrl ?? row.other_avatar_url ?? null,
+    // Mobile and existing conversation routes are profile-keyed. A namespaced
+    // synthetic key lets the existing screen distinguish groups without a new
+    // routing silo or collision with profile UUIDs.
+    other_profile_id: isGroup ? `group-${conversationId}` : (row.otherProfileId ?? row.other_profile_id ?? null),
+    other_display_name: isGroup ? title : (row.otherDisplayName ?? row.other_display_name ?? null),
+    other_username: isGroup ? null : (row.otherUsername ?? row.other_username ?? null),
+    other_avatar_url: isGroup ? null : (row.otherAvatarUrl ?? row.other_avatar_url ?? null),
     participant_count: Number(row.participantCount ?? row.participant_count ?? (row.type === "direct" ? 2 : 0)),
     my_role: row.myRole ?? row.my_role ?? "member",
     last_message_id: row.lastMessageId ?? row.last_message_id ?? null,
