@@ -35,6 +35,22 @@ export type AvailableSupportBand = {
   available_until: string;
 };
 
+export type GigSupportSlot = {
+  id: string;
+  gig_id: string;
+  support_band_id: string;
+  invited_by: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired' | 'completed';
+  revenue_share: number;
+  request_id?: string | null;
+  response_note?: string | null;
+  invited_at: string;
+  responded_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export async function getSupportPreferences(bandId: string): Promise<SupportPreferences | null> {
   const { data, error } = await (supabase as any)
     .from('band_support_preferences')
@@ -134,4 +150,65 @@ export async function findAvailableSupportBands(input: {
 
   if (error) throw error;
   return (data ?? []) as AvailableSupportBand[];
+}
+
+export async function createGigSupportOffer(input: {
+  gigId: string;
+  supportBandId: string;
+  requestId?: string;
+}): Promise<GigSupportSlot> {
+  const { data, error } = await (supabase as any).rpc('create_gig_support_offer', {
+    p_gig_id: input.gigId,
+    p_support_band_id: input.supportBandId,
+    p_request_id: input.requestId ?? crypto.randomUUID(),
+  });
+
+  if (error) throw error;
+  return data as GigSupportSlot;
+}
+
+export async function respondToGigSupportOffer(input: {
+  supportSlotId: string;
+  action: 'accept' | 'decline';
+  responseNote?: string | null;
+}): Promise<GigSupportSlot> {
+  const { data, error } = await (supabase as any).rpc('respond_to_gig_support_offer', {
+    p_support_slot_id: input.supportSlotId,
+    p_action: input.action,
+    p_response_note: input.responseNote ?? null,
+  });
+
+  if (error) throw error;
+  return data as GigSupportSlot;
+}
+
+export async function cancelGigSupportOffer(supportSlotId: string): Promise<GigSupportSlot> {
+  const { data, error } = await (supabase as any).rpc('cancel_gig_support_offer', {
+    p_support_slot_id: supportSlotId,
+  });
+
+  if (error) throw error;
+  return data as GigSupportSlot;
+}
+
+export async function listGigSupportSlots(gigId: string): Promise<GigSupportSlot[]> {
+  const { data, error } = await (supabase as any)
+    .from('gig_support_slots')
+    .select('*')
+    .eq('gig_id', gigId)
+    .order('invited_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as GigSupportSlot[];
+}
+
+export async function listBandSupportOffers(bandId: string): Promise<GigSupportSlot[]> {
+  const { data, error } = await (supabase as any)
+    .from('gig_support_slots')
+    .select('*')
+    .eq('support_band_id', bandId)
+    .order('invited_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as GigSupportSlot[];
 }
