@@ -6,7 +6,8 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Report a twaat
+  // Twaater reports now flow into the common player_reports moderation queue.
+  // The RPC resolves the post owner and captures the authoritative post snapshot server-side.
   const reportTwaatMutation = useMutation({
     mutationFn: async ({
       twaatId,
@@ -19,11 +20,25 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
       reason: "spam" | "harassment" | "inappropriate" | "misinformation" | "other";
       details?: string;
     }) => {
-      const { error } = await supabase.from("twaat_reports" as any).insert({
-        twaat_id: twaatId,
-        reporter_account_id: reporterAccountId,
-        report_reason: reason,
-        report_details: details,
+      const categoryMap = {
+        spam: "spam",
+        harassment: "harassment",
+        inappropriate: "other",
+        misinformation: "other",
+        other: "other",
+      } as const;
+      const description = details?.trim() || `Reported Twaater post for ${reason.replace(/_/g, " ")}.`;
+      const { error } = await (supabase as any).rpc("report_social_target", {
+        reported_profile_id: null,
+        target_type: "twaater_post",
+        target_id: twaatId,
+        category: categoryMap[reason],
+        reason: description,
+        context: {
+          surface: "twaater",
+          twaater_reason: reason,
+          reporter_account_id: reporterAccountId,
+        },
       });
 
       if (error) throw error;
@@ -35,19 +50,11 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
       });
     },
     onError: (error: any) => {
-      if (error.message.includes("duplicate")) {
-        toast({
-          title: "Already reported",
-          description: "You've already reported this post.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Failed to report",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Failed to report",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -139,7 +146,6 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
     enabled: !!viewerAccountId,
   });
 
-  // Check if an account is blocked
   const isAccountBlocked = (accountId: string) => {
     return blockedAccounts?.some((block: any) => block.blocked_account_id === accountId);
   };
