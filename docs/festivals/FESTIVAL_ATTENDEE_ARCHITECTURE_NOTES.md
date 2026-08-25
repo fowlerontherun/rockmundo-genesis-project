@@ -1,14 +1,14 @@
 # Festival Attendee Architecture Notes
 
 **Implementation plan:** `FESTIVAL_ATTENDEE_IMPLEMENTATION_PLAN.md`  
-**Phase:** 0 — Discovery and Architecture Review  
-**Status:** Implemented baseline / Phase 1 foundation started
+**Phase:** Programme C — attendee foundation through C4  
+**Status:** C1–C4 authoritative foundation complete
 
 ## Summary
 
-RockMundo already has a modern, server-authoritative festival ticketing path in the simplified festival system. The attendee feature must extend that path rather than introducing a second ticket model.
+RockMundo already has a modern, server-authoritative festival ticketing path in the simplified festival system. The attendee feature extends that path rather than introducing a second ticket model.
 
-The first attendee slice therefore adds an authoritative character-level lifecycle that is created from a valid modern admission ticket.
+The attendee foundation now covers admission-backed lifecycle creation, wristbands/memorabilia, authoritative check-in/leave/completion, Festival Mode, and authoritative schedule reservation/booking conflict rules.
 
 ## Existing systems to reuse
 
@@ -31,7 +31,7 @@ Festival attendance is character-level, not account-level. The existing `current
 
 ### Ticket purchase authority
 
-The existing `purchase_festival_tickets` RPC already owns ticket purchase authority, including sale validation, ticket issuance, capacity locking/idempotency and finance handling.
+The existing `purchase_festival_tickets` RPC owns ticket purchase authority, including sale validation, ticket issuance, capacity locking/idempotency and finance handling.
 
 The attendee system must **not** duplicate ticket sales or debit funds independently.
 
@@ -47,17 +47,11 @@ The existing `festival_attendance` table and older `festival_tickets`/festival a
 
 They remain untouched so the new attendee work does not destabilise legacy gig/stage presentation paths.
 
-## New authoritative attendee model
+## Authoritative attendee model
 
 `festival_player_attendance` represents one active character's lifecycle for one festival edition.
 
-Initial status:
-
-```text
-ticketed
-```
-
-Reserved lifecycle states:
+Lifecycle states:
 
 ```text
 ticketed
@@ -69,7 +63,7 @@ cancelled
 refunded
 ```
 
-The initial Phase 1 slice only creates and reads `ticketed` records. Later phases will introduce narrowly scoped RPCs for state transitions.
+State transitions are server-authoritative and audited. Browser clients cannot directly mutate attendee lifecycle rows.
 
 ### Key invariants
 
@@ -79,7 +73,9 @@ The initial Phase 1 slice only creates and reads `ticketed` records. Later phase
 - Browser clients cannot directly insert/update/delete attendee rows.
 - A character can read only their own attendee state.
 - The server creates attendee state from an authoritative issued admission ticket.
-- Reward, check-in and completion mutation remains server-authoritative in future phases.
+- Check-in, leave, completion, cancellation/refund propagation and schedule ownership remain server-authoritative.
+- Festival-owned schedule rows cannot be edited/deleted directly by normal browser roles.
+- Existing non-Festival commitments are never silently cancelled to make Festival attendance fit.
 
 ## Ticket → attendee flow
 
@@ -115,55 +111,135 @@ The `(festival_edition_id, profile_id)` unique constraint prevents multiple admi
 - attendee lifecycle status
 - lifecycle timestamps
 
-This is intentionally a read-only RPC for the browser.
+Lifecycle/readiness projections reconcile authoritative state before use.
 
 ## RLS / security model
 
 `festival_player_attendance` has RLS enabled.
 
-Direct table privileges are revoked from `anon` and `authenticated` roles. Authenticated players receive their data through `get_my_festival_attendance()` and the own-row RLS policy remains defence in depth.
+Direct mutation privileges are revoked from `anon` and `authenticated` roles. Authenticated players receive their data through permission-checked read/command boundaries and the own-row RLS policy remains defence in depth.
 
-No client-facing mutation API exists in this phase.
+Internal Festival scheduling helpers are not exposed as browser RPCs. Their `SECURITY DEFINER` execution is paired with fixed `search_path` and explicit execute revocation from `PUBLIC`, `anon`, and `authenticated`.
+
+## Wristband and Festival Mode authority
+
+A valid admission-backed attendee has one Festival wristband/memorabilia representation. Add-ons cannot create duplicates.
+
+After authoritative check-in moves the lifecycle to `attending`, the reduced Festival Mode shell replaces normal desktop/mobile gameplay navigation while retaining essential Inbox, safety/reporting, privacy/blocking, and bug-report paths.
+
+Refresh/reconnect rehydrates Festival Mode from authoritative attendee state. Leave, completion, cancellation or refund restore the normal shell and the captured return route.
+
+## C4 scheduling and activity authority
+
+A Festival commitment now affects scheduling before and after check-in.
+
+### Commitment window
+
+The states below reserve the edition's full Festival-local date window against **new** incompatible commitments:
+
+```text
+ticketed
+ready_to_check_in
+attending
+```
+
+The window is derived from `festival_editions_v2.starts_on` / `ends_on` in the Festival city's timezone. Terminal states no longer reserve future gameplay.
+
+### Existing commitments before admission/check-in
+
+Existing committed activities are preserved. They are not cancelled or rewritten when an admission is created.
+
+Readiness/check-in evaluates both the shared schedule and authoritative domain records. An overlapping existing rehearsal, recording, gig or travel commitment therefore produces `schedule_conflict` and keeps the attendee out of check-in until the player resolves that commitment normally.
+
+This also repairs a historic projection weakness: check-in cannot be fooled by an authoritative booking whose `player_scheduled_activities` projection is missing.
+
+### New normal activities after commitment
+
+New overlapping normal activity fails closed at the database boundary with:
+
+```text
+festival_attendance_schedule_locked
+```
+
+The authority is enforced at:
+
+- `player_scheduled_activities` for generic schedule writes;
+- `band_rehearsals` for rehearsal booking;
+- `recording_sessions` for solo/band recording;
+- `gigs` for band gig booking;
+- `player_travel_history` for travel booking.
+
+Band guards evaluate every active real non-touring member, including legacy leader identity resolution. A leader cannot create a band booking that silently conflicts with another active member's Festival commitment.
+
+Rehearsal/recording guards execute as `BEFORE` triggers on the authoritative booking row. When their atomic finance RPC has already prepared/debited payment earlier in the same transaction, a Festival conflict raises before the booking row commits and PostgreSQL rolls the whole transaction back, including the debit.
+
+### Allowed Festival-only overlap
+
+The only allowed schedule overlap is:
+
+- the server-owned `festival_attendance` reservation itself; or
+- a `festival_performance` / `gig` schedule row whose metadata identifies the **same canonical Festival edition**.
+
+Unrelated gigs or Festival rows for another edition are not exempt.
+
+### Releasing locks
+
+Festival-owned schedule reservations are released by the existing authoritative lifecycle boundaries:
+
+- early leave → reservation cancelled;
+- cancellation/refund → Festival reservation cancelled;
+- natural event expiry/completion → reservation completed.
+
+Normal pre-existing commitments remain untouched.
+
+## Verification evidence
+
+The C4 migration was parsed successfully against the connected live RockMundo PostgreSQL schema inside an explicit `BEGIN` / `ROLLBACK` verification transaction. No production schema or data changes were retained by that check.
+
+Focused Vitest contract coverage verifies:
+
+- pre-check-in commitment states;
+- allowed Festival-only overlap;
+- generic and domain booking guards;
+- all-active-band-member checks;
+- check-in fallback to authoritative domain commitments;
+- atomic paid rehearsal/recording rollback positioning;
+- terminal Festival lock release behaviour;
+- internal function permission/search-path hardening.
 
 ## Production-state audit at introduction
 
-At the time this foundation was introduced:
+At the time the original attendee foundation was introduced:
 
 - there were no launched modern festivals in production;
 - there were no modern ticket plans;
 - there were no issued modern festival tickets;
 - therefore no live attendee migration or reconciliation was required.
 
-The migration still contains an idempotent backfill so environments with existing valid admission tickets can safely create corresponding `ticketed` attendee rows.
+The original migration still contains an idempotent backfill so environments with existing valid admission tickets can safely create corresponding `ticketed` attendee rows.
 
 ## Frontend boundary
 
-The frontend gets a small attendance domain/repository/hook boundary:
+The frontend attendance domain remains behind the attendee repository/hooks rather than introducing direct table mutation.
 
-```text
-attendance/festivalAttendance.ts
-attendance/festivalAttendanceRepository.ts
-attendance/useFestivalAttendance.ts
-```
+The public festival page may show the active character's attendee lifecycle and ticket/wristband state. Buying extra add-ons must remain possible after becoming an attendee, so the attendee badge must not globally disable the ticket shop.
 
-The public festival page may use this only to show that the active character already has an attendee lifecycle for the festival.
-
-Buying extra add-ons must remain possible after becoming an attendee, so the attendee badge must not globally disable the ticket shop.
+During `attending`, Festival Mode intentionally removes normal gameplay routes; database scheduling authority remains necessary because browser navigation is not a security/consistency boundary and pre-check-in commitments exist before Festival Mode starts.
 
 ## Known debt kept outside this slice
 
-The current festival purchase/finance implementation has changed across recent festival migrations. Any remaining finance-ledger reconciliation should be handled in the finance/festival sales stream rather than expanding this attendee foundation.
+The current festival purchase/finance implementation has changed across festival migrations. Any remaining finance-ledger reconciliation belongs in the finance/festival sales stream rather than expanding attendee scheduling authority.
 
-This slice deliberately does not modify existing purchase accounting.
+C4 deliberately does not implement day planning, attendee condition simulation, random/social events, or completion rewards.
 
 ## Next implementation slice
 
-After this foundation is stable:
+With C1–C4 complete, the next attendee slice is **C5 — Festival day planner and stage schedule**:
 
-1. Add wristband/memorabilia integration using the existing inventory model.
-2. Add explicit check-in eligibility/readiness.
-3. Add server-authoritative check-in and leave RPCs.
-4. Introduce the Festival Mode shell only after check-in state is reliable.
-5. Add scheduling locks after Festival Mode entry/exit is authoritative.
+1. Build a persisted per-day attendee plan.
+2. Let players select bands/stages and Festival-area activities.
+3. Include walking/travel time between Festival areas.
+4. Detect intra-Festival timetable conflicts.
+5. Show trade-offs before the plan is committed.
 
-Do not implement rewards, day planning, random events or festival condition stats before the entry/exit lifecycle is stable.
+Do not duplicate the normal RockMundo scheduler for internal Festival day planning; C4 owns the external whole-Festival reservation while C5 should own the feasible plan *inside* that reservation.
