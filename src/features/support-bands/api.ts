@@ -51,6 +51,28 @@ export type GigSupportSlot = {
   updated_at?: string;
 };
 
+export type TourSupportCandidate = {
+  support_band_id: string;
+  support_band_name: string;
+  fame: number;
+  popularity: number;
+  eligible_shows: number;
+  total_shows: number;
+  full_tour_match: boolean;
+};
+
+export type TourSupportShowCandidate = {
+  gig_id: string;
+  scheduled_date: string;
+  city_id: string;
+  venue_id: string;
+  support_band_id: string;
+  support_band_name: string;
+  fame: number;
+  popularity: number;
+  travel_feasible: boolean;
+};
+
 export async function getSupportPreferences(bandId: string): Promise<SupportPreferences | null> {
   const { data, error } = await (supabase as any)
     .from('band_support_preferences')
@@ -150,6 +172,32 @@ export async function findAvailableSupportBands(input: {
 
   if (error) throw error;
   return (data ?? []) as AvailableSupportBand[];
+}
+
+export async function findTourSupportCandidates(input: {
+  headlinerBandId: string;
+  tourId: string;
+}): Promise<TourSupportCandidate[]> {
+  const { data, error } = await (supabase as any).rpc('find_tour_support_candidates', {
+    p_headliner_band_id: input.headlinerBandId,
+    p_tour_id: input.tourId,
+  });
+
+  if (error) throw error;
+  return (data ?? []) as TourSupportCandidate[];
+}
+
+export async function findTourSupportShowCandidates(input: {
+  headlinerBandId: string;
+  tourId: string;
+}): Promise<TourSupportShowCandidate[]> {
+  const { data, error } = await (supabase as any).rpc('find_tour_support_show_candidates', {
+    p_headliner_band_id: input.headlinerBandId,
+    p_tour_id: input.tourId,
+  });
+
+  if (error) throw error;
+  return (data ?? []) as TourSupportShowCandidate[];
 }
 
 export async function createGigSupportOffer(input: {
