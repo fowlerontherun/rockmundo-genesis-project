@@ -71,3 +71,5 @@ jobs:
           git add docs/IMPLEMENTATION_BACKLOG.md .github/workflows/temp-finalize-c3.yml
           git commit -m "docs(backlog): mark Festival C3 complete"
           git push origin HEAD:agent/festival-c3-mode-shell
+
+# Trigger the validation run after this workflow exists on the branch.
