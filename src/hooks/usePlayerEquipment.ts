@@ -50,9 +50,7 @@ export const usePlayerEquipment = () => {
   return useQuery<PlayerEquipmentData>({
     queryKey: ["player-equipment", profileId],
     queryFn: async () => {
-      if (!profileId) {
-        return { items: [], poolStatus: [] };
-      }
+      if (!profileId) return { items: [], poolStatus: [] };
 
       const [equipmentResult, poolResult] = await Promise.all([
         (supabase as any)
@@ -61,7 +59,7 @@ export const usePlayerEquipment = () => {
             `id, equipment_id, condition, is_equipped, created_at, available_for_loadout, available_at, loadout_slot_kind, pool_category,
              equipment:equipment_items!equipment_id (id, name, category, subcategory, price, rarity, description, stat_boosts, stock)`
           )
-          .eq("user_id", profileId)
+          .eq("profile_id", profileId)
           .order("created_at", { ascending: false }),
         (supabase as any)
           .from("player_gear_pool_status")
@@ -69,13 +67,8 @@ export const usePlayerEquipment = () => {
           .eq("user_id", profileId),
       ]);
 
-      if (equipmentResult.error) {
-        throw equipmentResult.error;
-      }
-
-      if (poolResult.error) {
-        throw poolResult.error;
-      }
+      if (equipmentResult.error) throw equipmentResult.error;
+      if (poolResult.error) throw poolResult.error;
 
       return {
         items: ((equipmentResult.data as PlayerEquipmentWithItem[] | null) ?? []).map((entry) => ({

@@ -13,81 +13,49 @@ interface EquipGearVariables {
   activityMetadata?: Record<string, unknown> | null;
 }
 
-interface EquipGearResult {
-  id: string;
-  isEquipped: boolean | null;
-}
+interface EquipGearResult { id: string; isEquipped: boolean | null; }
 
 export const useEquipPlayerEquipment = () => {
-  const { profileId, userId } = useActiveProfile();
+  const { profileId } = useActiveProfile();
   const { addActivity } = useGameData();
   const queryClient = useQueryClient();
 
   const mutation = useMutation<EquipGearResult, Error, EquipGearVariables>({
     mutationFn: async (variables) => {
-      if (!userId) {
-        throw new Error("You must be signed in to update equipment");
-      }
-
+      if (!profileId) throw new Error("You must have an active character to update equipment");
       const targetId = variables.playerEquipmentId;
       const unequipIds = (variables.unequipIds ?? []).filter((id) => id && id !== targetId);
-
       if (unequipIds.length > 0) {
         const { error: unequipError } = await supabase
           .from("player_equipment_inventory")
           .update({ is_equipped: false })
           .in("id", unequipIds)
-          .eq("user_id", userId);
-
-        if (unequipError) {
-          throw unequipError;
-        }
+          .eq("profile_id", profileId);
+        if (unequipError) throw unequipError;
       }
-
       const { data, error } = await supabase
         .from("player_equipment_inventory")
         .update({ is_equipped: variables.equip })
         .eq("id", targetId)
-        .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .select("id, is_equipped")
         .maybeSingle();
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error("Gear not found in your inventory");
-      }
-
+      if (error) throw error;
+      if (!data) throw new Error("Gear not found in this character's inventory");
       return { id: data.id, isEquipped: data.is_equipped } satisfies EquipGearResult;
     },
     onSuccess: async (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["player-equipment", userId] });
       queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
-
       if (variables.equip && variables.activityMessage) {
         try {
-          await addActivity(
-            "gear_equip",
-            variables.activityMessage,
-            undefined,
-            (variables.activityMetadata ?? null) as any,
-          );
+          await addActivity("gear_equip", variables.activityMessage, undefined, (variables.activityMetadata ?? null) as any);
         } catch (activityError) {
           console.error("Failed to log gear equip activity", activityError);
         }
       }
     },
-    onError: (error) => {
-      toast.error(error.message || "Unable to update equipment");
-    },
+    onError: (error) => toast.error(error.message || "Unable to update equipment"),
   });
 
-  return {
-    equipGear: mutation.mutate,
-    equipGearAsync: mutation.mutateAsync,
-    isUpdating: mutation.isPending,
-  };
+  return { equipGear: mutation.mutate, equipGearAsync: mutation.mutateAsync, isUpdating: mutation.isPending };
 };
-
