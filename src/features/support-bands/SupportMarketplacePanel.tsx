@@ -67,7 +67,8 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
   const [availability, setAvailability] = useState<SupportAvailability[]>([]);
   const [offers, setOffers] = useState<SupportOfferView[]>([]);
   const [gigs, setGigs] = useState<HeadlinerGig[]>([]);
-  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [citySearch, setCitySearch] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
   const [availableUntil, setAvailableUntil] = useState('');
   const [selectedGigId, setSelectedGigId] = useState('');
@@ -78,6 +79,11 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const cityNames = useMemo(() => new Map(cities.map((city) => [city.id, city.name])), [cities]);
+  const filteredCities = useMemo(() => {
+    const query = citySearch.trim().toLowerCase();
+    if (!query) return cities;
+    return cities.filter((city) => `${city.name} ${city.country ?? ''}`.toLowerCase().includes(query));
+  }, [cities, citySearch]);
 
   const loadMarketplace = useCallback(async () => {
     setLoading(true);
@@ -141,14 +147,35 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     }
   };
 
+  const toggleCitySelection = (cityId: string) => {
+    setSelectedCities((current) => current.includes(cityId)
+      ? current.filter((id) => id !== cityId)
+      : [...current, cityId]);
+  };
+
   const addAvailability = async () => {
-    if (!selectedCity || !availableFrom || !availableUntil) return;
+    if (selectedCities.length === 0 || !availableFrom || !availableUntil) return;
+    if (availableUntil < availableFrom) {
+      toast({ title: 'Invalid date range', description: 'The end date must be on or after the start date.', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
-      await addSupportAvailability({ bandId, cityId: selectedCity, availableFrom, availableUntil });
-      setSelectedCity(''); setAvailableFrom(''); setAvailableUntil('');
+      await Promise.all(selectedCities.map((cityId) => addSupportAvailability({
+        bandId,
+        cityId,
+        availableFrom,
+        availableUntil,
+      })));
+      const addedCount = selectedCities.length;
+      setSelectedCities([]);
+      setCitySearch('');
       await loadMarketplace();
-      toast({ title: 'Availability added' });
+      toast({
+        title: 'Availability added',
+        description: `${addedCount} ${addedCount === 1 ? 'city' : 'cities'} added for ${availableFrom} to ${availableUntil}.`,
+      });
     } catch (error: any) {
       toast({ title: 'Could not add availability', description: error?.message, variant: 'destructive' });
     } finally { setSaving(false); }
@@ -236,11 +263,80 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
               <div className="md:col-span-2"><Button onClick={savePrefs} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save preferences</Button></div>
             </div>
 
-            <div className="grid gap-3 rounded-lg border p-4 md:grid-cols-4">
-              <div className="md:col-span-2"><Label>City</Label><Select value={selectedCity} onValueChange={setSelectedCity}><SelectTrigger><SelectValue placeholder="Choose city" /></SelectTrigger><SelectContent>{cities.map((city) => <SelectItem key={city.id} value={city.id}>{city.name}{city.country ? ` · ${city.country}` : ''}</SelectItem>)}</SelectContent></Select></div>
-              <div><Label>From</Label><Input type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} /></div>
-              <div><Label>Until</Label><Input type="date" value={availableUntil} onChange={(e) => setAvailableUntil(e.target.value)} /></div>
-              <div className="md:col-span-4"><Button variant="secondary" onClick={addAvailability} disabled={saving || !selectedCity || !availableFrom || !availableUntil}><Plus className="mr-2 h-4 w-4" />Add availability</Button></div>
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>From</Label>
+                  <Input type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Until</Label>
+                  <Input type="date" value={availableUntil} onChange={(e) => setAvailableUntil(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <Label>Cities</Label>
+                    <p className="text-sm text-muted-foreground">Select every city where these same dates should apply.</p>
+                  </div>
+                  {selectedCities.length > 0 && <Badge variant="secondary">{selectedCities.length} selected</Badge>}
+                </div>
+                <Input
+                  value={citySearch}
+                  onChange={(e) => setCitySearch(e.target.value)}
+                  placeholder="Search cities or countries..."
+                  aria-label="Search support opportunity cities"
+                />
+                <div className="max-h-64 overflow-y-auto rounded-md border p-2">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredCities.map((city) => {
+                      const selected = selectedCities.includes(city.id);
+                      return (
+                        <Button
+                          key={city.id}
+                          type="button"
+                          variant={selected ? 'default' : 'outline'}
+                          className="h-auto min-h-10 justify-start whitespace-normal px-3 py-2 text-left"
+                          onClick={() => toggleCitySelection(city.id)}
+                          aria-pressed={selected}
+                        >
+                          {selected && <Check className="mr-2 h-4 w-4 shrink-0" />}
+                          <span>{city.name}{city.country ? <span className="text-xs opacity-80"> · {city.country}</span> : null}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  {filteredCities.length === 0 && <p className="p-3 text-sm text-muted-foreground">No matching cities.</p>}
+                </div>
+                {selectedCities.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCities.map((cityId) => (
+                      <Badge key={cityId} variant="outline" className="gap-1 pr-1">
+                        {cityNames.get(cityId) ?? 'City'}
+                        <button
+                          type="button"
+                          className="rounded p-0.5 hover:bg-muted"
+                          onClick={() => toggleCitySelection(cityId)}
+                          aria-label={`Remove ${cityNames.get(cityId) ?? 'city'}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Button
+                variant="secondary"
+                onClick={addAvailability}
+                disabled={saving || selectedCities.length === 0 || !availableFrom || !availableUntil}
+              >
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Add availability to {selectedCities.length || 0} {selectedCities.length === 1 ? 'city' : 'cities'}
+              </Button>
             </div>
 
             <div className="space-y-2">
