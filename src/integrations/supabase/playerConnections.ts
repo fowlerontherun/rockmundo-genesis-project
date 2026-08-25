@@ -7,14 +7,17 @@ export type FriendListKind = "friends" | "incoming" | "outgoing" | "recent";
 
 export interface FriendSummary { id: string; friendshipId: string; characterName: string; username?: string | null; avatarUrl?: string | null; cityName?: string | null; bandName?: string | null; primaryRole?: string | null; status: ManagedFriendshipStatus; requestedAt: string; friendshipDate?: string | null; mutualFriendCount: number; }
 
-export async function getConnectionState(targetProfileId: string): Promise<ConnectionState> {
-  const { data, error } = await (supabase as any).rpc("get_connection_state", { target_profile_id: targetProfileId });
+export async function getConnectionState(targetProfileId: string, viewerProfileId?: string | null): Promise<ConnectionState> {
+  const { data, error } = await (supabase as any).rpc("get_connection_state", {
+    target_profile_id: targetProfileId,
+    viewer_profile_id: viewerProfileId ?? null,
+  });
   if (error) throw error;
   return (data ?? "unavailable") as ConnectionState;
 }
 
-export async function sendConnectionRequest(targetProfileId: string) {
-  return sendFriendRequest({ addresseeProfileId: targetProfileId });
+export async function sendConnectionRequest(targetProfileId: string, requestorProfileId?: string | null) {
+  return sendFriendRequest({ requestorProfileId: requestorProfileId ?? undefined, addresseeProfileId: targetProfileId });
 }
 
 export async function respondToFriendship(friendshipId: string, nextStatus: Exclude<ManagedFriendshipStatus, "pending" | "blocked" | "expired">) {
@@ -23,8 +26,8 @@ export async function respondToFriendship(friendshipId: string, nextStatus: Excl
   return data;
 }
 
-export async function getFriendRequestCounts(): Promise<{ friends: number; incoming: number; outgoing: number }> {
-  const { data, error } = await (supabase as any).rpc("get_friend_request_counts");
+export async function getFriendRequestCounts(profileId?: string | null): Promise<{ friends: number; incoming: number; outgoing: number }> {
+  const { data, error } = await (supabase as any).rpc("get_friend_request_counts", { profile_id: profileId ?? null });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   return { friends: Number(row?.friends ?? 0), incoming: Number(row?.incoming ?? 0), outgoing: Number(row?.outgoing ?? 0) };
