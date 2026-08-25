@@ -68,10 +68,37 @@ end = sql.index(
 )
 section = sql[start:end]
 section = section.replace("  request_hash text;", "  v_request_hash text;", 1)
-section = section.replace("  request_hash := public.festival_terms_hash(", "  v_request_hash := public.festival_terms_hash(", 1)
-section = section.replace("collaboration.request_hash <> request_hash", "collaboration.request_hash <> v_request_hash", 1)
-section = section.replace("request_hash = request_hash,", "request_hash = v_request_hash,", 1)
-section = section.replace("      request_hash\n    )", "      v_request_hash\n    )", 1)
+section = section.replace(
+    "  request_hash := public.festival_terms_hash(",
+    "  v_request_hash := public.festival_terms_hash(",
+    1,
+)
+section = section.replace(
+    "collaboration.request_hash <> request_hash",
+    "collaboration.request_hash <> v_request_hash",
+    1,
+)
+section = section.replace(
+    "request_hash = request_hash,",
+    "request_hash = v_request_hash,",
+    1,
+)
+insert_value_marker = """      actor,
+      p_idempotency_key,
+      request_hash
+    )
+    RETURNING * INTO collaboration;"""
+if insert_value_marker not in section:
+    raise SystemExit("Invitation insert value marker not found; refusing ambiguous migration rewrite")
+section = section.replace(
+    insert_value_marker,
+    """      actor,
+      p_idempotency_key,
+      v_request_hash
+    )
+    RETURNING * INTO collaboration;""",
+    1,
+)
 sql = sql[:start] + section + sql[end:]
 migration_path.write_text(sql)
 
