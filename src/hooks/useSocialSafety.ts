@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { blockPlayer, getSocialPermissions, listBlockedPlayers, listMyReports, submitPlayerReport, unblockPlayer, type BlockReasonCategory, type ReportCategory } from "@/services/socialSafety";
+import { blockPlayer, getSocialPermissions, listBlockedPlayers, listMyReports, mutePlayer, submitPlayerReport, unblockPlayer, unmutePlayer, type BlockReasonCategory, type ReportCategory } from "@/services/socialSafety";
 
 export function useSocialPermission(targetProfileId?: string | null) {
   return useQuery({ queryKey: ["social-permission", targetProfileId], queryFn: () => getSocialPermissions(targetProfileId!), enabled: !!targetProfileId });
@@ -26,6 +26,20 @@ export function usePlayerBlockActions(targetProfileId?: string | null) {
   const block = useMutation({ mutationFn: (input?: { reasonCategory?: BlockReasonCategory | null; privateNote?: string | null }) => blockPlayer(targetProfileId!, input?.reasonCategory, input?.privateNote), onSuccess: () => { toast.success("Player blocked. They were not notified."); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
   const unblock = useMutation({ mutationFn: () => unblockPlayer(targetProfileId!), onSuccess: () => { toast.success("Player unblocked"); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
   return { block, unblock };
+}
+
+export function usePlayerMuteActions(targetProfileId?: string | null) {
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["social-permission"] });
+    queryClient.invalidateQueries({ queryKey: ["direct-messages"] });
+    queryClient.invalidateQueries({ queryKey: ["twaater-messages"] });
+    queryClient.invalidateQueries({ queryKey: ["twaater-notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+  };
+  const mute = useMutation({ mutationFn: () => mutePlayer(targetProfileId!), onSuccess: () => { toast.success("Player muted. They can still interact, but their direct/Twaater content is hidden from you."); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
+  const unmute = useMutation({ mutationFn: () => unmutePlayer(targetProfileId!), onSuccess: () => { toast.success("Player unmuted"); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
+  return { mute, unmute };
 }
 
 export function useReportPlayer() {
