@@ -3,7 +3,10 @@ import { join } from "node:path";
 
 const migrationDirectory = join(process.cwd(), "supabase", "migrations");
 const filenamePattern = /^(\d{14})_.+\.sql$/;
-const knownLegacyFutureCeiling = "20291217122000";
+// Main already contains the historical future-dated Festival sequence through C1.
+// Freeze that merged boundary exactly; C2 and any later continuation must still be
+// named explicitly below so the guard continues to reject accidental new futures.
+const knownLegacyFutureCeiling = "20291219080000";
 const festivalPhase2Continuation = "20291217130000_festival_site_and_stage_planning.sql";
 const festivalPhase3Continuation = "20291217140000_festival_ticketing_and_capacity_planning.sql";
 const festivalPhase4Continuation = "20291217150000_festival_artist_applications_and_bookings.sql";
