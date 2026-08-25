@@ -22,6 +22,7 @@ import {
   validateFestivalSetlist,
   type FestivalSetlistItemInput,
 } from "../bookingTypes";
+import { useFestivalContractCollaborators } from "../b7CollaborationVoting";
 import {
   useFestivalContractRepertoire,
   useFestivalSetlist,
@@ -51,6 +52,10 @@ export function FestivalSetlistEditorCanonical({
   );
   const [reason, setReason] = useState("");
   const repertoire = useFestivalContractRepertoire(contract.id);
+  const collaborators = useFestivalContractCollaborators(contract.id);
+  const acceptedCollaborators = (collaborators.data ?? []).filter(
+    (collaboration) => collaboration.status === "accepted",
+  );
   const preflight = useFestivalSetlistPreflight(contract.id, items);
   const maxSeconds =
     Number(contract.terms_snapshot?.set_duration_minutes ?? 45) * 60;
@@ -126,7 +131,7 @@ export function FestivalSetlistEditorCanonical({
             return (
               <div
                 key={`${item.song_id}-${index}`}
-                className="grid gap-2 rounded border p-2 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)_auto]"
+                className="grid gap-2 rounded border p-2 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,0.8fr)_minmax(0,1fr)_auto]"
               >
                 <Select
                   disabled={readOnly || repertoire.isLoading || repertoire.isError}
@@ -196,6 +201,38 @@ export function FestivalSetlistEditorCanonical({
                     )
                   }
                 />
+                <Select
+                  disabled={readOnly || collaborators.isLoading}
+                  value={item.guest_profile_id ?? "none"}
+                  onValueChange={(value) =>
+                    setItems(
+                      items.map((it, i) =>
+                        i === index
+                          ? {
+                              ...it,
+                              guest_profile_id:
+                                value === "none" ? undefined : value,
+                            }
+                          : it,
+                      ),
+                    )
+                  }
+                >
+                  <SelectTrigger aria-label={`Guest performer for song ${index + 1}`}>
+                    <SelectValue placeholder="No guest" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No guest</SelectItem>
+                    {acceptedCollaborators.map((collaboration) => (
+                      <SelectItem
+                        key={collaboration.profileId}
+                        value={collaboration.profileId}
+                      >
+                        {collaboration.displayName} · {collaboration.role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
                   aria-label={`Performance notes for song ${index + 1}`}
                   disabled={readOnly}
@@ -268,6 +305,14 @@ export function FestivalSetlistEditorCanonical({
           </Button>
         ) : null}
 
+        {acceptedCollaborators.length ? (
+          <p className="text-xs text-muted-foreground">
+            Accepted guest/featured performers can be assigned per song. The
+            server rejects any guest whose accepted obligations do not cover the
+            selected performance.
+          </p>
+        ) : null}
+
         {validation.warnings.map((warning) => (
           <p role="alert" key={warning} className="text-sm text-amber-600">
             {warning}
@@ -275,7 +320,7 @@ export function FestivalSetlistEditorCanonical({
         ))}
         {preflight.isFetching ? (
           <p className="text-sm text-muted-foreground">
-            Checking repertoire, duration and availability…
+            Checking repertoire, duration, guest obligations and availability…
           </p>
         ) : null}
         {preflight.isError ? (
@@ -287,6 +332,11 @@ export function FestivalSetlistEditorCanonical({
         {(preflight.data?.blockingReasons ?? []).map((blocker) => (
           <p role="alert" key={blocker} className="text-sm text-destructive">
             {blocker}
+          </p>
+        ))}
+        {(preflight.data?.guestPerformerIssues ?? []).map((issue) => (
+          <p role="alert" key={issue} className="text-sm text-destructive">
+            {issue}
           </p>
         ))}
         {(preflight.data?.warnings ?? []).map((warning) => (
