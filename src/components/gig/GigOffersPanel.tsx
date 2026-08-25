@@ -7,6 +7,7 @@ import { Calendar, DollarSign, Clock, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { acceptGigOffer, rejectGigOffer } from '@/utils/gigOfferGenerator';
 import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
+import { SupportHistoryPanel } from '@/features/support-bands/SupportHistoryPanel';
 
 interface GigOffer {
   id: string;
@@ -139,6 +140,7 @@ export function GigOffersPanel({ bandId }: { bandId: string }) {
       </section>
 
       <SupportMarketplacePanel bandId={bandId} />
+      <SupportHistoryPanel bandId={bandId} />
     </div>
   );
 }
