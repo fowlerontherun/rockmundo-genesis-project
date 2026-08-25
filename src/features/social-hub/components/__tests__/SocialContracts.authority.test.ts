@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const repoRoot = path.resolve(__dirname, "../../../../../");
+const repoRoot = process.cwd();
 const hookSource = fs.readFileSync(path.join(repoRoot, "src/hooks/useSocialContracts.ts"), "utf8");
 const panelSource = fs.readFileSync(path.join(repoRoot, "src/features/social-hub/components/SocialContractsPanel.tsx"), "utf8");
 
