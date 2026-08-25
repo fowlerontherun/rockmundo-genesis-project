@@ -12,6 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listPublicFestivalEditions } from "@/features/festivals/service";
 import { festivalBookingKeys } from "../bookingTypes";
+import { useFestivalBookingRealtime } from "../b7CollaborationVoting";
 import {
   useFestivalApplicationActions,
   useFestivalApplications,
@@ -28,6 +29,10 @@ import { createStableMutationIdempotencyKey } from "../useStableMutationIdempote
 import { ApplicationStatusCard } from "./ApplicationStatusCard";
 import { ContractWorkspace } from "./ContractWorkspace";
 import { FestivalApplicationDialog } from "./FestivalApplicationDialog";
+import {
+  FestivalFanVoting,
+  FestivalGuestCollaborationInvitations,
+} from "./FestivalB7Panels";
 import { FestivalDirectInvitations } from "./FestivalDirectInvitations";
 import { FestivalSetlistEditorCanonical } from "./FestivalSetlistEditor";
 import { OfferRevisionCard } from "./OfferRevisionCard";
@@ -35,6 +40,7 @@ import { OfferRevisionCard } from "./OfferRevisionCard";
 export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
   const [applyEdition, setApplyEdition] =
     useState<PublicFestivalEdition | null>(null);
+  useFestivalBookingRealtime(`player-${bandId ?? "all"}`);
   const editions = useQuery({
     queryKey: festivalBookingKeys.publicEditions,
     queryFn: listPublicFestivalEditions,
@@ -64,10 +70,11 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="discover">
-        <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
+        <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="discover">Discover</TabsTrigger>
           <TabsTrigger value="applications">My Applications</TabsTrigger>
           <TabsTrigger value="invitations">Invitations</TabsTrigger>
+          <TabsTrigger value="fan-voting">Fan Voting</TabsTrigger>
           <TabsTrigger value="offers">Offers</TabsTrigger>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="prep">Preparation</TabsTrigger>
@@ -146,8 +153,12 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
             <p>No applications yet.</p>
           )}
         </TabsContent>
-        <TabsContent value="invitations" className="space-y-3">
+        <TabsContent value="invitations" className="space-y-4">
           <FestivalDirectInvitations bandId={bandId} editions={allEditions} />
+          <FestivalGuestCollaborationInvitations />
+        </TabsContent>
+        <TabsContent value="fan-voting" className="space-y-3">
+          <FestivalFanVoting />
         </TabsContent>
         <TabsContent value="offers" className="space-y-3">
           {(offers.data ?? []).length ? (
