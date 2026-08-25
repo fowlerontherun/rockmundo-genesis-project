@@ -39,20 +39,32 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $function$
 DECLARE
-  v_ticket public.festival_issued_tickets%ROWTYPE;
+  v_ticket_status public.festival_issued_tickets.status%TYPE;
+  v_ticket_holder_profile_id public.festival_issued_tickets.holder_profile_id%TYPE;
+  v_ticket_launch_id public.festival_issued_tickets.festival_launch_id%TYPE;
+  v_ticket_reference public.festival_issued_tickets.ticket_reference%TYPE;
+  v_ticket_issued_at public.festival_issued_tickets.issued_at%TYPE;
   v_product_class text;
   v_ticket_type text;
   v_product_edition_id uuid;
   v_edition_name text;
   v_edition_year integer;
 BEGIN
-  SELECT ticket.*,
+  SELECT ticket.status,
+         ticket.holder_profile_id,
+         ticket.festival_launch_id,
+         ticket.ticket_reference,
+         ticket.issued_at,
          product.product_class,
          product.ticket_type,
          plan.festival_edition_id,
          edition.name,
          edition.edition_year
-    INTO v_ticket,
+    INTO v_ticket_status,
+         v_ticket_holder_profile_id,
+         v_ticket_launch_id,
+         v_ticket_reference,
+         v_ticket_issued_at,
          v_product_class,
          v_ticket_type,
          v_product_edition_id,
@@ -69,9 +81,9 @@ BEGIN
 
   IF NOT FOUND
      OR v_product_class <> 'admission'
-     OR v_ticket.status NOT IN ('valid', 'used')
-     OR v_ticket.holder_profile_id <> NEW.profile_id
-     OR v_ticket.festival_launch_id <> NEW.festival_launch_id
+     OR v_ticket_status NOT IN ('valid', 'used')
+     OR v_ticket_holder_profile_id <> NEW.profile_id
+     OR v_ticket_launch_id <> NEW.festival_launch_id
      OR v_product_edition_id IS DISTINCT FROM NEW.festival_edition_id THEN
     RAISE EXCEPTION 'festival_wristband_admission_mismatch' USING ERRCODE = 'P0001';
   END IF;
@@ -105,10 +117,10 @@ BEGIN
       'festivalEditionId', NEW.festival_edition_id,
       'attendanceId', NEW.id,
       'admissionTicketId', NEW.admission_ticket_id,
-      'ticketReference', v_ticket.ticket_reference,
+      'ticketReference', v_ticket_reference,
       'ticketType', v_ticket_type
     )),
-    coalesce(v_ticket.issued_at, NEW.created_at, now())
+    coalesce(v_ticket_issued_at, NEW.created_at, now())
   )
   ON CONFLICT (attendance_id, item_type) DO UPDATE
   SET admission_ticket_id = EXCLUDED.admission_ticket_id,
