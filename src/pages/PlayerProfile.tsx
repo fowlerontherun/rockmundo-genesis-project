@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { usePlayerConnection } from "@/hooks/usePlayerConnections";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSocialPermission } from "@/hooks/useSocialSafety";
 import { SafetyActions } from "@/components/social-safety/SafetyActions";
 import { respondToFriendship } from "@/integrations/supabase/playerConnections";
@@ -25,20 +26,9 @@ export default function PlayerProfile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get current user
-  const { data: currentUser, isLoading: isCurrentUserLoading } = useQuery({
-    queryKey: ["current-user"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, user_id")
-        .eq("user_id", user.id)
-        .single();
-      return profile;
-    },
-  });
+  // Always resolve the currently selected character. Querying profiles by
+  // user_id with .single() fails for accounts that own more than one character.
+  const { profile: currentUser, isLoading: isCurrentUserLoading } = useActiveProfile();
 
   const { data: profile, isLoading, isError, error } = useQuery({
     queryKey: ["public-player-profile-detail", playerId, currentUser?.id],
