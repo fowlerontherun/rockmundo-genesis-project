@@ -1,0 +1,53 @@
+name: Temporary B7 Festival Finalizer
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.ref == 'codex/backlog-b7-collaboration-voting-closure'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/backlog-b7-collaboration-voting-closure
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Apply B7 final corrections
+        run: python scripts/festivals/temp-finalize-b7.py
+      - name: Run focused B7 regressions
+        run: >-
+          npx vitest run
+          src/features/festivals/booking/directInvitations.database.test.ts
+          src/features/festivals/booking/b7CollaborationVoting.database.test.ts
+          src/features/festivals/booking/projections.test.ts
+          src/features/festivals/booking/hooks.test.tsx
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Repository lint gate
+        run: npm run lint:ci
+      - name: Migration timestamp verification
+        run: npm run verify:migration-timestamps
+      - name: Build
+        run: npm run build
+      - name: Commit final changes and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-finalize-b7.yml
+          git rm scripts/festivals/temp-finalize-b7.py
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Finalize backlog B7 festival collaboration and fan voting"
+          git push origin HEAD:codex/backlog-b7-collaboration-voting-closure
