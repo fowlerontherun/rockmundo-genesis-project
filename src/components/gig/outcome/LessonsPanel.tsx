@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { GigExperienceDTO } from "@/features/gig-experience/types";
 import { metricValue } from "@/features/gig-experience/reportMetric";
 import { bestSong, weakestSong, songScore } from "./reportUtils";
+import { SupportContributionCard } from "./SupportContributionCard";
 
 export function buildLessons(experience: GigExperienceDTO) {
   const worked = [...experience.lessons.worked];
@@ -45,14 +46,19 @@ export function buildLessons(experience: GigExperienceDTO) {
 export function LessonsPanel({ experience }: { experience: GigExperienceDTO }) {
   const lessons = buildLessons(experience);
   const empty = lessons.worked.length + lessons.heldBack.length + lessons.recommendations.length === 0;
-  return <Card aria-labelledby="lessons-heading" className="border-primary/30 bg-primary/5">
-    <CardHeader><CardTitle id="lessons-heading" className="flex items-center gap-2"><Lightbulb className="h-5 w-5" />Lessons for next gig</CardTitle></CardHeader>
-    <CardContent>{empty ? <p className="text-sm text-muted-foreground">No evidence-based recommendations are available yet.</p> : <div className="grid gap-4 md:grid-cols-3">
-      <LessonList icon={<CheckCircle2 className="h-4 w-4 text-green-600" />} title="What worked" items={lessons.worked} />
-      <LessonList icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} title="What didn't" items={lessons.heldBack} />
-      <LessonList icon={<Lightbulb className="h-4 w-4 text-primary" />} title="Recommended actions" items={lessons.recommendations} />
-    </div>}</CardContent>
-  </Card>;
+  const gigId = experience.gig.id && experience.gig.id !== "legacy" ? experience.gig.id : null;
+
+  return <div className="space-y-4">
+    <SupportContributionCard gigId={gigId} />
+    <Card aria-labelledby="lessons-heading" className="border-primary/30 bg-primary/5">
+      <CardHeader><CardTitle id="lessons-heading" className="flex items-center gap-2"><Lightbulb className="h-5 w-5" />Lessons for next gig</CardTitle></CardHeader>
+      <CardContent>{empty ? <p className="text-sm text-muted-foreground">No evidence-based recommendations are available yet.</p> : <div className="grid gap-4 md:grid-cols-3">
+        <LessonList icon={<CheckCircle2 className="h-4 w-4 text-green-600" />} title="What worked" items={lessons.worked} />
+        <LessonList icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} title="What didn't" items={lessons.heldBack} />
+        <LessonList icon={<Lightbulb className="h-4 w-4 text-primary" />} title="Recommended actions" items={lessons.recommendations} />
+      </div>}</CardContent>
+    </Card>
+  </div>;
 }
 function LessonList({ title, items, icon }: { title: string; items: string[]; icon: React.ReactNode }) {
   return <section><h3 className="mb-2 flex items-center gap-2 font-semibold">{icon}{title}</h3>{items.length ? <ul className="space-y-2 text-sm">{items.map((item) => <li key={item} className="rounded-md bg-background/80 p-2">{item}</li>)}</ul> : <p className="text-sm text-muted-foreground">No confirmed issue.</p>}</section>;
