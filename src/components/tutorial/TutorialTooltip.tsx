@@ -7,6 +7,15 @@ import { X, ChevronRight, Lightbulb, CheckCircle2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
+const LEGACY_TUTORIAL_ROUTE_REDIRECTS: Record<string, string> = {
+  "/rehearsals": "/band/rehearsals",
+};
+
+const resolveTutorialRoute = (route?: string | null) => {
+  if (!route) return null;
+  return LEGACY_TUTORIAL_ROUTE_REDIRECTS[route] ?? route;
+};
+
 export const TutorialTooltip = () => {
   const { currentStep, progressPercent, completeStep, incompleteSteps } = useTutorial();
   const navigate = useNavigate();
@@ -22,16 +31,18 @@ export const TutorialTooltip = () => {
     }
   }, []);
 
-  // Auto-complete step when user visits the target route
+  // Auto-complete step when user visits the target route, including legacy routes
+  // that have since moved into a hub.
   useEffect(() => {
-    if (currentStep?.target_route && location.pathname === currentStep.target_route) {
+    const targetRoute = resolveTutorialRoute(currentStep?.target_route);
+    if (targetRoute && location.pathname === targetRoute) {
       // Mark as visited after a short delay
       const timer = setTimeout(() => {
         completeStep(currentStep.step_key);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [location.pathname, currentStep]);
+  }, [location.pathname, currentStep, completeStep]);
 
   if (dismissed || !currentStep || progressPercent === 100) {
     return null;
@@ -53,8 +64,9 @@ export const TutorialTooltip = () => {
   };
 
   const handleGoToStep = () => {
-    if (currentStep.target_route) {
-      navigate(currentStep.target_route);
+    const targetRoute = resolveTutorialRoute(currentStep.target_route);
+    if (targetRoute) {
+      navigate(targetRoute);
     }
   };
 
