@@ -1,9 +1,15 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Music, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MapPin, MessageSquare, Music, User, UserRoundPlus } from "lucide-react";
 import { PresenceIndicator } from "@/components/presence/PresenceIndicator";
+import { DirectMessagePanel } from "@/features/relationships/components/DirectMessagePanel";
+import { resolveRelationshipPairKey } from "@/features/relationships/api";
+import { INVITE_KIND_LABELS, type SocialInviteKind, useCreateInvite } from "@/hooks/useSocialInvites";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface PlayerProfileHeaderProps {
   name: string;
@@ -50,12 +56,62 @@ export function PlayerProfileHeader({ name, username, avatarUrl, cityName, curre
   );
 }
 
+const INVITE_KINDS = Object.keys(INVITE_KIND_LABELS) as SocialInviteKind[];
+
 export function FutureProfileActions() {
+  const location = useLocation();
+  const { profileId, userId } = useActiveProfile();
+  const createInvite = useCreateInvite();
+  const [messageOpen, setMessageOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+
+  const targetProfileId = location.pathname.match(/\/player\/([0-9a-f-]{36})/i)?.[1] ?? null;
+  const canInteract = Boolean(profileId && userId && targetProfileId && targetProfileId !== profileId);
+  const channel = canInteract ? `dm:${resolveRelationshipPairKey(profileId!, targetProfileId!)}` : null;
+
+  const sendInvite = async (kind: SocialInviteKind) => {
+    if (!targetProfileId) return;
+    await createInvite.mutateAsync({ to_profile_id: targetProfileId, kind });
+    setInviteOpen(false);
+  };
+
+  if (!canInteract) return null;
+
   return (
     <>
-      {['Message', 'Invite to activity', 'Offer job', 'Send item', 'Send money', 'Report', 'Block'].map((label) => (
-        <Button key={label} size="sm" variant="outline" disabled title="Coming in a future social PR">{label}</Button>
-      ))}
+      <Button size="sm" variant="outline" onClick={() => setMessageOpen(true)}>
+        <MessageSquare className="mr-1 h-4 w-4" /> Message
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+        <UserRoundPlus className="mr-1 h-4 w-4" /> Invite to activity
+      </Button>
+
+      <Dialog open={messageOpen} onOpenChange={setMessageOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Direct message</DialogTitle></DialogHeader>
+          {channel && userId && (
+            <DirectMessagePanel channel={channel} currentUserId={userId} otherDisplayName="Player" />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Invite to activity</DialogTitle></DialogHeader>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {INVITE_KINDS.map((kind) => (
+              <Button
+                key={kind}
+                variant="outline"
+                onClick={() => void sendInvite(kind)}
+                disabled={createInvite.isPending}
+              >
+                {INVITE_KIND_LABELS[kind]}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
