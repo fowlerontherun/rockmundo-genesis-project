@@ -45,12 +45,20 @@ export const rememberFestivalModeReturnPath = (
   profileId: string | null | undefined,
   location: FestivalModeLocation,
 ) => {
-  if (!profileId || isFestivalModeSupportPath(location.pathname) || location.pathname === "/auth") {
-    return readFestivalModeReturnPath(storage, profileId);
+  if (!profileId) return null;
+
+  // The first route interrupted by the attending session is the return target
+  // for the whole Festival Mode lifecycle. Refreshes and support navigation
+  // must never replace it.
+  const existing = readFestivalModeReturnPath(storage, profileId);
+  if (existing) return existing;
+
+  if (isFestivalModeSupportPath(location.pathname) || location.pathname === "/auth") {
+    return null;
   }
 
   const returnPath = buildFestivalModeLocation(location);
-  if (!isSafeRelativePath(returnPath)) return readFestivalModeReturnPath(storage, profileId);
+  if (!isSafeRelativePath(returnPath)) return null;
 
   storage.setItem(festivalModeReturnStorageKey(profileId), returnPath);
   return returnPath;
