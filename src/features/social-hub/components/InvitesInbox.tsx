@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Inbox, Send, Check, X } from "lucide-react";
 import { format } from "date-fns";
+import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 import {
   INVITE_KIND_LABELS,
   useIncomingInvites,
@@ -50,39 +51,50 @@ function InviteRow({
           {invite.responded_at ? ` · Updated ${format(new Date(invite.responded_at), "PPp")}` : ""}
         </p>
       </div>
-      {!outgoing && invite.status === "pending" && (
-        <div className="flex flex-col gap-1">
-          <Button
-            size="sm"
-            variant="default"
-            onClick={() => respond.mutate({ id: invite.id, status: "accepted" })}
-            disabled={respond.isPending}
-            aria-label={`Accept ${INVITE_KIND_LABELS[invite.kind]} invite`}
-          >
-            <Check className="h-3 w-3 mr-1" /> Accept
-          </Button>
+      <div className="flex flex-col items-end gap-1">
+        {!outgoing && invite.status === "pending" && (
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => respond.mutate({ id: invite.id, status: "accepted" })}
+              disabled={respond.isPending}
+              aria-label={`Accept ${INVITE_KIND_LABELS[invite.kind]} invite`}
+            >
+              <Check className="h-3 w-3 mr-1" /> Accept
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => respond.mutate({ id: invite.id, status: "declined" })}
+              disabled={respond.isPending}
+              aria-label={`Decline ${INVITE_KIND_LABELS[invite.kind]} invite`}
+            >
+              <X className="h-3 w-3 mr-1" /> Decline
+            </Button>
+          </>
+        )}
+        {outgoing && invite.status === "pending" && (
           <Button
             size="sm"
             variant="outline"
-            onClick={() => respond.mutate({ id: invite.id, status: "declined" })}
+            onClick={() => respond.mutate({ id: invite.id, status: "cancelled" })}
             disabled={respond.isPending}
-            aria-label={`Decline ${INVITE_KIND_LABELS[invite.kind]} invite`}
+            aria-label={`Cancel ${INVITE_KIND_LABELS[invite.kind]} invite`}
           >
-            <X className="h-3 w-3 mr-1" /> Decline
+            Cancel
           </Button>
-        </div>
-      )}
-      {outgoing && invite.status === "pending" && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => respond.mutate({ id: invite.id, status: "cancelled" })}
-          disabled={respond.isPending}
-          aria-label={`Cancel ${INVITE_KIND_LABELS[invite.kind]} invite`}
-        >
-          Cancel
-        </Button>
-      )}
+        )}
+        {!outgoing && (
+          <ReportSocialTargetDialog
+            reportedProfileId={invite.from_profile_id}
+            targetType="social_invite"
+            targetId={invite.id}
+            triggerLabel="Report invite"
+            context={{ surface: "social_invites_inbox" }}
+          />
+        )}
+      </div>
     </div>
   );
 }
