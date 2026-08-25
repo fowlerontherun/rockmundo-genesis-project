@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { acceptGigOffer, rejectGigOffer } from '@/utils/gigOfferGenerator';
 import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
 import { SupportHistoryPanel } from '@/features/support-bands/SupportHistoryPanel';
+import { ConfirmedSupportSlotsPanel } from '@/features/support-bands/ConfirmedSupportSlotsPanel';
 
 interface GigOffer {
   id: string;
@@ -140,6 +141,7 @@ export function GigOffersPanel({ bandId }: { bandId: string }) {
       </section>
 
       <SupportMarketplacePanel bandId={bandId} />
+      <ConfirmedSupportSlotsPanel bandId={bandId} />
       <SupportHistoryPanel bandId={bandId} />
     </div>
   );
