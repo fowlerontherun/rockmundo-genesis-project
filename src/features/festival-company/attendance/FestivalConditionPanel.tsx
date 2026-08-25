@@ -6,6 +6,8 @@ const conditionLabels = [
   ["hunger", "Hunger"],
   ["hydration", "Hydration"],
   ["mood", "Mood"],
+  ["comfort", "Comfort"],
+  ["inspiration", "Inspiration"],
   ["intoxication", "Intoxication"],
   ["social", "Social"],
 ] as const;
@@ -24,7 +26,7 @@ export const FestivalConditionPanel = ({ attendanceId }: { attendanceId: string 
         ) : isError || !data ? (
           <p className="text-sm text-destructive" role="alert">Your Festival condition could not be loaded.</p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {conditionLabels.map(([key, label]) => (
               <div key={key} className="rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-2 text-sm">
@@ -42,7 +44,7 @@ export const FestivalConditionPanel = ({ attendanceId }: { attendanceId: string 
           </div>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
-          These are temporary Festival stats. They evolve on the server while you are checked in; Hunger and Intoxication are higher when the meter is fuller.
+          These temporary Festival stats evolve on the server while you are checked in. Completed plan activities can affect comfort and inspiration as well as your basic condition; Hunger and Intoxication are higher when the meter is fuller.
         </p>
       </CardContent>
     </Card>
