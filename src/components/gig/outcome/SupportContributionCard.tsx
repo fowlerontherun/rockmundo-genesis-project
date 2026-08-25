@@ -32,12 +32,13 @@ const money = (value: number) =>
 
 export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
   const [data, setData] = useState<SupportContribution | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(gigId));
 
   useEffect(() => {
     let mounted = true;
     if (!gigId) {
       setData(null);
+      setLoading(false);
       return () => { mounted = false; };
     }
 
