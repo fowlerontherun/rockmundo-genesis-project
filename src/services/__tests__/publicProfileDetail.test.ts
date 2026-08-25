@@ -11,6 +11,7 @@ const { getPublicProfileDetail, __publicProfileDetailTestUtils } = await import(
 
 const targetProfileId = "33333333-3333-4333-8333-333333333333";
 const viewerProfileId = "22222222-2222-4222-8222-222222222222";
+const newerVersionProfileId = "33333333-3333-7333-8333-333333333333";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -21,6 +22,13 @@ describe("public profile detail service", () => {
   it("validates target and viewer ids before backend reads", () => {
     expect(__publicProfileDetailTestUtils.validatePublicProfileDetailInput(` ${targetProfileId} `, viewerProfileId)).toEqual({
       target_profile_id: targetProfileId,
+      viewer_profile_id: viewerProfileId,
+    });
+  });
+
+  it("accepts canonical UUIDs from newer UUID versions", () => {
+    expect(__publicProfileDetailTestUtils.validatePublicProfileDetailInput(newerVersionProfileId, viewerProfileId)).toEqual({
+      target_profile_id: newerVersionProfileId,
       viewer_profile_id: viewerProfileId,
     });
   });
