@@ -21,13 +21,20 @@ type UntypedRpc = (
 
 const attendanceRpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
 
+const syncMyFestivalAttendanceLifecycle = async (): Promise<void> => {
+  const { error } = await attendanceRpc("sync_my_festival_attendance_lifecycle");
+  if (error) throw new Error(error.message || "festival_attendance_sync_failed");
+};
+
 export const getMyFestivalAttendance = async (): Promise<FestivalPlayerAttendance[]> => {
+  await syncMyFestivalAttendanceLifecycle();
   const { data, error } = await attendanceRpc("reconcile_my_festival_attendance");
   if (error) throw new Error(error.message || "festival_attendance_unavailable");
   return parseFestivalAttendanceReconciliation(data).attendance;
 };
 
 export const getMyFestivalCheckInEligibility = async (): Promise<FestivalCheckInEligibility[]> => {
+  await syncMyFestivalAttendanceLifecycle();
   const { data, error } = await attendanceRpc("get_my_festival_check_in_eligibility");
   if (error) throw new Error(error.message || "festival_check_in_eligibility_unavailable");
   return parseFestivalCheckInEligibilityList(data);
@@ -40,6 +47,7 @@ export const getMyFestivalMemorabilia = async (): Promise<FestivalMemorabiliaIte
 };
 
 export const checkInToFestival = async (attendanceId: string): Promise<FestivalCheckInResult> => {
+  await syncMyFestivalAttendanceLifecycle();
   const { data, error } = await attendanceRpc("check_in_to_festival", {
     p_attendance_id: attendanceId,
   });

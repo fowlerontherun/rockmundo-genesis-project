@@ -3,7 +3,10 @@ import { join } from "node:path";
 
 const migrationDirectory = join(process.cwd(), "supabase", "migrations");
 const filenamePattern = /^(\d{14})_.+\.sql$/;
-const knownLegacyFutureCeiling = "20291217122000";
+// Main already contains the historical future-dated Festival sequence through C1.
+// Freeze that merged boundary exactly; C2 and any later continuation must still be
+// named explicitly below so the guard continues to reject accidental new futures.
+const knownLegacyFutureCeiling = "20291219080000";
 const festivalPhase2Continuation = "20291217130000_festival_site_and_stage_planning.sql";
 const festivalPhase3Continuation = "20291217140000_festival_ticketing_and_capacity_planning.sql";
 const festivalPhase4Continuation = "20291217150000_festival_artist_applications_and_bookings.sql";
@@ -30,6 +33,8 @@ const festivalBacklogB5LifecycleContinuation = "20291219040000_festival_organise
 const festivalBacklogB5HardeningContinuation = "20291219040100_festival_organiser_lifecycle_hardening.sql";
 const festivalBacklogB5QueueContinuation = "20291219040200_festival_artist_schedule_queue_fix.sql";
 const festivalBacklogB6CommerceContinuation = "20291219050000_festival_ticket_vendor_analytics_closure.sql";
+const festivalBacklogC1WristbandContinuation = "20291219080000_festival_c1_wristband_inventory.sql";
+const festivalBacklogC2LifecycleContinuation = "20291219090000_festival_c2_attendee_lifecycle.sql";
 // PR #1517 may already have been applied. Preserve that exact immutable filename;
 // all corrections live in a current, forward migration.
 const deployedReleaseFinanceException = "20291218245800_release_finance_consistency.sql";
@@ -45,6 +50,7 @@ const documentedFestivalSequence = new Set([
   festivalSettlementV2AuditContinuation, festivalSettlementV2CompletionContinuation,
   festivalBacklogB5LifecycleContinuation, festivalBacklogB5HardeningContinuation,
   festivalBacklogB5QueueContinuation, festivalBacklogB6CommerceContinuation,
+  festivalBacklogC1WristbandContinuation, festivalBacklogC2LifecycleContinuation,
 ]);
 const legacySequenceNames = new Set(["085_jam_sessions_core.sql", "086_band_member_locks.sql", "087_bands_add_chemistry_cohesion.sql"]);
 const today = new Date();
