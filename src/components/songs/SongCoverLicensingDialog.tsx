@@ -54,24 +54,26 @@ export const SongCoverLicensingDialog = ({ open, onOpenChange, song }: Props) =>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Cover licensing — {song.title}</DialogTitle>
+          <DialogTitle>Recording-cover terms — {song.title}</DialogTitle>
           <DialogDescription>
-            Let other bands play or record this song and set the share of their earnings you keep.
+            Other bands can learn this song for live shows without taking ownership. These settings control permission to make and commercially release their own recording.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <Label className="text-sm">Open to covers</Label>
-              <p className="text-xs text-muted-foreground">Lists the song in the cover lookup.</p>
+              <Label className="text-sm">Publish recording terms</Label>
+              <p className="text-xs text-muted-foreground">
+                Bands can still add the song to a live repertoire when this is off, but recording requests require your approval.
+              </p>
             </div>
             <Switch checked={available} onCheckedChange={setAvailable} />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm">Your royalty share</Label>
+              <Label className="text-sm">Writer royalty</Label>
               <span className="text-sm font-semibold text-primary">{royalty}%</span>
             </div>
             <Slider
@@ -83,15 +85,15 @@ export const SongCoverLicensingDialog = ({ open, onOpenChange, song }: Props) =>
               onValueChange={(value) => setRoyalty(value[0] ?? 15)}
             />
             <p className="text-xs text-muted-foreground">
-              You earn {royalty}% of everything the covering band makes from live plays and recordings.
+              {royalty}% is taken from the cover recording's eligible revenue before the covering band or label is paid. If the original has multiple writers, that royalty is split by their songwriting ownership percentages.
             </p>
           </div>
 
           <div className="flex items-center justify-between gap-4">
             <div>
-              <Label className="text-sm">Auto-approve requests</Label>
+              <Label className="text-sm">Auto-approve recording requests</Label>
               <p className="text-xs text-muted-foreground">
-                Skip manual approval and license on these terms instantly.
+                Grant recording permission immediately on the published royalty terms.
               </p>
             </div>
             <Switch checked={autoApprove} onCheckedChange={setAutoApprove} disabled={!available} />
@@ -99,11 +101,9 @@ export const SongCoverLicensingDialog = ({ open, onOpenChange, song }: Props) =>
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={update.isPending}>
-            {update.isPending ? "Saving…" : "Save terms"}
+            {update.isPending ? "Saving…" : "Save recording terms"}
           </Button>
         </DialogFooter>
       </DialogContent>
