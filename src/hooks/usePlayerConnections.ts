@@ -24,6 +24,6 @@ export function useFriends(kind: FriendListKind, search = "") {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["friendships", profileId, kind, search], queryFn: () => listFriendships(profileId!, kind, search), enabled: !!profileId });
   const suggestions = useQuery({ queryKey: ["friend-suggestions", profileId], queryFn: () => listFriendSuggestions(profileId!), enabled: !!profileId && kind === "friends" });
-  const act = useMutation({ mutationFn: ({ friendshipId, status }: { friendshipId: string; status: "accepted" | "declined" | "cancelled" | "removed" }) => respondToFriendship(friendshipId, status), onSuccess: () => { toast.success("Friendship updated"); queryClient.invalidateQueries({ queryKey: ["friendships"] }); queryClient.invalidateQueries({ queryKey: ["friend-request-counts"] }); queryClient.invalidateQueries({ queryKey: ["player-connection"] }); }, onError: (e: Error) => toast.error(e.message) });
+  const act = useMutation({ mutationFn: ({ friendshipId, status }: { friendshipId: string; status: "accepted" | "declined" | "cancelled" | "removed" }) => respondToFriendship(friendshipId, status, profileId), onSuccess: () => { toast.success("Friendship updated"); queryClient.invalidateQueries({ queryKey: ["friendships"] }); queryClient.invalidateQueries({ queryKey: ["friend-request-counts"] }); queryClient.invalidateQueries({ queryKey: ["player-connection"] }); }, onError: (e: Error) => toast.error(e.message) });
   return { ...query, suggestions, act };
 }
