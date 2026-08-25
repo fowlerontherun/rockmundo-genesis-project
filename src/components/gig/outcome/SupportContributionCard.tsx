@@ -5,20 +5,22 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 
 type SupportContribution = {
-  gig_id?: string;
-  support_band_id?: string;
-  support_band_name?: string;
-  headliner_band_id?: string;
-  headliner_band_name?: string;
+  gigId?: string;
+  supportSlotId?: string;
+  supportBandId?: string;
+  supportBandName?: string;
+  headlinerBandId?: string;
+  headlinerBandName?: string;
   attendance?: number;
-  performance_rating?: number;
-  ticket_revenue?: number;
-  support_payment?: number;
-  ticket_demand_multiplier?: number;
-  support_fame_gain?: number;
-  support_fan_gain?: number;
-  relationship_gain?: number;
-  reputation_gain?: number;
+  performanceRating?: number;
+  ticketRevenue?: number;
+  supportPayment?: number;
+  ticketDemandMultiplier?: number;
+  ticketDemandBoostPercent?: number;
+  supportFameGain?: number;
+  supportFanGain?: number;
+  relationshipGain?: number;
+  reputationGain?: number;
 };
 
 const money = (value: number) =>
@@ -30,12 +32,13 @@ const money = (value: number) =>
 
 export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
   const [data, setData] = useState<SupportContribution | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(gigId));
 
   useEffect(() => {
     let mounted = true;
     if (!gigId) {
       setData(null);
+      setLoading(false);
       return () => { mounted = false; };
     }
 
@@ -49,8 +52,7 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
         if (import.meta.env.DEV) console.warn("Unable to load support contribution", { gigId, error });
         setData(null);
       } else {
-        const resolved = Array.isArray(contribution) ? contribution[0] : contribution;
-        setData(resolved && typeof resolved === "object" ? resolved as SupportContribution : null);
+        setData(contribution && typeof contribution === "object" ? contribution as SupportContribution : null);
       }
       setLoading(false);
     })();
@@ -70,7 +72,7 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
   }
   if (!data) return null;
 
-  const demandBoost = Math.max(0, Math.round(((Number(data.ticket_demand_multiplier) || 1) - 1) * 100));
+  const demandBoost = Number(data.ticketDemandBoostPercent ?? Math.max(0, ((Number(data.ticketDemandMultiplier) || 1) - 1) * 100));
 
   return (
     <Card className="border-primary/20" id="support-contribution">
@@ -81,7 +83,7 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
               <Handshake className="h-5 w-5" /> Support act contribution
             </CardTitle>
             <CardDescription>
-              Settled contribution from {data.support_band_name || "the support band"}; values come from the completed support-show record.
+              Settled contribution from {data.supportBandName || "the support band"}; these are authoritative post-show values, not projections.
             </CardDescription>
           </div>
           <Badge variant="outline">20% artist ticket share</Badge>
@@ -89,14 +91,14 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric icon={<Banknote />} label="Support payment" value={money(Number(data.support_payment) || 0)} detail={`From ${money(Number(data.ticket_revenue) || 0)} ticket revenue`} />
-          <Metric icon={<Ticket />} label="Ticket demand" value={`+${demandBoost}%`} detail="Support-driven demand uplift" />
-          <Metric icon={<Star />} label="Support rating" value={`${Number(data.performance_rating || 0).toFixed(1)}/25`} detail={`${Number(data.attendance || 0).toLocaleString()} attended`} />
-          <Metric icon={<Users />} label="New fans" value={`+${Number(data.support_fan_gain || 0).toLocaleString()}`} detail={`+${Number(data.support_fame_gain || 0).toLocaleString()} fame`} />
+          <Metric icon={<Banknote />} label="Support payment" value={money(Number(data.supportPayment) || 0)} detail={`From ${money(Number(data.ticketRevenue) || 0)} ticket revenue`} />
+          <Metric icon={<Ticket />} label="Ticket demand" value={`+${demandBoost.toFixed(1)}%`} detail="Support-driven demand uplift" />
+          <Metric icon={<Star />} label="Support rating" value={`${Number(data.performanceRating || 0).toFixed(1)}/25`} detail={`${Number(data.attendance || 0).toLocaleString()} attended`} />
+          <Metric icon={<Users />} label="New fans" value={`+${Number(data.supportFanGain || 0).toLocaleString()}`} detail={`+${Number(data.supportFameGain || 0).toLocaleString()} fame`} />
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          <Metric icon={<Handshake />} label="Band relationship" value={`+${Number(data.relationship_gain || 0)}`} detail="Relationship gained from this show" />
-          <Metric icon={<TrendingUp />} label="Support reputation" value={`+${Number(data.reputation_gain || 0)}`} detail="Support career reputation gained" />
+          <Metric icon={<Handshake />} label="Band relationship" value={`+${Number(data.relationshipGain || 0)}`} detail="Relationship gained from this show" />
+          <Metric icon={<TrendingUp />} label="Support reputation" value={`+${Number(data.reputationGain || 0)}`} detail="Support career reputation gained" />
         </div>
       </CardContent>
     </Card>
