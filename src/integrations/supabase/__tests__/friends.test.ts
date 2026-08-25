@@ -4,59 +4,97 @@ vi.stubEnv("VITE_SUPABASE_URL", "https://example.supabase.co");
 vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "test-key");
 
 const rpc = vi.fn();
+const from = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: {
-    rpc,
-    from: vi.fn(),
-  },
+  supabase: { rpc, from },
 }));
 
-const { sendFriendRequest, __friendRequestTestUtils } = await import("../friends");
+const {
+  sendFriendRequest,
+  updateFriendshipStatus,
+  deleteFriendship,
+  removeFriendship,
+  blockProfile,
+  unblockProfile,
+  __friendRequestTestUtils,
+} = await import("../friends");
 
 const requestorProfileId = "11111111-1111-4111-8111-111111111111";
 const addresseeProfileId = "22222222-2222-4222-8222-222222222222";
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("friend request safety service", () => {
+describe("authoritative friendship lifecycle", () => {
   it("rejects invalid target profile IDs before backend writes", async () => {
     await expect(sendFriendRequest({ requestorProfileId, addresseeProfileId: "bad-id" })).rejects.toThrow("valid player");
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("sends valid friend requests through the guarded RPC", async () => {
+  it("sends friend requests as the selected character through RPC only", async () => {
     rpc.mockResolvedValueOnce({
       data: { id: "friendship-1", requestor_id: requestorProfileId, addressee_id: addresseeProfileId, status: "pending" },
       error: null,
     });
 
     await expect(sendFriendRequest({ requestorProfileId, addresseeProfileId })).resolves.toMatchObject({ status: "pending" });
-    expect(rpc).toHaveBeenCalledWith("send_friend_request", { target_profile_id: addresseeProfileId });
-  });
-
-  it("treats duplicate pending requests as a successful idempotent response", async () => {
-    rpc.mockResolvedValueOnce({
-      data: { id: "friendship-1", requestor_id: requestorProfileId, addressee_id: addresseeProfileId, status: "pending" },
-      error: null,
+    expect(rpc).toHaveBeenCalledWith("send_friend_request", {
+      target_profile_id: addresseeProfileId,
+      requestor_profile_id: requestorProfileId,
     });
-
-    await expect(sendFriendRequest({ requestorProfileId, addresseeProfileId })).resolves.toMatchObject({ id: "friendship-1" });
+    expect(from).not.toHaveBeenCalled();
   });
 
-  it("maps blocked or unauthorized backend failures to friendly errors", async () => {
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "This player is not available for friend requests." } });
-
-    await expect(sendFriendRequest({ requestorProfileId, addresseeProfileId })).rejects.toThrow("not available");
+  it("fails closed when the authoritative RPC is unavailable", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "Could not find the function public.send_friend_request" } });
+    await expect(sendFriendRequest({ requestorProfileId, addresseeProfileId })).rejects.toThrow("send_friend_request");
+    expect(from).not.toHaveBeenCalled();
   });
 
-  it("maps unauthenticated backend failures to friendly errors", async () => {
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "Sign in with an active player profile before sending friend requests." } });
+  it("routes accept/decline/remove/cancel through the selected-character RPC", async () => {
+    rpc.mockResolvedValue({ data: { id: "friendship-1", status: "accepted" }, error: null });
+    await updateFriendshipStatus("friendship-1", "accepted", requestorProfileId);
+    await deleteFriendship("friendship-1", requestorProfileId);
+    await removeFriendship("friendship-1", requestorProfileId);
 
-    await expect(sendFriendRequest({ requestorProfileId, addresseeProfileId })).rejects.toThrow("Sign in");
+    expect(rpc).toHaveBeenNthCalledWith(1, "respond_to_friend_request", {
+      friendship_id: "friendship-1",
+      next_status: "accepted",
+      actor_profile_id: requestorProfileId,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, "respond_to_friend_request", {
+      friendship_id: "friendship-1",
+      next_status: "cancelled",
+      actor_profile_id: requestorProfileId,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(3, "respond_to_friend_request", {
+      friendship_id: "friendship-1",
+      next_status: "removed",
+      actor_profile_id: requestorProfileId,
+    });
+    expect(from).not.toHaveBeenCalled();
   });
 
-  it("maps declined cooldown backend failures to friendly errors", () => {
-    expect(__friendRequestTestUtils.friendlyFriendRequestError("That friend request was declined recently."))
-      .toContain("declined recently");
+  it("routes block and unblock through selected-character RPCs", async () => {
+    rpc.mockResolvedValueOnce({ data: { id: "block-1" }, error: null });
+    rpc.mockResolvedValueOnce({ data: true, error: null });
+
+    await blockProfile(addresseeProfileId, requestorProfileId, "private note");
+    await expect(unblockProfile(addresseeProfileId, requestorProfileId)).resolves.toBe(true);
+
+    expect(rpc).toHaveBeenNthCalledWith(1, "block_profile", {
+      target_profile_id: addresseeProfileId,
+      actor_profile_id: requestorProfileId,
+      note: "private note",
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, "unblock_profile", {
+      target_profile_id: addresseeProfileId,
+      actor_profile_id: requestorProfileId,
+    });
+  });
+
+  it("maps blocked, auth and declined-cooldown failures to useful messages", () => {
+    expect(__friendRequestTestUtils.friendlyFriendRequestError("This player is unavailable")).toContain("not available");
+    expect(__friendRequestTestUtils.friendlyFriendRequestError("Not authenticated")).toContain("Sign in");
+    expect(__friendRequestTestUtils.friendlyFriendRequestError("Friend request declined recently")).toContain("declined recently");
   });
 });
