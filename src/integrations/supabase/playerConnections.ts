@@ -13,7 +13,10 @@ export async function getConnectionState(targetProfileId: string): Promise<Conne
   return (data ?? "unavailable") as ConnectionState;
 }
 
-export async function sendConnectionRequest(targetProfileId: string) { return sendFriendRequest({ requestorProfileId: "server-controlled", addresseeProfileId: targetProfileId }); }
+export async function sendConnectionRequest(targetProfileId: string) {
+  return sendFriendRequest({ addresseeProfileId: targetProfileId });
+}
+
 export async function respondToFriendship(friendshipId: string, nextStatus: Exclude<ManagedFriendshipStatus, "pending" | "blocked" | "expired">) {
   const { data, error } = await (supabase as any).rpc("respond_to_friend_request", { friendship_id: friendshipId, next_status: nextStatus });
   if (error) throw error;
@@ -28,7 +31,10 @@ export async function getFriendRequestCounts(): Promise<{ friends: number; incom
 }
 
 export async function listFriendships(profileId: string, kind: FriendListKind, search = ""): Promise<FriendSummary[]> {
-  let query = (supabase as any).from("friendships").select("id, requestor_id, addressee_id, status, created_at, accepted_at, responded_at, profiles!friendships_requestor_id_fkey(id, username, display_name, avatar_url, city_name), addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, city_name)").or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`).order("updated_at", { ascending: false }).limit(50);
+  // Keep this selection compatible with the live friendship schema. accepted_at
+  // is not present in production; responded_at is the authoritative lifecycle
+  // timestamp currently available for accepted/declined requests.
+  let query = (supabase as any).from("friendships").select("id, requestor_id, addressee_id, status, created_at, responded_at, profiles!friendships_requestor_id_fkey(id, username, display_name, avatar_url, city_name), addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, city_name)").or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`).order("updated_at", { ascending: false }).limit(50);
   if (kind === "friends" || kind === "recent") query = query.eq("status", "accepted");
   if (kind === "incoming") query = query.eq("status", "pending").eq("addressee_id", profileId);
   if (kind === "outgoing") query = query.eq("status", "pending").eq("requestor_id", profileId);
@@ -36,7 +42,7 @@ export async function listFriendships(profileId: string, kind: FriendListKind, s
   if (error) throw error;
   return ((data ?? []) as any[]).map((row) => {
     const other = row.requestor_id === profileId ? row.addressee : row.profiles;
-    return { id: other?.id, friendshipId: row.id, characterName: other?.display_name || other?.username || "Unavailable player", username: other?.username, avatarUrl: other?.avatar_url, cityName: other?.city_name, status: row.status, requestedAt: row.created_at, friendshipDate: row.accepted_at ?? row.responded_at, mutualFriendCount: 0 };
+    return { id: other?.id, friendshipId: row.id, characterName: other?.display_name || other?.username || "Unavailable player", username: other?.username, avatarUrl: other?.avatar_url, cityName: other?.city_name, status: row.status, requestedAt: row.created_at, friendshipDate: row.responded_at, mutualFriendCount: 0 };
   }).filter((row) => row.id && (!search || `${row.characterName} ${row.username ?? ""} ${row.cityName ?? ""}`.toLowerCase().includes(search.toLowerCase())));
 }
 
