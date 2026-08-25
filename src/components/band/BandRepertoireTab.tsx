@@ -42,6 +42,14 @@ interface RepertoireSong {
   }[];
 }
 
+interface SongLiveStats {
+  song_id: string;
+  live_play_count: number;
+  last_played_at: string | null;
+  covering_band_count: number;
+  cover_live_play_count: number;
+}
+
 export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -123,6 +131,31 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
         revenue: streamsBySong[song.id]?.revenue || 0,
         ownership: ownershipData?.filter(o => o.song_id === song.id) || []
       }));
+    },
+    enabled: !!bandId,
+  });
+
+  // Fetch all song live/cover summaries in one request to avoid an RPC per repertoire row.
+  const { data: liveStatsBySong = {}, isLoading: loadingLiveStats } = useQuery({
+    queryKey: ["band-song-live-stats", bandId],
+    queryFn: async () => {
+      if (!bandId) return {} as Record<string, SongLiveStats>;
+
+      const { data, error } = await (supabase as any).rpc("get_band_song_live_stats", {
+        p_band_id: bandId,
+      });
+
+      if (error) throw error;
+
+      return ((data || []) as SongLiveStats[]).reduce((acc, row) => {
+        acc[row.song_id] = {
+          ...row,
+          live_play_count: Number(row.live_play_count || 0),
+          covering_band_count: Number(row.covering_band_count || 0),
+          cover_live_play_count: Number(row.cover_live_play_count || 0),
+        };
+        return acc;
+      }, {} as Record<string, SongLiveStats>);
     },
     enabled: !!bandId,
   });
@@ -312,6 +345,12 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
     }
   };
 
+  const formatLastPlayed = (songId: string) => {
+    if (loadingLiveStats) return "Loading live history…";
+    const lastPlayedAt = liveStatsBySong[songId]?.last_played_at;
+    return lastPlayedAt ? `Last live ${new Date(lastPlayedAt).toLocaleDateString()}` : "Never played live";
+  };
+
   return (
     <div className="space-y-6">
       {/* Stats Header */}
@@ -463,6 +502,21 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
                           <span className="text-xs text-muted-foreground hidden sm:inline">
                             {(song.streams || 0).toLocaleString()} streams
                           </span>
+
+                          <span className="text-xs text-muted-foreground">
+                            {loadingLiveStats ? "Live —" : `${liveStatsBySong[song.id]?.live_play_count || 0} live`}
+                          </span>
+
+                          <span className="text-xs text-muted-foreground">
+                            {loadingLiveStats ? "Covers —" : `${liveStatsBySong[song.id]?.covering_band_count || 0} cover${(liveStatsBySong[song.id]?.covering_band_count || 0) === 1 ? "" : "s"}`}
+                          </span>
+                        </div>
+
+                        <div className="mt-1 text-[11px] text-muted-foreground">
+                          {formatLastPlayed(song.id)}
+                          {!loadingLiveStats && (liveStatsBySong[song.id]?.cover_live_play_count || 0) > 0 && (
+                            <span> • {(liveStatsBySong[song.id]?.cover_live_play_count || 0).toLocaleString()} cover performances</span>
+                          )}
                         </div>
                       </div>
 
