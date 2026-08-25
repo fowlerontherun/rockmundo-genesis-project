@@ -42,6 +42,7 @@ export interface SocialPermissions {
   can_send_item: boolean;
   can_report: boolean;
   is_blocked_by_viewer: boolean;
+  is_muted_by_viewer: boolean;
   is_interaction_restricted: boolean;
   neutral_message?: string | null;
 }
@@ -85,6 +86,19 @@ export async function unblockPlayer(targetProfileId: string) {
   const { error } = await (supabase as any).rpc("unblock_player", { target_profile_id: targetProfileId });
   if (error) throw new Error("We couldn't unblock this player. Please try again.");
   window.dispatchEvent(new CustomEvent("rockmundo:analytics", { detail: { event: "player_unblocked", area: "social_safety" } }));
+}
+
+export async function mutePlayer(targetProfileId: string) {
+  const { data, error } = await (supabase as any).rpc("mute_profile", { target_profile_id: targetProfileId, mute_until: null, note: null });
+  if (error) throw new Error(/self/i.test(error.message) ? "You cannot mute yourself." : "We couldn't mute this player. Please try again.");
+  window.dispatchEvent(new CustomEvent("rockmundo:analytics", { detail: { event: "player_muted", area: "social_safety" } }));
+  return data;
+}
+
+export async function unmutePlayer(targetProfileId: string) {
+  const { error } = await (supabase as any).rpc("unmute_profile", { target_profile_id: targetProfileId });
+  if (error) throw new Error("We couldn't unmute this player. Please try again.");
+  window.dispatchEvent(new CustomEvent("rockmundo:analytics", { detail: { event: "player_unmuted", area: "social_safety" } }));
 }
 
 export async function listBlockedPlayers(search = ""): Promise<BlockedPlayerSummary[]> {
