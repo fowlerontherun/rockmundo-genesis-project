@@ -1,6 +1,6 @@
 -- Batched live-performance summaries for the Band Repertoire.
--- This is intentionally a new migration because the base song live/cover RPC
--- migration has already shipped and may already be recorded as applied.
+-- Production links song-performance rows to gig_outcomes, which then identify
+-- the canonical gig. Duplicate retry rows are collapsed per gig/song.
 
 CREATE OR REPLACE FUNCTION public.get_band_song_live_stats(p_band_id uuid)
 RETURNS TABLE (
@@ -21,16 +21,16 @@ AS $function$
     WHERE s.band_id = p_band_id
   ),
   completed AS (
-    SELECT DISTINCT ON (gsp.gig_id, gsp.song_id)
+    SELECT DISTINCT ON (go.gig_id, gsp.song_id)
       gsp.song_id,
-      gsp.gig_id,
-      g.band_id AS performing_band_id,
-      COALESCE(g.completed_at, g.scheduled_date, go.created_at) AS played_at
+      go.gig_id,
+      COALESCE(go.band_id, g.band_id) AS performing_band_id,
+      COALESCE(gsp.completed_at, go.completed_at, g.completed_at, g.scheduled_date, go.created_at) AS played_at
     FROM public.gig_song_performances gsp
     JOIN target_songs ts ON ts.song_id = gsp.song_id
-    JOIN public.gigs g ON g.id = gsp.gig_id
-    JOIN public.gig_outcomes go ON go.gig_id = g.id
-    ORDER BY gsp.gig_id, gsp.song_id, gsp.created_at DESC
+    JOIN public.gig_outcomes go ON go.id = gsp.gig_outcome_id
+    JOIN public.gigs g ON g.id = go.gig_id
+    ORDER BY go.gig_id, gsp.song_id, gsp.created_at DESC
   )
   SELECT
     ts.song_id,
@@ -54,6 +54,6 @@ REVOKE ALL ON FUNCTION public.get_band_song_live_stats(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_band_song_live_stats(uuid) TO authenticated;
 
 COMMENT ON FUNCTION public.get_band_song_live_stats(uuid) IS
-  'Returns one canonical completed-live-performance summary row per song owned by the requested band for repertoire list rendering.';
+  'Returns one canonical completed-live-performance summary row per song owned by the requested band for repertoire list rendering, using gig_outcome-linked performance rows.';
 
 NOTIFY pgrst, 'reload schema';
