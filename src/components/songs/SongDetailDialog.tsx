@@ -20,6 +20,8 @@ import {
   Headphones,
   Flame,
   Star,
+  Mic2,
+  Users,
 } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongVoting } from "@/components/audio/SongVoting";
@@ -29,12 +31,38 @@ interface SongDetailDialogProps {
   onClose: () => void;
 }
 
+interface CoverLiveStat {
+  band_id: string;
+  band_name: string;
+  live_play_count: number;
+  last_played_at: string | null;
+}
+
+interface SongLiveCoverStats {
+  song_id: string;
+  owner_band_id: string | null;
+  live_play_count: number;
+  last_played_at: string | null;
+  covering_band_count: number;
+  cover_live_play_count: number;
+  covers: CoverLiveStat[];
+}
+
+const formatPlayedDate = (value: string | null | undefined) => {
+  if (!value) return "Never played live";
+  return new Date(value).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => {
   const { data: song, isLoading } = useQuery({
     queryKey: ["song-details", songId],
     queryFn: async () => {
       if (!songId) return null;
-      
+
       const { data, error } = await supabase
         .from("songs")
         .select(`
@@ -53,12 +81,11 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
     enabled: !!songId,
   });
 
-  // Fetch streaming data from song_releases
   const { data: streamingData } = useQuery({
     queryKey: ["song-streaming-details", songId],
     queryFn: async () => {
       if (!songId) return null;
-      
+
       const { data } = await supabase
         .from("song_releases")
         .select("total_streams, total_revenue, platform_name, release_type")
@@ -67,7 +94,40 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
       return {
         totalStreams: data?.reduce((sum, r) => sum + (r.total_streams || 0), 0) || 0,
         totalRevenue: data?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
-        platforms: data || []
+        platforms: data || [],
+      };
+    },
+    enabled: !!songId,
+  });
+
+  const { data: liveStats, isLoading: liveStatsLoading } = useQuery({
+    queryKey: ["song-live-cover-stats", songId],
+    queryFn: async (): Promise<SongLiveCoverStats | null> => {
+      if (!songId) return null;
+
+      // The RPC is introduced by the same feature migration. Cast until the
+      // generated Supabase types are refreshed from the deployed schema.
+      const { data, error } = await (supabase as any).rpc("get_song_live_cover_stats", {
+        p_song_id: songId,
+      });
+
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) return null;
+
+      return {
+        song_id: row.song_id,
+        owner_band_id: row.owner_band_id,
+        live_play_count: Number(row.live_play_count || 0),
+        last_played_at: row.last_played_at || null,
+        covering_band_count: Number(row.covering_band_count || 0),
+        cover_live_play_count: Number(row.cover_live_play_count || 0),
+        covers: Array.isArray(row.covers)
+          ? row.covers.map((cover: any) => ({
+              ...cover,
+              live_play_count: Number(cover.live_play_count || 0),
+            }))
+          : [],
       };
     },
     enabled: !!songId,
@@ -95,7 +155,6 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
             </div>
           ) : song ? (
             <div className="space-y-6">
-              {/* Audio Player */}
               {(song.audio_url || song.audio_generation_status) && (
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -116,7 +175,6 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
 
               {(song.audio_url || song.audio_generation_status) && <Separator />}
 
-              {/* Quality Overview */}
               <div>
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
@@ -124,39 +182,26 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="p-3 rounded-lg bg-primary/5 border">
-                    <div className="text-2xl font-bold text-primary">
-                      {song.quality_score}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Overall Quality
-                    </div>
+                    <div className="text-2xl font-bold text-primary">{song.quality_score}</div>
+                    <div className="text-xs text-muted-foreground">Overall Quality</div>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/50 border">
-                    <div className="text-2xl font-bold">
-                      {song.melody_strength || 0}
-                    </div>
+                    <div className="text-2xl font-bold">{song.melody_strength || 0}</div>
                     <div className="text-xs text-muted-foreground">Melody</div>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/50 border">
-                    <div className="text-2xl font-bold">
-                      {song.lyrics_strength || 0}
-                    </div>
+                    <div className="text-2xl font-bold">{song.lyrics_strength || 0}</div>
                     <div className="text-xs text-muted-foreground">Lyrics</div>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/50 border">
-                    <div className="text-2xl font-bold">
-                      {song.arrangement_strength || 0}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Arrangement
-                    </div>
+                    <div className="text-2xl font-bold">{song.arrangement_strength || 0}</div>
+                    <div className="text-xs text-muted-foreground">Arrangement</div>
                   </div>
                 </div>
               </div>
 
               <Separator />
 
-              {/* Hype, Fame & Streaming */}
               <div>
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
@@ -168,18 +213,14 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                       <Flame className="h-4 w-4 text-orange-500" />
                       <span className="text-xs text-muted-foreground">Hype</span>
                     </div>
-                    <div className="text-2xl font-bold text-orange-500">
-                      {song.hype || 0}
-                    </div>
+                    <div className="text-2xl font-bold text-orange-500">{song.hype || 0}</div>
                   </div>
                   <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
                     <div className="flex items-center gap-2 mb-1">
                       <Star className="h-4 w-4 text-purple-500" />
                       <span className="text-xs text-muted-foreground">Fame</span>
                     </div>
-                    <div className="text-2xl font-bold text-purple-500">
-                      {song.fame || 0}
-                    </div>
+                    <div className="text-2xl font-bold text-purple-500">{song.fame || 0}</div>
                     <p className="text-[10px] text-muted-foreground">Permanent legacy</p>
                   </div>
                   <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20">
@@ -187,14 +228,11 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                       <TrendingUp className="h-4 w-4 text-sky-500" />
                       <span className="text-xs text-muted-foreground">Popularity</span>
                     </div>
-                    <div className="text-2xl font-bold text-sky-500">
-                      {(song as any).popularity || 0}
-                    </div>
+                    <div className="text-2xl font-bold text-sky-500">{(song as any).popularity || 0}</div>
                     <p className="text-[10px] text-muted-foreground">
                       Peak {(song as any).peak_popularity || 0} · fades when rested
                     </p>
                   </div>
-
                   <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -218,7 +256,71 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
 
               <Separator />
 
-              {/* Basic Information */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Mic2 className="h-4 w-4" />
+                  Live History
+                </h3>
+                {liveStatsLoading ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="h-20 rounded-lg border bg-muted/30 animate-pulse" />
+                    <div className="h-20 rounded-lg border bg-muted/30 animate-pulse" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg bg-secondary/30 border">
+                        <div className="text-2xl font-bold">
+                          {(liveStats?.live_play_count || 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Times played live</div>
+                        <div className="text-xs mt-1">
+                          {formatPlayedDate(liveStats?.last_played_at)}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-secondary/30 border">
+                        <div className="text-2xl font-bold">
+                          {(liveStats?.covering_band_count || 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Bands that covered it</div>
+                        <div className="text-xs mt-1">
+                          {(liveStats?.cover_live_play_count || 0).toLocaleString()} cover performances
+                        </div>
+                      </div>
+                    </div>
+
+                    {(liveStats?.covers?.length || 0) > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Users className="h-4 w-4" />
+                          Covered by
+                        </div>
+                        {liveStats!.covers.map((cover) => (
+                          <div
+                            key={cover.band_id}
+                            className="flex items-center justify-between gap-3 rounded-md border p-2.5 text-sm"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{cover.band_name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                Last played {formatPlayedDate(cover.last_played_at)}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="shrink-0">
+                              {cover.live_play_count.toLocaleString()} live
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-3">Not yet covered.</p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <Separator />
+
               <div>
                 <h3 className="font-semibold mb-3">Basic Information</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -235,9 +337,7 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Created:</span>
-                    <span>
-                      {new Date(song.created_at).toLocaleDateString()}
-                    </span>
+                    <span>{new Date(song.created_at).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -249,7 +349,6 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
 
               <Separator />
 
-              {/* Lyrics Preview */}
               {song.lyrics && (
                 <div>
                   <h3 className="font-semibold mb-2">Lyrics Preview</h3>
@@ -258,17 +357,13 @@ export const SongDetailDialog = ({ songId, onClose }: SongDetailDialogProps) => 
                     {song.lyrics.length > 300 && "..."}
                   </div>
                   {song.ai_generated_lyrics && (
-                    <div className="text-xs text-muted-foreground mt-2">
-                      ✨ AI-assisted lyrics
-                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">✨ AI-assisted lyrics</div>
                   )}
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Song not found
-            </div>
+            <div className="text-center py-8 text-muted-foreground">Song not found</div>
           )}
         </ScrollArea>
 
