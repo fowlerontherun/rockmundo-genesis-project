@@ -11,7 +11,12 @@ import type { FestivalContractRecord } from "../domainTypes";
 import { formatBookingDateTime } from "../formatting";
 import { CanonicalBookingProgress } from "./CanonicalBookingProgress";
 import { ContractSignaturePanel } from "./ContractSignaturePanel";
+import {
+  FestivalContractCollaborationPanel,
+  FestivalRivalryPanel,
+} from "./FestivalB7Panels";
 import { OfferTermsSummary } from "./OfferTermsSummary";
+
 export function ContractWorkspace({
   contract,
   authoritySide = "band",
@@ -72,9 +77,13 @@ export function ContractWorkspace({
             authoritySide={authoritySide}
           />
         ) : (
-          <Badge className="bg-emerald-500/20 text-emerald-600">
-            Active; schedule must be read from canonical blocks.
-          </Badge>
+          <>
+            <Badge className="bg-emerald-500/20 text-emerald-600">
+              Active; schedule must be read from canonical blocks.
+            </Badge>
+            <FestivalContractCollaborationPanel contract={contract} />
+            <FestivalRivalryPanel contract={contract} />
+          </>
         )}
       </CardContent>
     </Card>
