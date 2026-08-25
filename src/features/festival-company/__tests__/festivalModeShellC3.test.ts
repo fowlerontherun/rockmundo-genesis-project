@@ -33,26 +33,33 @@ describe("Festival Mode C3 shell", () => {
     expect(isFestivalModeSupportPath("/admin")).toBe(false);
   });
 
-  it("keeps the pre-festival return route stable while support pages are visited", () => {
+  it("keeps the first pre-festival return route stable across support navigation and refresh", () => {
     const storage = createStorage();
     const profileId = "profile-1";
+    const original = "/festival-companies/company-1/editions/edition-1?tab=tickets";
 
     expect(
       rememberFestivalModeReturnPath(storage, profileId, {
         pathname: "/festival-companies/company-1/editions/edition-1",
         search: "?tab=tickets",
       }),
-    ).toBe("/festival-companies/company-1/editions/edition-1?tab=tickets");
+    ).toBe(original);
 
     expect(
       rememberFestivalModeReturnPath(storage, profileId, {
         pathname: "/inbox",
       }),
-    ).toBe("/festival-companies/company-1/editions/edition-1?tab=tickets");
+    ).toBe(original);
 
-    expect(readFestivalModeReturnPath(storage, profileId)).toBe(
-      "/festival-companies/company-1/editions/edition-1?tab=tickets",
-    );
+    // Simulate a full refresh after Festival Mode has navigated back to its
+    // internal home route. The original interrupted route must still win.
+    expect(
+      rememberFestivalModeReturnPath(storage, profileId, {
+        pathname: "/",
+      }),
+    ).toBe(original);
+
+    expect(readFestivalModeReturnPath(storage, profileId)).toBe(original);
   });
 
   it("rejects unsafe stored return paths and clears Festival Mode state after exit", () => {
