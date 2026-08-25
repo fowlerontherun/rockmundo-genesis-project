@@ -5,40 +5,42 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdvancedGigs } from "@/hooks/useAdvancedGigs";
-import { Calendar, Clock, AlertTriangle, Lock, Music, DollarSign } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, Lock, Music, DollarSign, Handshake } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { SupportMarketplacePanel } from "@/features/support-bands/SupportMarketplacePanel";
+import { ConfirmedSupportSlotsPanel } from "@/features/support-bands/ConfirmedSupportSlotsPanel";
+import { SupportHistoryPanel } from "@/features/support-bands/SupportHistoryPanel";
 
 export default function AdvancedGigSystem() {
-  const { bandId } = useParams<{ bandId: string }>();
+  const { gigId } = useParams<{ gigId?: string }>();
+  const { profileId } = useActiveProfile();
   const [userBandId, setUserBandId] = useState<string | null>(null);
+  const supportMode = gigId === "support";
 
   useEffect(() => {
-    if (bandId) {
-      setUserBandId(bandId);
+    if (!profileId) {
+      setUserBandId(null);
       return;
     }
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return;
-
-      supabase
-        .from("band_members")
-        .select("band_id")
-        .eq("user_id", data.user.id)
-        .limit(1)
-        .single()
-        .then(({ data: member }) => {
-          if (member) setUserBandId(member.band_id);
-        });
-    });
-  }, [bandId]);
+    void supabase
+      .from("band_members")
+      .select("band_id")
+      .eq("profile_id", profileId)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data: member }) => {
+        setUserBandId(member?.band_id || null);
+      });
+  }, [profileId]);
 
   const { offers, conflicts, lockouts, upcomingGigs, isLoading } = useAdvancedGigs(userBandId || undefined);
 
   if (isLoading) {
     return (
-      <FMPageScaffold title="Advanced Gig System" icon={Music} backTo="/hub/band-live">
+      <FMPageScaffold title={supportMode ? "Support Opportunities" : "Advanced Gig System"} icon={supportMode ? Handshake : Music} backTo="/hub/band-live">
         <p className="text-muted-foreground">Loading gig system data...</p>
       </FMPageScaffold>
     );
@@ -46,13 +48,13 @@ export default function AdvancedGigSystem() {
 
   if (!userBandId) {
     return (
-      <FMPageScaffold title="Advanced Gig System" icon={Music} backTo="/hub/band-live">
+      <FMPageScaffold title={supportMode ? "Support Opportunities" : "Advanced Gig System"} icon={supportMode ? Handshake : Music} backTo="/hub/band-live">
         <Card>
           <CardHeader>
-            <CardTitle>Advanced Gig System</CardTitle>
+            <CardTitle>{supportMode ? "Support Opportunities" : "Advanced Gig System"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Join or create a band to manage gigs and offers.</p>
+            <p className="text-muted-foreground">Join or create a band to manage gigs and support opportunities.</p>
           </CardContent>
         </Card>
       </FMPageScaffold>
@@ -61,65 +63,73 @@ export default function AdvancedGigSystem() {
 
   return (
     <FMPageScaffold
-      title="Advanced Gig System"
-      subtitle="Manage offers, resolve conflicts, and track upcoming performances."
-      icon={Music}
+      title={supportMode ? "Support Opportunities" : "Advanced Gig System"}
+      subtitle={supportMode ? "Advertise availability, respond to support offers, and build your band's support reputation." : "Manage offers, resolve conflicts, and track upcoming performances."}
+      icon={supportMode ? Handshake : Music}
       backTo="/hub/band-live"
     >
+      {!supportMode && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Pending Offers</CardTitle>
+              <Music className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{offers.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Awaiting response</p>
+            </CardContent>
+          </Card>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending Offers</CardTitle>
-            <Music className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{offers.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Awaiting response</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Conflicts</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{conflicts.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Requires attention</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Conflicts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{conflicts.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Requires attention</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Active Lockouts</CardTitle>
+              <Lock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{lockouts.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Temporary restrictions</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Lockouts</CardTitle>
-            <Lock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{lockouts.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Temporary restrictions</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Upcoming Gigs</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{upcomingGigs.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Scheduled & confirmed</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Gigs</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcomingGigs.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Scheduled & confirmed</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="offers" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue={supportMode ? "support" : "offers"} className="space-y-4">
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="support"><Handshake className="mr-1 h-4 w-4" />Support Opportunities</TabsTrigger>
           <TabsTrigger value="offers">Gig Offers</TabsTrigger>
           <TabsTrigger value="conflicts">Conflicts</TabsTrigger>
           <TabsTrigger value="lockouts">Lockouts</TabsTrigger>
           <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="support" className="space-y-6">
+          <SupportMarketplacePanel bandId={userBandId} />
+          <ConfirmedSupportSlotsPanel bandId={userBandId} />
+          <SupportHistoryPanel bandId={userBandId} />
+        </TabsContent>
 
         <TabsContent value="offers" className="space-y-4">
           <Card>
