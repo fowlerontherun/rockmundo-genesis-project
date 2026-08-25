@@ -1,60 +1,85 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { loadFriendships, respondToFriendship, cancelFriendship, createFriendRequest } from "../api";
+import { toast } from "sonner";
+import { loadFriendships, cancelFriendship, createFriendRequest } from "../api";
+import { respondToFriendship as respondToFriendshipRpc } from "@/integrations/supabase/playerConnections";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import type { DecoratedFriendship } from "../types";
 
 export function useFriendships(profileId: string | null | undefined) {
   const queryClient = useQueryClient();
+  const { profileId: activeProfileId } = useActiveProfile();
+  const effectiveProfileId = activeProfileId ?? profileId ?? null;
 
   const query = useQuery<DecoratedFriendship[]>({
-    queryKey: ["friendships", profileId],
+    queryKey: ["friendships", effectiveProfileId],
     queryFn: () => {
-      if (!profileId) {
+      if (!effectiveProfileId) {
         return Promise.resolve([]);
       }
-      return loadFriendships(profileId);
+      return loadFriendships(effectiveProfileId);
     },
-    staleTime: 60_000,
-    enabled: Boolean(profileId),
+    staleTime: 15_000,
+    enabled: Boolean(effectiveProfileId),
   });
 
   const refresh = useCallback(() => {
-    return queryClient.invalidateQueries({ queryKey: ["friendships", profileId] });
-  }, [queryClient, profileId]);
+    queryClient.invalidateQueries({ queryKey: ["friendships"] });
+    queryClient.invalidateQueries({ queryKey: ["friend-request-counts"] });
+    queryClient.invalidateQueries({ queryKey: ["player-connection"] });
+    return queryClient.refetchQueries({ queryKey: ["friendships", effectiveProfileId] });
+  }, [queryClient, effectiveProfileId]);
 
   const acceptRequest = useCallback(
     async (friendshipId: string) => {
-      await respondToFriendship(friendshipId, "accepted");
-      await refresh();
+      try {
+        await respondToFriendshipRpc(friendshipId, "accepted");
+        await refresh();
+        toast.success("Friend request accepted");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to accept friend request.";
+        toast.error(message);
+      }
     },
     [refresh],
   );
 
   const declineRequest = useCallback(
     async (friendshipId: string) => {
-      await respondToFriendship(friendshipId, "declined");
-      await refresh();
+      try {
+        await respondToFriendshipRpc(friendshipId, "declined");
+        await refresh();
+        toast.success("Friend request declined");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to decline friend request.";
+        toast.error(message);
+      }
     },
     [refresh],
   );
 
   const removeFriend = useCallback(
     async (friendshipId: string) => {
-      await cancelFriendship(friendshipId);
-      await refresh();
+      try {
+        await cancelFriendship(friendshipId);
+        await refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to update friendship.";
+        toast.error(message);
+      }
     },
     [refresh],
   );
 
   const sendRequest = useCallback(
     async (targetProfileId: string) => {
-      if (!profileId) {
+      if (!effectiveProfileId) {
         throw new Error("Profile is required to send a friend request");
       }
-      await createFriendRequest(profileId, targetProfileId);
+      await createFriendRequest(effectiveProfileId, targetProfileId);
       await refresh();
     },
-    [profileId, refresh],
+    [effectiveProfileId, refresh],
   );
 
   return {
@@ -68,4 +93,3 @@ export function useFriendships(profileId: string | null | undefined) {
     sendRequest,
   };
 }
-
