@@ -93,8 +93,8 @@ export const FestivalModeHome = ({ attendance }: { attendance: FestivalPlayerAtt
           <CardTitle>Festival Mode</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>My Day supports future 30, 60 or 90-minute blocks across each Festival day.</p>
-          <p>Eat, Drink, Explore and Rest now resolve during their planned time window and update temporary Festival condition stats. Stages, social, campsite and the Festival map remain disabled until their authoritative systems arrive.</p>
+          <p>Build My Day with practical breaks or choose real performances from Stages.</p>
+          <p>We check timetable overlaps and walking time before adding a plan. Eat, Drink, Explore and Rest resolve during their planned window and update your Festival condition.</p>
         </CardContent>
       </Card>
     </div>

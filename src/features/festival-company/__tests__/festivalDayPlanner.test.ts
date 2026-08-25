@@ -257,5 +257,7 @@ describe("Festival day planner client", () => {
     expect(myDaySource).toContain('value: "vendor"');
     expect(myDaySource).toContain('value: "free_time"');
     expect(homeSource).toContain("FestivalConditionPanel");
+    expect(homeSource).toContain("choose real performances from Stages");
+    expect(homeSource).not.toContain("Stages, social, campsite and the Festival map remain disabled");
   });
 });

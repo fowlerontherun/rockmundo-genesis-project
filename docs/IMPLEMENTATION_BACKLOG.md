@@ -522,7 +522,7 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ## PR C5 — Festival day planner and stage schedule
 
 **Priority:** P1  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -542,6 +542,14 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ### Dependencies
 
 - PR C3.
+
+### Implementation notes
+
+- Festival Mode now exposes the published or locked canonical stage timetable and lets an attendee add a real performance to their persisted My Day plan.
+- Manual plans cover food, drink, exploring, rest, camping, VIP, vendors, and free time; campsite and VIP choices are checked against the attendee's admission product.
+- Preview and commit use the same server-authoritative overlap and walking-time feasibility rules, with per-attendee/day locking and idempotency protection preventing concurrent or replayed conflicts.
+- My Day and stage selections rehydrate from server-owned plan rows on reconnect, while completed, missed, and cancelled entries remain available as history.
+- Focused planner contract tests cover canonical timetable projection, authority boundaries, entitlements, travel conflicts, replay safety, parsing, and client refresh behaviour.
 
 ---
 
