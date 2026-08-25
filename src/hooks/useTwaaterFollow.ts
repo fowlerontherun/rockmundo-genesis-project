@@ -2,6 +2,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
+const socialActionError = (error: unknown, fallback: string) => {
+  const message = error instanceof Error ? error.message : String((error as { message?: string } | null)?.message ?? "");
+  if (/row-level security|permission denied|blocked|unavailable/i.test(message)) {
+    return "This account is unavailable for that action.";
+  }
+  return fallback;
+};
+
 export const useTwaaterFollow = (followerAccountId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -43,10 +51,10 @@ export const useTwaaterFollow = (followerAccountId?: string) => {
         description: "You'll now see their posts in your feed.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Follow failed",
-        description: error.message,
+        description: socialActionError(error, "We couldn't follow this account. Please try again."),
         variant: "destructive",
       });
     },
@@ -72,10 +80,10 @@ export const useTwaaterFollow = (followerAccountId?: string) => {
         description: "Removed from your feed.",
       });
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Unfollow failed",
-        description: error.message,
+        description: "We couldn't unfollow this account. Please try again.",
         variant: "destructive",
       });
     },
