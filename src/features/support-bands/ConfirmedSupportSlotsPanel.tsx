@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Calendar, Loader2, X } from 'lucide-react';
+import { AlertTriangle, Calendar, ListMusic, Loader2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cancelConfirmedSupportSlot } from './tourManagementApi';
+import { SupportSetlistEditor } from './SupportSetlistEditor';
 
 type ConfirmedSlot = {
   id: string;
@@ -35,6 +36,7 @@ export function ConfirmedSupportSlotsPanel({ bandId }: { bandId: string }) {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [preview, setPreview] = useState<CancelPreview | null>(null);
+  const [editingSetlistId, setEditingSetlistId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,6 +72,7 @@ export function ConfirmedSupportSlotsPanel({ bandId }: { bandId: string }) {
       await cancelConfirmedSupportSlot({ supportSlotId: preview.supportSlotId, reason: 'Cancelled by support band' });
       toast({ title: 'Support slot cancelled', description: 'The headliner has been notified and the date is available again.' });
       setPreview(null);
+      setEditingSetlistId((current) => current === preview.supportSlotId ? null : current);
       await load();
     } catch (error: any) {
       toast({ title: 'Could not cancel support slot', description: error?.message, variant: 'destructive' });
@@ -82,11 +85,17 @@ export function ConfirmedSupportSlotsPanel({ bandId }: { bandId: string }) {
   if (slots.length === 0) return null;
 
   return <Card className="border-primary/20">
-    <CardHeader><CardTitle>Confirmed Support Slots</CardTitle><CardDescription>Accepted support shows are firm bookings. Cancelling can reduce your support reliability and reputation.</CardDescription></CardHeader>
+    <CardHeader><CardTitle>Confirmed Support Slots</CardTitle><CardDescription>Prepare your support set for each confirmed show. Support sets can contain up to 6 songs / 30 minutes. Cancelling can reduce your support reliability and reputation.</CardDescription></CardHeader>
     <CardContent className="space-y-3">
-      {slots.map((slot) => <div key={slot.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-        <div><p className="font-medium">{slot.gig?.headliner?.name ?? 'Headliner'} · {slot.gig?.venue?.name ?? 'Venue'}</p><p className="flex items-center gap-1 text-sm text-muted-foreground"><Calendar className="h-3.5 w-3.5" />{slot.gig?.scheduled_date ? new Date(slot.gig.scheduled_date).toLocaleString() : 'Unknown date'}</p></div>
-        <Button size="sm" variant="outline" disabled={busyId === slot.id} onClick={() => showPreview(slot.id)}><X className="mr-1 h-4 w-4" />Cancel slot</Button>
+      {slots.map((slot) => <div key={slot.id} className="space-y-3 rounded-lg border p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><p className="font-medium">{slot.gig?.headliner?.name ?? 'Headliner'} · {slot.gig?.venue?.name ?? 'Venue'}</p><p className="flex items-center gap-1 text-sm text-muted-foreground"><Calendar className="h-3.5 w-3.5" />{slot.gig?.scheduled_date ? new Date(slot.gig.scheduled_date).toLocaleString() : 'Unknown date'}</p></div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant={editingSetlistId === slot.id ? 'secondary' : 'outline'} onClick={() => setEditingSetlistId((current) => current === slot.id ? null : slot.id)}><ListMusic className="mr-1 h-4 w-4" />{editingSetlistId === slot.id ? 'Close setlist' : 'Set support songs'}</Button>
+            <Button size="sm" variant="outline" disabled={busyId === slot.id} onClick={() => showPreview(slot.id)}><X className="mr-1 h-4 w-4" />Cancel slot</Button>
+          </div>
+        </div>
+        {editingSetlistId === slot.id && <SupportSetlistEditor supportSlotId={slot.id} bandId={bandId} />}
       </div>)}
 
       {preview && <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 space-y-3">
