@@ -104,6 +104,11 @@ export default function Busking() {
   const [statusLoading, setStatusLoading] = React.useState(false);
   const [lastResult, setLastResult] = React.useState<BuskingResult | null>(null);
   const pendingRequestKeyRef = React.useRef<string | null>(null);
+  const refreshActivityStatusRef = React.useRef(refreshActivityStatus);
+
+  React.useEffect(() => {
+    refreshActivityStatusRef.current = refreshActivityStatus;
+  }, [refreshActivityStatus]);
 
   const {
     data: buskingOptions,
@@ -180,15 +185,16 @@ export default function Busking() {
   const loadActivityStatus = React.useCallback(async () => {
     setStatusLoading(true);
     try {
-      await refreshActivityStatus();
+      await refreshActivityStatusRef.current();
     } finally {
       setStatusLoading(false);
     }
-  }, [refreshActivityStatus]);
+  }, []);
 
   React.useEffect(() => {
+    if (!profile?.id) return;
     void loadActivityStatus();
-  }, [loadActivityStatus]);
+  }, [profile?.id, loadActivityStatus]);
 
   const handleStartBusking = React.useCallback(async () => {
     if (!profile || !activeLocation) return;
@@ -219,7 +225,7 @@ export default function Busking() {
 
       await Promise.all([
         refetch(),
-        refreshActivityStatus(),
+        refreshActivityStatusRef.current(),
         refetchOptions(),
         showHistory ? refetchHistory() : Promise.resolve(),
       ]);
@@ -250,7 +256,6 @@ export default function Busking() {
     refetch,
     refetchHistory,
     refetchOptions,
-    refreshActivityStatus,
     selectedLength,
     showHistory,
     toast,
