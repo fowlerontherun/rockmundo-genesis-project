@@ -83,7 +83,7 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
               <Handshake className="h-5 w-5" /> Support act contribution
             </CardTitle>
             <CardDescription>
-              Settled contribution from {data.supportBandName || "the support band"}; values come from the completed support-show record.
+              Settled contribution from {data.supportBandName || "the support band"}; these are authoritative post-show values, not projections.
             </CardDescription>
           </div>
           <Badge variant="outline">20% artist ticket share</Badge>
