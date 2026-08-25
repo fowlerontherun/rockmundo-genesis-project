@@ -486,10 +486,10 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 ---
 
-## PR C4 — Festival scheduling locks and activity authority
+## PR C4 — Festival scheduling locks and activity authority ([#1649](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1649))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -506,6 +506,16 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ### Dependencies
 
 - PR C2.
+
+### Implementation notes
+
+- Admission-backed `ticketed`, `ready_to_check_in`, and `attending` states now reserve the full Festival-local date window against new incompatible schedule commitments.
+- The generic scheduled-activity trigger and authoritative rehearsal, recording, gig, and travel domain writes all fail closed with `festival_attendance_schedule_locked` before an overlapping booking can commit; paid rehearsal/recording failures therefore roll back in the same transaction as their debit.
+- Active real band members and legacy leader identity forms are checked so a band booking cannot silently schedule another player across their Festival commitment.
+- Check-in conflict detection now reads authoritative rehearsal, recording, gig, and travel rows as well as the shared schedule, covering older/missing schedule projections without cancelling those existing commitments.
+- Only the server-owned Festival attendance reservation and matching same-edition Festival performance schedule rows may overlap a Festival commitment.
+- Existing pre-admission commitments remain intact and keep readiness/check-in blocked until the player resolves them; leave, completion, cancellation, and refund continue to release only Festival-owned schedule reservations.
+- The migration was parsed against the live RockMundo PostgreSQL schema in a rolled-back transaction and focused C4 regression coverage was added for authority, atomicity, lifecycle release, and internal-function permissions.
 
 ---
 
