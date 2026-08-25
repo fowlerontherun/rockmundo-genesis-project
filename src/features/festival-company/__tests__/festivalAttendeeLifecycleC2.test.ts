@@ -96,7 +96,7 @@ describe("Festival attendee C2 lifecycle authority", () => {
       repositorySource.indexOf('attendanceRpc("get_my_festival_check_in_eligibility")'),
     );
     expect(repositorySource.indexOf("await syncMyFestivalAttendanceLifecycle();", repositorySource.indexOf("checkInToFestival"))).toBeLessThan(
-      repositorySource.indexOf('attendanceRpc("check_in_to_festival")'),
+      repositorySource.indexOf('attendanceRpc("check_in_to_festival",'),
     );
   });
 
