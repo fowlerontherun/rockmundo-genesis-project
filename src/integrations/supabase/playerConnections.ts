@@ -20,8 +20,16 @@ export async function sendConnectionRequest(targetProfileId: string, requestorPr
   return sendFriendRequest({ requestorProfileId: requestorProfileId ?? undefined, addresseeProfileId: targetProfileId });
 }
 
-export async function respondToFriendship(friendshipId: string, nextStatus: Exclude<ManagedFriendshipStatus, "pending" | "blocked" | "expired">) {
-  const { data, error } = await (supabase as any).rpc("respond_to_friend_request", { friendship_id: friendshipId, next_status: nextStatus });
+export async function respondToFriendship(
+  friendshipId: string,
+  nextStatus: Exclude<ManagedFriendshipStatus, "pending" | "blocked" | "expired">,
+  actorProfileId?: string | null,
+) {
+  const { data, error } = await (supabase as any).rpc("respond_to_friend_request", {
+    friendship_id: friendshipId,
+    next_status: nextStatus,
+    actor_profile_id: actorProfileId ?? null,
+  });
   if (error) throw error;
   return data;
 }
@@ -34,9 +42,6 @@ export async function getFriendRequestCounts(profileId?: string | null): Promise
 }
 
 export async function listFriendships(profileId: string, kind: FriendListKind, search = ""): Promise<FriendSummary[]> {
-  // Keep this selection compatible with the live friendship schema. accepted_at
-  // is not present in production; responded_at is the authoritative lifecycle
-  // timestamp currently available for accepted/declined requests.
   let query = (supabase as any).from("friendships").select("id, requestor_id, addressee_id, status, created_at, responded_at, profiles!friendships_requestor_id_fkey(id, username, display_name, avatar_url, city_name), addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, city_name)").or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`).order("updated_at", { ascending: false }).limit(50);
   if (kind === "friends" || kind === "recent") query = query.eq("status", "accepted");
   if (kind === "incoming") query = query.eq("status", "pending").eq("addressee_id", profileId);
