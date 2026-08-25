@@ -70,7 +70,11 @@ BEGIN
     ON programme.id = invitation.festival_artist_programme_id
   WHERE programme.festival_edition_id IS NOT NULL
     AND (
-      (invitation.artist_type = 'solo' AND invitation.artist_profile_id = actor)
+      (
+        p_band_id IS NULL
+        AND invitation.artist_type = 'solo'
+        AND invitation.artist_profile_id = actor
+      )
       OR (
         invitation.artist_type = 'band'
         AND (p_band_id IS NULL OR invitation.band_id = p_band_id)
