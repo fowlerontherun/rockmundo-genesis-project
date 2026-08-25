@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+// Accept any canonical UUID version. Profile IDs are database UUIDs, and newer
+// UUID versions must not be rejected by the client before Supabase can validate
+// and resolve them.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface PublicProfileDetailBand {
   id: string;
