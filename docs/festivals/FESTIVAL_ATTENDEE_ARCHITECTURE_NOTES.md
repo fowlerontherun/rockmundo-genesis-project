@@ -230,16 +230,16 @@ During `attending`, Festival Mode intentionally removes normal gameplay routes; 
 
 The current festival purchase/finance implementation has changed across festival migrations. Any remaining finance-ledger reconciliation belongs in the finance/festival sales stream rather than expanding attendee scheduling authority.
 
-C4 deliberately does not implement day planning, attendee condition simulation, random/social events, or completion rewards.
+C4 deliberately does not implement attendee condition simulation, random/social events, or completion rewards. C5 now owns the day-planning boundary inside C4's whole-Festival reservation.
 
 ## Next implementation slice
 
-With C1–C4 complete, the next attendee slice is **C5 — Festival day planner and stage schedule**:
+With C1–C5 complete, the next attendee slice is **C6 — Festival attendee condition simulation**:
 
-1. Build a persisted per-day attendee plan.
-2. Let players select bands/stages and Festival-area activities.
-3. Include walking/travel time between Festival areas.
-4. Detect intra-Festival timetable conflicts.
-5. Show trade-offs before the plan is committed.
+1. Add bounded Festival-specific energy, hydration, hunger, comfort, mood, and inspiration dimensions where appropriate.
+2. Reuse Wellness rather than establishing a second incompatible health authority.
+3. Resolve effects from authoritative planned activities, environment, camping, and crowd conditions.
+4. Prevent replay or repeated clicks from farming condition changes.
+5. Reconcile temporary Festival effects back into normal Wellness after attendance.
 
-Do not duplicate the normal RockMundo scheduler for internal Festival day planning; C4 owns the external whole-Festival reservation while C5 should own the feasible plan *inside* that reservation.
+C5's persisted, feasible plan is the authoritative activity input for C6; condition simulation must not create a parallel timetable or trust browser timing.

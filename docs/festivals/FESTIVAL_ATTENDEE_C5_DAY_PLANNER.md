@@ -2,7 +2,7 @@
 
 ## Status
 
-Programme C / C5 implementation scope.
+Programme C / C5 complete.
 
 ## Player experience
 
