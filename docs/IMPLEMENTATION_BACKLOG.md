@@ -452,10 +452,10 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 ---
 
-## PR C3 — Festival Mode shell and reduced game UI
+## PR C3 — Festival Mode shell and reduced game UI ([#1647](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1647))
 
 **Priority:** P0  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -470,6 +470,15 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 - A checked-in attendee consistently enters Festival Mode.
 - Refresh/reconnect restores Festival Mode correctly.
 - Leaving/completing the festival restores normal UI.
+
+### Implementation notes
+
+- Authoritative `attending` state now intercepts both desktop and mobile before normal RockMundo navigation renders.
+- Festival Mode has distinct desktop and mobile reduced shells with Home, My Day, Food & Drink, Activities and Inbox navigation.
+- Inbox, safety/reporting, blocked-player management and bug reporting remain reachable without exposing normal gameplay navigation.
+- The route interrupted by check-in is stored per active profile and restored after authoritative leave, completion, cancellation or refund.
+- Refresh/reconnect rehydrates from attendee state; transient attendance-query failures fail closed when the tab was already in Festival Mode.
+- Focused C3 routing/shell tests and full TypeScript checking passed before this item was marked complete.
 
 ### Dependencies
 
