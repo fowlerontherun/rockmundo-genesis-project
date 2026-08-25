@@ -2,9 +2,16 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   normalizeFestivalLocalStart,
   parseFestivalDayPlan,
+  parseFestivalPlanPreview,
+  parseFestivalStagePlanPreview,
+  parseFestivalStageSchedule,
   type CreateFestivalPlanItemInput,
   type FestivalDayPlan,
   type FestivalPlanMutationResult,
+  type FestivalPlanPreview,
+  type FestivalStagePlanPreview,
+  type FestivalStageSchedule,
+  type PreviewFestivalPlanItemInput,
 } from "./festivalDayPlanner";
 import {
   parseFestivalActivityResolution,
@@ -60,6 +67,20 @@ export const getMyFestivalDayPlan = async (attendanceId: string): Promise<Festiv
   return parseFestivalDayPlan(data);
 };
 
+export const previewFestivalDayPlanItem = async (
+  input: PreviewFestivalPlanItemInput,
+): Promise<FestivalPlanPreview> => {
+  const { data, error } = await plannerRpc("preview_festival_day_plan_item", {
+    p_attendance_id: input.attendanceId,
+    p_festival_date: input.festivalDate,
+    p_local_start: normalizeFestivalLocalStart(input.localStart),
+    p_duration_minutes: input.durationMinutes,
+    p_activity_type: input.activityType,
+  });
+  if (error) throw new Error(error.message || "festival_day_plan_preview_failed");
+  return parseFestivalPlanPreview(data);
+};
+
 export const createFestivalDayPlanItem = async (
   input: CreateFestivalPlanItemInput,
 ): Promise<FestivalPlanMutationResult> => {
@@ -81,6 +102,40 @@ export const cancelFestivalDayPlanItem = async (itemId: string): Promise<Festiva
     p_item_id: itemId,
   });
   if (error) throw new Error(error.message || "festival_day_plan_cancel_failed");
+  return parseMutationResult(data);
+};
+
+export const getMyFestivalStageSchedule = async (attendanceId: string): Promise<FestivalStageSchedule> => {
+  const { data, error } = await plannerRpc("get_my_festival_stage_schedule", {
+    p_attendance_id: attendanceId,
+  });
+  if (error) throw new Error(error.message || "festival_stage_schedule_unavailable");
+  return parseFestivalStageSchedule(data);
+};
+
+export const previewFestivalStagePlanItem = async (
+  attendanceId: string,
+  scheduleItemId: string,
+): Promise<FestivalStagePlanPreview> => {
+  const { data, error } = await plannerRpc("preview_festival_stage_plan_item", {
+    p_attendance_id: attendanceId,
+    p_schedule_item_id: scheduleItemId,
+  });
+  if (error) throw new Error(error.message || "festival_stage_plan_preview_failed");
+  return parseFestivalStagePlanPreview(data);
+};
+
+export const addFestivalStagePerformanceToDayPlan = async (
+  attendanceId: string,
+  scheduleItemId: string,
+  idempotencyKey: string,
+): Promise<FestivalPlanMutationResult> => {
+  const { data, error } = await plannerRpc("add_festival_stage_performance_to_day_plan", {
+    p_attendance_id: attendanceId,
+    p_schedule_item_id: scheduleItemId,
+    p_idempotency_key: idempotencyKey,
+  });
+  if (error) throw new Error(error.message || "festival_stage_plan_add_failed");
   return parseMutationResult(data);
 };
 

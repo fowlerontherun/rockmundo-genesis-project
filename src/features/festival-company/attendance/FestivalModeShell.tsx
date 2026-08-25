@@ -7,18 +7,20 @@ import { useLeaveFestivalEarly } from "./useFestivalAttendance";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
 import { FestivalModeActivityHub } from "./FestivalModeActivityHub";
 import { FestivalModeMyDay } from "./FestivalModeMyDay";
+import { FestivalModeStageSchedule } from "./FestivalModeStageSchedule";
 import { isFestivalModeSupportPath } from "./festivalModeRouting";
 
-export type FestivalModeSection = "home" | "my-day" | "food-drink" | "activities";
+export type FestivalModeSection = "home" | "my-day" | "stages" | "food-drink" | "activities";
 
 const festivalSections: Array<{ id: FestivalModeSection; label: string; mobileLabel: string }> = [
   { id: "home", label: "Festival Home", mobileLabel: "Home" },
   { id: "my-day", label: "My Day", mobileLabel: "My Day" },
+  { id: "stages", label: "Stages", mobileLabel: "Stages" },
   { id: "food-drink", label: "Food & Drink", mobileLabel: "Food" },
   { id: "activities", label: "Activities", mobileLabel: "Do" },
 ];
 
-const futureSections = ["Stages", "Social", "Campsite", "Festival Map"];
+const futureSections = ["Social", "Festival Map"];
 
 const supportLinks = [
   { to: "/inbox", label: "Inbox" },
@@ -111,6 +113,8 @@ export const FestivalModeShell = ({
     switch (activeSection) {
       case "my-day":
         return <FestivalModeMyDay attendance={attendance} />;
+      case "stages":
+        return <FestivalModeStageSchedule attendance={attendance} />;
       case "food-drink":
         return <FestivalModeActivityHub attendance={attendance} kind="food-drink" />;
       case "activities":
@@ -149,7 +153,7 @@ export const FestivalModeShell = ({
           aria-label="Festival navigation"
           className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur"
         >
-          <div className="mx-auto grid max-w-3xl grid-cols-5 gap-1">
+          <div className="mx-auto grid max-w-3xl grid-cols-6 gap-1">
             {festivalSections.map((section) => {
               const isCurrent = !supportRoute && section.id === activeSection;
               return (
@@ -159,7 +163,7 @@ export const FestivalModeShell = ({
                   aria-current={isCurrent ? "page" : undefined}
                   onClick={() => selectFestivalSection(section.id)}
                   className={[
-                    "rounded-lg px-2 py-2 text-center text-xs font-medium transition",
+                    "rounded-lg px-1.5 py-2 text-center text-[11px] font-medium transition",
                     isCurrent ? "bg-primary text-primary-foreground" : "hover:bg-muted",
                   ].join(" ")}
                 >
@@ -171,7 +175,7 @@ export const FestivalModeShell = ({
               to="/inbox"
               aria-current={location.pathname === "/inbox" ? "page" : undefined}
               className={[
-                "rounded-lg px-2 py-2 text-center text-xs font-medium transition",
+                "rounded-lg px-1.5 py-2 text-center text-[11px] font-medium transition",
                 location.pathname === "/inbox" ? "bg-primary text-primary-foreground" : "hover:bg-muted",
               ].join(" ")}
             >
