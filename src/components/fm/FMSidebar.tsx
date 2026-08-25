@@ -9,11 +9,12 @@ import {
   MAYOR_OFFICE_MODULE_LABEL,
   MAYOR_OFFICE_SIDEBAR,
 } from "@/config/mayorOfficeNavigation";
-import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Handshake, PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/rockmundo-new-logo.png";
 
 const COLLAPSED_KEY = "fm-sidebar-collapsed";
+const SUPPORT_OPPORTUNITIES_PATH = "/gigs/advanced/support";
 
 type SidebarItem = {
   label: string;
@@ -48,7 +49,7 @@ export const FMSidebar = () => {
       }));
     }
 
-    return mod.sidebar.map((group) => ({
+    const sidebarGroups = mod.sidebar.map((group) => ({
       label: group.label,
       items: group.items.map((item) => ({
         label: item.label,
@@ -57,7 +58,27 @@ export const FMSidebar = () => {
         active: pathname === item.path || pathname.startsWith(item.path + "/"),
       })),
     }));
-  }, [mayorCityId, mayorOffice, mayorSection, mod.sidebar, pathname]);
+
+    // Support availability is a first-class Band workflow, so keep it visible in
+    // the persistent navigation rather than relying on a Band hub tile that a
+    // player may never visit. The route already resolves to the Band module via
+    // the /gigs match path.
+    if (mod.id === "band-live") {
+      const performGroup = sidebarGroups.find((group) => group.label === "Perform");
+      if (performGroup && !performGroup.items.some((item) => item.path === SUPPORT_OPPORTUNITIES_PATH)) {
+        const myGigsIndex = performGroup.items.findIndex((item) => item.path === "/band/gigs");
+        const supportItem: SidebarItem = {
+          label: "Support Opportunities",
+          path: SUPPORT_OPPORTUNITIES_PATH,
+          icon: Handshake,
+          active: pathname === SUPPORT_OPPORTUNITIES_PATH || pathname.startsWith(SUPPORT_OPPORTUNITIES_PATH + "/"),
+        };
+        performGroup.items.splice(myGigsIndex >= 0 ? myGigsIndex + 1 : 0, 0, supportItem);
+      }
+    }
+
+    return sidebarGroups;
+  }, [mayorCityId, mayorOffice, mayorSection, mod.id, mod.sidebar, pathname]);
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem(COLLAPSED_KEY) === "1"; } catch { return false; }
