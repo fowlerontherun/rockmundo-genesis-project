@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   finalize:
@@ -32,7 +33,26 @@ jobs:
           src/features/festivals/booking/projections.test.ts
           src/features/festivals/booking/hooks.test.tsx
       - name: Typecheck
-        run: npm run typecheck
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee /tmp/b7-typecheck.log
+      - name: Report typecheck diagnostics
+        if: steps.typecheck.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### Temporary B7 typecheck diagnostics'
+            echo
+            echo '```text'
+            tail -n 180 /tmp/b7-typecheck.log
+            echo '```'
+          } > /tmp/b7-typecheck-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/b7-typecheck-comment.md
+          exit 1
       - name: Repository lint gate
         run: npm run lint:ci
       - name: Migration timestamp verification
