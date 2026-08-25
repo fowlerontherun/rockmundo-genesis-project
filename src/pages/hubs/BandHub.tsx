@@ -8,7 +8,7 @@ export default function BandHub() {
       description="Manage your band, chemistry, crew, rankings, and live opportunities."
       tiles={[
         { icon: Users, labelKey: "nav.bandManager", path: "/band", imagePrompt: "A rock band group photo in a rehearsal room with instruments and band logo on the wall" },
-        { icon: Handshake, labelKey: "Support Opportunities", path: "/gigs/advanced/support", description: "Advertise support availability, review offers, and build your support-band reputation.", imagePrompt: "Two touring rock bands shaking hands backstage before a support slot, venue posters and road cases nearby" },
+        { icon: Handshake, labelKey: "Offer as Support Act", path: "/gigs/advanced/support", description: "Make your band available for support slots by choosing cities and dates, then manage incoming support offers.", imagePrompt: "A rising rock band backstage beside a tour poster advertising support slots, road cases and venue passes nearby" },
         { icon: Sparkles, labelKey: "nav.bandChemistry", path: "/chemistry", imagePrompt: "Band members high-fiving with sparkles and energy flowing between them, chemistry vibes" },
         { icon: Globe, labelKey: "nav.bandFinder", path: "/bands/finder", imagePrompt: "A globe with musician silhouettes connected by lines, searching for band members worldwide" },
         { icon: Trophy, labelKey: "nav.bandRankings", path: "/band-rankings", imagePrompt: "A leaderboard with band names and rankings, trophies and spotlights on top bands" },
