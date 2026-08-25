@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Temporary branch-only helper. The workflow removes this file after C2 checks pass.
 path = Path("docs/IMPLEMENTATION_BACKLOG.md")
 text = path.read_text(encoding="utf-8")
 
