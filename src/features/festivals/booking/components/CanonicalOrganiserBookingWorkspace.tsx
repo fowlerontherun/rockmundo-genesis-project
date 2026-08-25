@@ -1,24 +1,29 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFestivalBookingRealtime } from "../b7CollaborationVoting";
 import { useFestivalOffers, useOrganiserFestivalApplications } from "../hooks";
 import { OrganiserApplicationQueue } from "./OrganiserApplicationQueue";
 import { OrganiserContractQueue } from "./OrganiserContractQueue";
+import { OrganiserFestivalFanVotingPanel } from "./FestivalB7Panels";
 import { OrganiserOfferQueue } from "./OrganiserOfferQueue";
 import { OrganiserSetlistQueue } from "./OrganiserSetlistQueue";
+
 export function CanonicalOrganiserBookingWorkspace({
   editionId,
 }: {
   editionId?: string;
 }) {
+  useFestivalBookingRealtime(`organiser-${editionId ?? "none"}`);
   const applications = useOrganiserFestivalApplications(editionId);
   const offers = useFestivalOffers(undefined, editionId);
   const appData = applications.data ?? [];
   return (
     <Tabs defaultValue="new">
-      <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
+      <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-9">
         <TabsTrigger value="new">New</TabsTrigger>
         <TabsTrigger value="review">Under Review</TabsTrigger>
         <TabsTrigger value="shortlisted">Shortlisted</TabsTrigger>
         <TabsTrigger value="waitlisted">Waitlisted</TabsTrigger>
+        <TabsTrigger value="fan-voting">Fan Voting</TabsTrigger>
         <TabsTrigger value="offers">Offers</TabsTrigger>
         <TabsTrigger value="signatures">Awaiting Signatures</TabsTrigger>
         <TabsTrigger value="active">Active Bookings</TabsTrigger>
@@ -58,6 +63,12 @@ export function CanonicalOrganiserBookingWorkspace({
           applications={appData}
           isLoading={applications.isLoading}
           editionId={editionId}
+        />
+      </TabsContent>
+      <TabsContent value="fan-voting">
+        <OrganiserFestivalFanVotingPanel
+          editionId={editionId}
+          applications={appData}
         />
       </TabsContent>
       <TabsContent value="offers">
