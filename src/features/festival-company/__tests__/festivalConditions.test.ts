@@ -18,6 +18,8 @@ const conditions = {
   mood: 70,
   intoxication: 0,
   social: 50,
+  comfort: 70,
+  inspiration: 50,
   lastEvolvedAt: "2030-07-01T12:00:00Z",
   lastActivityAt: null,
   serverNow: "2030-07-01T12:05:00Z",
@@ -87,6 +89,8 @@ describe("Festival condition client contracts", () => {
       hunger: 32,
       hydration: 75,
       intoxication: 0,
+      comfort: 70,
+      inspiration: 50,
     });
     expect(() => parseFestivalConditions({ ...conditions, energy: 101 }))
       .toThrow("malformed_festival_conditions");
@@ -122,6 +126,8 @@ describe("Festival condition client contracts", () => {
   it("exposes temporary condition UI and executable destination buttons", () => {
     expect(panelSource).toContain("Festival condition");
     expect(panelSource).toContain("Intoxication");
+    expect(panelSource).toContain("Comfort");
+    expect(panelSource).toContain("Inspiration");
     expect(hubSource).toContain("Do now");
     expect(hubSource).toContain("useResolveFestivalPlanActivity");
   });
