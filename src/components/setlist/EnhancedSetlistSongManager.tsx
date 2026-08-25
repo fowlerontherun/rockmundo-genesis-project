@@ -423,46 +423,35 @@ export const EnhancedSetlistSongManager = ({
 
   const [versionFilter, setVersionFilter] = useState<string>("all");
 
-  // Optimized single query for available songs
+  // Use the authoritative band repertoire. Covers only appear here after the band
+  // has explicitly added them to its active repertoire.
   const { data: availableSongs, isLoading: songsLoading } = useQuery({
-    queryKey: ["band-songs-optimized", bandId],
+    queryKey: ["band-setlist-repertoire", bandId],
     queryFn: async () => {
-      // Single optimized query using RPC or parallel queries
-      const [bandSongsResult, bandMembersResult] = await Promise.all([
-        supabase
-          .from("songs")
-          .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id, version, parent_song_id")
-          .eq("band_id", bandId)
-          .eq("archived", false)
-          .order("title"),
-        supabase
-          .from("band_members")
-          .select("user_id")
-          .eq("band_id", bandId)
-      ]);
+      const { data, error } = await (supabase as any).rpc("get_band_setlist_song_options", {
+        p_band_id: bandId,
+      });
 
-      if (bandSongsResult.error) throw bandSongsResult.error;
-      
-      const bandSongs = bandSongsResult.data || [];
-      const bandMembers = bandMembersResult.data || [];
-      
-      if (bandMembers.length > 0) {
-        const memberUserIds = bandMembers.map(m => m.user_id).filter(Boolean);
-        
-        if (memberUserIds.length > 0) {
-          const { data: memberSongs } = await supabase
-            .from("songs")
-            .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id, version, parent_song_id")
-            .in("user_id", memberUserIds)
-            .is("band_id", null)
-            .eq("archived", false)
-            .order("title");
+      if (error) throw error;
 
-          return [...bandSongs, ...(memberSongs || [])];
-        }
-      }
-
-      return bandSongs;
+      return ((data || []) as any[])
+        .map((song) => ({
+          id: song.song_id,
+          title: song.title,
+          genre: song.genre,
+          quality_score: song.quality_score,
+          duration_seconds: song.duration_seconds,
+          duration_display: song.duration_display,
+          status: song.status,
+          version: song.version || 'standard',
+          parent_song_id: song.parent_song_id,
+          repertoire_type: song.repertoire_type || 'original',
+          owner_band_id: song.owner_band_id,
+          owner_band_name: song.owner_band_name,
+          familiarity_percentage: song.familiarity_percentage || 0,
+          repertoire_status: song.repertoire_status || 'active',
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title));
     },
     staleTime: 2 * 60 * 1000, // Cache for 2 minutes
     gcTime: 5 * 60 * 1000,
@@ -578,7 +567,7 @@ export const EnhancedSetlistSongManager = ({
           <DialogHeader>
             <DialogTitle>Manage Setlist</DialogTitle>
             <DialogDescription>
-              Drag items to reorder. Add songs and performance items. Move up to 2 items to encore.
+              Add songs from the band's active repertoire, including covers, then drag items to reorder. Move up to 2 items to encore.
             </DialogDescription>
           </DialogHeader>
 
@@ -608,28 +597,29 @@ export const EnhancedSetlistSongManager = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Versions</SelectItem>
-                  <SelectItem value="standard">Original</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
                   <SelectItem value="acoustic">🎸 Acoustic</SelectItem>
                   <SelectItem value="remix">🎧 Remix</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={selectedSongId} onValueChange={setSelectedSongId}>
                 <SelectTrigger className="flex-1 min-w-[200px]">
-                  <SelectValue placeholder={songsLoading ? "Loading songs..." : "Select a song to add..."} />
+                  <SelectValue placeholder={songsLoading ? "Loading repertoire..." : "Select a repertoire song..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {songsLoading ? (
                     <div className="p-2 text-sm text-muted-foreground">
-                      Loading songs...
+                      Loading repertoire...
                     </div>
                   ) : unaddedSongs.length === 0 ? (
                     <div className="p-2 text-sm text-muted-foreground">
-                      No songs available to add
+                      No active repertoire songs available to add
                     </div>
                   ) : (
                     unaddedSongs.map((song) => (
                       <SelectItem key={song.id} value={song.id}>
-                        {song.title} ({song.genre})
+                        {song.title} ({song.genre || 'Unknown genre'})
+                        {song.repertoire_type === 'cover' && ` • Cover${song.owner_band_name ? ` of ${song.owner_band_name}` : ''} • Familiarity ${song.familiarity_percentage}%`}
                         {song.version && song.version !== 'standard' && ` [${song.version === 'acoustic' ? '🎸' : '🎧'}]`}
                       </SelectItem>
                     ))
