@@ -6,31 +6,29 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, LayoutDashboard } from "lucide-react";
 import { AdminNav, adminCategories } from "@/components/admin/AdminNav";
+import AdminBugReportsPanel from "@/components/admin/AdminBugReportsPanel";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-
 
 const Admin = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const navigate = useNavigate();
 
-  // Filter items based on search
   const filteredCategories = adminCategories.map(category => ({
     ...category,
-    items: category.items.filter(item => 
+    items: category.items.filter(item =>
       item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description?.toLowerCase().includes(searchQuery.toLowerCase())
     )
   })).filter(category => category.items.length > 0);
 
-  // Get category for active tab
   const activeCategory = activeTab === "all" ? null : adminCategories.find(c => c.id === activeTab);
+  void activeCategory;
 
   return (
     <AdminRoute>
       <div className="container mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-lg bg-primary/10">
@@ -47,9 +45,8 @@ const Admin = () => {
           </Badge>
         </div>
 
-        {/* Quick Actions removed - Eurovision now managed via /admin/eurovision */}
+        <AdminBugReportsPanel />
 
-        {/* Search */}
         <div className="max-w-md">
           <Input
             type="search"
@@ -60,7 +57,6 @@ const Admin = () => {
           />
         </div>
 
-        {/* Tabs for categories */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex flex-wrap h-auto gap-2 bg-transparent p-0">
             <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
@@ -69,8 +65,8 @@ const Admin = () => {
             {adminCategories.map((category) => {
               const Icon = category.icon;
               return (
-                <TabsTrigger 
-                  key={category.id} 
+                <TabsTrigger
+                  key={category.id}
                   value={category.id}
                   className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
@@ -81,7 +77,6 @@ const Admin = () => {
             })}
           </TabsList>
 
-          {/* All Tools Tab */}
           <TabsContent value="all" className="mt-6">
             {searchQuery ? (
               filteredCategories.length > 0 ? (
@@ -133,7 +128,6 @@ const Admin = () => {
             )}
           </TabsContent>
 
-          {/* Individual Category Tabs */}
           {adminCategories.map((category) => {
             const Icon = category.icon;
             return (
@@ -155,7 +149,7 @@ const Admin = () => {
 
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {category.items.map((item) => (
-                      <Card 
+                      <Card
                         key={item.path}
                         className="hover:border-primary hover:shadow-md transition-all cursor-pointer group"
                         onClick={() => navigate(item.path)}
