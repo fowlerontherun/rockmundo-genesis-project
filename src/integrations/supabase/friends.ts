@@ -119,11 +119,12 @@ export const sendFriendRequest = async ({
 }: SendFriendRequestParams): Promise<FriendshipRow> => {
   const targetProfileId = validateFriendRequestInput(addresseeProfileId);
 
-  // The RPC is authoritative and resolves the current active profile from the
-  // authenticated session. Do not require a client-supplied requestor id before
-  // trying it; newer callers intentionally leave that identity server-controlled.
+  // Pass the character selected by the UI when available. The RPC validates
+  // that it belongs to the authenticated user, preventing stale DB active flags
+  // from sending requests as a different character.
   const rpcAttempt = await (supabase as any).rpc("send_friend_request", {
     target_profile_id: targetProfileId,
+    requestor_profile_id: requestorProfileId ?? null,
   });
 
   if (!rpcAttempt.error && rpcAttempt.data) {
@@ -149,7 +150,6 @@ export const sendFriendRequest = async ({
     throw new Error("You cannot send a friend request to yourself.");
   }
 
-  // Check for an existing friendship in either direction so we don't hit the unique constraint blindly.
   const { data: existing, error: existingError } = await supabase
     .from("friendships")
     .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
@@ -169,7 +169,6 @@ export const sendFriendRequest = async ({
       throw new Error("You are already friends with this player.");
     }
     if (existing.status === "pending") {
-      // If the other side previously sent us a request, auto-accept.
       if (existing.requestor_id === targetProfileId && existing.addressee_id === requestorProfileId) {
         const accepted = await updateFriendshipStatus(existing.id, "accepted");
         return accepted;
@@ -177,7 +176,6 @@ export const sendFriendRequest = async ({
       return existing as FriendshipRow;
     }
     if (existing.status === "declined") {
-      // Revive the declined request by re-issuing from the current requestor.
       const { data: revived, error: reviveError } = await supabase
         .from("friendships")
         .update({
