@@ -99,6 +99,7 @@ const PERFORMANCE_CREW_ROLES = new Set([
 function getTieredBonusPercent(level: number): number {
   if (level <= 0) return 0;
   if (level >= 20) return 28;
+  // Quadratic curve: grows slowly at first, faster at higher levels
   return (level / 20) * (level / 20) * 28;
 }
 
@@ -150,6 +151,8 @@ function doesCategoryMatchRole(category: string, subcategory: string | null, rol
   return validCategories.some(vc => catLower.includes(vc) || subLower.includes(vc) || vc.includes(catLower));
 }
 
+// ── Stage Behavior Modifiers (mirrored from client stageBehaviors.ts) ──
+
 const BEHAVIOR_MODIFIERS: Record<string, { baseBonus: number; varianceMult: number; chemMult: number; crowdMult: number }> = {
   standard:    { baseBonus: 0,   varianceMult: 0.9,  chemMult: 1.0,  crowdMult: 1.0  },
   aggressive:  { baseBonus: 8,   varianceMult: 1.3,  chemMult: 0.9,  crowdMult: 1.25 },
@@ -168,6 +171,8 @@ const BEHAVIOR_MODIFIERS: Record<string, { baseBonus: number; varianceMult: numb
 function getBehaviorMods(key: string) {
   return BEHAVIOR_MODIFIERS[key] || BEHAVIOR_MODIFIERS.standard;
 }
+
+// ── Interfaces ──
 
 interface PerformanceFactors {
   seed?: string;
@@ -190,6 +195,8 @@ interface PerformanceItemFactors {
   memberSkillAverage: number;
 }
 
+// ── Performance calculators ──
+
 function seededUnit(seed: string) {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
@@ -198,14 +205,18 @@ function seededUnit(seed: string) {
 
 function calculateSongPerformance(factors: PerformanceFactors) {
   const bMods = getBehaviorMods(factors.stageBehavior || 'standard');
+
   const normalizedSongQuality = Math.min(100, (factors.songQuality / 1000) * 100);
   const normalizedMemberSkills = Math.min(100, (factors.memberSkillAverage / 150) * 100);
   const normalizedStageSkills = Math.min(100, Math.max(0, factors.stageSkillAverage || 0));
+
   const clamp = (v: number) => Math.min(100, Math.max(0, v || 0));
+
   const WEIGHTS = {
     songQuality: 0.25, rehearsal: 0.20, chemistry: 0.15,
     equipment: 0.12, crew: 0.08, memberSkills: 0.10, stageSkills: 0.10
   };
+
   const songQualityContrib = normalizedSongQuality * WEIGHTS.songQuality;
   const rehearsalContrib = clamp(factors.rehearsalLevel) * WEIGHTS.rehearsal;
   const chemistryContrib = clamp(factors.bandChemistry * bMods.chemMult) * WEIGHTS.chemistry;
@@ -213,7 +224,12 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   const crewContrib = clamp(factors.crewSkillLevel) * WEIGHTS.crew;
   const memberSkillsContrib = normalizedMemberSkills * WEIGHTS.memberSkills;
   const stageSkillsContrib = normalizedStageSkills * WEIGHTS.stageSkills;
-  const baseScore = songQualityContrib + rehearsalContrib + chemistryContrib + equipmentContrib + crewContrib + memberSkillsContrib + stageSkillsContrib + bMods.baseBonus;
+
+  const baseScore =
+    songQualityContrib + rehearsalContrib + chemistryContrib +
+    equipmentContrib + crewContrib + memberSkillsContrib + stageSkillsContrib +
+    bMods.baseBonus;
+
   let capacityMultiplier = 1.0;
   const cap = factors.venueCapacityUsed;
   if (cap >= 95) capacityMultiplier = 1.15;
@@ -221,17 +237,26 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   else if (cap >= 60) capacityMultiplier = 1.0;
   else if (cap >= 40) capacityMultiplier = 0.95;
   else capacityMultiplier = 0.85;
+
   const baseRoll = seededUnit(factors.seed || `${factors.songQuality}:${factors.rehearsalLevel}:${factors.memberSkillAverage}`);
   const variance = 0.96 + (baseRoll - 0.5) * (0.08 * bMods.varianceMult);
+
+  // Random event chance (matching client-side)
   let eventMultiplier = 1.0;
   const eventRoll = seededUnit(`${factors.seed || "gig"}:event`);
   const eventMagnitude = seededUnit(`${factors.seed || "gig"}:event:magnitude`);
   if (eventRoll < 0.05) eventMultiplier = 1.06 + eventMagnitude * 0.04;
   else if (eventRoll < 0.09) eventMultiplier = 0.92 + eventMagnitude * 0.04;
   else if (eventRoll < 0.14) eventMultiplier = 1.03 + eventMagnitude * 0.03;
+
+  // Quality difficulty curve (matching client-side)
   const qualityDifficulty = 0.75 + (normalizedSongQuality / 100) * 0.25;
+
+  // Convert to 25-star scale
   const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * qualityDifficulty * eventMultiplier;
   const score = Number(Math.max(0, Math.min(25, finalScore)).toFixed(2));
+
+  // Apply crowd engagement multiplier from behavior to thresholds
   const crowdMult = bMods.crowdMult;
   let crowdResponse = 'mixed';
   if (score >= 22 / crowdMult) crowdResponse = 'ecstatic';
@@ -239,6 +264,7 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   else if (score >= 14 / crowdMult) crowdResponse = 'engaged';
   else if (score >= 10 / crowdMult) crowdResponse = 'mixed';
   else crowdResponse = 'disappointed';
+
   const breakdown = {
     songQuality: Number(((songQualityContrib / 100) * 25).toFixed(2)),
     rehearsal: Number(((rehearsalContrib / 100) * 25).toFixed(2)),
@@ -248,13 +274,19 @@ function calculateSongPerformance(factors: PerformanceFactors) {
     memberSkills: Number(((memberSkillsContrib / 100) * 25).toFixed(2)),
     stageSkills: Number(((stageSkillsContrib / 100) * 25).toFixed(2))
   };
+
   return { score, crowdResponse, breakdown };
 }
 
 function calculatePerformanceItemScore(factors: PerformanceItemFactors) {
   const clamp = (v: number) => Math.min(100, Math.max(0, v || 50));
   const weights = { crowdAppeal: 0.35, skillMatch: 0.25, chemistry: 0.20, memberSkills: 0.20 };
-  const score = Number(((clamp(factors.crowdAppeal) / 100) * 25 * weights.crowdAppeal + (clamp(factors.skillMatch) / 100) * 25 * weights.skillMatch + (clamp(factors.bandChemistry) / 100) * 25 * weights.chemistry + (clamp(factors.memberSkillAverage) / 100) * 25 * weights.memberSkills).toFixed(2));
+  const score = Number((
+    (clamp(factors.crowdAppeal) / 100) * 25 * weights.crowdAppeal +
+    (clamp(factors.skillMatch) / 100) * 25 * weights.skillMatch +
+    (clamp(factors.bandChemistry) / 100) * 25 * weights.chemistry +
+    (clamp(factors.memberSkillAverage) / 100) * 25 * weights.memberSkills
+  ).toFixed(2));
   let crowdResponse = 'engaged';
   if (score >= 20) crowdResponse = 'ecstatic';
   else if (score >= 16) crowdResponse = 'enthusiastic';
@@ -263,182 +295,518 @@ function calculatePerformanceItemScore(factors: PerformanceItemFactors) {
   return { score, crowdResponse };
 }
 
-async function fetchLiveMemberSkillAverage(supabaseClient: any, members: any[]): Promise<number> {
+// ── Live skill fetching helpers ──
+
+async function fetchLiveMemberSkillAverage(
+  supabaseClient: any,
+  members: any[]
+): Promise<number> {
   if (!members || members.length === 0) return 50;
+
   let totalEffective = 0;
   let counted = 0;
+
   for (const member of members) {
+    // NPC members (no user_id) get a baseline skill level based on their tier
     if (!member.user_id) {
       const npcTier = member.touring_member_tier || 1;
-      totalEffective += Math.min(120, 30 + npcTier * 20);
+      // NPC baseline: tier 1=40, tier 2=60, tier 3=80, tier 4=100
+      const npcBaseline = Math.min(120, 30 + npcTier * 20);
+      totalEffective += npcBaseline;
+      counted++;
+      console.log(`[process-gig-song] NPC member role=${member.instrument_role}: baseline=${npcBaseline} (tier ${npcTier})`);
+      continue;
+    }
+
+    // Get profile_id for this user
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('user_id', member.user_id)
+      .single();
+
+    if (!profile) {
+      console.log(`[process-gig-song] No profile found for user ${member.user_id}`);
+      totalEffective += 50; // Default baseline
       counted++;
       continue;
     }
-    const { data: profile } = await supabaseClient.from('profiles').select('id').eq('user_id', member.user_id).single();
-    if (!profile) { totalEffective += 50; counted++; continue; }
+
     const role = member.instrument_role || 'Vocals';
-    const relevantSlugs = ROLE_SKILL_MAP[role] || ROLE_SKILL_MAP[Object.keys(ROLE_SKILL_MAP).find(k => role.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(role.toLowerCase())) || ''] || [];
+    const relevantSlugs = ROLE_SKILL_MAP[role] ||
+      ROLE_SKILL_MAP[Object.keys(ROLE_SKILL_MAP).find(k =>
+        role.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(role.toLowerCase())
+      ) || ''] || [];
+
+    console.log(`[process-gig-song] Member ${member.user_id} role=${role}, slugs=${relevantSlugs.length}`);
+
+    // Fetch skill progress
     let skillLevel = 0;
     if (relevantSlugs.length > 0) {
-      const { data: skillData } = await supabaseClient.from('skill_progress').select('skill_slug, current_level').eq('profile_id', profile.id).in('skill_slug', relevantSlugs);
+      const { data: skillData } = await supabaseClient
+        .from('skill_progress')
+        .select('skill_slug, current_level')
+        .eq('profile_id', profile.id)
+        .in('skill_slug', relevantSlugs);
+
       skillLevel = getSkillLevelFromProgress(skillData || [], relevantSlugs);
+      console.log(`[process-gig-song] Skill progress for role slugs: found ${skillData?.length || 0} entries, level=${skillLevel}`);
     }
+
+    // If no role-specific skills found, try ALL instrument skills as fallback
     if (skillLevel === 0) {
-      const { data: allSkills } = await supabaseClient.from('skill_progress').select('skill_slug, current_level').eq('profile_id', profile.id).like('skill_slug', 'instruments_%');
-      if (allSkills && allSkills.length > 0) skillLevel = Math.round(getSkillLevelFromProgress(allSkills, allSkills.map((s: any) => s.skill_slug)) * 0.5);
+      const { data: allSkills } = await supabaseClient
+        .from('skill_progress')
+        .select('skill_slug, current_level')
+        .eq('profile_id', profile.id)
+        .like('skill_slug', 'instruments_%');
+
+      if (allSkills && allSkills.length > 0) {
+        skillLevel = Math.round(getSkillLevelFromProgress(allSkills, allSkills.map((s: any) => s.skill_slug)) * 0.5);
+        console.log(`[process-gig-song] Fallback: using best instrument skills (${allSkills.length} entries), level=${skillLevel}`);
+      }
     }
+
+    // Factor in player attributes as a baseline
+    // Query by profile_id first, fall back to user_id
     let attrs: any = null;
-    const { data: attrsByProfile } = await supabaseClient.from('player_attributes').select('musical_ability, technical_mastery, rhythm_sense').eq('profile_id', profile.id).maybeSingle();
-    if (attrsByProfile) attrs = attrsByProfile;
-    else {
-      const { data: attrsByUser } = await supabaseClient.from('player_attributes').select('musical_ability, technical_mastery, rhythm_sense').eq('user_id', member.user_id).maybeSingle();
+    const { data: attrsByProfile } = await supabaseClient
+      .from('player_attributes')
+      .select('musical_ability, technical_mastery, rhythm_sense')
+      .eq('profile_id', profile.id)
+      .maybeSingle();
+    
+    if (attrsByProfile) {
+      attrs = attrsByProfile;
+    } else {
+      const { data: attrsByUser } = await supabaseClient
+        .from('player_attributes')
+        .select('musical_ability, technical_mastery, rhythm_sense')
+        .eq('user_id', member.user_id)
+        .maybeSingle();
       attrs = attrsByUser;
     }
+
     if (attrs) {
       const rawMusical = attrs.musical_ability ?? 5;
       const rawTechnical = attrs.technical_mastery ?? 5;
       const rawRhythm = attrs.rhythm_sense ?? 5;
+      
+      // Normalize: attributes can be 0-1000+, map to 0-50 bonus range
       const attrAvg = rawMusical * 0.4 + rawTechnical * 0.3 + rawRhythm * 0.3;
       const normalizedAttrBonus = Math.round(Math.min(50, (Math.min(attrAvg, 1000) / 1000) * 50));
-      skillLevel = skillLevel === 0 ? normalizedAttrBonus : Math.round(skillLevel * 0.7 + normalizedAttrBonus * 0.3);
+      
+      // Blend: if skill tree is trained, it dominates; otherwise attributes provide a baseline
+      if (skillLevel === 0) {
+        skillLevel = normalizedAttrBonus;
+      } else {
+        skillLevel = Math.round(skillLevel * 0.7 + normalizedAttrBonus * 0.3);
+      }
+      console.log(`[process-gig-song] After attribute blend: skillLevel=${skillLevel}, attrs musical=${rawMusical} technical=${rawTechnical} rhythm=${rawRhythm}`);
     }
+
+    // Fetch equipped gear bonus
     let gearMultiplier = 1.0;
-    const { data: equipment } = await supabaseClient.from('player_equipment').select('equipment_id, is_equipped').eq('user_id', member.user_id).eq('is_equipped', true);
+    const { data: equipment } = await supabaseClient
+      .from('player_equipment')
+      .select('equipment_id, is_equipped')
+      .eq('user_id', member.user_id)
+      .eq('is_equipped', true);
+
     if (equipment && equipment.length > 0) {
       const equipIds = equipment.map((e: any) => e.equipment_id);
-      const { data: items } = await supabaseClient.from('equipment_items').select('id, name, category, subcategory, rarity, stat_boosts').in('id', equipIds);
+      const { data: items } = await supabaseClient
+        .from('equipment_items')
+        .select('id, name, category, subcategory, rarity, stat_boosts')
+        .in('id', equipIds);
+
       if (items && items.length > 0) {
         let totalBonus = 0;
         for (const item of items) {
           if (doesCategoryMatchRole(item.category, item.subcategory, role)) {
             totalBonus += RARITY_BONUSES[item.rarity || 'common'] || 0.05;
-            if (item.stat_boosts && typeof item.stat_boosts === 'object') totalBonus += ((item.stat_boosts as Record<string, number>)['performance'] || 0) / 100;
+            if (item.stat_boosts && typeof item.stat_boosts === 'object') {
+              const perfBoost = (item.stat_boosts as Record<string, number>)['performance'] || 0;
+              totalBonus += perfBoost / 100;
+            }
           }
         }
         gearMultiplier = 1 + Math.min(totalBonus, 0.5);
       }
     }
-    totalEffective += Math.min(150, Math.round(skillLevel * gearMultiplier));
+
+    const effectiveLevel = Math.min(150, Math.round(skillLevel * gearMultiplier));
+    console.log(`[process-gig-song] Member ${member.user_id}: final effectiveLevel=${effectiveLevel}, gearMultiplier=${gearMultiplier}`);
+    totalEffective += effectiveLevel;
     counted++;
   }
-  return counted > 0 ? Math.round(totalEffective / counted) : 50;
+
+  const result = counted > 0 ? Math.round(totalEffective / counted) : 50;
+  console.log(`[process-gig-song] Member skill average: ${result} (${counted} members counted)`);
+  return result;
 }
 
-async function fetchStageSkillAverage(supabaseClient: any, members: any[]): Promise<number> {
+async function fetchStageSkillAverage(
+  supabaseClient: any,
+  members: any[]
+): Promise<number> {
   if (!members || members.length === 0) return 50;
+
   let totalStage = 0;
   let counted = 0;
+
   for (const member of members) {
     if (!member.user_id) {
+      // NPC members get baseline stage skills based on tier
       const npcTier = member.touring_member_tier || 1;
-      totalStage += Math.min(80, 25 + npcTier * 15);
+      const npcStage = Math.min(80, 25 + npcTier * 15);
+      totalStage += npcStage;
       counted++;
       continue;
     }
+
+    // Try profile_id first, then user_id
     let attrs: any = null;
-    const { data: profile } = await supabaseClient.from('profiles').select('id').eq('user_id', member.user_id).maybeSingle();
+    const { data: profile } = await supabaseClient
+      .from('profiles').select('id').eq('user_id', member.user_id).maybeSingle();
+    
     if (profile) {
-      const { data: a } = await supabaseClient.from('player_attributes').select('stage_presence, charisma, crowd_engagement').eq('profile_id', profile.id).maybeSingle();
+      const { data: a } = await supabaseClient
+        .from('player_attributes')
+        .select('stage_presence, charisma, crowd_engagement')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
       attrs = a;
     }
     if (!attrs) {
-      const { data: a } = await supabaseClient.from('player_attributes').select('stage_presence, charisma, crowd_engagement').eq('user_id', member.user_id).maybeSingle();
+      const { data: a } = await supabaseClient
+        .from('player_attributes')
+        .select('stage_presence, charisma, crowd_engagement')
+        .eq('user_id', member.user_id)
+        .maybeSingle();
       attrs = a;
     }
-    if (!attrs) { totalStage += 40; counted++; continue; }
+
+    if (!attrs) {
+      totalStage += 40;
+      counted++;
+      continue;
+    }
+
     const stagePresence = attrs.stage_presence ?? 5;
     const charisma = attrs.charisma ?? 5;
+    // Attributes can be 0-1000+, normalize to 0-100
     const raw = stagePresence * 0.6 + charisma * 0.4;
-    totalStage += Math.min(100, (Math.min(raw, 1000) / 1000) * 100);
+    const normalized = Math.min(100, (Math.min(raw, 1000) / 1000) * 100);
+    console.log(`[process-gig-song] Stage skills for ${member.user_id}: presence=${stagePresence}, charisma=${charisma}, normalized=${normalized}`);
+    totalStage += normalized;
     counted++;
   }
-  return counted > 0 ? Math.round(totalStage / counted) : 50;
+
+  const result = counted > 0 ? Math.round(totalStage / counted) : 50;
+  console.log(`[process-gig-song] Stage skill average: ${result} (${counted} members counted)`);
+  return result;
 }
 
+// ── Main handler ──
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
     const { gigId, outcomeId, songId, performanceItemId, position, itemType } = await req.json();
-    const supabaseClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
-    const { data: gig, error: gigError } = await supabaseClient.from('gigs').select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(*)').eq('id', gigId).single();
-    if (gigError || !gig) throw new Error('Gig not found');
-    if (["cancelled", "completed", "failed"].includes(gig.status)) throw new Error(`Cannot process song for gig in status ${gig.status}`);
-    const { data: canonicalOutcome, error: canonicalOutcomeError } = await supabaseClient.from('gig_outcomes').select('id').eq('gig_id', gigId).single();
-    if (canonicalOutcomeError || !canonicalOutcome || canonicalOutcome.id !== outcomeId) throw new Error('Outcome does not belong to gig');
-    const { data: existingPerformance } = await supabaseClient.from('gig_song_performances').select('*').eq('gig_outcome_id', outcomeId).eq('position', position).maybeSingle();
-    if (existingPerformance) return new Response(JSON.stringify({ success: true, performance: existingPerformance, duplicate: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+
+    console.log('[process-gig-song] Received:', { gigId, outcomeId, songId, performanceItemId, position, itemType });
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // Get gig details with proper relationship hint
+    const { data: gig, error: gigError } = await supabaseClient
+      .from('gigs')
+      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(*)')
+      .eq('id', gigId)
+      .single();
+
+    if (gigError || !gig) {
+      console.error('[process-gig-song] Gig fetch error:', gigError);
+      throw new Error('Gig not found');
+    }
+
+    if (["cancelled", "completed", "failed"].includes(gig.status)) {
+      throw new Error(`Cannot process song for gig in status ${gig.status}`);
+    }
+
+    const { data: canonicalOutcome, error: canonicalOutcomeError } = await supabaseClient
+      .from('gig_outcomes')
+      .select('id')
+      .eq('gig_id', gigId)
+      .single();
+
+    if (canonicalOutcomeError || !canonicalOutcome || canonicalOutcome.id !== outcomeId) {
+      throw new Error('Outcome does not belong to gig');
+    }
+
+    const { data: existingPerformance } = await supabaseClient
+      .from('gig_song_performances')
+      .select('*')
+      .eq('gig_outcome_id', outcomeId)
+      .eq('position', position)
+      .maybeSingle();
+
+    if (existingPerformance) {
+      console.log('[process-gig-song] Duplicate position prevented:', { gigId, outcomeId, position });
+      return new Response(
+        JSON.stringify({ success: true, performance: existingPerformance, duplicate: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
 
     const bandId = gig.band_id;
     const venueCapacity = gig.venues.capacity || 100;
-    const { data: members } = await supabaseClient.from('band_members').select('*').eq('band_id', bandId).eq('is_touring_member', false);
 
+    // Fetch band members (shared by both paths)
+    const { data: members } = await supabaseClient
+      .from('band_members')
+      .select('*')
+      .eq('band_id', bandId)
+      .eq('is_touring_member', false);
+
+    // Handle PERFORMANCE ITEM
     if (itemType === 'performance_item' && performanceItemId) {
-      const { data: perfItem, error: itemError } = await supabaseClient.from('performance_items_catalog').select('*').eq('id', performanceItemId).single();
-      if (itemError || !perfItem) throw new Error('Performance item not found');
+      console.log('[process-gig-song] Processing performance item:', performanceItemId);
+      
+      const { data: perfItem, error: itemError } = await supabaseClient
+        .from('performance_items_catalog')
+        .select('*')
+        .eq('id', performanceItemId)
+        .single();
+
+      if (itemError || !perfItem) {
+        console.error('[process-gig-song] Performance item not found:', itemError);
+        throw new Error('Performance item not found');
+      }
+
+      // Use live skill data for performance items too
       const memberSkillAverage = await fetchLiveMemberSkillAverage(supabaseClient, members || []);
+
       let skillMatch = 70;
-      if (perfItem.required_skill) skillMatch = Math.min(100, (memberSkillAverage / Math.max(1, perfItem.min_skill_level || 0)) * 100);
-      const result = calculatePerformanceItemScore({ crowdAppeal: perfItem.crowd_appeal || 50, skillMatch, bandChemistry: gig.bands.chemistry_level || 50, energyCost: 100 - (perfItem.energy_cost || 10), memberSkillAverage });
+      if (perfItem.required_skill) {
+        const minRequired = perfItem.min_skill_level || 0;
+        skillMatch = Math.min(100, (memberSkillAverage / Math.max(1, minRequired)) * 100);
+      }
+
+      const itemFactors: PerformanceItemFactors = {
+        crowdAppeal: perfItem.crowd_appeal || 50,
+        skillMatch,
+        bandChemistry: gig.bands.chemistry_level || 50,
+        energyCost: 100 - (perfItem.energy_cost || 10),
+        memberSkillAverage
+      };
+
+      const result = calculatePerformanceItemScore(itemFactors);
+
+      // Fetch band morale for performance item modifier
       const { data: bandMoraleData } = await supabaseClient.from('bands').select('morale').eq('id', bandId).single();
       const itemMorale = Math.max(0, Math.min(100, bandMoraleData?.morale ?? 50));
-      const moraleItemScore = Number(Math.max(0, Math.min(25, result.score * (0.85 + (itemMorale / 100) * 0.30))).toFixed(2));
-      const { data: performance, error: perfError } = await supabaseClient.from('gig_song_performances').insert({ gig_outcome_id: outcomeId, song_id: null, performance_item_id: performanceItemId, performance_item_name: perfItem.name, item_type: 'performance_item', song_title: perfItem.name, position, performance_score: moraleItemScore, crowd_response: result.crowdResponse, song_quality_contrib: result.score * 0.35, rehearsal_contrib: 0, chemistry_contrib: result.score * 0.20, equipment_contrib: 0, crew_contrib: 0, member_skill_contrib: result.score * 0.20, started_at: new Date().toISOString(), completed_at: new Date().toISOString() }).select().single();
+      const itemMoraleMod = parseFloat((0.85 + (itemMorale / 100) * 0.30).toFixed(3));
+      const moraleItemScore = Number(Math.max(0, Math.min(25, result.score * itemMoraleMod)).toFixed(2));
+      console.log(`[process-gig-song] Performance item: raw=${result.score}, morale=${itemMorale}, afterMorale=${moraleItemScore}`);
+
+      const { data: performance, error: perfError } = await supabaseClient
+        .from('gig_song_performances')
+        .insert({
+          gig_outcome_id: outcomeId,
+          song_id: null,
+          performance_item_id: performanceItemId,
+          performance_item_name: perfItem.name,
+          item_type: 'performance_item',
+          song_title: perfItem.name,
+          position,
+          performance_score: moraleItemScore,
+          crowd_response: result.crowdResponse,
+          song_quality_contrib: result.score * 0.35,
+          rehearsal_contrib: 0,
+          chemistry_contrib: result.score * 0.20,
+          equipment_contrib: 0,
+          crew_contrib: 0,
+          member_skill_contrib: result.score * 0.20,
+          started_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
       if (perfError) {
         if (perfError.code === '23505') {
-          const { data: duplicate } = await supabaseClient.from('gig_song_performances').select('*').eq('gig_outcome_id', outcomeId).eq('position', position).single();
+          const { data: duplicate } = await supabaseClient
+            .from('gig_song_performances')
+            .select('*')
+            .eq('gig_outcome_id', outcomeId)
+            .eq('position', position)
+            .single();
+          console.log('[process-gig-song] Concurrent duplicate performance item prevented:', { gigId, outcomeId, position });
           return new Response(JSON.stringify({ success: true, performance: duplicate, duplicate: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
         }
+        console.error('[process-gig-song] Insert error:', perfError);
         throw perfError;
       }
+
       await supabaseClient.rpc('mark_gig_position_processed', { p_gig_id: gigId, p_position: position });
-      return new Response(JSON.stringify({ success: true, performance, isPerformanceItem: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+
+      return new Response(
+        JSON.stringify({ success: true, performance, isPerformanceItem: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
-    if (!songId) throw new Error('Song ID required for song processing');
-    const { data: song } = await supabaseClient.from('songs').select('*').eq('id', songId).single();
+    // Handle SONG
+    if (!songId) {
+      throw new Error('Song ID required for song processing');
+    }
+
+    const { data: song } = await supabaseClient
+      .from('songs')
+      .select('*')
+      .eq('id', songId)
+      .single();
+
     if (!song) throw new Error('Song not found');
 
+    // Fetch performance factors in parallel
     const [equipmentRes, crewRes, rehearsalsRes, liveSkillAvg, stageSkillAvg] = await Promise.all([
-      supabaseClient.from('band_stage_equipment').select('id,equipment_type,quality_rating,condition_rating,is_active').eq('band_id', bandId),
+      supabaseClient.from('band_stage_equipment').select('*').eq('band_id', bandId),
       supabaseClient.from('band_crew_members').select('*').eq('band_id', bandId),
       supabaseClient.from('song_rehearsals').select('*').eq('band_id', bandId).eq('song_id', songId),
       fetchLiveMemberSkillAverage(supabaseClient, members || []),
       fetchStageSkillAverage(supabaseClient, members || [])
     ]);
-    const equipmentResolution = resolveBandEquipment(equipmentRes.data || []);
-    const equipmentQuality = equipmentResolution.score;
+
+    const equipment = equipmentRes.data || [];
     const crew = crewRes.data || [];
     const rehearsal = rehearsalsRes.data?.[0];
-    const showCrew = crew.filter((member: any) => PERFORMANCE_CREW_ROLES.has(String(member.crew_type || '')));
-    const crewSkillLevel = showCrew.length > 0 ? showCrew.reduce((sum: number, c: any) => sum + Number(c.skill_level || 0), 0) / showCrew.length : 40;
-    const liveSetupScore = Math.round(equipmentQuality * 0.6 + crewSkillLevel * 0.4);
-    const { data: outcomeData } = await supabaseClient.from('gig_outcomes').select('actual_attendance').eq('id', outcomeId).single();
-    const venueCapacityUsed = outcomeData ? (outcomeData.actual_attendance / venueCapacity) * 100 : 70;
-    console.log('[process-gig-song] Live setup data:', { equipmentQuality, equipmentSelectionMode: equipmentResolution.selectionMode, selectedEquipmentCount: equipmentResolution.selectedCount, ownedEquipmentCount: equipmentResolution.ownedCount, crewSkillLevel, liveSetupScore, showCrewCount: showCrew.length });
 
+    // Shared band equipment remains the 12% equipment contribution. Personal gear
+    // is already role-matched inside fetchLiveMemberSkillAverage and is not double-counted here.
+    const equipmentResolution = resolveBandEquipment(equipment);
+    const equipmentQuality = equipmentResolution.score;
+
+    // Only performance-facing Show Crew contributes to the 8% crew score.
+    const showCrew = crew.filter((member: any) => PERFORMANCE_CREW_ROLES.has(String(member.crew_type || '')));
+    const crewSkillLevel = showCrew.length > 0
+      ? showCrew.reduce((sum: number, c: any) => sum + Number(c.skill_level || 0), 0) / showCrew.length
+      : 40;
+    const liveSetupScore = Math.round(equipmentQuality * 0.6 + crewSkillLevel * 0.4);
+
+    const { data: outcomeData } = await supabaseClient
+      .from('gig_outcomes')
+      .select('actual_attendance')
+      .eq('id', outcomeId)
+      .single();
+
+    const venueCapacityUsed = outcomeData 
+      ? (outcomeData.actual_attendance / venueCapacity) * 100
+      : 70;
+
+    console.log('[process-gig-song] Live skill data:', {
+      memberSkillAverage: liveSkillAvg,
+      stageSkillAverage: stageSkillAvg,
+      equipmentQuality,
+      equipmentSelectionMode: equipmentResolution.selectionMode,
+      selectedEquipmentCount: equipmentResolution.selectedCount,
+      ownedEquipmentCount: equipmentResolution.ownedCount,
+      crewSkillLevel,
+      liveSetupScore,
+      showCrewCount: showCrew.length,
+      totalCrewCount: crew.length,
+      songQuality: song.quality_score,
+      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10
+    });
+
+    // Fetch leader's stage behavior + band morale for performance modifier
     const { data: bandData } = await supabaseClient.from('bands').select('leader_id, morale').eq('id', bandId).single();
     let stageBehavior = 'standard';
     if (bandData?.leader_id) {
       const { data: behaviorData } = await supabaseClient.from('player_behavior_settings').select('stage_behavior').eq('user_id', bandData.leader_id).maybeSingle();
       if (behaviorData?.stage_behavior) stageBehavior = behaviorData.stage_behavior;
     }
+
+    // Morale modifier: 0.85x at 0 morale → 1.0x at 50 → 1.15x at 100
     const bandMorale = Math.max(0, Math.min(100, bandData?.morale ?? 50));
     const moraleMod = parseFloat((0.85 + (bandMorale / 100) * 0.30).toFixed(3));
-    const result = calculateSongPerformance({ songQuality: song.quality_score || 50, rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10, bandChemistry: gig.bands.chemistry_level || 0, equipmentQuality, crewSkillLevel, memberSkillAverage: liveSkillAvg, stageSkillAverage: stageSkillAvg, venueCapacityUsed, stageBehavior, seed: `${gigId}:${outcomeId}:${songId}:${position}` });
+    console.log(`[process-gig-song] Morale modifier: morale=${bandMorale}, mod=${moraleMod}`);
+
+    const factors: PerformanceFactors = {
+      songQuality: song.quality_score || 50,
+      rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10,
+      bandChemistry: gig.bands.chemistry_level || 0,
+      equipmentQuality,
+      crewSkillLevel,
+      memberSkillAverage: liveSkillAvg,
+      stageSkillAverage: stageSkillAvg,
+      venueCapacityUsed,
+      stageBehavior,
+      seed: `${gigId}:${outcomeId}:${songId}:${position}`,
+    };
+
+    const result = calculateSongPerformance(factors);
+
+    // Apply morale modifier to final score
     const moraleSongScore = Number(Math.max(0, Math.min(25, result.score * moraleMod)).toFixed(2));
-    const { data: performance, error: perfError } = await supabaseClient.from('gig_song_performances').insert({ gig_outcome_id: outcomeId, song_id: songId, performance_item_id: null, item_type: 'song', song_title: song.title, position, performance_score: moraleSongScore, crowd_response: result.crowdResponse, song_quality_contrib: result.breakdown.songQuality, rehearsal_contrib: result.breakdown.rehearsal, chemistry_contrib: result.breakdown.chemistry, equipment_contrib: result.breakdown.equipment, crew_contrib: result.breakdown.crew, member_skill_contrib: result.breakdown.memberSkills, started_at: new Date().toISOString(), completed_at: new Date().toISOString() }).select().single();
+    console.log(`[process-gig-song] Song score: raw=${result.score}, afterMorale=${moraleSongScore}`);
+
+    const { data: performance, error: perfError } = await supabaseClient
+      .from('gig_song_performances')
+      .insert({
+        gig_outcome_id: outcomeId,
+        song_id: songId,
+        performance_item_id: null,
+        item_type: 'song',
+        song_title: song.title,
+        position,
+        performance_score: moraleSongScore,
+        crowd_response: result.crowdResponse,
+        song_quality_contrib: result.breakdown.songQuality,
+        rehearsal_contrib: result.breakdown.rehearsal,
+        chemistry_contrib: result.breakdown.chemistry,
+        equipment_contrib: result.breakdown.equipment,
+        crew_contrib: result.breakdown.crew,
+        member_skill_contrib: result.breakdown.memberSkills,
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
     if (perfError) {
       if (perfError.code === '23505') {
-        const { data: duplicate } = await supabaseClient.from('gig_song_performances').select('*').eq('gig_outcome_id', outcomeId).eq('position', position).single();
+        const { data: duplicate } = await supabaseClient
+          .from('gig_song_performances')
+          .select('*')
+          .eq('gig_outcome_id', outcomeId)
+          .eq('position', position)
+          .single();
+        console.log('[process-gig-song] Concurrent duplicate song prevented:', { gigId, outcomeId, position });
         return new Response(JSON.stringify({ success: true, performance: duplicate, duplicate: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
       }
       throw perfError;
     }
+
     await supabaseClient.rpc('mark_gig_position_processed', { p_gig_id: gigId, p_position: position });
-    return new Response(JSON.stringify({ success: true, performance }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+
+    return new Response(
+      JSON.stringify({ success: true, performance }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+    );
   } catch (error) {
     console.error("Error in process-gig-song:", error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+    );
   }
 });
