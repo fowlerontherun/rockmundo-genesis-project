@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Mail, Loader2, Route } from "lucide-react";
+import { Bell, Mail, Loader2, Route, Crown, Car, Plane } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useVipStatus } from "@/hooks/useVipStatus";
 
 interface Prefs {
   in_app_enabled: boolean;
@@ -33,6 +34,7 @@ const DEFAULTS: Prefs = {
 
 export const TravelNotificationPreferences = () => {
   const { profileId, userId } = useActiveProfile();
+  const { data: vipStatus, isLoading: vipStatusLoading } = useVipStatus();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -63,6 +65,21 @@ export const TravelNotificationPreferences = () => {
       return Boolean(data?.auto_travel_for_gigs);
     },
     enabled: !!profileId,
+  });
+
+  const { data: vipConcierge = true, isLoading: vipConciergeLoading } = useQuery({
+    queryKey: ["vip-gig-concierge", profileId],
+    queryFn: async (): Promise<boolean> => {
+      if (!profileId) return true;
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select("vip_gig_concierge_enabled")
+        .eq("id", profileId)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.vip_gig_concierge_enabled !== false;
+    },
+    enabled: !!profileId && Boolean(vipStatus?.isVip),
   });
 
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
@@ -108,40 +125,122 @@ export const TravelNotificationPreferences = () => {
     onError: (err: Error) => toast.error(err.message || "Failed to update automatic travel"),
   });
 
+  const saveVipConcierge = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!profileId) throw new Error("No active profile");
+      if (!vipStatus?.isVip) throw new Error("VIP Gig Concierge requires an active VIP membership");
+      const { error } = await (supabase as any)
+        .from("profiles")
+        .update({ vip_gig_concierge_enabled: enabled })
+        .eq("id", profileId);
+      if (error) throw error;
+      return enabled;
+    },
+    onSuccess: (enabled) => {
+      queryClient.setQueryData(["vip-gig-concierge", profileId], enabled);
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(enabled ? "VIP Gig Concierge enabled" : "VIP Gig Concierge disabled", {
+        description: enabled
+          ? "Your concierge will automatically dispatch a chauffeur or private jet when a gig needs travel."
+          : "You can still travel manually, but the VIP safety net will not move you automatically.",
+      });
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to update VIP Gig Concierge"),
+  });
+
   const update = (patch: Partial<Prefs>) => setPrefs((p) => ({ ...p, ...patch }));
 
   return (
     <div className="space-y-4">
-      <Card className="border-primary/20">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Route className="w-4 h-4" /> Automatic Gig Travel
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Let RockMundo arrange travel when your next booked show is in another city.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Label className="text-sm">Travel automatically for shows</Label>
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Travel is booked shortly before it is needed, aims to get you there around two hours before showtime, and uses your normal game cash. If travel cannot be booked, the show will not start remotely.
-              </p>
+      {vipStatus?.isVip ? (
+        <Card className="border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-background to-background">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+              <Crown className="w-4 h-4 text-amber-500" /> VIP Gig Concierge
+              <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30" variant="outline">
+                Included with VIP
+              </Badge>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              The simplest travel option: your concierge watches every booked gig and gets you to the venue city automatically.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm">Never miss a gig</Label>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Enabled by default for VIPs. The concierge chooses the fastest sensible service, books close to departure so your location stays accurate, and can rescue an overdue wrong-city show. The show waits until you physically arrive.
+                </p>
+              </div>
+              {vipStatusLoading || vipConciergeLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              ) : (
+                <Switch
+                  checked={vipConcierge}
+                  onCheckedChange={(value) => saveVipConcierge.mutate(value)}
+                  disabled={!profileId || saveVipConcierge.isPending}
+                  aria-label="VIP Gig Concierge"
+                />
+              )}
             </div>
-            {autoGigTravelLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-            ) : (
-              <Switch
-                checked={autoGigTravel}
-                onCheckedChange={(value) => saveAutoGigTravel.mutate(value)}
-                disabled={!profileId || saveAutoGigTravel.isPending}
-                aria-label="Travel automatically for shows"
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Car className="h-4 w-4 text-amber-500" /> Limo + chauffeur
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Used for suitable shorter domestic journeys. Door-to-door with no public timetable to manage.
+                </p>
+              </div>
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Plane className="h-4 w-4 text-amber-500" /> Private jet + pilot
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Used for longer or urgent journeys. The concierge can dispatch immediately when showtime is close.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Concierge transport is covered by VIP membership, so an emergency journey will not fail because the character cannot afford a fare.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Route className="w-4 h-4" /> Automatic Gig Travel
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Let RockMundo arrange travel when your next booked show is in another city.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm">Travel automatically for shows</Label>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Travel is booked shortly before it is needed, aims to get you there around two hours before showtime, and uses your normal game cash. If travel cannot be booked, the show will not start remotely.
+                </p>
+              </div>
+              {autoGigTravelLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              ) : (
+                <Switch
+                  checked={autoGigTravel}
+                  onCheckedChange={(value) => saveAutoGigTravel.mutate(value)}
+                  disabled={!profileId || saveAutoGigTravel.isPending}
+                  aria-label="Travel automatically for shows"
+                />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-2">
