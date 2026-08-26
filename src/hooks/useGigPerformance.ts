@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateSongPerformance, calculateMerchSales, type PerformanceFactors } from "@/utils/gigPerformanceCalculator";
 import { markCountryAsPerformed } from "@/utils/regionalFame";
+import { isPerformanceCrewRole, resolveBandEquipmentLiveSetup } from "@/utils/liveSetup";
 
 export interface GigPerformanceData {
   gigId: string;
@@ -119,14 +120,19 @@ export const useCompleteGigPerformance = () => {
       const members = membersRes.data || [];
       const merch = merchRes.data || [];
 
-      // Calculate average equipment quality (default to 40 if none)
-      const equipmentQuality = equipment.length > 0
-        ? equipment.reduce((sum, eq) => sum + eq.quality_rating, 0) / equipment.length
-        : 40;
+      // Mirror the authoritative Live Setup rules used by process-gig-song.
+      // Explicit Band Equipment selections win; otherwise use the strongest item per type.
+      const equipmentSummary = resolveBandEquipmentLiveSetup(equipment);
+      const equipmentQuality = equipmentSummary.score;
+      const usedEquipment = equipmentSummary.selectedIds.length > 0
+        ? equipment.filter((item) => equipmentSummary.selectedIds.includes(item.id))
+        : [];
 
-      // Calculate average crew skill (default to 40 if none)
-      const crewSkillLevel = crew.length > 0
-        ? crew.reduce((sum, c) => sum + c.skill_level, 0) / crew.length
+      // Only production-facing Show Crew contributes to live song performance.
+      // Touring, merch, security and wardrobe staff still incur their normal gig salary.
+      const showCrew = crew.filter((member) => isPerformanceCrewRole(member.crew_type));
+      const crewSkillLevel = showCrew.length > 0
+        ? showCrew.reduce((sum, member) => sum + Number(member.skill_level || 0), 0) / showCrew.length
         : 40;
 
       // Calculate band chemistry level
@@ -185,9 +191,9 @@ export const useCompleteGigPerformance = () => {
         merch
       );
 
-      // Calculate costs
+      // Calculate costs. All hired crew are paid; only equipment used by Live Setup depreciates here.
       const crewCosts = crew.reduce((sum, c) => sum + c.salary_per_gig, 0);
-      const equipmentWearCost = equipment.reduce((sum, eq) => {
+      const equipmentWearCost = usedEquipment.reduce((sum, eq) => {
         const wearRate = 0.02; // 2% depreciation per gig
         return sum + (eq.purchase_cost || 0) * wearRate;
       }, 0);
@@ -278,7 +284,7 @@ export const useCompleteGigPerformance = () => {
         .from('gig_song_performances')
         .insert(songPerformancesWithOutcome);
 
-      if (outcomeError) throw outcomeError;
+      if (perfError) throw perfError;
 
       // Update gig status
       await supabase
