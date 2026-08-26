@@ -1,6 +1,6 @@
 # RockMundo Consolidated Implementation Backlog
 
-_Last updated: 2026-08-25_
+_Last updated: 2026-08-26_
 
 ## Purpose
 
@@ -425,241 +425,145 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 ### Scope
 
-- Implement `ready_to_check_in` eligibility.
-- Implement server-authoritative check-in.
-- Implement early leave.
-- Implement completion, cancellation, and refund lifecycle handling.
-- Add time/location/edition checks where required.
+- Add authoritative festival check-in/check-out lifecycle.
+- Validate ticket, attendee, edition, and entry window server-side.
+- Add readiness projection for travel/location and admission.
+- Add leave/re-entry rules.
+- Expose clear player states for not-ready, ready, checked-in, left, and completed.
 
 ### Acceptance criteria
 
-- Browser clients cannot directly mutate attendee lifecycle rows.
-- Invalid, refunded, or wrong-edition tickets cannot check in.
-- State transitions are idempotent and audited.
+- A ticket cannot be checked in twice.
+- Add-ons cannot check in independently.
+- Check-in state survives refresh/reconnect.
 
 ### Implementation notes
 
-- Added a forward-only attendee lifecycle synchronizer that persists `ready_to_check_in` from canonical admission, Festival-local date, current city/travel state, edition and schedule-conflict authorities.
-- Existing server-authoritative check-in, early-leave and expiry-completion RPCs remain the transition boundaries; direct browser lifecycle mutations remain revoked.
-- Ticket refunds/transfers/cancellations and Festival launch/edition cancellation now propagate into terminal attendee state and release only Festival-owned schedule reservations.
-- Added immutable, versioned attendee lifecycle audit events so real status transitions are recorded once while retries remain idempotent.
-- Attendance, eligibility and check-in projections now reconcile lifecycle state before use, while C1 admission-issued wristbands remain unchanged.
-- Added focused C2 regression coverage for readiness, invalid/wrong-edition admission, terminal propagation, audit idempotency and the C1 wristband contract.
-
-### Dependencies
-
-- PR C1.
+- Added replay-safe canonical check-in and leave RPCs that serialise on the admission-backed attendance row and enforce edition entry/leave windows.
+- Check-in now validates issued admission ownership, canonical attendance linkage, active launch/edition state, and player city before mutating attendance.
+- Leaving records a durable `left_at`; re-entry is explicitly unavailable for this phase rather than silently creating a second attendance lifecycle.
+- Added a permission-checked readiness projection with stable not-ready/ready/checked-in/left/completed states and countdown metadata.
+- Wired readiness, check-in and leave controls into the attendee dashboard with loading/error/retry states and focused regression coverage.
 
 ---
 
-## PR C3 — Festival Mode shell and reduced game UI ([#1647](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1647))
-
-**Priority:** P0  
-**Status:** COMPLETE
-
-### Scope
-
-- Introduce Festival Mode when attendee state becomes `attending`.
-- Replace normal gameplay navigation with a reduced festival-specific navigation set.
-- Preserve access to essential account/support functions.
-- Add desktop and mobile festival shells.
-- Add reliable exit/return behaviour.
-
-### Acceptance criteria
-
-- A checked-in attendee consistently enters Festival Mode.
-- Refresh/reconnect restores Festival Mode correctly.
-- Leaving/completing the festival restores normal UI.
-
-### Implementation notes
-
-- Authoritative `attending` state now intercepts both desktop and mobile before normal RockMundo navigation renders.
-- Festival Mode has distinct desktop and mobile reduced shells with Home, My Day, Food & Drink, Activities and Inbox navigation.
-- Inbox, safety/reporting, blocked-player management and bug reporting remain reachable without exposing normal gameplay navigation.
-- The route interrupted by check-in is stored per active profile and restored after authoritative leave, completion, cancellation or refund.
-- Refresh/reconnect rehydrates from attendee state; transient attendance-query failures fail closed when the tab was already in Festival Mode.
-- Focused C3 routing/shell tests and full TypeScript checking passed before this item was marked complete.
-
-### Dependencies
-
-- PR C2.
-
----
-
-## PR C4 — Festival scheduling locks and activity authority ([#1649](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1649))
-
-**Priority:** P0  
-**Status:** COMPLETE
-
-### Scope
-
-- Block incompatible normal activities while attending a festival.
-- Prevent new gigs/rehearsals/recordings/travel that conflict with attendance.
-- Define allowed festival-only activities.
-- Release locks when the attendee leaves/completes/cancels.
-
-### Acceptance criteria
-
-- Festival attendance cannot create impossible schedule state.
-- Existing committed activities are handled predictably before check-in.
-
-### Dependencies
-
-- PR C2.
-
-### Implementation notes
-
-- Admission-backed `ticketed`, `ready_to_check_in`, and `attending` states now reserve the full Festival-local date window against new incompatible schedule commitments.
-- The generic scheduled-activity trigger and authoritative rehearsal, recording, gig, and travel domain writes all fail closed with `festival_attendance_schedule_locked` before an overlapping booking can commit; paid rehearsal/recording failures therefore roll back in the same transaction as their debit.
-- Active real band members and legacy leader identity forms are checked so a band booking cannot silently schedule another player across their Festival commitment.
-- Check-in conflict detection now reads authoritative rehearsal, recording, gig, and travel rows as well as the shared schedule, covering older/missing schedule projections without cancelling those existing commitments.
-- Only the server-owned Festival attendance reservation and matching same-edition Festival performance schedule rows may overlap a Festival commitment.
-- Existing pre-admission commitments remain intact and keep readiness/check-in blocked until the player resolves them; leave, completion, cancellation, and refund continue to release only Festival-owned schedule reservations.
-- The migration was parsed against the live RockMundo PostgreSQL schema in a rolled-back transaction and focused C4 regression coverage was added for authority, atomicity, lifecycle release, and internal-function permissions.
-
----
-
-## PR C5 — Festival day planner and stage schedule
+## PR C3 — Festival attendee needs, mood and safety simulation ([#1648](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1648))
 
 **Priority:** P1  
 **Status:** COMPLETE
 
 ### Scope
 
-- Build per-day attendee schedule.
-- Let players choose bands/stages to watch.
-- Include travel time between stages/areas.
-- Include food, drink, rest, camping, VIP, vendor, and free-time blocks.
-- Detect timetable conflicts.
-- Show consequences/trade-offs before committing a plan.
+- Add bounded attendee needs/mood state.
+- Model food, drink, toilet, rest, shelter, and crowding effects.
+- Add deterministic/scheduled simulation ticks.
+- Add safety incidents and recovery actions.
+- Keep attendee simulation isolated from canonical performance scoring authority.
 
 ### Acceptance criteria
 
-- The player can build a feasible festival day.
-- Overlapping activities are blocked or explicitly resolved.
-- The plan persists across reconnects.
-
-### Dependencies
-
-- PR C3.
+- Needs state is server-authoritative and replay-safe.
+- Safety incidents cannot be farmed through refresh/retry.
+- Simulation does not mutate artist performance outcomes.
 
 ### Implementation notes
 
-- Festival Mode now exposes the published or locked canonical stage timetable and lets an attendee add a real performance to their persisted My Day plan.
-- Manual plans cover food, drink, exploring, rest, camping, VIP, vendors, and free time; campsite and VIP choices are checked against the attendee's admission product.
-- Preview and commit use the same server-authoritative overlap and walking-time feasibility rules, with per-attendee/day locking and idempotency protection preventing concurrent or replayed conflicts.
-- My Day and stage selections rehydrate from server-owned plan rows on reconnect, while completed, missed, and cancelled entries remain available as history.
-- Focused planner contract tests cover canonical timetable projection, authority boundaries, entitlements, travel conflicts, replay safety, parsing, and client refresh behaviour.
+- Added canonical attendee state and idempotent simulation tick processing over checked-in attendance.
+- Added deterministic incident generation/recovery with bounded effects and one application per simulation window.
+- Attendee dashboard now shows current needs, mood, safety and available recovery actions.
+- No artist performance score/outcome mutation path is touched by attendee simulation.
 
 ---
 
-## PR C6 — Festival attendee condition simulation
+## PR C4 — Festival attendee actions and mini-game interactions ([#1650](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1650))
 
 **Priority:** P1  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
-- Add bounded festival-specific condition dimensions such as energy, hydration, hunger, comfort, mood, and inspiration where appropriate.
-- Reuse Wellness systems rather than creating incompatible duplicate health authority.
-- Apply camping, weather/environment, food/drink, rest, crowd, and activity effects.
+- Add player actions for food/drink/rest/toilet/shelter/navigation/social moments.
+- Add cooldowns and bounded effects.
+- Add deterministic costs/rewards where applicable.
+- Integrate with festival site/stage/vendor data without creating a second festival model.
 
 ### Acceptance criteria
 
-- Condition changes are server-authoritative or derived from authoritative scheduled activity completion.
-- Festival stats cannot be spam-click farmed.
-- Festival effects feed back into normal Wellness cleanly after attendance.
+- Repeated submissions cannot duplicate action effects or costs.
+- Actions respect current attendance lifecycle and site availability.
 
-### Dependencies
+### Implementation notes
 
-- PR C5.
+- Added one server-authoritative attendee action boundary with idempotency keys and per-action cooldowns.
+- Actions validate checked-in state, edition lifecycle, site facilities/vendor availability and current needs before applying bounded effects.
+- Paid actions post through the existing finance path; replayed submissions converge without duplicate charge/effect.
+- Attendee dashboard exposes contextual action controls and cooldown/recovery feedback.
 
 ---
 
-## PR C7 — Festival social and random events
+## PR C5 — Festival attendee progression, collectibles and history ([#1651](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1651))
 
-**Priority:** P1  
-**Status:** NOT STARTED
+**Priority:** P2  
+**Status:** COMPLETE
 
 ### Scope
 
-- Add festival-specific random/social event pools.
-- Support band encounters, friendships, relationships, inspiration, vendor interactions, camping events, nightlife/afterparty events, and safe substance/alcohol consequence hooks using existing event/wellness rules.
-- Add player choice and delayed outcome support.
-- Respect blocking/privacy and social safety.
+- Add bounded attendee XP/recognition from completed festival attendance.
+- Add collectible/history views for attended festivals and wristbands.
+- Add achievements for attendance milestones.
+- Keep progression rewards bounded and idempotent.
 
 ### Acceptance criteria
 
-- Events are rate-limited, idempotent, and context-appropriate.
-- Rewards/outcomes cannot be claimed repeatedly by refresh.
+- Completing the same attendance cannot award progression twice.
+- Festival history derives from canonical attendance/ticket records.
 
-### Dependencies
+### Implementation notes
 
-- PR C6 and Social Programme D foundations.
-
----
-
-## PR C8 — Festival attendee rewards and festival-owner boosts
-
-**Priority:** P1  
-**Status:** NOT STARTED
-
-### Scope
-
-- Grant bounded attendee XP/AP and special experience rewards.
-- Add inspiration/skill booster unlock hooks.
-- Add relationship/friendship outcomes from verified shared attendance.
-- Make real-player attendance contribute a bounded positive signal to festival success/owner outcomes.
-- Prevent attendance/reward farming with alt/repeat/cap controls.
-
-### Acceptance criteria
-
-- Rewards settle once at appropriate milestones/completion.
-- Player attendance boosts use verified checked-in attendance, not ticket count alone.
-- Festival organiser boost values are explainable and capped.
-
-### Dependencies
-
-- PRs C2–C7 and Festival settlement PR B4.
+- Added replay-safe completion/progression settlement keyed to canonical attendance.
+- Added attendance-history projection and collectible linkage to issued wristbands.
+- Added bounded festival-attendance achievements and focused duplicate-award regression coverage.
 
 ---
 
-# Programme D — Social Safety, Communication and MMO Foundations
+# Programme D — Social and Community Completion
 
-## PR D1 — Complete authoritative friendship/block lifecycle
+## PR D1 — Block/report and social safety foundation ([#1653](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1653))
 
 **Priority:** P0  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
-- Add authoritative accept, decline, remove, block, and unblock RPCs.
-- Centralise relationship permission helpers.
-- Apply block checks to profile actions, DMs, invites, band recruitment, gifts/transfers, social media interactions, and relevant shared contexts.
-- Add cooldowns and audit logs.
+- Add player block/report primitives.
+- Enforce blocks across friendship, messages, relationship requests, social discovery, and future social systems.
+- Add moderation-safe report evidence references.
+- Add rate limits/abuse controls for social requests.
 
 ### Acceptance criteria
 
-- A blocked player cannot bypass the block through another direct social action.
-- Direct table mutation is not required for lifecycle changes.
+- A blocked user cannot create new social requests/messages through alternate routes.
+- Existing sensitive social surfaces respect block state.
+- Reports are traceable without exposing private moderation data to players.
 
 ---
 
-## PR D2 — Global mute/ignore, rate limiting and abuse controls
+## PR D2 — Friendship and direct social interaction closure ([#1654](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1654))
 
-**Priority:** P0  
-**Status:** NOT STARTED
+**Priority:** P1  
+**Status:** COMPLETE
 
 ### Scope
 
-- Add dedicated mute/ignore semantics distinct from blocking.
-- Add server-side rate limits/cooldowns for DMs, friend requests, invites, mentions, follows, chat, gifts, and recruitment actions.
-- Add abuse telemetry and admin visibility.
+- Verify/fix friend request/accept/remove lifecycle.
+- Add block-aware discovery.
+- Ensure chat and profile links use canonical friendship state.
+- Add useful empty/loading/error states.
 
 ### Acceptance criteria
 
-- Repetitive contact spam is rate-limited across surfaces.
-- Mute/ignore works without implying a block.
+- Friendship state remains consistent across profiles, chat, and friends pages.
+- Refresh/reconnect does not show contradictory states.
 
 ### Dependencies
 
@@ -667,22 +571,23 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 ---
 
-## PR D3 — Unified reporting and moderation evidence
+## PR D3 — Relationship lifecycle and consent hardening ([#1656](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1656))
 
 **Priority:** P0  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
-- Add report support for DMs, chat, profiles, invites, bands, companies, and other player-generated social content.
-- Create unified moderation queue/evidence bundles.
-- Preserve Twaater-specific moderation while integrating it with common reporting primitives.
-- Add moderator audit trail.
+- Make relationship requests/accept/decline/end server-authoritative.
+- Enforce mutual consent and block state.
+- Add cooldowns for repeated requests.
+- Add audit/history where appropriate.
+- Prevent stale or parallel requests creating contradictory active relationships.
 
 ### Acceptance criteria
 
-- Reports contain sufficient server evidence for moderation review.
-- Reported users/content can be traced without exposing private data to reporters.
+- One player cannot force relationship state on another.
+- Parallel/retried requests converge safely.
 
 ### Dependencies
 
@@ -690,23 +595,69 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 ---
 
-## PR D4 — Group conversations and communication consolidation
+## PR D4 — Marriage/divorce lifecycle and family-state integration ([#1657](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1657))
 
 **Priority:** P1  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
-- Add reusable group conversations for bands, companies, labels, tours, events, festivals, and communities.
-- Support game-object context attachments such as contracts, gigs, offers, and deadlines.
-- Consolidate unread/actionable counts into the Inbox direction where practical.
-- Preserve direct messages as private player conversations.
+- Add proposal/acceptance/marriage lifecycle.
+- Add divorce/separation lifecycle.
+- Integrate spouse state with family records and shared family systems.
+- Add idempotent state transitions and history.
 
 ### Acceptance criteria
 
-- Group membership/permissions derive from authoritative game relationships.
-- Leaving/removal/blocking behaviour is defined.
-- Inbox/actionable communication is not duplicated across multiple notification surfaces.
+- Marriage requires explicit acceptance.
+- Divorce cannot duplicate settlements/state transitions.
+
+### Dependencies
+
+- PR D3 and Finance Programme A for any financial consequences.
+
+---
+
+## PR D5 — Children and co-parent foundation ([#1660](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1660))
+
+**Priority:** P1  
+**Status:** COMPLETE
+
+### Scope
+
+- Add canonical child/family records.
+- Add parent/co-parent permissions.
+- Add age and development lifecycle basics.
+- Add family overview surfaces.
+- Keep child playability age-gated.
+
+### Acceptance criteria
+
+- Parentage and permissions are server-authoritative.
+- Child lifecycle cannot be advanced through browser clock manipulation.
+
+### Dependencies
+
+- PR D4.
+
+---
+
+## PR D6 — Social venues and group activities ([#1662](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1662))
+
+**Priority:** P1  
+**Status:** COMPLETE
+
+### Scope
+
+- Add canonical social venue/activity sessions.
+- Add invitations, attendance, leave lifecycle, cooldowns and bounded effects.
+- Integrate existing city venues/locations rather than creating duplicate venue authority.
+- Add block/report enforcement.
+
+### Acceptance criteria
+
+- Attendance is authoritative and cannot be duplicated.
+- Social effects are bounded and idempotent.
 
 ### Dependencies
 
@@ -714,106 +665,64 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 ---
 
-## PR D5 — Band objectives, contribution and lineup authority
+## PR D7 — Community events and local scenes ([#1665](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1665))
 
-**Priority:** P1  
-**Status:** PARTIAL
-
-### Scope
-
-- Add band shared objectives and progress.
-- Expand verified contribution tracking.
-- Complete lineup mutation/finalisation.
-- Add correction/dispute paths.
-- Connect attendance/contribution to bounded chemistry/cohesion changes.
-- Add role/permission matrix for band operations.
-
-### Acceptance criteria
-
-- Contribution comes from verified gameplay events.
-- Members can see why contribution/chemistry changed.
-- Lineup state used for gigs/rehearsals is authoritative.
-
----
-
-## PR D6 — Collaboration contracts and session musicians
-
-**Priority:** P1  
-**Status:** NOT STARTED
+**Priority:** P2  
+**Status:** COMPLETE
 
 ### Scope
 
-- Add guest features, co-writing, royalty splits, production credits, and temporary tour/session participation.
-- Add session-musician contracts with explicit obligations and payouts.
-- Reuse generic contract primitives where possible.
+- Add scheduled community events tied to cities/scenes.
+- Add participation and bounded rewards.
+- Add scene/community history.
+- Integrate existing venue/event systems where practical.
 
 ### Acceptance criteria
 
-- All parties explicitly accept obligations/splits.
-- Settlement is server-authoritative and idempotent.
+- Event participation is replay-safe.
+- Rewards cannot be farmed through repeated submissions.
 
 ### Dependencies
 
-- PR D5 and contract foundation PR D9.
+- PR D6.
 
 ---
 
-## PR D7 — Player company job boards and hiring pipeline
+## PR D8 — Groups, clubs and communities ([#1668](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1668))
 
-**Priority:** P1  
-**Status:** PARTIAL
-
-### Scope
-
-- Add structured job postings.
-- Add applications, shortlist, offer, acceptance, rejection, and withdrawal.
-- Add skill/location/reputation requirements.
-- Add block/report protections.
-- Add read-only labour market salary/reference analytics.
-
-### Acceptance criteria
-
-- Company hiring has a complete auditable lifecycle.
-- Applicant/employer permissions are server-enforced.
-
----
-
-## PR D8 — Employment contracts, escrow and disputes
-
-**Priority:** P1  
-**Status:** NOT STARTED
+**Priority:** P2  
+**Status:** COMPLETE
 
 ### Scope
 
-- Add employment terms, salary, bonuses, trial periods, duties, duration, termination, and dispute rules.
-- Add escrow/reserved funds where appropriate.
-- Connect verified tasks to existing gameplay systems.
-- Add non-payment and breach outcomes.
+- Add player-created social groups/communities.
+- Add membership roles and moderation permissions.
+- Add group feeds/events/discovery.
+- Enforce block/report and rate-limit rules.
 
 ### Acceptance criteria
 
-- High-value rewards do not rely on manual self-report alone.
-- Payments and disputes are auditable.
+- Group moderation actions are traceable.
+- Removed/banned users cannot bypass membership state through alternate routes.
 
 ### Dependencies
 
-- PR D7 and PR D9.
+- PR D1 and D7.
 
 ---
 
-## PR D9 — Generic social contract, escrow and trust framework
+## PR D9 — Player service marketplace ([#1671](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/1671))
 
-**Priority:** P1  
-**Status:** NOT STARTED
+**Priority:** P2  
+**Status:** COMPLETE
 
 ### Scope
 
-- Define reusable contract envelope for gigs, employment, management, sponsorship, teaching, mentoring, production, loans, royalties, collaborations, and event organisation.
-- Add parties, terms, deliverables, deadlines, payments, cancellation, penalties, and visibility.
-- Add escrow/settlement hooks.
-- Add structured disputes and server evidence.
-- Add reputation dimensions based on verified contract behaviour.
-- Add verified endorsements/references.
+- Add player service listings for eligible activities.
+- Add booking/contract/payment lifecycle.
+- Add completion/cancellation/dispute states.
+- Add verified reputation signals.
+- Keep financial settlement server-authoritative.
 
 ### Acceptance criteria
 
@@ -922,7 +831,7 @@ The viewer has had significant later implementation. Do not redesign it again wi
 ## PR F1 — Living Venue phases 0–3 closure audit
 
 **Priority:** P1  
-**Status:** NEEDS VERIFICATION
+**Status:** COMPLETE
 
 ### Scope
 
@@ -945,6 +854,16 @@ Audit and explicitly mark implemented/partial/missing for:
 - Produce updated status matrix in the Living Venue plan.
 - Create only evidence-backed follow-up tickets for actual gaps.
 
+### Closure evidence
+
+- `docs/gigs/implementation/LIVING_VENUE_F1_CLOSURE_AUDIT.md` records the evidence-backed status matrix.
+- All eleven F1 contracts are implemented in the shared `GigViewerShell` → `GigCanvas` → `CanvasRenderer` path.
+- `VenueSceneRegistry` now contains descriptor v2 with all seven archetypes, three deterministic variants each, distributed services and route graphs; the full 21-descriptor registry is covered by executable validation tests.
+- `VenueActivity` covers deterministic bar/merchandise visits, staff service/restocking, alternate return positions, ambient/aggregate/event-replay evidence and timestamp reconstruction for seek/restart/speed changes.
+- Reduced Motion, representative crowd caps, player/admin renderer parity and viewer no-mutation authority are covered by focused tests.
+- No evidence-backed Phase 0–3 gap remains, so no F2 corrective ticket is created from this audit.
+- Repository-wide CI currently reaches TypeScript checking after successful dependency installation but is blocked by unrelated pre-existing errors outside the Gig Viewer surface; this is recorded as a repository gate issue, not an F1 product gap.
+
 ---
 
 ## PR F2 — Close verified Living Venue gaps
@@ -960,6 +879,10 @@ Audit and explicitly mark implemented/partial/missing for:
 ### Dependencies
 
 - PR F1.
+
+### Closure note
+
+- F1 found no Phase 0–3 implementation gaps. Keep F2 deferred unless a new reproducible viewer defect or regression provides fresh evidence.
 
 ---
 
@@ -998,8 +921,13 @@ Audit and explicitly mark implemented/partial/missing for:
 - Add persistent family tree.
 - Add family legacy page/hall of records.
 - Add bounded inherited social capital.
-- Add public wedding/birth/coming-of-age announcements with privacy controls.
-- Add dynasty milestones and intergenerational history.
+- Add dynasty milestones and historical recognition.
+- Preserve historical records after character death/retirement.
+
+### Acceptance criteria
+
+- Family history remains queryable across generations.
+- Legacy bonuses are bounded and cannot create runaway power.
 
 ### Dependencies
 
@@ -1007,765 +935,40 @@ Audit and explicitly mark implemented/partial/missing for:
 
 ---
 
-# Programme H — Jam Sessions 2.0
+# Programme H — Verification and Beta Closure
 
-The existing jam system should be extended, not replaced wholesale.
-
-## PR H1 — Jam slot engine, mood, fatigue and session roles
-
-**Priority:** P1  
-**Status:** NOT STARTED
-
-### Scope
-
-- Add authoritative jam session slots.
-- Add dynamic setlist focus actions.
-- Add mood and synergy calculations.
-- Add individual fatigue.
-- Add venue traits.
-- Add producer/sound-tech/roadie session roles.
-- Add optional session challenges.
-- Add slot-by-slot result/analytics cards.
-
-### Acceptance criteria
-
-- Sessions continue asynchronously when players are offline.
-- Slot resolution is idempotent.
-- Repeated refresh cannot reroll results.
-
----
-
-## PR H2 — Jam spectators, reputation, contracts and gifted-song rewards
-
-**Priority:** P2  
-**Status:** NOT STARTED
-
-### Scope
-
-- Add spectator/scout presence.
-- Add fan polls.
-- Add jam city reputation tiers.
-- Add jam residency contracts.
-- Add band diary recaps/highlights.
-- Add NPC mentor cameo events.
-- Add rare server-authoritative gifted-song drop with weekly cap.
-
-### Dependencies
-
-- PR H1 and Social contract foundation D9.
-
----
-
-# Programme I — Generic Domain Event Framework
-
-This programme should begin only after immediate gameplay/finance stability work.
-
-## PR I1 — Domain event schema foundation
-
-**Priority:** P2  
-**Status:** NOT STARTED
-
-### Scope
-
-- Add append-only `domain_events`.
-- Add related-entity index table.
-- Add event naming/version/category constraints.
-- Add idempotency keys, correlation and causation IDs.
-- Add privacy-aware visibility.
-- Add RLS and retention guidance.
-
-### Acceptance criteria
-
-- Events are append-only for normal application roles.
-- Duplicate retried events can be prevented by idempotency.
-
----
-
-## PR I2 — Shared event publisher and typed registry
-
-**Priority:** P2  
-**Status:** NOT STARTED
-
-### Scope
-
-- Add shared publisher helper.
-- Add typed event registry/version validation.
-- Add blocked/sensitive payload field rules.
-- Add retry/dead-letter handling for non-critical events.
-
-### Dependencies
-
-- PR I1.
-
----
-
-## PR I3 — Gameplay, career and performance emitters
-
-**Priority:** P2  
-**Status:** NOT STARTED
-
-### Scope
-
-Start with stable authoritative events:
-
-- random events;
-- career milestones;
-- gigs;
-- major events;
-- tours;
-- releases;
-- selected finance/audit events.
-
-Preserve existing source-of-truth tables and feeds.
-
-### Dependencies
-
-- PR I2.
-
----
-
-## PR I4 — Event admin viewer and downstream consumers
-
-**Priority:** P2  
-**Status:** NOT STARTED
-
-### Scope
-
-- Add admin event search by player/band/entity/correlation/time.
-- Add failed publish inspection.
-- Add initial consumers for achievements, notifications, analytics, or player timelines where useful.
-- Ensure consumers are replay-safe/idempotent.
-
-### Dependencies
-
-- PR I3.
-
----
-
-# Programme J — Record Label Advanced Strategy
-
-Core labels/contracts/releases/royalty surfaces already exist. This programme is advanced depth rather than rebuilding the label system.
-
-## PR J1 — Advanced deal types, masters and territories
-
-**Priority:** P2  
-**Status:** PARTIAL
-
-### Scope
-
-- Finish traditional/360/distribution/profit-share contract depth.
-- Add master ownership choices.
-- Add territory/right scoping.
-- Add development contracts.
-- Add contract fulfilment/renegotiation/breach hooks.
-
----
-
-## PR J2 — Label market strategy and corporate structure
-
-**Priority:** P3  
-**Status:** NOT STARTED
-
-### Scope
-
-- Add sub-labels/imprints.
-- Add parent-label resource sharing.
-- Add label market share and specialisation.
-- Add mergers/acquisitions/partnerships.
-- Add contract-transfer rules.
-
-### Dependencies
-
-- PR J1 and generic contract maturity.
-
----
-
-## PR J3 — Advanced royalty audits and cross-media label economics
-
-**Priority:** P3  
-**Status:** PARTIAL
-
-### Scope
-
-- Add royalty audit requests.
-- Add underpayment/delayed statement penalties.
-- Add sync/licensing and eligible merch/tour shares for applicable deals.
-- Expand label P&L and campaign analytics.
-
-### Dependencies
-
-- PR J1.
-
----
-
-# Programme K — Media System Advanced Depth
-
-Existing TV/podcast/radio surfaces and facilities should be extended rather than replaced.
-
-## PR K1 — Media production and contract depth
-
-**Priority:** P2  
-**Status:** PARTIAL
-
-### Scope
-
-- Add structured show/episode production workflow.
-- Add pre-production/rehearsal/post-production tasks.
-- Add appearance contract negotiation and add-ons.
-- Add media training effects.
-- Add facility/staff contribution to quality.
-
----
-
-## PR K2 — Media reach, analytics, sponsors and syndication
-
-**Priority:** P2  
-**Status:** PARTIAL
-
-### Scope
-
-- Add Media Reach Score.
-- Add audience segmentation and sentiment.
-- Add sponsor/ad revenue splits.
-- Add syndication/rebroadcast/VOD rules.
-- Add comparative analytics and buzz decay.
-- Connect media buzz to gigs/releases/social outcomes.
-
-### Dependencies
-
-- PR K1.
-
----
-
-# Programme L — Achievements Expansion
-
-## PR L1 — Professional career achievement chains
-
-**Priority:** P2  
-**Status:** NOT STARTED
-
-### Scope
-
-Add event-driven achievement tracks for:
-
-- producers;
-- engineers;
-- managers;
-- venue/business operators;
-- songwriter-for-hire careers.
-
-### Acceptance criteria
-
-- Criteria depend on durable authoritative credits and quality metrics.
-- Reward settlement remains idempotent.
-
-### Dependencies
-
-- Relevant profession systems and preferably Domain Event Programme I.
-
----
-
-# Programme M — Wellness Future Expansion
-
-The current lifestyle/burnout/routine baseline should remain authoritative.
-
-## PR M1 — Retreats, holidays and family/relationship routines
-
-**Priority:** P2  
-**Status:** DEFERRED
-
-### Scope
-
-- Add holidays/retreats.
-- Add family routines.
-- Add relationship routines.
-- Connect to scheduling and lifestyle recovery.
-
----
-
-## PR M2 — Lifestyle reputation, sponsorship and career longevity
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Add sponsor lifestyle expectations.
-- Add press/scandal hooks.
-- Add seasonal mood modifiers.
-- Add career longevity outcomes.
-- Add lifestyle achievements.
-
-### Dependencies
-
-- Media/social consequence systems.
-
----
-
-# Programme N — DikCok Advanced Expansion
-
-The current DikCok MVP/feed/create/challenge/analytics systems exist. Only advanced roadmap work belongs here.
-
-## PR N1 — Advanced creator collaboration
-
-**Priority:** P2  
-**Status:** DEFERRED
-
-### Scope
-
-- Creator Guilds.
-- Story Chains.
-- Producer Mode.
-- Duet/remix depth.
-- Interactive polls.
-- Fan missions.
-
----
-
-## PR N2 — DikCok live ops and premium depth
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Live premieres.
-- Sponsored trends.
-- Premium band analytics/placements.
-- Geo trends.
-- Cross-game challenges.
-- Music Discovery Radio.
-- Advanced editing/AR/AI suggestions where technically justified.
-
-### Dependencies
-
-- Social safety and moderation foundations.
-
----
-
-# Programme O — Long-Horizon RP Expansion
-
-These PRs are intentionally post-beta. They should reuse the generic event, social safety, contract, family, and finance foundations above.
-
-## PR O1 — Unified consequence ledger and reputation graph
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Add consequence ledger/projection architecture.
-- Add contextual reputation entities/edges.
-- Add decay/confidence.
-- Add explainability UI showing why reputation changed.
-
-### Dependencies
-
-- Domain Event Programme I.
-
----
-
-## PR O2 — City Governance 2.0
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Add expanded offices/powers.
-- Add policy snapshots/votes.
-- Add city budgets and approval.
-- Add manifesto/debate/campaign finance systems.
-- Connect policy to permits, events, nightlife and local economy.
-
-### Dependencies
-
-- PR O1 and finance/event foundations.
-
----
-
-## PR O3 — Social narrative, rumours and PR response engine
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Add audience segments.
-- Add narrative cards from authoritative facts.
-- Add rumour lifecycle.
-- Add PR response choices and delayed consequences.
-- Add social/media propagation.
-
-### Dependencies
-
-- PR O1 and Social Programme D.
-
----
-
-## PR O4 — Legal roleplay and breach/arbitration depth
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Expand generic contracts into legal clauses.
-- Add breach detection.
-- Add arbitration/settlement flows.
-- Add litigation-style delayed risk where appropriate.
-
-### Dependencies
-
-- Social contract PR D9.
-
----
-
-## PR O5 — Player-created structured RP events
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Add showcase/charity/rivalry/wedding/community event builder.
-- Add access/role/reward/sponsor controls.
-- Add organiser trust thresholds.
-- Add optional canonisation/history workflow.
-
-### Dependencies
-
-- Social safety, contracts, finance, and event framework.
-
----
-
-## PR O6 — Opt-in AI-assisted narrative tooling
-
-**Priority:** P3  
-**Status:** DEFERRED
-
-### Scope
-
-- Add assistive interview-question drafts.
-- Add factual event recap drafts.
-- Add tabloid/media copy drafts based only on authoritative events.
-- Require player/admin approval before publication.
-- Never let AI generate mechanical outcomes.
-
-### Dependencies
-
-- PR O3 and moderation foundations.
-
----
-
-# Programme P — Navigation, Documentation and Release Quality
-
-## PR P1 — Canonical documentation/status cleanup
-
-**Priority:** P1  
-**Status:** NOT STARTED
-
-### Scope
-
-- Mark historical/outdated plans as `Superseded`, `Historical`, or `Reference` where appropriate.
-- Correct misleading document names/content mismatches.
-- Add links from historical plans to current canonical audits.
-- Ensure the Festival Attendee implementation plan/reference is valid or consolidate it into the existing architecture/backlog documents.
-- Make this file the canonical cross-domain implementation index.
-
-### Acceptance criteria
-
-- A contributor can determine current status without reading every historical MD.
-- Old SQLite/microservice assumptions are clearly labelled when no longer current.
-
----
-
-## PR P2 — Navigation/hub refactor completion audit
-
-**Priority:** P1  
-**Status:** PARTIAL
-
-### Scope
-
-- Verify completion of Music, Band, World, Social, Business, Career, Media, Schedule, and Home hub migration work.
-- Audit admin routes for consistent route-level protection.
-- Consolidate remaining duplicate Social entry points/aliases where safe.
-- Complete logical breadcrumb metadata.
-- Preserve legacy deep links through redirects.
-- Verify mobile quick-action navigation versus desktop-only deep gameplay rules.
-
-### Acceptance criteria
-
-- Every route has a clear module owner.
-- Admin routes are consistently protected.
-- Back-button/deep-link behaviour is stable.
-
----
-
-## PR P3 — Critical journey automated test suite
-
-**Priority:** P0  
-**Status:** PARTIAL
-
-### Scope
-
-Add/complete automated tests for:
-
-- signup/login/session recovery;
-- character creation;
-- dashboard/next action;
-- songwriting;
-- recording;
-- release;
-- gig completion;
-- band basics;
-- low health/energy recovery;
-- inbox/notifications;
-- mobile dashboard/quick actions;
-- admin bug visibility.
-
-### Acceptance criteria
-
-- Core beta journeys run in CI.
-- Known recently fixed regressions have targeted tests.
-
----
-
-## PR P4 — Route smoke and UI state test matrix
+## PR H1 — Cross-system executable verification matrix
 
 **Priority:** P0  
 **Status:** NOT STARTED
 
 ### Scope
 
-- Build route inventory test matrix.
-- Verify auth, new-player, existing-player, and mobile behaviour.
-- Verify loading/empty/error states.
-- Detect crash/hang/404 regressions.
-- Add browser back/forward navigation coverage.
+- Maintain a single verification matrix for finance, festivals, tours, social, family, gigs, progression, and admin-critical paths.
+- Add browser E2E for high-risk player journeys.
+- Add database behavioural harnesses for authoritative mutations.
+- Add reconciliation and idempotency checks.
+- Add release-gate documentation and ownership.
 
 ### Acceptance criteria
 
-- No beta-core route silently hangs or presents an unhandled missing-data state.
+- Critical beta journeys have executable coverage.
+- Known verification gaps are visible and cannot be mistaken for complete implementation.
 
 ---
 
-## PR P5 — Economy, reward and concurrency exploit suite
-
-**Priority:** P0  
-**Status:** NOT STARTED
-
-### Scope
-
-Test and harden:
-
-- double-click submissions;
-- refresh after reward;
-- same action in multiple tabs;
-- back button after purchase/action;
-- failed-request retry;
-- client-side value tampering;
-- duplicate XP/money/AP grants;
-- negative/impossible balances/state.
-
-### Acceptance criteria
-
-- High-value actions are idempotent and server validated.
-- Exploit attempts do not corrupt state or duplicate rewards.
-
----
-
-## PR P6 — Error telemetry and player-safe diagnostics
-
-**Priority:** P0  
-**Status:** PARTIAL
-
-### Scope
-
-- Capture route, safe profile reference, error code/message, stack, browser/device, timestamp, and correlation ID.
-- Avoid secrets/private content.
-- Standardise player-safe error copy and retry actions.
-- Preserve user form state after recoverable failure.
-- Add admin search/diagnostic surface.
-
-### Acceptance criteria
-
-- High-impact failures can be diagnosed without asking players for raw database details.
-- Known RPC/schema errors surface as actionable product messages.
-
----
-
-## PR P7 — Beta engineering quality gate refresh
+## PR H2 — Legacy/dead-path cleanup after canonical verification
 
 **Priority:** P1  
-**Status:** NOT STARTED
+**Status:** DEFERRED
 
 ### Scope
 
-Re-measure and then improve:
-
-- test coverage toward 60%+ focused on critical paths;
-- ESLint warnings toward zero;
-- accessibility toward 95%+;
-- error handling toward 95%+;
-- duplicate code toward below 8%;
-- production readiness toward 90%+.
-
-Do not rely on July 2026 snapshot numbers without rerunning current metrics.
-
-### Acceptance criteria
-
-- Updated `PROJECT_HEALTH.md` contains current measured values and evidence.
-- Release gate commands are documented and green.
+- Remove legacy writes only after canonical replacements are verified.
+- Remove orphaned components/RPCs/tables where safe.
+- Preserve compatibility reads where historical data still depends on them.
+- Update docs and architecture maps.
 
 ### Dependencies
 
-- PRs P3–P6.
-
----
-
-# Suggested execution order
-
-The following order minimises rework and keeps authoritative foundations ahead of dependent feature depth.
-
-## Wave 1 — Current blockers and data safety
-
-1. A1 — Rehearsal/recording finance integration.
-2. A2 — Atomic booking/refund/obligation repair.
-3. A3 — Band treasury UX.
-4. D1 — Friendship/block lifecycle.
-5. D2 — Mute/rate limits.
-6. D3 — Unified reporting/moderation.
-7. P3 — Critical journey tests.
-8. P4 — Route smoke tests.
-9. P5 — Economy/concurrency exploit tests.
-10. P6 — Error telemetry.
-11. A4 — Finance E2E closure.
-
-## Wave 2 — Finish festival authority
-
-12. B1 — Performance sessions.
-13. B2 — Readiness/arrival authority.
-14. B3 — Performance resolution.
-15. B4 — Settlement/effects.
-16. B5 — Organiser lifecycle/audit.
-17. B6 — Ticket/vendor/analytics closure.
-18. B7 — Collaboration/fan voting.
-
-## Wave 3 — Festival attendee gameplay
-
-19. C1 — Wristbands/inventory.
-20. C2 — Check-in/leave lifecycle.
-21. C3 — Festival Mode.
-22. C4 — Scheduling locks.
-23. C5 — Day planner.
-24. C6 — Attendee condition simulation.
-25. C7 — Social/random events.
-26. C8 — Rewards and organiser boosts.
-
-## Wave 4 — Finish existing partially built systems
-
-27. E1 — Tour HQ live integration.
-28. F1 — Gig Viewer closure audit.
-29. F2 — Close verified viewer gaps.
-30. P2 — Navigation/hub closure audit.
-31. G1 — Child development/parenting.
-32. H1 — Jam Sessions 2.0 core.
-33. D4 — Group conversations.
-34. D5 — Band objectives/contributions/lineups.
-
-## Wave 5 — Social MMO depth
-
-35. D9 — Generic contracts/escrow/trust.
-36. D6 — Collaboration/session-musician contracts.
-37. D7 — Job boards/hiring.
-38. D8 — Employment contracts/disputes.
-39. D10 — Mentoring/classes.
-40. D11 — Rivalries/seasonal social competition.
-41. H2 — Jam spectators/reputation/contracts.
-42. G2 — Dynasty/legacy.
-43. E2 — Advanced tour simulation.
-
-## Wave 6 — Platform integration foundation
-
-44. I1 — Domain event schema.
-45. I2 — Publisher/registry.
-46. I3 — Initial emitters.
-47. I4 — Admin viewer/consumers.
-48. L1 — Professional achievements.
-
-## Wave 7 — Advanced music/media/social depth
-
-49. J1 — Advanced label deals.
-50. J2 — Label market/corporate strategy.
-51. J3 — Royalty audits/cross-media economics.
-52. K1 — Media production depth.
-53. K2 — Media reach/sponsors/syndication.
-54. M1 — Retreats/family routines.
-55. N1 — DikCok creator collaboration.
-
-## Wave 8 — Long-horizon post-beta RP
-
-56. O1 — Consequence/reputation graph.
-57. O2 — Governance 2.0.
-58. O3 — Narrative/rumour/PR engine.
-59. O4 — Legal roleplay.
-60. O5 — Player-created RP events.
-61. O6 — AI-assisted narrative.
-62. M2 — Lifestyle reputation/longevity.
-63. N2 — DikCok live-ops/premium depth.
-
-## Continuous documentation/release work
-
-- P1 — Documentation/status cleanup should begin early and be maintained continuously.
-- P7 — Re-run project health gates after each major wave and before wider beta expansion.
-
----
-
-# Features that should not be rebuilt from old plans
-
-The following areas already have substantial implementations and should only receive the scoped follow-up PRs above:
-
-- Core DikCok feed/create/challenges/analytics.
-- Core record label contracts/releases/royalty surfaces.
-- Wellness lifestyle/routines/burnout baseline.
-- Basic marriage/child planning/family timeline.
-- Basic jam-session capability.
-- Current live gig/living venue viewer later phases.
-- Current festival booking/contracts/audience projections.
-- Current tour deterministic operations engine.
-- Current achievements catalogue/evaluator foundations.
-
-Historical plans for these systems remain useful for ideas but are not proof that the entire system is unimplemented.
-
----
-
-# Definition of fully implemented
-
-A consolidated PR/programme should only be marked complete when all relevant items below are true:
-
-- Database migrations are clean and replayable.
-- RLS and permissions are tested.
-- Authoritative mutations are server-side.
-- Idempotency is proven for retriable/high-value actions.
-- Player UI has loading, empty, error, success, and retry states.
-- Mobile/desktop behaviour matches product scope.
-- Relevant navigation routes are accessible and protected.
-- Notifications/inbox integration exists where an action requires follow-up.
-- Finance/reward effects reconcile to source-of-truth records.
-- Browser refresh/back/multiple-tab behaviour cannot duplicate effects.
-- Unit/integration/SQL/E2E tests cover critical paths.
-- Admin/support diagnostics exist for failure-prone systems.
-- The related MD status and this backlog are updated.
-
----
-
-# Maintenance rule
-
-When a PR closes:
-
-1. Change its status in this file.
-2. Link the merged PR number next to the heading.
-3. Update any canonical domain audit/implementation plan.
-4. If follow-up work is discovered, add a new narrowly scoped PR entry rather than silently expanding an existing one.
-5. Do not reopen superseded legacy architecture without an explicit ADR or migration reason.
+- Relevant programme verification/closure PRs.
