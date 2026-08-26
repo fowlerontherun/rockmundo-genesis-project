@@ -11,6 +11,8 @@ describe("G2 dynasty and family legacy authority contracts", () => {
     expect(panel).toContain('rpc("get_family_legacy"');
     expect(panel).toContain("Hall of records");
     expect(panel).toContain("Dynasty milestones");
+    expect(panel).toContain('node.relationship === "descendant"');
+    expect(panel).toContain("Later generations");
     expect(panel).not.toMatch(/\.from\(["']family_(?:lineage|legacy|dynasty|social_capital)/);
   });
 
