@@ -2,18 +2,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useTranslation } from "@/hooks/useTranslation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Users } from "lucide-react";
 
 import { SummaryTab } from "@/features/education/components/SummaryTab";
 import { BooksTab } from "@/features/education/components/BooksTab";
 import { UniversityTab } from "@/features/education/components/UniversityTab";
 import { VideosTab } from "@/features/education/components/VideosTab";
 import { MentorsTab } from "@/features/education/components/MentorsTab";
+import { PlayerLearningNetwork } from "@/features/education/components/PlayerLearningNetwork";
 import { useEducationTabs } from "@/features/education/hooks/useEducationTabs";
 
 const Education = () => {
   const { t } = useTranslation();
-  const tabs = useEducationTabs();
+  const baseTabs = useEducationTabs();
+  const tabs = [...baseTabs, { value: "players", label: "Player Learning", icon: Users }];
   const defaultValue = tabs[0]?.value ?? "summary";
 
   const tabContentMap: Record<string, JSX.Element> = {
@@ -22,6 +24,7 @@ const Education = () => {
     university: <UniversityTab />,
     videos: <VideosTab />,
     mentors: <MentorsTab />,
+    players: <PlayerLearningNetwork />,
   };
 
   return (
@@ -34,7 +37,6 @@ const Education = () => {
     >
 
       <Tabs defaultValue={defaultValue} className="mt-6 sm:mt-8 space-y-6">
-        {/* Mobile: Scrollable tabs */}
         <div className="lg:hidden overflow-x-auto">
           <ScrollArea className="w-full whitespace-nowrap pb-2">
             <TabsList className="inline-flex h-auto w-max gap-1 bg-transparent p-0">
@@ -57,9 +59,8 @@ const Education = () => {
           </ScrollArea>
         </div>
 
-        {/* Desktop: Grid tabs */}
         <div className="hidden lg:block">
-          <TabsList className="grid w-full grid-cols-5 gap-2 bg-muted/50 p-1">
+          <TabsList className="grid w-full grid-cols-6 gap-2 bg-muted/50 p-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
 
