@@ -4,8 +4,9 @@ import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 /**
- * Global hook that processes ALL user's gigs that are in_progress
- * Runs every 30 seconds to advance songs and complete gigs
+ * Global hook that orchestrates active gigs while the server remains authoritative
+ * for outcome creation, song processing, timeline advancement and completion.
+ * Runs every 30 seconds to request any due song processing and completion.
  */
 export const useGlobalGigExecution = (userId: string | null) => {
   const { toast } = useToast();
@@ -16,7 +17,6 @@ export const useGlobalGigExecution = (userId: string | null) => {
     if (!userId) return;
 
     try {
-      // Get active profile's bands
       const { data: activeProfile } = await supabase
         .from("profiles")
         .select("id")
@@ -35,22 +35,21 @@ export const useGlobalGigExecution = (userId: string | null) => {
 
       if (!bandIds || bandIds.length === 0) return;
 
-      const bandIdList = bandIds.map(b => b.band_id);
+      const bandIdList = bandIds.map((band) => band.band_id);
 
-      // Find gigs that are in_progress
       const { data: activeGigs, error } = await supabase
-        .from('gigs')
+        .from("gigs")
         .select(`
           *,
           bands!gigs_band_id_fkey(name),
           venues!gigs_venue_id_fkey(name, capacity)
         `)
-        .in('band_id', bandIdList)
-        .eq('status', 'in_progress')
-        .not('setlist_id', 'is', null);
+        .in("band_id", bandIdList)
+        .eq("status", "in_progress")
+        .not("setlist_id", "is", null);
 
       if (error) {
-        console.error('[GlobalGigExecution] Error fetching active gigs:', error);
+        console.error("[GlobalGigExecution] Error fetching active gigs:", error);
         return;
       }
 
@@ -60,157 +59,133 @@ export const useGlobalGigExecution = (userId: string | null) => {
 
       for (const gig of activeGigs) {
         try {
-          // Get gig outcome
-          const { data: outcome } = await supabase
-            .from('gig_outcomes')
-            .select('id')
-            .eq('gig_id', gig.id)
+          // Outcome creation belongs to the database trigger fired when the gig
+          // enters in_progress. If that server-owned row is not visible yet, do
+          // not fabricate a browser fallback; leave the gig retryable.
+          const { data: outcome, error: outcomeError } = await supabase
+            .from("gig_outcomes")
+            .select("id")
+            .eq("gig_id", gig.id)
             .maybeSingle();
 
-          let outcomeId = outcome?.id;
-
-          if (!outcome) {
-            console.log(`[GlobalGigExecution] Creating outcome for gig ${gig.id}`);
-            // Outcome should be created by trigger, but create if missing
-            const { data: newOutcome } = await supabase
-              .from('gig_outcomes')
-              .insert({
-                gig_id: gig.id,
-                actual_attendance: Math.floor((gig.venues?.capacity || 100) * 0.7),
-                venue_name: gig.venues?.name || 'Unknown Venue',
-                venue_capacity: gig.venues?.capacity || 100,
-                attendance_percentage: 70,
-                ticket_revenue: 0,
-                merch_revenue: 0,
-                total_revenue: 0,
-                venue_cost: 0,
-                crew_cost: 0,
-                equipment_cost: 0,
-                total_costs: 0,
-                net_profit: 0,
-                overall_rating: 0,
-                performance_grade: 'pending'
-              })
-              .select('id')
-              .single();
-            
-            if (!newOutcome) continue;
-            outcomeId = newOutcome.id;
+          if (outcomeError) {
+            console.error(`[GlobalGigExecution] Error fetching outcome for gig ${gig.id}:`, outcomeError);
+            continue;
           }
 
-          if (!outcomeId) continue;
+          if (!outcome?.id) {
+            console.warn(`[GlobalGigExecution] Server-created outcome not ready for gig ${gig.id}; will retry`);
+            continue;
+          }
+
+          const outcomeId = outcome.id;
 
           // Get every setlist entry. Inner-joining songs used to silently drop
           // performance items such as stage dives from live progression.
           const { data: setlistSongs } = await supabase
-            .from('setlist_songs')
-            .select('id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds),performance_items_catalog(id,name,duration_seconds)')
-            .eq('setlist_id', gig.setlist_id)
-            .order('position');
+            .from("setlist_songs")
+            .select("id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds),performance_items_catalog(id,name,duration_seconds)")
+            .eq("setlist_id", gig.setlist_id)
+            .order("position");
 
           if (!setlistSongs || setlistSongs.length === 0) continue;
 
-          // Calculate elapsed time
           const startedAt = new Date(gig.started_at);
           const now = new Date();
           const elapsedSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
 
-          // Get existing performances
           const { data: existingPerformances } = await supabase
-            .from('gig_song_performances')
-            .select('song_id, position')
-            .eq('gig_outcome_id', outcomeId);
+            .from("gig_song_performances")
+            .select("song_id, position")
+            .eq("gig_outcome_id", outcomeId);
 
-          const performedPositions = new Set(existingPerformances?.map(p => p.position) || []);
+          const performedPositions = new Set(existingPerformances?.map((performance) => performance.position) || []);
 
-          // Calculate which songs should have been performed
           let cumulativeDuration = 0;
           const songsToPerform: Array<typeof setlistSongs[0] & { position: number }> = [];
 
           for (let i = 0; i < setlistSongs.length; i++) {
             const song = setlistSongs[i];
             const songDuration = song.songs?.duration_seconds || song.performance_items_catalog?.duration_seconds || 180;
-            
+
             if (elapsedSeconds >= cumulativeDuration && !performedPositions.has(i)) {
               songsToPerform.push({ ...song, position: i });
             }
             cumulativeDuration += songDuration;
           }
 
-          // Process songs that should have been performed
           for (const song of songsToPerform) {
-            const isPerformanceItem = song.item_type === 'performance_item' || (!song.song_id && !!song.performance_item_id);
-            console.log(`[GlobalGigExecution] Processing setlist item: ${song.songs?.title ?? song.performance_items_catalog?.name ?? 'Unknown item'} at position ${song.position}`);
-            
-            // Call edge function to process song
-            const { error: processError } = await supabase.functions.invoke('process-gig-song', {
+            const isPerformanceItem = song.item_type === "performance_item" || (!song.song_id && !!song.performance_item_id);
+            console.log(
+              `[GlobalGigExecution] Processing setlist item: ${song.songs?.title ?? song.performance_items_catalog?.name ?? "Unknown item"} at position ${song.position}`,
+            );
+
+            const { error: processError } = await supabase.functions.invoke("process-gig-song", {
               body: {
                 gigId: gig.id,
-                outcomeId: outcomeId,
+                outcomeId,
                 songId: song.song_id,
                 performanceItemId: song.performance_item_id,
-                itemType: isPerformanceItem ? 'performance_item' : 'song',
-                position: song.position
-              }
+                itemType: isPerformanceItem ? "performance_item" : "song",
+                position: song.position,
+              },
             });
 
             if (processError) {
-              console.error(`[GlobalGigExecution] Error processing song:`, processError);
+              console.error("[GlobalGigExecution] Error processing song:", processError);
             }
-
-            // Update gig's current_song_position
-            await supabase
-              .from('gigs')
-              .update({ current_song_position: song.position + 1 })
-              .eq('id', gig.id);
+            // process-gig-song advances current_song_position through the
+            // service-only mark_gig_position_processed RPC.
           }
 
-          // Check if gig should complete
-          const totalDuration = setlistSongs.reduce((sum, s) => 
-            sum + (s.songs?.duration_seconds || s.performance_items_catalog?.duration_seconds || 180), 0
+          const totalDuration = setlistSongs.reduce(
+            (sum, setlistItem) =>
+              sum + (setlistItem.songs?.duration_seconds || setlistItem.performance_items_catalog?.duration_seconds || 180),
+            0,
           );
 
-          if (elapsedSeconds >= totalDuration && performedPositions.size + songsToPerform.length >= setlistSongs.length) {
+          if (
+            elapsedSeconds >= totalDuration &&
+            performedPositions.size + songsToPerform.length >= setlistSongs.length
+          ) {
             if (completingGigsRef.current.has(gig.id)) continue;
             completingGigsRef.current.add(gig.id);
             console.log(`[GlobalGigExecution] Completing gig ${gig.id}`);
-            
-            const { data: completionData, error: completionError } = await supabase.functions.invoke('complete-gig', {
-              body: { gigId: gig.id }
+
+            const { data: completionData, error: completionError } = await supabase.functions.invoke("complete-gig", {
+              body: { gigId: gig.id },
             });
 
             if (completionError) {
               completingGigsRef.current.delete(gig.id);
-              console.error(`[GlobalGigExecution] complete-gig failed:`, completionError);
+              console.error("[GlobalGigExecution] complete-gig failed:", completionError);
               continue;
             }
 
             if (!(completionData as any)?.alreadyCompleted) {
               toast({
                 title: "Gig Completed!",
-                description: `${gig.bands?.name}'s performance has finished!`
+                description: `${gig.bands?.name}'s performance has finished!`,
               });
             }
 
-            queryClient.invalidateQueries({ queryKey: ['gigs'] });
-            queryClient.invalidateQueries({ queryKey: ['gig-outcomes'] });
+            queryClient.invalidateQueries({ queryKey: ["gigs"] });
+            queryClient.invalidateQueries({ queryKey: ["gig-outcomes"] });
           }
         } catch (gigError) {
           console.error(`[GlobalGigExecution] Error processing gig ${gig.id}:`, gigError);
         }
       }
     } catch (error) {
-      console.error('[GlobalGigExecution] Error:', error);
+      console.error("[GlobalGigExecution] Error:", error);
     }
   }, [userId, toast, queryClient]);
 
   useEffect(() => {
     if (!userId) return;
 
-    // Process immediately
     processGigs();
 
-    // Then every 30 seconds
     const interval = setInterval(processGigs, 30 * 1000);
 
     return () => clearInterval(interval);
