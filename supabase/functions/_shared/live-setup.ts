@@ -49,34 +49,19 @@ export function isPerformanceCrewRole(role?: string | null): boolean {
 
 export function getVenueLiveSetupTarget(capacity?: number | null): { target: number; label: string } {
   const safeCapacity = Math.max(0, Number(capacity || 0));
-  if (safeCapacity <= 250) return { target: 45, label: 'Basic' };
-  if (safeCapacity <= 1_000) return { target: 60, label: 'Touring' };
-  if (safeCapacity <= 5_000) return { target: 72, label: 'Professional' };
-  if (safeCapacity <= 20_000) return { target: 84, label: 'Elite' };
-  return { target: 92, label: 'World Class' };
+  if (safeCapacity <= 150) return { target: 45, label: 'Basic' };
+  if (safeCapacity <= 500) return { target: 60, label: 'Touring' };
+  if (safeCapacity <= 1_500) return { target: 70, label: 'Professional' };
+  if (safeCapacity <= 5_000) return { target: 82, label: 'Elite' };
+  return { target: 90, label: 'World Class' };
 }
 
 function getRating(score: number): string {
   if (score >= 90) return 'World Class';
-  if (score >= 80) return 'Elite';
-  if (score >= 70) return 'Professional';
-  if (score >= 55) return 'Touring';
-  return 'Basic';
-}
-
-function getRecommendation(equipment: number, crew: number, target: number): string {
-  const equipmentGap = target - equipment;
-  const crewGap = target - crew;
-
-  if (equipmentGap <= 0 && crewGap <= 0) {
-    return 'Your Live Setup is suitable for this venue. Focus on setlist, rehearsal and soundcheck.';
-  }
-
-  if (equipmentGap >= crewGap) {
-    return `Upgrade or repair shared band equipment first. Equipment is ${Math.max(0, Math.round(equipmentGap))} points below this venue's target.`;
-  }
-
-  return `Improve your Show Crew first. Crew capability is ${Math.max(0, Math.round(crewGap))} points below this venue's target.`;
+  if (score >= 80) return 'Excellent';
+  if (score >= 65) return 'Good';
+  if (score >= 50) return 'Developing';
+  return 'Needs Work';
 }
 
 export function calculateLiveSetup(input: LiveSetupInput): LiveSetupResult {
@@ -88,14 +73,29 @@ export function calculateLiveSetup(input: LiveSetupInput): LiveSetupResult {
   const venueTarget = getVenueLiveSetupTarget(input.venueCapacity);
   const gap = score - venueTarget.target;
 
+  let status: LiveSetupStatus = 'ready';
+  if (gap < -15) status = 'critical';
+  else if (gap < 0) status = 'warning';
+
+  let recommendation = 'Your live setup is suitable for this size of show.';
+  if (status !== 'ready') {
+    if (equipmentScore + 5 < crewScore) {
+      recommendation = 'Upgrade or repair your shared stage equipment first.';
+    } else if (crewScore + 5 < equipmentScore) {
+      recommendation = 'Improve your Show Crew first, especially sound and stage roles.';
+    } else {
+      recommendation = 'Improve both shared equipment and Show Crew before larger shows.';
+    }
+  }
+
   return {
     score,
     equipmentScore,
     crewScore,
     rating: getRating(score),
-    status: gap >= 0 ? 'ready' : gap >= -12 ? 'warning' : 'critical',
+    status,
     venueTarget,
     gap,
-    recommendation: getRecommendation(equipmentScore, crewScore, venueTarget.target),
+    recommendation,
   };
 }
