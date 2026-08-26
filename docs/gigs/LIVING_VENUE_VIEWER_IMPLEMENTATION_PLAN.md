@@ -1,5 +1,11 @@
 # Living Venue Gig Viewer — Implementation Plan
 
+## F1 closure status — 2026-08-26
+
+**Phases 0–3: COMPLETE.** The consolidated F1 audit found all eleven requested contracts implemented in the current shared viewer: contain-fit; Venue Wide/Stage Focus/Auto; seven archetypes with three deterministic variations each; route graphs and distributed service reachability; representative crowd caps; bar and merchandise activity; staff service loops; timestamp reconstruction for seek/restart/speed changes; Reduced Motion equivalents; and Admin Demo/player renderer parity.
+
+The evidence matrix and current file/test references are recorded in [`implementation/LIVING_VENUE_F1_CLOSURE_AUDIT.md`](implementation/LIVING_VENUE_F1_CLOSURE_AUDIT.md). No evidence-backed Phase 0–3 corrective gap remains, so the consolidated F2 item stays deferred unless a new reproducible regression is found.
+
 ## Purpose
 
 This plan expands both the player-facing Gig Viewer and the protected Admin Gig Viewer Demo into the same wide, deterministic **living venue** scene. The stage remains the visual focus while the venue interior, concessions, staff, fixed pedestrian routes, and the surrounding city or landscape make the show feel inhabited.
