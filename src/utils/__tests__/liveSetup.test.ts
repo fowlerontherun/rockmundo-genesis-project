@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateLiveSetup,
   getBandEquipmentEffectiveScore,
+  getCrewRoleInfo,
   getVenueSetupTarget,
   isPerformanceCrewRole,
   resolveBandEquipmentLiveSetup,
@@ -34,6 +35,27 @@ describe("liveSetup", () => {
     expect(isPerformanceCrewRole("Merch Director")).toBe(false);
     expect(isPerformanceCrewRole("Security Lead")).toBe(false);
     expect(isPerformanceCrewRole("Wardrobe Stylist")).toBe(false);
+  });
+
+  it("describes the actual gameplay department and impact of each crew role", () => {
+    expect(getCrewRoleInfo("Front of House Engineer")).toMatchObject({
+      department: "show",
+      departmentLabel: "Show Crew",
+      affectsLiveSetup: true,
+      impactLabel: "Live sound",
+    });
+    expect(getCrewRoleInfo("Tour Manager")).toMatchObject({
+      department: "touring",
+      departmentLabel: "Touring Operations",
+      affectsLiveSetup: false,
+      impactLabel: "Tour planning & logistics",
+    });
+    expect(getCrewRoleInfo("Merch Director")).toMatchObject({
+      department: "commercial",
+      departmentLabel: "Commercial & Image",
+      affectsLiveSetup: false,
+      impactLabel: "Merchandising",
+    });
   });
 
   it("uses condition for a quarter of shared equipment effectiveness", () => {
