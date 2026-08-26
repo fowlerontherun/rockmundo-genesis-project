@@ -31,16 +31,24 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
+export const festivalCompanyNeedsSetup = (
+  festival: Pick<
+    OwnedFestivalCompanySummary,
+    "setupCompleted" | "firstEditionExists"
+  >,
+) => !festival.setupCompleted || !festival.firstEditionExists;
+
 export const FestivalCompanyCard = ({
   festival,
 }: {
   festival: OwnedFestivalCompanySummary;
 }) => {
   const navigate = useNavigate();
-  const needsSetup =
-    !festival.setupCompleted ||
-    !festival.configurationComplete ||
-    !festival.firstEditionExists;
+  // The replacement flow treats setupCompleted + an annual edition as the
+  // authoritative unlock. configurationComplete is retained for display and
+  // compatibility, but must not trap an already-created Festival in setup if
+  // an older RPC reports a legacy configuration status.
+  const needsSetup = festivalCompanyNeedsSetup(festival);
 
   const editionsQuery = useQuery({
     queryKey: festivalCompanyEditionsQueryKey(festival.festivalCompanyId),
@@ -162,7 +170,11 @@ export const FestivalCompanyCard = ({
           <div>
             <div className="text-muted-foreground">Configuration</div>
             <div className="font-semibold">
-              {festival.configurationComplete ? "Complete" : "Incomplete"}
+              {festival.setupCompleted && festival.firstEditionExists
+                ? "Complete"
+                : festival.configurationComplete
+                  ? "Complete"
+                  : "Incomplete"}
             </div>
           </div>
           <div className="flex items-center gap-2">
