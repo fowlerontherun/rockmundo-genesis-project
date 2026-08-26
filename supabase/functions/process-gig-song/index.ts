@@ -85,6 +85,15 @@ const RARITY_BONUSES: Record<string, number> = {
   common: 0.05, uncommon: 0.10, rare: 0.18, epic: 0.25, legendary: 0.35
 };
 
+// Only production-facing staff contribute to the song-performance crew score.
+// Touring, security, merchandise and wardrobe roles have their own gameplay domains.
+const PERFORMANCE_CREW_ROLES = new Set([
+  "Front of House Engineer",
+  "Lighting Director",
+  "Road Crew Chief",
+  "Backline Technician",
+]);
+
 // ── Tiered bonus (matches client-side tieredSkillBonus.ts) ──
 function getTieredBonusPercent(level: number): number {
   if (level <= 0) return 0;
@@ -680,13 +689,18 @@ serve(async (req) => {
     const crew = crewRes.data || [];
     const rehearsal = rehearsalsRes.data?.[0];
 
+    // Shared band equipment remains the 12% equipment contribution. Personal gear
+    // is already role-matched inside fetchLiveMemberSkillAverage and is not double-counted here.
     const equipmentQuality = equipment.length > 0
       ? equipment.reduce((sum: number, eq: any) => sum + eq.quality_rating, 0) / equipment.length
       : 40;
 
-    const crewSkillLevel = crew.length > 0
-      ? crew.reduce((sum: number, c: any) => sum + c.skill_level, 0) / crew.length
+    // Only performance-facing Show Crew contributes to the 8% crew score.
+    const showCrew = crew.filter((member: any) => PERFORMANCE_CREW_ROLES.has(String(member.crew_type || '')));
+    const crewSkillLevel = showCrew.length > 0
+      ? showCrew.reduce((sum: number, c: any) => sum + Number(c.skill_level || 0), 0) / showCrew.length
       : 40;
+    const liveSetupScore = Math.round(equipmentQuality * 0.6 + crewSkillLevel * 0.4);
 
     const { data: outcomeData } = await supabaseClient
       .from('gig_outcomes')
@@ -703,6 +717,9 @@ serve(async (req) => {
       stageSkillAverage: stageSkillAvg,
       equipmentQuality,
       crewSkillLevel,
+      liveSetupScore,
+      showCrewCount: showCrew.length,
+      totalCrewCount: crew.length,
       songQuality: song.quality_score,
       rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10
     });
