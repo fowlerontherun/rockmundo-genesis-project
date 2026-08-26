@@ -30,7 +30,7 @@ type ProjectionRpcResult = {
   error: { message?: string } | null;
 };
 
-const projectionRpc = supabase.rpc as unknown as (
+const projectionRpc = supabase.rpc.bind(supabase) as unknown as (
   functionName: string,
   args: Record<string, Json>,
 ) => Promise<ProjectionRpcResult>;
