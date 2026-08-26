@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Calculator, Ticket, WandSparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Ticket, WandSparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,20 +13,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FestivalBudgetForecast } from "@/features/festivals/budget/FestivalBudgetForecast";
+import { festivalRoutes } from "@/features/festivals/routes";
 import { useFestivalSitePlan } from "../application/useFestivalSitePlan";
 import {
   useFestivalTicketPlan,
   useSaveFestivalTicketPlan,
 } from "../application/useFestivalTicketPlan";
 import {
-  formatMinorMoney,
   parseMoneyToMinor,
   ticketPlanToDraft,
   type FestivalTicketPlanDraft,
   type FestivalTicketPlanResult,
   type FestivalTicketProduct,
 } from "../domain/festivalTicketPlan";
-import { previewTicketForecast } from "../domain/festivalTicketForecast";
 import { validateFestivalTicketDraft } from "../domain/festivalTicketValidation";
 
 const SIMPLE_TICKET_SLUG = "standard-festival-ticket";
@@ -156,7 +156,8 @@ export function FestivalTicketPlanner({
       <Alert>
         <AlertDescription>
           Complete the high-level Festival plan before setting tickets. Detailed
-          site operations are generated from company upgrades and scale.
+          site operations are generated automatically from company upgrades and
+          Festival scale.
         </AlertDescription>
       </Alert>
     );
@@ -188,16 +189,8 @@ export function FestivalTicketPlanner({
     data.festivalDates,
     data.usableSiteCapacity,
   );
-  const forecast = previewTicketForecast(
-    draft,
-    data.festivalDates,
-    data.usableSiteCapacity,
-  );
   const savedDraft = simpleDraftFromResult(data);
   const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft);
-  const forecastSellThrough = Math.round(
-    draft.ticketPlan.expectedSellThroughBasisPoints / 100,
-  );
 
   const updateAdmission = (patch: Partial<FestivalTicketProduct>) => {
     setDraft((current) => {
@@ -265,22 +258,23 @@ export function FestivalTicketPlanner({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle id="simple-ticket-title" className="flex items-center gap-2">
-                <Ticket className="h-5 w-5" /> Standard Festival ticket
+                <Ticket className="h-5 w-5" /> Tickets & budget
               </CardTitle>
               <CardDescription>
-                Choose one price and one availability figure. The game calculates
-                demand from price, marketing, reputation and company upgrades.
+                Set one standard ticket price and how many tickets to sell. The
+                game handles demand, tax, refunds, sponsorship and operating
+                costs automatically.
               </CardDescription>
             </div>
             <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium">
-              Capacity {data.usableSiteCapacity.toLocaleString("en-GB")}
+              Maximum capacity {data.usableSiteCapacity.toLocaleString("en-GB")}
             </span>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-5 md:grid-cols-3">
+        <CardContent className="grid gap-5 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="festival-ticket-price">
-              Ticket price ({currency})
+              Standard ticket price ({currency})
             </Label>
             <Input
               id="festival-ticket-price"
@@ -304,49 +298,13 @@ export function FestivalTicketPlanner({
               value={admission.capacityLimit}
               onChange={(event) => updateCapacity(Number(event.target.value))}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Forecast sell-through</Label>
-            <div className="flex min-h-10 items-center rounded-md border bg-muted/40 px-3 text-lg font-semibold">
-              {forecastSellThrough}%
-            </div>
             <p className="text-xs text-muted-foreground">
-              {dirty
-                ? "Save your price and availability to recalculate demand."
-                : "Calculated by the game from price, marketing, reputation and upgrades."}
+              You can sell fewer tickets than capacity. Demand is recalculated
+              by the server after you save.
             </p>
           </div>
         </CardContent>
       </Card>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <ForecastCard
-          title="Expected tickets sold"
-          value={forecast.expectedTicketsSold.toLocaleString("en-GB")}
-        />
-        <ForecastCard
-          title="Expected gross sales"
-          value={formatMinorMoney(
-            forecast.expectedGrossTicketReceiptsMinor,
-            currency,
-          )}
-        />
-        <ForecastCard
-          title="Estimated tax and refunds"
-          value={formatMinorMoney(
-            forecast.estimatedTaxMinor + forecast.expectedRefundsMinor,
-            currency,
-          )}
-        />
-        <ForecastCard
-          title="Expected net ticket income"
-          value={formatMinorMoney(
-            forecast.expectedNetTicketReceiptsMinor,
-            currency,
-          )}
-        />
-      </div>
 
       {festivalEditionId ? (
         <FestivalBudgetForecast
@@ -358,14 +316,18 @@ export function FestivalTicketPlanner({
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <WandSparkles className="h-5 w-5" /> Automatic ticket operations
+            <WandSparkles className="h-5 w-5" /> Calculated automatically
           </CardTitle>
+          <CardDescription>
+            The forecast above is the whole Festival result, not just ticket
+            sales.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
-          <p>• General-sale timing and availability</p>
-          <p>• Booking fees, tax and expected refunds</p>
-          <p>• Daily attendance allocation</p>
-          <p>• Demand effects from marketing and reputation</p>
+          <p>• Expected attendance and ticket demand</p>
+          <p>• Total projected revenue and sponsorship</p>
+          <p>• Operating costs, tax and expected refunds</p>
+          <p>• Projected Festival profit or loss</p>
         </CardContent>
       </Card>
 
@@ -389,11 +351,11 @@ export function FestivalTicketPlanner({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
         <span role="status" className="text-sm text-muted-foreground">
           {save.isPending
-            ? "Saving and recalculating demand…"
+            ? "Saving and recalculating Festival forecast…"
             : dirty
               ? "Unsaved ticket choices"
               : data.ready
-                ? "Ticket plan ready"
+                ? "Tickets & budget ready"
                 : "Ticket choices saved"}
         </span>
         <div className="flex flex-wrap gap-2">
@@ -408,23 +370,32 @@ export function FestivalTicketPlanner({
             disabled={issues.length > 0 || save.isPending || !data.canWrite}
             onClick={() => persist(true)}
           >
-            <Calculator className="mr-2 h-4 w-4" /> Confirm ticket plan
+            <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm tickets & budget
           </Button>
         </div>
       </div>
-    </section>
-  );
-}
 
-function ForecastCard({ title, value }: { title: string; value: string }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="text-lg font-semibold">{value}</CardContent>
-    </Card>
+      {festivalEditionId && data.ready && !dirty ? (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" /> Tickets & budget complete
+            </CardTitle>
+            <CardDescription>
+              Your price, availability and Festival forecast are saved. Next,
+              review launch blockers and run the Festival.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link to={festivalRoutes.live(festivalCompanyId, festivalEditionId)}>
+                Continue to Run Festival
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+    </section>
   );
 }
