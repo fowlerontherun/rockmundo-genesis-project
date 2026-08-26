@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Mail, Loader2 } from "lucide-react";
+import { Bell, Mail, Loader2, Route } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -50,6 +50,21 @@ export const TravelNotificationPreferences = () => {
     enabled: !!profileId,
   });
 
+  const { data: autoGigTravel = false, isLoading: autoGigTravelLoading } = useQuery({
+    queryKey: ["auto-gig-travel", profileId],
+    queryFn: async (): Promise<boolean> => {
+      if (!profileId) return false;
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select("auto_travel_for_gigs")
+        .eq("id", profileId)
+        .maybeSingle();
+      if (error) throw error;
+      return Boolean(data?.auto_travel_for_gigs);
+    },
+    enabled: !!profileId,
+  });
+
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   useEffect(() => { if (data) setPrefs(data); }, [data]);
 
@@ -71,108 +86,163 @@ export const TravelNotificationPreferences = () => {
     onError: (err: Error) => toast.error(err.message || "Failed to save preferences"),
   });
 
+  const saveAutoGigTravel = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!profileId) throw new Error("No active profile");
+      const { error } = await (supabase as any)
+        .from("profiles")
+        .update({ auto_travel_for_gigs: enabled })
+        .eq("id", profileId);
+      if (error) throw error;
+      return enabled;
+    },
+    onSuccess: (enabled) => {
+      queryClient.setQueryData(["auto-gig-travel", profileId], enabled);
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(enabled ? "Automatic gig travel enabled" : "Automatic gig travel disabled", {
+        description: enabled
+          ? "RockMundo will arrange travel when an upcoming show is in another city. Normal travel costs still apply."
+          : "You'll need to arrange travel to shows yourself.",
+      });
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to update automatic travel"),
+  });
+
   const update = (patch: Partial<Prefs>) => setPrefs((p) => ({ ...p, ...patch }));
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Bell className="w-4 h-4" /> Travel Notifications
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Get pinged when a member's travel status changes, a leg is delayed, or a catch-up becomes available.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoading ? (
-          <div className="text-xs text-muted-foreground flex items-center gap-2">
-            <Loader2 className="w-3 h-3 animate-spin" /> Loading…
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm">In-app inbox alerts</Label>
-                <p className="text-[11px] text-muted-foreground">Adds an entry to your inbox.</p>
-              </div>
+    <div className="space-y-4">
+      <Card className="border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Route className="w-4 h-4" /> Automatic Gig Travel
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Let RockMundo arrange travel when your next booked show is in another city.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label className="text-sm">Travel automatically for shows</Label>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Travel is booked shortly before it is needed, aims to get you there around two hours before showtime, and uses your normal game cash. If travel cannot be booked, the show will not start remotely.
+              </p>
+            </div>
+            {autoGigTravelLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            ) : (
               <Switch
-                checked={prefs.in_app_enabled}
-                onCheckedChange={(v) => update({ in_app_enabled: v })}
+                checked={autoGigTravel}
+                onCheckedChange={(value) => saveAutoGigTravel.mutate(value)}
+                disabled={!profileId || saveAutoGigTravel.isPending}
+                aria-label="Travel automatically for shows"
               />
-            </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-            <div className="grid gap-2 pl-1 border-l-2 border-border">
-              <ToggleRow
-                label="Status changes (depart / arrive / cancel)"
-                checked={prefs.notify_status_changes}
-                disabled={!prefs.in_app_enabled}
-                onChange={(v) => update({ notify_status_changes: v })}
-              />
-              <ToggleRow
-                label="ETA delays"
-                checked={prefs.notify_eta_delays}
-                disabled={!prefs.in_app_enabled}
-                onChange={(v) => update({ notify_eta_delays: v })}
-              />
-              <ToggleRow
-                label="Catch-up / rejoin available"
-                checked={prefs.notify_rejoin_available}
-                disabled={!prefs.in_app_enabled}
-                onChange={(v) => update({ notify_rejoin_available: v })}
-              />
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bell className="w-4 h-4" /> Travel Notifications
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Get pinged when a member's travel status changes, a leg is delayed, or a catch-up becomes available.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="text-xs text-muted-foreground flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" /> Loading…
             </div>
-
-            <div className="border-t border-border pt-3 space-y-2">
+          ) : (
+            <>
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm">Auto-rejoin missed pickups</Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Automatically reattach to the nearest upcoming tour leg if you miss the band's pickup.
-                  </p>
+                  <Label className="text-sm">In-app inbox alerts</Label>
+                  <p className="text-[11px] text-muted-foreground">Adds an entry to your inbox.</p>
                 </div>
                 <Switch
-                  checked={prefs.auto_rejoin_enabled}
-                  onCheckedChange={(v) => update({ auto_rejoin_enabled: v })}
+                  checked={prefs.in_app_enabled}
+                  onCheckedChange={(v) => update({ in_app_enabled: v })}
                 />
               </div>
-            </div>
 
-            <div className="border-t border-border pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5" /> Email me too
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">Optional</Badge>
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Email delivery activates once a sender domain is configured for the project.
-                  </p>
+              <div className="grid gap-2 pl-1 border-l-2 border-border">
+                <ToggleRow
+                  label="Status changes (depart / arrive / cancel)"
+                  checked={prefs.notify_status_changes}
+                  disabled={!prefs.in_app_enabled}
+                  onChange={(v) => update({ notify_status_changes: v })}
+                />
+                <ToggleRow
+                  label="ETA delays"
+                  checked={prefs.notify_eta_delays}
+                  disabled={!prefs.in_app_enabled}
+                  onChange={(v) => update({ notify_eta_delays: v })}
+                />
+                <ToggleRow
+                  label="Catch-up / rejoin available"
+                  checked={prefs.notify_rejoin_available}
+                  disabled={!prefs.in_app_enabled}
+                  onChange={(v) => update({ notify_rejoin_available: v })}
+                />
+              </div>
+
+              <div className="border-t border-border pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm">Auto-rejoin missed pickups</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Automatically reattach to the nearest upcoming tour leg if you miss the band's pickup.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={prefs.auto_rejoin_enabled}
+                    onCheckedChange={(v) => update({ auto_rejoin_enabled: v })}
+                  />
                 </div>
-                <Switch
-                  checked={prefs.email_enabled}
-                  onCheckedChange={(v) => update({ email_enabled: v })}
-                />
               </div>
-              {prefs.email_enabled && (
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={prefs.email_address ?? ""}
-                  onChange={(e) => update({ email_address: e.target.value || null })}
-                  className="h-8 text-sm"
-                />
-              )}
-            </div>
 
-            <div className="flex justify-end pt-1">
-              <Button size="sm" onClick={() => save.mutate(prefs)} disabled={save.isPending}>
-                {save.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save preferences"}
-              </Button>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+              <div className="border-t border-border pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5" /> Email me too
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">Optional</Badge>
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Email delivery activates once a sender domain is configured for the project.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={prefs.email_enabled}
+                    onCheckedChange={(v) => update({ email_enabled: v })}
+                  />
+                </div>
+                {prefs.email_enabled && (
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={prefs.email_address ?? ""}
+                    onChange={(e) => update({ email_address: e.target.value || null })}
+                    className="h-8 text-sm"
+                  />
+                )}
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button size="sm" onClick={() => save.mutate(prefs)} disabled={save.isPending}>
+                  {save.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save preferences"}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
