@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -19,7 +18,6 @@ import {
   Music,
   Instagram,
   Youtube,
-  Radio,
   Clock,
   DollarSign,
   TrendingUp,
@@ -29,7 +27,7 @@ import {
   Share2,
   Filter,
 } from "lucide-react";
-import { format, formatDistanceToNow, parseISO, addMinutes, addDays, isBefore } from "date-fns";
+import { format, formatDistanceToNow, parseISO, isBefore } from "date-fns";
 
 interface PromotionActivity {
   id: string;
@@ -63,21 +61,24 @@ interface Cooldown {
 
 const activityIcons: Record<string, React.ElementType> = {
   reddit_ama: MessageCircle,
+  twitch_listening: Music,
   twitch_listening_party: Music,
   instagram_live: Instagram,
   youtube_premiere: Youtube,
   twitter_spaces: Mic2,
   busking: Mic2,
+  social_ads: Megaphone,
   social_media_ads: Megaphone,
+  street_team: Users,
   street_team_flyers: Users,
 };
 
 const promoFocusOptions = [
-  { value: 'general', label: 'General Band Promotion' },
-  { value: 'new_release', label: 'New Release/Single' },
-  { value: 'upcoming_tour', label: 'Upcoming Tour/Shows' },
-  { value: 'merch', label: 'Merchandise' },
-  { value: 'streaming', label: 'Streaming Platforms' },
+  { value: "general", label: "General Band Promotion" },
+  { value: "new_release", label: "New Release/Single" },
+  { value: "upcoming_tour", label: "Upcoming Tour/Shows" },
+  { value: "merch", label: "Merchandise" },
+  { value: "streaming", label: "Streaming Platforms" },
 ];
 
 const SelfPromotionBrowser = () => {
@@ -85,32 +86,31 @@ const SelfPromotionBrowser = () => {
   const { data: userBand, isLoading: bandLoading } = useUserBand();
   const queryClient = useQueryClient();
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
-  const [promoFocus, setPromoFocus] = useState<string>("general");
-  const [costFilter, setCostFilter] = useState<string>("all");
+  const [promoFocus, setPromoFocus] = useState("general");
+  const [costFilter, setCostFilter] = useState("all");
 
   const bandId = userBand?.id;
   const bandFame = userBand?.fame || 0;
-  const userId = profileId;
 
-  // Fetch player's personal cash balance from profiles
   const { data: playerProfile, isLoading: profileLoading } = useQuery({
-    queryKey: ["player-profile-cash", userId],
+    queryKey: ["player-profile-cash", profileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!profileId) return null;
+
       const { data, error } = await supabase
         .from("profiles")
         .select("id, cash")
-        .eq("id", userId)
+        .eq("id", profileId)
         .maybeSingle();
+
       if (error) throw error;
       return data;
     },
-    enabled: !!userId,
+    enabled: !!profileId,
   });
 
   const playerCash = playerProfile?.cash || 0;
 
-  // Fetch available promotion activities from catalog
   const { data: activities, isLoading: activitiesLoading } = useQuery({
     queryKey: ["self-promotion-catalog"],
     queryFn: async () => {
@@ -126,7 +126,6 @@ const SelfPromotionBrowser = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch active/scheduled promotions
   const { data: activePromotions, isLoading: activeLoading } = useQuery({
     queryKey: ["self-promotions-active", bandId],
     queryFn: async () => {
@@ -144,16 +143,14 @@ const SelfPromotionBrowser = () => {
     staleTime: 60 * 1000,
   });
 
-  // Fetch cooldowns
   const { data: cooldowns, isLoading: cooldownsLoading } = useQuery({
     queryKey: ["self-promotion-cooldowns", bandId],
     queryFn: async () => {
-      const now = new Date().toISOString();
       const { data, error } = await (supabase as any)
         .from("self_promotion_cooldowns")
         .select("activity_type, cooldown_expires_at")
         .eq("band_id", bandId)
-        .gt("cooldown_expires_at", now);
+        .gt("cooldown_expires_at", new Date().toISOString());
 
       if (error) throw error;
       return data as Cooldown[];
@@ -162,99 +159,47 @@ const SelfPromotionBrowser = () => {
     staleTime: 60 * 1000,
   });
 
-  // Start promotion mutation
   const startPromotionMutation = useMutation({
-    mutationFn: async ({ activityType, promoFocus }: { activityType: string; promoFocus: string }) => {
-      if (!bandId || !userId) throw new Error("Band or user not found");
-      
-      const activity = activities?.find(a => a.activity_type === activityType);
+    mutationFn: async ({ activityType, focus }: { activityType: string; focus: string }) => {
+      if (!bandId || !profileId) throw new Error("Band or active character not found");
+
+      const activity = activities?.find((item) => item.activity_type === activityType);
       if (!activity) throw new Error("Activity not found");
 
       if (playerCash < activity.base_cost) {
-        throw new Error(`Insufficient funds. Need $${activity.base_cost.toLocaleString()}, you have $${playerCash.toLocaleString()}`);
+        throw new Error(
+          `Insufficient funds. Need $${activity.base_cost.toLocaleString()}, you have $${playerCash.toLocaleString()}`,
+        );
       }
 
       if (bandFame < activity.min_fame_required) {
         throw new Error(`Need ${activity.min_fame_required.toLocaleString()} fame for this activity`);
       }
 
-      const cooldown = cooldowns?.find(c => c.activity_type === activityType);
+      const cooldown = cooldowns?.find((item) => item.activity_type === activityType);
       if (cooldown && isBefore(new Date(), parseISO(cooldown.cooldown_expires_at))) {
-        throw new Error(`This activity is on cooldown until ${format(parseISO(cooldown.cooldown_expires_at), "MMM d, h:mm a")}`);
+        throw new Error(
+          `This activity is on cooldown until ${format(parseISO(cooldown.cooldown_expires_at), "MMM d, h:mm a")}`,
+        );
       }
 
-      const startTime = new Date();
-      const endTime = addMinutes(startTime, activity.duration_minutes);
-
-      const profileRow = { id: userId };
-      const profile = profileRow;
-
-      if (!profile) throw new Error("Profile not found");
-
-      // Deduct from player's personal cash
-      const { error: deductError } = await supabase
-        .from("profiles")
-        .update({ cash: playerCash - activity.base_cost })
-        .eq("id", userId);
-
-      if (deductError) throw deductError;
-
-      const { data, error } = await (supabase as any)
-        .from("self_promotion_activities")
-        .insert({
-          user_id: userId,
-          band_id: bandId,
-          activity_type: activityType,
-          promo_focus: promoFocus,
-          status: "in_progress",
-          scheduled_start: startTime.toISOString(),
-          scheduled_end: endTime.toISOString(),
-          cost_paid: activity.base_cost,
-          fame_gained: 0,
-          fans_gained: 0,
-        })
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc("start_self_promotion", {
+        p_profile_id: profileId,
+        p_band_id: bandId,
+        p_activity_type: activityType,
+        p_promo_focus: focus,
+      });
 
       if (error) throw error;
-
-      await supabase
-        .from("player_scheduled_activities")
-        .insert({
-          user_id: userId,
-          profile_id: profile.id,
-          activity_type: "self_promotion",
-          title: `Self Promo: ${activity.name}`,
-          scheduled_start: startTime.toISOString(),
-          scheduled_end: endTime.toISOString(),
-          status: "in_progress",
-          metadata: {
-            self_promotion_id: data.id,
-            activity_type: activityType,
-            band_id: bandId,
-            promo_focus: promoFocus,
-          },
-        });
-
-      const cooldownExpires = addDays(new Date(), activity.cooldown_days);
-      await (supabase as any)
-        .from("self_promotion_cooldowns")
-        .upsert({
-          band_id: bandId,
-          activity_type: activityType,
-          cooldown_expires_at: cooldownExpires.toISOString(),
-        }, {
-          onConflict: "band_id,activity_type",
-        });
-
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["self-promotions-active", bandId] });
       queryClient.invalidateQueries({ queryKey: ["self-promotion-cooldowns", bandId] });
       queryClient.invalidateQueries({ queryKey: ["user-band-pr"] });
-      queryClient.invalidateQueries({ queryKey: ["player-profile-cash", userId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["player-profile-cash", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+
       toast.success("Promotion started!", {
         description: "Your self-promotion activity is now in progress.",
       });
@@ -266,7 +211,7 @@ const SelfPromotionBrowser = () => {
   });
 
   const isOnCooldown = (activityType: string): Date | null => {
-    const cooldown = cooldowns?.find(c => c.activity_type === activityType);
+    const cooldown = cooldowns?.find((item) => item.activity_type === activityType);
     if (cooldown && isBefore(new Date(), parseISO(cooldown.cooldown_expires_at))) {
       return parseISO(cooldown.cooldown_expires_at);
     }
@@ -276,7 +221,7 @@ const SelfPromotionBrowser = () => {
   const canAfford = (cost: number) => playerCash >= cost;
   const hasRequiredFame = (minFame: number) => bandFame >= minFame;
 
-  const filteredActivities = activities?.filter(activity => {
+  const filteredActivities = activities?.filter((activity) => {
     if (costFilter === "all") return true;
     if (costFilter === "free") return activity.base_cost === 0;
     if (costFilter === "low") return activity.base_cost > 0 && activity.base_cost <= 100;
@@ -285,13 +230,13 @@ const SelfPromotionBrowser = () => {
     return true;
   });
 
-  if (bandLoading || activitiesLoading || activeLoading || cooldownsLoading) {
+  if (bandLoading || profileLoading || activitiesLoading || activeLoading || cooldownsLoading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-48" />
+          {[...Array(6)].map((_, index) => (
+            <Skeleton key={index} className="h-48" />
           ))}
         </div>
       </div>
@@ -310,7 +255,19 @@ const SelfPromotionBrowser = () => {
     );
   }
 
-  const selectedActivityData = activities?.find(a => a.activity_type === selectedActivity);
+  if (!profileId || !playerProfile) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-12 text-center text-muted-foreground">
+            Select an active character before starting self-promotion.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const selectedActivityData = activities?.find((activity) => activity.activity_type === selectedActivity);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -324,7 +281,6 @@ const SelfPromotionBrowser = () => {
         </p>
       </div>
 
-      {/* Stats Banner */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-primary/5">
           <CardContent className="p-4">
@@ -364,7 +320,6 @@ const SelfPromotionBrowser = () => {
         </Card>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <Select value={costFilter} onValueChange={setCostFilter}>
           <SelectTrigger className="w-full md:w-48">
@@ -381,7 +336,6 @@ const SelfPromotionBrowser = () => {
         </Select>
       </div>
 
-      {/* Active Promotions */}
       {activePromotions && activePromotions.length > 0 && (
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="pb-2">
@@ -392,10 +346,10 @@ const SelfPromotionBrowser = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             {activePromotions.map((promo) => {
-              const activity = activities?.find(a => a.activity_type === promo.activity_type);
+              const activity = activities?.find((item) => item.activity_type === promo.activity_type);
               const Icon = activityIcons[promo.activity_type] || Megaphone;
               const endTime = parseISO(promo.scheduled_end);
-              
+
               return (
                 <div key={promo.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
                   <div className="flex items-center gap-3">
@@ -417,7 +371,6 @@ const SelfPromotionBrowser = () => {
         </Card>
       )}
 
-      {/* Selection Panel */}
       {selectedActivity && selectedActivityData && (
         <Card className="bg-card/80 border-primary/30">
           <CardHeader>
@@ -459,9 +412,9 @@ const SelfPromotionBrowser = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {promoFocusOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {promoFocusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -469,11 +422,7 @@ const SelfPromotionBrowser = () => {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setSelectedActivity(null)}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setSelectedActivity(null)}>
                 Cancel
               </Button>
               <Button
@@ -484,7 +433,9 @@ const SelfPromotionBrowser = () => {
                   !!isOnCooldown(selectedActivity) ||
                   startPromotionMutation.isPending
                 }
-                onClick={() => startPromotionMutation.mutate({ activityType: selectedActivity, promoFocus })}
+                onClick={() =>
+                  startPromotionMutation.mutate({ activityType: selectedActivity, focus: promoFocus })
+                }
               >
                 {startPromotionMutation.isPending ? (
                   <>
@@ -503,7 +454,6 @@ const SelfPromotionBrowser = () => {
         </Card>
       )}
 
-      {/* Available Activities Grid */}
       <p className="text-sm text-muted-foreground">
         Showing {filteredActivities?.length || 0} of {activities?.length || 0} activities
       </p>
@@ -526,11 +476,11 @@ const SelfPromotionBrowser = () => {
             const isSelected = selectedActivity === activity.activity_type;
 
             return (
-              <Card 
-                key={activity.id} 
+              <Card
+                key={activity.id}
                 className={`relative cursor-pointer transition-all hover:shadow-lg ${
-                  isSelected ? 'border-primary bg-primary/5' : ''
-                } ${isDisabled ? 'opacity-60' : ''}`}
+                  isSelected ? "border-primary bg-primary/5" : ""
+                } ${isDisabled ? "opacity-60" : ""}`}
                 onClick={() => !isDisabled && setSelectedActivity(activity.activity_type)}
               >
                 <CardContent className="p-4">
@@ -539,26 +489,21 @@ const SelfPromotionBrowser = () => {
                       <Lock className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
-                  
+
                   <div className="flex items-start gap-3">
-                    <div className={`rounded-lg p-2 ${isLocked ? 'bg-muted' : 'bg-primary/10'}`}>
-                      <Icon className={`h-5 w-5 ${isLocked ? 'text-muted-foreground' : 'text-primary'}`} />
+                    <div className={`rounded-lg p-2 ${isLocked ? "bg-muted" : "bg-primary/10"}`}>
+                      <Icon className={`h-5 w-5 ${isLocked ? "text-muted-foreground" : "text-primary"}`} />
                     </div>
                     <div className="flex-1 space-y-1">
                       <h4 className="font-medium text-sm">{activity.name}</h4>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {activity.description}
-                      </p>
-                      
+                      <p className="text-xs text-muted-foreground line-clamp-2">{activity.description}</p>
+
                       <div className="flex flex-wrap gap-1 mt-2">
                         <Badge variant="outline" className="text-xs">
                           <Clock className="mr-1 h-3 w-3" />
                           {activity.duration_minutes}m
                         </Badge>
-                        <Badge 
-                          variant={affordable ? "outline" : "destructive"} 
-                          className="text-xs"
-                        >
+                        <Badge variant={affordable ? "outline" : "destructive"} className="text-xs">
                           <DollarSign className="mr-1 h-3 w-3" />
                           ${activity.base_cost.toLocaleString()}
                         </Badge>
