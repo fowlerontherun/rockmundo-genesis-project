@@ -8,6 +8,7 @@ import { Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { CompanyEmploymentContracts } from "@/components/company/CompanyEmploymentContracts";
 
 interface OpenShift {
   id: string;
@@ -81,66 +82,70 @@ export function CompanyShiftMarketplace() {
       toast.success("Shift completed and paid");
       invalidate();
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["company-employment-contracts"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Could not complete shift"),
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Clock className="h-4 w-4" /> Player-run company shifts
-        </CardTitle>
-        <CardDescription>
-          Casual paid shifts published by player businesses. No contract needed — claim, work, get paid.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {isLoading ? (
-          <Skeleton className="h-14 w-full" />
-        ) : shifts.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No open shifts right now. New shifts are published every morning.
-          </p>
-        ) : (
-          shifts.map((s) => {
-            const myClaim = (myClaims as any[]).find((c) => c.shift_id === s.id);
-            const pay = Number(s.wage_per_hour) * s.duration_hours;
-            return (
-              <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{s.companies?.name ?? "Company"}</p>
-                  <p className="text-[11px] capitalize text-muted-foreground">
-                    {s.role.replace(/_/g, " ")} • {s.duration_hours}h • ${pay.toLocaleString()}
-                    {s.starts_at ? ` • ${format(new Date(s.starts_at), "d MMM HH:mm")}` : ""}
-                  </p>
-                  {s.required_skill && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Requires {s.required_skill} level {s.min_skill_level}
+    <div className="space-y-4">
+      <CompanyEmploymentContracts />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Clock className="h-4 w-4" /> Player-run company shifts
+          </CardTitle>
+          <CardDescription>
+            Casual paid shifts published by player businesses. No contract needed — claim, work, get paid.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {isLoading ? (
+            <Skeleton className="h-14 w-full" />
+          ) : shifts.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No open shifts right now. New shifts are published every morning.
+            </p>
+          ) : (
+            shifts.map((s) => {
+              const myClaim = (myClaims as any[]).find((c) => c.shift_id === s.id);
+              const pay = Number(s.wage_per_hour) * s.duration_hours;
+              return (
+                <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{s.companies?.name ?? "Company"}</p>
+                    <p className="text-[11px] capitalize text-muted-foreground">
+                      {s.role.replace(/_/g, " ")} • {s.duration_hours}h • ${pay.toLocaleString()}
+                      {s.starts_at ? ` • ${format(new Date(s.starts_at), "d MMM HH:mm")}` : ""}
                     </p>
-                  )}
+                    {s.required_skill && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Requires {s.required_skill} level {s.min_skill_level}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant="outline" className="text-[10px]">
+                      {s.slots_filled}/{s.slots_total}
+                    </Badge>
+                    {myClaim?.status === "claimed" ? (
+                      <Button size="sm" onClick={() => complete.mutate(myClaim.id)} disabled={complete.isPending}>
+                        Complete
+                      </Button>
+                    ) : myClaim ? (
+                      <Badge className="text-[10px]">{myClaim.status}</Badge>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => claim.mutate(s.id)} disabled={claim.isPending}>
+                        Claim
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant="outline" className="text-[10px]">
-                    {s.slots_filled}/{s.slots_total}
-                  </Badge>
-                  {myClaim?.status === "claimed" ? (
-                    <Button size="sm" onClick={() => complete.mutate(myClaim.id)} disabled={complete.isPending}>
-                      Complete
-                    </Button>
-                  ) : myClaim ? (
-                    <Badge className="text-[10px]">{myClaim.status}</Badge>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={() => claim.mutate(s.id)} disabled={claim.isPending}>
-                      Claim
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </CardContent>
-    </Card>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
