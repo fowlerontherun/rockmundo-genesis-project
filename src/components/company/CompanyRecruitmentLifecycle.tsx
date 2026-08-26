@@ -10,17 +10,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Briefcase, DollarSign, MapPin, Plus, Users, XCircle, CheckCircle2, Megaphone, Sparkles } from "lucide-react";
-import { getRolesForCompanyType, type CompanyRole } from "@/data/companyRoles";
+import { Briefcase, DollarSign, MapPin, Plus, Users, CheckCircle2, XCircle, ListChecks, History, BarChart3 } from "lucide-react";
+import { getRolesForCompanyType } from "@/data/companyRoles";
 
 const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "temporary"];
+const db = supabase as any;
 
-interface Props {
-  companyId: string;
-  companyName: string;
-  companyType?: string | null;
-  headquartersCityId?: string | null;
+type Props = { companyId: string; companyName: string; companyType?: string | null; headquartersCityId?: string | null };
+
+function parseSkillRequirements(value: string) {
+  const result: Record<string, number> = {};
+  for (const item of value.split(",")) {
+    const [slug, level] = item.split(":").map((part) => part.trim());
+    if (!slug) continue;
+    const parsed = Number(level || 0);
+    if (Number.isFinite(parsed) && parsed >= 0) result[slug] = Math.floor(parsed);
+  }
+  return result;
 }
 
 export function CompanyRecruitmentLifecycle({ companyId, companyName, companyType, headquartersCityId }: Props) {
@@ -28,7 +34,7 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, companyTyp
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [selectedVacancy, setSelectedVacancy] = useState<string | null>(null);
-  const [roleKey, setRoleKey] = useState<string>("");
+  const [roleKey, setRoleKey] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [staffCategory, setStaffCategory] = useState("specialist");
@@ -37,43 +43,15 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, companyTyp
   const [employmentType, setEmploymentType] = useState("full_time");
   const [closesAt, setClosesAt] = useState("");
   const [cityId, setCityId] = useState(headquartersCityId ?? "");
-
-  // Advertise dialog state
-  const [adOpen, setAdOpen] = useState(false);
-  const [adVacancyId, setAdVacancyId] = useState<string | null>(null);
-  const [adDays, setAdDays] = useState(7);
-  const [adDailySpend, setAdDailySpend] = useState(100);
+  const [skillRequirements, setSkillRequirements] = useState("");
+  const [minimumReputation, setMinimumReputation] = useState(0);
 
   const roles = useMemo(() => getRolesForCompanyType(companyType), [companyType]);
-
-  const applyRole = (key: string) => {
-    setRoleKey(key);
-    const r = roles.find((role) => role.key === key);
-    if (r) {
-      setTitle(r.title);
-      setDescription(r.description);
-      setStaffCategory(r.category);
-      setWeeklyWage(r.weeklyWage);
-    }
-  };
-
-  const reset = () => {
-    setRoleKey(""); setTitle(""); setDescription(""); setStaffCategory("specialist"); setPositions(1); setWeeklyWage(500); setEmploymentType("full_time"); setClosesAt(""); setCityId(headquartersCityId ?? "");
-  };
-
-  const openWithRole = (role: CompanyRole) => {
-    applyRole(role.key);
-    setEmploymentType("full_time");
-    setPositions(1);
-    setClosesAt("");
-    setCityId(headquartersCityId ?? "");
-    setOpen(true);
-  };
 
   const { data: cities = [] } = useQuery({
     queryKey: ["cities-for-company-recruitment"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cities").select("id, name, country").order("country").order("name");
+      const { data, error } = await supabase.from("cities").select("id,name,country").order("country").order("name");
       if (error) throw error;
       return data ?? [];
     },
@@ -83,7 +61,7 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, companyTyp
     queryKey: ["company-vacancies", companyId],
     queryFn: async () => {
       const { data, error } = await supabase.from("company_vacancies")
-        .select("*, cities:location_city_id(name, country), company_job_applications(id,status,suitability_score,created_at,applicant_profile_id,message, profiles:applicant_profile_id(display_name,avatar_url))")
+        .select("*,cities:location_city_id(name,country),company_job_applications(id,status,suitability_score,created_at,applicant_profile_id,message,offer_expires_at,profiles:applicant_profile_id(display_name,avatar_url))")
         .eq("company_id", companyId)
         .order("updated_at", { ascending: false });
       if (error) throw error;
@@ -91,333 +69,115 @@ export function CompanyRecruitmentLifecycle({ companyId, companyName, companyTyp
     },
   });
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ["company-lifecycle-employees", companyId],
+  const { data: events = [] } = useQuery({
+    queryKey: ["company-recruitment-events", companyId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("company_employees") as any)
-        .select("*, profiles:profile_id(display_name, avatar_url)")
-        .eq("company_id", companyId)
-        .order("status", { ascending: true })
-        .order("hired_at", { ascending: false });
+      const { data, error } = await db.from("company_recruitment_events").select("id,event_type,created_at,vacancy_id,application_id").eq("company_id", companyId).order("created_at", { ascending: false }).limit(40);
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const roleFillStatus = useMemo(() => {
-    const map = new Map<string, { open: number; filled: number }>();
-    for (const r of roles) map.set(r.title, { open: 0, filled: 0 });
-    for (const v of vacancies as any[]) {
-      const entry = map.get(v.job_title);
-      if (!entry) continue;
-      if (v.status === "open") entry.open += Math.max(0, (v.positions_available ?? 0) - (v.positions_filled ?? 0));
-      entry.filled += v.positions_filled ?? 0;
-    }
-    for (const e of employees as any[]) {
-      const entry = map.get(e.job_title ?? "");
-      if (entry && e.status === "active") entry.filled += 1;
-    }
-    return map;
-  }, [roles, vacancies, employees]);
+  const { data: analytics } = useQuery({
+    queryKey: ["company-labor-market-analytics", companyId],
+    queryFn: async () => {
+      const { data, error } = await db.rpc("get_company_labor_market_analytics", { p_company_id: companyId });
+      if (error) throw error;
+      return data as { market?: any[]; recentHires?: any[] };
+    },
+  });
+
+  const reset = () => {
+    setRoleKey(""); setTitle(""); setDescription(""); setStaffCategory("specialist"); setPositions(1);
+    setWeeklyWage(500); setEmploymentType("full_time"); setClosesAt(""); setCityId(headquartersCityId ?? "");
+    setSkillRequirements(""); setMinimumReputation(0);
+  };
 
   const saveVacancy = useMutation({
     mutationFn: async (action: "save_draft" | "publish") => {
-      const { error } = await (supabase as any).rpc("manage_company_vacancy", {
-        p_company_id: companyId,
-        p_action: action,
-        p_job_title: title,
-        p_staff_category: staffCategory,
-        p_description: description || null,
-        p_positions_available: positions,
-        p_weekly_wage: weeklyWage,
-        p_employment_type: employmentType,
-        p_is_permanent: employmentType !== "contract" && employmentType !== "temporary",
-        p_required_skills: {},
-        p_preferred_skills: {},
-        p_minimum_skill_levels: {},
-        p_location_city_id: cityId || null,
-        p_expected_activity_level: "regular",
+      const minimumSkills = parseSkillRequirements(skillRequirements);
+      const { data: vacancyId, error } = await db.rpc("manage_company_vacancy", {
+        p_company_id: companyId, p_action: action, p_job_title: title, p_staff_category: staffCategory,
+        p_description: description || null, p_positions_available: positions, p_weekly_wage: weeklyWage,
+        p_employment_type: employmentType, p_is_permanent: !["contract", "temporary"].includes(employmentType),
+        p_required_skills: minimumSkills, p_preferred_skills: {}, p_minimum_skill_levels: minimumSkills,
+        p_location_city_id: cityId || null, p_expected_activity_level: "regular",
         p_closes_at: closesAt ? new Date(closesAt).toISOString() : null,
       });
       if (error) throw error;
+      const { error: requirementError } = await db.rpc("set_company_vacancy_requirements", {
+        p_vacancy_id: vacancyId, p_location_city_id: cityId || null,
+        p_minimum_skill_levels: minimumSkills, p_minimum_reputation_score: minimumReputation,
+      });
+      if (requirementError) throw requirementError;
     },
-    onSuccess: () => { toast({ title: "Vacancy saved" }); qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] }); setOpen(false); reset(); },
-    onError: (e: Error) => toast({ title: "Could not save vacancy", description: e.message, variant: "destructive" }),
+    onSuccess: () => {
+      toast({ title: "Vacancy saved", description: "Requirements and audit history are server-authoritative." });
+      qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] });
+      qc.invalidateQueries({ queryKey: ["company-recruitment-events", companyId] });
+      qc.invalidateQueries({ queryKey: ["company-labor-market-analytics", companyId] });
+      setOpen(false); reset();
+    },
+    onError: (error: Error) => toast({ title: "Could not save vacancy", description: error.message, variant: "destructive" }),
   });
 
   const vacancyAction = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "close" | "cancel" | "reopen" }) => {
-      const { error } = await (supabase as any).rpc("manage_company_vacancy", { p_vacancy_id: id, p_action: action });
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] }),
-    onError: (e: Error) => toast({ title: "Vacancy action failed", description: e.message, variant: "destructive" }),
-  });
-
-  const advertise = useMutation({
-    mutationFn: async () => {
-      if (!adVacancyId) throw new Error("No vacancy selected");
-      const { error } = await (supabase as any).rpc("advertise_company_vacancy", {
-        p_vacancy_id: adVacancyId,
-        p_days: adDays,
-        p_daily_spend: adDailySpend,
-      });
+      const { error } = await db.rpc("manage_company_vacancy", { p_vacancy_id: id, p_action: action });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Vacancy advertised", description: `Boosted for ${adDays} day${adDays === 1 ? "" : "s"}.` });
       qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] });
-      qc.invalidateQueries({ queryKey: ["company-marketplace-vacancies"] });
-      setAdOpen(false);
+      qc.invalidateQueries({ queryKey: ["company-recruitment-events", companyId] });
     },
-    onError: (e: Error) => toast({ title: "Advertising failed", description: e.message, variant: "destructive" }),
   });
 
   const review = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "offer" | "reject" }) => {
-      const { error } = await (supabase as any).rpc("review_company_application", { p_application_id: id, p_action: action });
+    mutationFn: async ({ id, action }: { id: string; action: "shortlist" | "offer" | "reject" }) => {
+      const { error } = await db.rpc("review_company_application", { p_application_id: id, p_action: action });
       if (error) throw error;
     },
-    onSuccess: () => { toast({ title: "Application updated" }); qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] }); },
-    onError: (e: Error) => toast({ title: "Review failed", description: e.message, variant: "destructive" }),
-  });
-
-  const dismiss = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).rpc("dismiss_company_employee", { p_employee_id: id, p_reason: "Dismissed by company management" });
-      if (error) throw error;
+    onSuccess: () => {
+      toast({ title: "Application updated" });
+      qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] });
+      qc.invalidateQueries({ queryKey: ["company-recruitment-events", companyId] });
     },
-    onSuccess: () => { toast({ title: "Employee dismissed" }); qc.invalidateQueries({ queryKey: ["company-lifecycle-employees", companyId] }); },
-    onError: (e: Error) => toast({ title: "Dismissal failed", description: e.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Review failed", description: error.message, variant: "destructive" }),
   });
 
-  const deleteVacancy = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("company_vacancies").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast({ title: "Vacancy deleted" }); qc.invalidateQueries({ queryKey: ["company-vacancies", companyId] }); },
-    onError: (e: Error) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
-  });
+  const currentVacancy = (vacancies as any[]).find((vacancy) => vacancy.id === selectedVacancy);
 
-  const currentVacancy = useMemo(() => (vacancies as any[]).find((v: any) => v.id === selectedVacancy), [selectedVacancy, vacancies]);
+  return <div className="space-y-4">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <div><CardTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5" />Recruitment</CardTitle><CardDescription>Auditable vacancies, applications, shortlist and offers for {companyName}.</CardDescription></div>
+        <Button size="sm" onClick={() => setOpen(true)}><Plus className="mr-2 h-4 w-4" />Post vacancy</Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? <p className="text-sm text-muted-foreground">Loading vacancies…</p> : (vacancies as any[]).length === 0 ? <p className="text-sm text-muted-foreground">No vacancies yet.</p> : (vacancies as any[]).map((vacancy) => <div key={vacancy.id} className="rounded-lg border p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium">{vacancy.job_title}</p><p className="text-xs text-muted-foreground">{vacancy.cities?.name ?? "Any city"} · ${vacancy.weekly_wage}/week · reputation {vacancy.minimum_reputation_score ?? 0}+</p></div><Badge>{vacancy.status}</Badge></div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground"><span>{vacancy.positions_filled}/{vacancy.positions_available} filled</span><span>{(vacancy.company_job_applications ?? []).length} applications</span></div>
+          <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedVacancy(vacancy.id)}>Applicants</Button>{vacancy.status === "open" && <Button size="sm" variant="outline" onClick={() => vacancyAction.mutate({ id: vacancy.id, action: "close" })}>Close</Button>}{vacancy.status === "closed" && <Button size="sm" variant="outline" onClick={() => vacancyAction.mutate({ id: vacancy.id, action: "reopen" })}>Reopen</Button>}{!["filled", "cancelled"].includes(vacancy.status) && <Button size="sm" variant="destructive" onClick={() => vacancyAction.mutate({ id: vacancy.id, action: "cancel" })}>Cancel</Button>}</div>
+        </div>)}
+      </CardContent>
+    </Card>
 
-  const now = Date.now();
+    {currentVacancy && <Card><CardHeader><CardTitle>Applicants for {currentVacancy.job_title}</CardTitle><CardDescription>Shortlist before offering, or reject with the transition retained in audit history.</CardDescription></CardHeader><CardContent className="space-y-3">{(currentVacancy.company_job_applications ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No applications yet.</p> : (currentVacancy.company_job_applications ?? []).map((app: any) => <div key={app.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{app.profiles?.display_name ?? "Applicant"}</p><p className="text-sm text-muted-foreground">{app.message || "No message supplied."}</p><div className="mt-1 flex gap-2"><Badge variant="outline">{app.status}</Badge><Badge>Suitability {app.suitability_score}%</Badge></div></div><div className="flex flex-wrap gap-2">{["pending", "application_submitted"].includes(app.status) && <Button size="sm" variant="outline" onClick={() => review.mutate({ id: app.id, action: "shortlist" })}><ListChecks className="mr-1 h-4 w-4" />Shortlist</Button>}{["pending", "application_submitted", "shortlisted"].includes(app.status) && <Button size="sm" onClick={() => review.mutate({ id: app.id, action: "offer" })}><CheckCircle2 className="mr-1 h-4 w-4" />Offer</Button>}{!["hired", "rejected", "declined", "withdrawn", "expired"].includes(app.status) && <Button size="sm" variant="destructive" onClick={() => review.mutate({ id: app.id, action: "reject" })}><XCircle className="mr-1 h-4 w-4" />Reject</Button>}</div></div>)}</CardContent></Card>}
 
-  return (
-    <div className="space-y-4">
-      {/* Role catalog */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" />Job roles for this company</CardTitle>
-          <CardDescription>
-            Every role a {companyType ? companyType.split("_").join(" ") : "company"} typically hires. Click a role to open a pre-filled vacancy form.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {roles.map((r) => {
-              const status = roleFillStatus.get(r.title) ?? { open: 0, filled: 0 };
-              return (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => openWithRole(r)}
-                  className="text-left rounded-lg border p-3 hover:border-primary hover:bg-primary/5 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{r.title}</p>
-                      <p className="text-[11px] text-muted-foreground capitalize">{r.category.split("_").join(" ")}</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] whitespace-nowrap">
-                      ${r.weeklyWage}/wk
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{r.description}</p>
-                  <div className="mt-2 flex items-center gap-2 text-[10px]">
-                    {status.filled > 0 && <Badge variant="secondary" className="text-[10px]">{status.filled} hired</Badge>}
-                    {status.open > 0 && <Badge className="text-[10px]">{status.open} open</Badge>}
-                    <span className="ml-auto text-primary flex items-center gap-1"><Plus className="h-3 w-3" />Post vacancy</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5" />Recruitment</CardTitle>
-            <CardDescription>Create vacancies, advertise for applicants, review submissions and preserve hiring history for {companyName}.</CardDescription>
-          </div>
-          <Button size="sm" onClick={() => { reset(); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Custom vacancy</Button>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? <p className="text-sm text-muted-foreground">Loading vacancies…</p> : (vacancies as any[]).length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground"><Briefcase className="h-10 w-10 mx-auto mb-3 opacity-50" /><p>No vacancies yet. Post one from the role catalog above.</p></div>
-          ) : <div className="grid gap-3 md:grid-cols-2">
-            {(vacancies as any[]).map((v: any) => {
-              const applications = v.company_job_applications ?? [];
-              const isAdvertised = v.advertised_until && new Date(v.advertised_until).getTime() > now;
-              const daysLeft = isAdvertised ? Math.max(0, Math.ceil((new Date(v.advertised_until).getTime() - now) / 86400000)) : 0;
-              return <div key={v.id} className={`rounded-lg border p-3 space-y-2 ${isAdvertised ? "border-primary/50 bg-primary/5" : ""}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium truncate">{v.job_title}</p>
-                      {isAdvertised && <Badge className="text-[10px] gap-1"><Megaphone className="h-3 w-3" />Featured · {daysLeft}d</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{v.staff_category} • {v.cities?.name ?? "No city"}</p>
-                  </div>
-                  <Badge variant={v.status === "open" ? "default" : "secondary"}>{v.status}</Badge>
-                </div>
-                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />${v.weekly_wage}/week</span>
-                  <span className="flex items-center gap-1"><Users className="h-3 w-3" />{v.positions_filled}/{v.positions_available} filled</span>
-                  <span>{applications.length} applications</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setSelectedVacancy(v.id)}>View applicants</Button>
-                  {["open","draft"].includes(v.status) && (
-                    <Button size="sm" variant={isAdvertised ? "outline" : "default"} onClick={() => { setAdVacancyId(v.id); setAdDays(7); setAdDailySpend(100); setAdOpen(true); }}>
-                      <Megaphone className="h-4 w-4 mr-1" />{isAdvertised ? "Boost more" : "Advertise"}
-                    </Button>
-                  )}
-                  {v.status === "open" && <Button size="sm" variant="outline" onClick={() => vacancyAction.mutate({ id: v.id, action: "close" })}>Close</Button>}
-                  {v.status === "closed" && <Button size="sm" variant="outline" onClick={() => vacancyAction.mutate({ id: v.id, action: "reopen" })}>Reopen</Button>}
-                  {!["filled", "cancelled"].includes(v.status) && <Button size="sm" variant="destructive" onClick={() => vacancyAction.mutate({ id: v.id, action: "cancel" })}>Cancel</Button>}
-                  {v.status === "cancelled" && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild><Button size="sm" variant="destructive">Delete</Button></AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader><AlertDialogTitle>Delete cancelled vacancy?</AlertDialogTitle><AlertDialogDescription>This permanently removes the vacancy and its application records. This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteVacancy.mutate(v.id)}>Delete</AlertDialogAction></AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-              </div>;
-            })}
-          </div>}
-        </CardContent>
-      </Card>
-
-      {currentVacancy && <Card>
-        <CardHeader><CardTitle>Applicants for {currentVacancy.job_title}</CardTitle><CardDescription>Owners only see public profile details, suitability scores, and application messages.</CardDescription></CardHeader>
-        <CardContent className="space-y-3">
-          {(currentVacancy.company_job_applications ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No applications yet.</p> : (currentVacancy.company_job_applications ?? []).map((app: any) => <div key={app.id} className="rounded-lg border p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="font-medium">{app.profiles?.display_name ?? "Applicant"}</p><p className="text-sm text-muted-foreground">{app.message || "No message supplied."}</p><div className="flex gap-2 mt-1"><Badge variant="outline">{app.status}</Badge><Badge>Suitability {app.suitability_score}%</Badge></div></div>
-            <div className="flex gap-2"><Button size="sm" onClick={() => review.mutate({ id: app.id, action: "offer" })} disabled={!['pending','application_submitted'].includes(app.status)}><CheckCircle2 className="h-4 w-4 mr-1" />Offer</Button><Button size="sm" variant="destructive" onClick={() => review.mutate({ id: app.id, action: "reject" })} disabled={!['pending','application_submitted','offer_made'].includes(app.status)}><XCircle className="h-4 w-4 mr-1" />Reject</Button></div>
-          </div>)}
-        </CardContent>
-      </Card>}
-
-      <Card>
-        <CardHeader><CardTitle>Staff</CardTitle><CardDescription>NPC and real-player staff that feed the weekly company finance processor.</CardDescription></CardHeader>
-        <CardContent className="space-y-2">
-          {(employees as any[]).length === 0 ? <p className="text-sm text-muted-foreground">No staff records yet.</p> : (employees as any[]).map((emp: any) => <div key={emp.id} className="rounded-lg border p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="font-medium">{emp.profiles?.display_name ?? emp.job_title ?? emp.role}</p><p className="text-xs text-muted-foreground">{emp.employee_type} • {emp.staff_category} • ${emp.weekly_wage ?? emp.salary}/week • suitability {emp.suitability_rating ?? 0}%</p></div>
-            <div className="flex gap-2 items-center"><Badge variant={emp.status === "active" ? "default" : "secondary"}>{emp.contract_status ?? emp.status}</Badge>{emp.employee_type === "player" && emp.status === "active" && <AlertDialog><AlertDialogTrigger asChild><Button size="sm" variant="destructive">Dismiss</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Dismiss employee?</AlertDialogTitle><AlertDialogDescription>This preserves employment history and stops future wages/performance contributions.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => dismiss.mutate(emp.id)}>Dismiss</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div>
-          </div>)}
-        </CardContent>
-      </Card>
-
-      {/* Create vacancy dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create company vacancy</DialogTitle>
-            <DialogDescription>Choose a preset role or fill in a custom listing. Draft is private; publishing sends it to the jobs marketplace.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Pre-set role (optional)</Label>
-              <Select value={roleKey} onValueChange={applyRole}>
-                <SelectTrigger><SelectValue placeholder="Choose a preset role for this company" /></SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {roles.map((r) => (
-                    <SelectItem key={r.key} value={r.key}>
-                      {r.title} · ${r.weeklyWage}/wk
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Job title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-            <div><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Staff category</Label>
-                <Input value={staffCategory} onChange={(e) => setStaffCategory(e.target.value)} />
-              </div>
-              <div>
-                <Label>Employment type</Label>
-                <Select value={employmentType} onValueChange={setEmploymentType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{EMPLOYMENT_TYPES.map((s) => <SelectItem key={s} value={s}>{s.split("_").join(" ")}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label>Positions</Label><Input type="number" min={1} value={positions} onChange={(e) => setPositions(Number(e.target.value) || 1)} /></div>
-              <div><Label>Weekly wage</Label><Input type="number" min={0} value={weeklyWage} onChange={(e) => setWeeklyWage(Number(e.target.value) || 0)} /></div>
-              <div><Label>Closing date</Label><Input type="date" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} /></div>
-            </div>
-            <div>
-              <Label>Location</Label>
-              <Select value={cityId} onValueChange={setCityId}>
-                <SelectTrigger><SelectValue placeholder="Choose city" /></SelectTrigger>
-                <SelectContent>{(cities as any[]).map((c: any) => <SelectItem key={c.id} value={c.id}><MapPin className="h-3 w-3 mr-1 inline" />{c.name}, {c.country}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => saveVacancy.mutate("save_draft")}>Save draft</Button>
-            <Button onClick={() => saveVacancy.mutate("publish")}>Publish</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Advertise dialog */}
-      <Dialog open={adOpen} onOpenChange={setAdOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" />Advertise vacancy</DialogTitle>
-            <DialogDescription>Feature this listing at the top of the jobs marketplace to attract more applicants. Cost is billed from the company balance.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Duration (days)</Label>
-                <Input type="number" min={1} max={60} value={adDays} onChange={(e) => setAdDays(Math.max(1, Math.min(60, Number(e.target.value) || 1)))} />
-              </div>
-              <div>
-                <Label>Daily spend ($)</Label>
-                <Input type="number" min={10} step={10} value={adDailySpend} onChange={(e) => setAdDailySpend(Math.max(10, Number(e.target.value) || 10))} />
-              </div>
-            </div>
-            <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total advertising spend</span>
-                <span className="font-semibold">${(adDays * adDailySpend).toLocaleString()}</span>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Higher daily spend = higher placement priority. Featured vacancies show a badge and appear first in player job searches.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAdOpen(false)}>Cancel</Button>
-            <Button onClick={() => advertise.mutate()} disabled={advertise.isPending}>
-              <Megaphone className="h-4 w-4 mr-1" />
-              {advertise.isPending ? "Charging…" : `Advertise for $${(adDays * adDailySpend).toLocaleString()}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card><CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" />Labour market reference</CardTitle><CardDescription>Read-only salary and demand analytics from real vacancy history.</CardDescription></CardHeader><CardContent className="space-y-2">{(analytics?.market ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No market history yet.</p> : (analytics?.market ?? []).slice(0,8).map((row: any) => <div key={`${row.jobTitle}-${row.staffCategory}`} className="flex items-center justify-between rounded border p-2 text-sm"><div><p className="font-medium">{row.jobTitle}</p><p className="text-xs text-muted-foreground">{row.applications ?? 0} applications · {row.openVacancies ?? 0} open</p></div><div className="text-right"><p>${row.averageWeeklyWage}/wk avg</p><p className="text-xs text-muted-foreground">${row.minimumWeeklyWage}–${row.maximumWeeklyWage}</p></div></div>)}</CardContent></Card>
+      <Card><CardHeader><CardTitle className="flex items-center gap-2"><History className="h-5 w-5" />Recruitment history</CardTitle><CardDescription>Server-recorded evidence; cancelled vacancies are retained rather than deleted.</CardDescription></CardHeader><CardContent className="space-y-2">{events.length === 0 ? <p className="text-sm text-muted-foreground">No recruitment events yet.</p> : events.slice(0,12).map((event: any) => <div key={event.id} className="flex items-center justify-between rounded border p-2 text-sm"><span>{String(event.event_type).replaceAll("_", " ")}</span><span className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</span></div>)}</CardContent></Card>
     </div>
-  );
+
+    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>Create company vacancy</DialogTitle><DialogDescription>Applicants must satisfy the server-side location, skill and verified reputation requirements.</DialogDescription></DialogHeader><div className="space-y-4">
+      <div><Label>Preset role</Label><Select value={roleKey} onValueChange={(value) => { setRoleKey(value); const role = roles.find((item) => item.key === value); if (role) { setTitle(role.title); setDescription(role.description); setStaffCategory(role.category); setWeeklyWage(role.weeklyWage); } }}><SelectTrigger><SelectValue placeholder="Optional preset" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.key} value={role.key}>{role.title}</SelectItem>)}</SelectContent></Select></div>
+      <div><Label>Job title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div><div><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+      <div className="grid grid-cols-2 gap-3"><div><Label>Positions</Label><Input type="number" min={1} value={positions} onChange={(e) => setPositions(Number(e.target.value))} /></div><div><Label>Weekly wage</Label><Input type="number" min={0} value={weeklyWage} onChange={(e) => setWeeklyWage(Number(e.target.value))} /></div></div>
+      <div><Label>Employment type</Label><Select value={employmentType} onValueChange={setEmploymentType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{EMPLOYMENT_TYPES.map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}</SelectContent></Select></div>
+      <div><Label>City requirement</Label><Select value={cityId || "any"} onValueChange={(value) => setCityId(value === "any" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="any">Any city</SelectItem>{(cities as any[]).map((city) => <SelectItem key={city.id} value={city.id}>{city.name}, {city.country}</SelectItem>)}</SelectContent></Select></div>
+      <div><Label>Minimum skills</Label><Input value={skillRequirements} onChange={(e) => setSkillRequirements(e.target.value)} placeholder="vocals:20, business:10" /><p className="mt-1 text-xs text-muted-foreground">Comma-separated skill slug and level.</p></div>
+      <div><Label>Minimum verified reputation</Label><Input type="number" min={0} value={minimumReputation} onChange={(e) => setMinimumReputation(Number(e.target.value))} /></div>
+      <div><Label>Closes at</Label><Input type="datetime-local" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} /></div>
+    </div><DialogFooter><Button variant="outline" onClick={() => saveVacancy.mutate("save_draft")} disabled={!title.trim() || saveVacancy.isPending}>Save draft</Button><Button onClick={() => saveVacancy.mutate("publish")} disabled={!title.trim() || saveVacancy.isPending}>Publish</Button></DialogFooter></DialogContent></Dialog>
+  </div>;
 }
