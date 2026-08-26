@@ -133,7 +133,7 @@ BEGIN
     JOIN public.cities fc ON fc.id = p.current_city_id
     JOIN public.cities tc ON tc.id = v.city_id
     WHERE g.status = 'scheduled'
-      AND g.scheduled_date >= now() - interval '12 hours'
+      AND g.scheduled_date > now()
       AND g.scheduled_date <= now() + interval '72 hours'
       AND coalesce(bm.member_status, 'active') = 'active'
       AND p.auto_travel_for_gigs = true
