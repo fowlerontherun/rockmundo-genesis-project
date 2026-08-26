@@ -3,7 +3,7 @@ import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, GripVertical, Music, Plus, Save, Trash2, Volume2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, GripVertical, Music, Plus, Save, Trash2, Users, Volume2, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { SOUNDCHECK_TYPES, validateSoundcheckPlan, type SoundcheckType } from '@/utils/gigStageProduction';
 import { validateGigSetlist } from '@/utils/gigSetlistValidation';
+import { calculateLiveSetup, isPerformanceCrewRole } from '@/utils/liveSetup';
 
 interface DraftItem { id: string; song_id: string; title: string; duration_seconds: number | null; is_encore: boolean; rehearsal_level?: number | null }
 const fmt = (seconds: number | null | undefined) => seconds ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Missing';
@@ -53,6 +54,33 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
     return data;
   }});
 
+  const liveSetupQuery = useQuery({ queryKey: ['gig-live-setup', gigId, bandId], enabled: !!gigId && !!bandId, queryFn: async () => {
+    const [equipmentRes, crewRes, gigRes] = await Promise.all([
+      (supabase as any).from('band_stage_equipment').select('quality_rating').eq('band_id', bandId),
+      (supabase as any).from('band_crew_members').select('crew_type,skill_level').eq('band_id', bandId),
+      (supabase as any).from('gigs').select('venues!gigs_venue_id_fkey(capacity)').eq('id', gigId).maybeSingle(),
+    ]);
+    if (equipmentRes.error) throw equipmentRes.error;
+    if (crewRes.error) throw crewRes.error;
+    if (gigRes.error) throw gigRes.error;
+
+    const equipment = equipmentRes.data || [];
+    const showCrew = (crewRes.data || []).filter((member: any) => isPerformanceCrewRole(member.crew_type));
+    const equipmentQuality = equipment.length
+      ? equipment.reduce((sum: number, item: any) => sum + Number(item.quality_rating || 0), 0) / equipment.length
+      : 40;
+    const crewSkill = showCrew.length
+      ? showCrew.reduce((sum: number, member: any) => sum + Number(member.skill_level || 0), 0) / showCrew.length
+      : 40;
+    const venueCapacity = Number(gigRes.data?.venues?.capacity || 0);
+
+    return {
+      ...calculateLiveSetup({ equipmentQuality, crewSkill, venueCapacity }),
+      equipmentCount: equipment.length,
+      showCrewCount: showCrew.length,
+    };
+  }});
+
   useEffect(() => { if (soundcheckQuery.data?.soundcheck_type) setSoundcheckType(soundcheckQuery.data.soundcheck_type); }, [soundcheckQuery.data]);
 
   useEffect(() => {
@@ -73,13 +101,35 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
   const save = async () => { if (!validation.valid || saving) return; setSaving(true); try { const { error } = await (supabase as any).rpc('save_gig_setlist', { p_gig_id: gigId, p_name: 'Gig setlist', p_items: draft.map((d, i) => ({ song_id: d.song_id, position: i + 1, is_encore: d.is_encore })) }); if (error) throw error; toast({ title: 'Setlist saved', description: 'Gig preparation has been updated.' }); queryClient.invalidateQueries({ queryKey: ['gig-prep-setlist', gigId] }); queryClient.invalidateQueries({ queryKey: ['gig-details', gigId] }); } catch (e: any) { toast({ title: 'Could not save setlist', description: e.message, variant: 'destructive' }); } finally { setSaving(false); } };
   const onDragEnd = (event: DragEndEvent) => { if (!event.over || event.active.id === event.over.id) return; setDraft((items) => arrayMove(items, items.findIndex((i) => i.id === event.active.id), items.findIndex((i) => i.id === event.over?.id))); };
 
-  return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Music className="h-5 w-5" /> Gig preparation</CardTitle><CardDescription>Two steps before showtime: pick your setlist and complete a soundcheck{scheduledDate ? ` (${new Date(scheduledDate).toLocaleString()})` : ''}.</CardDescription></CardHeader><CardContent className="space-y-4">
+  return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Music className="h-5 w-5" /> Gig preparation</CardTitle><CardDescription>Prepare the set, soundcheck and Live Setup. Personal gear improves each musician's own role; shared band equipment and Show Crew make up the Live Setup.</CardDescription></CardHeader><CardContent className="space-y-4">
     <div className="grid gap-3 md:grid-cols-[160px_1fr]"><div><div className="text-3xl font-bold">{readyPercent}%</div><Badge variant={readyPercent === 100 ? 'default' : 'outline'}>{readyPercent === 100 ? 'Show ready' : 'In progress'}</Badge></div><div><Progress value={readyPercent} className="h-3" /><p className="mt-2 text-sm text-muted-foreground">Set duration {fmt(validation.totalDurationSeconds)} / booked {fmt(slotDurationSeconds)}.</p></div></div>
 
     <div className="grid gap-2 sm:grid-cols-2">
       <div className="flex items-center justify-between rounded-md border p-2 text-sm"><span>1. Setlist selected</span><Badge variant={setlistSaved ? 'outline' : 'destructive'}>{setlistSaved ? 'done' : 'pending'}</Badge></div>
       <div className="flex items-center justify-between rounded-md border p-2 text-sm"><span>2. Soundcheck completed</span><Badge variant={soundcheckDone ? 'outline' : 'destructive'}>{soundcheckDone ? 'done' : 'pending'}</Badge></div>
     </div>
+
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base"><Wrench className="h-4 w-4" />Live Setup</CardTitle>
+            <CardDescription>Shared stage equipment 60% · Show Crew 40%. This mirrors their existing 12% + 8% contribution to song performance.</CardDescription>
+          </div>
+          {liveSetupQuery.data && <div className="text-right"><div className="text-2xl font-bold">{liveSetupQuery.data.score}/100</div><Badge variant={liveSetupQuery.data.status === 'ready' ? 'default' : liveSetupQuery.data.status === 'warning' ? 'outline' : 'destructive'}>{liveSetupQuery.data.rating}</Badge></div>}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {liveSetupQuery.isLoading ? <p className="text-sm text-muted-foreground">Checking your Live Setup…</p> : liveSetupQuery.isError ? <p className="text-sm text-destructive">Live Setup could not be calculated.</p> : liveSetupQuery.data ? <>
+          <Progress value={liveSetupQuery.data.score} className="h-2" />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-md border p-3"><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-medium"><Volume2 className="h-4 w-4" />Band Equipment</span><span className="font-semibold">{liveSetupQuery.data.equipmentScore}/100</span></div><p className="mt-1 text-xs text-muted-foreground">{liveSetupQuery.data.equipmentCount} shared item{liveSetupQuery.data.equipmentCount === 1 ? '' : 's'} contributing to sound and stage quality.</p></div>
+            <div className="rounded-md border p-3"><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-medium"><Users className="h-4 w-4" />Show Crew</span><span className="font-semibold">{liveSetupQuery.data.crewScore}/100</span></div><p className="mt-1 text-xs text-muted-foreground">{liveSetupQuery.data.showCrewCount} performance crew member{liveSetupQuery.data.showCrewCount === 1 ? '' : 's'}. Tour, merch, security and wardrobe staff do not inflate this score.</p></div>
+          </div>
+          <div className="rounded-md bg-muted/50 p-3 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span>Recommended for this venue: <strong>{liveSetupQuery.data.venueTarget.label} ({liveSetupQuery.data.venueTarget.target})</strong></span><Badge variant={liveSetupQuery.data.gap >= 0 ? 'outline' : 'destructive'}>{liveSetupQuery.data.gap >= 0 ? `${liveSetupQuery.data.gap} above target` : `${Math.abs(liveSetupQuery.data.gap)} below target`}</Badge></div><p className="mt-2 text-muted-foreground">{liveSetupQuery.data.recommendation}</p></div>
+        </> : null}
+      </CardContent>
+    </Card>
 
     {validation.errors.map((m) => <p key={m} className="flex gap-2 text-sm text-destructive"><AlertTriangle className="h-4 w-4" />{m}</p>)}
     {validation.warnings.map((m) => <p key={m} className="flex gap-2 text-sm text-amber-600"><AlertTriangle className="h-4 w-4" />{m}</p>)}
