@@ -59,6 +59,8 @@ const parseMoment = (value: unknown): FestivalMoment => {
   if (!isRecord(value) || typeof value.id !== "string" || !UUID_RE.test(value.id) || typeof value.category !== "string" || !categories.has(value.category as FestivalMomentCategory) || !isString(value.title) || !isString(value.body) || !Array.isArray(value.options) || typeof value.status !== "string" || !statuses.has(value.status as FestivalMomentStatus) || !isNullableString(value.chosenOption) || !(value.outcome === null || isRecord(value.outcome)) || !isNullableUuid(value.relatedProfileId) || !isString(value.availableAt) || !isString(value.expiresAt) || !isNullableString(value.outcomeDueAt) || !isNullableString(value.resolvedAt) || !isRecord(value.context)) {
     throw new Error("malformed_festival_moment");
   }
+  const outcome = value.outcome as Record<string, unknown> | null;
+  const context = value.context as Record<string, unknown>;
   return {
     id: value.id,
     category: value.category as FestivalMomentCategory,
@@ -67,13 +69,13 @@ const parseMoment = (value: unknown): FestivalMoment => {
     options: value.options.map(parseOption),
     status: value.status as FestivalMomentStatus,
     chosenOption: value.chosenOption,
-    outcome: value.outcome,
+    outcome,
     relatedProfileId: value.relatedProfileId,
     availableAt: value.availableAt,
     expiresAt: value.expiresAt,
     outcomeDueAt: value.outcomeDueAt,
     resolvedAt: value.resolvedAt,
-    context: value.context,
+    context,
   };
 };
 
@@ -86,5 +88,12 @@ export const parseFestivalMomentMutationResult = (value: unknown): FestivalMomen
   if (!isRecord(value) || typeof value.id !== "string" || !UUID_RE.test(value.id) || typeof value.status !== "string" || !statuses.has(value.status as FestivalMomentStatus) || typeof value.duplicate !== "boolean") throw new Error("malformed_festival_moment_result");
   if (value.outcomeDueAt !== undefined && !isNullableString(value.outcomeDueAt)) throw new Error("malformed_festival_moment_result");
   if (value.outcome !== undefined && !(value.outcome === null || isRecord(value.outcome))) throw new Error("malformed_festival_moment_result");
-  return { id: value.id, status: value.status as FestivalMomentStatus, duplicate: value.duplicate, ...(value.outcomeDueAt !== undefined ? { outcomeDueAt: value.outcomeDueAt } : {}), ...(value.outcome !== undefined ? { outcome: value.outcome } : {}) };
+  const result: FestivalMomentMutationResult = {
+    id: value.id,
+    status: value.status as FestivalMomentStatus,
+    duplicate: value.duplicate,
+  };
+  if (value.outcomeDueAt !== undefined) result.outcomeDueAt = value.outcomeDueAt as string | null;
+  if (value.outcome !== undefined) result.outcome = value.outcome as Record<string, unknown> | null;
+  return result;
 };
