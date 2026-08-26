@@ -22,6 +22,7 @@ const PERFORMANCE_CREW_ROLE_ALIASES = new Set([
 ]);
 
 export type LiveSetupStatus = 'ready' | 'warning' | 'critical';
+export type EquipmentSelectionMode = 'selected' | 'automatic' | 'baseline';
 
 export interface LiveSetupInput {
   equipmentQuality: number;
@@ -40,11 +41,79 @@ export interface LiveSetupResult {
   recommendation: string;
 }
 
+export interface BandStageEquipmentLike {
+  id?: string | null;
+  equipment_type?: string | null;
+  quality_rating?: number | null;
+  condition_rating?: number | null;
+  is_active?: boolean | null;
+}
+
+export interface BandEquipmentResolution {
+  score: number;
+  selectionMode: EquipmentSelectionMode;
+  selectedCount: number;
+  ownedCount: number;
+  selectedIds: string[];
+}
+
 const clamp = (value: number) => Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0));
 
 export function isPerformanceCrewRole(role?: string | null): boolean {
   if (!role) return false;
   return PERFORMANCE_CREW_ROLE_ALIASES.has(role);
+}
+
+export function getEquipmentEffectiveQuality(item: BandStageEquipmentLike): number {
+  const quality = clamp(Number(item.quality_rating ?? 40));
+  const condition = clamp(Number(item.condition_rating ?? 70));
+  // Quality remains the main factor while maintenance now has a meaningful, bounded effect.
+  return Math.round(quality * 0.75 + condition * 0.25);
+}
+
+/**
+ * Resolve the shared Band Equipment that contributes to Live Setup.
+ * - Explicitly selected (`is_active`) equipment always wins.
+ * - Existing bands with no selection automatically use the best item of each equipment type.
+ * - No owned equipment falls back to the historic 40/100 baseline.
+ */
+export function resolveBandEquipment(rows: BandStageEquipmentLike[] | null | undefined): BandEquipmentResolution {
+  const equipment = rows || [];
+  if (equipment.length === 0) {
+    return { score: 40, selectionMode: 'baseline', selectedCount: 0, ownedCount: 0, selectedIds: [] };
+  }
+
+  const explicitlySelected = equipment.filter((item) => Boolean(item.is_active));
+  let chosen: BandStageEquipmentLike[];
+  let selectionMode: EquipmentSelectionMode;
+
+  if (explicitlySelected.length > 0) {
+    chosen = explicitlySelected;
+    selectionMode = 'selected';
+  } else {
+    const bestByType = new Map<string, BandStageEquipmentLike>();
+    equipment.forEach((item, index) => {
+      const type = String(item.equipment_type || `equipment-${index}`).toLowerCase();
+      const current = bestByType.get(type);
+      if (!current || getEquipmentEffectiveQuality(item) > getEquipmentEffectiveQuality(current)) {
+        bestByType.set(type, item);
+      }
+    });
+    chosen = [...bestByType.values()];
+    selectionMode = 'automatic';
+  }
+
+  const score = chosen.length > 0
+    ? Math.round(chosen.reduce((sum, item) => sum + getEquipmentEffectiveQuality(item), 0) / chosen.length)
+    : 40;
+
+  return {
+    score,
+    selectionMode,
+    selectedCount: chosen.length,
+    ownedCount: equipment.length,
+    selectedIds: chosen.map((item) => item.id).filter((id): id is string => Boolean(id)),
+  };
 }
 
 export function getVenueLiveSetupTarget(capacity?: number | null): { target: number; label: string } {
