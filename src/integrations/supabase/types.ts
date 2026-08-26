@@ -7744,36 +7744,74 @@ export type Database = {
       }
       community_mentorship_matches: {
         Row: {
+          accepted_at: string | null
+          baseline_level: number | null
+          baseline_xp: number | null
           created_at: string | null
+          end_reason: string | null
           ended_at: string | null
+          ended_by_profile_id: string | null
           id: string
+          last_progress_checked_at: string | null
           match_date: string | null
           mentee_profile_id: string
           mentor_profile_id: string
+          request_note: string | null
+          skill_slug: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          accepted_at?: string | null
+          baseline_level?: number | null
+          baseline_xp?: number | null
           created_at?: string | null
+          end_reason?: string | null
           ended_at?: string | null
+          ended_by_profile_id?: string | null
           id?: string
+          last_progress_checked_at?: string | null
           match_date?: string | null
           mentee_profile_id: string
           mentor_profile_id: string
+          request_note?: string | null
+          skill_slug?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          accepted_at?: string | null
+          baseline_level?: number | null
+          baseline_xp?: number | null
           created_at?: string | null
+          end_reason?: string | null
           ended_at?: string | null
+          ended_by_profile_id?: string | null
           id?: string
+          last_progress_checked_at?: string | null
           match_date?: string | null
           mentee_profile_id?: string
           mentor_profile_id?: string
+          request_note?: string | null
+          skill_slug?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "community_mentorship_matches_ended_by_profile_id_fkey"
+            columns: ["ended_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentorship_matches_ended_by_profile_id_fkey"
+            columns: ["ended_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "community_mentorship_matches_mentee_profile_id_fkey"
             columns: ["mentee_profile_id"]
@@ -7806,8 +7844,10 @@ export type Database = {
           headline: string | null
           id: string
           is_open_to_mentor: boolean | null
+          max_active_mentees: number
           mentor_capacity: number | null
           mentorship_style: string | null
+          minimum_skill_level: number
           profile_id: string
           updated_at: string | null
         }
@@ -7819,8 +7859,10 @@ export type Database = {
           headline?: string | null
           id?: string
           is_open_to_mentor?: boolean | null
+          max_active_mentees?: number
           mentor_capacity?: number | null
           mentorship_style?: string | null
+          minimum_skill_level?: number
           profile_id: string
           updated_at?: string | null
         }
@@ -7832,8 +7874,10 @@ export type Database = {
           headline?: string | null
           id?: string
           is_open_to_mentor?: boolean | null
+          max_active_mentees?: number
           mentor_capacity?: number | null
           mentorship_style?: string | null
+          minimum_skill_level?: number
           profile_id?: string
           updated_at?: string | null
         }
@@ -7850,6 +7894,44 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_mentorship_rewards: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          mentee_xp: number
+          mentor_xp: number
+          milestone: number
+          verified_level: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          mentee_xp?: number
+          mentor_xp?: number
+          milestone: number
+          verified_level: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          mentee_xp?: number
+          mentor_xp?: number
+          milestone?: number
+          verified_level?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentorship_rewards_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "community_mentorship_matches"
             referencedColumns: ["id"]
           },
         ]
@@ -8195,6 +8277,225 @@ export type Database = {
             columns: ["vacancy_id"]
             isOneToOne: false
             referencedRelation: "company_vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_employment_contracts: {
+        Row: {
+          bonus_per_verified_shift_minor: number
+          company_id: string
+          consecutive_unpaid_weeks: number
+          created_at: string
+          dispute_rules: Json
+          duties: Json
+          employee_profile_id: string
+          employment_id: string
+          ends_at: string | null
+          id: string
+          reserve_escrow_id: string | null
+          reserve_status: string
+          salary_reserve_weeks: number
+          social_contract_id: string
+          starts_at: string
+          status: string
+          termination_notice_days: number
+          termination_rules: Json
+          trial_ends_at: string | null
+          updated_at: string
+          weekly_salary_minor: number
+        }
+        Insert: {
+          bonus_per_verified_shift_minor?: number
+          company_id: string
+          consecutive_unpaid_weeks?: number
+          created_at?: string
+          dispute_rules?: Json
+          duties?: Json
+          employee_profile_id: string
+          employment_id: string
+          ends_at?: string | null
+          id?: string
+          reserve_escrow_id?: string | null
+          reserve_status?: string
+          salary_reserve_weeks?: number
+          social_contract_id: string
+          starts_at?: string
+          status?: string
+          termination_notice_days?: number
+          termination_rules?: Json
+          trial_ends_at?: string | null
+          updated_at?: string
+          weekly_salary_minor: number
+        }
+        Update: {
+          bonus_per_verified_shift_minor?: number
+          company_id?: string
+          consecutive_unpaid_weeks?: number
+          created_at?: string
+          dispute_rules?: Json
+          duties?: Json
+          employee_profile_id?: string
+          employment_id?: string
+          ends_at?: string | null
+          id?: string
+          reserve_escrow_id?: string | null
+          reserve_status?: string
+          salary_reserve_weeks?: number
+          social_contract_id?: string
+          starts_at?: string
+          status?: string
+          termination_notice_days?: number
+          termination_rules?: Json
+          trial_ends_at?: string | null
+          updated_at?: string
+          weekly_salary_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_employment_contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employment_contracts_employee_profile_id_fkey"
+            columns: ["employee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employment_contracts_employee_profile_id_fkey"
+            columns: ["employee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employment_contracts_employment_id_fkey"
+            columns: ["employment_id"]
+            isOneToOne: true
+            referencedRelation: "company_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employment_contracts_reserve_escrow_id_fkey"
+            columns: ["reserve_escrow_id"]
+            isOneToOne: false
+            referencedRelation: "social_contract_escrow"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employment_contracts_social_contract_id_fkey"
+            columns: ["social_contract_id"]
+            isOneToOne: true
+            referencedRelation: "social_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_employment_payroll: {
+        Row: {
+          bonus_due_minor: number
+          contract_id: string
+          failure_reason: string | null
+          id: string
+          paid_minor: number
+          payment_transaction_id: string | null
+          processed_at: string
+          salary_due_minor: number
+          status: string
+          total_due_minor: number
+          week_start: string
+        }
+        Insert: {
+          bonus_due_minor?: number
+          contract_id: string
+          failure_reason?: string | null
+          id?: string
+          paid_minor?: number
+          payment_transaction_id?: string | null
+          processed_at?: string
+          salary_due_minor?: number
+          status: string
+          total_due_minor?: number
+          week_start: string
+        }
+        Update: {
+          bonus_due_minor?: number
+          contract_id?: string
+          failure_reason?: string | null
+          id?: string
+          paid_minor?: number
+          payment_transaction_id?: string | null
+          processed_at?: string
+          salary_due_minor?: number
+          status?: string
+          total_due_minor?: number
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_employment_payroll_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "company_employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_employment_payroll_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_employment_task_evidence: {
+        Row: {
+          bonus_due_minor: number
+          contract_id: string
+          created_at: string
+          evidence: Json
+          id: string
+          payroll_week: string
+          source_id: string
+          source_type: string
+          task_type: string
+          verified_at: string
+        }
+        Insert: {
+          bonus_due_minor?: number
+          contract_id: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          payroll_week: string
+          source_id: string
+          source_type: string
+          task_type: string
+          verified_at?: string
+        }
+        Update: {
+          bonus_due_minor?: number
+          contract_id?: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          payroll_week?: string
+          source_id?: string
+          source_type?: string
+          task_type?: string
+          verified_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_employment_task_evidence_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "company_employment_contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -8573,6 +8874,7 @@ export type Database = {
           id: string
           message: string | null
           offer_expires_at: string | null
+          offer_terms: Json | null
           status: string
           suitability_score: number
           updated_at: string
@@ -8585,6 +8887,7 @@ export type Database = {
           id?: string
           message?: string | null
           offer_expires_at?: string | null
+          offer_terms?: Json | null
           status?: string
           suitability_score?: number
           updated_at?: string
@@ -8597,6 +8900,7 @@ export type Database = {
           id?: string
           message?: string | null
           offer_expires_at?: string | null
+          offer_terms?: Json | null
           status?: string
           suitability_score?: number
           updated_at?: string
@@ -9560,10 +9864,13 @@ export type Database = {
         Row: {
           advertised_until: string | null
           advertising_daily_spend: number
+          bonus_per_verified_shift: number
           closes_at: string | null
           company_id: string
+          contract_duration_weeks: number | null
           created_at: string
           description: string | null
+          employment_duties: Json
           employment_type: string
           expected_activity_level: string
           id: string
@@ -9576,19 +9883,25 @@ export type Database = {
           positions_filled: number
           preferred_skills: Json
           required_skills: Json
+          salary_reserve_weeks: number
           staff_category: string
           status: string
+          termination_notice_days: number
           total_advertising_spend: number
+          trial_period_days: number
           updated_at: string
           weekly_wage: number
         }
         Insert: {
           advertised_until?: string | null
           advertising_daily_spend?: number
+          bonus_per_verified_shift?: number
           closes_at?: string | null
           company_id: string
+          contract_duration_weeks?: number | null
           created_at?: string
           description?: string | null
+          employment_duties?: Json
           employment_type?: string
           expected_activity_level?: string
           id?: string
@@ -9601,19 +9914,25 @@ export type Database = {
           positions_filled?: number
           preferred_skills?: Json
           required_skills?: Json
+          salary_reserve_weeks?: number
           staff_category: string
           status?: string
+          termination_notice_days?: number
           total_advertising_spend?: number
+          trial_period_days?: number
           updated_at?: string
           weekly_wage?: number
         }
         Update: {
           advertised_until?: string | null
           advertising_daily_spend?: number
+          bonus_per_verified_shift?: number
           closes_at?: string | null
           company_id?: string
+          contract_duration_weeks?: number | null
           created_at?: string
           description?: string | null
+          employment_duties?: Json
           employment_type?: string
           expected_activity_level?: string
           id?: string
@@ -9626,9 +9945,12 @@ export type Database = {
           positions_filled?: number
           preferred_skills?: Json
           required_skills?: Json
+          salary_reserve_weeks?: number
           staff_category?: string
           status?: string
+          termination_notice_days?: number
           total_advertising_spend?: number
+          trial_period_days?: number
           updated_at?: string
           weekly_wage?: number
         }
@@ -37519,6 +37841,191 @@ export type Database = {
           },
         ]
       }
+      player_education_class_enrolments: {
+        Row: {
+          baseline_level: number
+          baseline_xp: number
+          checked_in_at: string | null
+          class_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          payment_transaction_id: string | null
+          settlement_attempted_at: string | null
+          settlement_error: string | null
+          skill_xp_awarded: number
+          status: string
+          student_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          baseline_level?: number
+          baseline_xp?: number
+          checked_in_at?: string | null
+          class_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          payment_transaction_id?: string | null
+          settlement_attempted_at?: string | null
+          settlement_error?: string | null
+          skill_xp_awarded?: number
+          status?: string
+          student_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          baseline_level?: number
+          baseline_xp?: number
+          checked_in_at?: string | null
+          class_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          payment_transaction_id?: string | null
+          settlement_attempted_at?: string | null
+          settlement_error?: string | null
+          skill_xp_awarded?: number
+          status?: string
+          student_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_education_class_enrolments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "player_education_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_education_class_enrolments_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_education_class_enrolments_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_education_class_enrolments_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_education_classes: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          duration_hours: number
+          id: string
+          max_students: number
+          price_minor: number
+          scheduled_at: string
+          skill_slug: string
+          status: string
+          teacher_profile_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_hours?: number
+          id?: string
+          max_students?: number
+          price_minor?: number
+          scheduled_at: string
+          skill_slug: string
+          status?: string
+          teacher_profile_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_hours?: number
+          id?: string
+          max_students?: number
+          price_minor?: number
+          scheduled_at?: string
+          skill_slug?: string
+          status?: string
+          teacher_profile_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_education_classes_teacher_profile_id_fkey"
+            columns: ["teacher_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_education_classes_teacher_profile_id_fkey"
+            columns: ["teacher_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_education_reward_ledger: {
+        Row: {
+          created_at: string
+          enrolment_id: string
+          id: string
+          payment_transaction_id: string | null
+          student_skill_xp: number
+          teacher_profile_xp: number
+        }
+        Insert: {
+          created_at?: string
+          enrolment_id: string
+          id?: string
+          payment_transaction_id?: string | null
+          student_skill_xp: number
+          teacher_profile_xp: number
+        }
+        Update: {
+          created_at?: string
+          enrolment_id?: string
+          id?: string
+          payment_transaction_id?: string | null
+          student_skill_xp?: number
+          teacher_profile_xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_education_reward_ledger_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: true
+            referencedRelation: "player_education_class_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_education_reward_ledger_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_employment: {
         Row: {
           auto_clock_in: boolean | null
@@ -46787,6 +47294,173 @@ export type Database = {
           },
         ]
       }
+      social_communities: {
+        Row: {
+          city_id: string | null
+          community_type: string
+          created_at: string
+          description: string
+          id: string
+          is_open: boolean
+          max_members: number
+          name: string
+          owner_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          city_id?: string | null
+          community_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_open?: boolean
+          max_members?: number
+          name: string
+          owner_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string | null
+          community_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_open?: boolean
+          max_members?: number
+          name?: string
+          owner_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_communities_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_communities_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_community_memberships: {
+        Row: {
+          community_id: string
+          id: string
+          joined_at: string
+          left_at: string | null
+          profile_id: string
+          role: string
+          status: string
+        }
+        Insert: {
+          community_id: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          profile_id: string
+          role?: string
+          status?: string
+        }
+        Update: {
+          community_id?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          profile_id?: string
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_community_memberships_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "social_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_community_memberships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_community_memberships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_competition_entries: {
+        Row: {
+          baseline_value: number
+          context: string
+          id: string
+          joined_at: string
+          last_score: number
+          metric: string
+          profile_id: string
+          season_id: string
+          updated_at: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          baseline_value: number
+          context?: string
+          id?: string
+          joined_at?: string
+          last_score?: number
+          metric?: string
+          profile_id: string
+          season_id: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          baseline_value?: number
+          context?: string
+          id?: string
+          joined_at?: string
+          last_score?: number
+          metric?: string
+          profile_id?: string
+          season_id?: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_competition_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_competition_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_competition_entries_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_contract_disputes: {
         Row: {
           contract_id: string
@@ -47581,6 +48255,164 @@ export type Database = {
             columns: ["target_profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_rivalries: {
+        Row: {
+          challenger_baseline: number | null
+          challenger_profile_id: string
+          challenger_score: number
+          created_at: string
+          ended_at: string | null
+          id: string
+          metric: string
+          requested_at: string
+          responded_at: string | null
+          rival_baseline: number | null
+          rival_profile_id: string
+          rival_score: number
+          started_at: string | null
+          status: string
+          target: number
+          updated_at: string
+          winner_profile_id: string | null
+        }
+        Insert: {
+          challenger_baseline?: number | null
+          challenger_profile_id: string
+          challenger_score?: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          metric: string
+          requested_at?: string
+          responded_at?: string | null
+          rival_baseline?: number | null
+          rival_profile_id: string
+          rival_score?: number
+          started_at?: string | null
+          status?: string
+          target?: number
+          updated_at?: string
+          winner_profile_id?: string | null
+        }
+        Update: {
+          challenger_baseline?: number | null
+          challenger_profile_id?: string
+          challenger_score?: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          metric?: string
+          requested_at?: string
+          responded_at?: string | null
+          rival_baseline?: number | null
+          rival_profile_id?: string
+          rival_score?: number
+          started_at?: string | null
+          status?: string
+          target?: number
+          updated_at?: string
+          winner_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_rivalries_challenger_profile_id_fkey"
+            columns: ["challenger_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalries_challenger_profile_id_fkey"
+            columns: ["challenger_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalries_rival_profile_id_fkey"
+            columns: ["rival_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalries_rival_profile_id_fkey"
+            columns: ["rival_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalries_winner_profile_id_fkey"
+            columns: ["winner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalries_winner_profile_id_fkey"
+            columns: ["winner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_rivalry_events: {
+        Row: {
+          actor_profile_id: string | null
+          challenger_score: number | null
+          created_at: string
+          event_type: string
+          evidence: Json
+          id: string
+          rival_score: number | null
+          rivalry_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          challenger_score?: number | null
+          created_at?: string
+          event_type: string
+          evidence?: Json
+          id?: string
+          rival_score?: number | null
+          rivalry_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          challenger_score?: number | null
+          created_at?: string
+          event_type?: string
+          evidence?: Json
+          id?: string
+          rival_score?: number | null
+          rivalry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_rivalry_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalry_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalry_events_rivalry_id_fkey"
+            columns: ["rivalry_id"]
+            isOneToOne: false
+            referencedRelation: "social_rivalries"
             referencedColumns: ["id"]
           },
         ]
@@ -54258,6 +55090,24 @@ export type Database = {
         Args: { p_runtime_id: string }
         Returns: string
       }
+      _create_company_employment_contract: {
+        Args: { p_application_id: string; p_employment_id: string }
+        Returns: string
+      }
+      _d10_award_skill_xp: {
+        Args: { p_profile_id: string; p_skill_slug: string; p_xp: number }
+        Returns: Json
+      }
+      _d10_profiles_blocked: {
+        Args: { p_a: string; p_b: string }
+        Returns: boolean
+      }
+      _d10_required_skill_xp: { Args: { p_level: number }; Returns: number }
+      _d11_metric_value: {
+        Args: { p_metric: string; p_profile_id: string }
+        Returns: number
+      }
+      _d11_profile_owned: { Args: { p_profile_id: string }; Returns: boolean }
       _debit_atomic_booking_payment: {
         Args: {
           p_amount_minor: number
@@ -56287,6 +57137,14 @@ export type Database = {
         Args: { p_contract_id: string; p_idempotency_key: string }
         Returns: Json
       }
+      cancel_player_education_class: {
+        Args: { p_class_id: string; p_teacher_profile_id: string }
+        Returns: Json
+      }
+      cancel_player_education_class_enrolment: {
+        Args: { p_class_id: string; p_student_profile_id: string }
+        Returns: Json
+      }
       cancel_social_contract: {
         Args: { p_contract_id: string; p_reason?: string }
         Returns: Json
@@ -56348,6 +57206,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      check_in_player_education_class: {
+        Args: { p_class_id: string; p_student_profile_id: string }
+        Returns: Json
       }
       check_in_to_festival: { Args: { p_attendance_id: string }; Returns: Json }
       check_marriage_eligibility: {
@@ -56502,6 +57364,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      complete_player_education_class: {
+        Args: { p_class_id: string; p_teacher_profile_id: string }
+        Returns: Json
       }
       complete_skill_practice: {
         Args: { p_activity_id: string }
@@ -57045,6 +57911,19 @@ export type Database = {
         }
         Returns: string
       }
+      create_player_education_class: {
+        Args: {
+          p_description: string
+          p_duration_hours: number
+          p_max_students: number
+          p_price_minor: number
+          p_scheduled_at: string
+          p_skill_slug: string
+          p_teacher_profile_id: string
+          p_title: string
+        }
+        Returns: Json
+      }
       create_release_with_financing: {
         Args: { p_payload: Json }
         Returns: string
@@ -57099,6 +57978,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_social_community: {
+        Args: {
+          p_description?: string
+          p_is_open?: boolean
+          p_max_members?: number
+          p_name: string
+          p_profile_id: string
+          p_type?: string
+        }
+        Returns: string
       }
       create_social_contract: {
         Args: {
@@ -57248,6 +58138,10 @@ export type Database = {
           p_target_profile_id: string
         }
         Returns: string
+      }
+      enrol_player_education_class: {
+        Args: { p_class_id: string; p_student_profile_id: string }
+        Returns: Json
       }
       ensure_context_conversation: {
         Args: { p_context_id: string; p_context_type: string }
@@ -57840,6 +58734,7 @@ export type Database = {
           profile_id: string
         }[]
       }
+      finalise_social_season: { Args: { p_season_id: string }; Returns: Json }
       finance_credit_owner: {
         Args: {
           p_amount_minor: number
@@ -57925,6 +58820,17 @@ export type Database = {
           band_name: string
           fame: number
           popularity: number
+        }[]
+      }
+      find_social_rival_candidate: {
+        Args: { p_profile_id: string; p_username: string }
+        Returns: {
+          display_name: string
+          experience: number
+          fame: number
+          fans: number
+          profile_id: string
+          username: string
         }[]
       }
       find_tour_support_candidates: {
@@ -58097,6 +59003,10 @@ export type Database = {
         Returns: Json
       }
       get_banking_dashboard: { Args: never; Returns: Json }
+      get_community_mentor_discovery: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       get_company_employee_roster: {
         Args: { p_company_id: string }
         Returns: {
@@ -58112,6 +59022,10 @@ export type Database = {
           total_earned: number
           username: string
         }[]
+      }
+      get_company_employment_contracts: {
+        Args: { p_company_id?: string }
+        Returns: Json
       }
       get_company_labor_market_analytics: {
         Args: { p_company_id?: string }
@@ -58388,6 +59302,10 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: Json
       }
+      get_my_community_mentorships: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       get_my_eligible_band_contribution_accounts: {
         Args: { p_band_id: string; p_currency_code?: string }
         Returns: {
@@ -58425,6 +59343,10 @@ export type Database = {
         Returns: Json
       }
       get_my_music_collaboration_contracts: { Args: never; Returns: Json }
+      get_my_player_education_classes: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       get_my_social_contracts: {
         Args: never
         Returns: {
@@ -58439,6 +59361,25 @@ export type Database = {
           updated_at: string
           version: number
           visibility: string
+        }[]
+      }
+      get_my_social_rivalries: {
+        Args: { p_profile_id: string }
+        Returns: {
+          challenger_name: string
+          challenger_profile_id: string
+          challenger_score: number
+          ended_at: string
+          id: string
+          metric: string
+          requested_at: string
+          rival_name: string
+          rival_profile_id: string
+          rival_score: number
+          started_at: string
+          status: string
+          target: number
+          winner_profile_id: string
         }[]
       }
       get_or_create_cover_master: {
@@ -58477,6 +59418,10 @@ export type Database = {
       }
       get_owned_festival_companies: { Args: never; Returns: Json }
       get_player_discovery_filter_options: { Args: never; Returns: Json }
+      get_player_education_classes: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_public_festival: { Args: { p_slug: string }; Returns: Json }
       get_public_festival_directory: {
@@ -58564,6 +59509,21 @@ export type Database = {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
       }
+      get_social_communities: {
+        Args: { p_profile_id: string }
+        Returns: {
+          city_id: string
+          community_type: string
+          description: string
+          id: string
+          is_member: boolean
+          is_open: boolean
+          is_owner: boolean
+          max_members: number
+          member_count: number
+          name: string
+        }[]
+      }
       get_social_contract_reputation: {
         Args: { p_profile_id: string }
         Returns: {
@@ -58576,6 +59536,49 @@ export type Database = {
       get_social_permissions: {
         Args: { target_profile_id: string }
         Returns: Json
+      }
+      get_social_rivalry_history: {
+        Args: { p_profile_id: string; p_rivalry_id: string }
+        Returns: {
+          actor_profile_id: string
+          challenger_score: number
+          created_at: string
+          event_type: string
+          evidence: Json
+          id: string
+          rival_score: number
+        }[]
+      }
+      get_social_season_leaderboard: {
+        Args: {
+          p_context?: string
+          p_limit?: number
+          p_metric?: string
+          p_profile_id: string
+          p_season_id: string
+        }
+        Returns: {
+          display_name: string
+          is_self: boolean
+          profile_id: string
+          rank: number
+          score: number
+          username: string
+        }[]
+      }
+      get_social_seasons: {
+        Args: { p_profile_id: string }
+        Returns: {
+          description: string
+          end_date: string
+          id: string
+          is_active: boolean
+          joined_city: boolean
+          joined_global: boolean
+          name: string
+          season_number: number
+          start_date: string
+        }[]
       }
       get_song_live_cover_stats: {
         Args: { p_song_id: string }
@@ -58859,6 +59862,19 @@ export type Database = {
       is_storefront_open: { Args: { _company_id: string }; Returns: boolean }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      join_social_community: {
+        Args: { p_community_id: string; p_profile_id: string }
+        Returns: boolean
+      }
+      join_social_season: {
+        Args: {
+          p_context?: string
+          p_metric?: string
+          p_profile_id: string
+          p_season_id: string
+        }
+        Returns: string
+      }
       launch_festival: {
         Args: {
           p_expected_version: number
@@ -58868,9 +59884,25 @@ export type Database = {
         }
         Returns: Json
       }
+      leave_community_mentorship: {
+        Args: { p_match_id: string }
+        Returns: Json
+      }
       leave_festival_early: { Args: { p_attendance_id: string }; Returns: Json }
       leave_group_conversation: {
         Args: { p_conversation_id: string }
+        Returns: boolean
+      }
+      leave_social_community: {
+        Args: { p_community_id: string; p_profile_id: string }
+        Returns: boolean
+      }
+      leave_social_rivalry: {
+        Args: { p_profile_id: string; p_rivalry_id: string }
+        Returns: boolean
+      }
+      leave_social_season: {
+        Args: { p_entry_id: string; p_profile_id: string }
         Returns: boolean
       }
       link_label_to_company: {
@@ -59161,6 +60193,7 @@ export type Database = {
           id: string
           message: string | null
           offer_expires_at: string | null
+          offer_terms: Json | null
           status: string
           suitability_score: number
           updated_at: string
@@ -59174,6 +60207,14 @@ export type Database = {
         }
       }
       offer_social_contract: { Args: { p_contract_id: string }; Returns: Json }
+      open_company_employment_dispute: {
+        Args: {
+          p_contract_id: string
+          p_details?: string
+          p_reason_code: string
+        }
+        Returns: string
+      }
       open_festival_ticket_sales: {
         Args: {
           p_expected_launch_version: number
@@ -59351,6 +60392,14 @@ export type Database = {
       }
       preview_support_band_cancellation: {
         Args: { p_support_slot_id: string }
+        Returns: Json
+      }
+      process_community_mentorship_progress: {
+        Args: { p_match_id: string }
+        Returns: Json
+      }
+      process_company_employment_payroll: {
+        Args: { p_week_start?: string }
         Returns: Json
       }
       process_company_weekly_finances: { Args: never; Returns: number }
@@ -59607,6 +60656,10 @@ export type Database = {
       }
       record_support_band_history: { Args: { p_gig_id: string }; Returns: Json }
       refresh_festival_world_records: { Args: never; Returns: Json }
+      refresh_social_rivalry: {
+        Args: { p_profile_id: string; p_rivalry_id: string }
+        Returns: Json
+      }
       reorder_release_stock: {
         Args: {
           p_format_id: string
@@ -59665,6 +60718,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      request_community_mentorship: {
+        Args: {
+          p_mentee_profile_id: string
+          p_mentor_profile_id: string
+          p_note?: string
+          p_skill_slug: string
+        }
+        Returns: Json
       }
       request_gig_lineup_correction: {
         Args: {
@@ -59735,6 +60797,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      request_social_rivalry: {
+        Args: {
+          p_metric?: string
+          p_profile_id: string
+          p_rival_profile_id: string
+          p_target?: number
+        }
+        Returns: string
       }
       request_song_cover: {
         Args: {
@@ -59908,6 +60979,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      respond_community_mentorship: {
+        Args: { p_accept: boolean; p_match_id: string }
+        Returns: Json
+      }
       respond_social_activity_invitation: {
         Args: { p_activity_id: string; p_response: string }
         Returns: {
@@ -59960,6 +61035,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      respond_social_rivalry: {
+        Args: { p_accept: boolean; p_profile_id: string; p_rivalry_id: string }
+        Returns: Json
       }
       respond_to_company_offer: {
         Args: { p_accept: boolean; p_application_id: string }
@@ -60726,6 +61805,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_community_mentorship_profile: {
+        Args: {
+          p_capacity?: number
+          p_headline?: string
+          p_is_open: boolean
+          p_profile_id: string
+          p_skill_slugs?: string[]
+          p_style?: string
+        }
+        Returns: Json
+      }
+      set_company_vacancy_contract_terms: {
+        Args: {
+          p_bonus_per_verified_shift?: number
+          p_contract_duration_weeks?: number
+          p_employment_duties?: Json
+          p_salary_reserve_weeks?: number
+          p_termination_notice_days?: number
+          p_trial_period_days?: number
+          p_vacancy_id: string
+        }
+        Returns: Json
+      }
       set_company_vacancy_requirements: {
         Args: {
           p_location_city_id?: string
@@ -61178,6 +62280,10 @@ export type Database = {
       }
       sync_job_employee_counts: { Args: never; Returns: undefined }
       sync_twaater_fame_scores: { Args: never; Returns: undefined }
+      terminate_company_employment_contract: {
+        Args: { p_contract_id: string; p_reason?: string }
+        Returns: Json
+      }
       trade_crypto_token: {
         Args: {
           p_profile_id: string
