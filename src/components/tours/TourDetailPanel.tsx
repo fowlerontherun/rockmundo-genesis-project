@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 import { TourMemberSyncStatus } from "@/components/tours/TourMemberSyncStatus";
+import { LiveTourHQPanel } from "@/components/tours/LiveTourHQPanel";
 
 interface TourDetailPanelProps {
   tour: {
@@ -59,7 +60,6 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">Band</p>
@@ -99,14 +99,16 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
 
       <Separator />
 
-      {/* Financial overview */}
+      {(isActive || isCompleted) && <LiveTourHQPanel tourId={tour.id} />}
+
+      <Separator />
+
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : stats ? (
         <>
-          {/* Revenue headline */}
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="pt-4 pb-3">
               <div className="grid grid-cols-2 gap-4">
@@ -150,7 +152,6 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
             </CardContent>
           </Card>
 
-          {/* Upfront cost info */}
           {(tour.total_upfront_cost || 0) > 0 && (
             <div className="flex items-center justify-between text-sm px-1">
               <span className="text-muted-foreground">Upfront Cost Paid</span>
@@ -164,7 +165,6 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
             </div>
           )}
 
-          {/* Shows progress */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -208,7 +208,6 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
             </CardContent>
           </Card>
 
-          {/* Best / Worst shows */}
           {(stats.bestShow || stats.worstShow) && stats.completedShows > 1 && (
             <div className="grid grid-cols-2 gap-3">
               {stats.bestShow && (
@@ -234,7 +233,6 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
             </div>
           )}
 
-          {/* Merch boost badge */}
           {(tour.merch_boost_multiplier || 0) > 1 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
               <ShoppingBag className="h-3 w-3" />
@@ -246,10 +244,7 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
         <p className="text-sm text-muted-foreground text-center py-4">No performance data yet.</p>
       )}
 
-      {/* Per-member live sync status (current city, assigned leg, ETA, sync health) */}
       {tour.band?.id && <TourMemberSyncStatus tourId={tour.id} bandId={tour.band.id} />}
-
-      {/* Per-member travel timeline log */}
       <TravelTimelineLog tourId={tour.id} includeAllMembers limit={150} />
     </div>
   );
