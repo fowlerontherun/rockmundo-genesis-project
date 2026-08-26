@@ -41,6 +41,7 @@ export function ChildCard({ child, className }: ChildCardProps) {
   const topPotentials = Object.entries(child.inherited_potentials)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3);
+  const harmony = Number((child as any).co_parent_harmony ?? 70);
 
   return (
     <Card
@@ -107,7 +108,7 @@ export function ChildCard({ child, className }: ChildCardProps) {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <ScoreGauge
             label="Stability"
             value={child.emotional_stability}
@@ -129,6 +130,14 @@ export function ChildCard({ child, className }: ChildCardProps) {
             value={child.bond_parent_b}
             max={100}
             color="social-loyalty"
+            variant="bar"
+            size="sm"
+          />
+          <ScoreGauge
+            label="Co-parent"
+            value={harmony}
+            max={100}
+            color="social-chemistry"
             variant="bar"
             size="sm"
           />
