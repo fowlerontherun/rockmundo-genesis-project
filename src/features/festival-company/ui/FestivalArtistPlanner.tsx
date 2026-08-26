@@ -150,7 +150,9 @@ export function FestivalArtistPlanner({
             <Music2 aria-hidden="true" /> Line-up unavailable
           </CardTitle>
           <CardDescription>
-            Complete the Festival plan and tickets before choosing the line-up.
+            Complete the annual Festival Plan before choosing the line-up. The
+            game creates the ticket foundation automatically; ticket price and
+            availability are set later on Tickets & budget.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -250,8 +252,8 @@ export function FestivalArtistPlanner({
           <CardHeader>
             <CardTitle>Owner choices</CardTitle>
             <CardDescription>
-              These are the only line-up settings required for the annual
-              Festival.
+              Choose the line-up method and artist budget. Optional targeting
+              can be left alone unless you want tighter control.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -303,52 +305,59 @@ export function FestivalArtistPlanner({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="festival-minimum-fame">
-                Minimum artist fame (optional)
-              </Label>
-              <Input
-                id="festival-minimum-fame"
-                type="number"
-                min={0}
-                value={draft.minimumArtistFame ?? ""}
-                onChange={(event) =>
-                  setDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          minimumArtistFame:
-                            event.target.value === ""
-                              ? null
-                              : Math.max(0, Number(event.target.value)),
-                        }
-                      : current,
-                  )
-                }
-              />
-            </div>
+            <details className="rounded-lg border bg-muted/20 p-3">
+              <summary className="cursor-pointer text-sm font-medium">
+                Optional artist targeting
+              </summary>
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="festival-minimum-fame">
+                    Minimum artist fame
+                  </Label>
+                  <Input
+                    id="festival-minimum-fame"
+                    type="number"
+                    min={0}
+                    value={draft.minimumArtistFame ?? ""}
+                    onChange={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              minimumArtistFame:
+                                event.target.value === ""
+                                  ? null
+                                  : Math.max(0, Number(event.target.value)),
+                            }
+                          : current,
+                      )
+                    }
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="festival-preferred-genres">
-                Preferred genres (optional)
-              </Label>
-              <Input
-                id="festival-preferred-genres"
-                placeholder="Rock, indie, punk"
-                value={draft.preferredGenres}
-                onChange={(event) =>
-                  setDraft((current) =>
-                    current
-                      ? { ...current, preferredGenres: event.target.value }
-                      : current,
-                  )
-                }
-              />
-              <p className="text-sm text-muted-foreground">
-                Separate genres with commas. This guides applications and NPC
-                fallback choices.
-              </p>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="festival-preferred-genres">
+                    Preferred genres
+                  </Label>
+                  <Input
+                    id="festival-preferred-genres"
+                    placeholder="Rock, indie, punk"
+                    value={draft.preferredGenres}
+                    onChange={(event) =>
+                      setDraft((current) =>
+                        current
+                          ? { ...current, preferredGenres: event.target.value }
+                          : current,
+                      )
+                    }
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Separate genres with commas. This guides applications and NPC
+                    fallback choices.
+                  </p>
+                </div>
+              </div>
+            </details>
           </CardContent>
         </Card>
 
