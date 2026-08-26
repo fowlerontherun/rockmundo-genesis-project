@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { calculateLiveSetup, isPerformanceCrewRole } from '../_shared/live-setup.ts';
+import { calculateLiveSetup, isPerformanceCrewRole, resolveBandEquipment } from '../_shared/live-setup.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,7 +50,7 @@ serve(async (req) => {
     const [equipmentRes, crewRes] = await Promise.all([
       supabase
         .from('band_stage_equipment')
-        .select('id,quality_rating')
+        .select('id,equipment_type,quality_rating,condition_rating,is_active')
         .eq('band_id', gig.band_id),
       supabase
         .from('band_crew_members')
@@ -61,24 +61,27 @@ serve(async (req) => {
     if (equipmentRes.error) throw equipmentRes.error;
     if (crewRes.error) throw crewRes.error;
 
-    const equipment = equipmentRes.data || [];
+    const equipmentResolution = resolveBandEquipment(equipmentRes.data || []);
     const showCrew = (crewRes.data || []).filter((member) => isPerformanceCrewRole(member.crew_type));
-
-    const equipmentQuality = equipment.length > 0
-      ? equipment.reduce((sum, item) => sum + Number(item.quality_rating || 0), 0) / equipment.length
-      : 40;
 
     const crewSkill = showCrew.length > 0
       ? showCrew.reduce((sum, member) => sum + Number(member.skill_level || 0), 0) / showCrew.length
       : 40;
 
     const venueCapacity = Number((gig.venues as { capacity?: number } | null)?.capacity || 0);
-    const result = calculateLiveSetup({ equipmentQuality, crewSkill, venueCapacity });
+    const result = calculateLiveSetup({
+      equipmentQuality: equipmentResolution.score,
+      crewSkill,
+      venueCapacity,
+    });
 
     return new Response(
       JSON.stringify({
         ...result,
-        equipmentCount: equipment.length,
+        equipmentCount: equipmentResolution.selectedCount,
+        ownedEquipmentCount: equipmentResolution.ownedCount,
+        equipmentSelectionMode: equipmentResolution.selectionMode,
+        selectedEquipmentIds: equipmentResolution.selectedIds,
         showCrewCount: showCrew.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
