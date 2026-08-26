@@ -23,9 +23,9 @@ All five G2 tables have RLS enabled and ordinary authenticated clients have no d
 
 Existing `player_children`, `profiles`, and `marriages` remain the source gameplay records. G2 derives persistent lineage edges and idempotent history events from those canonical records.
 
-Births, weddings, and coming-of-age conversions are captured into the family legacy event ledger. Existing families were backfilled so the Hall of Records does not begin empty for established dynasties.
+Births, weddings, coming-of-age conversions, and dynasty milestone unlocks are captured into the family legacy event ledger. Existing families were backfilled so the Hall of Records does not begin empty for established dynasties.
 
-The Family Dashboard continues to use the existing `FamilyLegacyPanel`, now backed by `get_family_legacy()` rather than browser-calculated inheritance values.
+`get_family_legacy()` recursively follows converted descendants with cycle protection and a bounded traversal depth. The existing Family Dashboard continues to use `FamilyLegacyPanel`, which now renders parents, the current generation, direct children, and later generations from that server projection rather than browser-calculated inheritance values.
 
 ## Inherited social capital
 
@@ -39,23 +39,25 @@ Family visibility defaults to private with all announcement toggles disabled.
 
 Players can opt into wedding, birth, and coming-of-age announcements. A shared family event is exposed by `get_public_family_announcements()` only when every recorded owner has public announcement visibility enabled and has opted into that event type. One participant cannot publish another participant's family event unilaterally.
 
+Family-tree visibility is enforced by `get_public_family_tree(profile_id)`. A private tree returns no lineage data; a public tree returns a sanitized recursive family projection for authenticated viewers.
+
 ## Dynasty milestones
 
-G2 records idempotent milestones for:
+G2 records idempotent milestones from the recursive descendant graph for:
 
 - first child;
 - second generation;
 - three generations;
 - a growing family line with four recorded descendants.
 
-Milestones are recognition/history evidence only and do not award unrestricted economic power.
+Milestones are persisted into dynasty history as idempotent events. They are recognition/history evidence only and do not award unrestricted economic power.
 
 ## Player surface
 
 The existing Family Dashboard now exposes:
 
 - authoritative generation and inherited social capital;
-- persistent parents/current-generation/children lineage;
+- persistent recursive parents/current-generation/children/later-generation lineage;
 - Hall of Records history;
 - dynasty milestones;
 - family privacy controls;
@@ -71,6 +73,7 @@ Live verification confirmed:
 - browser-facing G2 RPCs are executable by `authenticated` and denied to `anon`;
 - internal lineage/event/milestone helpers cannot be executed by browser roles;
 - all G2 `SECURITY DEFINER` functions have `search_path=pg_catalog, public`;
+- family trees default private and the public-tree RPC refuses lineage data unless the owner opts in;
 - announcement defaults are private/off and shared public announcements require unanimous opt-in.
 
 Focused source-contract coverage is in `src/components/family/__tests__/g2DynastyAuthority.contract.test.ts`.
