@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import type { PlayerChild } from "@/hooks/useChildPlanning";
 import { useChildAgeProgression } from "@/hooks/useChildAgeProgression";
+import { useOptionalGameData } from "@/hooks/useGameData";
+import { ParentingDecisionDialog } from "./ParentingDecisionDialog";
 
 interface ChildCardProps {
   child: PlayerChild;
@@ -18,18 +20,19 @@ const PLAYABILITY_CONFIG: Record<string, { label: string; color: string }> = {
     color: "bg-muted text-muted-foreground border-border",
   },
   guided: {
-    label: "Guided (6-15)",
+    label: "Guided (6-17)",
     color:
       "bg-social-chemistry/20 text-social-chemistry border-social-chemistry/30",
   },
   playable: {
-    label: "Playable (16+)",
+    label: "Playable (18+)",
     color: "bg-social-love/20 text-social-love border-social-love/30",
   },
 };
 
 export function ChildCard({ child, className }: ChildCardProps) {
   const navigate = useNavigate();
+  const gameData = useOptionalGameData();
   const progression = useChildAgeProgression(child as any);
   const liveAge = progression?.liveAge ?? child.current_age;
   const stageMeta = progression?.stageMeta;
@@ -38,6 +41,7 @@ export function ChildCard({ child, className }: ChildCardProps) {
   const topPotentials = Object.entries(child.inherited_potentials)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3);
+  const harmony = Number((child as any).co_parent_harmony ?? 70);
 
   return (
     <Card
@@ -48,11 +52,11 @@ export function ChildCard({ child, className }: ChildCardProps) {
       )}
     >
       <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Baby className="h-4 w-4 text-social-loyalty" />
-            <div>
-              <p className="text-sm font-semibold">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Baby className="h-4 w-4 text-social-loyalty shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">
                 {child.name} {child.surname}
               </p>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -65,7 +69,14 @@ export function ChildCard({ child, className }: ChildCardProps) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div onClick={(event) => event.stopPropagation()}>
+              <ParentingDecisionDialog
+                childId={child.id}
+                childName={child.name}
+                currentProfileId={gameData?.profile?.id}
+              />
+            </div>
             <Badge
               variant="outline"
               className={cn("text-[10px]", playability.color)}
@@ -97,7 +108,7 @@ export function ChildCard({ child, className }: ChildCardProps) {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <ScoreGauge
             label="Stability"
             value={child.emotional_stability}
@@ -119,6 +130,14 @@ export function ChildCard({ child, className }: ChildCardProps) {
             value={child.bond_parent_b}
             max={100}
             color="social-loyalty"
+            variant="bar"
+            size="sm"
+          />
+          <ScoreGauge
+            label="Co-parent"
+            value={harmony}
+            max={100}
+            color="social-chemistry"
             variant="bar"
             size="sm"
           />
