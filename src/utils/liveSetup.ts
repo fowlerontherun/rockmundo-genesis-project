@@ -28,6 +28,28 @@ export const CREW_DEPARTMENTS = {
   },
 } as const;
 
+export type CrewDepartmentKey = keyof typeof CREW_DEPARTMENTS;
+
+export interface CrewRoleInfo {
+  role: string;
+  department: CrewDepartmentKey | "support";
+  departmentLabel: string;
+  departmentDescription: string;
+  affectsLiveSetup: boolean;
+  impactLabel: string;
+}
+
+const CREW_ROLE_IMPACT: Record<string, string> = {
+  "Front of House Engineer": "Live sound",
+  "Lighting Director": "Lighting & presentation",
+  "Road Crew Chief": "Stage operations",
+  "Backline Technician": "Instrument & backline reliability",
+  "Tour Manager": "Tour planning & logistics",
+  "Security Lead": "Safety & incidents",
+  "Merch Director": "Merchandising",
+  "Wardrobe Stylist": "Image & presentation",
+};
+
 export interface VenueSetupTarget {
   target: number;
   label: "Basic" | "Touring" | "Professional" | "Elite" | "World Class";
@@ -76,6 +98,34 @@ export function isPerformanceCrewRole(role: string | null | undefined): boolean 
   return PERFORMANCE_CREW_ROLES.includes(
     role as (typeof PERFORMANCE_CREW_ROLES)[number],
   );
+}
+
+export function getCrewRoleInfo(role: string | null | undefined): CrewRoleInfo {
+  const safeRole = role || "Unknown Crew Role";
+
+  for (const [department, config] of Object.entries(CREW_DEPARTMENTS) as Array<
+    [CrewDepartmentKey, (typeof CREW_DEPARTMENTS)[CrewDepartmentKey]]
+  >) {
+    if ((config.roles as readonly string[]).includes(safeRole)) {
+      return {
+        role: safeRole,
+        department,
+        departmentLabel: config.label,
+        departmentDescription: config.description,
+        affectsLiveSetup: department === "show",
+        impactLabel: CREW_ROLE_IMPACT[safeRole] || config.label,
+      };
+    }
+  }
+
+  return {
+    role: safeRole,
+    department: "support",
+    departmentLabel: "Band Support",
+    departmentDescription: "Supports the band without directly changing the Live Setup score.",
+    affectsLiveSetup: false,
+    impactLabel: CREW_ROLE_IMPACT[safeRole] || "Band support",
+  };
 }
 
 export function getBandEquipmentEffectiveScore(item: BandEquipmentLiveSetupItem): number {
