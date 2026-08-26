@@ -43,9 +43,10 @@ describe("GigOutcomeReport rebuild", () => {
     expect(screen.getByLabelText(/chronological gig timeline/i)).toHaveTextContent("Turning point");
   });
 
-  it("generates evidence-based lessons without inventing unsupported advice", () => {
+  it("generates evidence-based lessons using Live Setup terminology", () => {
     const lessons = buildLessons(makeExperience());
-    expect(lessons.recommendations).toEqual(expect.arrayContaining(["Book smaller venue", "Rehearse Weak Opener", "Replace weak opener", "Improve equipment", "Hire crew", "Increase chemistry"].slice(0, 5)));
+    expect(lessons.recommendations).toEqual(expect.arrayContaining(["Book smaller venue", "Rehearse Weak Opener", "Replace weak opener", "Upgrade or repair band equipment", "Improve Show Crew"].slice(0, 5)));
+    expect(lessons.heldBack.join(" ")).toContain("Live Setup");
     expect(lessons.worked.join(" ")).toContain("Closer");
   });
 
