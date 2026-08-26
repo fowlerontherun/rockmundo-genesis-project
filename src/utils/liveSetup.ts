@@ -37,7 +37,6 @@ export interface LiveSetupInput {
   equipmentQuality: number;
   crewSkill: number;
   venueCapacity?: number | null;
-  equipmentCondition?: number | null;
 }
 
 export interface LiveSetupResult {
@@ -51,6 +50,24 @@ export interface LiveSetupResult {
   recommendation: string;
 }
 
+export type BandEquipmentSelectionMode = "selected" | "automatic" | "baseline";
+
+export interface BandEquipmentLiveSetupItem {
+  id?: string | null;
+  equipment_type?: string | null;
+  quality_rating?: number | null;
+  condition_rating?: number | null;
+  is_active?: boolean | null;
+}
+
+export interface BandEquipmentLiveSetupSummary {
+  score: number;
+  selectionMode: BandEquipmentSelectionMode;
+  selectedCount: number;
+  ownedCount: number;
+  selectedIds: string[];
+}
+
 const clamp = (value: number, min = 0, max = 100) =>
   Math.max(min, Math.min(max, Number.isFinite(value) ? value : 0));
 
@@ -59,6 +76,64 @@ export function isPerformanceCrewRole(role: string | null | undefined): boolean 
   return PERFORMANCE_CREW_ROLES.includes(
     role as (typeof PERFORMANCE_CREW_ROLES)[number],
   );
+}
+
+export function getBandEquipmentEffectiveScore(item: BandEquipmentLiveSetupItem): number {
+  const quality = clamp(Number(item.quality_rating ?? 40));
+  const condition = clamp(Number(item.condition_rating ?? 70));
+  return Math.round(quality * 0.75 + condition * 0.25);
+}
+
+/**
+ * Mirrors the authoritative server rule for shared Band Equipment.
+ * Explicit Live Setup selections win. If nothing is selected, the best owned
+ * item of each equipment type is used automatically so existing bands keep working.
+ */
+export function resolveBandEquipmentLiveSetup(
+  rows: BandEquipmentLiveSetupItem[] | null | undefined,
+): BandEquipmentLiveSetupSummary {
+  const equipment = rows ?? [];
+  if (equipment.length === 0) {
+    return {
+      score: 40,
+      selectionMode: "baseline",
+      selectedCount: 0,
+      ownedCount: 0,
+      selectedIds: [],
+    };
+  }
+
+  const explicitlySelected = equipment.filter((item) => Boolean(item.is_active));
+  let chosen: BandEquipmentLiveSetupItem[];
+  let selectionMode: BandEquipmentSelectionMode;
+
+  if (explicitlySelected.length > 0) {
+    chosen = explicitlySelected;
+    selectionMode = "selected";
+  } else {
+    const bestByType = new Map<string, BandEquipmentLiveSetupItem>();
+    equipment.forEach((item, index) => {
+      const type = String(item.equipment_type || `equipment-${index}`).toLowerCase();
+      const current = bestByType.get(type);
+      if (!current || getBandEquipmentEffectiveScore(item) > getBandEquipmentEffectiveScore(current)) {
+        bestByType.set(type, item);
+      }
+    });
+    chosen = [...bestByType.values()];
+    selectionMode = "automatic";
+  }
+
+  const score = chosen.length > 0
+    ? Math.round(chosen.reduce((sum, item) => sum + getBandEquipmentEffectiveScore(item), 0) / chosen.length)
+    : 40;
+
+  return {
+    score,
+    selectionMode,
+    selectedCount: chosen.length,
+    ownedCount: equipment.length,
+    selectedIds: chosen.map((item) => item.id).filter((id): id is string => Boolean(id)),
+  };
 }
 
 export function getLiveSetupRating(score: number): string {
@@ -79,12 +154,8 @@ export function getVenueSetupTarget(capacity = 0): VenueSetupTarget {
 }
 
 export function calculateLiveSetup(input: LiveSetupInput): LiveSetupResult {
-  const rawEquipmentQuality = clamp(input.equipmentQuality);
-  const equipmentScore =
-    input.equipmentCondition == null
-      ? rawEquipmentQuality
-      : clamp(rawEquipmentQuality * 0.75 + clamp(input.equipmentCondition) * 0.25);
-  const crewScore = clamp(input.crewSkill);
+  const equipmentScore = Math.round(clamp(input.equipmentQuality));
+  const crewScore = Math.round(clamp(input.crewSkill));
   const score = Math.round(
     equipmentScore * LIVE_SETUP_WEIGHTS.equipment +
       crewScore * LIVE_SETUP_WEIGHTS.crew,
@@ -110,8 +181,8 @@ export function calculateLiveSetup(input: LiveSetupInput): LiveSetupResult {
   return {
     score,
     rating: getLiveSetupRating(score),
-    equipmentScore: Math.round(equipmentScore),
-    crewScore: Math.round(crewScore),
+    equipmentScore,
+    crewScore,
     venueTarget,
     gap,
     status,

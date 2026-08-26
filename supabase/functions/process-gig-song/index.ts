@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveBandEquipment } from "../_shared/live-setup.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -691,9 +692,8 @@ serve(async (req) => {
 
     // Shared band equipment remains the 12% equipment contribution. Personal gear
     // is already role-matched inside fetchLiveMemberSkillAverage and is not double-counted here.
-    const equipmentQuality = equipment.length > 0
-      ? equipment.reduce((sum: number, eq: any) => sum + eq.quality_rating, 0) / equipment.length
-      : 40;
+    const equipmentResolution = resolveBandEquipment(equipment);
+    const equipmentQuality = equipmentResolution.score;
 
     // Only performance-facing Show Crew contributes to the 8% crew score.
     const showCrew = crew.filter((member: any) => PERFORMANCE_CREW_ROLES.has(String(member.crew_type || '')));
@@ -716,6 +716,9 @@ serve(async (req) => {
       memberSkillAverage: liveSkillAvg,
       stageSkillAverage: stageSkillAvg,
       equipmentQuality,
+      equipmentSelectionMode: equipmentResolution.selectionMode,
+      selectedEquipmentCount: equipmentResolution.selectedCount,
+      ownedEquipmentCount: equipmentResolution.ownedCount,
       crewSkillLevel,
       liveSetupScore,
       showCrewCount: showCrew.length,
