@@ -15,12 +15,14 @@ export function buildLessons(experience: GigExperienceDTO) {
   const best = bestSong(experience.songs);
   const weak = weakestSong(experience.songs);
   const equipment = metricValue(experience.analysis.equipmentQuality, 0);
-  const crew = metricValue(experience.analysis.crewSkill, 0);
+  const showCrew = metricValue(experience.analysis.crewSkill, 0);
   const chemistry = metricValue(experience.analysis.bandChemistry, 0);
 
   if (best && songScore(best) >= 18) worked.push(`${best.title} connected strongly with the crowd.`);
   if (fill >= 0.75) worked.push("Venue demand was healthy for this room size.");
-  if (equipment >= 18) worked.push("Equipment quality supported a consistent show.");
+  if (equipment >= 18 && showCrew >= 18) worked.push("Your Live Setup was strong: shared equipment and Show Crew both supported the performance.");
+  else if (equipment >= 18) worked.push("Shared band equipment supported the Live Setup well.");
+  else if (showCrew >= 18) worked.push("Show Crew supported the Live Setup well.");
   if (chemistry >= 18) worked.push("Band chemistry helped the set hold together.");
 
   if (capacity > 0 && fill < 0.45) {
@@ -32,8 +34,14 @@ export function buildLessons(experience: GigExperienceDTO) {
     recommendations.push(`Rehearse ${weak.title}`);
   }
   if (experience.songs[0] && songScore(experience.songs[0]) < 13) recommendations.push("Replace weak opener");
-  if (equipment > 0 && equipment < 12) recommendations.push("Improve equipment");
-  if (crew > 0 && crew < 12) recommendations.push("Hire crew");
+  if (equipment > 0 && equipment < 12) {
+    heldBack.push("Shared band equipment held back the Live Setup.");
+    recommendations.push("Upgrade or repair band equipment");
+  }
+  if (showCrew > 0 && showCrew < 12) {
+    heldBack.push("Show Crew capability held back the Live Setup.");
+    recommendations.push("Improve Show Crew");
+  }
   if (chemistry > 0 && chemistry < 12) recommendations.push("Increase chemistry");
 
   return {
