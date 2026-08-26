@@ -48,7 +48,7 @@ type LegacyNode = {
   nodeType: "profile" | "child";
   profileId?: string | null;
   name: string;
-  relationship: "self" | "parent" | "child" | "ancestor" | string;
+  relationship: "self" | "parent" | "child" | "ancestor" | "descendant" | string;
   generation: number;
   fame: number;
   level: number;
@@ -187,6 +187,7 @@ export function FamilyLegacyPanel({ familyMembers = [], legacyPressure = 0, fame
   const parents = tree.filter((node) => node.relationship === "parent" || node.relationship === "ancestor");
   const self = tree.filter((node) => node.relationship === "self");
   const children = tree.filter((node) => node.relationship === "child");
+  const descendants = tree.filter((node) => node.relationship === "descendant");
   const familySize = tree.length || familyMembers.length;
   const visibleHistory = useMemo(() => (data?.history ?? []).slice(0, 12), [data?.history]);
 
@@ -234,6 +235,7 @@ export function FamilyLegacyPanel({ familyMembers = [], legacyPressure = 0, fame
                 {parents.length > 0 && <div><p className="mb-2 text-xs font-medium text-muted-foreground">Parents & ancestors</p><div className="grid gap-2 sm:grid-cols-2">{parents.map((node) => <TreeNode key={`${node.id}-${node.relationship}`} node={node} />)}</div></div>}
                 {self.length > 0 && <div><p className="mb-2 text-xs font-medium text-muted-foreground">Current generation</p><div className="grid gap-2 sm:grid-cols-2">{self.map((node) => <TreeNode key={node.id} node={node} />)}</div></div>}
                 {children.length > 0 && <div><p className="mb-2 text-xs font-medium text-muted-foreground">Next generation</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{children.map((node) => <TreeNode key={node.id} node={node} />)}</div></div>}
+                {descendants.length > 0 && <div><p className="mb-2 text-xs font-medium text-muted-foreground">Later generations</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{descendants.map((node) => <TreeNode key={`${node.id}-${node.generation}`} node={node} />)}</div></div>}
               </div>
             )}
           </div>
