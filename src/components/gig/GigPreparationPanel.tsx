@@ -14,7 +14,6 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { SOUNDCHECK_TYPES, validateSoundcheckPlan, type SoundcheckType } from '@/utils/gigStageProduction';
 import { validateGigSetlist } from '@/utils/gigSetlistValidation';
-import { calculateLiveSetup, isPerformanceCrewRole } from '@/utils/liveSetup';
 
 interface DraftItem { id: string; song_id: string; title: string; duration_seconds: number | null; is_encore: boolean; rehearsal_level?: number | null }
 const fmt = (seconds: number | null | undefined) => seconds ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Missing';
@@ -54,31 +53,11 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
     return data;
   }});
 
-  const liveSetupQuery = useQuery({ queryKey: ['gig-live-setup', gigId, bandId], enabled: !!gigId && !!bandId, queryFn: async () => {
-    const [equipmentRes, crewRes, gigRes] = await Promise.all([
-      (supabase as any).from('band_stage_equipment').select('quality_rating').eq('band_id', bandId),
-      (supabase as any).from('band_crew_members').select('crew_type,skill_level').eq('band_id', bandId),
-      (supabase as any).from('gigs').select('venues!gigs_venue_id_fkey(capacity)').eq('id', gigId).maybeSingle(),
-    ]);
-    if (equipmentRes.error) throw equipmentRes.error;
-    if (crewRes.error) throw crewRes.error;
-    if (gigRes.error) throw gigRes.error;
-
-    const equipment = equipmentRes.data || [];
-    const showCrew = (crewRes.data || []).filter((member: any) => isPerformanceCrewRole(member.crew_type));
-    const equipmentQuality = equipment.length
-      ? equipment.reduce((sum: number, item: any) => sum + Number(item.quality_rating || 0), 0) / equipment.length
-      : 40;
-    const crewSkill = showCrew.length
-      ? showCrew.reduce((sum: number, member: any) => sum + Number(member.skill_level || 0), 0) / showCrew.length
-      : 40;
-    const venueCapacity = Number(gigRes.data?.venues?.capacity || 0);
-
-    return {
-      ...calculateLiveSetup({ equipmentQuality, crewSkill, venueCapacity }),
-      equipmentCount: equipment.length,
-      showCrewCount: showCrew.length,
-    };
+  const liveSetupQuery = useQuery({ queryKey: ['gig-live-setup', gigId], enabled: !!gigId && !!bandId, queryFn: async () => {
+    const { data, error } = await supabase.functions.invoke('preview-live-setup', { body: { gigId } });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
   }});
 
   useEffect(() => { if (soundcheckQuery.data?.soundcheck_type) setSoundcheckType(soundcheckQuery.data.soundcheck_type); }, [soundcheckQuery.data]);
@@ -89,7 +68,7 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
   }, [setlistQuery.data, songsQuery.data]);
 
   const validation = useMemo(() => validateGigSetlist(draft.map((d) => ({ songId: d.song_id, bandId, durationSeconds: d.duration_seconds, isEncore: d.is_encore })), bandId, slotDurationSeconds), [draft, bandId, slotDurationSeconds]);
-  const soundcheckValidation = useMemo(() => validateSoundcheckPlan({ soundcheckType, scheduledStart: soundcheckQuery.data?.scheduled_start }, { gigStart: scheduledDate || new Date().toISOString(), setupMinutes: 60 }), [soundcheckType, soundcheckQuery.data, scheduledDate, ]);
+  const soundcheckValidation = useMemo(() => validateSoundcheckPlan({ soundcheckType, scheduledStart: soundcheckQuery.data?.scheduled_start }, { gigStart: scheduledDate || new Date().toISOString(), setupMinutes: 60 }), [soundcheckType, soundcheckQuery.data, scheduledDate]);
 
   const setlistSaved = !!setlistQuery.data?.gig_setlist_items?.length && validation.valid;
   const soundcheckDone = !!soundcheckQuery.data && soundcheckQuery.data.soundcheck_type !== 'none' && (soundcheckQuery.data.status === 'confirmed' || soundcheckQuery.data.status === 'completed');
