@@ -29,7 +29,7 @@ const festival = {
   companyId: "22222222-2222-4222-8222-222222222222",
   publicName: "Shock Festival",
   legalCompanyName: "Shock Festival Ltd",
-  setupStatus: "complete",
+  setupStatus: "ready_for_planning",
   setupCompleted: true,
   configurationComplete: true,
   firstEditionExists: true,
@@ -126,6 +126,22 @@ describe("FestivalCompanyCard owner next action", () => {
       screen.getByRole("button", { name: "Continue Line-up" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/finish the 2026 line-up/i)).toBeInTheDocument();
+  });
+
+  it("does not send an already-created Festival back to setup when a legacy RPC reports configuration incomplete", () => {
+    render(
+      <FestivalCompanyCard
+        festival={{ ...festival, configurationComplete: false }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Continue Line-up" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Continue setup" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Complete")).toBeInTheDocument();
   });
 
   it("moves to Tickets & budget only after Line-up is ready", () => {
