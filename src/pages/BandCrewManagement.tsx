@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import { CircleDashed, Loader2, Lock, Star, Trash2, UserPlus, Users, Zap } from "lucide-react";
+import { Loader2, Lock, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { isPerformanceCrewRole } from "@/utils/liveSetup";
 
 import tourManagerImg from "@/assets/crew/tour-manager.jpg";
 import fohEngineerImg from "@/assets/crew/foh-engineer.jpg";
@@ -45,6 +46,16 @@ const ROLE_TO_IMAGE: Record<string, string> = {
 };
 const getCrewImage = (role: string, slug?: string | null) =>
   (slug && CREW_IMAGES[slug]) || ROLE_TO_IMAGE[role] || tourManagerImg;
+
+const SUPPORT_CREW_IMPACT: Record<string, string> = {
+  "Tour Manager": "Touring & logistics",
+  "Merch Director": "Merch sales",
+  "Security Lead": "Safety & incidents",
+  "Wardrobe Stylist": "Image & presentation",
+};
+
+const getCrewImpact = (role: string) =>
+  isPerformanceCrewRole(role) ? "Live Setup" : SUPPORT_CREW_IMPACT[role] || "Band support";
 
 // Star rating display component
 const StarRating = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) => {
@@ -214,15 +225,14 @@ const BandCrewManagement = () => {
     });
   }, [availableCrew, selectedRole, selectedTier]);
 
-  // Stats
+  // Player-facing crew departments. Only Show Crew contributes to the Live Setup score.
   const crewCount = hiredCrew?.length ?? 0;
+  const showCrew = (hiredCrew || []).filter((crew) => isPerformanceCrewRole(crew.crew_type));
+  const supportCrew = (hiredCrew || []).filter((crew) => !isPerformanceCrewRole(crew.crew_type));
+  const showCrewSkill = showCrew.length > 0
+    ? showCrew.reduce((sum, crew) => sum + Number(crew.skill_level || 0), 0) / showCrew.length
+    : 40;
   const totalPayroll = hiredCrew?.reduce((sum, c) => sum + c.salary_per_gig, 0) ?? 0;
-  const avgStarRating = crewCount > 0 
-    ? (hiredCrew?.reduce((sum, c) => sum + (c.star_rating ?? 5), 0) ?? 0) / crewCount 
-    : 0;
-  const avgCohesion = crewCount > 0
-    ? (hiredCrew?.reduce((sum, c) => sum + c.cohesion_rating, 0) ?? 0) / crewCount
-    : 0;
 
   // Calculate what tier the band can access
   const currentTier = FAME_TIERS.findIndex(t => bandFame >= t.min && bandFame <= t.max);
@@ -265,10 +275,13 @@ const BandCrewManagement = () => {
     onSuccess: (_, crew) => {
       queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });
       queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["gig-live-setup"] });
       setHireDialogOpen(false);
       setSelectedCrewMember(null);
       toast.success(`${crew.name} hired!`, {
-        description: `${crew.star_rating}★ ${crew.role} joins your crew.`,
+        description: isPerformanceCrewRole(crew.role)
+          ? `${crew.star_rating}★ ${crew.role} joins your Show Crew and can improve Live Setup.`
+          : `${crew.star_rating}★ ${crew.role} joins your support crew for ${getCrewImpact(crew.role).toLowerCase()}.`,
       });
     },
     onError: (error: Error) => {
@@ -297,6 +310,7 @@ const BandCrewManagement = () => {
     onSuccess: (_, crew) => {
       queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });
       queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["gig-live-setup"] });
       toast.success(`${crew.name} released from crew`);
     },
     onError: (error: Error) => {
@@ -354,31 +368,27 @@ const BandCrewManagement = () => {
           <CardHeader>
             <CardTitle className="text-2xl">Crew Management • {bandName}</CardTitle>
             <CardDescription>
-              Hire crew to boost your gig performance. Higher star ratings = better bonuses. Cohesion grows over time.
+              Show Crew affects your Live Setup. Support Crew handles touring, merch, safety and image instead of directly changing song-performance crew score.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Crew Size</div>
+                <div className="text-sm text-muted-foreground">Total Crew</div>
                 <div className="mt-1 flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
                   <span className="text-2xl font-bold">{crewCount}</span>
                 </div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Avg Star Rating</div>
-                <div className="mt-1 flex items-center gap-2">
-                  <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
-                  <span className="text-2xl font-bold">{avgStarRating.toFixed(1)}</span>
-                </div>
+                <div className="text-sm text-muted-foreground">Show Crew</div>
+                <div className="mt-1 text-2xl font-bold">{showCrew.length}</div>
+                <div className="text-xs text-muted-foreground">{Math.round(showCrewSkill)}/100 avg skill · affects Live Setup</div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Avg Cohesion</div>
-                <div className="mt-1 flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-blue-500" />
-                  <span className="text-2xl font-bold">{avgCohesion.toFixed(0)}%</span>
-                </div>
+                <div className="text-sm text-muted-foreground">Support Crew</div>
+                <div className="mt-1 text-2xl font-bold">{supportCrew.length}</div>
+                <div className="text-xs text-muted-foreground">Touring, merch, safety & image</div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4">
                 <div className="text-sm text-muted-foreground">Cost per Gig</div>
@@ -407,7 +417,7 @@ const BandCrewManagement = () => {
               <CardHeader>
                 <CardTitle>Active Crew</CardTitle>
                 <CardDescription>
-                  Your crew's cohesion grows with each gig performed together. Higher cohesion = better performance bonuses.
+                  Show Crew contributes to Live Setup. Support Crew improves its own area of the band. Cohesion still grows as people work gigs together.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -434,18 +444,26 @@ const BandCrewManagement = () => {
                           />
                         </div>
                         <CardHeader className="pb-2">
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-2">
                             <div>
                               <CardTitle className="text-lg">{crew.name}</CardTitle>
                               <CardDescription>{crew.crew_type}</CardDescription>
                             </div>
-                            <Badge variant="outline" className="flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                              {crew.star_rating ?? 5}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-1">
+                              <Badge variant={isPerformanceCrewRole(crew.crew_type) ? "default" : "secondary"}>{getCrewImpact(crew.crew_type)}</Badge>
+                              <Badge variant="outline" className="flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                                {crew.star_rating ?? 5}
+                              </Badge>
+                            </div>
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                          <p className="text-xs text-muted-foreground">
+                            {isPerformanceCrewRole(crew.crew_type)
+                              ? "Directly contributes to the Show Crew portion of Live Setup."
+                              : `Supports ${getCrewImpact(crew.crew_type).toLowerCase()} and does not inflate the song-performance crew score.`}
+                          </p>
                           <StarRating rating={crew.star_rating ?? 5} />
                           
                           <CohesionBar value={crew.cohesion_rating} />
@@ -496,7 +514,7 @@ const BandCrewManagement = () => {
                   <div>
                     <CardTitle>Available Crew</CardTitle>
                     <CardDescription>
-                      Higher fame unlocks better crew. Crew can only work for one band at a time.
+                      Each role shows what it actually affects. Higher fame unlocks stronger specialists; a crew member can only work for one band at a time.
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -566,21 +584,29 @@ const BandCrewManagement = () => {
                             />
                           </div>
                           <CardHeader className="pb-2">
-                            <div className="flex items-start justify-between">
+                            <div className="flex items-start justify-between gap-2">
                               <div>
                                 <CardTitle className="text-lg">{crew.name}</CardTitle>
                                 <CardDescription>{crew.role}</CardDescription>
                               </div>
-                              <Badge 
-                                variant={crew.star_rating >= 9 ? "default" : crew.star_rating >= 7 ? "secondary" : "outline"}
-                                className="flex items-center gap-1"
-                              >
-                                <Star className={`h-3 w-3 ${crew.star_rating >= 7 ? "fill-yellow-500 text-yellow-500" : ""}`} />
-                                {crew.star_rating}
-                              </Badge>
+                              <div className="flex flex-col items-end gap-1">
+                                <Badge variant={isPerformanceCrewRole(crew.role) ? "default" : "secondary"}>{getCrewImpact(crew.role)}</Badge>
+                                <Badge 
+                                  variant={crew.star_rating >= 9 ? "default" : crew.star_rating >= 7 ? "secondary" : "outline"}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Star className={`h-3 w-3 ${crew.star_rating >= 7 ? "fill-yellow-500 text-yellow-500" : ""}`} />
+                                  {crew.star_rating}
+                                </Badge>
+                              </div>
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-3">
+                            <p className="text-xs text-muted-foreground">
+                              {isPerformanceCrewRole(crew.role)
+                                ? "Show Crew: directly improves the crew side of Live Setup."
+                                : `Support Crew: improves ${getCrewImpact(crew.role).toLowerCase()} rather than the Live Setup crew score.`}
+                            </p>
                             <StarRating rating={crew.star_rating} />
                             
                             <p className="text-sm text-muted-foreground line-clamp-2">
@@ -636,7 +662,9 @@ const BandCrewManagement = () => {
           <DialogHeader>
             <DialogTitle>Hire {selectedCrewMember?.name}?</DialogTitle>
             <DialogDescription>
-              This crew member will join your band exclusively.
+              {selectedCrewMember
+                ? `${selectedCrewMember.role} affects ${getCrewImpact(selectedCrewMember.role)}. This crew member will join your band exclusively.`
+                : "This crew member will join your band exclusively."}
             </DialogDescription>
           </DialogHeader>
           {selectedCrewMember && (
@@ -656,10 +684,13 @@ const BandCrewManagement = () => {
                   <div className="text-lg font-semibold">{selectedCrewMember.name}</div>
                   <div className="text-sm text-muted-foreground">{selectedCrewMember.role}</div>
                 </div>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                  {selectedCrewMember.star_rating}
-                </Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant={isPerformanceCrewRole(selectedCrewMember.role) ? "default" : "secondary"}>{getCrewImpact(selectedCrewMember.role)}</Badge>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                    {selectedCrewMember.star_rating}
+                  </Badge>
+                </div>
               </div>
               
               <StarRating rating={selectedCrewMember.star_rating} size="lg" />
