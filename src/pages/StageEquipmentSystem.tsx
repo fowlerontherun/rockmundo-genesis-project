@@ -1,13 +1,10 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Badge,
-} from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +14,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { RecommendedSetup } from "@/components/stage-equipment/RecommendedSetup";
+import {
+  ConditionTier,
+  RarityTier,
+  SizeCategory,
+  WeightCategory,
+  equipmentLabelMap as labelMap,
+  formatEquipmentCurrency as formatCurrency,
+} from "@/features/stage-equipment/catalog";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import type { Database } from "@/lib/supabase-types";
@@ -28,25 +37,16 @@ import {
   Guitar,
   Loader2,
   Minus,
+  PackageCheck,
   ShoppingCart,
   Sparkles,
   Wand2,
+  Wrench,
 } from "lucide-react";
 import {
-  CONDITION_ORDER,
-  EquipmentCatalogItem,
-  equipmentLabelMap as labelMap,
-  formatEquipmentCurrency as formatCurrency,
-  EQUIPMENT_TYPES,
-  RarityTier,
-  SizeCategory,
-  StageEquipmentType,
-  WeightCategory,
-  ConditionTier,
-} from "@/features/stage-equipment/catalog";
-import { useStageEquipmentCatalog } from "@/features/stage-equipment/catalog-context";
-import { RecommendedSetup } from "@/components/stage-equipment/RecommendedSetup";
-import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+  getBandEquipmentEffectiveScore,
+  resolveBandEquipmentLiveSetup,
+} from "@/utils/liveSetup";
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
 
@@ -65,30 +65,8 @@ interface EquipmentMetadata {
   value: number;
   lastConditionTier?: ConditionTier;
   lastConditionPoints?: number;
+  wearGigIds?: string[];
 }
-
-interface ConditionState {
-  tier: ConditionTier;
-  points: number;
-  score: number;
-}
-
-const sizeToUnits = (size: SizeCategory): number => {
-  switch (size) {
-    case "tiny":
-      return 1;
-    case "small":
-      return 2;
-    case "medium":
-      return 3;
-    case "larger":
-      return 4;
-    case "huge":
-      return 5;
-    default:
-      return 3;
-  }
-};
 
 const unitsToSize = (units?: number | null): SizeCategory => {
   switch (units) {
@@ -96,8 +74,6 @@ const unitsToSize = (units?: number | null): SizeCategory => {
       return "tiny";
     case 2:
       return "small";
-    case 3:
-      return "medium";
     case 4:
       return "larger";
     case 5:
@@ -107,92 +83,55 @@ const unitsToSize = (units?: number | null): SizeCategory => {
   }
 };
 
-const calculateConditionState = (metadata: EquipmentMetadata): ConditionState => {
-  const baseIndex = CONDITION_ORDER.indexOf(metadata.baseCondition);
-  if (baseIndex === -1) {
-    return { tier: "usable", points: 100, score: 400 };
-  }
-
-  const shows = metadata.showsPerformed ?? 0;
-  if (shows <= 30) {
-    const points = metadata.lastConditionPoints ?? 100;
-    return { tier: metadata.baseCondition, points, score: baseIndex * 100 + points };
-  }
-
-  const degradeStart = 30;
-  const degradeWindow = 20;
-  let extraShows = Math.max(0, shows - degradeStart);
-  const tiersLost = Math.floor(extraShows / degradeWindow);
-  let remainder = extraShows % degradeWindow;
-
-  let newIndex = Math.max(0, baseIndex - tiersLost);
-  if (tiersLost > baseIndex) {
-    newIndex = 0;
-    remainder = 0;
-  }
-
-  let points = 100;
-  if (remainder > 0) {
-    points = Math.max(0, 100 - Math.round((remainder / degradeWindow) * 100));
-  }
-
-  if (newIndex === 0 && tiersLost > baseIndex) {
-    points = 0;
-  }
-
-  return {
-    tier: CONDITION_ORDER[newIndex],
-    points,
-    score: newIndex * 100 + points,
-  };
+const conditionTierFromPoints = (points?: number | null): ConditionTier => {
+  const value = Math.max(0, Math.min(100, Number(points ?? 70)));
+  if (value >= 90) return "brand_new";
+  if (value >= 80) return "very_good";
+  if (value >= 65) return "good";
+  if (value >= 50) return "ok";
+  if (value >= 35) return "usable";
+  if (value >= 20) return "bad";
+  if (value >= 10) return "terrible";
+  return "almost_dead";
 };
 
 const createDefaultMetadata = (item: StageEquipmentRecord): EquipmentMetadata => ({
   weight: "medium",
   size: unitsToSize(item.size_units ?? 3),
-  baseCondition: "good",
+  baseCondition: conditionTierFromPoints(item.condition_rating),
   showsPerformed: 0,
-  liveImpact: "General purpose upgrade",
+  liveImpact: "Shared production equipment for your band's live show.",
   rarity: "normal",
   liveSelected: Boolean(item.is_active),
   value: item.purchase_cost ?? 0,
-  lastConditionTier: "good",
+  lastConditionTier: conditionTierFromPoints(item.condition_rating),
   lastConditionPoints: item.condition_rating ?? 100,
 });
 
 const parseMetadata = (item: StageEquipmentRecord): EquipmentMetadata => {
   const fallback = createDefaultMetadata(item);
-  if (!item.notes) {
-    return fallback;
-  }
+  if (!item.notes) return fallback;
 
   try {
     const raw = JSON.parse(item.notes) as Partial<EquipmentMetadata>;
     return {
       ...fallback,
       ...raw,
-      weight: (raw?.weight as WeightCategory) ?? fallback.weight,
-      size: (raw?.size as SizeCategory) ?? fallback.size,
-      baseCondition: (raw?.baseCondition as ConditionTier) ?? fallback.baseCondition,
-      rarity: (raw?.rarity as RarityTier) ?? fallback.rarity,
-      liveSelected: raw?.liveSelected ?? fallback.liveSelected,
-      value: raw?.value ?? fallback.value,
-      showsPerformed: raw?.showsPerformed ?? fallback.showsPerformed,
-      lastConditionTier: (raw?.lastConditionTier as ConditionTier) ?? fallback.lastConditionTier,
-      lastConditionPoints: raw?.lastConditionPoints ?? fallback.lastConditionPoints,
+      weight: (raw.weight as WeightCategory) ?? fallback.weight,
+      size: (raw.size as SizeCategory) ?? fallback.size,
+      baseCondition: (raw.baseCondition as ConditionTier) ?? fallback.baseCondition,
+      rarity: (raw.rarity as RarityTier) ?? fallback.rarity,
+      // is_active is authoritative. notes only preserves legacy metadata/display fields.
+      liveSelected: Boolean(item.is_active),
+      value: raw.value ?? fallback.value,
+      showsPerformed: raw.showsPerformed ?? fallback.showsPerformed,
+      wearGigIds: Array.isArray(raw.wearGigIds) ? raw.wearGigIds : undefined,
     };
   } catch (error) {
     console.error("Failed to parse equipment metadata", error);
     return fallback;
   }
 };
-
-const buildMetadataPayload = (metadata: EquipmentMetadata, condition: ConditionState): EquipmentMetadata => ({
-  ...metadata,
-  liveSelected: metadata.liveSelected,
-  lastConditionTier: condition.tier,
-  lastConditionPoints: condition.points,
-});
 
 const StageEquipmentSystem = () => {
   const queryClient = useQueryClient();
@@ -202,7 +141,10 @@ const StageEquipmentSystem = () => {
   const bandGenre = primaryBand?.bands?.genre ?? "Rock";
   const bandFame = primaryBand?.bands?.fame ?? 0;
 
-  // Fetch band member count
+  const [selectedType, setSelectedType] = useState("all");
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [selectedDbItem, setSelectedDbItem] = useState<any | null>(null);
+
   const { data: memberCount = 1 } = useQuery({
     queryKey: ["band-member-count", bandId],
     queryFn: async () => {
@@ -218,13 +160,6 @@ const StageEquipmentSystem = () => {
     enabled: Boolean(bandId),
   });
 
-  const { catalog: localCatalog, setCatalog } = useStageEquipmentCatalog();
-  const [selectedType, setSelectedType] = useState<string>("all");
-  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
-  const [selectedCatalogItem, setSelectedCatalogItem] = useState<EquipmentCatalogItem | null>(null);
-  const [selectedDbItem, setSelectedDbItem] = useState<any | null>(null);
-
-  // Fetch stage equipment from database
   const { data: dbCatalog = [], isLoading: catalogLoading } = useQuery({
     queryKey: ["stage-equipment-catalog"],
     queryFn: async () => {
@@ -234,216 +169,169 @@ const StageEquipmentSystem = () => {
         .eq("category", "stage")
         .eq("is_available", true)
         .order("subcategory", { ascending: true });
-
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
 
-  const { data: equipment, isLoading: loadingEquipment } = useQuery<StageEquipmentRecord[]>({
+  const { data: equipment = [], isLoading: loadingEquipment } = useQuery<StageEquipmentRecord[]>({
     queryKey: ["band-stage-equipment", bandId],
     queryFn: async () => {
       if (!bandId) return [];
-
       const { data, error } = await supabase
         .from("band_stage_equipment")
         .select("*")
         .eq("band_id", bandId)
         .order("created_at", { ascending: false });
-
       if (error) throw error;
       return (data ?? []) as StageEquipmentRecord[];
     },
     enabled: Boolean(bandId),
   });
 
-  const updateEquipmentMutation = useMutation({
-    mutationFn: async ({
-      equipmentId,
-      metadata,
-      conditionRating,
-    }: {
-      equipmentId: string;
-      metadata: EquipmentMetadata;
-      conditionRating: number;
-    }) => {
-      const { error } = await supabase
-        .from("band_stage_equipment")
-        .update({
-          notes: JSON.stringify(metadata),
-          condition_rating: conditionRating,
-          is_active: metadata.liveSelected,
-        })
-        .eq("id", equipmentId);
+  const inventory = useMemo(
+    () => equipment.map((item) => ({ ...item, metadata: parseMetadata(item) })),
+    [equipment],
+  );
 
-      if (error) throw error;
+  const equipmentResolution = useMemo(
+    () => resolveBandEquipmentLiveSetup(
+      inventory.map((item) => ({
+        id: item.id,
+        equipment_type: item.equipment_type,
+        quality_rating: item.quality_rating,
+        condition_rating: item.condition_rating,
+        is_active: item.is_active,
+      })),
+    ),
+    [inventory],
+  );
+
+  const usedIds = useMemo(() => new Set(equipmentResolution.selectedIds), [equipmentResolution.selectedIds]);
+  const liveSetup = useMemo(() => inventory.filter((item) => usedIds.has(item.id)), [inventory, usedIds]);
+  const explicitlySelectedCount = inventory.filter((item) => item.is_active).length;
+  const totalValue = inventory.reduce((sum, item) => sum + (item.metadata.value ?? item.purchase_cost ?? 0), 0);
+  const averageCondition = inventory.length > 0
+    ? Math.round(inventory.reduce((sum, item) => sum + Number(item.condition_rating ?? 70), 0) / inventory.length)
+    : 0;
+
+  const updateLiveSetupMutation = useMutation({
+    mutationFn: async ({ activateIds }: { activateIds: Set<string> }) => {
+      const updates = inventory.map(async (item) => {
+        const nextActive = activateIds.has(item.id);
+        if (Boolean(item.is_active) === nextActive) return;
+        const metadata = { ...item.metadata, liveSelected: nextActive };
+        const { error } = await supabase
+          .from("band_stage_equipment")
+          .update({ is_active: nextActive, notes: JSON.stringify(metadata) })
+          .eq("id", item.id)
+          .eq("band_id", bandId!);
+        if (error) throw error;
+      });
+      await Promise.all(updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["live-setup-preview"] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update equipment");
-    },
+    onError: (error: Error) => toast.error(error.message || "Failed to update Live Setup"),
   });
 
-  const purchaseMutation = useMutation({
-    mutationFn: async (item: EquipmentCatalogItem) => {
-      if (!bandId) {
-        throw new Error("Join a band to purchase equipment");
-      }
+  const handleToggleLive = (item: (typeof inventory)[number]) => {
+    const currentManual = new Set(inventory.filter((row) => row.is_active).map((row) => row.id));
 
-      // Check band balance first
+    if (currentManual.size === 0) {
+      // First customisation starts from the automatic setup so a single click does not
+      // accidentally remove every other useful equipment type from the show.
+      equipmentResolution.selectedIds.forEach((id) => currentManual.add(id));
+    }
+
+    if (currentManual.has(item.id)) currentManual.delete(item.id);
+    else currentManual.add(item.id);
+
+    updateLiveSetupMutation.mutate({ activateIds: currentManual });
+  };
+
+  const returnToAutomaticSetup = () => {
+    updateLiveSetupMutation.mutate({ activateIds: new Set<string>() });
+  };
+
+  const purchaseMutation = useMutation({
+    mutationFn: async (item: any) => {
+      if (!bandId) throw new Error("Join a band to purchase equipment");
+      const price = Number(item.base_price ?? 0);
+
       const { data: band, error: bandError } = await supabase
         .from("bands")
         .select("band_balance")
         .eq("id", bandId)
         .single();
-
       if (bandError) throw bandError;
-      if (!band || (band.band_balance || 0) < item.cost) {
-        throw new Error(`Insufficient band funds. Need $${item.cost.toLocaleString()}`);
+
+      const currentBalance = Number(band?.band_balance ?? 0);
+      if (currentBalance < price) {
+        throw new Error(`Insufficient band funds. Need ${formatCurrency(price)}.`);
       }
 
-      // Deduct cost from band balance
       const { error: balanceError } = await supabase
         .from("bands")
-        .update({ band_balance: (band.band_balance || 0) - item.cost })
+        .update({ band_balance: currentBalance - price })
         .eq("id", bandId);
-
       if (balanceError) throw balanceError;
 
       const metadata: EquipmentMetadata = {
-        weight: item.weight,
-        size: item.size,
-        baseCondition: item.baseCondition,
+        weight: "medium",
+        size: "medium",
+        baseCondition: "brand_new",
         showsPerformed: 0,
-        liveImpact: item.liveImpact,
-        rarity: item.rarity,
+        liveImpact: item.description || "Professional shared stage equipment.",
+        rarity: (item.rarity as RarityTier) || "normal",
         liveSelected: false,
-        value: item.cost,
-        lastConditionTier: item.baseCondition,
+        value: price,
+        lastConditionTier: "brand_new",
         lastConditionPoints: 100,
       };
 
-      const condition = calculateConditionState(metadata);
-
-      const { error } = await supabase.from("band_stage_equipment").insert({
+      const { error: insertError } = await supabase.from("band_stage_equipment").insert({
         band_id: bandId,
         equipment_name: item.name,
-        equipment_type: item.type,
-        quality_rating: 80,
-        condition_rating: condition.points,
-        power_draw: null,
-        purchase_cost: item.cost,
+        equipment_type: item.subcategory || "general",
+        quality_rating: Number(item.quality_rating ?? 80),
+        condition_rating: 100,
+        purchase_cost: price,
         purchase_date: new Date().toISOString(),
-        size_units: sizeToUnits(item.size),
-        notes: JSON.stringify(buildMetadataPayload(metadata, condition)),
+        size_units: 3,
+        notes: JSON.stringify(metadata),
+        is_active: false,
       });
 
-      if (error) throw error;
-      
-      return { cost: item.cost };
+      if (insertError) {
+        // Best-effort compensation so a failed inventory insert does not silently charge the band.
+        await supabase.from("bands").update({ band_balance: currentBalance }).eq("id", bandId);
+        throw insertError;
+      }
+
+      return { price };
     },
-    onSuccess: (data, item) => {
-      toast.success(`${item.name} purchased for $${item.cost.toLocaleString()}`);
+    onSuccess: ({ price }) => {
+      toast.success(`${selectedDbItem?.name ?? "Equipment"} purchased for ${formatCurrency(price)}`);
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
       queryClient.invalidateQueries({ queryKey: ["band", bandId] });
-      setCatalog((prev) =>
-        prev.map((entry) =>
-          entry.id === item.id
-            ? { ...entry, amountAvailable: Math.max(0, entry.amountAvailable - 1) }
-            : entry,
-        ),
-      );
       setPurchaseDialogOpen(false);
-      setSelectedCatalogItem(null);
+      setSelectedDbItem(null);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to buy equipment");
-    },
+    onError: (error: Error) => toast.error(error.message || "Failed to buy equipment"),
   });
 
-  const enrichedEquipment = useMemo(() => {
-    return (equipment ?? []).map((item) => {
-      const metadata = parseMetadata(item);
-      const condition = calculateConditionState(metadata);
-      const normalizedMetadata = buildMetadataPayload(metadata, condition);
-
-      return {
-        ...item,
-        metadata: normalizedMetadata,
-        condition,
-      };
-    });
-  }, [equipment]);
-
-  const inventory = useMemo(() => enrichedEquipment ?? [], [enrichedEquipment]);
-  const liveSetup = useMemo(
-    () => inventory.filter((item) => item.metadata.liveSelected || item.is_active),
-    [inventory],
-  );
-
-  const totalValue = inventory.reduce((sum, item) => sum + (item.metadata.value ?? item.purchase_cost ?? 0), 0);
-  const totalConditionScore = inventory.reduce((sum, item) => sum + item.condition.score, 0);
-  const averageConditionScore = inventory.length > 0 ? totalConditionScore / inventory.length : 0;
-  const averageConditionTierIndex = Math.min(
-    CONDITION_ORDER.length - 1,
-    Math.max(0, Math.floor(averageConditionScore / 100)),
-  );
-  const averageConditionTier = CONDITION_ORDER[averageConditionTierIndex];
-
-  const handleToggleLive = (item: (typeof inventory)[number]) => {
-    const nextMetadata = {
-      ...item.metadata,
-      liveSelected: !item.metadata.liveSelected,
-    };
-    updateEquipmentMutation.mutate({
-      equipmentId: item.id,
-      metadata: nextMetadata,
-      conditionRating: item.condition.points,
-    });
-  };
-
-  const handleLogShow = (item: (typeof inventory)[number]) => {
-    const updatedMetadata: EquipmentMetadata = {
-      ...item.metadata,
-      showsPerformed: item.metadata.showsPerformed + 1,
-    };
-    const nextCondition = calculateConditionState(updatedMetadata);
-    const payload = buildMetadataPayload(updatedMetadata, nextCondition);
-
-    updateEquipmentMutation.mutate({
-      equipmentId: item.id,
-      metadata: payload,
-      conditionRating: nextCondition.points,
-    });
-
-    toast.message(`${item.equipment_name ?? "Equipment"} logged for another show`, {
-      description: `Condition now ${labelMap[nextCondition.tier]} (${nextCondition.points}/100).`,
-    });
-  };
-
-  const filteredCatalog = useMemo(() => {
-    if (selectedType === "all") return localCatalog;
-    return localCatalog.filter((item) => item.type === selectedType);
-  }, [localCatalog, selectedType]);
-
-  // Filter DB catalog by subcategory
   const filteredDbCatalog = useMemo(() => {
     if (selectedType === "all") return dbCatalog;
     return dbCatalog.filter((item) => item.subcategory === selectedType);
   }, [dbCatalog, selectedType]);
 
-  // Get unique subcategories from DB catalog
-  const subcategories = useMemo(() => {
-    const subs = new Set(dbCatalog.map(item => item.subcategory).filter(Boolean));
-    return Array.from(subs).sort();
-  }, [dbCatalog]);
-
-  const openPurchaseDialog = (item: EquipmentCatalogItem) => {
-    setSelectedCatalogItem(item);
-    setPurchaseDialogOpen(true);
-  };
+  const subcategories = useMemo(
+    () => Array.from(new Set(dbCatalog.map((item) => item.subcategory).filter(Boolean))).sort(),
+    [dbCatalog],
+  );
 
   const openDbPurchaseDialog = (item: any) => {
     setSelectedDbItem(item);
@@ -452,9 +340,9 @@ const StageEquipmentSystem = () => {
 
   if (loadingBand || loadingEquipment) {
     return (
-      <FMPageScaffold title="Stage Equipment" subtitle="Loading band rig…" icon={Guitar} backTo="/hub/band-live">
+      <FMPageScaffold title="Band Equipment" subtitle="Loading shared live rig…" icon={Guitar} backTo="/hub/band-live">
         <div className="flex items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" /> Loading stage equipment data...
+          <Loader2 className="h-5 w-5 animate-spin" /> Loading band equipment...
         </div>
       </FMPageScaffold>
     );
@@ -462,109 +350,185 @@ const StageEquipmentSystem = () => {
 
   if (!bandId) {
     return (
-      <FMPageScaffold title="Stage Equipment" subtitle="Join a band to manage stage equipment." icon={Guitar} backTo="/hub/band-live">
-        <Card>
-          <CardHeader>
-            <CardTitle>Join a band to manage stage equipment</CardTitle>
-            <CardDescription>
-              Stage gear lives with your band. Join or create a band to start tracking inventory, live rigs, and upgrades.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <CircleDashed className="h-4 w-4" />
-              <AlertTitle>No band selected</AlertTitle>
-              <AlertDescription>
-                Head to the bands hub to pick your crew. Once you're in, the full equipment system unlocks here.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+      <FMPageScaffold title="Band Equipment" subtitle="Join a band to manage shared live equipment." icon={Guitar} backTo="/hub/band-live">
+        <Alert>
+          <CircleDashed className="h-4 w-4" />
+          <AlertTitle>No band selected</AlertTitle>
+          <AlertDescription>Band Equipment belongs to the band. Join or create a band to build a shared live rig.</AlertDescription>
+        </Alert>
       </FMPageScaffold>
     );
   }
 
+  const selectionLabel = equipmentResolution.selectionMode === "selected"
+    ? "Custom Setup"
+    : equipmentResolution.selectionMode === "automatic"
+      ? "Auto Setup"
+      : "Venue Baseline";
+
   return (
     <FMPageScaffold
-      title={`Stage Equipment • ${bandName}`}
-      subtitle="Track owned gear, curate your live stage setup, and expand your catalog with precision upgrades."
+      title={`Band Equipment • ${bandName}`}
+      subtitle="Shared PA, lighting and production gear used by the whole band. Your own instrument and personal rig stay under Personal Gear."
       icon={Guitar}
       backTo="/hub/band-live"
       headerActions={
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span><span className="font-semibold text-foreground">{inventory.length}</span> owned</span>
-          <span>Live: <span className="font-semibold text-foreground">{liveSetup.length}</span></span>
+        <div className="flex items-center gap-2 text-xs">
+          <Badge variant={equipmentResolution.selectionMode === "selected" ? "default" : "secondary"}>{selectionLabel}</Badge>
+          <span className="text-muted-foreground">{equipmentResolution.selectedCount} used · {inventory.length} owned</span>
         </div>
       }
     >
       <div className="flex flex-col gap-6">
-        <Card>
-          <CardContent className="flex flex-wrap items-center gap-4 py-3 text-sm text-muted-foreground">
-            <div>
-              <span className="font-semibold text-foreground">{inventory.length}</span> pieces owned
-            </div>
-            <div>
-              Live setup: <span className="font-semibold text-foreground">{liveSetup.length}</span>
-            </div>
-            <div>
-              Total value: <span className="font-semibold text-foreground">{formatCurrency(totalValue)}</span>
-            </div>
-            {inventory.length > 0 && (
-              <div className="flex items-center gap-1">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                Avg condition: <span className="font-semibold text-foreground">{labelMap[averageConditionTier]}</span>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Shared Equipment Score</CardTitle>
+                  <CardDescription>One part of Live Setup: Band Equipment 60% + Show Crew 40%.</CardDescription>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold">{equipmentResolution.score}<span className="text-base text-muted-foreground">/100</span></div>
+                  <Badge variant="outline">{selectionLabel}</Badge>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Progress value={equipmentResolution.score} />
+              <div className="grid gap-3 text-sm sm:grid-cols-3">
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Gear in score</div>
+                  <div className="font-semibold">{equipmentResolution.selectedCount} items</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Formula</div>
+                  <div className="font-semibold">75% quality · 25% condition</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Owned value</div>
+                  <div className="font-semibold">{formatCurrency(totalValue)}</div>
+                </div>
+              </div>
+              {equipmentResolution.selectionMode === "automatic" && (
+                <Alert>
+                  <Wand2 className="h-4 w-4" />
+                  <AlertTitle>Auto Setup is active</AlertTitle>
+                  <AlertDescription>
+                    No custom rig is saved, so RockMundo uses your strongest owned item in each equipment type. Customise only when you want specific gear used.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {equipmentResolution.selectionMode === "baseline" && (
+                <Alert>
+                  <CircleDashed className="h-4 w-4" />
+                  <AlertTitle>Using venue baseline equipment</AlertTitle>
+                  <AlertDescription>Buy shared stage equipment to improve this part of Live Setup above the basic 40/100 fallback.</AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
 
-        <Tabs defaultValue="recommended" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Condition</CardTitle>
+              <CardDescription>Wear is tied to real completed gigs.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-muted-foreground" />
+                <span className="text-2xl font-bold">{averageCondition || "—"}</span>
+                {inventory.length > 0 && <span className="text-sm text-muted-foreground">/100 average</span>}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                You no longer need to log shows manually. Equipment used in the live rig wears automatically when a gig completes.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="live" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="recommended" className="gap-1">
-              <Wand2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Recommended</span>
-            </TabsTrigger>
-            <TabsTrigger value="inventory">Current Equipment</TabsTrigger>
-            <TabsTrigger value="live">Live Stage Setup</TabsTrigger>
+            <TabsTrigger value="live" className="gap-1"><PackageCheck className="h-4 w-4" /> Live Setup</TabsTrigger>
+            <TabsTrigger value="inventory">Inventory</TabsTrigger>
+            <TabsTrigger value="recommended" className="gap-1"><Wand2 className="h-4 w-4" /> Recommended</TabsTrigger>
             <TabsTrigger value="market">Buy Equipment</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="recommended" className="space-y-4">
-            <RecommendedSetup
-              bandProfile={{
-                genre: bandGenre,
-                fame: bandFame,
-                memberCount: memberCount,
-              }}
-              catalogItems={dbCatalog.map(item => ({
-                ...item,
-                stat_boosts: (item.stat_boosts as Record<string, number> | null)
-              }))}
-              ownedItemNames={inventory.map(i => i.equipment_name || "")}
-              onPurchase={openDbPurchaseDialog}
-              isPurchasing={purchaseMutation.isPending}
-            />
+          <TabsContent value="live" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle>{selectionLabel}</CardTitle>
+                  <CardDescription>
+                    This shared production rig supplies the equipment contribution to gig performance. Personal instruments are scored separately against each musician's role.
+                  </CardDescription>
+                </div>
+                {explicitlySelectedCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={returnToAutomaticSetup} disabled={updateLiveSetupMutation.isPending}>
+                    <Wand2 className="mr-2 h-4 w-4" /> Return to Auto Setup
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                {liveSetup.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                    <CircleDashed className="h-10 w-10 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">No band-owned stage equipment yet.</p>
+                      <p className="text-sm text-muted-foreground">The venue baseline is being used until the band buys shared production gear.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {liveSetup.map((item) => {
+                      const condition = Number(item.condition_rating ?? 70);
+                      const effective = getBandEquipmentEffectiveScore(item);
+                      return (
+                        <Card key={item.id} className="border-primary/40">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <CardTitle className="text-base">{item.equipment_name ?? "Equipment"}</CardTitle>
+                                <CardDescription>{item.metadata.liveImpact}</CardDescription>
+                              </div>
+                              <Badge variant={equipmentResolution.selectionMode === "selected" ? "default" : "secondary"}>
+                                {equipmentResolution.selectionMode === "selected" ? "Selected" : "Auto"}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <Badge variant="secondary">{item.equipment_type ?? "General"}</Badge>
+                              <Badge variant="outline">Quality {item.quality_rating ?? 40}</Badge>
+                              <Badge variant="outline">Condition {condition}</Badge>
+                            </div>
+                            <div className="rounded-md bg-muted p-3">
+                              <div className="text-xs text-muted-foreground">Effective equipment score</div>
+                              <div className="text-xl font-semibold">{effective}/100</div>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => handleToggleLive(item)} disabled={updateLiveSetupMutation.isPending}>
+                              {item.is_active ? "Remove from setup" : equipmentResolution.selectionMode === "automatic" ? "Customise setup" : "Add to setup"}
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="inventory" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Owned Equipment</CardTitle>
-                <CardDescription>
-                  Review your inventory, monitor condition degradation across shows, and decide what stays in the live rig.
-                </CardDescription>
+                <CardTitle>Band Equipment Inventory</CardTitle>
+                <CardDescription>Choose the shared gear the band takes on stage. Condition is updated automatically by completed gigs.</CardDescription>
               </CardHeader>
               <CardContent>
                 {inventory.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-                    <Guitar className="h-10 w-10 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-foreground">No stage equipment yet.</p>
-                      <p className="text-sm text-muted-foreground">
-                        Head to the market tab to pick up your first pieces and build a signature stage presence.
-                      </p>
-                    </div>
-                  </div>
+                  <div className="py-10 text-center text-sm text-muted-foreground">No shared stage equipment owned yet.</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
@@ -572,69 +536,47 @@ const StageEquipmentSystem = () => {
                         <TableRow>
                           <TableHead>Equipment</TableHead>
                           <TableHead>Type</TableHead>
-                          <TableHead>Value</TableHead>
+                          <TableHead>Quality</TableHead>
                           <TableHead>Condition</TableHead>
-                          <TableHead>Live Setup</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead>Effective</TableHead>
+                          <TableHead>Setup</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {inventory.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <div className="font-semibold text-foreground">{item.equipment_name ?? "Equipment"}</div>
-                              <div className="text-xs text-muted-foreground">{item.metadata.liveImpact}</div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{item.equipment_type ?? "—"}</Badge>
-                            </TableCell>
-                            <TableCell>{formatCurrency(item.metadata.value ?? item.purchase_cost)}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
+                        {inventory.map((item) => {
+                          const condition = Number(item.condition_rating ?? 70);
+                          const isUsed = usedIds.has(item.id);
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div className="font-medium">{item.equipment_name ?? "Equipment"}</div>
+                                <div className="text-xs text-muted-foreground">{formatCurrency(item.metadata.value ?? item.purchase_cost)}</div>
+                              </TableCell>
+                              <TableCell><Badge variant="secondary">{item.equipment_type ?? "General"}</Badge></TableCell>
+                              <TableCell>{item.quality_rating ?? 40}/100</TableCell>
+                              <TableCell>
                                 <div className="flex items-center gap-2">
-                                  <Badge className="bg-emerald-600 hover:bg-emerald-700">
-                                    {labelMap[item.condition.tier]}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {item.condition.points}/100 · {item.metadata.showsPerformed} shows
-                                  </span>
+                                  <span>{condition}/100</span>
+                                  <Badge variant="outline">{labelMap[conditionTierFromPoints(condition)]}</Badge>
                                 </div>
-                                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                  <span>Weight: {labelMap[item.metadata.weight]}</span>
-                                  <span>Size: {labelMap[item.metadata.size]}</span>
-                                  <span>Rarity: {labelMap[item.metadata.rarity]}</span>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {item.metadata.liveSelected ? (
-                                <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
-                                  In Live Setup
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline">Not Selected</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="space-x-2 text-right">
-                              <Button
-                                variant={item.metadata.liveSelected ? "secondary" : "outline"}
-                                size="sm"
-                                onClick={() => handleToggleLive(item)}
-                                disabled={updateEquipmentMutation.isPending}
-                              >
-                                {item.metadata.liveSelected ? "Remove" : "Add"}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleLogShow(item)}
-                                disabled={updateEquipmentMutation.isPending}
-                              >
-                                Log Show
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                              </TableCell>
+                              <TableCell className="font-semibold">{getBandEquipmentEffectiveScore(item)}/100</TableCell>
+                              <TableCell>
+                                {isUsed ? (
+                                  <Badge variant={item.is_active ? "default" : "secondary"}>{item.is_active ? "Selected" : "Auto"}</Badge>
+                                ) : (
+                                  <Badge variant="outline">Stored</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button variant={item.is_active ? "secondary" : "outline"} size="sm" onClick={() => handleToggleLive(item)} disabled={updateLiveSetupMutation.isPending}>
+                                  {item.is_active ? "Remove" : isUsed && equipmentResolution.selectionMode === "automatic" ? "Customise" : "Add"}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -643,57 +585,68 @@ const StageEquipmentSystem = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="live" className="space-y-4">
+          <TabsContent value="recommended" className="space-y-4">
+            <RecommendedSetup
+              bandProfile={{ genre: bandGenre, fame: bandFame, memberCount }}
+              catalogItems={dbCatalog.map((item) => ({
+                ...item,
+                stat_boosts: item.stat_boosts as Record<string, number> | null,
+              }))}
+              ownedItemNames={inventory.map((item) => item.equipment_name || "")}
+              onPurchase={openDbPurchaseDialog}
+              isPurchasing={purchaseMutation.isPending}
+            />
+          </TabsContent>
+
+          <TabsContent value="market" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Live Stage Setup</CardTitle>
-                <CardDescription>
-                  The gear currently locked into your touring rig. Keep condition healthy to avoid mid-show failures.
-                </CardDescription>
+              <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>Buy Band Equipment</CardTitle>
+                  <CardDescription>Shared PA, lighting, monitoring, effects and production equipment is paid for from band funds.</CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm text-muted-foreground">Filter</Label>
+                  <Select value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger className="w-[200px]"><SelectValue placeholder="All equipment" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All equipment</SelectItem>
+                      {subcategories.map((sub) => (
+                        <SelectItem key={String(sub)} value={String(sub)} className="capitalize">{String(sub).replace(/_/g, " ")}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
-                {liveSetup.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-                    <CircleDashed className="h-10 w-10 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-foreground">No equipment selected for the live setup.</p>
-                      <p className="text-sm text-muted-foreground">
-                        Add gear from the inventory tab to curate your touring configuration.
-                      </p>
-                    </div>
-                  </div>
+                {catalogLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : filteredDbCatalog.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">No equipment found.</div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {liveSetup.map((item) => (
-                      <Card key={item.id} className="border-primary/50">
-                        <CardHeader>
-                          <CardTitle className="text-lg">{item.equipment_name ?? "Equipment"}</CardTitle>
-                          <CardDescription>{item.metadata.liveImpact}</CardDescription>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredDbCatalog.map((item) => (
+                      <Card key={item.id}>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <CardTitle className="text-sm">{item.name}</CardTitle>
+                              <CardDescription className="text-xs">{item.brand || String(item.subcategory || "Stage equipment").replace(/_/g, " ")}</CardDescription>
+                            </div>
+                            <Badge variant="secondary" className="capitalize">{item.rarity}</Badge>
+                          </div>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                            <Badge variant="secondary">{item.equipment_type ?? "—"}</Badge>
-                            <Badge variant="outline">{labelMap[item.metadata.weight]} weight</Badge>
-                            <Badge variant="outline">{labelMap[item.metadata.size]} size</Badge>
-                            <Badge variant="outline">{labelMap[item.metadata.rarity]}</Badge>
-                          </div>
-                          <div className="rounded-md bg-muted p-3 text-sm">
-                            <div className="flex items-center gap-2 text-foreground">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              {labelMap[item.condition.tier]} · {item.condition.points}/100
+                          <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
+                          <div className="flex items-center justify-between border-t pt-3">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Quality {item.quality_rating ?? 80}/100</div>
+                              <div className="font-bold">{formatCurrency(item.base_price)}</div>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.metadata.showsPerformed} shows logged · Value {formatCurrency(item.metadata.value)}
-                            </div>
+                            <Button size="sm" onClick={() => openDbPurchaseDialog(item)} disabled={purchaseMutation.isPending}>
+                              <ShoppingCart className="mr-1 h-3 w-3" /> Buy
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleLive(item)}
-                            disabled={updateEquipmentMutation.isPending}
-                          >
-                            Remove from live setup
-                          </Button>
                         </CardContent>
                       </Card>
                     ))}
@@ -702,260 +655,51 @@ const StageEquipmentSystem = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          <TabsContent value="market" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <CardTitle>Buy Stage Equipment</CardTitle>
-                  <CardDescription>
-                    Browse real equipment from top brands - PA systems, lighting, effects, and more.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Label className="text-sm text-muted-foreground">Filter</Label>
-                  <Select value={selectedType} onValueChange={setSelectedType}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="All equipment" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All equipment</SelectItem>
-                      {subcategories.map((sub) => (
-                        <SelectItem key={sub} value={sub} className="capitalize">
-                          {sub?.replace(/_/g, ' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {catalogLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : filteredDbCatalog.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center">
-                    <CircleDashed className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">No equipment found.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    {/* Group by subcategory */}
-                    {Object.entries(
-                      filteredDbCatalog.reduce((acc, item) => {
-                        const sub = item.subcategory || 'other';
-                        if (!acc[sub]) acc[sub] = [];
-                        acc[sub].push(item);
-                        return acc;
-                      }, {} as Record<string, typeof filteredDbCatalog>)
-                    ).sort(([a], [b]) => a.localeCompare(b)).map(([subcategory, items]) => {
-                      const subcategoryLabels: Record<string, string> = {
-                        pa_speaker: "🔊 PA Speakers",
-                        subwoofer: "🔉 Subwoofers",
-                        line_array: "📢 Line Arrays",
-                        mixer: "🎛️ Digital Mixers",
-                        monitor: "🎧 Stage Monitors",
-                        moving_head: "💡 Moving Head Lights",
-                        par_light: "🔦 Par Lights",
-                        strobe: "⚡ Strobe Lights",
-                        fog: "🌫️ Fog Machines",
-                        hazer: "💨 Hazers",
-                        iem: "🎧 In-Ear Monitors",
-                        wireless_mic: "🎤 Wireless Microphones",
-                        wireless_guitar: "🎸 Wireless Guitar Systems",
-                        di_box: "📦 DI Boxes",
-                        cable: "🔌 Cables",
-                        effects: "✨ Stage Effects",
-                      };
-
-                      const rarityColors: Record<string, string> = {
-                        common: "bg-slate-500",
-                        uncommon: "bg-emerald-500",
-                        rare: "bg-blue-500",
-                        epic: "bg-purple-500",
-                        legendary: "bg-amber-500",
-                      };
-
-                      return (
-                        <div key={subcategory} className="space-y-4">
-                          <div className="flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur py-2 z-10 border-b border-border">
-                            <h3 className="text-xl font-bold">
-                              {subcategoryLabels[subcategory] || subcategory.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                            </h3>
-                            <Badge variant="secondary">{items.length}</Badge>
-                          </div>
-                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {items.map((item) => (
-                              <Card key={item.id} className="relative overflow-hidden">
-                                <div 
-                                  className={`absolute top-0 right-0 w-16 h-16 opacity-10 ${rarityColors[item.rarity?.toLowerCase() || 'common']}`}
-                                  style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} 
-                                />
-                                <CardHeader className="pb-2 pt-3">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex-1 min-w-0">
-                                      <CardTitle className="text-sm truncate">{item.name}</CardTitle>
-                                      {item.brand && (
-                                        <CardDescription className="text-xs font-medium">{item.brand}</CardDescription>
-                                      )}
-                                    </div>
-                                    <Badge className={`text-[10px] px-1.5 ${rarityColors[item.rarity?.toLowerCase() || 'common']}`}>
-                                      {item.rarity}
-                                    </Badge>
-                                  </div>
-                                </CardHeader>
-                                <CardContent className="space-y-2 pt-0 pb-3">
-                                  <p className="text-[11px] text-muted-foreground line-clamp-2">{item.description}</p>
-                                  <div className="flex gap-3 text-[11px]">
-                                    <span>
-                                      <span className="text-muted-foreground">Q:</span>
-                                      <span className="font-semibold ml-0.5">{item.quality_rating}/100</span>
-                                    </span>
-                                  </div>
-                                  {item.stat_boosts && Object.keys(item.stat_boosts).length > 0 && (
-                                    <div className="flex flex-wrap gap-1">
-                                      {Object.entries(item.stat_boosts as Record<string, number>).slice(0, 2).map(([stat, value]) => (
-                                        <Badge key={stat} variant="outline" className="text-[10px] py-0 px-1">
-                                          {stat}: +{value}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  )}
-                                  <div className="flex items-center justify-between pt-2 border-t">
-                                    <div className="text-base font-bold">
-                                      ${item.base_price?.toLocaleString()}
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      className="h-6 text-xs"
-                                      onClick={() => openDbPurchaseDialog(item)}
-                                      disabled={purchaseMutation.isPending}
-                                    >
-                                      <ShoppingCart className="h-3 w-3 mr-1" /> Buy
-                                    </Button>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
 
-      <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm equipment purchase</DialogTitle>
-            <DialogDescription>
-              Add this equipment to your band's inventory and make it available for your live setup.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedCatalogItem && (
-            <div className="space-y-3">
-              <div>
-                <div className="text-lg font-semibold text-foreground">{selectedCatalogItem.name}</div>
-                <div className="text-sm text-muted-foreground">{selectedCatalogItem.liveImpact}</div>
-              </div>
-              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                <Badge variant="secondary">{selectedCatalogItem.type}</Badge>
-                <Badge variant="outline">{labelMap[selectedCatalogItem.weight]} weight</Badge>
-                <Badge variant="outline">{labelMap[selectedCatalogItem.size]} size</Badge>
-                <Badge variant="outline">{labelMap[selectedCatalogItem.rarity]}</Badge>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Condition starts at <span className="font-medium text-foreground">{labelMap[selectedCatalogItem.baseCondition]}</span>. Expect wear after 30 shows.
-              </div>
-              <div className="text-lg font-semibold text-foreground">{formatCurrency(selectedCatalogItem.cost)}</div>
-            </div>
-          )}
-          {selectedDbItem && !selectedCatalogItem && (
-            <div className="space-y-3">
-              <div>
-                <div className="text-lg font-semibold text-foreground">{selectedDbItem.name}</div>
-                <div className="text-sm text-muted-foreground">{selectedDbItem.brand} • {selectedDbItem.subcategory?.replace(/_/g, ' ')}</div>
-              </div>
-              <p className="text-sm text-muted-foreground">{selectedDbItem.description}</p>
-              <div className="flex flex-wrap gap-2 text-sm">
-                <Badge variant="secondary" className="capitalize">{selectedDbItem.rarity}</Badge>
-                <Badge variant="outline">Quality: {selectedDbItem.quality_rating}/100</Badge>
-              </div>
-              {selectedDbItem.stat_boosts && Object.keys(selectedDbItem.stat_boosts).length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(selectedDbItem.stat_boosts as Record<string, number>).map(([stat, value]) => (
-                    <Badge key={stat} variant="outline" className="text-xs">
-                      {stat}: +{value}
-                    </Badge>
-                  ))}
+        <Alert>
+          <Sparkles className="h-4 w-4" />
+          <AlertTitle>Band Equipment is not Personal Gear</AlertTitle>
+          <AlertDescription>
+            Guitars, basses, drums, microphones and other equipped personal items improve the musician using them. This page controls the band's shared production layer that combines with Show Crew to form Live Setup.
+          </AlertDescription>
+        </Alert>
+
+        <Dialog open={purchaseDialogOpen} onOpenChange={(open) => {
+          setPurchaseDialogOpen(open);
+          if (!open) setSelectedDbItem(null);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm band equipment purchase</DialogTitle>
+              <DialogDescription>The cost is paid from the band's balance. New equipment enters inventory and Auto Setup can use it immediately if it is the strongest item of its type.</DialogDescription>
+            </DialogHeader>
+            {selectedDbItem && (
+              <div className="space-y-3">
+                <div>
+                  <div className="text-lg font-semibold">{selectedDbItem.name}</div>
+                  <div className="text-sm text-muted-foreground">{selectedDbItem.brand} · {String(selectedDbItem.subcategory || "stage equipment").replace(/_/g, " ")}</div>
                 </div>
-              )}
-              <div className="text-lg font-semibold text-foreground">${selectedDbItem.base_price?.toLocaleString()}</div>
-            </div>
-          )}
-          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-            <Button variant="outline" onClick={() => { setPurchaseDialogOpen(false); setSelectedDbItem(null); setSelectedCatalogItem(null); }}>
-              <Minus className="mr-2 h-4 w-4" /> Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (selectedDbItem) {
-                  // Purchase from DB catalog
-                  const metadata: EquipmentMetadata = {
-                    weight: "medium",
-                    size: "medium",
-                    baseCondition: "brand_new",
-                    showsPerformed: 0,
-                    liveImpact: selectedDbItem.description || "Professional stage equipment",
-                    rarity: selectedDbItem.rarity || "normal",
-                    liveSelected: false,
-                    value: selectedDbItem.base_price,
-                    lastConditionTier: "brand_new",
-                    lastConditionPoints: 100,
-                  };
-                  const condition = calculateConditionState(metadata);
-                  
-                  supabase.from("band_stage_equipment").insert({
-                    band_id: bandId!,
-                    equipment_name: selectedDbItem.name,
-                    equipment_type: selectedDbItem.subcategory || "general",
-                    quality_rating: selectedDbItem.quality_rating || 80,
-                    condition_rating: 100,
-                    purchase_cost: selectedDbItem.base_price,
-                    purchase_date: new Date().toISOString(),
-                    size_units: 3,
-                    notes: JSON.stringify(buildMetadataPayload(metadata, condition)),
-                  }).then(({ error }) => {
-                    if (error) {
-                      toast.error(error.message);
-                    } else {
-                      toast.success(`${selectedDbItem.name} added to your inventory`);
-                      queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-                    }
-                    setPurchaseDialogOpen(false);
-                    setSelectedDbItem(null);
-                  });
-                } else if (selectedCatalogItem) {
-                  purchaseMutation.mutate(selectedCatalogItem);
-                }
-              }}
-              disabled={(!selectedCatalogItem && !selectedDbItem) || purchaseMutation.isPending}
-            >
-              {purchaseMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <ShoppingCart className="mr-2 h-4 w-4" />
-              )}
-              Confirm purchase
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                <p className="text-sm text-muted-foreground">{selectedDbItem.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="capitalize">{selectedDbItem.rarity}</Badge>
+                  <Badge variant="outline">Quality {selectedDbItem.quality_rating ?? 80}/100</Badge>
+                  <Badge variant="outline">Starts at 100 condition</Badge>
+                </div>
+                <div className="text-lg font-semibold">{formatCurrency(selectedDbItem.base_price)}</div>
+              </div>
+            )}
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <Button variant="outline" onClick={() => { setPurchaseDialogOpen(false); setSelectedDbItem(null); }}>
+                <Minus className="mr-2 h-4 w-4" /> Cancel
+              </Button>
+              <Button onClick={() => selectedDbItem && purchaseMutation.mutate(selectedDbItem)} disabled={!selectedDbItem || purchaseMutation.isPending}>
+                {purchaseMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                Confirm purchase
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </FMPageScaffold>
   );
