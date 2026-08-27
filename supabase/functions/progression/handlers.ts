@@ -116,8 +116,7 @@ export async function handleClaimDailyXp(
 
   // Calculate bonuses based on new streak
   const { bonusSxp, bonusAp, milestones } = calculateStreakBonuses(newStreak);
-  const lifetimeSxp = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
-  const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
+  const scaledBaseAp = rollDailyBaseAp();
 
   // VIP bonus: active VIP subscribers get +25% on the daily stipend (SXP and AP)
   const VIP_BONUS_MULTIPLIER = 0.25;
