@@ -69,6 +69,12 @@ export const FMSidebar = () => {
           ];
         }
 
+        // The standalone Stage Setup page was an obsolete hardcoded demo. Old
+        // bookmarks redirect to Band Equipment, but it should no longer be advertised.
+        if (mod.id === "band-live" && item.path === "/stage-setup") {
+          return [];
+        }
+
         // Band Equipment is surfaced once under Your Band. The old Perform copy
         // used the legacy "Stage Equipment" name and duplicated the destination.
         if (mod.id === "band-live" && group.label === "Perform" && item.path === "/stage-equipment") {
@@ -135,7 +141,7 @@ export const FMSidebar = () => {
 
   return (
     <aside
-      className={cn(
+      className={cn}(
         "shrink-0 bg-fm-panel border-r border-fm-border flex flex-col transition-[width] duration-150",
         collapsed ? "w-12" : "w-56"
       )}
@@ -194,7 +200,7 @@ export const FMSidebar = () => {
                       onClick={() => navigate(item.path)}
                       title={collapsed ? item.label : undefined}
                       aria-current={item.active ? "page" : undefined}
-                      className={cn(
+                      className={cn}(
                         "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[12px] transition-colors",
                         item.active
                           ? "bg-fm-accent/15 text-fm-accent"
