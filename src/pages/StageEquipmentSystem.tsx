@@ -28,6 +28,7 @@ import {
   equipmentLabelMap as labelMap,
   formatEquipmentCurrency as formatCurrency,
 } from "@/features/stage-equipment/catalog";
+import { purchaseBandEquipment } from "@/features/stage-equipment/purchaseBandEquipment";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import type { Database } from "@/lib/supabase-types";
@@ -259,64 +260,13 @@ const StageEquipmentSystem = () => {
   const purchaseMutation = useMutation({
     mutationFn: async (item: any) => {
       if (!bandId) throw new Error("Join a band to purchase equipment");
-      const price = Number(item.base_price ?? 0);
-
-      const { data: band, error: bandError } = await supabase
-        .from("bands")
-        .select("band_balance")
-        .eq("id", bandId)
-        .single();
-      if (bandError) throw bandError;
-
-      const currentBalance = Number(band?.band_balance ?? 0);
-      if (currentBalance < price) {
-        throw new Error(`Insufficient band funds. Need ${formatCurrency(price)}.`);
-      }
-
-      const { error: balanceError } = await supabase
-        .from("bands")
-        .update({ band_balance: currentBalance - price })
-        .eq("id", bandId);
-      if (balanceError) throw balanceError;
-
-      const metadata: EquipmentMetadata = {
-        weight: "medium",
-        size: "medium",
-        baseCondition: "brand_new",
-        showsPerformed: 0,
-        liveImpact: item.description || "Professional shared stage equipment.",
-        rarity: (item.rarity as RarityTier) || "normal",
-        liveSelected: false,
-        value: price,
-        lastConditionTier: "brand_new",
-        lastConditionPoints: 100,
-      };
-
-      const { error: insertError } = await supabase.from("band_stage_equipment").insert({
-        band_id: bandId,
-        equipment_name: item.name,
-        equipment_type: item.subcategory || "general",
-        quality_rating: Number(item.quality_rating ?? 80),
-        condition_rating: 100,
-        purchase_cost: price,
-        purchase_date: new Date().toISOString(),
-        size_units: 3,
-        notes: JSON.stringify(metadata),
-        is_active: false,
-      });
-
-      if (insertError) {
-        // Best-effort compensation so a failed inventory insert does not silently charge the band.
-        await supabase.from("bands").update({ band_balance: currentBalance }).eq("id", bandId);
-        throw insertError;
-      }
-
-      return { price };
+      return purchaseBandEquipment(bandId, item.id);
     },
-    onSuccess: ({ price }) => {
-      toast.success(`${selectedDbItem?.name ?? "Equipment"} purchased for ${formatCurrency(price)}`);
+    onSuccess: ({ price, equipment_name }) => {
+      toast.success(`${equipment_name || selectedDbItem?.name || "Equipment"} purchased for ${formatCurrency(price)}`);
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
       queryClient.invalidateQueries({ queryKey: ["band", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["live-setup-preview"] });
       setPurchaseDialogOpen(false);
       setSelectedDbItem(null);
     },
@@ -672,7 +622,7 @@ const StageEquipmentSystem = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirm band equipment purchase</DialogTitle>
-              <DialogDescription>The cost is paid from the band's balance. New equipment enters inventory and Auto Setup can use it immediately if it is the strongest item of its type.</DialogDescription>
+              <DialogDescription>The cost is paid from the band's balance. Purchase and inventory creation are committed together, so the band cannot be charged without receiving the equipment.</DialogDescription>
             </DialogHeader>
             {selectedDbItem && (
               <div className="space-y-3">
