@@ -29,8 +29,13 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
 
   const claimMutation = useMutation({
     mutationFn: claimDailyXp,
-    onSuccess: async () => {
-      toast.success("Daily stipend claimed successfully!");
+    onSuccess: async (data) => {
+      const apBalance = (data as { wallet?: { attribute_points_balance?: number | null } } | undefined)?.wallet?.attribute_points_balance;
+      toast.success(
+        typeof apBalance === "number"
+          ? `Daily stipend claimed! Attribute Point balance: ${apBalance} AP`
+          : "Daily stipend claimed successfully!",
+      );
       // Refresh every cache that reads the XP wallet / attributes / profile
       await queryClient.invalidateQueries({
         predicate: (query) => {
