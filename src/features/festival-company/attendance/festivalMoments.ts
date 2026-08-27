@@ -67,7 +67,7 @@ const parseMoment = (value: unknown): FestivalMoment => {
     options: value.options.map(parseOption),
     status: value.status as FestivalMomentStatus,
     chosenOption: value.chosenOption,
-    outcome: value.outcome,
+    outcome: value.outcome as Record<string, unknown> | null,
     relatedProfileId: value.relatedProfileId,
     availableAt: value.availableAt,
     expiresAt: value.expiresAt,
