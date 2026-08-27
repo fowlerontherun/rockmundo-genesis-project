@@ -494,3 +494,16 @@ Rehearsal attendance correction requests are now implemented for final `attended
 - RLS/RPC verification remains a required live gate. Static review confirms operational functions use `SECURITY DEFINER` with fixed `search_path = public`, public execution revocation, and authenticated grants where defined; the late participant/performer policy definitions now tolerate early bootstrap creation.
 - Contribution correction remains append-only/voiding-oriented; no production contribution rows are deleted by the repair.
 - Remaining blocker: a real `supabase start`, `supabase db reset`, migration status check, contribution harness, participant harness, recruitment harness, correction harness, and type regeneration still must pass before Phase 4 can be signed off or gig-lineup mutation can begin.
+
+## D11 audit update — rivalries, communities and seasonal competition
+
+- ✅ Player and band rivalries are now opt-in, baseline-scored, server-authoritative lifecycles with explicit acceptance, request/active expiry, no-penalty exits, pair cooldowns, open-rivalry caps, shared event history, and idempotent settlement.
+- ✅ Band invitation/response/end authority is limited to active leaders, founders, co-leaders and managers. Ordinary active members can view and refresh progress without changing consent or ending a rivalry.
+- ✅ Player discovery and community owner/member contexts expose the common block/report controls. Server discovery and lifecycle RPCs enforce blocks; band discovery/request also rejects target bands whose managers have a block boundary with the initiating actor.
+- ✅ Communities now provide bounded creation, public/private directory rules, capacity and membership caps, join/leave, owner visibility controls, owner member removal, and a seven-day removed-member rejoin cooldown.
+- ✅ Seasonal competition captures an immutable baseline and city context, admits one auth account per season/context/metric, preserves baselines across withdrawal/rejoin, derives live/final scores from canonical profile data, and finalises dense ranks idempotently.
+- ✅ Recognition is prestige-only: rivalry winner and positive-growth season placement badges plus historical result rows. There are no D11 cash, XP, AP, skill, stat, or economy rewards.
+- ✅ The five D11 state tables remain behind an RPC-only browser boundary with explicit service-role policies. Anonymous and direct authenticated access is denied; browser writes to shared leaderboard tables were removed; rollover/finalisation and internal helpers are service-only.
+- ✅ Direct live deployment seeded Social Season 1 and installed the daily rollover job. Per project convention, no D11 migration file was added.
+- ✅ `supabase/tests/d11_social_competition_harness.sql` passed against production inside a transaction and verified rollback retained zero fixture rows. It covers table/RPC privileges, consent, canonical scoring, ordinary-member authority, blocks, capacity, removal cooldown, character-slot anti-smurfing, baseline preservation, city capture, service-only finalisation, positive-score rewards and badge idempotency.
+- ✅ Supabase security/performance advisors report no actionable D11-scoped findings. Authenticated `SECURITY DEFINER` notices are expected for the tested identity-checking RPC boundary; unused-index notices reflect new indexes before production traffic.

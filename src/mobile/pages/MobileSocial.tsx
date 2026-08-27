@@ -1,7 +1,7 @@
 import { FormEvent, ReactNode, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronLeft, Inbox as InboxIcon, Mail, MessageCircle, MessageSquare, Monitor, Send, Twitter, UserPlus, Users, X } from "lucide-react";
+import { Check, ChevronLeft, Inbox as InboxIcon, Mail, MessageCircle, MessageSquare, Monitor, Send, Trophy, Twitter, UserPlus, Users, X } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
 import { useUnifiedInbox, useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
@@ -10,17 +10,19 @@ import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { listConversations } from "@/features/direct-messages/services/conversations";
 import { useTwaaterExploreFeed } from "@/hooks/useTwaaterExploreFeed";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
+import { SocialCompetitionNetwork } from "@/features/social-competition/components/SocialCompetitionNetwork";
 import { resolveCompanionPath } from "@/mobile/routeRegistry";
 import { EmptyState } from "../components/EmptyState";
 import { MobileInstantChat } from "../components/MobileInstantChat";
 import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge, MobileStickyActionBar } from "../components/MobilePrimitives";
 
-type NavKey = "overview" | "chat" | "messages" | "friends" | "twaater" | "notifications" | "profile" | "conversation" | "requests" | "desktop";
+type NavKey = "overview" | "chat" | "messages" | "friends" | "competition" | "twaater" | "notifications" | "profile" | "conversation" | "requests" | "desktop";
 const nav: [NavKey, string, string][] = [
   ["overview", "Overview", "/mobile/social"],
   ["chat", "Live chat", "/mobile/social/chat"],
   ["messages", "Messages", "/mobile/social/messages"],
   ["friends", "Friends", "/mobile/social/friends"],
+  ["competition", "Competition", "/mobile/social/competition"],
   ["twaater", "Twaater", "/mobile/social/twaater"],
   ["notifications", "Inbox", "/mobile/social/notifications"],
 ];
@@ -58,6 +60,7 @@ function Overview() {
       <MobileEntityCard title="Direct messages" subtitle="Recent conversations" icon={<MessageSquare/>} meta={<MobileStatusBadge tone={(dm.data ?? 0) > 0 ? "danger" : "neutral"}>{dm.isLoading ? "…" : dm.isError ? "!" : dm.data ?? 0}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/messages")}/>
       <MobileEntityCard title="Friend requests" subtitle="Incoming requests" icon={<UserPlus/>} meta={<MobileStatusBadge tone={requests.length ? "warning" : "neutral"}>{friends.loading ? "…" : requests.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/requests")}/>
       <MobileEntityCard title="Friends" subtitle="Your accepted contacts" icon={<Users/>} meta={<MobileStatusBadge>{friends.loading ? "…" : accepted.length}</MobileStatusBadge>} onPress={() => navigate("/mobile/social/friends")}/>
+      <MobileEntityCard title="Competition" subtitle="Rivalries, communities and seasons" icon={<Trophy/>} meta={<MobileStatusBadge tone="info">Opt in</MobileStatusBadge>} onPress={() => navigate("/mobile/social/competition")}/>
       <MobileEntityCard title="Twaater" subtitle="Check the world feed" icon={<Twitter/>} meta={<MobileStatusBadge tone="info">Live</MobileStatusBadge>} onPress={() => navigate("/mobile/social/twaater")}/>
     </div>
 
@@ -159,12 +162,17 @@ function InboxPage() {
   </Shell>;
 }
 
+function CompetitionPage() {
+  return <Shell active="competition" title="Social competition" desc="Opt-in rivalries, communities and fixed-baseline seasons."><SocialCompetitionNetwork showIntro={false}/></Shell>;
+}
+
 export default function MobileSocial() {
   const { section, id } = useParams();
   if (section === "chat") return <ChatPage/>;
   if (section === "messages" && id) return <Conversation/>;
   if (section === "messages") return <Messages/>;
   if (section === "friends") return <Friends/>;
+  if (section === "competition") return <CompetitionPage/>;
   if (section === "requests") return <Friends requestsOnly/>;
   if (section === "twaater") return <TwaaterPage/>;
   if (section === "profile") return <Profile/>;

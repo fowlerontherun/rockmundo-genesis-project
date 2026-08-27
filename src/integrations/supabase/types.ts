@@ -48837,6 +48837,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "social_rivalries_initiated_by_profile_id_fkey"
+            columns: ["initiated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalries_rival_band_id_fkey"
+            columns: ["rival_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "social_rivalries_challenger_profile_id_fkey"
             columns: ["challenger_profile_id"]
             isOneToOne: false
@@ -48897,6 +48911,13 @@ export type Database = {
             columns: ["winner_profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_rivalries_winner_band_id_fkey"
+            columns: ["winner_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]
@@ -60085,17 +60106,17 @@ export type Database = {
           challenger_name: string
           challenger_profile_id: string
           challenger_score: number
-          ended_at: string
+          ended_at: string | null
           id: string
           metric: string
           requested_at: string
           rival_name: string
           rival_profile_id: string
           rival_score: number
-          started_at: string
+          started_at: string | null
           status: string
           target: number
-          winner_profile_id: string
+          winner_profile_id: string | null
         }[]
       }
       get_or_create_cover_master: {
@@ -60274,6 +60295,17 @@ export type Database = {
           owner_profile_id: string
         }[]
       }
+      get_social_community_members: {
+        Args: { p_community_id: string; p_profile_id: string }
+        Returns: {
+          display_name: string | null
+          is_self: boolean
+          joined_at: string
+          profile_id: string
+          role: string
+          username: string
+        }[]
+      }
       get_social_competition_band_options: {
         Args: { p_profile_id: string }
         Returns: {
@@ -60300,13 +60332,13 @@ export type Database = {
       get_social_rivalry_history: {
         Args: { p_profile_id: string; p_rivalry_id: string }
         Returns: {
-          actor_profile_id: string
-          challenger_score: number
+          actor_profile_id: string | null
+          challenger_score: number | null
           created_at: string
           event_type: string
           evidence: Json
           id: string
-          rival_score: number
+          rival_score: number | null
         }[]
       }
       get_social_season_leaderboard: {

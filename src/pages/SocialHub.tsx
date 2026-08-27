@@ -5,7 +5,7 @@ import { socialHubNavigation } from "@/config/hubNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarPlus, FileSignature, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
+import { CalendarPlus, FileSignature, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2, Trophy } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { MessagesTab } from "@/features/social-hub/components/MessagesTab";
@@ -17,6 +17,7 @@ import { useTwaaterTrending } from "@/hooks/useTwaaterTrending";
 const Relationships = lazy(() => import("./Relationships"));
 const PlayerSearch = lazy(() => import("./PlayerSearch"));
 const BandFinder = lazy(() => import("./BandFinder"));
+const SocialCompetitionNetwork = lazy(() => import("@/features/social-competition/components/SocialCompetitionNetwork"));
 
 const Fallback = () => (
   <div className="flex h-40 items-center justify-center text-muted-foreground">
@@ -57,6 +58,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
           <Button asChild variant="outline"><Link to="/social/contracts"><FileSignature className="mr-2 h-4 w-4" />Contracts</Link></Button>
           <Button asChild variant="outline"><Link to="/social/twaater"><Newspaper className="mr-2 h-4 w-4" />Open Twaater</Link></Button>
           <Button asChild variant="outline"><Link to="/social/recruitment"><Music2 className="mr-2 h-4 w-4" />Browse recruitment</Link></Button>
+          <Button asChild variant="outline"><Link to="/social/competition"><Trophy className="mr-2 h-4 w-4" />Social competition</Link></Button>
           <Button asChild variant="outline"><Link to="/social/activities"><CalendarPlus className="mr-2 h-4 w-4" />Plan activity</Link></Button>
           {pendingInvites.length > 0 && <Button asChild variant="secondary"><Link to="/social/invitations"><Inbox className="mr-2 h-4 w-4" />Review invitations</Link></Button>}
         </CardContent>
@@ -98,6 +100,9 @@ export default function SocialHub() {
       invites: "/social/invitations",
       invitations: "/social/invitations",
       contracts: "/social/contracts",
+      competition: "/social/competition",
+      communities: "/social/competition",
+      rivals: "/social/competition",
     };
     legacyParams.delete("tab");
     const preservedSearch = legacyParams.toString();
@@ -112,16 +117,17 @@ export default function SocialHub() {
     : child === "invitations" ? <InvitesInbox profileId={profileId} />
     : child === "contracts" ? <SocialContractsPanel />
     : child === "recruitment" ? <Suspense fallback={<Fallback />}><BandFinder /></Suspense>
+    : child === "competition" ? <Suspense fallback={<Fallback />}><SocialCompetitionNetwork /></Suspense>
     : <SocialOverview profileId={profileId} />;
 
   return (
     <HubLayout
       title="Social"
-      description="Find players, maintain friendships, message contacts, manage contracts, follow Twaater and discover recruitment opportunities."
+      description="Find players, maintain friendships, message contacts, join communities, and opt into social competition."
       icon={Users}
       overviewPath="/social"
       navigation={socialHubNavigation}
-      actions={[{ label: "Find players", path: "/social/players", icon: Compass }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
+      actions={[{ label: "Find players", path: "/social/players", icon: Compass }, { label: "Competition", path: "/social/competition", icon: Trophy }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
     >
       {content}
     </HubLayout>

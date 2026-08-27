@@ -864,7 +864,7 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ## PR D11 — Rivalries, communities and seasonal social competition
 
 **Priority:** P2  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
@@ -883,6 +883,18 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ### Dependencies
 
 - Social safety PRs D1–D3.
+
+### Implementation notes
+
+- Social now has one responsive Competition surface for player rivalries, band rivalries, communities, active/historical seasons, contextual standings, entries, and D11 recognition.
+- Player and band challenges are explicitly opt-in. Requests expire after seven days, active rivalries expire after 30 days, either side can exit without a gameplay penalty, and seven-day pair cooldowns plus pending/active caps limit request spam.
+- All scores use canonical server-side profile or band growth from baselines captured at acceptance. Player, band, and season history remains readable after completion; refresh/finalisation is idempotent.
+- Common block/report controls remain available in player and community contexts. Blocked pairs are removed from discovery and interaction; band invitations also respect blocks between the initiating actor and target managers.
+- Communities enforce owner authority, 2–500 member capacities, a 20-community membership cap, private-directory boundaries, owner removal, and a seven-day removed-member rejoin cooldown.
+- Seasonal entries use fixed baselines and one auth-account entry per season/context/metric, so character slots cannot multiply entries. City context is captured when joining, withdrawal/rejoin preserves the original baseline, and only positive canonical growth is award-eligible.
+- Rewards are limited to bounded rivalry/season badges and permanent result history. D11 never grants cash, XP, AP, skill progress, stats, or economy advantages.
+- Live Supabase changes were applied directly with no migration file. The five D11 tables are browser-inaccessible and service-policy protected; authenticated reads and mutations use identity-checked RPCs, internal helpers/finalisation remain private, generic leaderboard browser writes are revoked, and Season 1 plus daily rollover are active.
+- The production rollback harness passed all authority, lifecycle, block, capacity, anti-smurf, baseline, finalisation, idempotency, and cleanup assertions. Supabase advisors report no actionable D11-scoped security or performance findings.
 
 ---
 

@@ -52,6 +52,7 @@ export const socialHubNavigation: HubNavigationItem[] = [
   { id: "friends", label: "Friends", path: "/social/friends", icon: Heart, matchPaths: ["/relationships", "/social?tab=friends"] },
   { id: "players", label: "Players", path: "/social/players", icon: Search, matchPaths: ["/players/search", "/player/:playerId", "/social?tab=discover"] },
   { id: "messages", label: "Messages", path: "/social/messages", icon: MessageSquare, matchPaths: ["/twaater/messages", "/social?tab=messages"] },
+  { id: "competition", label: "Competition", path: "/social/competition", icon: Trophy, matchPaths: ["/social?tab=competition", "/social?tab=communities", "/social?tab=rivals"] },
   { id: "twaater", label: "Twaater", path: "/social/twaater", icon: Newspaper, matchPaths: ["/twaater", "/twaater/:handle", "/twaater/tag/:hashtag", "/twaater/twaat/:twaatId", "/twaater/notifications", "/twaater/analytics"] },
   { id: "recruitment", label: "Recruitment", path: "/social/recruitment", icon: Compass, matchPaths: ["/bands/finder", "/bands/browse", "/bands/search", "/band/:bandId"] },
   { id: "invitations", label: "Invitations", path: "/social/invitations", icon: Inbox, matchPaths: ["/social?tab=invites"] },
