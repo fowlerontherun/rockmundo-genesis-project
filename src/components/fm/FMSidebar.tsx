@@ -9,7 +9,7 @@ import {
   MAYOR_OFFICE_MODULE_LABEL,
   MAYOR_OFFICE_SIDEBAR,
 } from "@/config/mayorOfficeNavigation";
-import { ChevronDown, ChevronRight, Handshake, PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Handshake, Hammer, PanelLeftClose, PanelLeftOpen, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/rockmundo-new-logo.png";
 
@@ -49,14 +49,39 @@ export const FMSidebar = () => {
       }));
     }
 
-    const sidebarGroups = mod.sidebar.map((group) => ({
+    const sidebarGroups: SidebarGroup[] = mod.sidebar.map((group) => ({
       label: group.label,
-      items: group.items.map((item) => ({
-        label: item.label,
-        path: item.path,
-        icon: item.icon,
-        active: pathname === item.path || pathname.startsWith(item.path + "/"),
-      })),
+      items: group.items.flatMap((item): SidebarItem[] => {
+        if (mod.id === "band-live" && item.path === "/band/equipment") {
+          return [
+            {
+              label: "Band Equipment",
+              path: "/stage-equipment",
+              icon: Hammer,
+              active: pathname === "/stage-equipment" || pathname.startsWith("/stage-equipment/"),
+            },
+            {
+              label: "Show Crew",
+              path: "/band-crew",
+              icon: Users,
+              active: pathname === "/band-crew" || pathname.startsWith("/band-crew/"),
+            },
+          ];
+        }
+
+        // Band Equipment is surfaced once under Your Band. The old Perform copy
+        // used the legacy "Stage Equipment" name and duplicated the destination.
+        if (mod.id === "band-live" && group.label === "Perform" && item.path === "/stage-equipment") {
+          return [];
+        }
+
+        return [{
+          label: item.label,
+          path: item.path,
+          icon: item.icon,
+          active: pathname === item.path || pathname.startsWith(item.path + "/"),
+        }];
+      }),
     }));
 
     // Support availability is a first-class Band workflow, so keep it visible in
@@ -73,7 +98,7 @@ export const FMSidebar = () => {
           icon: Handshake,
           active: pathname === SUPPORT_OPPORTUNITIES_PATH || pathname.startsWith(SUPPORT_OPPORTUNITIES_PATH + "/"),
         };
-        performGroup.items.splice(myGigsIndex >= 0 ? myGigsIndex + 1 : 0, 0, supportItem as (typeof performGroup.items)[number]);
+        performGroup.items.splice(myGigsIndex >= 0 ? myGigsIndex + 1 : 0, 0, supportItem);
       }
     }
 
