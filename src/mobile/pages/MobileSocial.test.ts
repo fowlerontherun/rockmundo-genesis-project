@@ -9,13 +9,20 @@ const roomView = fs.readFileSync(path.resolve("src/components/fm/chat/ChatRoomVi
 
 describe("Mobile Social companion contract", () => {
   it("keeps quick communication flows on mobile", () => {
-    for (const route of ["/mobile/social/chat", "/mobile/social/messages", "/mobile/social/friends", "/mobile/social/twaater", "/mobile/social/notifications"]) {
+    for (const route of ["/mobile/social/chat", "/mobile/social/messages", "/mobile/social/friends", "/mobile/social/competition", "/mobile/social/twaater", "/mobile/social/notifications"]) {
       expect(source).toContain(route);
     }
     expect(source).toContain("useDirectMessages");
     expect(source).toContain("useFriendships");
     expect(source).toContain("useNotificationsFeed");
     expect(source).toContain("useUnifiedInbox");
+  });
+
+  it("exposes the shared D11 competition surface", () => {
+    expect(source).toContain('import { SocialCompetitionNetwork } from "@/features/social-competition/components/SocialCompetitionNetwork"');
+    expect(source).toContain('["competition", "Competition", "/mobile/social/competition"]');
+    expect(source).toContain('if (section === "competition") return <CompetitionPage/>');
+    expect(source).toContain("<SocialCompetitionNetwork showIntro={false}/>");
   });
 
   it("uses one Inbox surface for game messages, outcomes and alerts", () => {

@@ -781,6 +781,7 @@ function App() {
                     <Route path="social/players" element={<PlayersBrowser />} />
                     <Route path="social/players/discover" element={<PlayerDiscovery />} />
                     <Route path="social/messages" element={<SocialHubUnified />} />
+                    <Route path="social/competition" element={<SocialHubUnified />} />
                     <Route path="social/invitations" element={<SocialHubUnified />} />
                     <Route path="social/activities" element={<SocialActivities />} />
                     <Route path="social/activities/new" element={<NewSocialActivity />} />

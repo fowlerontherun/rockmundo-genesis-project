@@ -32,7 +32,7 @@ const me = [
 
 function meta(pattern: string, section: MobileDestination, fallbackStatus: MobileFallbackStatus = "wrapped-desktop"): MobileRouteMeta {
   const dedicated = pattern.startsWith("/mobile") || fallbackStatus === "dedicated";
-  return { pattern, section, bottomNav: section, auth: "player", shell: "mobile", component: dedicated ? `Mobile${section}` : "Desktop route redirected to companion surface", showActivityBar: true, showFab: true, fullscreenAllowed: pattern.includes("perform") || pattern.includes("compose"), fallbackStatus, notes: dedicated ? "Dedicated mobile implementation." : "Desktop gameplay route; mobile navigation redirects to the supported companion destination rather than mounting desktop gameplay." };
+  return { pattern, section, bottomNav: section, auth: fallbackStatus === "public" ? "public" : "player", shell: "mobile", component: dedicated ? `Mobile${section}` : "Desktop route redirected to companion surface", showActivityBar: true, showFab: true, fullscreenAllowed: pattern.includes("perform") || pattern.includes("compose"), fallbackStatus, notes: dedicated ? "Dedicated mobile implementation." : "Desktop gameplay route; mobile navigation redirects to the supported companion destination rather than mounting desktop gameplay." };
 }
 
 export const mobileRouteRegistry: MobileRouteMeta[] = [
@@ -89,6 +89,7 @@ export function resolveCompanionPath(path?: string | null): string {
   if (["/bands/finder", "/bands/browse", "/bands/search"].includes(clean)) return "/mobile/social/friends";
   if (clean === "/twaater" || clean.startsWith("/twaater/")) return "/mobile/social/twaater";
   if (clean === "/social/messages") return "/mobile/social/messages";
+  if (clean === "/social/competition") return "/mobile/social/competition";
   if (clean === "/social/invitations" || clean === "/community/invitations") return "/mobile/social/requests";
   if (clean === "/social" || clean.startsWith("/social/") || clean.startsWith("/community/")) return "/mobile/social";
 
