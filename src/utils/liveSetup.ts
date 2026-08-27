@@ -79,6 +79,7 @@ export interface BandEquipmentLiveSetupItem {
   equipment_type?: string | null;
   quality_rating?: number | null;
   condition_rating?: number | null;
+  purchase_cost?: number | null;
   is_active?: boolean | null;
 }
 
@@ -132,6 +133,22 @@ export function getBandEquipmentEffectiveScore(item: BandEquipmentLiveSetupItem)
   const quality = clamp(Number(item.quality_rating ?? 40));
   const condition = clamp(Number(item.condition_rating ?? 70));
   return Math.round(quality * 0.75 + condition * 0.25);
+}
+
+/**
+ * Mirrors the database repair charge used by repair_band_stage_equipment().
+ * A full 0 -> 100 restoration costs 50% of recorded purchase price. Smaller
+ * repairs scale linearly with missing condition. Legacy rows without a price
+ * use a 1,000 fallback so they are still maintainable.
+ */
+export function getBandEquipmentRepairCost(item: BandEquipmentLiveSetupItem): number {
+  const condition = clamp(Number(item.condition_rating ?? 100));
+  const missing = 100 - condition;
+  if (missing <= 0) return 0;
+
+  const recordedCost = Number(item.purchase_cost ?? 0);
+  const baseCost = Number.isFinite(recordedCost) && recordedCost > 0 ? recordedCost : 1000;
+  return Math.max(1, Math.ceil((missing / 100) * baseCost * 0.5));
 }
 
 /**
