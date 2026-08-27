@@ -53,7 +53,7 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
 
   // Calculate what they'll get (use current streak + 1 if they claim today)
   const effectiveStreak = hasClaimedToday ? streak : streak + 1;
-  const { baseSxp, baseAp, bonusSxp, bonusAp, vipBonusSxp, vipBonusAp, totalSxp, totalAp } = calculateTotalStipend(
+  const { baseSxp, baseApMin, baseApMax, vipBonusSxp, vipBonusApMin, vipBonusApMax, totalSxp, totalApMin, totalApMax } = calculateTotalStipend(
     hasClaimedToday ? streak : effectiveStreak,
     lifetimeSxp,
     isVip,
