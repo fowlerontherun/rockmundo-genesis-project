@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { EquipmentRepairButton } from "@/components/stage-equipment/EquipmentRepairButton";
 import { RecommendedSetup } from "@/components/stage-equipment/RecommendedSetup";
 import {
   ConditionTier,
@@ -441,7 +442,7 @@ const StageEquipmentSystem = () => {
                 {inventory.length > 0 && <span className="text-sm text-muted-foreground">/100 average</span>}
               </div>
               <p className="text-xs text-muted-foreground">
-                You no longer need to log shows manually. Equipment used in the live rig wears automatically when a gig completes.
+                Used equipment wears automatically when gigs complete. Repair worn items from Inventory to restore them to 100 using band funds.
               </p>
             </CardContent>
           </Card>
@@ -524,7 +525,7 @@ const StageEquipmentSystem = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Band Equipment Inventory</CardTitle>
-                <CardDescription>Choose the shared gear the band takes on stage. Condition is updated automatically by completed gigs.</CardDescription>
+                <CardDescription>Choose the shared gear the band takes on stage. Worn items can be repaired to 100 condition using band funds.</CardDescription>
               </CardHeader>
               <CardContent>
                 {inventory.length === 0 ? (
@@ -570,9 +571,12 @@ const StageEquipmentSystem = () => {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <Button variant={item.is_active ? "secondary" : "outline"} size="sm" onClick={() => handleToggleLive(item)} disabled={updateLiveSetupMutation.isPending}>
-                                  {item.is_active ? "Remove" : isUsed && equipmentResolution.selectionMode === "automatic" ? "Customise" : "Add"}
-                                </Button>
+                                <div className="flex flex-wrap justify-end gap-2">
+                                  <EquipmentRepairButton item={item} bandId={bandId} />
+                                  <Button variant={item.is_active ? "secondary" : "outline"} size="sm" onClick={() => handleToggleLive(item)} disabled={updateLiveSetupMutation.isPending}>
+                                    {item.is_active ? "Remove" : isUsed && equipmentResolution.selectionMode === "automatic" ? "Customise" : "Add"}
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           );
