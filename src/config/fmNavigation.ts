@@ -492,7 +492,6 @@ export const FM_MODULES: FMModule[] = [
     rootPath: "/social",
     matchPaths: [
       "/hub/social", "/social",
-      "/social/competition",
       "/twaater", "/dikcok", "/gettit",
       "/nightclubs", "/nightclub", "/nightclub-management",
       "/casino", "/lottery", "/underworld",
@@ -500,7 +499,6 @@ export const FM_MODULES: FMModule[] = [
     ],
     subTabs: [
       { label: "Overview", path: "/social", icon: MessageSquare },
-      { label: "Competition", path: "/social/competition", icon: Trophy },
       { label: "Twaater", path: "/twaater", icon: Newspaper },
       { label: "DikCok", path: "/dikcok", icon: Tv },
       { label: "Nightlife", path: "/nightclubs", icon: Sparkles },
@@ -514,7 +512,6 @@ export const FM_MODULES: FMModule[] = [
           { label: "Friends", path: "/social/friends", icon: Heart },
           { label: "Players", path: "/social/players", icon: Users },
           { label: "Messages", path: "/social/messages", icon: MessageSquare },
-          { label: "Competition", path: "/social/competition", icon: Trophy },
           { label: "Recruitment", path: "/social/recruitment", icon: Users },
           { label: "Invitations", path: "/social/invitations", icon: InboxIcon },
         ],

@@ -47592,6 +47592,72 @@ export type Database = {
         }
         Relationships: []
       }
+      skill_xp_spend_ledger: {
+        Row: {
+          balance_version: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          level_after: number
+          level_before: number
+          profile_id: string
+          result: Json
+          skill_slug: string
+          wallet_after: number
+          wallet_before: number
+          xp_progress_after: number
+          xp_progress_before: number
+          xp_spent: number
+        }
+        Insert: {
+          balance_version?: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          level_after: number
+          level_before: number
+          profile_id: string
+          result?: Json
+          skill_slug: string
+          wallet_after: number
+          wallet_before: number
+          xp_progress_after: number
+          xp_progress_before: number
+          xp_spent: number
+        }
+        Update: {
+          balance_version?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          level_after?: number
+          level_before?: number
+          profile_id?: string
+          result?: Json
+          skill_slug?: string
+          wallet_after?: number
+          wallet_before?: number
+          xp_progress_after?: number
+          xp_progress_before?: number
+          xp_spent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_xp_spend_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_xp_spend_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skin_collections: {
         Row: {
           banner_image_url: string | null
@@ -48837,20 +48903,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "social_rivalries_initiated_by_profile_id_fkey"
-            columns: ["initiated_by_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "social_rivalries_rival_band_id_fkey"
-            columns: ["rival_band_id"]
-            isOneToOne: false
-            referencedRelation: "bands"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "social_rivalries_challenger_profile_id_fkey"
             columns: ["challenger_profile_id"]
             isOneToOne: false
@@ -48911,13 +48963,6 @@ export type Database = {
             columns: ["winner_profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "social_rivalries_winner_band_id_fkey"
-            columns: ["winner_band_id"]
-            isOneToOne: false
-            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]
@@ -60106,17 +60151,17 @@ export type Database = {
           challenger_name: string
           challenger_profile_id: string
           challenger_score: number
-          ended_at: string | null
+          ended_at: string
           id: string
           metric: string
           requested_at: string
           rival_name: string
           rival_profile_id: string
           rival_score: number
-          started_at: string | null
+          started_at: string
           status: string
           target: number
-          winner_profile_id: string | null
+          winner_profile_id: string
         }[]
       }
       get_or_create_cover_master: {
@@ -60298,7 +60343,7 @@ export type Database = {
       get_social_community_members: {
         Args: { p_community_id: string; p_profile_id: string }
         Returns: {
-          display_name: string | null
+          display_name: string
           is_self: boolean
           joined_at: string
           profile_id: string
@@ -60332,13 +60377,13 @@ export type Database = {
       get_social_rivalry_history: {
         Args: { p_profile_id: string; p_rivalry_id: string }
         Returns: {
-          actor_profile_id: string | null
-          challenger_score: number | null
+          actor_profile_id: string
+          challenger_score: number
           created_at: string
           event_type: string
           evidence: Json
           id: string
-          rival_score: number | null
+          rival_score: number
         }[]
       }
       get_social_season_leaderboard: {
@@ -61230,6 +61275,20 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      progression_skill_required_xp: {
+        Args: { p_level: number }
+        Returns: number
+      }
+      progression_spend_skill_xp: {
+        Args: {
+          p_idempotency_key?: string
+          p_metadata?: Json
+          p_profile_id: string
+          p_skill_slug: string
+          p_xp: number
+        }
+        Returns: Json
+      }
       promote_twaat: {
         Args: { p_hours: number; p_twaat_id: string }
         Returns: Json
@@ -61333,6 +61392,10 @@ export type Database = {
           stage_id: string
           total_planned_song_count: number
         }[]
+      }
+      purchase_band_stage_equipment: {
+        Args: { p_band_id: string; p_catalog_item_id: string }
+        Returns: Json
       }
       purchase_equipment_atomic: {
         Args: {
@@ -61505,6 +61568,10 @@ export type Database = {
       reorder_setlist_items: {
         Args: { p_setlist_id: string; p_updates: Json }
         Returns: undefined
+      }
+      repair_band_stage_equipment: {
+        Args: { p_equipment_id: string }
+        Returns: Json
       }
       repair_festival_data_health_issue: {
         Args: { p_action: string; p_issue_id: string; p_reason?: string }

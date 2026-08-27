@@ -6,14 +6,8 @@ describe("mobile route registry", () => {
     expect(getMobileRouteMeta("/mobile")?.fallbackStatus).toBe("dedicated");
     expect(getMobileRouteMeta("/mobile/career/songs")?.bottomNav).toBe("career");
     expect(getMobileRouteMeta("/mobile/social/messages/123")?.bottomNav).toBe("social");
-    expect(getMobileRouteMeta("/mobile/social/competition")?.bottomNav).toBe("social");
     expect(getMobileRouteMeta("/mobile/world/cities")?.bottomNav).toBe("world");
     expect(getMobileRouteMeta("/mobile/me/settings")?.bottomNav).toBe("me");
-  });
-
-  it("keeps D11 competition inside its dedicated mobile companion", async () => {
-    const { resolveCompanionPath } = await import("./routeRegistry");
-    expect(resolveCompanionPath("/social/competition")).toBe("/mobile/social/competition");
   });
 
   it("maps nested desktop fallback routes to stable bottom-navigation owners", () => {

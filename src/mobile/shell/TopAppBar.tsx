@@ -21,7 +21,6 @@ const DETAIL_TITLES: Record<string, string> = {
   "/mobile/social/chat": "Live chat",
   "/mobile/social/messages": "Messages",
   "/mobile/social/friends": "Friends",
-  "/mobile/social/competition": "Competition",
   "/mobile/social/requests": "Friend requests",
   "/mobile/social/twaater": "Twaater",
   "/mobile/social/notifications": "Inbox",

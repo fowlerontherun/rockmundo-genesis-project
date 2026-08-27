@@ -106,7 +106,6 @@ export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/band-rankings", "/mobile/social"],
   ["/band-fame-map", "/mobile/social"],
   ["/social/messages", "/mobile/social/messages"],
-  ["/social/competition", "/mobile/social/competition"],
   ["/social", "/mobile/social"],
   ["/social/*", "/mobile/social"],
 

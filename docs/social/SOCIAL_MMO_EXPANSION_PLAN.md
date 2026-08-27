@@ -425,17 +425,16 @@ Safety is a core feature, not an afterthought.
 - Add safeguards for new-player contracts and fees.
 
 ### Phase 6: Communities and Fan Clubs
-- ✅ D11 adds guarded community shells with owner/member roles, capacity, public/private discovery, membership lifecycle, owner removal, block-aware visibility, and moderation controls.
-- Announcements and linked events remain future expansion.
+- Add community shells with roles, membership, announcements, and linked events.
 - Add fan club mechanics connected to artists and bands.
 - Add community projects tied to gigs, media, festivals, and education.
 - Add community reputation and discovery ranking.
 
 ### Phase 7: Rivalries, Seasons, and Social Legacy
-- ✅ D11 adds mutually accepted player and band rivalry declarations, fixed goals, canonical growth scoring, no-penalty exits, expiry, cooldowns, and event history.
-- ✅ D11 adds 28-day seasonal competitions with account-scoped fixed baselines and global/captured-city leaderboards.
-- ✅ D11 preserves rivalry, season-entry, final-rank, and recognition history in the shared Social Competition surface. Broader company/profile history projections remain future expansion.
-- ✅ D11 awards bounded prestige badges only; no cash, XP, AP, skill, stat, or economy reward is attached.
+- Add opt-in rivalry declarations.
+- Add seasonal competitions and contextual leaderboards.
+- Add social history archives on profiles, bands, companies, and communities.
+- Add awards that emphasize prestige over raw power.
 
 ### Phase 8: Economy Expansion and Live Ops
 - Add broader service marketplace categories.
