@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateLiveSetup,
   getBandEquipmentEffectiveScore,
+  getBandEquipmentRepairCost,
   getCrewRoleInfo,
   getVenueSetupTarget,
   isPerformanceCrewRole,
@@ -61,6 +62,12 @@ describe("liveSetup", () => {
   it("uses condition for a quarter of shared equipment effectiveness", () => {
     expect(getBandEquipmentEffectiveScore({ quality_rating: 80, condition_rating: 40 })).toBe(70);
     expect(getBandEquipmentEffectiveScore({ quality_rating: 80, condition_rating: 100 })).toBe(85);
+  });
+
+  it("prices repairs in proportion to missing condition and purchase cost", () => {
+    expect(getBandEquipmentRepairCost({ condition_rating: 80, purchase_cost: 6500 })).toBe(650);
+    expect(getBandEquipmentRepairCost({ condition_rating: 100, purchase_cost: 6500 })).toBe(0);
+    expect(getBandEquipmentRepairCost({ condition_rating: 50, purchase_cost: null })).toBe(250);
   });
 
   it("honours explicit live setup selections instead of averaging all owned equipment", () => {
