@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.703",
+    date: "2026-08-27",
+    changes: [
+      { type: 'feature', description: "Daily stipend now rolls a random 1–10 Attribute Points every claim, replacing the old lifetime-XP decay that shrank veteran rewards." },
+      { type: 'fix', description: "Fixed the daily stipend preview showing incorrect Attribute Point amounts — the card's math (5–15 AP, uncapped totals) no longer disagrees with what the server actually awards, and totals respect the 30 AP daily cap." },
+      { type: 'improvement', description: "Claiming the stipend now confirms your new Attribute Point balance in the success toast." },
+    ],
+  },
+  {
     version: "1.1.702",
     date: "2026-08-24",
     changes: [

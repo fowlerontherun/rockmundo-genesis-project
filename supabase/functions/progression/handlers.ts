@@ -30,22 +30,16 @@ const STREAK_MILESTONES = [
 
 // Base stipend amounts
 const BASE_STIPEND_SXP = 500;
-const MAX_STIPEND_AP = 8;
-const MIN_STIPEND_AP = 2;
-// AP decays from MAX to MIN as lifetime SXP grows.
-// Full AP until 1000 lifetime SXP, then linear decay to MIN at 10000+ SXP.
-const AP_DECAY_START = 1000;
-const AP_DECAY_END = 10000;
+// Daily base AP is rolled randomly between these bounds on every claim.
+const MIN_STIPEND_AP = 1;
+const MAX_STIPEND_AP = 10;
 // Hard cap on total AP from the daily stipend claim (base + streak bonuses)
 const DAILY_STIPEND_AP_CAP = 30;
 // Hard cap on total SXP from the daily stipend claim (base + streak bonuses)
 const DAILY_STIPEND_SXP_CAP = 2000;
 
-function getScaledBaseAp(lifetimeSxp: number): number {
-  if (lifetimeSxp <= AP_DECAY_START) return MAX_STIPEND_AP;
-  if (lifetimeSxp >= AP_DECAY_END) return MIN_STIPEND_AP;
-  const progress = (lifetimeSxp - AP_DECAY_START) / (AP_DECAY_END - AP_DECAY_START);
-  return Math.round(MAX_STIPEND_AP - progress * (MAX_STIPEND_AP - MIN_STIPEND_AP));
+function rollDailyBaseAp(): number {
+  return MIN_STIPEND_AP + Math.floor(Math.random() * (MAX_STIPEND_AP - MIN_STIPEND_AP + 1));
 }
 
 type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
@@ -122,8 +116,7 @@ export async function handleClaimDailyXp(
 
   // Calculate bonuses based on new streak
   const { bonusSxp, bonusAp, milestones } = calculateStreakBonuses(newStreak);
-  const lifetimeSxp = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
-  const scaledBaseAp = getScaledBaseAp(lifetimeSxp);
+  const scaledBaseAp = rollDailyBaseAp();
 
   // VIP bonus: active VIP subscribers get +25% on the daily stipend (SXP and AP)
   const VIP_BONUS_MULTIPLIER = 0.25;

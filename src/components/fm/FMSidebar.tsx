@@ -73,7 +73,7 @@ export const FMSidebar = () => {
           icon: Handshake,
           active: pathname === SUPPORT_OPPORTUNITIES_PATH || pathname.startsWith(SUPPORT_OPPORTUNITIES_PATH + "/"),
         };
-        performGroup.items.splice(myGigsIndex >= 0 ? myGigsIndex + 1 : 0, 0, supportItem);
+        performGroup.items.splice(myGigsIndex >= 0 ? myGigsIndex + 1 : 0, 0, supportItem as (typeof performGroup.items)[number]);
       }
     }
 

@@ -67,13 +67,13 @@ const parseMoment = (value: unknown): FestivalMoment => {
     options: value.options.map(parseOption),
     status: value.status as FestivalMomentStatus,
     chosenOption: value.chosenOption,
-    outcome: value.outcome,
+    outcome: value.outcome as Record<string, unknown> | null,
     relatedProfileId: value.relatedProfileId,
     availableAt: value.availableAt,
     expiresAt: value.expiresAt,
     outcomeDueAt: value.outcomeDueAt,
     resolvedAt: value.resolvedAt,
-    context: value.context,
+    context: value.context as Record<string, unknown>,
   };
 };
 
@@ -86,5 +86,5 @@ export const parseFestivalMomentMutationResult = (value: unknown): FestivalMomen
   if (!isRecord(value) || typeof value.id !== "string" || !UUID_RE.test(value.id) || typeof value.status !== "string" || !statuses.has(value.status as FestivalMomentStatus) || typeof value.duplicate !== "boolean") throw new Error("malformed_festival_moment_result");
   if (value.outcomeDueAt !== undefined && !isNullableString(value.outcomeDueAt)) throw new Error("malformed_festival_moment_result");
   if (value.outcome !== undefined && !(value.outcome === null || isRecord(value.outcome))) throw new Error("malformed_festival_moment_result");
-  return { id: value.id, status: value.status as FestivalMomentStatus, duplicate: value.duplicate, ...(value.outcomeDueAt !== undefined ? { outcomeDueAt: value.outcomeDueAt } : {}), ...(value.outcome !== undefined ? { outcome: value.outcome } : {}) };
+  return { id: value.id, status: value.status as FestivalMomentStatus, duplicate: value.duplicate, ...(value.outcomeDueAt !== undefined ? { outcomeDueAt: value.outcomeDueAt as string } : {}), ...(value.outcome !== undefined ? { outcome: value.outcome as Record<string, unknown> | null } : {}) };
 };

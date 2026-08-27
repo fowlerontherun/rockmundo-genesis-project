@@ -51,7 +51,7 @@ export async function respondToFriendship(
   friendshipId: string,
   status: Exclude<FriendshipStatus, "pending">,
 ): Promise<void> {
-  await updateFriendshipStatus(friendshipId, status);
+  await updateFriendshipStatus(friendshipId, status as "accepted" | "declined");
 }
 
 export async function cancelFriendship(friendshipId: string): Promise<void> {

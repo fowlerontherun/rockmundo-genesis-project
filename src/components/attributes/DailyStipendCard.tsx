@@ -29,8 +29,13 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
 
   const claimMutation = useMutation({
     mutationFn: claimDailyXp,
-    onSuccess: async () => {
-      toast.success("Daily stipend claimed successfully!");
+    onSuccess: async (data) => {
+      const apBalance = (data as { wallet?: { attribute_points_balance?: number | null } } | undefined)?.wallet?.attribute_points_balance;
+      toast.success(
+        typeof apBalance === "number"
+          ? `Daily stipend claimed! Attribute Point balance: ${apBalance} AP`
+          : "Daily stipend claimed successfully!",
+      );
       // Refresh every cache that reads the XP wallet / attributes / profile
       await queryClient.invalidateQueries({
         predicate: (query) => {
@@ -53,7 +58,7 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
 
   // Calculate what they'll get (use current streak + 1 if they claim today)
   const effectiveStreak = hasClaimedToday ? streak : streak + 1;
-  const { baseSxp, baseAp, bonusSxp, bonusAp, vipBonusSxp, vipBonusAp, totalSxp, totalAp } = calculateTotalStipend(
+  const { baseSxp, baseApMin, baseApMax, vipBonusSxp, vipBonusApMin, vipBonusApMax, totalSxp, totalApMin, totalApMax } = calculateTotalStipend(
     hasClaimedToday ? streak : effectiveStreak,
     lifetimeSxp,
     isVip,
@@ -85,7 +90,7 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Base Reward:</span>
-            <span>{baseSxp} SXP + {baseAp} AP</span>
+            <span>{baseSxp} SXP + {baseApMin}–{baseApMax} AP (random roll)</span>
           </div>
           
           {reachedMilestones.length > 0 && (
@@ -104,7 +109,7 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
             </div>
           )}
           
-          {isVip && (vipBonusSxp > 0 || vipBonusAp > 0) && (
+          {isVip && (vipBonusSxp > 0 || vipBonusApMax > 0) && (
             <div className="flex justify-between border-t border-border/50 pt-2 text-amber-600 dark:text-amber-400">
               <span className="flex items-center gap-1">
                 <Crown className="w-3.5 h-3.5" />
@@ -113,13 +118,13 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
                 </Badge>
                 Bonus:
               </span>
-              <span>+{vipBonusSxp} SXP + {vipBonusAp} AP</span>
+              <span>+{vipBonusSxp} SXP + {vipBonusApMin}–{vipBonusApMax} AP</span>
             </div>
           )}
 
           <div className="flex justify-between font-bold text-base border-t border-border pt-2">
             <span>Total Today:</span>
-            <span className="text-primary">{totalSxp} SXP + {totalAp} AP</span>
+            <span className="text-primary">{totalSxp} SXP + {totalApMin}–{totalApMax} AP</span>
           </div>
         </div>
 
