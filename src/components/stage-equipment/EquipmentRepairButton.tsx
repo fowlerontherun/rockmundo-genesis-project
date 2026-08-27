@@ -20,6 +20,19 @@ interface RepairResult {
   band_balance: number;
 }
 
+interface RpcErrorLike {
+  message: string;
+}
+
+interface DirectRpcClient {
+  rpc: (
+    functionName: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: RpcErrorLike | null }>;
+}
+
+const directRpcClient = supabase as unknown as DirectRpcClient;
+
 interface EquipmentRepairButtonProps {
   item: RepairableEquipment;
   bandId: string;
@@ -31,12 +44,12 @@ export const EquipmentRepairButton = ({ item, bandId }: EquipmentRepairButtonPro
 
   const repairMutation = useMutation({
     mutationFn: async () => {
-      // The live database RPC is applied directly in Supabase. Cast here until
-      // generated database types are refreshed in the repository.
-      const { data, error } = await (supabase as any).rpc("repair_band_stage_equipment", {
+      // The live RPC is applied directly in Supabase. Keep a narrow local type
+      // until generated database types are refreshed in the repository.
+      const { data, error } = await directRpcClient.rpc("repair_band_stage_equipment", {
         p_equipment_id: item.id,
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data as RepairResult;
     },
     onSuccess: (result) => {
