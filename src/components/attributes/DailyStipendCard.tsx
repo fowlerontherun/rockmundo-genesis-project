@@ -85,7 +85,7 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Base Reward:</span>
-            <span>{baseSxp} SXP + {baseAp} AP</span>
+            <span>{baseSxp} SXP + {baseApMin}–{baseApMax} AP (random roll)</span>
           </div>
           
           {reachedMilestones.length > 0 && (
