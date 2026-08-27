@@ -830,7 +830,7 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ## PR D10 — Mentoring and player-led education
 
 **Priority:** P2  
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
 ### Scope
 
@@ -848,6 +848,16 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ### Dependencies
 
 - PRs D1–D3 and D9.
+
+### Implementation notes
+
+- Education now has a Player Learning surface for verified mentor discovery, request/accept/leave relationships, milestone checks, bounded player-class creation, enrolment, attendance, cancellation, and settlement retry.
+- Mentorship rewards derive from canonical skill-level progress, have one unique ledger row per milestone, and leave/cooldown rules preserve the penalty-free exit acceptance criterion.
+- Player classes require real subject and teaching skills, enforce schedule/capacity/$500 limits, use server-timed attendance, and settle paid classes through canonical Finance only after completion.
+- Mentee, mentor, teacher, and reservation caps use transactional locking; the weekly same-teacher/skill limit includes active reservations so parallel bookings cannot pre-farm rewards.
+- Common block/report controls are available throughout the learning surface, while blocked pairs are removed from mentor/class discovery and rejected by lifecycle RPCs.
+- Live Supabase was hardened directly: all seven D10 tables use authenticated SELECT-only RLS, anonymous table/RPC access is revoked, mutations stay behind identity-checked RPCs, helpers are private to server roles, and missing FK indexes/constraints are present.
+- A 12-scenario rollback-only production suite passed with zero retained rows, and the D10-scoped Supabase security/performance advisor result is clean.
 
 ---
 
