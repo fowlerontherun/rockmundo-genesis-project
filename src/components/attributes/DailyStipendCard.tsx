@@ -104,7 +104,7 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
             </div>
           )}
           
-          {isVip && (vipBonusSxp > 0 || vipBonusAp > 0) && (
+          {isVip && (vipBonusSxp > 0 || vipBonusApMax > 0) && (
             <div className="flex justify-between border-t border-border/50 pt-2 text-amber-600 dark:text-amber-400">
               <span className="flex items-center gap-1">
                 <Crown className="w-3.5 h-3.5" />
@@ -113,13 +113,13 @@ export const DailyStipendCard = ({ lastClaimDate, streak = 0, lifetimeSxp = 0, o
                 </Badge>
                 Bonus:
               </span>
-              <span>+{vipBonusSxp} SXP + {vipBonusAp} AP</span>
+              <span>+{vipBonusSxp} SXP + {vipBonusApMin}–{vipBonusApMax} AP</span>
             </div>
           )}
 
           <div className="flex justify-between font-bold text-base border-t border-border pt-2">
             <span>Total Today:</span>
-            <span className="text-primary">{totalSxp} SXP + {totalAp} AP</span>
+            <span className="text-primary">{totalSxp} SXP + {totalApMin}–{totalApMax} AP</span>
           </div>
         </div>
 
