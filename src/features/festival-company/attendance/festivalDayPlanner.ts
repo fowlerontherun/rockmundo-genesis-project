@@ -196,6 +196,9 @@ const isItemStatus = (value: unknown): value is FestivalPlanItemStatus =>
   typeof value === "string" && ITEM_STATUSES.has(value as FestivalPlanItemStatus);
 const isSource = (value: unknown): value is FestivalPlanItemSource =>
   typeof value === "string" && SOURCES.has(value as FestivalPlanItemSource);
+const isScheduleState = (value: unknown): value is "locked" | "published" =>
+  value === "locked" || value === "published";
+
 
 const parseDay = (value: unknown): FestivalPlanDay => {
   if (!isRecord(value) || !isDate(value.date) || !isPositiveInteger(value.dayNumber)) {
