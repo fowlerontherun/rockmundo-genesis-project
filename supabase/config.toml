@@ -127,7 +127,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.process-pr-activity]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-demo-review]
 verify_jwt = false
