@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -4384,6 +4384,8 @@ export type Database = {
           locked_until: string | null
           maturity_date: string | null
           nickname: string | null
+          opening_idempotency_key: string | null
+          opening_request: Json
           profile_id: string
           provider_name: string
           status: string
@@ -4399,6 +4401,8 @@ export type Database = {
           locked_until?: string | null
           maturity_date?: string | null
           nickname?: string | null
+          opening_idempotency_key?: string | null
+          opening_request?: Json
           profile_id: string
           provider_name?: string
           status?: string
@@ -4414,6 +4418,8 @@ export type Database = {
           locked_until?: string | null
           maturity_date?: string | null
           nickname?: string | null
+          opening_idempotency_key?: string | null
+          opening_request?: Json
           profile_id?: string
           provider_name?: string
           status?: string
@@ -4430,6 +4436,8 @@ export type Database = {
           currency_code: string
           description: string | null
           id: string
+          operation_idempotency_key: string | null
+          operation_request: Json
           profile_id: string
           related_account_id: string | null
           related_band_id: string | null
@@ -4444,6 +4452,8 @@ export type Database = {
           currency_code?: string
           description?: string | null
           id?: string
+          operation_idempotency_key?: string | null
+          operation_request?: Json
           profile_id: string
           related_account_id?: string | null
           related_band_id?: string | null
@@ -4458,6 +4468,8 @@ export type Database = {
           currency_code?: string
           description?: string | null
           id?: string
+          operation_idempotency_key?: string | null
+          operation_request?: Json
           profile_id?: string
           related_account_id?: string | null
           related_band_id?: string | null
@@ -37269,6 +37281,51 @@ export type Database = {
           },
         ]
       }
+      player_banking_operations: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          idempotency_key: string
+          operation_type: string
+          profile_id: string
+          request_payload: Json
+          response_payload: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          idempotency_key: string
+          operation_type: string
+          profile_id: string
+          request_payload: Json
+          response_payload?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          idempotency_key?: string
+          operation_type?: string
+          profile_id?: string
+          request_payload?: Json
+          response_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_banking_operations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_banking_operations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_behavior_settings: {
         Row: {
           afterparty_attendance: string
@@ -51943,6 +52000,308 @@ export type Database = {
           },
         ]
       }
+      tour_budget_ledger: {
+        Row: {
+          amount: number
+          category: string
+          description: string | null
+          direction: string
+          gig_id: string | null
+          id: string
+          posted_at: string
+          source_id: string
+          source_type: string
+          tour_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          description?: string | null
+          direction: string
+          gig_id?: string | null
+          id?: string
+          posted_at?: string
+          source_id?: string
+          source_type: string
+          tour_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          description?: string | null
+          direction?: string
+          gig_id?: string | null
+          id?: string
+          posted_at?: string
+          source_id?: string
+          source_type?: string
+          tour_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_budget_ledger_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_budget_ledger_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_completion_reports: {
+        Row: {
+          best_gig_id: string | null
+          biggest_media_story: string | null
+          completed_at: string
+          crew_performance: Json
+          equipment_wear: Json
+          fans_gained: number
+          financial_performance: Json
+          future_planning_modifiers: Json
+          most_profitable_city_id: string | null
+          reputation_gained: number
+          strongest_audience_city_id: string | null
+          tour_highlights: Json
+          tour_id: string
+          vehicle_usage: Json
+          worst_gig_id: string | null
+        }
+        Insert: {
+          best_gig_id?: string | null
+          biggest_media_story?: string | null
+          completed_at?: string
+          crew_performance?: Json
+          equipment_wear?: Json
+          fans_gained?: number
+          financial_performance?: Json
+          future_planning_modifiers?: Json
+          most_profitable_city_id?: string | null
+          reputation_gained?: number
+          strongest_audience_city_id?: string | null
+          tour_highlights?: Json
+          tour_id: string
+          vehicle_usage?: Json
+          worst_gig_id?: string | null
+        }
+        Update: {
+          best_gig_id?: string | null
+          biggest_media_story?: string | null
+          completed_at?: string
+          crew_performance?: Json
+          equipment_wear?: Json
+          fans_gained?: number
+          financial_performance?: Json
+          future_planning_modifiers?: Json
+          most_profitable_city_id?: string | null
+          reputation_gained?: number
+          strongest_audience_city_id?: string | null
+          tour_highlights?: Json
+          tour_id?: string
+          vehicle_usage?: Json
+          worst_gig_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_completion_reports_best_gig_id_fkey"
+            columns: ["best_gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_completion_reports_most_profitable_city_id_fkey"
+            columns: ["most_profitable_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_completion_reports_strongest_audience_city_id_fkey"
+            columns: ["strongest_audience_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_completion_reports_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: true
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_completion_reports_worst_gig_id_fkey"
+            columns: ["worst_gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_crew_schedules: {
+        Row: {
+          accommodation_status: string
+          company_staff_id: string | null
+          created_at: string
+          daily_cost: number
+          display_name: string
+          fatigue_score: number
+          gig_id: string | null
+          id: string
+          morale_score: number
+          npc_staff_id: string | null
+          player_id: string | null
+          role: string
+          shift_ends_at: string | null
+          shift_starts_at: string | null
+          tour_id: string
+          transport_status: string
+          worker_type: string
+        }
+        Insert: {
+          accommodation_status?: string
+          company_staff_id?: string | null
+          created_at?: string
+          daily_cost?: number
+          display_name: string
+          fatigue_score?: number
+          gig_id?: string | null
+          id?: string
+          morale_score?: number
+          npc_staff_id?: string | null
+          player_id?: string | null
+          role: string
+          shift_ends_at?: string | null
+          shift_starts_at?: string | null
+          tour_id: string
+          transport_status?: string
+          worker_type?: string
+        }
+        Update: {
+          accommodation_status?: string
+          company_staff_id?: string | null
+          created_at?: string
+          daily_cost?: number
+          display_name?: string
+          fatigue_score?: number
+          gig_id?: string | null
+          id?: string
+          morale_score?: number
+          npc_staff_id?: string | null
+          player_id?: string | null
+          role?: string
+          shift_ends_at?: string | null
+          shift_starts_at?: string | null
+          tour_id?: string
+          transport_status?: string
+          worker_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_crew_schedules_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_crew_schedules_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_crew_schedules_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_crew_schedules_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_equipment_manifest: {
+        Row: {
+          condition_snapshot: number
+          current_city_id: string | null
+          current_vehicle_id: string | null
+          equipment_id: string | null
+          equipment_source: string
+          id: string
+          in_transit: boolean
+          is_spare: boolean
+          load_weight: number
+          name: string
+          needs_repair: boolean
+          replacement_cost: number
+          role: string
+          tour_id: string
+          updated_at: string
+        }
+        Insert: {
+          condition_snapshot?: number
+          current_city_id?: string | null
+          current_vehicle_id?: string | null
+          equipment_id?: string | null
+          equipment_source?: string
+          id?: string
+          in_transit?: boolean
+          is_spare?: boolean
+          load_weight?: number
+          name: string
+          needs_repair?: boolean
+          replacement_cost?: number
+          role: string
+          tour_id: string
+          updated_at?: string
+        }
+        Update: {
+          condition_snapshot?: number
+          current_city_id?: string | null
+          current_vehicle_id?: string | null
+          equipment_id?: string | null
+          equipment_source?: string
+          id?: string
+          in_transit?: boolean
+          is_spare?: boolean
+          load_weight?: number
+          name?: string
+          needs_repair?: boolean
+          replacement_cost?: number
+          role?: string
+          tour_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_equipment_manifest_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_equipment_manifest_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tour_gigs: {
         Row: {
           created_at: string | null
@@ -52025,6 +52384,383 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tour_logistics_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_logistics_events: {
+        Row: {
+          cost_impact: number
+          created_by: string | null
+          event_type: string
+          fatigue_impact: number
+          generated_at: string
+          gig_id: string | null
+          id: string
+          message: string
+          morale_impact: number
+          resolved: boolean
+          resolved_at: string | null
+          severity: string
+          tour_id: string
+        }
+        Insert: {
+          cost_impact?: number
+          created_by?: string | null
+          event_type: string
+          fatigue_impact?: number
+          generated_at?: string
+          gig_id?: string | null
+          id?: string
+          message: string
+          morale_impact?: number
+          resolved?: boolean
+          resolved_at?: string | null
+          severity: string
+          tour_id: string
+        }
+        Update: {
+          cost_impact?: number
+          created_by?: string | null
+          event_type?: string
+          fatigue_impact?: number
+          generated_at?: string
+          gig_id?: string | null
+          id?: string
+          message?: string
+          morale_impact?: number
+          resolved?: boolean
+          resolved_at?: string | null
+          severity?: string
+          tour_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_logistics_events_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_logistics_events_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_merchandise_plans: {
+        Row: {
+          lost_sales: number
+          reorder_cost: number
+          reorder_quantity: number
+          shipping_cost: number
+          starting_stock: number
+          stock_remaining: number
+          storage_cost_per_day: number
+          tour_id: string
+          unit_cost: number
+          unit_price: number
+          units_sold: number
+          updated_at: string
+        }
+        Insert: {
+          lost_sales?: number
+          reorder_cost?: number
+          reorder_quantity?: number
+          shipping_cost?: number
+          starting_stock?: number
+          stock_remaining?: number
+          storage_cost_per_day?: number
+          tour_id: string
+          unit_cost?: number
+          unit_price?: number
+          units_sold?: number
+          updated_at?: string
+        }
+        Update: {
+          lost_sales?: number
+          reorder_cost?: number
+          reorder_quantity?: number
+          shipping_cost?: number
+          starting_stock?: number
+          stock_remaining?: number
+          storage_cost_per_day?: number
+          tour_id?: string
+          unit_cost?: number
+          unit_price?: number
+          units_sold?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_merchandise_plans_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: true
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_operation_requests: {
+        Row: {
+          action: string
+          created_at: string
+          idempotency_key: string
+          request_fingerprint: string
+          requested_by: string | null
+          response: Json
+          tour_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          idempotency_key: string
+          request_fingerprint: string
+          requested_by?: string | null
+          response: Json
+          tour_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          idempotency_key?: string
+          request_fingerprint?: string
+          requested_by?: string | null
+          response?: Json
+          tour_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_operation_requests_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_operation_states: {
+        Row: {
+          applied_template_at: string | null
+          band_morale: number
+          budget_snapshot: Json
+          crew_morale: number
+          current_city_id: string | null
+          current_stop_id: string | null
+          fatigue_score: number
+          health_score: number
+          last_recalculated_at: string
+          logistics_snapshot: Json
+          outstanding_issues: Json
+          plan_snapshot: Json
+          plan_version: number
+          production_status: string
+          template_id: string | null
+          tour_id: string
+          tour_momentum: number
+          tour_reputation: number
+          updated_at: string
+        }
+        Insert: {
+          applied_template_at?: string | null
+          band_morale?: number
+          budget_snapshot?: Json
+          crew_morale?: number
+          current_city_id?: string | null
+          current_stop_id?: string | null
+          fatigue_score?: number
+          health_score?: number
+          last_recalculated_at?: string
+          logistics_snapshot?: Json
+          outstanding_issues?: Json
+          plan_snapshot?: Json
+          plan_version?: number
+          production_status?: string
+          template_id?: string | null
+          tour_id: string
+          tour_momentum?: number
+          tour_reputation?: number
+          updated_at?: string
+        }
+        Update: {
+          applied_template_at?: string | null
+          band_morale?: number
+          budget_snapshot?: Json
+          crew_morale?: number
+          current_city_id?: string | null
+          current_stop_id?: string | null
+          fatigue_score?: number
+          health_score?: number
+          last_recalculated_at?: string
+          logistics_snapshot?: Json
+          outstanding_issues?: Json
+          plan_snapshot?: Json
+          plan_version?: number
+          production_status?: string
+          template_id?: string | null
+          tour_id?: string
+          tour_momentum?: number
+          tour_reputation?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_operation_states_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_operation_states_current_stop_id_fkey"
+            columns: ["current_stop_id"]
+            isOneToOne: false
+            referencedRelation: "tour_venues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_operation_states_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "tour_operation_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_operation_states_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: true
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_operation_templates: {
+        Row: {
+          accommodation_preferences: Json
+          audio_package: string
+          backup_equipment: Json
+          band_id: string
+          catering_preferences: Json
+          created_at: string
+          created_by: string | null
+          equipment_loadout: Json
+          id: string
+          lighting_package: string
+          merchandise_plan: Json
+          name: string
+          preferred_crew: Json
+          production_package: string
+          rehearsal_schedule: Json
+          sponsor_obligations: Json
+          updated_at: string
+          vehicle_setup: Json
+        }
+        Insert: {
+          accommodation_preferences?: Json
+          audio_package?: string
+          backup_equipment?: Json
+          band_id: string
+          catering_preferences?: Json
+          created_at?: string
+          created_by?: string | null
+          equipment_loadout?: Json
+          id?: string
+          lighting_package?: string
+          merchandise_plan?: Json
+          name: string
+          preferred_crew?: Json
+          production_package?: string
+          rehearsal_schedule?: Json
+          sponsor_obligations?: Json
+          updated_at?: string
+          vehicle_setup?: Json
+        }
+        Update: {
+          accommodation_preferences?: Json
+          audio_package?: string
+          backup_equipment?: Json
+          band_id?: string
+          catering_preferences?: Json
+          created_at?: string
+          created_by?: string | null
+          equipment_loadout?: Json
+          id?: string
+          lighting_package?: string
+          merchandise_plan?: Json
+          name?: string
+          preferred_crew?: Json
+          production_package?: string
+          rehearsal_schedule?: Json
+          sponsor_obligations?: Json
+          updated_at?: string
+          vehicle_setup?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_operation_templates_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_sponsor_obligations: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          due_gig_id: string | null
+          id: string
+          notes: string | null
+          obligation_type: string
+          sponsor_name: string
+          status: string
+          tour_id: string
+          value_amount: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          due_gig_id?: string | null
+          id?: string
+          notes?: string | null
+          obligation_type: string
+          sponsor_name: string
+          status?: string
+          tour_id: string
+          value_amount?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          due_gig_id?: string | null
+          id?: string
+          notes?: string | null
+          obligation_type?: string
+          sponsor_name?: string
+          status?: string
+          tour_id?: string
+          value_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_sponsor_obligations_due_gig_id_fkey"
+            columns: ["due_gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_sponsor_obligations_tour_id_fkey"
             columns: ["tour_id"]
             isOneToOne: false
             referencedRelation: "tours"
@@ -55691,6 +56427,23 @@ export type Database = {
         Returns: boolean
       }
       _caller_profile_id: { Args: never; Returns: string }
+      _claim_player_banking_operation: {
+        Args: {
+          p_idempotency_key: string
+          p_operation_type: string
+          p_profile_id: string
+          p_request_payload: Json
+        }
+        Returns: Json
+      }
+      _complete_player_banking_operation: {
+        Args: {
+          p_idempotency_key: string
+          p_profile_id: string
+          p_response_payload: Json
+        }
+        Returns: Json
+      }
       _complete_simplified_festival_settlement: {
         Args: { p_runtime_id: string }
         Returns: string
@@ -56347,6 +57100,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      _journal_profile_wallet_delta: {
+        Args: { p_context?: Json; p_delta_minor: number; p_profile_id: string }
+        Returns: string
+      }
       _music_collaboration_actor_profile_id: { Args: never; Returns: string }
       _music_collaboration_can_manage: {
         Args: { p_band_id: string }
@@ -56356,9 +57113,47 @@ export type Database = {
         Args: { p_contract_id: string }
         Returns: Json
       }
+      _profile_finance_activity: {
+        Args: { p_currency_code: string; p_profile_id: string }
+        Returns: {
+          activity_amount_minor: number
+          activity_created_at: string
+          activity_currency_code: string
+          activity_description: string
+          activity_destination_account_id: string
+          activity_direction: string
+          activity_external_cash_flow: boolean
+          activity_id: string
+          activity_related_entity_id: string
+          activity_related_entity_type: string
+          activity_source: string
+          activity_source_account_id: string
+        }[]
+      }
+      _profile_finance_activity_raw: {
+        Args: { p_currency_code: string; p_profile_id: string }
+        Returns: {
+          activity_amount_minor: number
+          activity_created_at: string
+          activity_currency_code: string
+          activity_description: string
+          activity_destination_account_id: string
+          activity_direction: string
+          activity_external_cash_flow: boolean
+          activity_id: string
+          activity_related_entity_id: string
+          activity_related_entity_type: string
+          activity_source: string
+          activity_source_account_id: string
+        }[]
+      }
       _refresh_family_dynasty_milestones: {
         Args: { p_profile_id: string }
         Returns: undefined
+      }
+      _replace_tour_operations_plan: {
+        Args: { p_plan: Json; p_template_id?: string; p_tour_id: string }
+        Returns: number
       }
       _saved_search_json: {
         Args: {
@@ -56387,6 +57182,26 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: number
       }
+      _tour_operation_cached_request: {
+        Args: {
+          p_action: string
+          p_fingerprint: string
+          p_idempotency_key: string
+          p_tour_id: string
+        }
+        Returns: Json
+      }
+      _tour_operation_store_request: {
+        Args: {
+          p_action: string
+          p_fingerprint: string
+          p_idempotency_key: string
+          p_response: Json
+          p_tour_id: string
+        }
+        Returns: undefined
+      }
+      _tour_operations_access: { Args: { p_tour_id: string }; Returns: Json }
       accept_festival_offer: {
         Args: {
           p_idempotency_key?: string
@@ -57124,6 +57939,15 @@ export type Database = {
       apply_to_company_vacancy: {
         Args: { p_message?: string; p_vacancy_id: string }
         Returns: string
+      }
+      apply_tour_operation_template: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_template_id: string
+          p_tour_id: string
+        }
+        Returns: Json
       }
       approve_festival_edition_settlement: {
         Args: {
@@ -58078,6 +58902,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_open_mic_atomic: {
+        Args: { p_performance_id: string; p_user_id: string }
+        Returns: Json
+      }
       complete_player_education_class: {
         Args: { p_class_id: string; p_teacher_profile_id: string }
         Returns: Json
@@ -58122,6 +58950,10 @@ export type Database = {
           p_listing_id: string
           p_sale_price: number
         }
+        Returns: Json
+      }
+      complete_tour_operations_report: {
+        Args: { p_idempotency_key: string; p_tour_id: string }
         Returns: Json
       }
       complete_wellness_habit: { Args: { _habit_id: string }; Returns: Json }
@@ -58812,6 +59644,14 @@ export type Database = {
       delete_player_saved_search: {
         Args: { saved_search_id: string; viewer_profile_id?: string }
         Returns: undefined
+      }
+      deposit_my_wallet_to_bank: {
+        Args: {
+          p_amount_minor: number
+          p_bank_account_id: string
+          p_idempotency_key: string
+        }
+        Returns: Json
       }
       deposit_to_band_treasury: {
         Args: {
@@ -60486,6 +61326,10 @@ export type Database = {
         }[]
       }
       get_tour_hq_live: { Args: { p_tour_id: string }; Returns: Json }
+      get_tour_operations_workspace: {
+        Args: { p_tour_id: string }
+        Returns: Json
+      }
       get_tour_support_assignments: {
         Args: { p_headliner_band_id: string; p_tour_id: string }
         Returns: {
@@ -61065,6 +61909,17 @@ export type Database = {
         }
         Returns: Json
       }
+      open_my_bank_account: {
+        Args: {
+          p_account_type: string
+          p_currency_code: string
+          p_idempotency_key: string
+          p_initial_amount_minor: number
+          p_nickname: string
+          p_term_months: number
+        }
+        Returns: Json
+      }
       open_social_contract_dispute: {
         Args: {
           p_contract_id: string
@@ -61537,6 +62392,16 @@ export type Database = {
         Returns: string
       }
       record_support_band_history: { Args: { p_gig_id: string }; Returns: Json }
+      record_tour_logistics_event: {
+        Args: {
+          p_event_type: string
+          p_gig_id?: string
+          p_idempotency_key?: string
+          p_notes?: string
+          p_tour_id: string
+        }
+        Returns: Json
+      }
       refresh_festival_world_records: { Args: never; Returns: Json }
       refresh_social_band_rivalry: {
         Args: { p_profile_id: string; p_rivalry_id: string }
@@ -61864,6 +62729,14 @@ export type Database = {
           p_contract_status?: string
           p_dispute_id: string
           p_resolution: Json
+        }
+        Returns: Json
+      }
+      resolve_tour_logistics_event: {
+        Args: {
+          p_event_id: string
+          p_idempotency_key: string
+          p_tour_id: string
         }
         Returns: Json
       }
@@ -62437,6 +63310,19 @@ export type Database = {
           p_name: string
           p_song_ids: string[]
           p_support_slot_id: string
+        }
+        Returns: Json
+      }
+      save_tour_operation_template: {
+        Args: { p_idempotency_key: string; p_template: Json; p_tour_id: string }
+        Returns: Json
+      }
+      save_tour_operations_plan: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_plan: Json
+          p_tour_id: string
         }
         Returns: Json
       }
@@ -63287,6 +64173,15 @@ export type Database = {
         }
         Returns: Json
       }
+      transfer_between_my_bank_accounts: {
+        Args: {
+          p_amount_minor: number
+          p_destination_bank_account_id: string
+          p_idempotency_key: string
+          p_source_bank_account_id: string
+        }
+        Returns: Json
+      }
       transfer_company_funds: {
         Args: {
           p_amount: number
@@ -63685,6 +64580,14 @@ export type Database = {
           p_expected_version?: number
           p_idempotency_key?: string
           p_offer_id: string
+        }
+        Returns: Json
+      }
+      withdraw_my_bank_to_wallet: {
+        Args: {
+          p_amount_minor: number
+          p_bank_account_id: string
+          p_idempotency_key: string
         }
         Returns: Json
       }
