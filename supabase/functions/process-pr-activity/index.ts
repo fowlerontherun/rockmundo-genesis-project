@@ -13,6 +13,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-triggered-by",
 };
 
+class PRActivityError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string,
+  ) {
+    super(message);
+    this.name = "PRActivityError";
+  }
+}
+
+const jsonResponse = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status,
+  });
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,9 +44,12 @@ serve(async (req) => {
   
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
   const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    supabaseUrl,
+    serviceRoleKey,
   );
 
   let runId: string | null = null;
@@ -46,10 +66,31 @@ serve(async (req) => {
     });
 
     if (!payload?.offerId) {
-      throw new Error("offerId is required");
+      throw new PRActivityError("offerId is required", 400, "missing_offer_id");
     }
 
     const { offerId, action = 'accept' } = payload;
+
+    if (!['accept', 'decline', 'complete'].includes(action)) {
+      throw new PRActivityError(`Unknown action: ${action}`, 400, "invalid_action");
+    }
+
+    const authorization = req.headers.get("Authorization");
+    const token = authorization?.replace(/^Bearer\s+/i, "") ?? "";
+    const isServiceInvocation = token.length > 0 && token === serviceRoleKey;
+    let callerUserId: string | null = null;
+
+    if (!isServiceInvocation) {
+      if (!token) {
+        throw new PRActivityError("You must be signed in to manage PR offers", 401, "unauthorized");
+      }
+
+      const { data: authData, error: authError } = await supabaseClient.auth.getUser(token);
+      if (authError || !authData.user) {
+        throw new PRActivityError("Your session is no longer valid. Please sign in again.", 401, "unauthorized");
+      }
+      callerUserId = authData.user.id;
+    }
 
     // Fetch the offer
     const { data: offer, error: offerError } = await supabaseClient
@@ -59,7 +100,42 @@ serve(async (req) => {
       .single();
 
     if (offerError || !offer) {
-      throw new Error(`Offer not found: ${offerError?.message || 'Unknown error'}`);
+      throw new PRActivityError("This PR offer could not be found", 404, "offer_not_found");
+    }
+
+    let leaderProfile: { id: string; user_id: string } | null = null;
+
+    if (action !== 'complete') {
+      // PR offers belong to a band, so always resolve the character through the
+      // band's current leader. One account can own several character profiles;
+      // looking up profiles by user_id with .single() fails for those accounts.
+      const { data: band, error: bandError } = await supabaseClient
+        .from('bands')
+        .select('leader_id')
+        .eq('id', offer.band_id)
+        .single();
+
+      if (bandError || !band?.leader_id) {
+        throw new PRActivityError("The band's leader could not be resolved", 422, "band_leader_not_found");
+      }
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('id, user_id')
+        .eq('id', band.leader_id)
+        .single();
+
+      if (profileError || !profile?.user_id) {
+        throw new PRActivityError("The band leader's character profile could not be found", 422, "leader_profile_not_found");
+      }
+
+      leaderProfile = profile;
+
+      if (!isServiceInvocation && callerUserId !== leaderProfile.user_id) {
+        throw new PRActivityError("Only the current band leader can manage this PR offer", 403, "forbidden");
+      }
+    } else if (!isServiceInvocation) {
+      throw new PRActivityError("Only the scheduled PR worker can complete an appearance", 403, "forbidden");
     }
 
     if (action === 'decline') {
@@ -79,23 +155,15 @@ serve(async (req) => {
         resultSummary: { action: 'declined', offerId },
       });
 
-      return new Response(
-        JSON.stringify({ success: true, action: 'declined' }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({ success: true, action: 'declined' });
     }
 
     if (action === 'accept') {
-      // Get user's profile_id first
-      const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('id')
-        .eq('user_id', offer.user_id)
-        .single();
-
-      if (!profile) {
-        throw new Error('User profile not found');
+      if (!leaderProfile) {
+        throw new PRActivityError("The band leader's character profile could not be found", 422, "leader_profile_not_found");
       }
+
+      const scheduledUserId = leaderProfile.user_id;
 
       // Determine duration (film = 7 days, others = 1 hour)
       const isFilm = offer.media_type === 'film';
@@ -107,7 +175,7 @@ serve(async (req) => {
 
       // Check for scheduling conflicts before accepting
       const { data: hasConflict } = await supabaseClient.rpc('check_scheduling_conflict', {
-        p_user_id: offer.user_id,
+        p_user_id: scheduledUserId,
         p_start: startTime.toISOString(),
         p_end: endTime.toISOString(),
         p_exclude_id: null,
@@ -118,22 +186,17 @@ serve(async (req) => {
         const { data: conflict } = await supabaseClient
           .from('player_scheduled_activities')
           .select('title')
-          .eq('user_id', offer.user_id)
+          .eq('user_id', scheduledUserId)
           .in('status', ['scheduled', 'in_progress'])
           .lte('scheduled_start', endTime.toISOString())
           .gte('scheduled_end', startTime.toISOString())
           .limit(1)
           .maybeSingle();
 
-        // Return a 400 validation error, not 500
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: 'scheduling_conflict',
-            message: `You have "${conflict?.title || 'another activity'}" scheduled at this time. Please decline or reschedule.`,
-            conflictingActivity: conflict?.title,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        throw new PRActivityError(
+          `You have "${conflict?.title || 'another activity'}" scheduled at this time. Please decline or reschedule.`,
+          400,
+          "scheduling_conflict",
         );
       }
 
@@ -150,8 +213,8 @@ serve(async (req) => {
       const { error: activityError } = await supabaseClient
         .from('player_scheduled_activities')
         .insert({
-          user_id: offer.user_id,
-          profile_id: profile.id,
+          user_id: scheduledUserId,
+          profile_id: leaderProfile.id,
           activity_type: isFilm ? 'film_production' : 'pr_appearance',
           title: `PR: ${offer.media_type.toUpperCase()} Appearance`,
           scheduled_start: startTime.toISOString(),
@@ -168,7 +231,12 @@ serve(async (req) => {
         });
 
       if (activityError) {
-        console.error('Failed to create scheduled activity:', activityError);
+        await supabaseClient
+          .from('pr_media_offers')
+          .update({ status: 'pending', accepted_at: null })
+          .eq('id', offerId)
+          .eq('status', 'accepted');
+        throw new Error(`Failed to schedule the PR appearance: ${activityError.message}`);
       }
 
       await completeJobRun({
@@ -181,10 +249,7 @@ serve(async (req) => {
         resultSummary: { action: 'accepted', offerId, scheduledFor: offer.proposed_date },
       });
 
-      return new Response(
-        JSON.stringify({ success: true, action: 'accepted', scheduledFor: offer.proposed_date }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({ success: true, action: 'accepted', scheduledFor: offer.proposed_date });
     }
 
     if (action === 'complete') {
@@ -375,17 +440,12 @@ serve(async (req) => {
         },
       });
 
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          action: 'completed',
-          rewards: { fameBoost, fanBoost, compensation }
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({
+        success: true,
+        action: 'completed',
+        rewards: { fameBoost, fanBoost, compensation },
+      });
     }
-
-    throw new Error(`Unknown action: ${action}`);
   } catch (error) {
     await failJobRun({
       jobName: "process-pr-activity",
@@ -397,9 +457,9 @@ serve(async (req) => {
     });
 
     console.error("Error:", error);
-    return new Response(
-      JSON.stringify({ error: getErrorMessage(error) }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
+    const status = error instanceof PRActivityError ? error.status : 500;
+    const code = error instanceof PRActivityError ? error.code : "internal_error";
+    const message = getErrorMessage(error);
+    return jsonResponse({ success: false, error: code, message }, status);
   }
 });

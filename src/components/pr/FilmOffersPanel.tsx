@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,7 +110,11 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
         body: { offerId, action: "accept" },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(
+          await getEdgeFunctionErrorMessage(error, "This film offer could not be accepted."),
+        );
+      }
       return data;
     },
     onSuccess: () => {

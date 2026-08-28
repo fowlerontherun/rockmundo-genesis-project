@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,11 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
       const { data, error } = await supabase.functions.invoke("process-pr-activity", {
         body: { offerId, action },
       });
-      if (error) throw error;
+      if (error) {
+        throw new Error(
+          await getEdgeFunctionErrorMessage(error, "This PR offer could not be processed."),
+        );
+      }
       return data;
     },
     onSuccess: (data, variables) => {

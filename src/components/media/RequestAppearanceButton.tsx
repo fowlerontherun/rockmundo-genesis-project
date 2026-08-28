@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Megaphone, Loader2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export type RequestableMediaType =
   | "radio"
@@ -90,7 +91,11 @@ export function RequestAppearanceButton({
       const { data: result, error: fnError } = await supabase.functions.invoke("process-pr-activity", {
         body: { offerId, action: "accept" },
       });
-      if (fnError) throw fnError;
+      if (fnError) {
+        throw new Error(
+          await getEdgeFunctionErrorMessage(fnError, "This appearance could not be booked."),
+        );
+      }
       if (result && result.success === false) {
         throw new Error(result.message || "Could not book this appearance.");
       }
