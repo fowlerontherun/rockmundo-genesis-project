@@ -45,11 +45,19 @@ describe("canonical Financial Command Center UI", () => {
     expect(hookSource).toContain("profileError ?? query.error");
   });
 
+  it("refreshes live balances and outgoings instead of serving a stale snapshot", () => {
+    expect(hookSource).toContain("staleTime: 0");
+    expect(hookSource).toContain('refetchOnMount: "always"');
+    expect(hookSource).toContain("refetchOnWindowFocus: true");
+    expect(hookSource).toContain("refetchInterval: 15_000");
+    expect(hookSource).toContain("refetchIntervalInBackground: false");
+  });
+
   it("keeps transfers visible without classifying them as spending", () => {
     expect(hookSource).toContain('"transfer"');
     expect(hookSource).toContain("externalCashFlow");
     expect(transactionSource).toContain('value: "transfer"');
-    expect(transactionSource).toContain("transaction.externalCashFlow");
+    expect(transactionSource).toContain("item.externalCashFlow");
   });
 
   it("keeps band treasuries separate from personal net worth", () => {

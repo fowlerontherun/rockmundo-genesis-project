@@ -239,6 +239,11 @@ export const useFinances = () => {
     queryKey: ["finance-command-center", profileId],
     queryFn: () => fetchFinanceCommandCenter(250),
     enabled: !!profileId,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 
   const mapped = query.data ? mapCommandCenter(query.data) : null;
