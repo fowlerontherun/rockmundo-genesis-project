@@ -200,7 +200,7 @@ export const FMSidebar = () => {
                       onClick={() => navigate(item.path)}
                       title={collapsed ? item.label : undefined}
                       aria-current={item.active ? "page" : undefined}
-                      className={cn}(
+                      className={cn(
                         "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[12px] transition-colors",
                         item.active
                           ? "bg-fm-accent/15 text-fm-accent"
