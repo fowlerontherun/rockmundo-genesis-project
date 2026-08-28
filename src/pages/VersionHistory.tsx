@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.704",
+    date: "2026-08-28",
+    changes: [
+      { type: 'fix', description: "Open Mic performances now resume from their saved song time after a page refresh instead of restarting the one-minute progress loop." },
+      { type: 'fix', description: "Finishing an Open Mic is now authenticated and idempotent: reconnects and repeated clicks cannot duplicate song results, fame, fans, morale or reputation rewards." },
+      { type: 'improvement', description: "The Finish Performance Now recovery action reports server errors clearly and can safely resume a partially processed set." },
+    ],
+  },
+  {
     version: "1.1.703",
     date: "2026-08-27",
     changes: [

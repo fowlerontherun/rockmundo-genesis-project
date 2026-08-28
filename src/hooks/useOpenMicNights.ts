@@ -48,6 +48,7 @@ export interface OpenMicSongPerformance {
   performance_score: number | null;
   crowd_response: string | null;
   commentary: string[] | null;
+  created_at: string;
 }
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -218,7 +219,7 @@ export function useSignUpForOpenMic() {
       if (error) throw error;
 
       // Create scheduled activity to block the time slot
-      const { error: activityError } = await (supabase as any)
+      const { error: activityError } = await supabase
         .from('player_scheduled_activities')
         .insert({
           user_id: userId,

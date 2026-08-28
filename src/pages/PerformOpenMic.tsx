@@ -1,13 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   useOpenMicPerformance, 
   useOpenMicSongPerformances,
-  useStartOpenMicPerformance 
+  useStartOpenMicPerformance,
+  type OpenMicPerformance,
 } from "@/hooks/useOpenMicNights";
 import { OpenMicOutcomeReport } from "@/components/open-mic/OpenMicOutcomeReport";
+import {
+  getOpenMicSongDurationMs,
+  getOpenMicSongProgress,
+  getOpenMicSongRemainingMs,
+  getOpenMicSongStartedAtMs,
+} from "@/features/open-mic/liveProgress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +35,7 @@ import {
 import { format, isPast, differenceInMinutes, differenceInHours } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMLiveSkeleton } from "@/components/fm/FMPageSkeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface LiveCommentary {
   text: string;
@@ -36,24 +43,53 @@ interface LiveCommentary {
   timestamp: number;
 }
 
+type OpenMicSong = NonNullable<OpenMicPerformance["song_1"]>;
+
+const getSongAudioUrl = (song: OpenMicSong | null | undefined) =>
+  (song as (OpenMicSong & { audio_url?: string | null }) | null | undefined)?.audio_url ?? null;
+
+const getErrorMessage = async (error: unknown) => {
+  const response = error instanceof Error && "context" in error
+    ? (error as Error & { context?: unknown }).context
+    : null;
+
+  if (response instanceof Response) {
+    try {
+      const body = await response.clone().json() as { error?: unknown };
+      if (typeof body.error === "string" && body.error.trim()) return body.error;
+    } catch {
+      // Fall back to the client error when the function did not return JSON.
+    }
+  }
+
+  return error instanceof Error ? error.message : "The performance could not be processed.";
+};
+
 export default function PerformOpenMic() {
   const { performanceId } = useParams<{ performanceId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const { data: performance, isLoading, refetch } = useOpenMicPerformance(performanceId || null);
-  const { data: songPerformances = [], refetch: refetchSongs } = useOpenMicSongPerformances(performanceId || null);
+  const {
+    data: songPerformances = [],
+    isLoading: songPerformancesLoading,
+    refetch: refetchSongs,
+  } = useOpenMicSongPerformances(performanceId || null);
   const startPerformance = useStartOpenMicPerformance();
   
   const [commentary, setCommentary] = useState<LiveCommentary[]>([]);
   const [currentSongProgress, setCurrentSongProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
+  const announcedSongsRef = useRef(new Set<string>());
   
   // Audio playback state
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  const playbackSettingsRef = useRef({ volume, isMuted });
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
 
@@ -61,6 +97,80 @@ export default function PerformOpenMic() {
   const currentSong = performance?.current_song_position === 1 
     ? performance?.song_1 
     : performance?.song_2;
+  const firstSongCompletedAt = songPerformances.find((result) => result.position === 1)?.created_at ?? null;
+
+  const processSongComplete = useCallback(async (
+    targetPerformance: OpenMicPerformance,
+    targetSong: OpenMicSong,
+  ): Promise<boolean> => {
+    if (processingRef.current) return false;
+
+    processingRef.current = true;
+    setIsProcessing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('process-open-mic-song', {
+        body: {
+          performanceId: targetPerformance.id,
+          songId: targetSong.id,
+          position: targetPerformance.current_song_position,
+        },
+      });
+
+      if (error) throw error;
+
+      const crowdResponse = data?.crowd_response || 'engaged';
+      const responseComments: Record<string, string> = {
+        ecstatic: '🎉 The crowd goes wild! Standing ovation!',
+        enthusiastic: '👏 Great response from the audience!',
+        engaged: '👍 The crowd is appreciating the performance.',
+        mixed: '😐 Some mixed reactions from the audience.',
+        disappointed: '😔 The crowd seems a bit underwhelmed.',
+      };
+
+      setCommentary(prev => [...prev, {
+        text: responseComments[crowdResponse] || 'Song completed.',
+        type: crowdResponse === 'ecstatic' || crowdResponse === 'enthusiastic' ? 'positive' :
+              crowdResponse === 'disappointed' ? 'negative' : 'neutral',
+        timestamp: Date.now(),
+      }]);
+
+      if (targetPerformance.current_song_position < 2) {
+        setCommentary(prev => [...prev, {
+          text: 'Getting ready for the next song...',
+          type: 'neutral',
+          timestamp: Date.now(),
+        }]);
+        setCurrentSongProgress(0);
+        setAudioCurrentTime(0);
+      } else {
+        const { error: completeError } = await supabase.functions.invoke('complete-open-mic', {
+          body: { performanceId: targetPerformance.id },
+        });
+
+        if (completeError) throw completeError;
+      }
+
+      await Promise.all([refetch(), refetchSongs()]);
+      return true;
+    } catch (error) {
+      console.error('Error processing open mic song:', error);
+      setCommentary(prev => [...prev, {
+        text: 'Technical difficulties — use Finish Performance Now to retry safely.',
+        type: 'negative',
+        timestamp: Date.now(),
+      }]);
+      toast({
+        title: "Open Mic processing failed",
+        description: await getErrorMessage(error),
+        variant: "destructive",
+      });
+      return true;
+    } finally {
+      processingRef.current = false;
+      setIsProcessing(false);
+    }
+  }, [refetch, refetchSongs, toast]);
 
   // Audio playback effect
   useEffect(() => {
@@ -72,7 +182,7 @@ export default function PerformOpenMic() {
       return;
     }
 
-    const audioUrl = (currentSong as any).audio_url;
+    const audioUrl = getSongAudioUrl(currentSong);
     if (!audioUrl) return;
 
     // Create or update audio element
@@ -81,7 +191,8 @@ export default function PerformOpenMic() {
         audioRef.current.pause();
       }
       audioRef.current = new Audio(audioUrl);
-      audioRef.current.volume = isMuted ? 0 : volume;
+      const playbackSettings = playbackSettingsRef.current;
+      audioRef.current.volume = playbackSettings.isMuted ? 0 : playbackSettings.volume;
       
       audioRef.current.onloadedmetadata = () => {
         setAudioDuration(audioRef.current?.duration || 0);
@@ -95,10 +206,9 @@ export default function PerformOpenMic() {
         }
       };
       
-      audioRef.current.onended = async () => {
+      audioRef.current.onended = () => {
         setIsAudioPlaying(false);
-        // Song finished - process it
-        await processSongComplete();
+        void processSongComplete(performance, currentSong);
       };
       
       // Auto-play when ready
@@ -116,163 +226,148 @@ export default function PerformOpenMic() {
         audioRef.current.pause();
       }
     };
-  }, [currentSong, performance?.status]);
+  }, [currentSong, performance, processSongComplete]);
 
   // Update volume
   useEffect(() => {
+    playbackSettingsRef.current = { volume, isMuted };
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
 
-  // Process song completion
-  const processSongComplete = async () => {
-    if (!performance || !currentSong || isProcessing) return;
-    
-    setIsProcessing(true);
-    
-    try {
-      // Call edge function to process the song
-      const { data, error } = await supabase.functions.invoke('process-open-mic-song', {
-        body: {
-          performanceId: performance.id,
-          songId: currentSong.id,
-          position: performance.current_song_position,
-        },
-      });
-
-      if (error) throw error;
-
-      // Add result commentary
-      const crowdResponse = data?.crowd_response || 'engaged';
-      const responseComments: Record<string, string> = {
-        ecstatic: '🎉 The crowd goes wild! Standing ovation!',
-        enthusiastic: '👏 Great response from the audience!',
-        engaged: '👍 The crowd is appreciating the performance.',
-        mixed: '😐 Some mixed reactions from the audience.',
-        disappointed: '😔 The crowd seems a bit underwhelmed.',
-      };
-      
-      setCommentary(prev => [...prev, { 
-        text: responseComments[crowdResponse] || 'Song completed.', 
-        type: crowdResponse === 'ecstatic' || crowdResponse === 'enthusiastic' ? 'positive' : 
-              crowdResponse === 'disappointed' ? 'negative' : 'neutral',
-        timestamp: Date.now() 
-      }]);
-
-      // Advance to next song or complete
-      if (performance.current_song_position < 2) {
-        await supabase
-          .from('open_mic_performances')
-          .update({ current_song_position: 2 })
-          .eq('id', performance.id);
-        
-        setCommentary(prev => [...prev, { 
-          text: 'Getting ready for the next song...', 
-          type: 'neutral', 
-          timestamp: Date.now() 
-        }]);
-        
-        // Reset audio state for next song
-        setCurrentSongProgress(0);
-        setAudioCurrentTime(0);
-      } else {
-        // Complete the performance
-        const { error: completeError } = await supabase.functions.invoke('complete-open-mic', {
-          body: { performanceId: performance.id },
-        });
-
-        if (completeError) throw completeError;
-      }
-
-      // Refetch data
-      await refetch();
-      await refetchSongs();
-      
-    } catch (err) {
-      console.error('Error processing song:', err);
-      setCommentary(prev => [...prev, { 
-        text: 'Technical difficulties... but the show goes on!', 
-        type: 'negative', 
-        timestamp: Date.now() 
-      }]);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   // Fallback: simulated progression if no audio
   useEffect(() => {
     if (!performance || performance.status !== 'in_progress' || !currentSong) return;
     if (performance.current_song_position > 2) return;
-    
-    const audioUrl = (currentSong as any).audio_url;
+
+    const audioUrl = getSongAudioUrl(currentSong);
     if (audioUrl) return; // Use audio-based progression instead
+    if (performance.current_song_position === 2 && songPerformancesLoading) return;
 
-    let progressInterval: NodeJS.Timeout;
-    let processingTimeout: NodeJS.Timeout;
+    const songKey = `${performance.id}:${performance.current_song_position}`;
+    const songDurationMs = getOpenMicSongDurationMs(currentSong.duration_seconds);
+    const songStartedAtMs = getOpenMicSongStartedAtMs(
+      performance.current_song_position,
+      performance.started_at,
+      firstSongCompletedAt ? [{ position: 1, created_at: firstSongCompletedAt }] : [],
+    ) ?? Date.now();
 
-    const processSong = async () => {
-      setIsProcessing(true);
-      setCurrentSongProgress(0);
-      
-      // Add intro commentary
-      const introComments = [
-        { text: `Now performing: "${currentSong.title}"`, type: 'neutral' as const },
-        { text: 'The crowd settles in...', type: 'neutral' as const },
-      ];
-      setCommentary(prev => [...prev, ...introComments.map((c, i) => ({ ...c, timestamp: Date.now() + i }))]);
+    if (!announcedSongsRef.current.has(songKey)) {
+      announcedSongsRef.current.add(songKey);
+      setCommentary(prev => [...prev,
+        { text: `Now performing: "${currentSong.title}"`, type: 'neutral', timestamp: Date.now() },
+        { text: 'The crowd settles in...', type: 'neutral', timestamp: Date.now() + 1 },
+      ]);
+    }
 
-      // Simulate song progress (use actual duration, capped at 60s for demo)
-      const songDuration = Math.min(currentSong.duration_seconds || 180, 60) * 1000;
-      const progressStep = 100 / (songDuration / 500);
-      
-      progressInterval = setInterval(() => {
-        setCurrentSongProgress(prev => Math.min(prev + progressStep, 100));
-      }, 500);
+    let completionRetryTimeout: number | undefined;
+    let midpointTimeout: number | undefined;
 
-      // Mid-song commentary
-      setTimeout(() => {
+    const updateProgress = () => {
+      setCurrentSongProgress(getOpenMicSongProgress(Date.now(), songStartedAtMs, songDurationMs));
+    };
+
+    updateProgress();
+    const progressInterval = window.setInterval(updateProgress, 500);
+
+    const midpointDelayMs = songStartedAtMs + (songDurationMs / 2) - Date.now();
+    if (midpointDelayMs > 0) {
+      midpointTimeout = window.setTimeout(() => {
         const midComments = [
           'The energy in the room is building!',
           'People are nodding along to the beat.',
           'Someone in the back pulls out their phone to record.',
         ];
         const randomComment = midComments[Math.floor(Math.random() * midComments.length)];
-        setCommentary(prev => [...prev, { text: randomComment, type: 'positive', timestamp: Date.now() }]);
-      }, songDuration / 2);
+        setCommentary(prev => [...prev, {
+          text: randomComment,
+          type: 'positive',
+          timestamp: Date.now(),
+        }]);
+      }, midpointDelayMs);
+    }
 
-      // Process song completion
-      processingTimeout = setTimeout(async () => {
-        clearInterval(progressInterval);
-        setCurrentSongProgress(100);
-        await processSongComplete();
-        setIsProcessing(false);
-      }, songDuration);
+    const finishSong = async () => {
+      window.clearInterval(progressInterval);
+      setCurrentSongProgress(100);
+
+      const startedProcessing = await processSongComplete(performance, currentSong);
+      if (!startedProcessing) {
+        completionRetryTimeout = window.setTimeout(() => {
+          void finishSong();
+        }, 500);
+      }
     };
 
-    processSong();
+    const completionTimeout = window.setTimeout(() => {
+      void finishSong();
+    }, getOpenMicSongRemainingMs(Date.now(), songStartedAtMs, songDurationMs));
 
     return () => {
-      clearInterval(progressInterval);
-      clearTimeout(processingTimeout);
+      window.clearInterval(progressInterval);
+      if (completionTimeout !== undefined) window.clearTimeout(completionTimeout);
+      if (completionRetryTimeout !== undefined) window.clearTimeout(completionRetryTimeout);
+      if (midpointTimeout !== undefined) window.clearTimeout(midpointTimeout);
     };
-  }, [performance?.status, performance?.current_song_position, currentSong?.id]);
-
-  // Add intro commentary when starting
-  useEffect(() => {
-    if (performance?.status === 'in_progress' && currentSong && commentary.length === 0) {
-      setCommentary([
-        { text: `Now performing: "${currentSong.title}"`, type: 'neutral', timestamp: Date.now() },
-        { text: 'The crowd settles in...', type: 'neutral', timestamp: Date.now() + 1 },
-      ]);
-    }
-  }, [performance?.status, currentSong]);
+  }, [
+    currentSong,
+    firstSongCompletedAt,
+    performance,
+    processSongComplete,
+    songPerformancesLoading,
+  ]);
 
   const handleStart = () => {
     if (!performanceId) return;
     startPerformance.mutate(performanceId);
   };
+
+  const handleFinishNow = useCallback(async () => {
+    if (!performance || processingRef.current) return;
+
+    processingRef.current = true;
+    setIsProcessing(true);
+
+    try {
+      const songs = [performance.song_1, performance.song_2];
+
+      for (const [index, song] of songs.entries()) {
+        if (!song) throw new Error(`Song ${index + 1} is missing from the Open Mic setlist.`);
+
+        const { error } = await supabase.functions.invoke('process-open-mic-song', {
+          body: {
+            performanceId: performance.id,
+            songId: song.id,
+            position: index + 1,
+          },
+        });
+
+        if (error) throw error;
+      }
+
+      const { error: completeError } = await supabase.functions.invoke('complete-open-mic', {
+        body: { performanceId: performance.id },
+      });
+      if (completeError) throw completeError;
+
+      await Promise.all([refetch(), refetchSongs()]);
+      toast({
+        title: "Performance complete",
+        description: "Your Open Mic results are ready.",
+      });
+    } catch (error) {
+      console.error('Error completing Open Mic performance:', error);
+      toast({
+        title: "Could not finish the performance",
+        description: await getErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      processingRef.current = false;
+      setIsProcessing(false);
+    }
+  }, [performance, refetch, refetchSongs, toast]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -409,7 +504,7 @@ export default function PerformOpenMic() {
   }
 
   // Live performance view
-  const hasAudio = !!(currentSong as any)?.audio_url;
+  const hasAudio = !!getSongAudioUrl(currentSong);
   
   return (
     <FMPageScaffold
@@ -492,45 +587,13 @@ export default function PerformOpenMic() {
           <Button 
             variant="destructive" 
             className="w-full"
-            onClick={async () => {
-              setIsProcessing(true);
-              try {
-                // Process remaining songs first
-                if (!songPerformances.find(sp => sp.position === performance.current_song_position)) {
-                  await supabase.functions.invoke('process-open-mic-song', {
-                    body: {
-                      performanceId: performance.id,
-                      songId: currentSong?.id,
-                      position: performance.current_song_position,
-                    },
-                  });
-                }
-                if (performance.current_song_position === 1 && !songPerformances.find(sp => sp.position === 2)) {
-                  await supabase.functions.invoke('process-open-mic-song', {
-                    body: {
-                      performanceId: performance.id,
-                      songId: performance.song_2?.id,
-                      position: 2,
-                    },
-                  });
-                }
-                // Complete the performance
-                await supabase.functions.invoke('complete-open-mic', {
-                  body: { performanceId: performance.id },
-                });
-                await refetch();
-              } catch (err) {
-                console.error('Error completing performance:', err);
-              } finally {
-                setIsProcessing(false);
-              }
-            }}
+            onClick={() => void handleFinishNow()}
             disabled={isProcessing}
           >
             {isProcessing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : null}
-            Complete Performance Now
+            Finish Performance Now
           </Button>
         </CardContent>
       </Card>

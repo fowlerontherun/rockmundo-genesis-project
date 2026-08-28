@@ -2,197 +2,78 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+class HttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
   }
+}
+
+const jsonResponse = (body: unknown, status = 200) => new Response(
+  JSON.stringify(body),
+  {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  },
+);
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
 
   try {
-    const { performanceId } = await req.json();
-    
-    console.log('Completing open mic performance:', performanceId);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const authorization = req.headers.get("Authorization");
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get performance details
-    const { data: performance, error: perfError } = await supabase
-      .from('open_mic_performances')
-      .select(`
-        *,
-        venue:open_mic_venues(capacity, city_id)
-      `)
-      .eq('id', performanceId)
-      .single();
-
-    if (perfError) throw perfError;
-
-    // Get song performances
-    const { data: songPerformances, error: spError } = await supabase
-      .from('open_mic_song_performances')
-      .select('performance_score, crowd_response')
-      .eq('performance_id', performanceId);
-
-    if (spError) throw spError;
-
-    // Calculate overall rating (average of song scores)
-    const totalScore = songPerformances.reduce((sum, sp) => sum + (sp.performance_score || 0), 0);
-    const overallRating = songPerformances.length > 0 ? totalScore / songPerformances.length : 50;
-
-    // Calculate fame gained (scaled down from regular gigs)
-    // Open mics give less fame but are easier to access
-    const venueCapacity = performance.venue?.capacity || 75;
-    let fameGained = Math.floor((overallRating / 100) * (venueCapacity / 10));
-    
-    // Bonus for exceptional performances
-    if (overallRating >= 85) {
-      fameGained = Math.floor(fameGained * 1.5);
-    } else if (overallRating >= 70) {
-      fameGained = Math.floor(fameGained * 1.2);
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      throw new Error("Open Mic service configuration is incomplete");
     }
-    
-    // Minimum fame for completing
-    fameGained = Math.max(5, fameGained);
-
-    // Calculate fans gained (based on performance and venue size)
-    // Open mics have lower conversion but build core fanbase
-    const attendanceEstimate = Math.floor(venueCapacity * (0.3 + Math.random() * 0.4)); // 30-70% capacity
-    let conversionRate = 0.02; // Base 2% conversion for open mics
-    
-    if (overallRating >= 85) {
-      conversionRate = 0.08; // 8% for amazing performances
-    } else if (overallRating >= 70) {
-      conversionRate = 0.05; // 5% for good performances
-    } else if (overallRating >= 55) {
-      conversionRate = 0.03; // 3% for decent performances
-    }
-    
-    const fansGained = Math.max(1, Math.floor(attendanceEstimate * conversionRate));
-
-    // Update performance record
-    const { error: updatePerfError } = await supabase
-      .from('open_mic_performances')
-      .update({
-        status: 'completed',
-        overall_rating: overallRating,
-        fame_gained: fameGained,
-        fans_gained: fansGained,
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', performanceId);
-
-    if (updatePerfError) throw updatePerfError;
-
-    // Update band stats if band exists
-    if (performance.band_id) {
-      // Update band fame
-      const { error: bandError } = await supabase
-        .from('bands')
-        .update({
-          fame: supabase.rpc('increment_value', { row_id: performance.band_id, amount: fameGained }),
-          total_fans: supabase.rpc('increment_value', { row_id: performance.band_id, amount: fansGained }),
-        })
-        .eq('id', performance.band_id);
-
-      // Use raw update instead since rpc might not exist
-      const { data: band } = await supabase
-        .from('bands')
-        .select('fame, total_fans, casual_fans, morale, reputation_score, fan_sentiment_score')
-        .eq('id', performance.band_id)
-        .single();
-
-      if (band) {
-        // === OPEN MIC → MORALE (v1.0.966) ===
-        const curMorale = (band as any).morale ?? 50;
-        const moraleBoost = overallRating >= 85 ? 4 : overallRating >= 70 ? 2 : overallRating >= 50 ? 1 : -2;
-
-        // === OPEN MIC → REPUTATION (v1.0.982) ===
-        const curRep = (band as any).reputation_score ?? 0;
-        const repChange = overallRating >= 85 ? 3 : overallRating >= 70 ? 1 : overallRating < 40 ? -2 : 0;
-
-        // === OPEN MIC → FAN SENTIMENT (v1.0.983) ===
-        const curSent = (band as any).fan_sentiment_score ?? 0;
-        const sentChange = overallRating >= 85 ? 5 : overallRating >= 70 ? 2 : overallRating < 40 ? -4 : 0;
-
-        await supabase
-          .from('bands')
-          .update({
-            fame: (band.fame || 0) + fameGained,
-            total_fans: (band.total_fans || 0) + fansGained,
-            casual_fans: (band.casual_fans || 0) + fansGained,
-            morale: Math.max(0, Math.min(100, curMorale + moraleBoost)),
-            reputation_score: Math.max(-100, Math.min(100, curRep + repChange)),
-            fan_sentiment_score: Math.max(-100, Math.min(100, curSent + sentChange)),
-          } as any)
-          .eq('id', performance.band_id);
-
-        console.log(`Open mic: rating ${overallRating} → morale ${moraleBoost > 0 ? '+' : ''}${moraleBoost}, rep ${repChange > 0 ? '+' : ''}${repChange}, sent ${sentChange > 0 ? '+' : ''}${sentChange}`);
-      }
-
-      // Update city fans if venue has city
-      if (performance.venue?.city_id) {
-        const { data: existingCityFans } = await supabase
-          .from('band_city_fans')
-          .select('*')
-          .eq('band_id', performance.band_id)
-          .eq('city_id', performance.venue.city_id)
-          .single();
-
-        if (existingCityFans) {
-          await supabase
-            .from('band_city_fans')
-            .update({
-              casual_fans: existingCityFans.casual_fans + fansGained,
-              total_fans: existingCityFans.total_fans + fansGained,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existingCityFans.id);
-        } else {
-          // Get city info
-          const { data: city } = await supabase
-            .from('cities')
-            .select('name, country')
-            .eq('id', performance.venue.city_id)
-            .single();
-
-          if (city) {
-            await supabase
-              .from('band_city_fans')
-              .insert({
-                band_id: performance.band_id,
-                city_id: performance.venue.city_id,
-                city_name: city.name,
-                country: city.country,
-                casual_fans: fansGained,
-                total_fans: fansGained,
-              });
-          }
-        }
-      }
+    if (!authorization?.startsWith("Bearer ")) {
+      throw new HttpError(401, "You must be signed in to complete an Open Mic");
     }
 
-    console.log('Open mic completed:', { overallRating, fameGained, fansGained });
+    const authClient = createClient(supabaseUrl, anonKey);
+    const token = authorization.slice("Bearer ".length);
+    const { data: { user }, error: userError } = await authClient.auth.getUser(token);
+    if (userError || !user) throw new HttpError(401, "Your session has expired. Please sign in again.");
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        overall_rating: overallRating,
-        fame_gained: fameGained,
-        fans_gained: fansGained,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const body = await req.json();
+    const performanceId = typeof body?.performanceId === "string" ? body.performanceId : null;
+    if (!performanceId) throw new HttpError(400, "A valid Open Mic performance is required");
 
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const { data: performance, error: performanceError } = await admin
+      .from("open_mic_performances")
+      .select("id,user_id")
+      .eq("id", performanceId)
+      .maybeSingle();
+
+    if (performanceError) throw performanceError;
+    if (!performance) throw new HttpError(404, "Open Mic performance not found");
+    if (performance.user_id !== user.id) throw new HttpError(403, "This is not your Open Mic performance");
+
+    const { data: result, error: completionError } = await admin.rpc("complete_open_mic_atomic", {
+      p_performance_id: performanceId,
+      p_user_id: user.id,
+    });
+
+    if (completionError) {
+      const message = completionError.message || "Open Mic completion failed";
+      const status = message.includes("Both Open Mic songs") || message.includes("not currently live") ? 409 : 500;
+      throw new HttpError(status, message);
+    }
+
+    console.log("Open Mic completed", { performanceId, alreadyCompleted: result?.already_completed });
+    return jsonResponse({ success: true, ...result });
   } catch (error) {
-    console.error('Error completing open mic:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const status = error instanceof HttpError ? error.status : 500;
+    const message = error instanceof Error ? error.message : "Open Mic completion failed";
+    console.error("Error completing Open Mic", { status, message });
+    return jsonResponse({ error: message }, status);
   }
 });
