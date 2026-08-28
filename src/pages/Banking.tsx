@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   depositWalletToBank,
   transferBetweenBankAccounts,
@@ -98,14 +99,35 @@ const operationKey = () => crypto.randomUUID();
 
 export default function Banking() {
   const queryClient = useQueryClient();
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["banking-dashboard"],
+  const {
+    profileId,
+    isLoading: isProfileLoading,
+    error: profileError,
+  } = useActiveProfile();
+  const {
+    data,
+    isLoading: isDashboardLoading,
+    error: dashboardError,
+    refetch,
+  } = useQuery({
+    queryKey: ["banking-dashboard", profileId],
     queryFn: fetchBankingDashboard,
+    enabled: Boolean(profileId),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+  const isLoading = isProfileLoading || (Boolean(profileId) && isDashboardLoading);
+  const error =
+    profileError ??
+    dashboardError ??
+    (!isProfileLoading && !profileId
+      ? new Error("Create or activate a character before opening a bank account.")
+      : null);
 
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["banking-dashboard"] }),
+      queryClient.invalidateQueries({ queryKey: ["finance-command-center"] }),
       queryClient.invalidateQueries({ queryKey: ["profile"] }),
       queryClient.invalidateQueries({ queryKey: ["active-profile"] }),
       queryClient.invalidateQueries({ queryKey: ["financial-account"] }),

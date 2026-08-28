@@ -6,6 +6,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import Banking from "./Banking";
 import { fetchBankingDashboard } from "@/services/banking/bankingService";
 
+vi.mock("@/hooks/useActiveProfile", () => ({
+  useActiveProfile: () => ({
+    profileId: "profile-1",
+    isLoading: false,
+    error: null,
+  }),
+}));
+
 vi.mock("@/services/banking/bankingService", () => ({
   fetchBankingDashboard: vi.fn(),
   formatCurrencyMinor: ({ amountMinor, currencyCode }: { amountMinor: number; currencyCode: string }) => `${currencyCode} ${amountMinor}`,
@@ -37,9 +45,12 @@ describe("Banking page", () => {
 
     renderBanking();
 
-    expect(await screen.findByText("No linked bank accounts yet.")).toBeInTheDocument();
-    expect(screen.getByText("No active loans.")).toBeInTheDocument();
-    expect(screen.getByText(/No savings goals yet/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "No accounts yet. Open your first current or savings account to get started.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open account" })).toBeInTheDocument();
     expect(fetchBankingDashboard).toHaveBeenCalledTimes(1);
   });
 
@@ -57,6 +68,10 @@ describe("Banking page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitFor(() => expect(fetchBankingDashboard).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("No linked bank accounts yet.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "No accounts yet. Open your first current or savings account to get started.",
+      ),
+    ).toBeInTheDocument();
   });
 });

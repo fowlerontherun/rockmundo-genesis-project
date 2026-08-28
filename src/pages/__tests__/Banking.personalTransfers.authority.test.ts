@@ -61,6 +61,7 @@ describe("Banking personal-transfer authority and retry contract", () => {
   it("refreshes banking, character cash and finance activity", () => {
     for (const queryKey of [
       'queryKey: ["banking-dashboard"]',
+      'queryKey: ["finance-command-center"]',
       'queryKey: ["profile"]',
       'queryKey: ["active-profile"]',
       'queryKey: ["financial-account"]',
@@ -68,6 +69,12 @@ describe("Banking personal-transfer authority and retry contract", () => {
     ]) {
       expect(bankingSource).toContain(queryKey);
     }
+  });
+
+  it("scopes dashboard caching to the active character", () => {
+    expect(bankingSource).toContain('queryKey: ["banking-dashboard", profileId]');
+    expect(bankingSource).toContain("enabled: Boolean(profileId)");
+    expect(bankingSource).toContain('refetchOnMount: "always"');
   });
 
   it("preserves currency rules", () => {
