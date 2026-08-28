@@ -141,7 +141,7 @@ export const FMSidebar = () => {
 
   return (
     <aside
-      className={cn}(
+      className={cn(
         "shrink-0 bg-fm-panel border-r border-fm-border flex flex-col transition-[width] duration-150",
         collapsed ? "w-12" : "w-56"
       )}
