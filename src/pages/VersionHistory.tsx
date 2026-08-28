@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.705",
+    date: "2026-08-28",
+    changes: [
+      { type: 'fix', description: "Fixed a syntax error in the sidebar navigation that prevented the app from compiling and loading." },
+    ],
+  },
+  {
     version: "1.1.704",
     date: "2026-08-28",
     changes: [
