@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.706",
+    date: "2026-08-28",
+    changes: [
+      { type: 'fix', description: "Fixed a TypeScript error in the festival day planner by narrowing the unknown scheduleState value to the allowed union type 'locked' | 'published' via a dedicated type guard." },
+    ],
+  },
+  {
     version: "1.1.705",
     date: "2026-08-28",
     changes: [

@@ -196,6 +196,9 @@ const isItemStatus = (value: unknown): value is FestivalPlanItemStatus =>
   typeof value === "string" && ITEM_STATUSES.has(value as FestivalPlanItemStatus);
 const isSource = (value: unknown): value is FestivalPlanItemSource =>
   typeof value === "string" && SOURCES.has(value as FestivalPlanItemSource);
+const isScheduleState = (value: unknown): value is "locked" | "published" =>
+  value === "locked" || value === "published";
+
 
 const parseDay = (value: unknown): FestivalPlanDay => {
   if (!isRecord(value) || !isDate(value.date) || !isPositiveInteger(value.dayNumber)) {
@@ -440,7 +443,7 @@ export const parseFestivalStageSchedule = (value: unknown): FestivalStageSchedul
     !isUuid(value.attendanceId) ||
     !isUuid(value.festivalEditionId) ||
     !isNullableUuid(value.revisionId) ||
-    !(value.scheduleState === null || value.scheduleState === "published" || value.scheduleState === "locked") ||
+    (value.scheduleState !== null && !isScheduleState(value.scheduleState)) ||
     typeof value.scheduleAvailable !== "boolean" ||
     !isString(value.timezone) ||
     !Array.isArray(value.days) ||
@@ -454,7 +457,7 @@ export const parseFestivalStageSchedule = (value: unknown): FestivalStageSchedul
     attendanceId: value.attendanceId,
     festivalEditionId: value.festivalEditionId,
     revisionId: value.revisionId,
-    scheduleState: value.scheduleState as "locked" | "published",
+    scheduleState: value.scheduleState,
     scheduleAvailable: value.scheduleAvailable,
     timezone: value.timezone,
     days: value.days.map(parseDay),
