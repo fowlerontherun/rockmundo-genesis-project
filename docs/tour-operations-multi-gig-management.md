@@ -45,7 +45,7 @@ The budget is idempotent: the same tour inputs return the same totals, so repeat
 
 ## Tour HQ implementation
 
-`TourHQPanel` displays:
+`TourHQPanel` displays the deterministic summary used by the operations engine. `LiveTourHQPanel` is the canonical player workspace and displays:
 
 - Current city and next venue.
 - Remaining shows, map stops and calendar stops.
@@ -98,7 +98,9 @@ The completion report includes financial performance, reputation gained, fans ga
 
 ## Security and permissions
 
-The database migration uses RLS on tour operations tables. Band members may view tour operations records; leaders/managers write templates, state, ledger rows, equipment manifests, crew schedules, merchandise plans, sponsor obligations, events and reports. RPCs and existing gig booking policies remain the authoritative place for mutating gigs.
+The live database rollout uses RLS on every tour operations table and revokes direct browser table access. Authenticated band members read the consolidated workspace through a reviewed RPC; only leaders/managers can use its mutation RPCs. Each privileged function validates the caller, fixes its `search_path`, rejects anonymous execution and keeps event impacts and completion calculations server-owned. Existing gig booking policies remain authoritative for mutating gigs.
+
+The rollout was applied directly to the Supabase project rather than committed as a migration, by request. `supabase/tests/e1_tour_operations_harness.sql` verifies the deployed contract without modifying schema or data.
 
 ## Admin balancing
 
@@ -110,7 +112,6 @@ Unit tests cover logistics, scheduling, budgets, crew, equipment, fatigue, moral
 
 ## Remaining limitations
 
-- Tour HQ is a reusable panel and deterministic engine; wiring it to live Supabase data for every tour detail route should be completed in the next UI integration pass.
 - Ferry/customs/flight delays use event contracts but not detailed external markets.
 - Regional popularity persistence is schema-ready through report/stat records, but advanced demand decay and oversaturation should be tuned after production data exists.
 - Weather is not simulated directly; future work can feed weather modifiers into fatigue/event risk.

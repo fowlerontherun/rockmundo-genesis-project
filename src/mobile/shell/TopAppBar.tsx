@@ -65,7 +65,7 @@ export const TopAppBar = () => {
   const { profile } = useGameData();
   const unreadCount = useUnifiedInboxUnreadCount();
   const displayName = profile?.display_name || profile?.username || "Player";
-  const avatarUrl = (profile as any)?.avatar_url;
+  const avatarUrl = profile?.avatar_url ?? undefined;
   const title = titleFor(location.pathname, location.search);
 
   return (

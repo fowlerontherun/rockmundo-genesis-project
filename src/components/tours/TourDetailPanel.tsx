@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 import { TourMemberSyncStatus } from "@/components/tours/TourMemberSyncStatus";
+import { LiveTourHQPanel } from "@/components/tours/LiveTourHQPanel";
 
 interface TourDetailPanelProps {
   tour: {
@@ -50,8 +51,7 @@ const travelIcon = (mode: string | null | undefined) => {
 export function TourDetailPanel({ tour }: TourDetailPanelProps) {
   const { data: stats, isLoading } = useTourStats(tour.id);
 
-  const isActive = tour.status === "active" || tour.status === "scheduled";
-  const isCompleted = tour.status === "completed";
+  const supportsTourOperations = ["scheduled", "active", "completed", "cancelled"].includes(tour.status);
   const fillPct = stats ? (stats.totalShows > 0 ? (stats.completedShows / stats.totalShows) * 100 : 0) : 0;
   const occupancyPct = stats && stats.totalCapacity > 0
     ? Math.round((stats.totalTicketsSold / stats.totalCapacity) * 100)
@@ -244,6 +244,10 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
         </>
       ) : (
         <p className="text-sm text-muted-foreground text-center py-4">No performance data yet.</p>
+      )}
+
+      {supportsTourOperations && (
+        <LiveTourHQPanel tourId={tour.id} tourStatus={tour.status} />
       )}
 
       {/* Per-member live sync status (current city, assigned leg, ETA, sync health) */}
