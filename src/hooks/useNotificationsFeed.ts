@@ -48,11 +48,11 @@ export function useNotificationsFeed() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        (payload) => {
-          const row = (payload.new && Object.keys(payload.new).length > 0 ? payload.new : payload.old) as Partial<PersistedNotification>;
-          if (row.profile_id === profileId) {
-            qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] });
-          }
+        () => {
+          // The database subscription is account-filtered, but the refetch itself
+          // is character-filtered. This keeps realtime simple without allowing a
+          // sibling character's rows into the active character cache.
+          qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] });
         }
       )
       .subscribe();
