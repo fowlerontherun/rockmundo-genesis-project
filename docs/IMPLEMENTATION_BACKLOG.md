@@ -693,7 +693,7 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 ## PR D4 — Group conversations and communication consolidation
 
 **Priority:** P1  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
@@ -904,6 +904,13 @@ This programme extends the modern ticket system. It must not reuse the legacy at
 
 - Opening the same live tour from all supported routes shows consistent Tour HQ state.
 - Mutations persist and survive refresh/reconnect.
+
+### Implementation notes (2026-08-29)
+
+- Deployed the durable Tour HQ tables, RLS boundary, idempotency records and seven authenticated operations RPCs directly to the production Supabase project. No migration file was added, by request.
+- Added one RPC-only `LiveTourHQPanel` for scheduled, active, completed and cancelled tour detail states, with periodic/focus refresh, explicit retry/read-only states and optimistic version conflict protection.
+- Crew schedules, equipment manifests, merchandise plans, sponsor obligations, reusable band templates, logistics events, ledgers and completion reports now round-trip through the live workspace.
+- Added source authority coverage and a verification-only database contract harness; the production rollback harness, grants, RLS, function search paths and advisors were also verified against the live project.
 
 ---
 

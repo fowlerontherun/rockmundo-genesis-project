@@ -35,8 +35,8 @@ describe("Mobile Social companion contract", () => {
     expect(source).toContain('if (section === "chat") return <ChatPage/>');
 
     for (const room of ["world", "help", "recruit", "band", "friends"]) {
-      expect(mobileChat).toContain(`id: \"${room}\" as RoomId`);
-      expect(desktopChat).toContain(`id: \"${room}\" as RoomId`);
+      expect(mobileChat).toContain(`id: "${room}" as RoomId`);
+      expect(desktopChat).toContain(`id: "${room}" as RoomId`);
     }
 
     expect(mobileChat).toContain('channelKey="world"');
@@ -59,7 +59,7 @@ describe("Mobile Social companion contract", () => {
   });
 
   it("only exposes incoming pending requests as actionable requests", () => {
-    expect(source).toContain('x.friendship?.status === "pending" && x.friendship?.addressee_id === profileId');
+    expect(source).toContain('friendship.friendship?.status === "pending" && friendship.friendship?.addressee_id === profileId');
     expect(source).toContain("No incoming friend requests");
   });
 

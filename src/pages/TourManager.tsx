@@ -1224,7 +1224,7 @@ const TourManager = () => {
                         ) : (
                           <Plus className="h-4 w-4 mr-2" />
                         )}
-                        Catch Up to Tour ($1,500 charter)
+                        Catch Up to Tour (£1,500 charter)
                       </Button>
 
                       <AlertDialog>
@@ -1242,7 +1242,7 @@ const TourManager = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Cancel Tour?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will cancel {selectedTour.name}. Future gigs and travel will be cancelled, while tour history is retained.
+                              This will cancel {selectedTour.name}. Future gigs and travel will be cancelled. Completed shows and tour history will remain visible.
                               {new Date(
                                 selectedTour.created_at,
                               ).toDateString() === new Date().toDateString()
