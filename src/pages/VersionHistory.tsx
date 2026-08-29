@@ -17,7 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.707",
+    date: "2026-08-29",
+    changes: [
+      { type: 'fix', description: "Fixed the 'recording_window_duration_mismatch' error when booking a recording session: the booked window now matches the chosen session length (4h demo, 8h professional) instead of always using the 4-hour slot block." },
+    ],
+  },
+  {
     version: "1.1.706",
+
     date: "2026-08-28",
     changes: [
       { type: 'fix', description: "Fixed a TypeScript error in the festival day planner by narrowing the unknown scheduleState value to the allowed union type 'locked' | 'published' via a dedicated type guard." },
