@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.708",
+    date: "2026-08-29",
+    changes: [
+      { type: 'feature', description: "Added a recording session confirmation modal that shows the exact scheduled time window, studio, song, duration and cost after booking." },
+      { type: 'feature', description: "You can now cancel or reschedule a booked recording session straight from the confirmation modal — cancelling frees the studio slot, clears diary blocks and refunds the full cost." },
+    ],
+  },
+  {
     version: "1.1.707",
     date: "2026-08-29",
     changes: [

@@ -55,6 +55,11 @@ import {
 } from "@/utils/skillRecordingBonus";
 import type { SkillProgressEntry } from "@/utils/skillGearPerformance";
 import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
+import { useCancelRecordingSession } from "@/hooks/useCancelRecordingSession";
+import {
+  RecordingBookingConfirmation,
+  type RecordingBookingSummary,
+} from "./RecordingBookingConfirmation";
 
 interface SessionConfiguratorProps {
   userId: string;
@@ -116,6 +121,9 @@ export const SessionConfigurator = ({
     conflicts: ConflictInfo[];
     retry: (skipProfileIds: string[]) => Promise<void>;
   } | null>(null);
+  const [bookingSummary, setBookingSummary] =
+    useState<RecordingBookingSummary | null>(null);
+  const cancelSession = useCancelRecordingSession();
 
   // The parent page may fail to resolve the player's band (stricter filters or
   // legacy rows). Resolve it here as a fallback so the payer choice always shows.
@@ -336,7 +344,7 @@ export const SessionConfigurator = ({
 
 
     try {
-      await createSession.mutateAsync({
+      const session = await createSession.mutateAsync({
         user_id: userId,
         profile_id: profileId || null,
         band_id: effectiveBandId || null,
@@ -354,7 +362,19 @@ export const SessionConfigurator = ({
         skip_profile_ids: normalizedSkipProfileIds,
       });
       setConflictState(null);
-      onComplete();
+      setBookingSummary({
+        sessionId: (session as any)?.id ?? "",
+        studioName: studio?.name ?? "Recording Studio",
+        songTitle: song?.title ?? "Your song",
+        producerName: (producer as any)?.name ?? null,
+        recordingType,
+        durationHours,
+        scheduledStart: start.toISOString(),
+        scheduledEnd: end.toISOString(),
+        totalCost,
+        payer,
+        payerName: payer === "band" ? bandName : null,
+      });
     } catch (error: unknown) {
       if (isBandUnavailableError(error)) {
         setConflictState({
@@ -376,8 +396,42 @@ export const SessionConfigurator = ({
 
   const canBook = selectedSlotId && canAfford;
 
+  const handleCancelBookedSession = async (mode: "cancel" | "reschedule") => {
+    if (!bookingSummary?.sessionId) {
+      setBookingSummary(null);
+      if (mode === "cancel") onComplete();
+      return;
+    }
+    try {
+      await cancelSession.mutateAsync({
+        sessionId: bookingSummary.sessionId,
+        reason: mode === "reschedule" ? "rescheduled_by_player" : "cancelled_by_player",
+      });
+      setBookingSummary(null);
+      if (mode === "reschedule") {
+        setSelectedSlotId("");
+        setFormError("");
+      } else {
+        onComplete();
+      }
+    } catch {
+      // The mutation surfaces its own error toast; keep the dialog open.
+    }
+  };
+
   return (
     <div className="space-y-6">
+      <RecordingBookingConfirmation
+        open={!!bookingSummary}
+        summary={bookingSummary}
+        isCancelling={cancelSession.isPending}
+        onClose={() => {
+          setBookingSummary(null);
+          onComplete();
+        }}
+        onCancelSession={() => void handleCancelBookedSession("cancel")}
+        onReschedule={() => void handleCancelBookedSession("reschedule")}
+      />
       {conflictState && (
         <BandAvailabilityConflictDialog
           open
