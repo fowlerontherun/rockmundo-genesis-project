@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { asAny } from "@/lib/type-helpers";
 
 export interface PersistedNotification {
@@ -21,19 +21,19 @@ export interface PersistedNotification {
 const QUERY_KEY = ["notifications-feed"] as const;
 
 export function useNotificationsFeed() {
-  const { user } = useAuth();
+  const { userId, profileId } = useActiveProfile();
   const qc = useQueryClient();
-  const userId = user?.id ?? null;
 
   const query = useQuery({
-    queryKey: [...QUERY_KEY, userId],
-    enabled: !!userId,
+    queryKey: [...QUERY_KEY, userId, profileId],
+    enabled: !!userId && !!profileId,
     queryFn: async (): Promise<PersistedNotification[]> => {
-      if (!userId) return [];
+      if (!userId || !profileId) return [];
       const { data, error } = await supabase
         .from(asAny("notifications"))
         .select("*")
         .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -42,67 +42,76 @@ export function useNotificationsFeed() {
   });
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !profileId) return;
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}:${profileId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
         () => {
-          qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId] });
+          // The database subscription is account-filtered, but the refetch itself
+          // is character-filtered. This keeps realtime simple without allowing a
+          // sibling character's rows into the active character cache.
+          qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] });
         }
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, qc]);
+  }, [userId, profileId, qc]);
 
   const markRead = useMutation({
     mutationFn: async (id: string) => {
+      if (!profileId) return;
       const { error } = await supabase
         .from(asAny("notifications"))
         .update({ read_at: new Date().toISOString() } as never)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("profile_id", profileId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
   });
 
   const markAllRead = useMutation({
     mutationFn: async () => {
-      if (!userId) return;
+      if (!userId || !profileId) return;
       const { error } = await supabase
         .from(asAny("notifications"))
         .update({ read_at: new Date().toISOString() } as never)
         .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .is("read_at", null);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
   });
 
   const dismiss = useMutation({
     mutationFn: async (id: string) => {
+      if (!profileId) return;
       const { error } = await supabase
         .from(asAny("notifications"))
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("profile_id", profileId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
   });
 
   const clearAll = useMutation({
     mutationFn: async () => {
-      if (!userId) return;
+      if (!userId || !profileId) return;
       const { error } = await supabase
         .from(asAny("notifications"))
         .delete()
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .eq("profile_id", profileId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
   });
 
   const notifications = query.data ?? [];
