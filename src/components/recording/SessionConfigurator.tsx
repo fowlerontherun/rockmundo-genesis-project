@@ -329,7 +329,11 @@ export const SessionConfigurator = ({
     if (!slot) {
       return;
     }
-    const { start, end } = getSlotTimeRange(slot, selectedDate);
+    const { start } = getSlotTimeRange(slot, selectedDate);
+    // The booking authority requires the window length to match the selected
+    // recording duration (demo 4h, professional 8h), not the 4-hour slot block.
+    const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000);
+
 
     try {
       await createSession.mutateAsync({
