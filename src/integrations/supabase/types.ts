@@ -28804,6 +28804,18 @@ export type Database = {
           band_id: string
           booking_fee: number | null
           booking_request_id: string | null
+          cancellation_fame_penalty: number | null
+          cancellation_fan_sentiment_penalty: number | null
+          cancellation_financial_transaction_id: string | null
+          cancellation_notice_hours: number | null
+          cancellation_policy_version: string | null
+          cancellation_reason: string | null
+          cancellation_refund_amount: number | null
+          cancellation_refund_percentage: number | null
+          cancellation_reputation_penalty: number | null
+          cancellation_tier: string | null
+          cancelled_at: string | null
+          cancelled_by_profile_id: string | null
           completed_at: string | null
           completion_claimed_at: string | null
           created_at: string | null
@@ -28850,6 +28862,18 @@ export type Database = {
           band_id: string
           booking_fee?: number | null
           booking_request_id?: string | null
+          cancellation_fame_penalty?: number | null
+          cancellation_fan_sentiment_penalty?: number | null
+          cancellation_financial_transaction_id?: string | null
+          cancellation_notice_hours?: number | null
+          cancellation_policy_version?: string | null
+          cancellation_reason?: string | null
+          cancellation_refund_amount?: number | null
+          cancellation_refund_percentage?: number | null
+          cancellation_reputation_penalty?: number | null
+          cancellation_tier?: string | null
+          cancelled_at?: string | null
+          cancelled_by_profile_id?: string | null
           completed_at?: string | null
           completion_claimed_at?: string | null
           created_at?: string | null
@@ -28896,6 +28920,18 @@ export type Database = {
           band_id?: string
           booking_fee?: number | null
           booking_request_id?: string | null
+          cancellation_fame_penalty?: number | null
+          cancellation_fan_sentiment_penalty?: number | null
+          cancellation_financial_transaction_id?: string | null
+          cancellation_notice_hours?: number | null
+          cancellation_policy_version?: string | null
+          cancellation_reason?: string | null
+          cancellation_refund_amount?: number | null
+          cancellation_refund_percentage?: number | null
+          cancellation_reputation_penalty?: number | null
+          cancellation_tier?: string | null
+          cancelled_at?: string | null
+          cancelled_by_profile_id?: string | null
           completed_at?: string | null
           completion_claimed_at?: string | null
           created_at?: string | null
@@ -58228,6 +58264,23 @@ export type Database = {
           p_ticket_price: number
           p_venue_id: string
         }
+        Returns: Json
+      }
+      cancel_gig: {
+        Args: { p_gig_id: string; p_reason?: string }
+        Returns: Json
+      }
+      check_gig_booking_day_rule: {
+        Args: {
+          p_band_id: string
+          p_local_date: string
+          p_slot: string
+          p_venue_id: string
+        }
+        Returns: Json
+      }
+      preview_gig_cancellation: {
+        Args: { p_gig_id: string }
         Returns: Json
       }
       book_vip_gig_concierge_travel: {

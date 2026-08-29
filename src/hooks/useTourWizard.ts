@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { 
@@ -38,10 +39,18 @@ import {
   estimateMerchSalesPerAttendee,
 } from '@/utils/tourCalculations';
 import { createBandScheduledActivities } from '@/utils/bandActivityScheduling';
+import { getGigBookingPlayerError } from '@/utils/gigBookingErrors';
 
 export interface UseTourWizardOptions {
   bandId?: string;
 }
+
+type CreatedTourGig = Pick<
+  Database['public']['Tables']['gigs']['Row'],
+  'id' | 'venue_id' | 'scheduled_date'
+>;
+type PlayerTravelHistoryInsert = Database['public']['Tables']['player_travel_history']['Insert'];
+type ScheduledActivityInsert = Database['public']['Tables']['player_scheduled_activities']['Insert'];
 
 const WIZARD_STEPS = [
   'Basics',
@@ -612,7 +621,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         estimated_revenue: v.estimatedTicketRevenue,
       }));
 
-      let createdGigs: any[] = [];
+      let createdGigs: CreatedTourGig[] = [];
       if (gigsToCreate.length > 0) {
         const { data: gigs, error: gigsError } = await supabase
           .from('gigs')
@@ -774,10 +783,10 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
               .from('cities')
               .select('id, name, country')
               .in('id', cityIds);
-            (cityRows || []).forEach((c: any) => cityNameLookup.set(c.id, `${c.name}, ${c.country}`));
+            (cityRows || []).forEach((city) => cityNameLookup.set(city.id, `${city.name}, ${city.country}`));
 
-            const memberRows: any[] = [];
-            const activityRows: any[] = [];
+            const memberRows: PlayerTravelHistoryInsert[] = [];
+            const activityRows: ScheduledActivityInsert[] = [];
             for (const leg of insertedLegs || []) {
               const fromName = cityNameLookup.get(leg.from_city_id) || 'Unknown';
               const toName = cityNameLookup.get(leg.to_city_id) || 'Unknown';
@@ -818,10 +827,10 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
               }
             }
             if (memberRows.length > 0) {
-              await (supabase as any).from('player_travel_history').insert(memberRows);
+              await supabase.from('player_travel_history').insert(memberRows);
             }
             if (activityRows.length > 0) {
-              await (supabase as any).from('player_scheduled_activities').insert(activityRows);
+              await supabase.from('player_scheduled_activities').insert(activityRows);
             }
           } catch (memberTravelErr) {
             console.warn('Auto member travel creation failed:', memberTravelErr);
@@ -852,9 +861,11 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       });
     },
     onError: (error: Error) => {
+      const isGigDayConflict = error.message.includes('gig_booking_same_day_');
+      const playerError = isGigDayConflict ? getGigBookingPlayerError(error) : null;
       toast({
-        title: 'Failed to book tour',
-        description: error.message,
+        title: playerError?.title ?? 'Failed to book tour',
+        description: playerError?.description ?? error.message,
         variant: 'destructive',
       });
     },

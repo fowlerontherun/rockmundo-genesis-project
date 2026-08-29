@@ -10,6 +10,8 @@ const messages: Array<[string, string, string]> = [
   ['gig_booking_insufficient_funds', 'Insufficient funds', 'The band does not have enough funds for this booking.'],
   ['gig_booking_setlist_invalid', 'Setlist unavailable', 'That setlist is no longer valid. Choose an active setlist with at least six songs.'],
   ['gig_booking_past_date', 'Invalid date', 'Choose a gig date and time in the future.'],
+  ['gig_booking_same_day_different_venue', 'Same-day venue conflict', 'Your band already has a show that day at another venue. Multiple shows in one day must all be at the same venue.'],
+  ['gig_booking_same_day_gap_too_short', 'Not enough time between shows', 'Same-venue shows on the same day must have at least four full hours between them.'],
   ['gig_booking_band_conflict', 'Band scheduling conflict', 'A band member or the band already has a conflicting activity.'],
   ['gig_booking_venue_conflict', 'Venue unavailable', 'The venue is already booked during part of that time.'],
   ['gig_booking_venue_cooldown', 'Venue on cooldown', 'Your band played here recently. Choose another venue or a later date.'],

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Star, Ticket, Users } from 'lucide-react';
+import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Star, Ticket, Users, XCircle } from 'lucide-react';
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +28,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
 import { getGigBookingPlayerError, type GigBookingErrorLike } from '@/utils/gigBookingErrors';
 import { formatMerchCurrency } from '@/lib/api/merch';
+import { GigCancellationDialog } from '@/components/gig/GigCancellationDialog';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -59,6 +60,7 @@ const GigBooking = () => {
   const [band, setBand] = useState<BandRow | null>(null);
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
   const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
+  const [cancellingGig, setCancellingGig] = useState<GigWithVenue | null>(null);
   const [isBooking, setIsBooking] = useState(false);
   const bookingInFlight = useRef(false);
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
@@ -228,7 +230,7 @@ const GigBooking = () => {
         venues:venues!gigs_venue_id_fkey (*)
       `)
       .eq('band_id', bandId)
-      .in('status', ['scheduled', 'in_progress', 'ready_for_completion'])
+      .in('status', ['scheduled', 'confirmed', 'in_progress', 'ready_for_completion'])
       .order('scheduled_date', { ascending: true });
 
     if (error) {
@@ -875,6 +877,17 @@ const GigBooking = () => {
                             >
                               {statusConfig.buttonLabel}
                             </Button>
+                            {(status === 'scheduled' || status === 'confirmed') && scheduledDate.getTime() > Date.now() && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setCancellingGig(gig)}
+                              >
+                                <XCircle className="mr-1 h-3.5 w-3.5" />
+                                Cancel show
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
@@ -924,6 +937,25 @@ const GigBooking = () => {
           initialDate={getNextAvailableDateForVenue(bookingVenue.id)}
         />
       )}
+
+      <GigCancellationDialog
+        gig={cancellingGig ? {
+          id: cancellingGig.id,
+          venueName: cancellingGig.venues?.name ?? 'Unknown venue',
+          scheduledDate: cancellingGig.scheduled_date,
+        } : null}
+        onClose={() => setCancellingGig(null)}
+        onCancelled={async () => {
+          if (!band?.id) return;
+          await Promise.all([
+            loadUpcomingGigs(band.id),
+            updateBandLockout(band.id),
+            updateVenueCooldowns(band.id, venues),
+          ]);
+          const refreshedBand = await resolveBand();
+          if (refreshedBand) setBand(refreshedBand);
+        }}
+      />
     </FMPageScaffold>
   );
 };

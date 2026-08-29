@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { getGigBookingPlayerError } from '@/utils/gigBookingErrors';
 
 /**
  * AI Gig Offer Generator
@@ -10,6 +11,14 @@ interface OfferCriteria {
   maxFame?: number;
   genreMatch?: string[];
   qualityTier?: string;
+}
+
+interface GigScheduleConflict {
+  conflict_type: 'double_booking';
+  gig_id_1: string;
+  gig_id_2: string;
+  band_id: string;
+  detected_at: string;
 }
 
 /**
@@ -151,7 +160,8 @@ export async function acceptGigOffer(offerId: string): Promise<{ gigId: string |
     .single();
 
   if (gigError || !gig) {
-    return { gigId: null, error: gigError?.message || 'Failed to create gig' };
+    const playerError = gigError ? getGigBookingPlayerError(gigError) : null;
+    return { gigId: null, error: playerError?.description || 'Failed to create gig' };
   }
 
   // Update offer status
@@ -176,7 +186,7 @@ export async function rejectGigOffer(offerId: string): Promise<void> {
 /**
  * Detect scheduling conflicts
  */
-export async function detectGigConflicts(bandId: string): Promise<any[]> {
+export async function detectGigConflicts(bandId: string): Promise<GigScheduleConflict[]> {
   const { data: gigs } = await supabase
     .from('gigs')
     .select('*')
@@ -186,7 +196,7 @@ export async function detectGigConflicts(bandId: string): Promise<any[]> {
 
   if (!gigs || gigs.length < 2) return [];
 
-  const conflicts = [];
+  const conflicts: GigScheduleConflict[] = [];
 
   for (let i = 0; i < gigs.length - 1; i++) {
     for (let j = i + 1; j < gigs.length; j++) {

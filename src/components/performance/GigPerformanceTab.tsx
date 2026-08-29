@@ -1,25 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Music, MapPin, DollarSign, Users, X } from 'lucide-react';
+import { Calendar, Music, MapPin, DollarSign, Users, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useToast } from '@/hooks/use-toast';
-import { useGigCancellation } from '@/hooks/useGigCancellation';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
+import { GigCancellationDialog } from '@/components/gig/GigCancellationDialog';
 
 type GigRow = Database['public']['Tables']['gigs']['Row'];
 type VenueRow = Database['public']['Tables']['venues']['Row'];
@@ -33,7 +22,7 @@ export function GigPerformanceTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [scheduledGigs, setScheduledGigs] = useState<GigWithVenue[]>([]);
-  const { isLoading: isCancelling, calculateCancellationDetails, cancelGig } = useGigCancellation();
+  const [cancellingGig, setCancellingGig] = useState<GigWithVenue | null>(null);
 
   const loadScheduledGigs = useCallback(async () => {
     if (!profileId) return;
@@ -64,13 +53,13 @@ export function GigPerformanceTab() {
           venues:venues!gigs_venue_id_fkey (*)
         `)
         .in('band_id', bandIds)
-        .eq('status', 'scheduled')
+        .in('status', ['scheduled', 'confirmed'])
         .gte('scheduled_date', new Date().toISOString())
         .order('scheduled_date', { ascending: true });
 
       if (gigsError) throw gigsError;
 
-      setScheduledGigs((gigs as any) ?? []);
+      setScheduledGigs((gigs ?? []) as unknown as GigWithVenue[]);
     } catch (error) {
       console.error('Error loading scheduled gigs:', error);
       toast({
@@ -191,71 +180,17 @@ export function GigPerformanceTab() {
                     <Badge variant="secondary">Ready</Badge>
                   )}
                   
-                  {/* Cancel Gig Button */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                        disabled={isCancelling}
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Cancel
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Cancel Gig?</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-2">
-                          {(() => {
-                            const details = calculateCancellationDetails(
-                              gig.id,
-                              gig.band_id,
-                              gig.scheduled_date,
-                              gig.payment || 0
-                            );
-                            return (
-                              <>
-                                <p>Are you sure you want to cancel this gig at <strong>{venue?.name}</strong>?</p>
-                                <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-1 text-sm">
-                                  <p><strong>Days until gig:</strong> {details.daysUntilGig}</p>
-                                  <p><strong>Booking fee:</strong> ${details.bookingFee.toLocaleString()}</p>
-                                  <p><strong>Refund amount:</strong> ${details.refundAmount.toLocaleString()} ({Math.round(details.refundPercentage * 100)}%)</p>
-                                  {details.famePenalty > 0 && (
-                                    <p className="text-destructive"><strong>Fame penalty:</strong> -{details.famePenalty}</p>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Earlier cancellations receive better refunds and lower penalties.
-                                </p>
-                              </>
-                            );
-                          })()}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Gig</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={async () => {
-                            const details = calculateCancellationDetails(
-                              gig.id,
-                              gig.band_id,
-                              gig.scheduled_date,
-                              gig.payment || 0
-                            );
-                            const success = await cancelGig(details);
-                            if (success) {
-                              loadScheduledGigs();
-                            }
-                          }}
-                        >
-                          Cancel Gig
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {!isPast && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setCancellingGig(gig)}
+                    >
+                      <XCircle className="mr-1 h-3.5 w-3.5" />
+                      Cancel show
+                    </Button>
+                  )}
 
                   <Button asChild size="sm">
                     <Link to={`/performance/gig/${gig.id}`}>
@@ -268,6 +203,16 @@ export function GigPerformanceTab() {
           })}
         </CardContent>
       </Card>
+
+      <GigCancellationDialog
+        gig={cancellingGig ? {
+          id: cancellingGig.id,
+          venueName: cancellingGig.venues?.name ?? 'Unknown venue',
+          scheduledDate: cancellingGig.scheduled_date,
+        } : null}
+        onClose={() => setCancellingGig(null)}
+        onCancelled={loadScheduledGigs}
+      />
 
       <div className="text-center">
         <Button asChild variant="outline">

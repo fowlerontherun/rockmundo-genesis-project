@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getGigBookingPlayerError } from '@/utils/gigBookingErrors';
 import {
   addSupportAvailability,
   createGigSupportOffer,
@@ -25,6 +26,16 @@ import {
 } from './api';
 
 type City = { id: string; name: string; country: string | null };
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string') return message;
+  }
+  return fallback;
+};
+
 type SupportOfferView = {
   id: string;
   status: string;
@@ -91,13 +102,13 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
       const [prefRow, availabilityRows, cityResult, offerResult, gigResult] = await Promise.all([
         getSupportPreferences(bandId),
         listSupportAvailability(bandId),
-        (supabase as any).from('cities').select('id,name,country').order('country').order('name'),
-        (supabase as any)
+        supabase.from('cities').select('id,name,country').order('country').order('name'),
+        supabase
           .from('gig_support_slots')
           .select('id,status,revenue_share,invited_at,gig:gigs!gig_support_slots_gig_id_fkey(id,scheduled_date,scheduled_end,band_id,venue:venues!gigs_venue_id_fkey(id,name,city_id),headliner:bands!gigs_band_id_fkey(id,name))')
           .eq('support_band_id', bandId)
           .order('invited_at', { ascending: false }),
-        (supabase as any)
+        supabase
           .from('gigs')
           .select('id,scheduled_date,scheduled_end,venue:venues!gigs_venue_id_fkey(id,name,city_id,capacity)')
           .eq('band_id', bandId)
@@ -126,8 +137,8 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
       setCities((cityResult.data ?? []) as City[]);
       setOffers((offerResult.data ?? []) as SupportOfferView[]);
       setGigs((gigResult.data ?? []) as HeadlinerGig[]);
-    } catch (error: any) {
-      toast({ title: 'Support marketplace unavailable', description: error?.message ?? 'Could not load support data.', variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Support marketplace unavailable', description: getErrorMessage(error, 'Could not load support data.'), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -140,8 +151,8 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     try {
       await saveSupportPreferences(bandId, prefs);
       toast({ title: 'Support preferences saved', description: prefs.enabled ? 'Your band can now appear in eligible support searches.' : 'Your band is no longer advertising support availability.' });
-    } catch (error: any) {
-      toast({ title: 'Could not save preferences', description: error?.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Could not save preferences', description: getErrorMessage(error, 'Please try again.'), variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -176,8 +187,8 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
         title: 'Availability added',
         description: `${addedCount} ${addedCount === 1 ? 'city' : 'cities'} added for ${availableFrom} to ${availableUntil}.`,
       });
-    } catch (error: any) {
-      toast({ title: 'Could not add availability', description: error?.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Could not add availability', description: getErrorMessage(error, 'Please try again.'), variant: 'destructive' });
     } finally { setSaving(false); }
   };
 
@@ -186,8 +197,8 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     try {
       await setSupportAvailabilityStatus(row.id, row.status === 'active' ? 'disabled' : 'active');
       await loadMarketplace();
-    } catch (error: any) {
-      toast({ title: 'Could not update availability', description: error?.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Could not update availability', description: getErrorMessage(error, 'Please try again.'), variant: 'destructive' });
     } finally { setBusyId(null); }
   };
 
@@ -197,8 +208,15 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
       await respondToGigSupportOffer({ supportSlotId: offerId, action });
       await loadMarketplace();
       toast({ title: action === 'accept' ? 'Support slot accepted' : 'Support slot declined' });
-    } catch (error: any) {
-      toast({ title: `Could not ${action} support slot`, description: error?.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Please try again.');
+      const isGigDayConflict = message.includes('gig_booking_same_day_');
+      const playerError = isGigDayConflict ? getGigBookingPlayerError({ message }) : null;
+      toast({
+        title: playerError?.title ?? `Could not ${action} support slot`,
+        description: playerError?.description ?? message,
+        variant: 'destructive',
+      });
     } finally { setBusyId(null); }
   };
 
@@ -215,8 +233,8 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
         venueCapacity: gig.venue.capacity ?? 0,
       });
       setCandidates(rows);
-    } catch (error: any) {
-      toast({ title: 'Could not find support bands', description: error?.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Could not find support bands', description: getErrorMessage(error, 'Please try again.'), variant: 'destructive' });
     } finally { setSearching(false); }
   };
 
@@ -227,8 +245,8 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
       await createGigSupportOffer({ gigId: selectedGigId, supportBandId });
       toast({ title: 'Support offer sent', description: 'The band can now accept or decline the slot.' });
       setCandidates((current) => current.filter((item) => item.band_id !== supportBandId));
-    } catch (error: any) {
-      toast({ title: 'Could not send support offer', description: error?.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      toast({ title: 'Could not send support offer', description: getErrorMessage(error, 'Please try again.'), variant: 'destructive' });
     } finally { setBusyId(null); }
   };
 

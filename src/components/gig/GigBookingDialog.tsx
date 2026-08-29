@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle, Target, Star, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -29,6 +29,7 @@ import type { Database } from "@/lib/supabase-types";
 import { calculateSetlistDuration, validateSetlistForSlot } from "@/utils/setlistDuration";
 import { useSetlistSongs } from "@/hooks/useSetlists";
 import { TicketOperatorSelector } from "@/components/gig/TicketOperatorSelector";
+import { useGigBookingDayRule } from "@/hooks/useGigBookingDayRule";
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type BandRow = Database['public']['Tables']['bands']['Row'];
@@ -139,6 +140,17 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     !!venue
   );
 
+  const {
+    data: dayRule,
+    isLoading: isCheckingDayRule,
+    isError: isDayRuleError,
+  } = useGigBookingDayRule(
+    band?.id,
+    venue?.id,
+    selectedDate,
+    selectedSlot || undefined,
+  );
+
   const { data: setlistSongsData } = useSetlistSongs(selectedSetlistId || null);
 
   const eligibleSetlists = setlists.filter((sl) => (sl.song_count ?? 0) >= 6);
@@ -245,6 +257,19 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
   const handleConfirm = async () => {
     if (!selectedSetlistId || !selectedSlot || !selectedDate || !venue) return;
 
+    if (isCheckingDayRule || isDayRuleError || dayRule?.allowed === false) {
+      toast({
+        title: dayRule?.reason === "different_venue" ? "Same-day venue conflict" : "Show schedule unavailable",
+        description: dayRule?.reason === "different_venue"
+          ? "Your band already has a show that day at another venue. Same-day shows must be at the same venue."
+          : dayRule?.allowed === false
+            ? "Shows at the same venue must have at least four full hours between them."
+            : "Wait for the server schedule check to finish, then try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (durationValidation && durationValidation.valid === false) {
       toast({
         title: "Setlist doesn't fit",
@@ -309,7 +334,10 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     isBooking ||
     bandLockout.isLocked ||
     durationValidation?.valid === false ||
-    operatorRequired;
+    operatorRequired ||
+    isCheckingDayRule ||
+    isDayRuleError ||
+    dayRule?.allowed === false;
 
   const payoutTier = payoutBreakdown ? getPayoutTier(payoutBreakdown.netPayout) : null;
 
@@ -380,6 +408,14 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
             </p>
           </CardContent>
         </Card>
+
+        <Alert>
+          <Clock className="h-4 w-4" />
+          <AlertTitle>Same-day show rule</AlertTitle>
+          <AlertDescription>
+            A band cannot book two shows on the same day unless both are at this exact venue with at least four full hours between one show ending and the next starting. The server enforces this for venue bookings, offers, and tour shows.
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-6">
           {/* Date Selection */}
@@ -470,6 +506,49 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                   );
                 })}
               </RadioGroup>
+            )}
+
+            {selectedSlot && isCheckingDayRule && (
+              <div className="flex items-center gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary" />
+                Checking the band's full show calendar…
+              </div>
+            )}
+
+            {selectedSlot && isDayRuleError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Schedule check unavailable</AlertTitle>
+                <AlertDescription>
+                  Booking is paused because the server could not confirm the band's availability. No fee has been charged.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {dayRule?.allowed === false && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>
+                  {dayRule.reason === "different_venue"
+                    ? "Another venue is already booked that day"
+                    : "Not enough time between shows"}
+                </AlertTitle>
+                <AlertDescription>
+                  {dayRule.reason === "different_venue"
+                    ? `Your band is already playing at ${dayRule.existing_show?.venue_name ?? "another venue"}. Same-day shows are only allowed at the same venue.`
+                    : `This slot leaves ${dayRule.actual_gap_minutes ?? 0} minutes between shows. A minimum gap of ${dayRule.minimum_gap_minutes} minutes (four hours) is required.`}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {dayRule?.allowed && dayRule.reason === "same_venue_gap_ok" && (
+              <Alert className="border-green-500/30 bg-green-500/5">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertTitle>Same-venue double show allowed</AlertTitle>
+                <AlertDescription>
+                  This slot leaves {dayRule.actual_gap_minutes} minutes between shows, meeting the four-hour reset and recovery rule.
+                </AlertDescription>
+              </Alert>
             )}
           </div>
 
