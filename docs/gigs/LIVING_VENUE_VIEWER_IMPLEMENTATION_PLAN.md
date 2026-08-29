@@ -280,6 +280,35 @@ Each PR must update production and demo fixtures together and include a before/a
 | Performance | Low/mid/high tiers, stadium aggregation, counter caps, DPR cap, hidden-tab pause, teardown/leak checks |
 | Authority | Network mutation interception; saved totals unchanged by speed/seek; replay schema validation; authorization |
 
+## F1 closure audit (2026-08-29)
+
+The status terms in this matrix are deliberately strict: **Implemented** means the
+production path exists and the cited executable gate passed; **Partial** means a
+production path exists but a scoped acceptance condition is still unproven; and
+**Missing** means no production path exists. The audit found no partial or missing
+phases 0–3 requirements.
+
+| F1 requirement | Status | Production and executable evidence |
+| --- | --- | --- |
+| Contain-fit at required viewport sizes | Implemented | `engine/SceneLayout.ts` uses the smaller-axis ratio for the complete 1280 × 720 scene; `hooks/useCanvasSize.ts` applies it to the renderer. `pages/admin/GigViewerDemo.tsx` provides exact 360 × 800, 390 × 844, 768 × 1024, 1366 × 768, and 1920 × 1080 frames. `tests/sceneLayout.test.ts` verifies no crop across portrait, landscape, desktop, and ultrawide boxes; `tests/browser/gigReplayBrowserGate.test.tsx` covers mobile and fixed-overlay/fullscreen shell behavior. |
+| Venue Wide, Stage Focus, and Auto cameras | Implemented | `engine/CameraDirector.ts`, `GigViewerControls.tsx`, and `hooks/useGigViewerPreferences.ts` expose all three modes, keep Venue Wide as the default, clamp authored safe bounds, and derive Auto from replay time. `tests/cameraDirector.test.ts` and the browser gate verify mode output, persistence, safe bounds, deterministic shots, and reduced-motion behavior. |
+| Seven venue archetypes and deterministic variations | Implemented | `engine/VenueSceneRegistry.ts` contains pub, club, theatre, arena, stadium, festival, and beach registries with three immutable variations each. `tests/venueSceneRegistry.test.ts` validates all 21 descriptors, distinct structural fingerprints, seeded selection, and deterministic fallback. |
+| Path graphs and service-point reachability | Implemented | Each descriptor owns explicit approach/return route IDs, waypoints, queue points, and return anchors. `tests/venueSceneRegistry.test.ts` proves every bar and merchandise point resolves both routes and rejects missing, short, off-scene, stage-crossing, or mismatched paths; `tests/venueActivity.test.ts` proves invalid paths fail closed. |
+| Deterministic representative crowd caps | Implemented | `engine/RepresentativeCrowd.ts` derives a presentation-only count with authoritative-zero handling and hard 12–72 bounds; performance-tier draw budgets remain separately capped in `engine/ViewerDiagnostics.ts`. `tests/representativeCrowd.test.ts` and `tests/viewerDiagnostics.test.ts` cover determinism, min/max bounds, archetype fallbacks, and zero attendance. |
+| Bar activity | Implemented | `engine/VenueActivity.ts` builds timestamp-derived bar journeys without mutating settlement data; `engine/VenueSceneRenderer.ts` renders distributed bar fixtures and stock. `tests/venueActivity.test.ts`, `tests/replayChecksum.test.ts`, and `tests/visualRegression.test.ts` verify ambient/settled evidence, bounded queues, deterministic reconstruction, replay stability, and draw output. |
+| Merchandise activity | Implemented | The same activity projection builds merchandise browse, queue, service, carried-item, and return states from ambient, aggregate, or event-replay evidence; the renderer draws merchandise fixtures and product stock. Activity, checksum, and visual-regression gates cover item mix, zero-sales behavior, deterministic schedules, and stable rendering. |
+| Staff queues and service loops | Implemented | `engine/VenueActivity.ts` assigns staff per distributed station and derives idle, customer handover, restock, and return states from playback time. `tests/venueActivity.test.ts` verifies queue-slot uniqueness, station assignment, reconstructable handovers, deterministic restocking, in-fixture bounds, and safe disablement for invalid routes. |
+| Seek, restart, and fast-playback reconstruction | Implemented | `engine/PlaybackController.ts` owns the single replay clock and 1×/2×/Fast (4×) speeds; activity, crowd, performer, camera, and scene state are pure timestamp projections. `tests/engine.test.ts`, `tests/venueActivity.test.ts`, `tests/performerLifecycle.test.ts`, and `tests/cameraDirector.test.ts` cover play/pause, clock jumps, speed changes, restart, backward/forward reconstruction, and repeated-frame equality. |
+| Reduced-motion equivalents | Implemented | The saved/system preference is wired through the shared shell to cameras, activity, crowd, performers, environments, signage, ambience, particles, and controls. Camera, activity, crowd lifecycle, environment, signage, ambience, performance-profile, visual-regression, and controls-accessibility tests verify stable/snap equivalents while retaining semantic state and service handovers. |
+| Demo/player renderer parity | Implemented | `pages/admin/GigViewerDemo.tsx` passes deterministic fixture data into the production `GigViewerShell`; analysis and player modes both instantiate `GigCanvas` and the same renderer stack. `tests/browser/gigReplayBrowserGate.test.tsx` exercises both modes, while `tests/viewerNoMutation.test.ts` enforces the presentation-only authority boundary. |
+
+### Verification result and follow-ups
+
+- Viewer gate: **32 test files, 214 tests passed** on 2026-08-29, including the production-shell browser surrogate, visual fingerprints, replay checksum, accessibility controls, and no-mutation gate.
+- Partial rows: **0**. Missing rows: **0**.
+- No F2 follow-up tickets were created. F2 remains a contingency for a future reproducible regression rather than a speculative implementation slice.
+- This closure audit required documentation changes only. It introduced no schema or data change, so there was no database operation to apply.
+
 ## Definition of done
 
 The expansion is complete only when all of the following are demonstrated in both the real Gig Viewer and Admin Gig Viewer Demo:
