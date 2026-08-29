@@ -1,6 +1,6 @@
 # RockMundo Consolidated Implementation Backlog
 
-_Last updated: 2026-08-25_
+_Last updated: 2026-08-29_
 
 ## Purpose
 
@@ -932,7 +932,13 @@ The viewer has had significant later implementation. Do not redesign it again wi
 ## PR F1 — Living Venue phases 0–3 closure audit
 
 **Priority:** P1  
-**Status:** NEEDS VERIFICATION
+**Status:** COMPLETE
+
+**Implementation note (2026-08-29):** The closure matrix in
+`docs/gigs/LIVING_VENUE_VIEWER_IMPLEMENTATION_PLAN.md` verifies all eleven scoped
+requirements as implemented. The complete viewer gate passed 32 test files and
+214 tests. No partial or missing rows were found, so no F2 implementation tickets
+were created and no database change was required.
 
 ### Scope
 
@@ -961,6 +967,10 @@ Audit and explicitly mark implemented/partial/missing for:
 
 **Priority:** P1  
 **Status:** DEFERRED
+
+**Closure note (2026-08-29):** F1 found no evidence-backed phases 0–3 gaps. Keep
+this as a contingency only; do not schedule work here without a new reproducible
+gap and executable evidence.
 
 ### Scope
 

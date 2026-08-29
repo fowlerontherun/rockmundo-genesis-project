@@ -4,6 +4,11 @@ This note records the focused verification and containment slice from the
 [implementation plan](../LIVING_VENUE_VIEWER_IMPLEMENTATION_PLAN.md). It does not
 implement the Phase 2 descriptor or redesign venue archetypes.
 
+> Historical baseline: this file records the state of the original Phase 0/1
+> slice. The dependency-pending, partial, and missing labels below are superseded
+> by the evidence-backed [F1 closure audit](../LIVING_VENUE_VIEWER_IMPLEMENTATION_PLAN.md#f1-closure-audit-2026-08-29),
+> which verified phases 0–3 complete on 2026-08-29.
+
 ## Status matrix
 
 | Contract | Status | Executable evidence |
