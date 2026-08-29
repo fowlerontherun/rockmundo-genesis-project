@@ -82,7 +82,7 @@ export const useCancelRecordingSession = () => {
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
       toast.success(
         result.refunded > 0
-          ? `Session cancelled — £${result.refunded.toLocaleString()} refunded`
+          ? `Session cancelled — $${result.refunded.toLocaleString()} refunded`
           : "Recording session cancelled",
       );
     },
