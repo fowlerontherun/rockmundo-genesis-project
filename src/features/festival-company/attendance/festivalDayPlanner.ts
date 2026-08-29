@@ -457,7 +457,7 @@ export const parseFestivalStageSchedule = (value: unknown): FestivalStageSchedul
     attendanceId: value.attendanceId,
     festivalEditionId: value.festivalEditionId,
     revisionId: value.revisionId,
-    scheduleState: value.scheduleState,
+    scheduleState: isScheduleState(value.scheduleState) ? value.scheduleState : null,
     scheduleAvailable: value.scheduleAvailable,
     timezone: value.timezone,
     days: value.days.map(parseDay),
