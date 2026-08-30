@@ -281,21 +281,29 @@ const BandCrewManagement = () => {
   const filteredCatalog = useMemo(() => {
     if (!availableCrew) return [];
 
-    return availableCrew.filter((crew) => {
-      if (crew.hired_by_band_id !== null) return false;
-      if (selectedRole !== "all" && crew.role !== selectedRole) return false;
+    return availableCrew
+      .filter((crew) => {
+        if (crew.hired_by_band_id !== null) return false;
+        if (selectedRole !== "all" && crew.role !== selectedRole) return false;
+        if (affordableOnly && bandFame < crew.min_fame_required) return false;
 
-      if (selectedTier !== "all") {
-        const tierNum = parseInt(selectedTier);
-        const tier = FAME_TIERS[tierNum - 1];
-        if (tier && (crew.star_rating < tier.stars[0] || crew.star_rating > tier.stars[1])) {
-          return false;
+        if (selectedTier !== "all") {
+          const tierNum = parseInt(selectedTier);
+          const tier = FAME_TIERS[tierNum - 1];
+          if (tier && (crew.star_rating < tier.stars[0] || crew.star_rating > tier.stars[1])) {
+            return false;
+          }
         }
-      }
 
-      return true;
-    });
-  }, [availableCrew, selectedRole, selectedTier]);
+        return true;
+      })
+      .sort((a, b) => {
+        const aLocked = bandFame < a.min_fame_required ? 1 : 0;
+        const bLocked = bandFame < b.min_fame_required ? 1 : 0;
+        if (aLocked !== bLocked) return aLocked - bLocked;
+        return b.star_rating - a.star_rating;
+      });
+  }, [availableCrew, selectedRole, selectedTier, affordableOnly, bandFame]);
 
   const crewCount = hiredCrew?.length ?? 0;
   const showCrew = (hiredCrew || []).filter((crew) => isPerformanceCrewRole(crew.crew_type));
