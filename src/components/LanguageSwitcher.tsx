@@ -12,8 +12,8 @@ import { useLanguageStore, useTranslation } from "@/hooks/useTranslation";
 const languages: Array<{ code: SupportedLanguage; name: string; flag: string }> = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
   { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
-  { code: 'pt', name: 'Português', flag: '🇧🇷' },
+  { code: 'zh', name: '简体中文', flag: '🇨🇳' },
+  { code: 'pt', name: 'Português (Brasil)', flag: '🇧🇷' },
   { code: 'ja', name: '日本語', flag: '🇯🇵' },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'fr', name: 'Français', flag: '🇫🇷' },
