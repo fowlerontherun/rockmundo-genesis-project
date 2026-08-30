@@ -236,16 +236,63 @@ export default function Shop() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <ul className="space-y-1 text-muted-foreground">
-            <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> One-off {donationPrice} donation, no subscription.</li>
+            <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Donate {donationPrice} or any amount you choose — no subscription.</li>
             <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Earns the legendary “Project Supporter” achievement.</li>
             <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Grants 1,000 bonus XP to your active character.</li>
           </ul>
           <div className="flex flex-wrap items-center gap-3">
             <CurrencySelector />
-            <Button onClick={handleDonate} disabled={donating} className="gap-2">
+            <Button onClick={() => void handleDonate()} disabled={donating} className="gap-2">
               {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
             </Button>
           </div>
+
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
+            <div>
+              <div className="font-semibold">Choose your own amount</div>
+              <p className="text-xs text-muted-foreground">
+                Any amount from {formatMinor(100, currency)} to {formatMinor(200000, currency)} in {currency.toUpperCase()}.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[500, 1000, 2500, 5000, 10000].map((preset) => (
+                <Button
+                  key={preset}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={donating}
+                  onClick={() => setCustomAmount(String(preset / 100))}
+                >
+                  {formatMinor(preset, currency)}
+                </Button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  {CURRENCY_META[currency].symbol}
+                </span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  max={2000}
+                  step="0.01"
+                  aria-label="Custom donation amount"
+                  placeholder="25.00"
+                  value={customAmount}
+                  onChange={(event) => setCustomAmount(event.target.value)}
+                  className="w-32 pl-7"
+                />
+              </div>
+              <Button onClick={() => void handleCustomDonate()} disabled={donating || !customAmount} className="gap-2">
+                {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate custom amount
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+
         </CardContent>
       </Card>
     </FMPageScaffold>
