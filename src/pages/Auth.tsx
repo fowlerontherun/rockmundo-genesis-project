@@ -25,6 +25,7 @@ import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TermsDialog, TERMS_VERSION } from "@/components/legal/TermsDialog";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 type AuthTab = "login" | "signup" | "forgot";
 
