@@ -230,6 +230,17 @@ serve(async (req) => {
     const productionIncidents = incidentRoll < productionIncidentRisk ? [{ type: productionComplexity > 70 ? 'delayed_setup' : 'lighting_cue_failure', severity: productionIncidentRisk > 45 ? 'major' : 'minor', impact: Math.round(Math.min(12, productionIncidentRisk / 6)), mitigation: (soundcheckBenefit[soundcheckType] || 0) >= 13 ? 'Caught during soundcheck and partially mitigated.' : 'Crew worked around it during the show.' }] : [];
     avgRating = Math.max(0, Math.min(25, avgRating * (1 + audienceProductionBonus + soundcheckBonus - fatiguePenalty - (productionIncidents[0]?.impact || 0) / 250)));
 
+    // === MISSING MEMBER PENALTY — leader chose to perform without absent members ===
+    const absencePenalty = (gig as any).absence_decision === 'perform'
+      ? Math.max(0, Math.min(0.6, Number((gig as any).absence_quality_penalty || 0)))
+      : 0;
+    if (absencePenalty > 0) {
+      avgRating = Math.max(0, Math.min(25, avgRating * (1 - absencePenalty)));
+      console.log(`[complete-gig] Absence penalty applied: ${(absencePenalty * 100).toFixed(0)}% (${(gig as any).absent_member_count || 0} missing member(s))`);
+    }
+
+
+
     // Commerce is a single transactional authority. The RPC serializes on the
     // gig, returns the immutable existing settlement on retry, locks inventory,
     // and writes orders, stock, venue finance and outcome aggregates together.
