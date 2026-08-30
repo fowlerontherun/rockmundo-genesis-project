@@ -19,6 +19,7 @@ import {
   useCityProjectTypes,
   useProposeCityProject,
   useCancelCityProject,
+  useCityTreasury,
 } from "@/hooks/useCityProjects";
 import {
   PROJECT_CATEGORY_LABELS,
@@ -62,10 +63,13 @@ function effectValue(key: string, value: number) {
 export function MayorProjectsTab({ cityId, politics }: Props) {
   const { data: types } = useCityProjectTypes();
   const { data: projects } = useCityProjects(cityId);
+  const { data: treasury } = useCityTreasury(cityId);
   const propose = useProposeCityProject();
   const cancel = useCancelCityProject();
 
   const [confirmType, setConfirmType] = useState<CityProjectType | null>(null);
+
+  const available = Number(treasury?.balance ?? 0) - Number(treasury?.pending_commitments ?? 0);
 
   const active = useMemo(
     () => projects?.filter((p) => p.status === "in_progress") ?? [],
@@ -90,6 +94,8 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
   const finalCost = (t: CityProjectType) =>
     Math.round(t.base_cost * (1 - discount / 100));
 
+  const isAffordable = (t: CityProjectType) => available >= finalCost(t);
+
   const isUnlocked = (t: CityProjectType) => {
     if (!t.required_skill_slug || t.required_skill_level === 0) return true;
     if (!politics) return false;
@@ -99,6 +105,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
       ] ?? 0;
     return lvl >= t.required_skill_level;
   };
+
 
   return (
     <div className="space-y-4">
@@ -117,7 +124,11 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
         <TabsContent value="catalog" className="space-y-3 mt-4">
           <div className="rounded-lg border bg-muted/15 p-3 text-xs text-muted-foreground">
             Completed projects now permanently improve explicit city ratings. A rating of 50 is neutral; higher ratings create bounded gameplay advantages shown in City Services.
+            <span className="mt-1 block font-medium text-foreground">
+              Available treasury: ${Math.round(available).toLocaleString()}
+            </span>
           </div>
+
           {discount > 0 && (
             <div className="text-xs text-success">
               ✓ Negotiation skill grants you a {discount}% discount on all
@@ -187,14 +198,20 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                               ≥ {t.required_skill_level}
                             </div>
                           )}
+                          {unlocked && !isAffordable(t) && (
+                            <div className="text-xs text-warning">
+                              Treasury short by ${(finalCost(t) - available).toLocaleString()} — collect more city taxes first.
+                            </div>
+                          )}
                           <Button
                             size="sm"
                             className="w-full"
-                            disabled={!unlocked || propose.isPending}
+                            disabled={!unlocked || !isAffordable(t) || propose.isPending}
                             onClick={() => setConfirmType(t)}
                           >
                             <Hammer className="h-3 w-3 mr-1" /> Propose
                           </Button>
+
                         </CardContent>
                       </Card>
                     );

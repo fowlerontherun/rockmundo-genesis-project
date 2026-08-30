@@ -58723,6 +58723,34 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_city_project: {
+        Args: { p_profile_id: string; p_project_id: string }
+        Returns: {
+          approval_change: number
+          city_id: string
+          completed_at: string | null
+          completes_at: string
+          cost: number
+          created_at: string
+          description: string | null
+          duration_days: number
+          effects: Json
+          id: string
+          mayor_id: string | null
+          name: string
+          notes: string | null
+          project_type_id: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "city_projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       cancel_confirmed_support_slot: {
         Args: { p_reason?: string; p_support_slot_id: string }
         Returns: {
@@ -59045,6 +59073,10 @@ export type Database = {
           travel_duration_multiplier: number
         }[]
       }
+      city_politics_skill_value: {
+        Args: { p_profile_id: string; p_slug: string }
+        Returns: number
+      }
       claim_company_shift: { Args: { p_shift_id: string }; Returns: string }
       claim_gig_completion: { Args: { p_gig_id: string }; Returns: Json }
       claim_gig_completion_attempt: {
@@ -59115,6 +59147,7 @@ export type Database = {
         }
       }
       complete_company_shift: { Args: { p_claim_id: string }; Returns: Json }
+      complete_due_city_projects: { Args: never; Returns: number }
       complete_expired_festival_attendance: { Args: never; Returns: Json }
       complete_festival_performance: {
         Args: { p_idempotency_key?: string; p_session_id: string }
@@ -62507,6 +62540,38 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "child_parenting_decisions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      propose_city_project: {
+        Args: {
+          p_city_id: string
+          p_profile_id: string
+          p_project_type_id: string
+        }
+        Returns: {
+          approval_change: number
+          city_id: string
+          completed_at: string | null
+          completes_at: string
+          cost: number
+          created_at: string
+          description: string | null
+          duration_days: number
+          effects: Json
+          id: string
+          mayor_id: string | null
+          name: string
+          notes: string | null
+          project_type_id: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "city_projects"
           isOneToOne: true
           isSetofReturn: false
         }

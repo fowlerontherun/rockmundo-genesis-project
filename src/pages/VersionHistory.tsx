@@ -17,7 +17,19 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.716",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "Mayor's Office city projects now work end to end: proposing and cancelling projects are backed by real City Hall actions that reserve, spend and refund treasury funds." },
+      { type: "feature", description: "Added a catalogue of 20 city development projects across infrastructure, culture, economy and quality of life, with costs, durations, approval impact and politics skill requirements." },
+      { type: "feature", description: "City projects now complete automatically every 10 minutes, paying out of the treasury, applying permanent city rating effects and raising the mayor's approval." },
+      { type: "fix", description: "Every city now has an active law record, so the Laws & Policy and City Services sections of the Mayor's Office load instead of showing a blank page." },
+      { type: "improvement", description: "The project catalogue now shows available treasury and explains exactly how much is missing when a project is unaffordable." },
+    ],
+  },
+  {
     version: "1.1.715",
+
     date: "2026-08-30",
     changes: [
       { type: "feature", description: "Seeded 320 new hireable crew members: eight candidates for every crew role at all five fame tiers, so every role has affordable options from day one." },
