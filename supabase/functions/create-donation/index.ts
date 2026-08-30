@@ -12,6 +12,15 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-DONATION] ${step}${detailsStr}`);
 };
 
+const ALLOWED_CURRENCIES = ["usd", "gbp", "eur"] as const;
+type AllowedCurrency = typeof ALLOWED_CURRENCIES[number];
+const parseCurrency = (value: unknown): AllowedCurrency => {
+  const candidate = typeof value === "string" ? value.toLowerCase() : "";
+  return (ALLOWED_CURRENCIES as readonly string[]).includes(candidate)
+    ? (candidate as AllowedCurrency)
+    : "usd";
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
