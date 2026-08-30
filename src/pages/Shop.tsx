@@ -14,11 +14,20 @@ import { useToast } from "@/hooks/use-toast";
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { cn } from "@/lib/utils";
+import { CurrencySelector } from "@/components/shop/CurrencySelector";
+import { useCheckoutCurrency } from "@/hooks/useCheckoutCurrency";
+import { CHECKOUT_PRICING, formatMinor, formatProductPrice, type CheckoutProductKey } from "@/lib/checkoutCurrency";
 
-const VIP_PLANS = [
-  { name: "Monthly", price: "£4.99", period: "per month", note: null as string | null },
-  { name: "Quarterly", price: "£12.49", period: "every 3 months", note: "Save 17%" },
-  { name: "Annual", price: "£39.99", period: "per year", note: "Save 33% — best value" },
+const VIP_PLANS: Array<{
+  name: string;
+  pricingKey: CheckoutProductKey;
+  months: number;
+  period: string;
+  note: string | null;
+}> = [
+  { name: "Monthly", pricingKey: "vipMonthly", months: 1, period: "per month", note: null },
+  { name: "Quarterly", pricingKey: "vipQuarterly", months: 3, period: "every 3 months", note: "Save 17%" },
+  { name: "Annual", pricingKey: "vipAnnual", months: 12, period: "per year", note: "Save 33% — best value" },
 ];
 
 const VIP_FEATURES = [
@@ -43,13 +52,19 @@ export default function Shop() {
   const { data: vipStatus } = useVipStatus();
   const { slots } = useCharacterSlots();
   const [donating, setDonating] = useState(false);
+  const { currency } = useCheckoutCurrency();
+  const donationPrice = formatProductPrice("donation", currency);
+  const cheapestMonthly = formatMinor(
+    Math.round(CHECKOUT_PRICING.vipAnnual[currency] / 12),
+    currency,
+  );
 
   const maxSlots = slots?.maxSlots ?? 2;
 
   const handleDonate = async () => {
     setDonating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-donation");
+      const { data, error } = await supabase.functions.invoke("create-donation", { body: { currency } });
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
     } catch {
@@ -80,15 +95,16 @@ export default function Shop() {
             <p className="text-sm text-muted-foreground max-w-2xl">
               {vipStatus?.isVip
                 ? `Your membership is active${vipStatus.daysRemaining ? ` for ${vipStatus.daysRemaining} more days` : ""}. Manage billing or grab extra character slots and cosmetics below.`
-                : "Companies, world touring, recording and releases, awards, crew hiring and gig audio — everything in one membership from £3.33/month."}
+                : `Companies, world touring, recording and releases, awards, crew hiring and gig audio — everything in one membership from ${cheapestMonthly}/month.`}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CurrencySelector className="w-full md:w-auto" />
             <Button size="lg" onClick={() => navigate("/vip-subscribe")} className="gap-2">
               <Crown className="h-4 w-4" /> {vipStatus?.isVip ? "Manage VIP" : "Get VIP"}
             </Button>
             <Button size="lg" variant="outline" onClick={handleDonate} disabled={donating} className="gap-2">
-              {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate £10
+              {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
             </Button>
           </div>
         </CardContent>
@@ -119,7 +135,7 @@ export default function Shop() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base"><Crown className="h-4 w-4 text-primary" /> VIP plans</CardTitle>
-          <CardDescription>Pick the billing period that suits you. Cancel any time from the billing portal.</CardDescription>
+          <CardDescription>Pick the billing period that suits you — pay in USD, GBP or EUR. Cancel any time from the billing portal.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3">
           {VIP_PLANS.map((plan) => (
@@ -134,8 +150,15 @@ export default function Shop() {
                 <span className="text-sm font-semibold">{plan.name}</span>
                 {plan.note && <Badge variant="secondary" className="text-[10px]">{plan.note}</Badge>}
               </div>
-              <div className="mt-2 text-2xl font-bold">{plan.price}</div>
+              <div className="mt-2 text-2xl font-bold">
+                {formatMinor(CHECKOUT_PRICING[plan.pricingKey][currency], currency)}
+              </div>
               <div className="text-xs text-muted-foreground">{plan.period}</div>
+              {plan.months > 1 && (
+                <div className="text-[10px] text-muted-foreground">
+                  {formatMinor(Math.round(CHECKOUT_PRICING[plan.pricingKey][currency] / plan.months), currency)}/month
+                </div>
+              )}
               <Button className="mt-3 w-full" variant={plan.note?.includes("best") ? "default" : "outline"} onClick={() => navigate("/vip-subscribe")}>
                 Choose {plan.name}
               </Button>
@@ -178,7 +201,8 @@ export default function Shop() {
             <li><span className="font-medium text-foreground">3. Create your character.</span> The slot unlocks immediately after payment and you can build a brand new artist.</li>
             <li><span className="font-medium text-foreground">4. Switch any time.</span> Each character keeps its own band, money, skills, schedule and history — nothing is shared.</li>
           </ol>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CurrencySelector className="w-full md:w-auto" />
             <Button onClick={() => navigate("/buy-character-slot")} className="gap-2">
               <UserPlus className="h-4 w-4" /> Buy a character slot
             </Button>
@@ -200,7 +224,7 @@ export default function Shop() {
             <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Grants 1,000 bonus XP to your active character.</li>
           </ul>
           <Button onClick={handleDonate} disabled={donating} className="gap-2">
-            {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate £10
+            {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
           </Button>
         </CardContent>
       </Card>
