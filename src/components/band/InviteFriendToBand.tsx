@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -186,7 +186,6 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
       });
 
       setOpen(false);
-      // Reset form
       setSelectedFriend('');
       setInstrumentRole('Guitar');
       setVocalRole(undefined);
@@ -204,118 +203,127 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Invite Friend
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Invite Friend to {bandName}</DialogTitle>
-          <DialogDescription>
-            Choose a friend from your list and assign them a role in the band.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <UserPlus className="h-4 w-4 mr-2" />
+        Invite Friend
+      </Button>
 
-        <div className="space-y-4 py-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : friends.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No available friends to invite. Friends who are already members or have pending invites are hidden.
-            </p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="friend">Select Friend</Label>
-                <Select value={selectedFriend} onValueChange={setSelectedFriend}>
-                  <SelectTrigger id="friend">
-                    <SelectValue placeholder="Choose a friend" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {friends.map((friend) => (
-                      <SelectItem key={friend.id} value={friend.profile.id}>
-                        {friend.profile.display_name} (@{friend.profile.username})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Friend to {bandName}</DialogTitle>
+            <DialogDescription>
+              Choose a friend from your list and assign them a role in the band.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin" />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="instrument">Instrument Role</Label>
-                <Select value={instrumentRole} onValueChange={setInstrumentRole}>
-                  <SelectTrigger id="instrument">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {INSTRUMENTS.map((instrument) => (
-                      <SelectItem key={instrument} value={instrument}>
-                        {instrument}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vocals">Vocal Role (Optional)</Label>
-                <Select value={vocalRole} onValueChange={setVocalRole}>
-                  <SelectTrigger id="vocals">
-                    <SelectValue placeholder="Select vocal role" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {VOCAL_ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="message">Personal Message (Optional)</Label>
-                <Textarea
-                  id="message"
-                  maxLength={280}
-                  aria-describedby="band-invite-message-help"
-                  placeholder="Add a personal message to your invitation..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={3}
-                />
-                <p id="band-invite-message-help" className="text-xs text-muted-foreground">
-                  {message.trim().length}/280 characters
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleInvite} 
-            disabled={submitting || !selectedFriend || friends.length === 0}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sending...
-              </>
+            ) : friends.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No available friends to invite. Friends who are already members or have pending invites are hidden.
+              </p>
             ) : (
-              'Send Invitation'
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="friend">Select Friend</Label>
+                  <Select value={selectedFriend} onValueChange={setSelectedFriend}>
+                    <SelectTrigger id="friend">
+                      <SelectValue placeholder="Choose a friend" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {friends.map((friend) => (
+                        <SelectItem key={friend.id} value={friend.profile.id}>
+                          {friend.profile.display_name} (@{friend.profile.username})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="instrument">Instrument Role</Label>
+                  <Select value={instrumentRole} onValueChange={setInstrumentRole}>
+                    <SelectTrigger id="instrument">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {INSTRUMENTS.map((instrument) => (
+                        <SelectItem key={instrument} value={instrument}>
+                          {instrument}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vocals">Vocal Role (Optional)</Label>
+                  <Select value={vocalRole} onValueChange={setVocalRole}>
+                    <SelectTrigger id="vocals">
+                      <SelectValue placeholder="Select vocal role" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {VOCAL_ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Personal Message (Optional)</Label>
+                  <Textarea
+                    id="message"
+                    maxLength={280}
+                    aria-describedby="band-invite-message-help"
+                    placeholder="Add a personal message to your invitation..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={3}
+                  />
+                  <p id="band-invite-message-help" className="text-xs text-muted-foreground">
+                    {message.trim().length}/280 characters
+                  </p>
+                </div>
+              </>
             )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleInvite}
+              disabled={submitting || !selectedFriend || friends.length === 0}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                'Send Invitation'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
