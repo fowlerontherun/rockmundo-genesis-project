@@ -13,7 +13,10 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { Loader2, Lock, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { CREW_DEPARTMENTS, getCrewRoleInfo, isPerformanceCrewRole } from "@/utils/liveSetup";
-import { CrewGuide, type CrewCoverageEntry } from "@/components/band/CrewGuide";
+import { CrewGuide, CREW_ROLE_GUIDES, type CrewCoverageEntry } from "@/components/band/CrewGuide";
+
+const getRoleBenefit = (role: string) =>
+  CREW_ROLE_GUIDES.find((guide) => guide.role === role)?.benefit ?? "Supports the band behind the scenes.";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -194,11 +197,11 @@ const RosterCrewCard = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-md bg-muted/40 p-3 text-xs">
-          <p className="font-medium">Gameplay area: {roleInfo.impactLabel}</p>
+          <p className="font-medium">{getRoleBenefit(crew.crew_type)}</p>
           <p className="mt-1 text-muted-foreground">
             {roleInfo.affectsLiveSetup
-              ? "Directly contributes to the Show Crew portion of Live Setup."
-              : "Kept separate from the core song-performance Live Setup score."}
+              ? "Counts towards your gig quality score."
+              : "Helps outside the gig quality score."}
           </p>
         </div>
         <StarRating rating={crew.star_rating ?? 5} />
@@ -699,11 +702,11 @@ const BandCrewManagement = () => {
                           </CardHeader>
                           <CardContent className="space-y-3">
                             <div className="rounded-md bg-muted/40 p-3 text-xs">
-                              <p className="font-medium">Gameplay area: {roleInfo.impactLabel}</p>
+                              <p className="font-medium">{getRoleBenefit(crew.role)}</p>
                               <p className="mt-1 text-muted-foreground">
                                 {roleInfo.affectsLiveSetup
-                                  ? "This Show Crew role directly improves the crew side of Live Setup."
-                                  : "This specialist is deliberately kept outside the Live Setup crew score."}
+                                  ? "Counts towards your gig quality score."
+                                  : "Helps outside the gig quality score."}
                               </p>
                             </div>
                             <StarRating rating={crew.star_rating} />
@@ -751,7 +754,7 @@ const BandCrewManagement = () => {
             <DialogTitle>Hire {selectedCrewMember?.name}?</DialogTitle>
             <DialogDescription>
               {selectedCrewMember
-                ? `${selectedCrewMember.role} joins ${getCrewRoleInfo(selectedCrewMember.role).departmentLabel} · gameplay area: ${getCrewRoleInfo(selectedCrewMember.role).impactLabel}.`
+                ? `${getRoleBenefit(selectedCrewMember.role)} Paid $${selectedCrewMember.salary.toLocaleString()} every gig you play.`
                 : "This crew member will join your band exclusively."}
             </DialogDescription>
           </DialogHeader>
@@ -786,8 +789,8 @@ const BandCrewManagement = () => {
               <p className="text-sm text-muted-foreground">{selectedCrewMember.background}</p>
               <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="mb-3 text-sm">
-                  <span className="font-medium">Gameplay area:</span>{" "}
-                  {getCrewRoleInfo(selectedCrewMember.role).impactLabel}
+                  <span className="font-medium">What they do:</span>{" "}
+                  {getRoleBenefit(selectedCrewMember.role)}
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>Skill: <span className="font-medium">{selectedCrewMember.skill}/100</span></div>
