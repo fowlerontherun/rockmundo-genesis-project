@@ -66,6 +66,57 @@ const travelRequestKey = (bookingData: TravelBookingData) =>
     bookingData.scheduledDepartureTime ?? "immediate",
   ].join("|");
 
+const TRAVEL_ERROR_MESSAGES: Array<[string, string]> = [
+  ["travel_departure_too_soon", "Choose a departure at least 30 minutes from now."],
+  ["travel_schedule_conflict", "That journey overlaps another scheduled activity. Choose a different departure time."],
+  ["travel_activity_conflict", "Your character is busy during this departure. Finish or reschedule the current activity first."],
+  ["travel_already_in_progress", "Your character is already travelling."],
+  ["travel_destination_is_current_city", "Your character is already in that city."],
+  ["travel_current_city_not_set", "Your character does not currently have a valid city location."],
+  ["travel_profile_not_found", "The active character could not be found. Switch character or reload and try again."],
+  ["travel_city_not_found", "One of the selected cities is no longer available."],
+  ["travel_bus_route_unavailable", "Bus travel is not available for this route."],
+  ["travel_train_network_unavailable", "Train travel is not available for this route."],
+  ["travel_train_connection_unavailable", "There is no valid rail connection for this route."],
+  ["travel_ship_route_unavailable", "Ship travel is not available for this route."],
+  ["travel_mode_unavailable_for_distance", "That transport option is not available for this distance."],
+  ["insufficient", "You do not have enough available funds for this journey."],
+  ["festival_attendance_schedule_locked", "Festival attendance currently locks this travel window."],
+];
+
+const friendlyTravelError = (message: string) => {
+  const normalised = message.toLowerCase();
+  const mapped = TRAVEL_ERROR_MESSAGES.find(([code]) => normalised.includes(code));
+  return mapped?.[1] ?? message;
+};
+
+const extractFunctionError = async (error: any, data: any): Promise<string> => {
+  if (typeof data?.error === "string" && data.error.trim()) {
+    return friendlyTravelError(data.error);
+  }
+
+  // Supabase FunctionsHttpError keeps the non-2xx response body on context.
+  // Reading it here prevents the UI from collapsing every server validation into
+  // the unhelpful "Edge Function returned a non-2xx status code" message.
+  const response = error?.context;
+  if (response && typeof response.clone === "function") {
+    try {
+      const payload = await response.clone().json();
+      if (typeof payload?.error === "string" && payload.error.trim()) {
+        return friendlyTravelError(payload.error);
+      }
+    } catch {
+      // Fall through to the SDK error below.
+    }
+  }
+
+  const fallback = error?.message || "Unable to book travel";
+  if (fallback === "Edge Function returned a non-2xx status code") {
+    return "Travel could not be booked. Check your departure time, schedule and available funds, then try again.";
+  }
+  return friendlyTravelError(fallback);
+};
+
 /**
  * Legacy preview-only affordability helper.
  *
@@ -132,10 +183,10 @@ export async function bookTravel(bookingData: TravelBookingData): Promise<Travel
   });
 
   if (error) {
-    throw new Error(data?.error || error.message || "Unable to book travel");
+    throw new Error(await extractFunctionError(error, data));
   }
   if (!data?.success || !data?.result) {
-    throw new Error(data?.error || "Unable to book travel");
+    throw new Error(friendlyTravelError(data?.error || "Unable to book travel"));
   }
 
   const result = data.result as AuthoritativeTravelResult;
