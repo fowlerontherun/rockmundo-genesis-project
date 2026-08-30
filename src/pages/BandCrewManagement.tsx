@@ -478,57 +478,41 @@ const BandCrewManagement = () => {
     <FMPageScaffold title={`Crew Management • ${bandName}`} icon={Users} backTo="/hub/band">
       <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Crew Management • {bandName}</CardTitle>
-            <CardDescription>
-              Crew is split by what it actually does. Only Show Crew changes Live Setup; Touring Operations and Commercial & Image stay outside the core song-performance score.
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl">Crew snapshot • {bandName}</CardTitle>
+            <CardDescription>Four quick numbers, then the guide below tells you what to do next.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Total Crew</div>
+          <CardContent>
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Crew hired</div>
                 <div className="mt-1 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  <span className="text-2xl font-bold">{crewCount}</span>
+                  <Users className="h-4 w-4 text-primary" />
+                  <span className="text-xl font-bold">{crewCount}</span>
                 </div>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Show Crew</div>
-                <div className="mt-1 text-2xl font-bold">{showCrew.length}</div>
-                <div className="text-xs text-muted-foreground">{Math.round(showCrewSkill)}/100 avg skill · affects Live Setup</div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Gig quality crew</div>
+                <div className="mt-1 text-xl font-bold">{showCrew.length}</div>
+                <div className="text-[11px] text-muted-foreground">{Math.round(showCrewSkill)}/100 average skill</div>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Cost per Gig</div>
-                <div className="mt-1 text-2xl font-bold">${totalPayroll.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">All hired departments are paid</div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Wages per gig</div>
+                <div className="mt-1 text-xl font-bold">${totalPayroll.toLocaleString()}</div>
+                <div className="text-[11px] text-muted-foreground">Paid out of each show</div>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Your Fame</div>
-                <div className="mt-1 text-2xl font-bold">{bandFame.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Can hire up to {maxAccessibleStars}★ crew</div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Band fame</div>
+                <div className="mt-1 text-xl font-bold">{bandFame.toLocaleString()}</div>
+                <div className="text-[11px] text-muted-foreground">Unlocks up to {maxAccessibleStars}★ crew</div>
               </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              {ROSTER_DEPARTMENTS.map((department) => {
-                const config = CREW_DEPARTMENTS[department];
-                return (
-                  <div key={department} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold">{config.label}</p>
-                      <Badge variant={department === "show" ? "default" : "secondary"}>{crewByDepartment[department].length}</Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{config.description}</p>
-                    <p className="mt-2 text-xs font-medium">{department === "show" ? "Counts toward Live Setup" : "Does not inflate Live Setup"}</p>
-                  </div>
-                );
-              })}
             </div>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="roster" className="space-y-4">
+        <CrewGuide bandFame={bandFame} coverage={crewCoverage} onHireRole={handleHireRoleShortcut} />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="roster">Your Crew ({crewCount})</TabsTrigger>
             <TabsTrigger value="hire">Hire Crew</TabsTrigger>
