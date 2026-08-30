@@ -17,14 +17,14 @@ serve(async (req) => {
   }
 
   try {
-    const { gigId } = await req.json();
+    const { gigId, idempotencyKey } = await req.json();
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    console.log(`Completing gig ${gigId}`);
+    console.log(`Completing gig ${gigId}${idempotencyKey ? ` (idempotency key ${idempotencyKey})` : ''}`);
 
     // Get gig and outcome with venue and city info for proper country tracking
     const { data: gig, error: gigError } = await supabaseClient
@@ -944,9 +944,6 @@ serve(async (req) => {
       .from('gigs')
       .update({
         status: 'completed',
-        production_breakdown: { score: Math.round(productionScore), setup_minutes: productionSetupMinutes, setup_access_minutes: venueSetupAccess, cost: productionCost, audience_modifier: audienceProductionBonus, complexity: productionComplexity },
-        soundcheck_breakdown: { type: soundcheckType, cost: soundcheckCost, sound_modifier: soundcheckBonus, fatigue_penalty: fatiguePenalty },
-        production_incidents: productionIncidents,
         completed_at: new Date().toISOString(),
         result_ready_at: new Date().toISOString()
       })

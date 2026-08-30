@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.712",
+    date: "2026-08-30",
+    changes: [
+      { type: 'feature', description: "Gigs that fail to complete are now retried automatically in the background, so a failed completion recovers without any manual intervention." },
+      { type: 'feature', description: "Each retry uses a unique idempotency key and a per-gig lock, so a gig can never be completed twice or double-paid even if several workers run at once." },
+      { type: 'improvement', description: "Retries use a growing cooldown (2 minutes, 5, 15, 45, then 2 hours) and stop after 6 attempts, flagging the gig for admin attention with its last error instead of retrying forever." },
+      { type: 'fix', description: "Fixed the underlying error that was stopping every gig from completing: the production, soundcheck and incident details are now saved to the gig result correctly." },
+      { type: 'improvement', description: "The admin Gig Job Monitor now has a Completion retries panel showing attempt counts, last attempt, next retry time and the last error for every affected gig." },
+    ],
+  },
+  {
     version: "1.1.711",
     date: "2026-08-30",
     changes: [

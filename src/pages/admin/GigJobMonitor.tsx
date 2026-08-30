@@ -107,6 +107,32 @@ export default function GigJobMonitor() {
     refetchInterval: 30000,
   });
 
+  const retryQuery = useQuery({
+    queryKey: ["admin-gig-completion-retries"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("gigs")
+        .select(
+          "id, status, scheduled_date, completion_attempt_count, completion_last_error, completion_last_attempt_at, completion_next_retry_at, completion_needs_attention",
+        )
+        .gt("completion_attempt_count", 0)
+        .order("completion_last_attempt_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        status: string;
+        scheduled_date: string | null;
+        completion_attempt_count: number;
+        completion_last_error: string | null;
+        completion_last_attempt_at: string | null;
+        completion_next_retry_at: string | null;
+        completion_needs_attention: boolean;
+      }>;
+    },
+    refetchInterval: 30000,
+  });
+
   const runsByJob = useMemo(() => {
     const grouped: Record<string, JobRun[]> = {};
     for (const run of runsQuery.data ?? []) {
@@ -132,7 +158,7 @@ export default function GigJobMonitor() {
   }, [pipelineQuery.data]);
 
   const refreshAll = async () => {
-    await Promise.all([runsQuery.refetch(), configQuery.refetch(), pipelineQuery.refetch()]);
+    await Promise.all([runsQuery.refetch(), configQuery.refetch(), pipelineQuery.refetch(), retryQuery.refetch()]);
     toast({ title: "Refreshed", description: "Gig job data reloaded." });
   };
 
@@ -145,7 +171,7 @@ export default function GigJobMonitor() {
       });
       if (error) throw error;
       toast({ title: "Job triggered", description: `${functionName} ran. Reloading results…` });
-      await Promise.all([runsQuery.refetch(), pipelineQuery.refetch()]);
+      await Promise.all([runsQuery.refetch(), pipelineQuery.refetch(), retryQuery.refetch()]);
     } catch (error) {
       toast({
         title: "Trigger failed",
@@ -329,6 +355,64 @@ export default function GigJobMonitor() {
                       </TableCell>
                       <TableCell className="text-xs">{gig.current_song_position ?? "—"}</TableCell>
                       <TableCell className="text-xs">{gig.setlist_id ? "Yes" : "Missing"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Completion retries</CardTitle>
+          <CardDescription>
+            Gigs that failed to complete are retried automatically with an idempotency key and a growing cooldown
+            (2m, 5m, 15m, 45m, then 2h). After 6 failed attempts a gig stops retrying and is flagged here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {retryQuery.isLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : (retryQuery.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No gigs have needed a completion retry.</p>
+          ) : (
+            <ScrollArea className="max-h-72">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Gig</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Attempts</TableHead>
+                    <TableHead>Last attempt</TableHead>
+                    <TableHead>Next retry</TableHead>
+                    <TableHead>Last error</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(retryQuery.data ?? []).map((gig) => (
+                    <TableRow key={gig.id}>
+                      <TableCell className="font-mono text-[11px]">{gig.id.slice(0, 8)}</TableCell>
+                      <TableCell>
+                        <Badge variant={gig.completion_needs_attention ? "destructive" : "outline"}>
+                          {gig.completion_needs_attention ? "Needs attention" : gig.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{gig.completion_attempt_count}</TableCell>
+                      <TableCell className="text-xs">
+                        {gig.completion_last_attempt_at
+                          ? format(new Date(gig.completion_last_attempt_at), "d MMM HH:mm")
+                          : "\u2014"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {gig.completion_next_retry_at
+                          ? format(new Date(gig.completion_next_retry_at), "d MMM HH:mm")
+                          : "\u2014"}
+                      </TableCell>
+                      <TableCell className="max-w-[280px] truncate text-[11px] text-muted-foreground">
+                        {gig.completion_last_error ?? "\u2014"}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
