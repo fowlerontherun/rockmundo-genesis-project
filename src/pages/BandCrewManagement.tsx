@@ -467,12 +467,33 @@ const BandCrewManagement = () => {
   if (!bandId) {
     return (
       <FMPageScaffold title="Crew Management" icon={Users} backTo="/hub/band">
-        <Card className="mx-auto max-w-lg">
-          <CardHeader>
-            <CardTitle>Join a Band First</CardTitle>
-            <CardDescription>You need to be in a band to hire crew members.</CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="mx-auto max-w-2xl space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Crew comes after your band</CardTitle>
+              <CardDescription>
+                Crew are the staff who make your shows better — a sound engineer, a lighting director, a road chief and
+                so on. You hire them for a band, so join or start one first.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {CREW_ROLE_GUIDES.slice(0, 4).map((guide) => (
+                  <div key={guide.role} className="rounded-lg border bg-muted/20 p-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <guide.icon className="h-4 w-4 text-primary" />
+                      {guide.role}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{guide.benefit}</p>
+                  </div>
+                ))}
+              </div>
+              <Button asChild className="w-full">
+                <Link to="/band-finder">Find or create a band</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </FMPageScaffold>
     );
   }
