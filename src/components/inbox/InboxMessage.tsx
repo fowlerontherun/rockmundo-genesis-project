@@ -44,6 +44,8 @@ const categoryConfig: Record<InboxCategory, { icon: typeof Dice5; colorClass: st
 export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: InboxMessageProps) {
   const navigate = useNavigate();
   const { respondToInvitation } = useCollaborationInvites();
+  const resolveAbsence = useGigAbsenceDecision();
+
   const config = categoryConfig[message.category];
   const Icon = config.icon;
 
