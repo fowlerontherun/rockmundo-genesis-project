@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.711",
+    date: "2026-08-30",
+    changes: [
+      { type: 'feature', description: "Band leaders now receive an urgent inbox alert 30 minutes before a gig when band members are not at the venue city, listing who is missing." },
+      { type: 'feature', description: "The alert offers two choices: perform without the absent members (the show goes ahead with a performance quality penalty scaled to how many are missing, up to 60%) or pull the gig (it fails and the band loses fans, fan sentiment and fame)." },
+      { type: 'improvement', description: "Gigs where the leader chose to perform anyway now start on time with whoever is present instead of waiting for the two-hour lenient fallback, and all band members are notified when a gig is pulled." },
+    ],
+  },
+  {
+
     version: "1.1.710",
     date: "2026-08-30",
     changes: [
