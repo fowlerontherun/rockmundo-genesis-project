@@ -19,6 +19,7 @@ import {
   useCityProjectTypes,
   useProposeCityProject,
   useCancelCityProject,
+  useCityTreasury,
 } from "@/hooks/useCityProjects";
 import {
   PROJECT_CATEGORY_LABELS,
