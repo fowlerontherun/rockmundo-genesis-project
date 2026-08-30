@@ -124,7 +124,7 @@ export const TopStatusBar = () => {
   };
 
   return (
-    <header className="h-14 flex items-center gap-3 px-3 bg-fm-panel border-b border-fm-border relative">
+    <header className="h-14 flex items-center gap-1.5 sm:gap-3 px-2 sm:px-3 bg-fm-panel border-b border-fm-border relative">
       <button
         onClick={() => navigate("/")}
         className="group flex items-center gap-2.5 pr-1 -ml-1 pl-1 py-1 rounded-md hover:bg-fm-panel-2 transition-colors"
@@ -146,7 +146,7 @@ export const TopStatusBar = () => {
         </div>
       </button>
 
-      <div className="h-7 w-px bg-fm-border" />
+      <div className="hidden sm:block h-7 w-px bg-fm-border" />
 
       <button
         className="flex min-w-0 items-center gap-2 px-2 py-1 rounded hover:bg-fm-panel-2 transition-colors"
