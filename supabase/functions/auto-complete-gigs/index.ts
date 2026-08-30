@@ -149,13 +149,102 @@ serve(async (req) => {
 
     console.log(`[auto-complete-gigs] Processed ${processedCount} songs, completed ${completedCount} gigs`);
 
+    // ---- Automatic retry workflow for gigs that failed to complete ----
+    const retrySummary = {
+      candidates: 0,
+      retried: 0,
+      recovered: 0,
+      failed: 0,
+      skipped: 0,
+      exhausted: 0,
+    };
+
+    try {
+      const { data: candidates, error: candidatesError } = await supabaseClient.rpc(
+        'list_gig_completion_retry_candidates',
+        { p_limit: 25, p_overdue_minutes: 10 },
+      );
+
+      if (candidatesError) throw candidatesError;
+
+      retrySummary.candidates = candidates?.length ?? 0;
+
+      for (const candidate of candidates ?? []) {
+        const attemptWindow = Math.floor(Date.now() / 60000); // stable per-minute window
+        const idempotencyKey = `gig-completion:${candidate.gig_id}:${candidate.attempt_count + 1}:${attemptWindow}`;
+
+        const { data: claim, error: claimError } = await supabaseClient.rpc(
+          'claim_gig_completion_attempt',
+          { p_gig_id: candidate.gig_id, p_idempotency_key: idempotencyKey },
+        );
+
+        if (claimError) {
+          console.error('[auto-complete-gigs] Retry claim failed:', candidate.gig_id, claimError);
+          retrySummary.skipped++;
+          continue;
+        }
+
+        if (!claim?.claimed) {
+          console.log(`[auto-complete-gigs] Retry skipped for ${candidate.gig_id}: ${claim?.reason}`);
+          if (claim?.reason === 'attempts_exhausted') retrySummary.exhausted++;
+          else retrySummary.skipped++;
+          continue;
+        }
+
+        retrySummary.retried++;
+
+        let attemptError: string | null = null;
+        try {
+          const { data: retryResult, error: retryError } = await supabaseClient.functions.invoke(
+            'complete-gig',
+            { body: { gigId: candidate.gig_id, idempotencyKey } },
+          );
+          if (retryError) attemptError = getErrorMessage(retryError);
+          else if (retryResult?.error) attemptError = String(retryResult.error);
+        } catch (invokeError) {
+          attemptError = getErrorMessage(invokeError);
+        }
+
+        const { data: recorded, error: recordError } = await supabaseClient.rpc(
+          'record_gig_completion_attempt',
+          {
+            p_attempt_id: claim.attemptId,
+            p_success: attemptError === null,
+            p_error: attemptError,
+          },
+        );
+
+        if (recordError) {
+          console.error('[auto-complete-gigs] Failed to record retry outcome:', recordError);
+        }
+
+        if (attemptError === null) {
+          retrySummary.recovered++;
+          console.log(`[auto-complete-gigs] ✅ Recovered gig ${candidate.gig_id} on attempt ${claim.attemptNumber}`);
+        } else {
+          retrySummary.failed++;
+          if (recorded?.exhausted) retrySummary.exhausted++;
+          console.error(
+            `[auto-complete-gigs] Retry ${claim.attemptNumber} failed for gig ${candidate.gig_id}: ${attemptError}` +
+              (recorded?.retryAt ? ` — next retry ${recorded.retryAt}` : ' — no further retries'),
+          );
+        }
+      }
+    } catch (retryPassError) {
+      console.error('[auto-complete-gigs] Retry pass error:', retryPassError);
+    }
+
     await completeJobRun({
       jobName: "auto-complete-gigs",
       runId,
       supabaseClient,
       durationMs: Date.now() - startedAt,
       processedCount: processedCount,
-      resultSummary: { completedGigs: completedCount, totalChecked: inProgressGigs?.length || 0 },
+      resultSummary: {
+        completedGigs: completedCount,
+        totalChecked: inProgressGigs?.length || 0,
+        retry: retrySummary,
+      },
     });
 
     return new Response(
@@ -163,7 +252,8 @@ serve(async (req) => {
         success: true, 
         processedSongs: processedCount,
         completedGigs: completedCount,
-        totalChecked: inProgressGigs?.length || 0
+        totalChecked: inProgressGigs?.length || 0,
+        retry: retrySummary,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
