@@ -10,10 +10,13 @@ import { FMChatDock } from "./chat/FMChatDock";
 import { FMCommandPalette } from "./FMCommandPalette";
 import { BugReportButton } from "@/components/bug-report/BugReportButton";
 import { findModuleForPath } from "@/config/fmNavigation";
+import { useTranslation } from "@/hooks/useTranslation";
+import { translateFMText } from "@/i18n/fm";
 import { recordModulePath } from "@/lib/fmHistory";
 
 export const FMShell = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
+  const { language } = useTranslation();
   const mod = findModuleForPath(pathname);
 
   // Persist the most recent path inside each module so ModuleTabs and
@@ -32,7 +35,7 @@ export const FMShell = ({ children }: { children: ReactNode }) => {
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-fm-accent focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
         >
-          Skip to main content
+          {translateFMText(language, "skipToMain")}
         </a>
         <TopStatusBar />
         <ModuleTabs />
