@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.718",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "Applying Skill XP now works for skills you have never practised — a progress record is created automatically instead of failing with a 'skill locked' error" },
+      { type: "fix", description: "Players missing an XP wallet record no longer get a technical error when spending Skill XP" },
+    ],
+  },
+  {
     version: "1.1.717",
     date: "2026-08-30",
     changes: [
