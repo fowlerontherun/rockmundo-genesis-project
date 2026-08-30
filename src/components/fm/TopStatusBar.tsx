@@ -149,15 +149,15 @@ export const TopStatusBar = () => {
       <div className="h-7 w-px bg-fm-border" />
 
       <button
-        className="flex items-center gap-2 px-2 py-1 rounded hover:bg-fm-panel-2 transition-colors"
+        className="flex min-w-0 items-center gap-2 px-2 py-1 rounded hover:bg-fm-panel-2 transition-colors"
         onClick={() => navigate("/hub/character")}
         aria-label={translateFMText(language, "openCharacterHub", { name })}
       >
-        <User className="h-4 w-4 text-fm-accent" />
-        <span className="text-sm font-semibold text-fm-fg">{name}</span>
+        <User className="h-4 w-4 shrink-0 text-fm-accent" />
+        <span className="max-w-[90px] truncate text-sm font-semibold text-fm-fg sm:max-w-none">{name}</span>
       </button>
 
-      <div className="h-6 w-px bg-fm-border" />
+      <div className="hidden sm:block h-6 w-px bg-fm-border" />
 
       <div className="hidden md:flex text-[12px] text-fm-fg-muted items-center gap-2" aria-label={`${translateFMText(language, "gameDate")}: ${dateStr}`}>
         <span>{translateFMText(language, "gameDate")}</span>
