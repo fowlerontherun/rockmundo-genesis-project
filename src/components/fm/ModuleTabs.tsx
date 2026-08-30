@@ -9,6 +9,8 @@ import {
 } from "@/config/mayorOfficeNavigation";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCurrentMayorOffice } from "@/hooks/useCurrentMayorOffice";
+import { useTranslation } from "@/hooks/useTranslation";
+import { translateFMLabel, translateFMText } from "@/i18n/fm";
 import { cn } from "@/lib/utils";
 
 export const ModuleTabs = () => {
@@ -16,6 +18,7 @@ export const ModuleTabs = () => {
   const { pathname } = useLocation();
   const { isAdmin } = useUserRole();
   const { data: mayorOffice } = useCurrentMayorOffice();
+  const { language } = useTranslation();
   const active = findModuleForPath(pathname);
   const cityHallActive = isMayorOfficePath(pathname);
   const modules = FM_MODULES.filter((m) => (m.primary ?? true) && (m.id !== "admin" || isAdmin()));
@@ -35,7 +38,7 @@ export const ModuleTabs = () => {
         key="city-hall"
         onClick={() => navigate(buildMayorOfficePath(mayorOffice.cityId))}
         aria-current={cityHallActive ? "page" : undefined}
-        title={`Manage ${mayorOffice.cityName}`}
+        title={translateFMText(language, "manageCity", { city: mayorOffice.cityName })}
         className={cn(
           "relative my-1.5 px-3 flex shrink-0 items-center gap-2 text-[12px] font-medium tracking-tight transition-colors rounded-[7px]",
           cityHallActive
@@ -45,13 +48,16 @@ export const ModuleTabs = () => {
         style={cityHallActive ? { background: "hsl(var(--fm-accent) / 0.15)" } : undefined}
       >
         <Icon className="h-3.5 w-3.5" aria-hidden />
-        <span>{MAYOR_OFFICE_MODULE_LABEL}</span>
+        <span>{translateFMLabel(language, MAYOR_OFFICE_MODULE_LABEL)}</span>
       </button>
     );
   };
 
   return (
-    <nav className="h-11 flex items-stretch bg-fm-panel border-b border-fm-border px-2 gap-1 overflow-x-auto fm-scrollbar-thin" aria-label="Primary modules">
+    <nav
+      className="h-11 flex items-stretch bg-fm-panel border-b border-fm-border px-2 gap-1 overflow-x-auto fm-scrollbar-thin"
+      aria-label={translateFMText(language, "primaryModules")}
+    >
       {modules.map((mod) => {
         const Icon = mod.icon;
         const isActive = !cityHallActive && mod.id === active.id;
@@ -69,7 +75,7 @@ export const ModuleTabs = () => {
               style={isActive ? { background: "hsl(var(--fm-accent) / 0.15)" } : undefined}
             >
               <Icon className="h-3.5 w-3.5" aria-hidden />
-              <span>{mod.label}</span>
+              <span>{translateFMLabel(language, mod.label)}</span>
             </button>
             {mod.id === "world" && renderCityHall()}
           </Fragment>

@@ -2,10 +2,12 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { useTranslation } from "@/hooks/useTranslation";
+import { translateFMLabel, translateFMText } from "@/i18n/fm";
+import { getFMStatusCopy } from "@/i18n/fmStatus";
 import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
-
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
@@ -91,16 +93,30 @@ export const TopStatusBar = () => {
   const { signOut } = useAuth();
   const { profile } = useGameData();
   const { data: calendar } = useGameCalendar();
+  const { language } = useTranslation();
+  const statusCopy = getFMStatusCopy(language);
 
   const cash = (profile as any)?.cash ?? (profile as any)?.money ?? 0;
   const fame = (profile as any)?.fame ?? 0;
   const health = (profile as any)?.health ?? 100;
   const energy = (profile as any)?.energy ?? 100;
-  const name = (profile as any)?.stage_name ?? (profile as any)?.display_name ?? "Artist";
+  const name = (profile as any)?.stage_name ?? (profile as any)?.display_name ?? translateFMText(language, "artist");
 
   const dateStr = calendar
-    ? `${calendar.gameDay} ${calendar.monthName} ${calendar.gameYear}`
+    ? new Intl.DateTimeFormat(statusCopy.locale, {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(Date.UTC(calendar.gameYear, calendar.gameMonth - 1, calendar.gameDay)))
     : "—";
+
+  const numberFormatter = new Intl.NumberFormat(statusCopy.locale);
+  const cashLabel = statusCopy.cash;
+  const fameLabel = statusCopy.fame;
+  const healthLabel = statusCopy.health;
+  const energyLabel = statusCopy.energy;
+  const characterStatus = translateFMText(language, "characterStatus");
 
   const handleLogout = async () => {
     await signOut();
@@ -109,12 +125,11 @@ export const TopStatusBar = () => {
 
   return (
     <header className="h-14 flex items-center gap-3 px-3 bg-fm-panel border-b border-fm-border relative">
-      {/* Brand block */}
       <button
         onClick={() => navigate("/")}
         className="group flex items-center gap-2.5 pr-1 -ml-1 pl-1 py-1 rounded-md hover:bg-fm-panel-2 transition-colors"
-        title="Rockmundo home"
-        aria-label="Go to Rockmundo home"
+        title={translateFMText(language, "rockmundoHome")}
+        aria-label={translateFMText(language, "goHome")}
       >
         <img
           src={logo}
@@ -126,7 +141,7 @@ export const TopStatusBar = () => {
             ROCKMUNDO
           </span>
           <span className="text-[9px] tracking-[0.25em] text-fm-fg-muted uppercase mt-0.5" data-fm-keep-caps>
-            Live the dream
+            {translateFMText(language, "liveTheDream")}
           </span>
         </div>
       </button>
@@ -136,7 +151,7 @@ export const TopStatusBar = () => {
       <button
         className="flex items-center gap-2 px-2 py-1 rounded hover:bg-fm-panel-2 transition-colors"
         onClick={() => navigate("/hub/character")}
-        aria-label={`Open character hub for ${name}`}
+        aria-label={translateFMText(language, "openCharacterHub", { name })}
       >
         <User className="h-4 w-4 text-fm-accent" />
         <span className="text-sm font-semibold text-fm-fg">{name}</span>
@@ -144,43 +159,42 @@ export const TopStatusBar = () => {
 
       <div className="h-6 w-px bg-fm-border" />
 
-      <div className="hidden md:flex text-[12px] text-fm-fg-muted items-center gap-2" aria-label={`Game date: ${dateStr}`}>
-        <span>Game date</span>
+      <div className="hidden md:flex text-[12px] text-fm-fg-muted items-center gap-2" aria-label={`${translateFMText(language, "gameDate")}: ${dateStr}`}>
+        <span>{translateFMText(language, "gameDate")}</span>
         <span className="text-fm-fg font-medium tabular-nums">{dateStr}</span>
       </div>
 
-
       <div className="flex-1" />
 
-      <div className="hidden xl:flex items-center gap-1.5" role="group" aria-label="Character status">
-        <StatPip icon={DollarSign} label="Cash" value={`$${Number(cash).toLocaleString()}`} tone="good" />
-        <StatPip icon={Flame} label="Fame" value={Number(fame).toLocaleString()} tone="warn" />
+      <div className="hidden xl:flex items-center gap-1.5" role="group" aria-label={characterStatus}>
+        <StatPip icon={DollarSign} label={cashLabel} value={`$${numberFormatter.format(Number(cash))}`} tone="good" />
+        <StatPip icon={Flame} label={fameLabel} value={numberFormatter.format(Number(fame))} tone="warn" />
         <StatPip
           icon={Heart}
-          label="Health"
+          label={healthLabel}
           value={`${health}%`}
           tone={health >= 70 ? "good" : health >= 40 ? "warn" : "bad"}
         />
         <StatPip
           icon={Zap}
-          label="Energy"
+          label={energyLabel}
           value={`${energy}%`}
           tone={energy >= 70 ? "good" : energy >= 40 ? "warn" : "bad"}
         />
       </div>
 
-      <div className="hidden md:flex xl:hidden items-center gap-1.5" role="group" aria-label="Character status">
-        <CompactStatPip icon={DollarSign} label="Cash" value={`$${Number(cash).toLocaleString()}`} tone="good" className="hidden lg:flex" />
-        <CompactStatPip icon={Flame} label="Fame" value={Number(fame).toLocaleString()} tone="warn" className="hidden lg:flex" />
+      <div className="hidden md:flex xl:hidden items-center gap-1.5" role="group" aria-label={characterStatus}>
+        <CompactStatPip icon={DollarSign} label={cashLabel} value={`$${numberFormatter.format(Number(cash))}`} tone="good" className="hidden lg:flex" />
+        <CompactStatPip icon={Flame} label={fameLabel} value={numberFormatter.format(Number(fame))} tone="warn" className="hidden lg:flex" />
         <CompactStatPip
           icon={Heart}
-          label="Health"
+          label={healthLabel}
           value={`${health}%`}
           tone={health >= 70 ? "good" : health >= 40 ? "warn" : "bad"}
         />
         <CompactStatPip
           icon={Zap}
-          label="Energy"
+          label={energyLabel}
           value={`${energy}%`}
           tone={energy >= 70 ? "good" : energy >= 40 ? "warn" : "bad"}
         />
@@ -193,26 +207,26 @@ export const TopStatusBar = () => {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              aria-label="Open complete character status"
+              aria-label={translateFMText(language, "openCharacterStatus")}
             >
               <Gauge className="h-4 w-4 text-fm-accent" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 border-fm-border bg-fm-panel text-fm-fg">
-            <DropdownMenuLabel>Character status</DropdownMenuLabel>
+            <DropdownMenuLabel>{characterStatus}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <dl aria-label="Character status details">
-              <StatusMenuRow icon={DollarSign} label="Cash" value={`$${Number(cash).toLocaleString()}`} tone="good" />
-              <StatusMenuRow icon={Flame} label="Fame" value={Number(fame).toLocaleString()} tone="warn" />
+            <dl aria-label={translateFMText(language, "characterStatusDetails")}>
+              <StatusMenuRow icon={DollarSign} label={cashLabel} value={`$${numberFormatter.format(Number(cash))}`} tone="good" />
+              <StatusMenuRow icon={Flame} label={fameLabel} value={numberFormatter.format(Number(fame))} tone="warn" />
               <StatusMenuRow
                 icon={Heart}
-                label="Health"
+                label={healthLabel}
                 value={`${health}%`}
                 tone={health >= 70 ? "good" : health >= 40 ? "warn" : "bad"}
               />
               <StatusMenuRow
                 icon={Zap}
-                label="Energy"
+                label={energyLabel}
                 value={`${energy}%`}
                 tone={energy >= 70 ? "good" : energy >= 40 ? "warn" : "bad"}
               />
@@ -228,11 +242,11 @@ export const TopStatusBar = () => {
         size="sm"
         className="h-8 gap-1.5"
         onClick={() => window.dispatchEvent(new Event("fm:open-command"))}
-        aria-label="Open navigation search"
-        title="Search navigation (Ctrl+K or Cmd+K)"
+        aria-label={translateFMText(language, "openNavigationSearch")}
+        title={translateFMText(language, "searchNavigationShortcut")}
       >
         <Search className="h-4 w-4" aria-hidden="true" />
-        <span className="hidden lg:inline text-xs">Search</span>
+        <span className="hidden lg:inline text-xs">{translateFMLabel(language, "Search")}</span>
         <kbd className="hidden xl:inline rounded border border-fm-border px-1 text-[10px] text-fm-fg-muted">⌘K</kbd>
       </Button>
       <CharacterSwitcher />
@@ -240,10 +254,16 @@ export const TopStatusBar = () => {
       <ActivityStatusIndicator />
       <NotificationBell />
       <RMRadioButton />
-      
       <LanguageSwitcher />
       <HowToPlayDialog />
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleLogout} title="Sign out" aria-label="Sign out">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={handleLogout}
+        title={translateFMText(language, "signOut")}
+        aria-label={translateFMText(language, "signOut")}
+      >
         <LogOut className="h-4 w-4" />
       </Button>
     </header>

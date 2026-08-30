@@ -1,5 +1,6 @@
 import { ReactNode, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { useTranslation } from "@/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 
 export type DataTableColumn<T> = {
@@ -26,9 +27,11 @@ interface DataTableProps<T> {
 }
 
 export function DataTable<T extends Record<string, any>>({
-  columns, rows, rowKey, onRowClick, emptyMessage = "No data", className, defaultSort,
+  columns, rows, rowKey, onRowClick, emptyMessage, className, defaultSort,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(defaultSort ?? null);
+  const resolvedEmptyMessage = emptyMessage ?? t('common.noData', 'No data');
 
   const sorted = useMemo(() => {
     if (!sort) return rows;
@@ -91,7 +94,7 @@ export function DataTable<T extends Record<string, any>>({
           </thead>
           <tbody>
             {sorted.length === 0 ? (
-              <tr><td colSpan={columns.length} className="px-3 py-6 text-center text-fm-fg-muted">{emptyMessage}</td></tr>
+              <tr><td colSpan={columns.length} className="px-3 py-6 text-center text-fm-fg-muted">{resolvedEmptyMessage}</td></tr>
             ) : sorted.map((row, i) => (
               <tr
                 key={rowKey(row, i)}

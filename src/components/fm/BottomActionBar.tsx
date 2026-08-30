@@ -2,11 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Bell, History, Calendar } from "lucide-react";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
+import { useTranslation } from "@/hooks/useTranslation";
+import { translateFMLabel } from "@/i18n/fm";
 import { version } from "@/components/VersionHeader";
 
 export const BottomActionBar = () => {
   const navigate = useNavigate();
   const { data: unread } = useUnreadInboxCount();
+  const { language } = useTranslation();
 
   return (
     <footer className="h-12 flex items-center gap-2 px-3 bg-fm-panel border-t border-fm-border">
@@ -27,7 +30,7 @@ export const BottomActionBar = () => {
         onClick={() => navigate("/schedule")}
       >
         <Calendar className="h-3.5 w-3.5" />
-        <span className="text-xs">Schedule</span>
+        <span className="text-xs">{translateFMLabel(language, "Schedule")}</span>
       </Button>
 
       <Button
@@ -37,7 +40,7 @@ export const BottomActionBar = () => {
         onClick={() => navigate("/inbox")}
       >
         <Bell className="h-3.5 w-3.5" />
-        <span className="text-xs">Inbox</span>
+        <span className="text-xs">{translateFMLabel(language, "Inbox")}</span>
         {unread && unread > 0 ? (
           <span className="ml-1 px-1.5 py-0.5 rounded-full bg-fm-bad text-white text-[10px] font-bold leading-none">
             {unread}
