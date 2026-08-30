@@ -382,6 +382,19 @@ const BandCrewManagement = () => {
         throw new Error(`Need ${crew.min_fame_required.toLocaleString()} fame to hire this crew member`);
       }
 
+      // Claim the catalog slot first so two bands cannot hire the same person.
+      const { data: claimed, error: claimError } = await supabase
+        .from("crew_catalog")
+        .update({ hired_by_band_id: bandId })
+        .eq("id", crew.id)
+        .is("hired_by_band_id", null)
+        .select("id");
+      if (claimError) throw claimError;
+      if (!claimed || claimed.length === 0) {
+        queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
+        throw new Error(`${crew.name} has just been hired by another band. Pick someone else.`);
+      }
+
       const { error: insertError } = await supabase.from("band_crew_members").insert({
         band_id: bandId,
         name: crew.name,
@@ -396,13 +409,12 @@ const BandCrewManagement = () => {
         catalog_crew_id: crew.id,
         notes: JSON.stringify({ specialties: crew.specialties, traits: crew.traits }),
       });
-      if (insertError) throw insertError;
+      if (insertError) {
+        // Release the claim so the candidate stays hireable.
+        await supabase.from("crew_catalog").update({ hired_by_band_id: null }).eq("id", crew.id);
+        throw insertError;
+      }
 
-      const { error: updateError } = await supabase
-        .from("crew_catalog")
-        .update({ hired_by_band_id: bandId })
-        .eq("id", crew.id);
-      if (updateError) throw updateError;
     },
     onSuccess: (_, crew) => {
       const roleInfo = getCrewRoleInfo(crew.role);
