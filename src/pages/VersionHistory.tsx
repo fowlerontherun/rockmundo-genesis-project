@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.721",
+    date: "2026-08-30",
+    changes: [
+      { type: "feature", description: "Stripe checkout now supports paying in pounds (GBP) and euros (EUR) as well as US dollars, with a currency switcher on the Shop, VIP and character slot pages" },
+      { type: "improvement", description: "All shop prices display in your chosen currency and the selection is remembered between visits" },
+    ],
+  },
+  {
     version: "1.1.720",
     date: "2026-08-30",
     changes: [
