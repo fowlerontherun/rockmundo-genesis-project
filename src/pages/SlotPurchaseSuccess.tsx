@@ -60,6 +60,13 @@ export default function SlotPurchaseSuccess() {
                   <Button onClick={() => navigate("/characters/new")}>Create Character</Button>
                   <Button variant="outline" onClick={() => navigate("/home")}>Dashboard</Button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(`/checkout-receipt${sessionId ? `?session_id=${sessionId}` : ""}`)}
+                >
+                  View receipt & status
+                </Button>
               </>
             )}
             {status === "error" && (

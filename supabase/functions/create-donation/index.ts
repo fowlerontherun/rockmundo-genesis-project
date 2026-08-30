@@ -90,6 +90,7 @@ serve(async (req) => {
       cancel_url: `${origin}/dashboard`,
       metadata: {
         user_id: user.id,
+        purchase_type: "donation",
         donation_type: "project_support",
         currency,
       },

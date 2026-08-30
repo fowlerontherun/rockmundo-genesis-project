@@ -167,6 +167,14 @@ export default function DonationSuccess() {
             <Home className="h-4 w-4 mr-2" />
             Return to Dashboard
           </Button>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate(`/checkout-receipt${sessionId ? `?session_id=${sessionId}` : ""}`)}
+          >
+            View receipt & status
+          </Button>
         </CardContent>
       </Card>
     </FMPageScaffold>

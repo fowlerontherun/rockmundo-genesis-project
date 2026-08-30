@@ -103,6 +103,14 @@ export default function VipSuccess() {
               <Crown className="h-4 w-4 mr-2" />
               Start Building Your Empire
             </Button>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate(`/checkout-receipt${sessionId ? `?session_id=${sessionId}` : ""}`)}
+            >
+              View receipt & subscription status
+            </Button>
             
             <p className="text-xs text-muted-foreground">
               Redirecting in {countdown} seconds...

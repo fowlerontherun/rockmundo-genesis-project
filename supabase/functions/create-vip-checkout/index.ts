@@ -84,6 +84,7 @@ serve(async (req) => {
       cancel_url: `${origin}/vip-subscribe`,
       metadata: {
         user_id: user.id,
+        purchase_type: "vip",
         currency,
       },
       subscription_data: {
