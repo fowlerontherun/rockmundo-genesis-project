@@ -100,9 +100,10 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         fetchWorldNews(6).catch(() => []),
       ]);
 
-      const results = [activitiesResult, inboxResult, notificationsResult, releasesResult, activityLogResult, chartResult];
-      const failed = results.find((result: any) => result.error);
-      if (failed?.error) throw failed.error;
+      // Individual section failures shouldn't blank the whole briefing.
+      [activitiesResult, inboxResult, notificationsResult, releasesResult, activityLogResult, chartResult]
+        .filter((result: any) => result?.error)
+        .forEach((result: any) => console.warn("[TodaysBriefing] section failed:", result.error));
 
       return {
         activities: activitiesResult.data ?? [],
