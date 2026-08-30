@@ -27503,6 +27503,53 @@ export type Database = {
           },
         ]
       }
+      gig_completion_attempts: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          gig_id: string
+          id: string
+          idempotency_key: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_number?: number
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          gig_id: string
+          id?: string
+          idempotency_key: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          gig_id?: string
+          id?: string
+          idempotency_key?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_completion_attempts_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_consequence_snapshots: {
         Row: {
           category: string
@@ -28934,7 +28981,12 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by_profile_id: string | null
           completed_at: string | null
+          completion_attempt_count: number
           completion_claimed_at: string | null
+          completion_last_attempt_at: string | null
+          completion_last_error: string | null
+          completion_needs_attention: boolean
+          completion_next_retry_at: string | null
           created_at: string | null
           crowd_engagement: number | null
           current_song_position: number | null
@@ -28998,7 +29050,12 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by_profile_id?: string | null
           completed_at?: string | null
+          completion_attempt_count?: number
           completion_claimed_at?: string | null
+          completion_last_attempt_at?: string | null
+          completion_last_error?: string | null
+          completion_needs_attention?: boolean
+          completion_next_retry_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
           current_song_position?: number | null
@@ -29062,7 +29119,12 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by_profile_id?: string | null
           completed_at?: string | null
+          completion_attempt_count?: number
           completion_claimed_at?: string | null
+          completion_last_attempt_at?: string | null
+          completion_last_error?: string | null
+          completion_needs_attention?: boolean
+          completion_next_retry_at?: string | null
           created_at?: string | null
           crowd_engagement?: number | null
           current_song_position?: number | null
@@ -58976,6 +59038,14 @@ export type Database = {
       }
       claim_company_shift: { Args: { p_shift_id: string }; Returns: string }
       claim_gig_completion: { Args: { p_gig_id: string }; Returns: Json }
+      claim_gig_completion_attempt: {
+        Args: {
+          p_gig_id: string
+          p_idempotency_key: string
+          p_max_attempts?: number
+        }
+        Returns: Json
+      }
       claim_gig_viewer_replay_generation: {
         Args: {
           p_gig_id: string
@@ -61865,6 +61935,22 @@ export type Database = {
         Args: { p_festival_id: string; p_notes?: string; p_price_cents: number }
         Returns: string
       }
+      list_gig_completion_retry_candidates: {
+        Args: {
+          p_limit?: number
+          p_max_attempts?: number
+          p_overdue_minutes?: number
+        }
+        Returns: {
+          attempt_count: number
+          gig_id: string
+          last_error: string
+          next_retry_at: string
+          scheduled_date: string
+          started_at: string
+          status: string
+        }[]
+      }
       list_manageable_job_vacancies: {
         Args: { actor_profile_id?: string }
         Returns: {
@@ -62623,6 +62709,15 @@ export type Database = {
           p_idempotency_key?: string
           p_reaction_type: string
           p_segment_id?: string
+        }
+        Returns: Json
+      }
+      record_gig_completion_attempt: {
+        Args: {
+          p_attempt_id: string
+          p_error?: string
+          p_max_attempts?: number
+          p_success: boolean
         }
         Returns: Json
       }
