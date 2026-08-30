@@ -13,6 +13,9 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { Loader2, Lock, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { CREW_DEPARTMENTS, getCrewRoleInfo, isPerformanceCrewRole } from "@/utils/liveSetup";
+import { CrewGuide, type CrewCoverageEntry } from "@/components/band/CrewGuide";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 import tourManagerImg from "@/assets/crew/tour-manager.jpg";
 import fohEngineerImg from "@/assets/crew/foh-engineer.jpg";
