@@ -6735,6 +6735,117 @@ export type Database = {
           },
         ]
       }
+      city_development: {
+        Row: {
+          city_id: string
+          culture: number
+          economy: number
+          education: number
+          healthcare: number
+          infrastructure: number
+          music_scene: number
+          public_safety: number
+          quality_of_life: number
+          tourism: number
+          transport: number
+          updated_at: string
+        }
+        Insert: {
+          city_id: string
+          culture?: number
+          economy?: number
+          education?: number
+          healthcare?: number
+          infrastructure?: number
+          music_scene?: number
+          public_safety?: number
+          quality_of_life?: number
+          tourism?: number
+          transport?: number
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string
+          culture?: number
+          economy?: number
+          education?: number
+          healthcare?: number
+          infrastructure?: number
+          music_scene?: number
+          public_safety?: number
+          quality_of_life?: number
+          tourism?: number
+          transport?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_development_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: true
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_development_history: {
+        Row: {
+          after_state: Json
+          before_state: Json
+          city_id: string
+          created_at: string
+          deltas: Json
+          id: string
+          mayor_id: string | null
+          project_id: string | null
+          source: string
+        }
+        Insert: {
+          after_state?: Json
+          before_state?: Json
+          city_id: string
+          created_at?: string
+          deltas?: Json
+          id?: string
+          mayor_id?: string | null
+          project_id?: string | null
+          source: string
+        }
+        Update: {
+          after_state?: Json
+          before_state?: Json
+          city_id?: string
+          created_at?: string
+          deltas?: Json
+          id?: string
+          mayor_id?: string | null
+          project_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_development_history_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_development_history_mayor_id_fkey"
+            columns: ["mayor_id"]
+            isOneToOne: false
+            referencedRelation: "city_mayors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_development_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "city_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       city_districts: {
         Row: {
           city_id: string
@@ -58838,6 +58949,31 @@ export type Database = {
         Args: { p_moment_id: string; p_option_id: string }
         Returns: Json
       }
+      city_gameplay_modifiers: {
+        Args: { p_city_id: string }
+        Returns: {
+          audience_demand_multiplier: number
+          culture_rating: number
+          economy_rating: number
+          economy_revenue_multiplier: number
+          education_rating: number
+          festival_demand_multiplier: number
+          healthcare_rating: number
+          incident_risk_multiplier: number
+          infrastructure_rating: number
+          local_talent_multiplier: number
+          logistics_multiplier: number
+          music_scene_rating: number
+          public_safety_rating: number
+          quality_of_life_rating: number
+          recovery_multiplier: number
+          tax_base_multiplier: number
+          tourism_rating: number
+          transport_rating: number
+          travel_cost_multiplier: number
+          travel_duration_multiplier: number
+        }[]
+      }
       claim_company_shift: { Args: { p_shift_id: string }; Returns: string }
       claim_gig_completion: { Args: { p_gig_id: string }; Returns: Json }
       claim_gig_viewer_replay_generation: {
@@ -58848,6 +58984,7 @@ export type Database = {
         }
         Returns: Json
       }
+      clamp_city_rating: { Args: { p_value: number }; Returns: number }
       cleanup_stuck_cron_runs: { Args: never; Returns: number }
       cleanup_timed_out_generations: { Args: never; Returns: number }
       close_festival_ticket_sales: {
