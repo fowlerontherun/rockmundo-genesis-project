@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.729",
+    date: "2026-08-30",
+    changes: [
+      { type: "feature", description: "Seeded 57 new Underworld black-market items: consumables, timed boosters, bootleg skill books and rare collectibles" },
+      { type: "improvement", description: "New underworld stock spans common to legendary rarity with cash prices, effects, flavour lore and addiction risk where relevant" },
+    ],
+  },
+  {
     version: "1.1.728",
     date: "2026-08-30",
     changes: [
