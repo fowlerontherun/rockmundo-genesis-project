@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { InboxMessage as InboxMessageType, InboxCategory } from "@/hooks/useInbox";
 import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
+import { useGigAbsenceDecision } from "@/hooks/useGigAbsenceDecision";
+
 
 interface InboxMessageProps {
   message: InboxMessageType;
