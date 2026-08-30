@@ -218,6 +218,7 @@ const BrandsAdmin = lazyWithRetry(() => import("./pages/admin/BrandsAdmin"));
 const AdminProducers = lazyWithRetry(() => import("./pages/admin/Producers"));
 const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/TwaaterModeration"));
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
+const AdminGigJobMonitor = lazyWithRetry(() => import("./pages/admin/GigJobMonitor"));
 const AdminWorldReset = lazyWithRetry(() => import("./pages/admin/WorldReset"));
 const AdminDebugPanel = lazyWithRetry(() => import("./pages/admin/DebugPanel"));
 const AdminFinanceDiagnostics = lazyWithRetry(() => import("./pages/admin/FinanceDiagnostics"));
