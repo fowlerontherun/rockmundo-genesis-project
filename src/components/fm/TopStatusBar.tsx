@@ -235,37 +235,44 @@ export const TopStatusBar = () => {
         </DropdownMenu>
       </div>
 
-      <div className="h-6 w-px bg-fm-border mx-1" />
+      <div className="hidden sm:block h-6 w-px bg-fm-border mx-1" />
 
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 gap-1.5"
-        onClick={() => window.dispatchEvent(new Event("fm:open-command"))}
-        aria-label={translateFMText(language, "openNavigationSearch")}
-        title={translateFMText(language, "searchNavigationShortcut")}
-      >
-        <Search className="h-4 w-4" aria-hidden="true" />
-        <span className="hidden lg:inline text-xs">{translateFMLabel(language, "Search")}</span>
-        <kbd className="hidden xl:inline rounded border border-fm-border px-1 text-[10px] text-fm-fg-muted">⌘K</kbd>
-      </Button>
-      <CharacterSwitcher />
-      <PrisonStatusIndicator />
-      <ActivityStatusIndicator />
-      <NotificationBell />
-      <RMRadioButton />
-      <LanguageSwitcher />
-      <HowToPlayDialog />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={handleLogout}
-        title={translateFMText(language, "signOut")}
-        aria-label={translateFMText(language, "signOut")}
-      >
-        <LogOut className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center gap-0.5 shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hidden sm:flex h-8 gap-1.5"
+          onClick={() => window.dispatchEvent(new Event("fm:open-command"))}
+          aria-label={translateFMText(language, "openNavigationSearch")}
+          title={translateFMText(language, "searchNavigationShortcut")}
+        >
+          <Search className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden lg:inline text-xs">{translateFMLabel(language, "Search")}</span>
+          <kbd className="hidden xl:inline rounded border border-fm-border px-1 text-[10px] text-fm-fg-muted">⌘K</kbd>
+        </Button>
+        <CharacterSwitcher />
+        <PrisonStatusIndicator />
+        <ActivityStatusIndicator />
+        <NotificationBell />
+        <div className="hidden sm:block">
+          <RMRadioButton />
+        </div>
+        {/* Language selection stays visible at every breakpoint */}
+        <LanguageSwitcher />
+        <div className="hidden sm:block">
+          <HowToPlayDialog />
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleLogout}
+          title={translateFMText(language, "signOut")}
+          aria-label={translateFMText(language, "signOut")}
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
+      </div>
     </header>
   );
 };
