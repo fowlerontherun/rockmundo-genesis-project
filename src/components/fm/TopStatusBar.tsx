@@ -4,6 +4,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { useTranslation } from "@/hooks/useTranslation";
 import { translateFMLabel, translateFMText } from "@/i18n/fm";
+import { getFMStatusCopy } from "@/i18n/fmStatus";
 import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
@@ -93,6 +94,7 @@ export const TopStatusBar = () => {
   const { profile } = useGameData();
   const { data: calendar } = useGameCalendar();
   const { language } = useTranslation();
+  const statusCopy = getFMStatusCopy(language);
 
   const cash = (profile as any)?.cash ?? (profile as any)?.money ?? 0;
   const fame = (profile as any)?.fame ?? 0;
@@ -101,13 +103,19 @@ export const TopStatusBar = () => {
   const name = (profile as any)?.stage_name ?? (profile as any)?.display_name ?? translateFMText(language, "artist");
 
   const dateStr = calendar
-    ? `${calendar.gameDay} ${calendar.monthName} ${calendar.gameYear}`
+    ? new Intl.DateTimeFormat(statusCopy.locale, {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(Date.UTC(calendar.gameYear, calendar.gameMonth - 1, calendar.gameDay)))
     : "—";
 
-  const cashLabel = translateFMLabel(language, "Cash");
-  const fameLabel = translateFMLabel(language, "Fame");
-  const healthLabel = translateFMLabel(language, "Health");
-  const energyLabel = translateFMLabel(language, "Energy");
+  const numberFormatter = new Intl.NumberFormat(statusCopy.locale);
+  const cashLabel = statusCopy.cash;
+  const fameLabel = statusCopy.fame;
+  const healthLabel = statusCopy.health;
+  const energyLabel = statusCopy.energy;
   const characterStatus = translateFMText(language, "characterStatus");
 
   const handleLogout = async () => {
@@ -159,8 +167,8 @@ export const TopStatusBar = () => {
       <div className="flex-1" />
 
       <div className="hidden xl:flex items-center gap-1.5" role="group" aria-label={characterStatus}>
-        <StatPip icon={DollarSign} label={cashLabel} value={`$${Number(cash).toLocaleString()}`} tone="good" />
-        <StatPip icon={Flame} label={fameLabel} value={Number(fame).toLocaleString()} tone="warn" />
+        <StatPip icon={DollarSign} label={cashLabel} value={`$${numberFormatter.format(Number(cash))}`} tone="good" />
+        <StatPip icon={Flame} label={fameLabel} value={numberFormatter.format(Number(fame))} tone="warn" />
         <StatPip
           icon={Heart}
           label={healthLabel}
@@ -176,8 +184,8 @@ export const TopStatusBar = () => {
       </div>
 
       <div className="hidden md:flex xl:hidden items-center gap-1.5" role="group" aria-label={characterStatus}>
-        <CompactStatPip icon={DollarSign} label={cashLabel} value={`$${Number(cash).toLocaleString()}`} tone="good" className="hidden lg:flex" />
-        <CompactStatPip icon={Flame} label={fameLabel} value={Number(fame).toLocaleString()} tone="warn" className="hidden lg:flex" />
+        <CompactStatPip icon={DollarSign} label={cashLabel} value={`$${numberFormatter.format(Number(cash))}`} tone="good" className="hidden lg:flex" />
+        <CompactStatPip icon={Flame} label={fameLabel} value={numberFormatter.format(Number(fame))} tone="warn" className="hidden lg:flex" />
         <CompactStatPip
           icon={Heart}
           label={healthLabel}
@@ -208,8 +216,8 @@ export const TopStatusBar = () => {
             <DropdownMenuLabel>{characterStatus}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <dl aria-label={translateFMText(language, "characterStatusDetails")}>
-              <StatusMenuRow icon={DollarSign} label={cashLabel} value={`$${Number(cash).toLocaleString()}`} tone="good" />
-              <StatusMenuRow icon={Flame} label={fameLabel} value={Number(fame).toLocaleString()} tone="warn" />
+              <StatusMenuRow icon={DollarSign} label={cashLabel} value={`$${numberFormatter.format(Number(cash))}`} tone="good" />
+              <StatusMenuRow icon={Flame} label={fameLabel} value={numberFormatter.format(Number(fame))} tone="warn" />
               <StatusMenuRow
                 icon={Heart}
                 label={healthLabel}
