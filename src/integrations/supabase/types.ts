@@ -11487,24 +11487,6 @@ export type Database = {
         }
         Relationships: []
       }
-      debug_travel_log: {
-        Row: {
-          created_at: string
-          id: string
-          msg: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          msg?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          msg?: string | null
-        }
-        Relationships: []
-      }
       demo_submissions: {
         Row: {
           artist_profile_id: string | null
@@ -59813,17 +59795,6 @@ export type Database = {
       current_profile_id: { Args: never; Returns: string }
       current_profile_id_safe: { Args: never; Returns: string }
       current_user_is_platform_admin: { Args: never; Returns: boolean }
-      debug_travel_dry_run: {
-        Args: {
-          p_departure: string
-          p_dest: string
-          p_fare: number
-          p_hours: number
-          p_mode: string
-          p_user_id: string
-        }
-        Returns: string
-      }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
       decline_festival_offer: {
         Args: {
