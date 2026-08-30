@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.709",
+    date: "2026-08-30",
+    changes: [
+      { type: 'feature', description: "Added an admin Gig Job Monitor page showing the last run time, success/failure status, duration, processed counts and full run logs for the auto-complete-gigs and auto-start-gigs background workers." },
+      { type: 'feature', description: "The Gig Job Monitor includes a gig pipeline health panel that highlights gigs stuck past their start time, in progress, awaiting completion or failed, plus 'Run now' buttons to trigger either worker manually." },
+    ],
+  },
+  {
     version: "1.1.708",
     date: "2026-08-29",
     changes: [
