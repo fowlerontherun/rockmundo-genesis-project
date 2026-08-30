@@ -32,7 +32,8 @@ const me = [
 
 function meta(pattern: string, section: MobileDestination, fallbackStatus: MobileFallbackStatus = "wrapped-desktop"): MobileRouteMeta {
   const dedicated = pattern.startsWith("/mobile") || fallbackStatus === "dedicated";
-  return { pattern, section, bottomNav: section, auth: "player", shell: "mobile", component: dedicated ? `Mobile${section}` : "Desktop route redirected to companion surface", showActivityBar: true, showFab: true, fullscreenAllowed: pattern.includes("perform") || pattern.includes("compose"), fallbackStatus, notes: dedicated ? "Dedicated mobile implementation." : "Desktop gameplay route; mobile navigation redirects to the supported companion destination rather than mounting desktop gameplay." };
+  const isPublic = fallbackStatus === "public";
+  return { pattern, section, bottomNav: section, auth: isPublic ? "public" : "player", shell: isPublic ? "none" : "mobile", component: dedicated ? `Mobile${section}` : isPublic ? "Public route" : "Desktop route redirected to companion surface", showActivityBar: !isPublic, showFab: !isPublic, fullscreenAllowed: isPublic || pattern.includes("perform") || pattern.includes("compose"), fallbackStatus, notes: dedicated ? "Dedicated mobile implementation." : isPublic ? "Public route remains outside the authenticated mobile shell." : "Desktop gameplay route; mobile navigation redirects to the supported companion destination rather than mounting desktop gameplay." };
 }
 
 export const mobileRouteRegistry: MobileRouteMeta[] = [
@@ -76,8 +77,8 @@ export function resolveCompanionPath(path?: string | null): string {
   const clean = path.split("?")[0].split("#")[0];
 
   if (["/home", "/dashboard"].includes(clean)) return "/mobile";
-  if (clean === "/schedule" || clean.startsWith("/schedule/")) return "/mobile?view=day";
-  if (clean === "/stage-practice") return "/mobile?view=day#practice";
+  if (clean === "/schedule" || clean.startsWith("/schedule/")) return "/mobile/career/schedule";
+  if (clean === "/stage-practice") return "/mobile/career/practice";
   if (clean === "/travel" || clean.startsWith("/world/travel")) return "/mobile/world/travel";
   if (clean === "/wellness" || clean === "/character/wellness") return "/mobile/me/wellness";
   if (clean === "/skills" || clean === "/character/skills") return "/mobile/me/skills";
@@ -86,11 +87,12 @@ export function resolveCompanionPath(path?: string | null): string {
   if (clean === "/festivals" || clean.startsWith("/festivals/")) return "/mobile/world/festivals";
   if (clean === "/inbox") return "/mobile/social/mail";
   if (clean === "/relationships") return "/mobile/social/friends";
-  if (["/bands/finder", "/bands/browse", "/bands/search"].includes(clean)) return "/mobile/social/friends";
+  if (["/bands/finder", "/bands/browse", "/bands/search", "/players/search", "/community/friends", "/community/players", "/community/bands/recruitment", "/social/friends", "/social/players", "/social/recruitment"].includes(clean)) return "/mobile/social/friends";
   if (clean === "/twaater" || clean.startsWith("/twaater/")) return "/mobile/social/twaater";
   if (clean === "/social/messages") return "/mobile/social/messages";
   if (clean === "/social/invitations" || clean === "/community/invitations") return "/mobile/social/requests";
   if (clean === "/social" || clean.startsWith("/social/") || clean.startsWith("/community/")) return "/mobile/social";
+  if (clean === "/media" || clean === "/hub/media" || clean.startsWith("/media/")) return "/mobile/career";
 
   const profileTarget = playerProfilePath(clean);
   if (profileTarget) return profileTarget;

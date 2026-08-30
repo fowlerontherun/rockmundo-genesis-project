@@ -865,3 +865,29 @@ No route analytics facility was present for navigation-productivity events durin
 ### Known limitations and follow-up
 
 Favourites and recents are browser-local, not cross-device. Dynamic entity favourites are limited to canonical internal routes already known to the client; this PR does not introduce a backend search service or gameplay-wide entity index. Future navigation enhancements should be driven by player analytics and usability feedback rather than further structural expansion.
+
+## P2 closure audit — 2026-08-30
+
+This audit closes the remaining consolidated-backlog navigation work. It supersedes the PR 9 statement that Media is compatibility-only: the implemented application already exposes Media as a primary module, and this audit gives it the canonical `/media` landing route while retaining `/hub/media` as a query-preserving alias.
+
+### Verified final module ownership
+
+The primary module order is Home, Character, Music, Band, Career, Business, Media, World, Social, Schedule and permission-gated Admin. `resolveModuleForPath()` now distinguishes an explicitly owned route from the Home fallback, normalises query strings, fragments and trailing slashes, and uses the most specific matching route metadata. An executable inventory reads the authenticated `App.tsx` route table and fails when a literal or festival route lacks an owner, when a literal route is duplicated, or when equally specific modules claim the same route.
+
+### Closure results
+
+| Audit area | Result |
+| --- | --- |
+| Hub migration | Music, Band, World, Social, Business, Career, Media, Schedule and Home have explicit module ownership and stable roots. |
+| Admin protection | One `AdminRoute`/`Outlet` boundary protects every live literal and dynamic `/admin` route. Module-tab visibility remains a convenience; the route boundary is authoritative in the client. |
+| Social aliases | `/players/search` and the remaining `/community/*` discovery aliases redirect to canonical `/social/*` destinations while preserving query parameters. |
+| Media compatibility | `/media` is canonical and `/hub/media` redirects to it without discarding the query string. |
+| Breadcrumbs | Band and Schedule pages that render `HubLayout` suppress the competing segment-based shell breadcrumb, leaving one logical trail. |
+| Legacy deep links | Existing aliases remain route-table redirects; no deployed compatibility route was removed. |
+| Mobile navigation | Schedule and practice use their dedicated mobile screens; Social discovery aliases and Media routes resolve to supported companion surfaces instead of desktop gameplay. |
+
+### Regression coverage
+
+The navigation tests cover primary labels and roots, selected-state matching, route ownership and ambiguity, duplicate route declarations, admin-boundary membership, Social/Media redirect contracts, logical breadcrumb ownership, mobile route metadata and desktop-to-mobile bridging. The App route-tree smoke test also constructs the complete route tree after the shared admin boundary was introduced.
+
+This audit changes no database schema, data, RLS policy, RPC or server function.

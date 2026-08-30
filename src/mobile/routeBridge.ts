@@ -21,6 +21,10 @@ export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/bands/finder", "/mobile/social/friends"],
   ["/bands/browse", "/mobile/social/friends"],
   ["/bands/search", "/mobile/social/friends"],
+  ["/players/search", "/mobile/social/friends"],
+  ["/community/friends", "/mobile/social/friends"],
+  ["/community/players", "/mobile/social/friends"],
+  ["/community/bands/recruitment", "/mobile/social/friends"],
 
   // Career
   ["/stage-practice", "/mobile/career/practice"],
@@ -62,6 +66,9 @@ export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/booking/*", "/mobile/career"],
   ["/career", "/mobile/career"],
   ["/career/*", "/mobile/career"],
+  ["/hub/media", "/mobile/career"],
+  ["/media", "/mobile/career"],
+  ["/media/*", "/mobile/career"],
 
   // World
   ["/travel", "/mobile/world/travel"],
@@ -106,6 +113,9 @@ export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/band-rankings", "/mobile/social"],
   ["/band-fame-map", "/mobile/social"],
   ["/social/messages", "/mobile/social/messages"],
+  ["/social/friends", "/mobile/social/friends"],
+  ["/social/players", "/mobile/social/friends"],
+  ["/social/recruitment", "/mobile/social/friends"],
   ["/social", "/mobile/social"],
   ["/social/*", "/mobile/social"],
 

@@ -19,11 +19,18 @@ describe("mobile navigation and page contracts", () => {
   it("routes desktop Home separately from My Day schedule links", () => {
     expect(resolveCompanionPath("/home")).toBe("/mobile");
     expect(resolveCompanionPath("/dashboard")).toBe("/mobile");
-    expect(resolveCompanionPath("/schedule/today")).toBe("/mobile?view=day");
+    expect(resolveCompanionPath("/schedule/today")).toBe("/mobile/career/schedule");
+    expect(resolveCompanionPath("/stage-practice")).toBe("/mobile/career/practice");
   });
 
   it("keeps direct player links useful on mobile", () => {
     expect(resolveCompanionPath("/player/example-player")).toBe("/mobile/social/profile/example-player");
+  });
+
+  it("sends canonical and legacy Social and Media routes to supported companions", () => {
+    expect(resolveCompanionPath("/community/friends")).toBe("/mobile/social/friends");
+    expect(resolveCompanionPath("/social/players")).toBe("/mobile/social/friends");
+    expect(resolveCompanionPath("/media/radio")).toBe("/mobile/career");
   });
 
   it("uses direct supported mobile destinations from the top app bar", () => {

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, matchPath, useLocation } from "react-router-dom";
 import { ChevronRight, Home, type LucideIcon } from "lucide-react";
 import { DOMAIN_ICONS, type DomainKey } from "@/components/ui/domain-icons";
 
@@ -93,9 +93,40 @@ const NON_ROUTABLE_SEGMENTS = new Set([
   "tours",
 ]);
 
+// These pages render HubLayout, which owns the logical Home > Hub > Child
+// breadcrumb. Suppress the shell breadcrumb so assistive technology and
+// sighted users receive one coherent trail instead of two competing trails.
+export const HUB_BREADCRUMB_ROUTES = [
+  "/band",
+  "/band/members",
+  "/band/fame",
+  "/band/repertoire",
+  "/band/history",
+  "/band/finances",
+  "/band/chemistry",
+  "/band/settings",
+  "/schedule",
+  "/schedule/today",
+  "/schedule/week",
+  "/schedule/calendar",
+  "/schedule/current",
+  "/schedule/book",
+  "/schedule/upcoming",
+  "/schedule/history",
+] as const;
+
+export const usesHubBreadcrumbs = (pathname: string) => {
+  const normalisedPath = pathname.replace(/\/+$/, "") || "/";
+  return HUB_BREADCRUMB_ROUTES.some((path) =>
+    matchPath({ path, end: true }, normalisedPath),
+  );
+};
+
 export const Breadcrumbs = () => {
   const location = useLocation();
   const segments = location.pathname.split("/").filter(Boolean);
+
+  if (usesHubBreadcrumbs(location.pathname)) return null;
 
   // Hide on root, auth, onboarding and shallow top-level routes
   if (segments.length < 2) return null;

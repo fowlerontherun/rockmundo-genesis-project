@@ -24,7 +24,8 @@ describe("band hub navigation consolidation", () => {
     expect(isHubNavigationItemActive("/rehearsals", byId("rehearsals"))).toBe(true);
     expect(isHubNavigationItemActive("/gigs/perform/gig-1", byId("gigs"))).toBe(true);
     expect(isHubNavigationItemActive("/tour-manager", byId("tours"))).toBe(true);
-    expect(isHubNavigationItemActive("/band-crew", byId("equipment"))).toBe(true);
+    expect(isHubNavigationItemActive("/band-crew", byId("crew"))).toBe(true);
+    expect(isHubNavigationItemActive("/band-crew", byId("equipment"))).toBe(false);
     expect(isHubNavigationItemActive("/chemistry", byId("chemistry"))).toBe(true);
   });
 

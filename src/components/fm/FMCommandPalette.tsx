@@ -126,7 +126,7 @@ export const FMCommandPalette = () => {
 
   const renderItem = (destination: NavigationDestination | StoredNavigationDestination, prefix: string) => {
     const canonical = canonicalDestination(destination);
-    const Icon = "Icon" in canonical ? canonical.Icon : undefined;
+    const Icon = (canonical as NavigationDestination).Icon;
     const pinned = favouritePaths.has(destination.path);
     const displayLabel = translateFMLabel(language, canonical.label);
     const displayHub = canonical.hubLabel ? translateFMLabel(language, canonical.hubLabel) : undefined;

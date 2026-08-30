@@ -39,7 +39,7 @@ export const worldHubNavigation: HubNavigationItem[] = [
   { id: "cities", label: "Cities", path: "/world/cities", icon: MapPin, matchPaths: ["/cities", "/cities/:cityId", "/cities/treasury"] },
   { id: "venues", label: "Venues", path: "/world/venues", icon: Building2, matchPaths: ["/venues", "/venue-business/:venueId"] },
   { id: "studios", label: "Studios", path: "/world/studios", icon: Disc3, matchPaths: ["/recording-studio", "/recording-studio-business/:studioId", "/rehearsal-studio-business/:studioId"] },
-  { id: "companies", label: "Companies", path: "/world/companies", icon: Briefcase, matchPaths: ["/world-companies", "/companies/directory", "/company/:companyId"] },
+  { id: "companies", label: "Companies", path: "/world/companies", icon: Briefcase, matchPaths: ["/world-companies", "/companies/directory"] },
   { id: "events", label: "Events", path: "/world/events", icon: Calendar, matchPaths: ["/major-events", "/events/eurovision"] },
   { id: "festivals", label: "Festivals", path: "/world/festivals", icon: Star, matchPaths: ["/festivals", "/festivals/:festivalId", "/world/festivals/:festivalCompanyIdentifier", "/festival-company/new", "/festival-opportunities"] },
   { id: "pulse", label: "World Pulse", path: "/world/pulse", icon: Radio, matchPaths: ["/world-pulse"] },

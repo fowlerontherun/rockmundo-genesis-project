@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, matchPath, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, matchPath, useLocation } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider, useGameData } from "./hooks/useGameData";
 import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalog-context";
@@ -21,6 +21,7 @@ import ErrorBoundary from "@/components/ui/error-boundary";
 import { PageLoadingState } from "@/components/ui/page-state";
 import { festivalRoutePatterns, festivalRoutes } from "./features/festivals/routes";
 import { FestivalFoundingPage, FestivalCompanyHome, FestivalEditionShell, FestivalEditionWorkspace, FestivalUpgradesPage, PublicFestivalEditionPage, LegacyFestivalRedirect, LegacyFestivalSetupRedirect } from "./features/festivals/ui/CanonicalFestivalRoutes";
+import { AdminRoute } from "./components/AdminRoute";
 
 // Redirect component for removed placeholder pages
 const RedirectTo = ({ to }: { to: string }) => {
@@ -39,6 +40,12 @@ const CurrentCityRedirect = () => {
   const { currentCity } = useGameData();
   return <Navigate to={currentCity?.id ? `/cities/${currentCity.id}` : "/cities"} replace />;
 };
+
+const AdminRouteBoundary = () => (
+  <AdminRoute>
+    <Outlet />
+  </AdminRoute>
+);
 import WorldPulsePage from "./pages/WorldPulse";
 import BandManager from "./pages/BandManager";
 const Modeling = lazyWithRetry(() => import("./pages/Modeling"));
@@ -797,13 +804,13 @@ function App() {
                     <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
                     <Route path="employment" element={<Employment />} />
                     <Route path="inventory" element={<InventoryManager />} />
-                    <Route path="players/search" element={<PreserveQueryRedirect to="/community/players" />} />
-                    <Route path="community/friends" element={<FriendsPage />} />
+                    <Route path="players/search" element={<PreserveQueryRedirect to="/social/players" />} />
+                    <Route path="community/friends" element={<PreserveQueryRedirect to="/social/friends" />} />
                     <Route path="settings/privacy/blocked-players" element={<BlockedPlayersPage />} />
                     <Route path="settings/safety/reports" element={<MyReportsPage />} />
-                    <Route path="community/players" element={<PlayersBrowser />} />
-                    <Route path="community/bands/recruitment" element={<BandRecruitmentDiscovery />} />
-                    <Route path="community/invitations" element={<SocialHubUnified />} />
+                    <Route path="community/players" element={<PreserveQueryRedirect to="/social/players" />} />
+                    <Route path="community/bands/recruitment" element={<PreserveQueryRedirect to="/social/recruitment" />} />
+                    <Route path="community/invitations" element={<PreserveQueryRedirect to="/social/invitations" />} />
                     <Route path="player/:playerId" element={<PlayerProfile />} />
                     <Route path="players/:playerId" element={<PlayerProfile />} />
                     <Route path="bands/browse" element={<BandBrowser />} />
@@ -846,7 +853,8 @@ function App() {
                     {/* New split hubs */}
                     <Route path="hub/world" element={<PreserveQueryRedirect to="/world" />} />
                     <Route path="hub/social" element={<PreserveQueryRedirect to="/social" />} />
-                    <Route path="hub/media" element={<MediaHub />} />
+                    <Route path="media" element={<MediaHub />} />
+                    <Route path="hub/media" element={<PreserveQueryRedirect to="/media" />} />
                     {/* Old hub redirects */}
                     <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
@@ -862,12 +870,14 @@ function App() {
                     {/* Redirects */}
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
+                    <Route path="university/:id" element={<UniversityDetail />} />
+                    {/* P2 admin route boundary start */}
+                    <Route element={<AdminRouteBoundary />}>
                     <Route path="admin" element={<Admin />} />
                     <Route path="admin/players" element={<AdminPlayerManagement />} />
                     <Route path="admin/player-reports" element={<AdminPlayerReports />} />
                     <Route path="admin/achievements" element={<AdminAchievements />} />
                     <Route path="admin/analytics" element={<AdminAnalytics />} />
-                    <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/courses" element={<AdminCourses />} />
                     <Route path="admin/cities" element={<AdminCities />} />
@@ -961,6 +971,8 @@ function App() {
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
                     <Route path="admin/pov-clips" element={<POVClipAdmin />} />
                     <Route path="admin/practice-tracks" element={<PracticeTracksAdmin />} />
+                    </Route>
+                    {/* P2 admin route boundary end */}
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="world-map" element={<WorldMap />} />
                     <Route path="nightclubs" element={<NightclubHub />} />
