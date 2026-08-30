@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.723",
+    date: "2026-08-30",
+    changes: [
+      { type: "feature", description: "New post-checkout receipt page showing exactly what you bought (VIP plan, donation or character slots) with itemised totals, the paid currency and a link to the official Stripe receipt" },
+      { type: "feature", description: "The receipt page also shows your live subscription state: VIP status, renewal or expiry date, billing amount and interval, character slots used, plus a Manage billing shortcut" },
+      { type: "improvement", description: "VIP, donation and character slot success pages now link straight to the receipt and status page" },
+    ],
+  },
+  {
     version: "1.1.722",
     date: "2026-08-30",
     changes: [
