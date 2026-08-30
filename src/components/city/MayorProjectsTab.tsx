@@ -62,10 +62,13 @@ function effectValue(key: string, value: number) {
 export function MayorProjectsTab({ cityId, politics }: Props) {
   const { data: types } = useCityProjectTypes();
   const { data: projects } = useCityProjects(cityId);
+  const { data: treasury } = useCityTreasury(cityId);
   const propose = useProposeCityProject();
   const cancel = useCancelCityProject();
 
   const [confirmType, setConfirmType] = useState<CityProjectType | null>(null);
+
+  const available = Number(treasury?.balance ?? 0) - Number(treasury?.pending_commitments ?? 0);
 
   const active = useMemo(
     () => projects?.filter((p) => p.status === "in_progress") ?? [],
@@ -90,6 +93,8 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
   const finalCost = (t: CityProjectType) =>
     Math.round(t.base_cost * (1 - discount / 100));
 
+  const isAffordable = (t: CityProjectType) => available >= finalCost(t);
+
   const isUnlocked = (t: CityProjectType) => {
     if (!t.required_skill_slug || t.required_skill_level === 0) return true;
     if (!politics) return false;
@@ -99,6 +104,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
       ] ?? 0;
     return lvl >= t.required_skill_level;
   };
+
 
   return (
     <div className="space-y-4">
