@@ -103,13 +103,9 @@ export const TopStatusBar = () => {
   const name = (profile as any)?.stage_name ?? (profile as any)?.display_name ?? translateFMText(language, "artist");
 
   const dateStr = calendar
-    ? new Intl.DateTimeFormat(statusCopy.locale, {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-      }).format(new Date(Date.UTC(calendar.gameYear, calendar.gameMonth - 1, calendar.gameDay)))
+    ? `${calendar.gameDay} ${calendar.monthName} · Year ${calendar.gameYear}`
     : "—";
+
 
   const numberFormatter = new Intl.NumberFormat(statusCopy.locale);
   const cashLabel = statusCopy.cash;
