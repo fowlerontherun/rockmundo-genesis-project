@@ -246,6 +246,8 @@ const BandCrewManagement = () => {
 
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedTier, setSelectedTier] = useState<string>("all");
+  const [affordableOnly, setAffordableOnly] = useState(true);
+  const [activeTab, setActiveTab] = useState("roster");
   const [hireDialogOpen, setHireDialogOpen] = useState(false);
   const [selectedCrewMember, setSelectedCrewMember] = useState<CrewCatalogRow | null>(null);
 
