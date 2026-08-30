@@ -381,6 +381,48 @@
   animation: vip-glow 2s ease-in-out infinite;
 }
 
+/* Shop tab — premium gold treatment that stands out from module accents */
+:root {
+  --fm-shop: 43 96% 50%;            /* gold #FACC15 */
+  --fm-shop-glow: 43 96% 50% / 0.45;
+  --fm-shop-glow-strong: 43 96% 50% / 0.75;
+}
+
+@keyframes shop-flash {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px hsl(var(--fm-shop) / 0.6));
+  }
+  50% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 8px hsl(var(--fm-shop) / 1));
+  }
+}
+
+@keyframes shop-pulse-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 6px hsl(var(--fm-shop) / 0.35),
+      0 0 12px hsl(var(--fm-shop) / 0.2),
+      inset 0 0 0 1px hsl(var(--fm-shop) / 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 14px hsl(var(--fm-shop) / 0.65),
+      0 0 28px hsl(var(--fm-shop) / 0.35),
+      inset 0 0 0 1px hsl(var(--fm-shop) / 0.55);
+  }
+}
+
+.shop-tab-glow {
+  animation: shop-pulse-glow 1.8s ease-in-out infinite;
+}
+
+.shop-icon-flash {
+  animation: shop-flash 1.4s ease-in-out infinite;
+  color: hsl(var(--fm-shop));
+}
+
 /* Location Accent Utilities */
 .border-location-primary {
   border-color: hsl(var(--location-primary, 220 80% 45%));
