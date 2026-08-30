@@ -41,6 +41,18 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
   const [message, setMessage] = useState('');
   const { toast } = useToast();
 
+  useEffect(() => {
+    const handleHubAction = (event: Event) => {
+      const detail = (event as CustomEvent<{ label?: string; path?: string }>).detail;
+      if (detail?.path === '/band/members' && detail?.label === 'Invite member') {
+        setOpen(true);
+      }
+    };
+
+    window.addEventListener('rockmundo:hub-action', handleHubAction);
+    return () => window.removeEventListener('rockmundo:hub-action', handleHubAction);
+  }, []);
+
   const loadFriends = useCallback(async (profileId: string) => {
     try {
       const { data: friendships, error } = await supabase
@@ -141,9 +153,6 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
           return;
         }
 
-        // BandManager passes the active character profile ID. Use it directly so
-        // multi-character accounts invite from the selected character instead of
-        // resolving an arbitrary/primary profile from auth.user_id.
         await loadFriends(currentUserId);
       } catch (error) {
         console.error('Error preparing friends:', error);
