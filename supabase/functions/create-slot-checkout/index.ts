@@ -13,6 +13,15 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-SLOT-CHECKOUT] ${step}${detailsStr}`);
 };
 
+const ALLOWED_CURRENCIES = ["usd", "gbp", "eur"] as const;
+type AllowedCurrency = typeof ALLOWED_CURRENCIES[number];
+const parseCurrency = (value: unknown): AllowedCurrency => {
+  const candidate = typeof value === "string" ? value.toLowerCase() : "";
+  return (ALLOWED_CURRENCIES as readonly string[]).includes(candidate)
+    ? (candidate as AllowedCurrency)
+    : "usd";
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -49,6 +58,16 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
+    let requestedCurrency: string | undefined;
+    try {
+      const body = await req.json();
+      requestedCurrency = body?.currency;
+    } catch {
+      requestedCurrency = undefined;
+    }
+    const currency = parseCurrency(requestedCurrency);
+    logStep("Currency resolved", { currency });
+
     const origin = req.headers.get("origin") || "https://rockmundo-genesis-project.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
@@ -61,11 +80,13 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
+      currency,
       success_url: `${origin}/slot-purchase-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/buy-character-slot`,
       metadata: {
         user_id: user.id,
         purchase_type: "character_slot",
+        currency,
       },
     });
 

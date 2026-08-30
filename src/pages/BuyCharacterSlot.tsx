@@ -10,6 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { CurrencySelector } from "@/components/shop/CurrencySelector";
+import { useCheckoutCurrency } from "@/hooks/useCheckoutCurrency";
+import { formatProductPrice } from "@/lib/checkoutCurrency";
 
 export default function BuyCharacterSlot() {
   const { slots, slotsLoading, characters, switchCharacter } = useCharacterSlots();
@@ -17,6 +20,8 @@ export default function BuyCharacterSlot() {
   const [switchingToId, setSwitchingToId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { currency } = useCheckoutCurrency();
+  const slotPrice = formatProductPrice("characterSlot", currency);
 
   const maxPossible = 5;
   const currentMax = slots?.maxSlots ?? 2;
@@ -26,7 +31,7 @@ export default function BuyCharacterSlot() {
   const handlePurchase = async () => {
     setPurchasing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-slot-checkout");
+      const { data, error } = await supabase.functions.invoke("create-slot-checkout", { body: { currency } });
       if (error) throw error;
       if (data?.url) {
         window.open(data.url, "_blank");
@@ -141,7 +146,10 @@ export default function BuyCharacterSlot() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-3xl font-bold">£5.00</div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-3xl font-bold">{slotPrice}</div>
+              <CurrencySelector showLabel={false} />
+            </div>
             <p className="text-sm text-muted-foreground">
               One-time purchase. Adds a permanent extra character slot to your account.
             </p>
@@ -182,7 +190,7 @@ export default function BuyCharacterSlot() {
               ) : !canBuyMore ? (
                 "Max Slots Reached"
               ) : (
-                <>Buy Extra Slot — £5.00</>
+                <>Buy Extra Slot — {slotPrice}</>
               )}
             </Button>
           </CardContent>

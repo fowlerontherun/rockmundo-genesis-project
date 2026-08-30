@@ -9,44 +9,48 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { CurrencySelector } from "@/components/shop/CurrencySelector";
+import { useCheckoutCurrency } from "@/hooks/useCheckoutCurrency";
+import { CHECKOUT_PRICING, CURRENCY_META, formatMinor, type CheckoutProductKey } from "@/lib/checkoutCurrency";
 
 interface VipTier {
   name: string;
-  price: number;
+  pricingKey: CheckoutProductKey;
+  monthsCovered: number;
   priceId: string;
   productId: string;
   period: string;
   savings: string | null;
-  monthlyEquivalent?: number;
   popular?: boolean;
 }
 
 const VIP_TIERS: Record<string, VipTier> = {
   monthly: {
     name: "Monthly",
-    price: 4.99,
+    pricingKey: "vipMonthly",
+    monthsCovered: 1,
     priceId: "price_1T3AGhGWxwyLFaDWcv1AIl14",
     productId: "prod_U1CgRsAireZl9I",
     period: "per month",
     savings: null,
   },
   quarterly: {
-    name: "Quarterly", 
-    price: 12.49,
+    name: "Quarterly",
+    pricingKey: "vipQuarterly",
+    monthsCovered: 3,
     priceId: "price_1T3AHDGWxwyLFaDWdlz5KJmk",
     productId: "prod_U1CgeFJg7jmvIR",
     period: "every 3 months",
     savings: "17% off",
-    monthlyEquivalent: 4.16,
   },
   annual: {
     name: "Annual",
-    price: 39.99,
+    pricingKey: "vipAnnual",
+    monthsCovered: 12,
     priceId: "price_1T3AHXGWxwyLFaDWEkKFzcdC",
     productId: "prod_U1CgIlSSIwxYER",
     period: "per year",
     savings: "33% off",
-    monthlyEquivalent: 3.33,
     popular: true,
   },
 };
@@ -72,6 +76,7 @@ export default function VipSubscribe() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
+  const { currency } = useCheckoutCurrency();
 
   const handleSubscribe = async (tierId: keyof typeof VIP_TIERS) => {
     setLoadingTier(tierId);
@@ -80,7 +85,7 @@ export default function VipSubscribe() {
       const tier = VIP_TIERS[tierId];
       
       const { data, error } = await supabase.functions.invoke('create-vip-checkout', {
-        body: { priceId: tier.priceId },
+        body: { priceId: tier.priceId, currency },
       });
 
       if (error) throw error;
@@ -191,6 +196,11 @@ export default function VipSubscribe() {
         </Card>
       )}
 
+      {/* Currency Selector */}
+      <div className="flex justify-center">
+        <CurrencySelector />
+      </div>
+
       {/* Pricing Cards */}
       <div className="grid gap-6 md:grid-cols-3">
         {Object.entries(VIP_TIERS).map(([tierId, tier]) => (
@@ -218,13 +228,22 @@ export default function VipSubscribe() {
             
             <CardContent className="space-y-6">
               <div className="text-center">
-                <span className="text-4xl font-bold">${tier.price}</span>
+                <span className="text-4xl font-bold">
+                  {formatMinor(CHECKOUT_PRICING[tier.pricingKey][currency], currency)}
+                </span>
                 <span className="text-muted-foreground"> {tier.period}</span>
-                {'monthlyEquivalent' in tier && tier.monthlyEquivalent && (
+                {tier.monthsCovered > 1 && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    ${tier.monthlyEquivalent.toFixed(2)}/month
+                    {formatMinor(
+                      Math.round(CHECKOUT_PRICING[tier.pricingKey][currency] / tier.monthsCovered),
+                      currency,
+                    )}
+                    /month
                   </p>
                 )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Billed in {CURRENCY_META[currency].name}
+                </p>
               </div>
 
               <ul className="space-y-2">
