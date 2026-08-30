@@ -353,6 +353,7 @@ const Journal = lazyWithRetry(() => import("./pages/Journal"));
 const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
 const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
+const CheckoutReceipt = lazyWithRetry(() => import("./pages/CheckoutReceipt"));
 const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
 const WorldParliament = lazyWithRetry(() => import("./pages/WorldParliament"));
@@ -550,6 +551,7 @@ function App() {
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
+                    <Route path="checkout-receipt" element={<CheckoutReceipt />} />
                     <Route path="shop" element={<Shop />} />
                     <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="blind-boxes" element={<BlindBoxStore />} />
