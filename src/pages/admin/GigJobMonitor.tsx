@@ -107,6 +107,32 @@ export default function GigJobMonitor() {
     refetchInterval: 30000,
   });
 
+  const retryQuery = useQuery({
+    queryKey: ["admin-gig-completion-retries"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("gigs")
+        .select(
+          "id, status, scheduled_date, completion_attempt_count, completion_last_error, completion_last_attempt_at, completion_next_retry_at, completion_needs_attention",
+        )
+        .gt("completion_attempt_count", 0)
+        .order("completion_last_attempt_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        status: string;
+        scheduled_date: string | null;
+        completion_attempt_count: number;
+        completion_last_error: string | null;
+        completion_last_attempt_at: string | null;
+        completion_next_retry_at: string | null;
+        completion_needs_attention: boolean;
+      }>;
+    },
+    refetchInterval: 30000,
+  });
+
   const runsByJob = useMemo(() => {
     const grouped: Record<string, JobRun[]> = {};
     for (const run of runsQuery.data ?? []) {
