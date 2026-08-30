@@ -924,6 +924,7 @@ function App() {
                     <Route path="admin/marketplace" element={<AdminMarketplace />} />
                     <Route path="admin/twaater-moderation" element={<AdminTwaaterModeration />} />
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
+                    <Route path="admin/gig-job-monitor" element={<AdminGigJobMonitor />} />
                     <Route path="admin/world-reset" element={<AdminWorldReset />} />
                     <Route path="admin/debug-panel" element={<AdminDebugPanel />} />
                     <Route path="admin/finance-diagnostics" element={<AdminFinanceDiagnostics />} />
