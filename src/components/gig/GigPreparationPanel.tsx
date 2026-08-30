@@ -15,19 +15,73 @@ import { useToast } from '@/hooks/use-toast';
 import { SOUNDCHECK_TYPES, validateSoundcheckPlan, type SoundcheckType } from '@/utils/gigStageProduction';
 import { validateGigSetlist } from '@/utils/gigSetlistValidation';
 
-interface DraftItem { id: string; song_id: string; title: string; duration_seconds: number | null; is_encore: boolean; rehearsal_level?: number | null }
-const fmt = (seconds: number | null | undefined) => seconds ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Missing';
-
-function SortableSong({ item, index, onEncore, onRemove, onMove }: { item: DraftItem; index: number; onEncore: (id: string, value: boolean) => void; onRemove: (id: string) => void; onMove: (id: string, delta: number) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
-  return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className="flex flex-col gap-2 rounded-md border bg-card p-3 sm:flex-row sm:items-center">
-    <button className="self-start text-muted-foreground" aria-label={`Drag ${item.title}`} {...attributes} {...listeners}><GripVertical className="h-4 w-4" /></button>
-    <div className="min-w-0 flex-1"><p className="font-medium">{index + 1}. {item.title}</p><p className="text-xs text-muted-foreground">{fmt(item.duration_seconds)} · rehearsal {Math.round(item.rehearsal_level ?? 0)}%</p></div>
-    <div className="flex items-center gap-2"><Button variant="outline" size="sm" onClick={() => onMove(item.id, -1)} disabled={index === 0}>Up</Button><Button variant="outline" size="sm" onClick={() => onMove(item.id, 1)}>Down</Button><label className="flex items-center gap-2 text-sm"><Switch checked={item.is_encore} onCheckedChange={(v) => onEncore(item.id, v)} /> Encore</label><Button variant="ghost" size="icon" onClick={() => onRemove(item.id)} aria-label={`Remove ${item.title}`}><Trash2 className="h-4 w-4" /></Button></div>
-  </div>;
+interface DraftItem {
+  id: string;
+  song_id: string;
+  title: string;
+  duration_seconds: number | null;
+  is_encore: boolean;
+  rehearsal_level?: number | null;
 }
 
-export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slotDurationSeconds = 7200 }: { gigId: string; bandId: string; status?: string | null; scheduledDate?: string | null; slotDurationSeconds?: number }) {
+const fmt = (seconds: number | null | undefined) =>
+  seconds ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Missing';
+
+function SortableSong({
+  item,
+  index,
+  onEncore,
+  onRemove,
+  onMove,
+}: {
+  item: DraftItem;
+  index: number;
+  onEncore: (id: string, value: boolean) => void;
+  onRemove: (id: string) => void;
+  onMove: (id: string, delta: number) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className="flex flex-col gap-2 rounded-md border bg-card p-3 sm:flex-row sm:items-center"
+    >
+      <button className="self-start text-muted-foreground" aria-label={`Drag ${item.title}`} {...attributes} {...listeners}>
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{index + 1}. {item.title}</p>
+        <p className="text-xs text-muted-foreground">{fmt(item.duration_seconds)} · rehearsal {Math.round(item.rehearsal_level ?? 0)}%</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => onMove(item.id, -1)} disabled={index === 0}>Up</Button>
+        <Button variant="outline" size="sm" onClick={() => onMove(item.id, 1)}>Down</Button>
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={item.is_encore} onCheckedChange={(v) => onEncore(item.id, v)} /> Encore
+        </label>
+        <Button variant="ghost" size="icon" onClick={() => onRemove(item.id)} aria-label={`Remove ${item.title}`}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function GigPreparationPanel({
+  gigId,
+  bandId,
+  status,
+  scheduledDate,
+  slotDurationSeconds = 7200,
+}: {
+  gigId: string;
+  bandId: string;
+  status?: string | null;
+  scheduledDate?: string | null;
+  slotDurationSeconds?: number;
+}) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [draft, setDraft] = useState<DraftItem[]>([]);
@@ -37,92 +91,384 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
   const [savingSoundcheck, setSavingSoundcheck] = useState(false);
   const locked = status === 'completed' || status === 'cancelled';
 
-  const songsQuery = useQuery({ queryKey: ['gig-prep-songs', bandId], enabled: !!bandId, queryFn: async () => {
-    const { data, error } = await supabase.from('songs').select('id,title,duration_seconds,band_id,status,archived').eq('band_id', bandId).eq('archived', false).order('title');
-    if (error) throw error;
-    const ids = (data || []).map((s) => s.id);
-    const { data: rehearsals } = ids.length ? await supabase.from('song_rehearsals').select('song_id,rehearsal_level').eq('band_id', bandId).in('song_id', ids) : { data: [] as any[] };
-    return (data || []).map((s: any) => ({ ...s, rehearsal_level: rehearsals?.find((r: any) => r.song_id === s.id)?.rehearsal_level ?? 0 }));
-  }});
+  const songsQuery = useQuery({
+    queryKey: ['gig-prep-songs', bandId],
+    enabled: !!bandId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('songs')
+        .select('id,title,duration_seconds,band_id,status,archived')
+        .eq('band_id', bandId)
+        .eq('archived', false)
+        .order('title');
+      if (error) throw error;
 
-  const soundcheckQuery = useQuery({ queryKey: ['gig-prep-soundcheck', gigId], enabled: !!gigId, queryFn: async () => { const { data, error } = await (supabase as any).from('gig_soundcheck_plans').select('*').eq('gig_id', gigId).maybeSingle(); if (error) throw error; return data; }});
+      const ids = (data || []).map((s) => s.id);
+      const { data: rehearsals } = ids.length
+        ? await supabase.from('song_rehearsals').select('song_id,rehearsal_level').eq('band_id', bandId).in('song_id', ids)
+        : { data: [] as any[] };
 
-  const setlistQuery = useQuery({ queryKey: ['gig-prep-setlist', gigId], enabled: !!gigId, queryFn: async () => {
-    const { data, error } = await (supabase as any).from('gig_setlists').select('id,name,total_duration_seconds,gig_setlist_items(id,song_id,position,is_encore,songs(id,title,duration_seconds))').eq('gig_id', gigId).maybeSingle();
-    if (error) throw error;
-    return data;
-  }});
+      return (data || []).map((s: any) => ({
+        ...s,
+        rehearsal_level: rehearsals?.find((r: any) => r.song_id === s.id)?.rehearsal_level ?? 0,
+      }));
+    },
+  });
 
-  const liveSetupQuery = useQuery({ queryKey: ['gig-live-setup', gigId], enabled: !!gigId && !!bandId, queryFn: async () => {
-    const { data, error } = await supabase.functions.invoke('preview-live-setup', { body: { gigId } });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
-    return data;
-  }});
+  const soundcheckQuery = useQuery({
+    queryKey: ['gig-prep-soundcheck', gigId],
+    enabled: !!gigId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('gig_soundcheck_plans')
+        .select('*')
+        .eq('gig_id', gigId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  useEffect(() => { if (soundcheckQuery.data?.soundcheck_type) setSoundcheckType(soundcheckQuery.data.soundcheck_type); }, [soundcheckQuery.data]);
+  const setlistQuery = useQuery({
+    queryKey: ['gig-prep-setlist', gigId],
+    enabled: !!gigId,
+    queryFn: async () => {
+      const fetchPreparedSetlist = async () => {
+        const { data, error } = await (supabase as any)
+          .from('gig_setlists')
+          .select('id,name,total_duration_seconds,gig_setlist_items(id,song_id,position,is_encore,songs(id,title,duration_seconds))')
+          .eq('gig_id', gigId)
+          .maybeSingle();
+        if (error) throw error;
+        return data;
+      };
+
+      const existing = await fetchPreparedSetlist();
+      if (existing?.gig_setlist_items?.length) return existing;
+
+      // Older bookings store the chosen setlist on gigs.setlist_id. Promote that booked
+      // setlist into the newer per-gig preparation model so viewing a booked gig never
+      // incorrectly reports that no setlist was selected.
+      const { data: bookedGig, error: gigError } = await supabase
+        .from('gigs')
+        .select('setlist_id')
+        .eq('id', gigId)
+        .single();
+      if (gigError) throw gigError;
+      if (!bookedGig?.setlist_id) return existing;
+
+      const { data: bookedSetlist, error: setlistError } = await supabase
+        .from('setlists')
+        .select('id,name')
+        .eq('id', bookedGig.setlist_id)
+        .maybeSingle();
+      if (setlistError) throw setlistError;
+
+      const { data: bookedItems, error: itemsError } = await supabase
+        .from('setlist_songs')
+        .select('song_id,position,songs(id,title,duration_seconds)')
+        .eq('setlist_id', bookedGig.setlist_id)
+        .order('position');
+      if (itemsError) throw itemsError;
+      if (!bookedItems?.length) return existing;
+
+      if (!locked) {
+        const { error: importError } = await (supabase as any).rpc('save_gig_setlist', {
+          p_gig_id: gigId,
+          p_name: bookedSetlist?.name || 'Booked setlist',
+          p_items: bookedItems.map((item: any, index: number) => ({
+            song_id: item.song_id,
+            position: item.position ?? index + 1,
+            is_encore: false,
+          })),
+        });
+        if (importError) throw importError;
+
+        const imported = await fetchPreparedSetlist();
+        if (imported?.gig_setlist_items?.length) return imported;
+      }
+
+      // Completed/cancelled legacy gigs are read-only, but should still display the
+      // setlist that was actually selected when the show was booked.
+      return {
+        id: null,
+        name: bookedSetlist?.name || 'Booked setlist',
+        total_duration_seconds: null,
+        gig_setlist_items: bookedItems.map((item: any, index: number) => ({
+          id: `booked-${item.song_id}`,
+          song_id: item.song_id,
+          position: item.position ?? index + 1,
+          is_encore: false,
+          songs: item.songs,
+        })),
+      };
+    },
+  });
+
+  const liveSetupQuery = useQuery({
+    queryKey: ['gig-live-setup', gigId],
+    enabled: !!gigId && !!bandId,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('preview-live-setup', { body: { gigId } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+  });
 
   useEffect(() => {
-    const items = (setlistQuery.data?.gig_setlist_items || []).slice().sort((a: any, b: any) => a.position - b.position).map((item: any) => ({ id: item.id, song_id: item.song_id, title: item.songs?.title || 'Unknown song', duration_seconds: item.songs?.duration_seconds ?? null, is_encore: !!item.is_encore, rehearsal_level: songsQuery.data?.find((s: any) => s.id === item.song_id)?.rehearsal_level ?? 0 }));
+    if (soundcheckQuery.data?.soundcheck_type) setSoundcheckType(soundcheckQuery.data.soundcheck_type);
+  }, [soundcheckQuery.data]);
+
+  useEffect(() => {
+    const items = (setlistQuery.data?.gig_setlist_items || [])
+      .slice()
+      .sort((a: any, b: any) => a.position - b.position)
+      .map((item: any) => ({
+        id: item.id,
+        song_id: item.song_id,
+        title: item.songs?.title || 'Unknown song',
+        duration_seconds: item.songs?.duration_seconds ?? null,
+        is_encore: !!item.is_encore,
+        rehearsal_level: songsQuery.data?.find((s: any) => s.id === item.song_id)?.rehearsal_level ?? 0,
+      }));
     setDraft(items);
   }, [setlistQuery.data, songsQuery.data]);
 
-  const validation = useMemo(() => validateGigSetlist(draft.map((d) => ({ songId: d.song_id, bandId, durationSeconds: d.duration_seconds, isEncore: d.is_encore })), bandId, slotDurationSeconds), [draft, bandId, slotDurationSeconds]);
-  const soundcheckValidation = useMemo(() => validateSoundcheckPlan({ soundcheckType, scheduledStart: soundcheckQuery.data?.scheduled_start }, { gigStart: scheduledDate || new Date().toISOString(), setupMinutes: 60 }), [soundcheckType, soundcheckQuery.data, scheduledDate]);
+  const validation = useMemo(
+    () => validateGigSetlist(
+      draft.map((d) => ({ songId: d.song_id, bandId, durationSeconds: d.duration_seconds, isEncore: d.is_encore })),
+      bandId,
+      slotDurationSeconds,
+    ),
+    [draft, bandId, slotDurationSeconds],
+  );
+
+  const soundcheckValidation = useMemo(
+    () => validateSoundcheckPlan(
+      { soundcheckType, scheduledStart: soundcheckQuery.data?.scheduled_start },
+      { gigStart: scheduledDate || new Date().toISOString(), setupMinutes: 60 },
+    ),
+    [soundcheckType, soundcheckQuery.data, scheduledDate],
+  );
 
   const setlistSaved = !!setlistQuery.data?.gig_setlist_items?.length && validation.valid;
-  const soundcheckDone = !!soundcheckQuery.data && soundcheckQuery.data.soundcheck_type !== 'none' && (soundcheckQuery.data.status === 'confirmed' || soundcheckQuery.data.status === 'completed');
+  const soundcheckDone = !!soundcheckQuery.data
+    && soundcheckQuery.data.soundcheck_type !== 'none'
+    && (soundcheckQuery.data.status === 'confirmed' || soundcheckQuery.data.status === 'completed');
   const readyPercent = (setlistSaved ? 50 : 0) + (soundcheckDone ? 50 : 0);
   const available = (songsQuery.data || []).filter((s: any) => !draft.some((d) => d.song_id === s.id));
 
-  const addSong = () => { const song: any = available.find((s: any) => s.id === selectedSong); if (!song) return; setDraft((d) => [...d, { id: `draft-${song.id}`, song_id: song.id, title: song.title, duration_seconds: song.duration_seconds, is_encore: false, rehearsal_level: song.rehearsal_level }]); setSelectedSong(''); };
-  const saveSoundcheck = async () => { if (savingSoundcheck || locked) return; setSavingSoundcheck(true); try { const { error } = await (supabase as any).rpc('save_gig_soundcheck_plan', { p_gig_id: gigId, p_soundcheck_type: soundcheckType, p_scheduled_start: soundcheckValidation.suggestedStart.toISOString(), p_status: 'confirmed' }); if (error) throw error; toast({ title: 'Soundcheck confirmed', description: `${SOUNDCHECK_TYPES[soundcheckType].label} booked for this gig.` }); queryClient.invalidateQueries({ queryKey: ['gig-prep-soundcheck', gigId] }); } catch (e: any) { toast({ title: 'Could not confirm soundcheck', description: e.message, variant: 'destructive' }); } finally { setSavingSoundcheck(false); } };
-  const save = async () => { if (!validation.valid || saving) return; setSaving(true); try { const { error } = await (supabase as any).rpc('save_gig_setlist', { p_gig_id: gigId, p_name: 'Gig setlist', p_items: draft.map((d, i) => ({ song_id: d.song_id, position: i + 1, is_encore: d.is_encore })) }); if (error) throw error; toast({ title: 'Setlist saved', description: 'Gig preparation has been updated.' }); queryClient.invalidateQueries({ queryKey: ['gig-prep-setlist', gigId] }); queryClient.invalidateQueries({ queryKey: ['gig-details', gigId] }); } catch (e: any) { toast({ title: 'Could not save setlist', description: e.message, variant: 'destructive' }); } finally { setSaving(false); } };
-  const onDragEnd = (event: DragEndEvent) => { if (!event.over || event.active.id === event.over.id) return; setDraft((items) => arrayMove(items, items.findIndex((i) => i.id === event.active.id), items.findIndex((i) => i.id === event.over?.id))); };
+  const addSong = () => {
+    const song: any = available.find((s: any) => s.id === selectedSong);
+    if (!song) return;
+    setDraft((d) => [...d, {
+      id: `draft-${song.id}`,
+      song_id: song.id,
+      title: song.title,
+      duration_seconds: song.duration_seconds,
+      is_encore: false,
+      rehearsal_level: song.rehearsal_level,
+    }]);
+    setSelectedSong('');
+  };
 
-  return <Card><CardHeader><CardTitle className="flex items-center gap-2"><Music className="h-5 w-5" /> Gig preparation</CardTitle><CardDescription>Prepare the set, soundcheck and Live Setup. Personal gear improves each musician's own role; shared band equipment and Show Crew make up the Live Setup.</CardDescription></CardHeader><CardContent className="space-y-4">
-    <div className="grid gap-3 md:grid-cols-[160px_1fr]"><div><div className="text-3xl font-bold">{readyPercent}%</div><Badge variant={readyPercent === 100 ? 'default' : 'outline'}>{readyPercent === 100 ? 'Show ready' : 'In progress'}</Badge></div><div><Progress value={readyPercent} className="h-3" /><p className="mt-2 text-sm text-muted-foreground">Set duration {fmt(validation.totalDurationSeconds)} / booked {fmt(slotDurationSeconds)}.</p></div></div>
+  const saveSoundcheck = async () => {
+    if (savingSoundcheck || locked) return;
+    setSavingSoundcheck(true);
+    try {
+      const { error } = await (supabase as any).rpc('save_gig_soundcheck_plan', {
+        p_gig_id: gigId,
+        p_soundcheck_type: soundcheckType,
+        p_scheduled_start: soundcheckValidation.suggestedStart.toISOString(),
+        p_status: 'confirmed',
+      });
+      if (error) throw error;
+      toast({ title: 'Soundcheck confirmed', description: `${SOUNDCHECK_TYPES[soundcheckType].label} booked for this gig.` });
+      queryClient.invalidateQueries({ queryKey: ['gig-prep-soundcheck', gigId] });
+    } catch (e: any) {
+      toast({ title: 'Could not confirm soundcheck', description: e.message, variant: 'destructive' });
+    } finally {
+      setSavingSoundcheck(false);
+    }
+  };
 
-    <div className="grid gap-2 sm:grid-cols-2">
-      <div className="flex items-center justify-between rounded-md border p-2 text-sm"><span>1. Setlist selected</span><Badge variant={setlistSaved ? 'outline' : 'destructive'}>{setlistSaved ? 'done' : 'pending'}</Badge></div>
-      <div className="flex items-center justify-between rounded-md border p-2 text-sm"><span>2. Soundcheck completed</span><Badge variant={soundcheckDone ? 'outline' : 'destructive'}>{soundcheckDone ? 'done' : 'pending'}</Badge></div>
-    </div>
+  const save = async () => {
+    if (!validation.valid || saving) return;
+    setSaving(true);
+    try {
+      const { error } = await (supabase as any).rpc('save_gig_setlist', {
+        p_gig_id: gigId,
+        p_name: setlistQuery.data?.name || 'Gig setlist',
+        p_items: draft.map((d, i) => ({ song_id: d.song_id, position: i + 1, is_encore: d.is_encore })),
+      });
+      if (error) throw error;
+      toast({ title: 'Setlist saved', description: 'Gig preparation has been updated.' });
+      queryClient.invalidateQueries({ queryKey: ['gig-prep-setlist', gigId] });
+      queryClient.invalidateQueries({ queryKey: ['gig-details', gigId] });
+    } catch (e: any) {
+      toast({ title: 'Could not save setlist', description: e.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
+  const onDragEnd = (event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) return;
+    setDraft((items) => arrayMove(
+      items,
+      items.findIndex((i) => i.id === event.active.id),
+      items.findIndex((i) => i.id === event.over?.id),
+    ));
+  };
+
+  return (
     <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base"><Wrench className="h-4 w-4" />Live Setup</CardTitle>
-            <CardDescription>Shared stage equipment 60% · Show Crew 40%. This mirrors their existing 12% + 8% contribution to song performance.</CardDescription>
-          </div>
-          {liveSetupQuery.data && <div className="text-right"><div className="text-2xl font-bold">{liveSetupQuery.data.score}/100</div><Badge variant={liveSetupQuery.data.status === 'ready' ? 'default' : liveSetupQuery.data.status === 'warning' ? 'outline' : 'destructive'}>{liveSetupQuery.data.rating}</Badge></div>}
-        </div>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Music className="h-5 w-5" /> Gig preparation</CardTitle>
+        <CardDescription>
+          The setlist selected when this gig was booked is used automatically. You can reorder it, add or remove songs, then save the changes for this gig only.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {liveSetupQuery.isLoading ? <p className="text-sm text-muted-foreground">Checking your Live Setup…</p> : liveSetupQuery.isError ? <p className="text-sm text-destructive">Live Setup could not be calculated.</p> : liveSetupQuery.data ? <>
-          <Progress value={liveSetupQuery.data.score} className="h-2" />
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div className="rounded-md border p-3"><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-medium"><Volume2 className="h-4 w-4" />Band Equipment</span><span className="font-semibold">{liveSetupQuery.data.equipmentScore}/100</span></div><p className="mt-1 text-xs text-muted-foreground">{liveSetupQuery.data.equipmentCount} shared item{liveSetupQuery.data.equipmentCount === 1 ? '' : 's'} contributing to sound and stage quality.</p></div>
-            <div className="rounded-md border p-3"><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-medium"><Users className="h-4 w-4" />Show Crew</span><span className="font-semibold">{liveSetupQuery.data.crewScore}/100</span></div><p className="mt-1 text-xs text-muted-foreground">{liveSetupQuery.data.showCrewCount} performance crew member{liveSetupQuery.data.showCrewCount === 1 ? '' : 's'}. Tour, merch, security and wardrobe staff do not inflate this score.</p></div>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-[160px_1fr]">
+          <div>
+            <div className="text-3xl font-bold">{readyPercent}%</div>
+            <Badge variant={readyPercent === 100 ? 'default' : 'outline'}>{readyPercent === 100 ? 'Show ready' : 'In progress'}</Badge>
           </div>
-          <div className="rounded-md bg-muted/50 p-3 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span>Recommended for this venue: <strong>{liveSetupQuery.data.venueTarget.label} ({liveSetupQuery.data.venueTarget.target})</strong></span><Badge variant={liveSetupQuery.data.gap >= 0 ? 'outline' : 'destructive'}>{liveSetupQuery.data.gap >= 0 ? `${liveSetupQuery.data.gap} above target` : `${Math.abs(liveSetupQuery.data.gap)} below target`}</Badge></div><p className="mt-2 text-muted-foreground">{liveSetupQuery.data.recommendation}</p></div>
-        </> : null}
+          <div>
+            <Progress value={readyPercent} className="h-3" />
+            <p className="mt-2 text-sm text-muted-foreground">Set duration {fmt(validation.totalDurationSeconds)} / booked {fmt(slotDurationSeconds)}.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="flex items-center justify-between rounded-md border p-2 text-sm">
+            <span>1. Setlist selected</span>
+            <Badge variant={setlistSaved ? 'outline' : 'destructive'}>{setlistSaved ? 'done' : 'pending'}</Badge>
+          </div>
+          <div className="flex items-center justify-between rounded-md border p-2 text-sm">
+            <span>2. Soundcheck completed</span>
+            <Badge variant={soundcheckDone ? 'outline' : 'destructive'}>{soundcheckDone ? 'done' : 'pending'}</Badge>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base"><Wrench className="h-4 w-4" />Live Setup</CardTitle>
+                <CardDescription>Shared stage equipment 60% · Show Crew 40%. This mirrors their existing 12% + 8% contribution to song performance.</CardDescription>
+              </div>
+              {liveSetupQuery.data && (
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{liveSetupQuery.data.score}/100</div>
+                  <Badge variant={liveSetupQuery.data.status === 'ready' ? 'default' : liveSetupQuery.data.status === 'warning' ? 'outline' : 'destructive'}>
+                    {liveSetupQuery.data.rating}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {liveSetupQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Checking your Live Setup…</p>
+            ) : liveSetupQuery.isError ? (
+              <p className="text-sm text-destructive">Live Setup could not be calculated.</p>
+            ) : liveSetupQuery.data ? (
+              <>
+                <Progress value={liveSetupQuery.data.score} className="h-2" />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-md border p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-sm font-medium"><Volume2 className="h-4 w-4" />Band Equipment</span>
+                      <span className="font-semibold">{liveSetupQuery.data.equipmentScore}/100</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{liveSetupQuery.data.equipmentCount} shared item{liveSetupQuery.data.equipmentCount === 1 ? '' : 's'} contributing to sound and stage quality.</p>
+                  </div>
+                  <div className="rounded-md border p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-sm font-medium"><Users className="h-4 w-4" />Show Crew</span>
+                      <span className="font-semibold">{liveSetupQuery.data.crewScore}/100</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{liveSetupQuery.data.showCrewCount} performance crew member{liveSetupQuery.data.showCrewCount === 1 ? '' : 's'}. Tour, merch, security and wardrobe staff do not inflate this score.</p>
+                  </div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>Recommended for this venue: <strong>{liveSetupQuery.data.venueTarget.label} ({liveSetupQuery.data.venueTarget.target})</strong></span>
+                    <Badge variant={liveSetupQuery.data.gap >= 0 ? 'outline' : 'destructive'}>
+                      {liveSetupQuery.data.gap >= 0 ? `${liveSetupQuery.data.gap} above target` : `${Math.abs(liveSetupQuery.data.gap)} below target`}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-muted-foreground">{liveSetupQuery.data.recommendation}</p>
+                </div>
+              </>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {validation.errors.map((m) => <p key={m} className="flex gap-2 text-sm text-destructive"><AlertTriangle className="h-4 w-4" />{m}</p>)}
+        {validation.warnings.map((m) => <p key={m} className="flex gap-2 text-sm text-amber-600"><AlertTriangle className="h-4 w-4" />{m}</p>)}
+        {validation.valid && <p className="flex gap-2 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" />Setlist is valid. You can change it below and save the updated version for this gig.</p>}
+
+        <div className="flex gap-2">
+          <Select value={selectedSong} onValueChange={setSelectedSong} disabled={locked}>
+            <SelectTrigger><SelectValue placeholder={songsQuery.isLoading ? 'Loading songs...' : 'Add an eligible band song'} /></SelectTrigger>
+            <SelectContent>
+              {available.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.title} · {fmt(s.duration_seconds)}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button onClick={addSong} disabled={!selectedSong || locked}><Plus className="mr-2 h-4 w-4" />Add</Button>
+        </div>
+
+        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={draft.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {draft.length === 0 ? (
+                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No setlist is attached to this gig. Add songs to prepare the gig.</p>
+              ) : draft.map((item, index) => (
+                <SortableSong
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  onEncore={(id, v) => setDraft((d) => d.map((i) => i.id === id ? { ...i, is_encore: v } : i))}
+                  onRemove={(id) => setDraft((d) => d.filter((i) => i.id !== id))}
+                  onMove={(id, delta) => setDraft((d) => {
+                    const from = d.findIndex((i) => i.id === id);
+                    const to = Math.max(0, Math.min(d.length - 1, from + delta));
+                    return arrayMove(d, from, to);
+                  })}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+
+        <Button onClick={save} disabled={saving || locked || !validation.valid} className="w-full">
+          <Save className="mr-2 h-4 w-4" />{saving ? 'Saving...' : 'Save changes to gig setlist'}
+        </Button>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base"><Volume2 className="h-4 w-4" />Soundcheck</CardTitle>
+            <CardDescription>{SOUNDCHECK_TYPES[soundcheckType].label} · {soundcheckValidation.durationMinutes}m · ${soundcheckValidation.estimatedCost}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select value={soundcheckType} onValueChange={(v) => setSoundcheckType(v as SoundcheckType)} disabled={locked}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(SOUNDCHECK_TYPES).map(([key, pkg]) => <SelectItem key={key} value={key}>{pkg.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">Suggested start {soundcheckValidation.suggestedStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Sound +{soundcheckValidation.soundBenefit}, failure risk -{soundcheckValidation.failureRiskReduction}, fatigue {soundcheckValidation.fatigueImpact}.</p>
+            {[...soundcheckValidation.errors, ...soundcheckValidation.warnings].map((m) => <p key={m} className="flex gap-2 text-xs text-amber-600"><AlertTriangle className="h-3 w-3" />{m}</p>)}
+            <Button onClick={saveSoundcheck} disabled={savingSoundcheck || locked} variant="outline" className="w-full">
+              <Save className="mr-2 h-4 w-4" />{savingSoundcheck ? 'Saving...' : soundcheckDone ? 'Update soundcheck' : 'Complete soundcheck'}
+            </Button>
+          </CardContent>
+        </Card>
       </CardContent>
     </Card>
-
-    {validation.errors.map((m) => <p key={m} className="flex gap-2 text-sm text-destructive"><AlertTriangle className="h-4 w-4" />{m}</p>)}
-    {validation.warnings.map((m) => <p key={m} className="flex gap-2 text-sm text-amber-600"><AlertTriangle className="h-4 w-4" />{m}</p>)}
-    {validation.valid && <p className="flex gap-2 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" />Setlist is valid and ready to save.</p>}
-
-    <div className="flex gap-2"><Select value={selectedSong} onValueChange={setSelectedSong} disabled={locked}><SelectTrigger><SelectValue placeholder={songsQuery.isLoading ? 'Loading songs...' : 'Add an eligible band song'} /></SelectTrigger><SelectContent>{available.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.title} · {fmt(s.duration_seconds)}</SelectItem>)}</SelectContent></Select><Button onClick={addSong} disabled={!selectedSong || locked}><Plus className="mr-2 h-4 w-4" />Add</Button></div>
-    <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}><SortableContext items={draft.map((d) => d.id)} strategy={verticalListSortingStrategy}><div className="space-y-2">{draft.length === 0 ? <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No songs yet. Add songs to prepare the gig.</p> : draft.map((item, index) => <SortableSong key={item.id} item={item} index={index} onEncore={(id, v) => setDraft((d) => d.map((i) => i.id === id ? { ...i, is_encore: v } : i))} onRemove={(id) => setDraft((d) => d.filter((i) => i.id !== id))} onMove={(id, delta) => setDraft((d) => { const from = d.findIndex((i) => i.id === id); const to = Math.max(0, Math.min(d.length - 1, from + delta)); return arrayMove(d, from, to); })} />)}</div></SortableContext></DndContext>
-    <Button onClick={save} disabled={saving || locked || !validation.valid} className="w-full"><Save className="mr-2 h-4 w-4" />{saving ? 'Saving...' : 'Save gig setlist'}</Button>
-
-    <Card><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Volume2 className="h-4 w-4" />Soundcheck</CardTitle><CardDescription>{SOUNDCHECK_TYPES[soundcheckType].label} · {soundcheckValidation.durationMinutes}m · ${soundcheckValidation.estimatedCost}</CardDescription></CardHeader><CardContent className="space-y-3">
-      <Select value={soundcheckType} onValueChange={(v) => setSoundcheckType(v as SoundcheckType)} disabled={locked}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(SOUNDCHECK_TYPES).map(([key, pkg]) => <SelectItem key={key} value={key}>{pkg.label}</SelectItem>)}</SelectContent></Select>
-      <p className="text-sm text-muted-foreground">Suggested start {soundcheckValidation.suggestedStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Sound +{soundcheckValidation.soundBenefit}, failure risk -{soundcheckValidation.failureRiskReduction}, fatigue {soundcheckValidation.fatigueImpact}.</p>
-      {[...soundcheckValidation.errors, ...soundcheckValidation.warnings].map((m) => <p key={m} className="flex gap-2 text-xs text-amber-600"><AlertTriangle className="h-3 w-3" />{m}</p>)}
-      <Button onClick={saveSoundcheck} disabled={savingSoundcheck || locked} variant="outline" className="w-full"><Save className="mr-2 h-4 w-4" />{savingSoundcheck ? 'Saving...' : soundcheckDone ? 'Update soundcheck' : 'Complete soundcheck'}</Button>
-    </CardContent></Card>
-  </CardContent></Card>;
+  );
 }
