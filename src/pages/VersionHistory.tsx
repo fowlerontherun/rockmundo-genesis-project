@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.728",
+    date: "2026-08-30",
+    changes: [
+      { type: "feature", description: "Social Activities now load real data: invitations, upcoming, hosting, band activities and completed memories, with Accept/Decline, Cancel and Complete actions" },
+      { type: "feature", description: "Activity detail pages show participants, responses, attendance, timings and costs, with host and invitee actions" },
+      { type: "fix", description: "Social > Contracts is now a working route and appears in the Social hub navigation" },
+      { type: "feature", description: "Friend cards now include Chat, Invite, Gift and Underworld gift actions" },
+    ],
+  },
+  {
     version: "1.1.727",
     date: "2026-08-30",
     changes: [
