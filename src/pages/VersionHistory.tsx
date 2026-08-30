@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.715",
+    date: "2026-08-30",
+    changes: [
+      { type: "feature", description: "Seeded 320 new hireable crew members: eight candidates for every crew role at all five fame tiers, so every role has affordable options from day one." },
+      { type: "improvement", description: "Crew directory roles now use the same eight names as the crew guide, so role coverage, hire shortcuts and portraits all line up." },
+      { type: "fix", description: "Hiring now claims the candidate atomically and the directory refreshes straight away, so hired crew disappear from the available list and coverage updates instantly." },
+    ],
+  },
+  {
+
     version: "1.1.714",
     date: "2026-08-30",
     changes: [
