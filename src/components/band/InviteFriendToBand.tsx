@@ -8,17 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Loader2 } from 'lucide-react';
-import type { Database } from '@/lib/supabase-types';
-import { fetchPrimaryProfileForUser } from '@/integrations/supabase/friends';
 import { sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
 
 interface InviteFriendToBandProps {
   bandId: string;
   bandName: string;
+  /** Active character profile ID. Kept under the existing prop name for backwards compatibility. */
   currentUserId: string;
 }
-
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 interface Friend {
   id: string;
@@ -42,7 +39,6 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
   const [instrumentRole, setInstrumentRole] = useState('Guitar');
   const [vocalRole, setVocalRole] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
-  const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
   const { toast } = useToast();
 
   const loadFriends = useCallback(async (profileId: string) => {
@@ -135,22 +131,20 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
     const prepareFriends = async () => {
       setLoading(true);
       try {
-        if (!currentProfile) {
-          const profile = await fetchPrimaryProfileForUser(currentUserId);
-          if (!profile) {
-            toast({
-              title: 'Profile required',
-              description: 'Create your character profile to invite friends.',
-              variant: 'destructive',
-            });
-            setFriends([]);
-            return;
-          }
-          setCurrentProfile(profile);
+        if (!currentUserId) {
+          toast({
+            title: 'Character required',
+            description: 'Select an active character before inviting a band member.',
+            variant: 'destructive',
+          });
+          setFriends([]);
           return;
         }
 
-        await loadFriends(currentProfile.id);
+        // BandManager passes the active character profile ID. Use it directly so
+        // multi-character accounts invite from the selected character instead of
+        // resolving an arbitrary/primary profile from auth.user_id.
+        await loadFriends(currentUserId);
       } catch (error) {
         console.error('Error preparing friends:', error);
         toast({
@@ -164,7 +158,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
     };
 
     void prepareFriends();
-  }, [open, currentProfile, currentUserId, loadFriends, toast]);
+  }, [open, currentUserId, loadFriends, toast]);
 
   const handleInvite = async () => {
     if (!selectedFriend) {
@@ -288,7 +282,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
                 <Label htmlFor="message">Personal Message (Optional)</Label>
                 <Textarea
                   id="message"
-                  maxLength={500}
+                  maxLength={280}
                   aria-describedby="band-invite-message-help"
                   placeholder="Add a personal message to your invitation..."
                   value={message}
@@ -296,7 +290,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
                   rows={3}
                 />
                 <p id="band-invite-message-help" className="text-xs text-muted-foreground">
-                  {message.trim().length}/500 characters
+                  {message.trim().length}/280 characters
                 </p>
               </div>
             </>
