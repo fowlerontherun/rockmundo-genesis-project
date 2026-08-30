@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.722",
+    date: "2026-08-30",
+    changes: [
+      { type: "improvement", description: "The top-level Shop tab now uses a premium gold colour with a pulsing glow and flashing icon so it stands out from the other module tabs" },
+    ],
+  },
+  {
     version: "1.1.721",
     date: "2026-08-30",
     changes: [
