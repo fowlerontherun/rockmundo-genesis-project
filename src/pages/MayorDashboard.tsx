@@ -126,9 +126,34 @@ export default function MayorDashboard() {
 
       {section === "projects" && <MayorProjectsTab cityId={cityId} politics={politics} />}
 
-      {section === "laws" && currentLaws && <MayorLawPolicyEditor cityId={cityId} currentLaws={currentLaws} />}
+      {section === "laws" &&
+        (currentLaws ? (
+          <MayorLawPolicyEditor cityId={cityId} currentLaws={currentLaws} />
+        ) : (
+          <Card className="py-10 text-center">
+            <CardContent>
+              <h3 className="mb-1 font-semibold">Law record not published yet</h3>
+              <p className="text-sm text-muted-foreground">
+                City Hall is still publishing this city's legal charter. Refresh in a moment to edit taxes, permits and nightlife policy.
+              </p>
+            </CardContent>
+          </Card>
+        ))}
 
-      {section === "services" && currentLaws && <MayorCityServicesTab city={city} laws={currentLaws} />}
+      {section === "services" &&
+        (currentLaws ? (
+          <MayorCityServicesTab city={city} laws={currentLaws} />
+        ) : (
+          <Card className="py-10 text-center">
+            <CardContent>
+              <h3 className="mb-1 font-semibold">City services unavailable</h3>
+              <p className="text-sm text-muted-foreground">
+                Service effects are derived from the city's active law record, which is still being published.
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+
 
       {section === "opinion" && <MayorPublicOpinionTab cityId={cityId} mayor={mayor} />}
 
