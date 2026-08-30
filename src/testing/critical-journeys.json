@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "journeys": [
+    {
+      "id": "auth-session-recovery",
+      "label": "Signup, login and session recovery",
+      "regressions": ["session hydration", "email signup redirect", "password recovery"],
+      "tests": [
+        "src/pages/Auth.criticalJourney.test.tsx",
+        "src/hooks/__tests__/auth.smoke.test.tsx"
+      ]
+    },
+    {
+      "id": "character-creation",
+      "label": "Character creation",
+      "regressions": ["authoritative profile creation RPC", "missing profile identifier"],
+      "tests": [
+        "src/hooks/__tests__/useCharacterSlots.criticalJourney.test.tsx"
+      ]
+    },
+    {
+      "id": "dashboard-next-action",
+      "label": "Dashboard and next action",
+      "regressions": ["new-player actions", "established-player recommendations"],
+      "tests": [
+        "src/components/dashboard/GettingStartedPanel.test.ts"
+      ]
+    },
+    {
+      "id": "songwriting",
+      "label": "Songwriting",
+      "regressions": ["406/schema-cache recovery", "scheduled songwriting authority"],
+      "tests": [
+        "src/lib/songwritingResilientLoader.test.ts",
+        "src/components/songwriting/SongwritingScheduleDialog.test.tsx"
+      ]
+    },
+    {
+      "id": "recording",
+      "label": "Recording",
+      "regressions": ["persisted workflow compatibility", "invalid stage transitions"],
+      "tests": [
+        "src/lib/workflows/__tests__/recording.workflow.test.ts"
+      ]
+    },
+    {
+      "id": "release",
+      "label": "Release",
+      "regressions": ["release finance recovery", "recorded release costs"],
+      "tests": [
+        "src/lib/releaseFinanceStabilisation.test.ts",
+        "src/lib/__tests__/releaseFinance.test.ts"
+      ]
+    },
+    {
+      "id": "gig-completion",
+      "label": "Gig completion",
+      "regressions": ["completed gig outcome mapping", "post-gig consequences"],
+      "tests": [
+        "src/features/gig-experience/__tests__/GigExperienceService.test.ts",
+        "src/utils/__tests__/gigPostConsequences.test.ts"
+      ]
+    },
+    {
+      "id": "band-basics",
+      "label": "Band basics",
+      "regressions": ["founder membership", "private band permissions"],
+      "tests": [
+        "src/components/band/BandCreationForm.test.tsx",
+        "src/lib/__tests__/band-permissions.test.ts"
+      ]
+    },
+    {
+      "id": "wellness-recovery",
+      "label": "Low health and energy recovery",
+      "regressions": ["recovery forecasting", "recovery activity availability"],
+      "tests": [
+        "src/lib/wellnessRecovery.test.ts",
+        "src/hooks/__tests__/skillPracticeErrors.test.ts"
+      ]
+    },
+    {
+      "id": "inbox-notifications",
+      "label": "Inbox and notifications",
+      "regressions": ["duplicate inbox events", "multi-character notification leakage"],
+      "tests": [
+        "src/hooks/useUnifiedInbox.test.ts",
+        "src/lib/notificationModels.test.ts",
+        "src/hooks/__tests__/multiCharacterNotificationScope.contract.test.ts"
+      ]
+    },
+    {
+      "id": "mobile-dashboard-actions",
+      "label": "Mobile dashboard and quick actions",
+      "regressions": ["mobile daily loop", "desktop route companion mapping", "mobile scroll ownership"],
+      "tests": [
+        "src/mobile/pages/MobileDailyLoop.test.ts",
+        "src/mobile/navigationAudit.test.ts",
+        "src/mobile/routeRegistry.test.ts"
+      ]
+    },
+    {
+      "id": "admin-bug-visibility",
+      "label": "Admin bug visibility",
+      "regressions": ["bug-report inbox visibility", "route-level admin protection"],
+      "tests": [
+        "src/components/admin/AdminBugReportsPanel.test.tsx",
+        "src/config/__tests__/routeOwnershipAudit.test.ts"
+      ]
+    }
+  ]
+}

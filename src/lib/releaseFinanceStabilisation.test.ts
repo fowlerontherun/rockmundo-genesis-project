@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { chooseActiveBandMembership } from "@/utils/activeBandMembership";
 
-const sql = readFileSync(new URL("../../supabase/migrations/20260820200000_release_finance_stabilisation.sql", import.meta.url), "utf8");
+const sql = readFileSync(resolve(process.cwd(), "supabase/migrations/20260820200000_release_finance_stabilisation.sql"), "utf8");
 
 describe("release finance recovery contract", () => {
   it("accepts modern and legacy active membership but rejects former and touring members", () => {

@@ -1,35 +1,42 @@
-# Beta smoke and regression tests
+# Critical beta journey test gate
 
-RockMundo uses Vitest with jsdom for the current beta smoke suite. Playwright is not installed in this repository, so browser journey coverage is represented by deterministic component/helper smoke tests rather than an end-to-end browser runner.
+RockMundo uses a focused Vitest gate for the player and operator journeys that must remain healthy for beta. The gate exercises production components, hooks, services, workflows, route contracts, and SQL contracts; it does not rely on parallel test-only implementations of gameplay rules.
 
 ## Commands
 
+- `npm run test:critical-journeys` validates the journey manifest and runs its test files.
+- `npm run test:smoke` is retained as a compatibility alias for the same gate.
 - `npm run test:unit` runs the complete Vitest suite.
-- `npm run test:smoke` runs the focused beta smoke/regression subset.
-- `npm run typecheck`, `npm run lint`, and `npm run build` should still pass before merging.
+- `npm run typecheck`, `npm run lint:ci`, and `npm run build` remain part of CI verification.
 
-## Smoke coverage added
+## Gate design
 
-The focused smoke suite covers these stable journey contracts:
+[`src/testing/critical-journeys.json`](../src/testing/critical-journeys.json) is the source of truth. Each entry names a required journey, the regressions it protects, and one or more production-facing test files. [`scripts/run-critical-journeys.mjs`](../scripts/run-critical-journeys.mjs) rejects missing journeys, duplicate identifiers, empty regression coverage, invalid test paths, and missing files before invoking Vitest.
 
-- Authentication/profile data resolves to loading, ready, empty, or error states without hanging.
-- New-player onboarding step generation includes valid routes for character setup, skills, songwriting, and schedule.
-- Established players with real progress do not receive inappropriate beginner blockers.
-- Manager recommendations remain rules-based and route to recording, release, schedule, wellness, and inbox actions.
-- Songwriting empty/error/valid/invalid states are deterministic.
-- Recording eligibility shows a clear reason for ineligible songs.
-- Release selection includes recorded songs only.
-- Band-private access is denied for non-members.
-- Schedule display filters fake placeholders and preserves chronological order and 1h/2h/4h durations.
-- Resource transactions use idempotency keys to block duplicate awards/charges and report insufficient funds.
-- Admin access rejects normal users and allows admins.
+The CI workflow runs this focused gate immediately after static checks and before the complete unit suite. This keeps the beta contract visible in job output and prevents unrelated broad-suite failures from masking the critical result.
 
-## Test data
+## Journey inventory
 
-All smoke data is in-memory fixture data inside Vitest tests. No production data or real credentials are required.
+| Journey | Protected behavior |
+| --- | --- |
+| Signup, login and session recovery | Session hydration, canonical email confirmation redirect, password recovery |
+| Character creation | Authoritative `create_character_profile` RPC and visible failures |
+| Dashboard and next action | New-player guidance and established-player release progression |
+| Songwriting | Resilient loading, character isolation, and scheduled activity authority |
+| Recording | Persisted workflow compatibility and invalid transition rejection |
+| Release | Finance recovery contracts and recorded release costs |
+| Gig completion | Outcome mapping and post-gig consequences |
+| Band basics | Founder membership and private-band permissions |
+| Low health and energy recovery | Recovery forecasts and recovery activity availability |
+| Inbox and notifications | Duplicate suppression and multi-character scoping |
+| Mobile dashboard and quick actions | Daily loop, companion routes, and scroll ownership |
+| Admin bug visibility | Open blocker visibility, investigation notes, and admin route protection |
+
+## Test data and database use
+
+Component and hook tests use deterministic in-memory fixtures with the Supabase client boundary mocked. Existing SQL contract tests read repository SQL directly. The gate requires no production credentials and does not mutate a database.
 
 ## Remaining gaps
 
-- Browser-level route rendering and console-error checks need Playwright or another E2E runner.
-- Local Supabase seeded integration coverage would strengthen RLS and protected RPC assertions.
-- Recording, release, booking, resource, and admin flows are currently covered at helper/contract level, not full UI submission level.
+- Route-by-route browser rendering, loading/empty/error matrices, and history navigation belong to backlog PR P4.
+- Seeded local-Supabase integration coverage can further strengthen RLS and protected-RPC verification.

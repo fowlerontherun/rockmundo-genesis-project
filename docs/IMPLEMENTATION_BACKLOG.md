@@ -1542,7 +1542,7 @@ These PRs are intentionally post-beta. They should reuse the generic event, soci
 ## PR P3 — Critical journey automated test suite
 
 **Priority:** P0  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
@@ -1560,6 +1560,17 @@ Add/complete automated tests for:
 - inbox/notifications;
 - mobile dashboard/quick actions;
 - admin bug visibility.
+
+### Completion evidence (2026-08-30)
+
+- Added a versioned critical-journey manifest covering all 12 required beta journeys and 23 production-facing test files.
+- Added a manifest-validating runner and made the critical journey suite an explicit required CI step.
+- Added targeted UI/contract coverage for login, signup, password recovery, authoritative character creation, and admin bug-report visibility and notes.
+- Preserved `npm run test:smoke` as a compatibility alias while retiring the synthetic test-only smoke scenario helpers.
+- Reconciled stale onboarding and songwriting assertions with current release guidance and strict multi-character isolation.
+- Made the release-finance SQL contract test portable when run as part of the combined CI suite.
+- Verified the gate locally with 23 passing files and 120 passing tests.
+- No database changes were required for this test-and-CI-only backlog item.
 
 ### Acceptance criteria
 
