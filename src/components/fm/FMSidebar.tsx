@@ -10,6 +10,8 @@ import {
   MAYOR_OFFICE_SIDEBAR,
 } from "@/config/mayorOfficeNavigation";
 import { ChevronDown, ChevronRight, Handshake, Hammer, PanelLeftClose, PanelLeftOpen, Users, type LucideIcon } from "lucide-react";
+import { useTranslation } from "@/hooks/useTranslation";
+import { translateFMLabel, translateFMText } from "@/i18n/fm";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/rockmundo-new-logo.png";
 
@@ -31,6 +33,7 @@ type SidebarGroup = {
 export const FMSidebar = () => {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
+  const { language } = useTranslation();
   const mod = findModuleForPath(pathname);
   const mayorOffice = isMayorOfficePath(pathname);
   const mayorCityId = getMayorOfficeCityId(pathname);
@@ -149,8 +152,8 @@ export const FMSidebar = () => {
       <button
         onClick={() => navigate("/")}
         className="h-11 flex items-center gap-2 px-2.5 border-b border-fm-border hover:bg-fm-panel-2 transition-colors"
-        title="Rockmundo home"
-        aria-label="Go to Rockmundo home"
+        title={translateFMText(language, "rockmundoHome")}
+        aria-label={translateFMText(language, "goHome")}
       >
         <img src={logo} alt="Rockmundo" className="h-7 w-7 object-contain shrink-0" />
         {!collapsed && (
@@ -163,14 +166,14 @@ export const FMSidebar = () => {
       <div className="h-9 flex items-center justify-between px-3 border-b border-fm-border">
         {!collapsed && (
           <span className="text-[12px] font-medium tracking-tight text-fm-fg truncate">
-            {shellLabel}
+            {translateFMLabel(language, shellLabel)}
           </span>
         )}
         <button
           onClick={toggleCollapsed}
           className="ml-auto p-1 rounded-[6px] hover:bg-fm-panel-2 text-fm-fg-muted"
-          title={collapsed ? "Expand" : "Collapse"}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={translateFMText(language, collapsed ? "expand" : "collapse")}
+          aria-label={translateFMText(language, collapsed ? "expandSidebar" : "collapseSidebar")}
           aria-expanded={!collapsed}
         >
           {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
@@ -186,7 +189,7 @@ export const FMSidebar = () => {
                 className="w-full flex items-center justify-between px-3 py-1 text-[11px] text-fm-fg-muted hover:text-fm-fg"
                 aria-expanded={!!openGroups[group.label]}
               >
-                <span>{group.label}</span>
+                <span>{translateFMLabel(language, group.label)}</span>
                 {openGroups[group.label] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               </button>
             )}
@@ -194,11 +197,12 @@ export const FMSidebar = () => {
               <div className="space-y-px px-1">
                 {group.items.map((item) => {
                   const Icon = item.icon;
+                  const translatedItemLabel = translateFMLabel(language, item.label);
                   return (
                     <button
                       key={item.path}
                       onClick={() => navigate(item.path)}
-                      title={collapsed ? item.label : undefined}
+                      title={collapsed ? translatedItemLabel : undefined}
                       aria-current={item.active ? "page" : undefined}
                       className={cn(
                         "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[7px] text-[12px] transition-colors",
@@ -208,7 +212,7 @@ export const FMSidebar = () => {
                       )}
                     >
                       {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      {!collapsed && <span className="truncate">{translatedItemLabel}</span>}
                     </button>
                   );
                 })}
