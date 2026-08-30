@@ -124,7 +124,11 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
         <TabsContent value="catalog" className="space-y-3 mt-4">
           <div className="rounded-lg border bg-muted/15 p-3 text-xs text-muted-foreground">
             Completed projects now permanently improve explicit city ratings. A rating of 50 is neutral; higher ratings create bounded gameplay advantages shown in City Services.
+            <span className="mt-1 block font-medium text-foreground">
+              Available treasury: ${Math.round(available).toLocaleString()}
+            </span>
           </div>
+
           {discount > 0 && (
             <div className="text-xs text-success">
               ✓ Negotiation skill grants you a {discount}% discount on all
