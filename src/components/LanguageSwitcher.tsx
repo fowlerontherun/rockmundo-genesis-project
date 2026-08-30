@@ -46,8 +46,8 @@ export const LanguageSwitcher = () => {
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
-            onClick={() => setLanguage(lang.code)}
-            className={language === lang.code ? 'bg-accent' : ''}
+            onSelect={() => setLanguage(lang.code)}
+            className={`cursor-pointer py-2.5 ${language === lang.code ? 'bg-accent' : ''}`}
           >
             <div className="flex items-center gap-2">
               <span aria-hidden="true">{lang.flag}</span>
