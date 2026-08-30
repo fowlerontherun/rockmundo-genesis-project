@@ -11376,6 +11376,24 @@ export type Database = {
         }
         Relationships: []
       }
+      debug_travel_log: {
+        Row: {
+          created_at: string
+          id: string
+          msg: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          msg?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          msg?: string | null
+        }
+        Relationships: []
+      }
       demo_submissions: {
         Row: {
           artist_profile_id: string | null
