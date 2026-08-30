@@ -91,7 +91,7 @@ const StatusMenuRow = ({ icon: Icon, label, value, tone = "neutral" }: {
 export const TopStatusBar = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { profile } = useGameData();
+  const { profile, currentCity } = useGameData();
   const { data: calendar } = useGameCalendar();
   const { language } = useTranslation();
   const statusCopy = getFMStatusCopy(language);
