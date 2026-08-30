@@ -193,14 +193,20 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
                               ≥ {t.required_skill_level}
                             </div>
                           )}
+                          {unlocked && !isAffordable(t) && (
+                            <div className="text-xs text-warning">
+                              Treasury short by ${(finalCost(t) - available).toLocaleString()} — collect more city taxes first.
+                            </div>
+                          )}
                           <Button
                             size="sm"
                             className="w-full"
-                            disabled={!unlocked || propose.isPending}
+                            disabled={!unlocked || !isAffordable(t) || propose.isPending}
                             onClick={() => setConfirmType(t)}
                           >
                             <Hammer className="h-3 w-3 mr-1" /> Propose
                           </Button>
+
                         </CardContent>
                       </Card>
                     );
