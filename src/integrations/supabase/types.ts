@@ -28134,10 +28134,13 @@ export type Database = {
           new_followers: number | null
           overall_rating: number | null
           performance_grade: string | null
+          production_breakdown: Json
+          production_incidents: Json
           promoter_modifier: number | null
           repeat_attendees: number | null
           skill_performance_avg: number | null
           social_buzz_impact: number | null
+          soundcheck_breakdown: Json
           stage_behavior_used: string | null
           superfans_gained: number | null
           ticket_revenue: number
@@ -28181,10 +28184,13 @@ export type Database = {
           new_followers?: number | null
           overall_rating?: number | null
           performance_grade?: string | null
+          production_breakdown?: Json
+          production_incidents?: Json
           promoter_modifier?: number | null
           repeat_attendees?: number | null
           skill_performance_avg?: number | null
           social_buzz_impact?: number | null
+          soundcheck_breakdown?: Json
           stage_behavior_used?: string | null
           superfans_gained?: number | null
           ticket_revenue?: number
@@ -28228,10 +28234,13 @@ export type Database = {
           new_followers?: number | null
           overall_rating?: number | null
           performance_grade?: string | null
+          production_breakdown?: Json
+          production_incidents?: Json
           promoter_modifier?: number | null
           repeat_attendees?: number | null
           skill_performance_avg?: number | null
           social_buzz_impact?: number | null
+          soundcheck_breakdown?: Json
           stage_behavior_used?: string | null
           superfans_gained?: number | null
           ticket_revenue?: number
