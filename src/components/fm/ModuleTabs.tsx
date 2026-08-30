@@ -69,22 +69,21 @@ export const ModuleTabs = () => {
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "relative my-1.5 px-3 flex shrink-0 items-center gap-2 text-[12px] font-medium tracking-tight transition-colors rounded-[7px]",
-                isFeatured && "font-semibold border border-fm-accent/60 text-fm-accent shadow-[0_0_12px_hsl(var(--fm-accent)/0.35)]",
-                isActive
-                  ? "text-fm-accent"
-                  : isFeatured
-                    ? "hover:text-fm-accent"
-                    : "text-fm-fg-muted hover:text-fm-fg",
+                isFeatured && "font-semibold border-[hsl(var(--fm-shop))] text-[hsl(var(--fm-shop))] shop-tab-glow",
+                isActive && !isFeatured && "text-fm-accent",
+                isActive && isFeatured && "text-[hsl(var(--fm-shop))]",
+                !isActive && !isFeatured && "text-fm-fg-muted hover:text-fm-fg",
+                !isActive && isFeatured && "hover:text-[hsl(var(--fm-shop))]",
               )}
               style={
-                isActive
+                isActive && !isFeatured
                   ? { background: "hsl(var(--fm-accent) / 0.15)" }
                   : isFeatured
-                    ? { background: "hsl(var(--fm-accent) / 0.10)" }
+                    ? { background: "hsl(var(--fm-shop) / 0.10)" }
                     : undefined
               }
             >
-              <Icon className="h-3.5 w-3.5" aria-hidden />
+              <Icon className={cn("h-3.5 w-3.5", isFeatured && "shop-icon-flash")} aria-hidden />
               <span>{translateFMLabel(language, mod.label)}</span>
             </button>
 
