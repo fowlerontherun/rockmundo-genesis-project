@@ -18,6 +18,7 @@ describe("navigation polish regression coverage", () => {
       "Media",
       "World",
       "Social",
+      "Schedule",
       "Admin",
     ]);
     expect(FM_MODULES.find((module) => module.id === "media")?.primary).toBe(true);
@@ -31,6 +32,7 @@ describe("navigation polish regression coverage", () => {
     expect(FM_MODULES.find((module) => module.id === "business")?.rootPath).toBe("/business");
     expect(FM_MODULES.find((module) => module.id === "world")?.rootPath).toBe("/world");
     expect(FM_MODULES.find((module) => module.id === "social")?.rootPath).toBe("/social");
+    expect(FM_MODULES.find((module) => module.id === "schedule")?.rootPath).toBe("/schedule");
     expect(FM_MODULES.find((module) => module.id === "career")?.rootPath).toBe("/career");
     expect(FM_MODULES.find((module) => module.id === "admin")?.rootPath).toBe("/admin");
   });

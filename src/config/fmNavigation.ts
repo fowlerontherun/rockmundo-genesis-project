@@ -33,7 +33,7 @@ export const FM_MODULES: FMModule[] = [
     label: "Home",
     icon: Home,
     rootPath: "/home",
-    matchPaths: ["/home", "/dashboard", "/inbox", "/journal", "/todays-news", "/statistics", "/advisor"],
+    matchPaths: ["/home", "/dashboard", "/hub", "/inbox", "/journal", "/todays-news", "/statistics", "/advisor", "/version-history"],
     subTabs: [
       { label: "Home", path: "/home", icon: Home },
       { label: "Inbox", path: "/inbox", icon: InboxIcon },
@@ -76,7 +76,9 @@ export const FM_MODULES: FMModule[] = [
       "/character", "/hub/character", "/characters", "/my-character", "/avatar-designer",
       "/wellness", "/skin-store", "/tattoo-parlour", "/gear", "/gear-shop",
       "/inventory", "/clothing-shop", "/housing", "/personal-vehicles",
-      "/family", "/legacy", "/hall-of-immortals",
+      "/family", "/legacy", "/hall-of-immortals", "/skills",
+      "/buy-character-slot", "/slot-purchase-success", "/onboarding",
+      "/prison", "/gear-history",
     ],
     subTabs: [
       { label: "Overview", path: "/character", icon: Users },
@@ -137,6 +139,7 @@ export const FM_MODULES: FMModule[] = [
       "/streaming-platforms", "/streaming",
       "/music/charts", "/country-charts", "/christmas-charts",
       "/competitive-charts", "/song-rankings", "/song-market", "/song-manager",
+      "/cover-songs", "/music-studio",
     ],
     subTabs: [
       { label: "Overview", path: "/music", icon: Music },
@@ -195,8 +198,9 @@ export const FM_MODULES: FMModule[] = [
       "/band-crew", "/band-riders", "/band-vehicles", "/band-rankings",
       "/band-fame-map", "/gigs", "/gig-booking", "/open-mic",
       "/jam-sessions", "/jams", "/busking", "/tour-manager",
-      "/festivals", "/festival-opportunities", "/major-events", "/events/eurovision",
+      "/festival-opportunities", "/events/eurovision",
       "/awards", "/stage-setup", "/stage-equipment",
+      "/battle-of-the-bands", "/performance/gig",
     ],
     subTabs: [
       { label: "Overview", path: "/band", icon: Users },
@@ -270,7 +274,8 @@ export const FM_MODULES: FMModule[] = [
     matchPaths: [
       "/career", "/career/overview", "/career/employment", "/career/finances", "/career/fame", "/career/charts", "/career/awards", "/career/achievements", "/career/discography", "/career/history", "/hub/career-business", "/hub/career",
       "/finances", "/sponsorships", "/employment", "/teaching",
-      "/education", "/booking", "/offers-dashboard",
+      "/education", "/offers-dashboard", "/finance", "/jobs", "/university",
+      "/progression", "/achievements",
       "/public-relations", "/pr",
       "/producer-career", "/modeling", "/acting", "/clothing-designer",
     ],
@@ -331,9 +336,10 @@ export const FM_MODULES: FMModule[] = [
       "/business/recruitment", "/business/job-adverts", "/business/finances",
       "/business/advertising", "/business/labels", "/business/reports", "/hub/commerce",
       "/labels", "/record-label", "/my-companies", "/company",
-      "/venues", "/venue-business", "/recording-studio-business",
+      "/venue-business", "/recording-studio-business",
       "/rehearsal-studio-business", "/merch-factory", "/logistics-company",
       "/security-firm", "/merchandise",
+      "/festival-company", "/companies/festivals", "/crafting",
     ],
     subTabs: [
       { label: "Overview", path: "/business", icon: Building2 },
@@ -373,10 +379,10 @@ export const FM_MODULES: FMModule[] = [
     label: "Media",
     primary: true,
     icon: Newspaper,
-    rootPath: "/hub/media",
+    rootPath: "/media",
     matchPaths: [
-      "/hub/media",
-      "/media/radio", "/radio",
+      "/media", "/hub/media",
+      "/media/radio", "/radio", "/radio-stations",
       "/media/tv-shows",
       "/media/newspapers",
       "/media/magazines",
@@ -388,7 +394,7 @@ export const FM_MODULES: FMModule[] = [
       "/media/acting",
     ],
     subTabs: [
-      { label: "Hub", path: "/hub/media", icon: Newspaper },
+      { label: "Hub", path: "/media", icon: Newspaper },
       { label: "Radio", path: "/media/radio", icon: Radio },
       { label: "TV", path: "/media/tv-shows", icon: Tv },
       { label: "Press", path: "/media/newspapers", icon: Newspaper },
@@ -441,7 +447,7 @@ export const FM_MODULES: FMModule[] = [
     matchPaths: [
       "/world", "/world/*", "/hub/world", "/hub/world-social",
       "/world-map", "/world-pulse", "/world-environment",
-      "/cities", "/travel", "/venues", "/world-companies", "/companies/directory", "/company/:companyId", "/festivals", "/major-events", "/landmarks", "/seasonal-events",
+      "/cities", "/travel", "/venues", "/world-companies", "/companies/directory", "/festivals", "/major-events", "/events/narratives", "/landmarks", "/seasonal-events",
       "/world-parliament", "/political-party", "/politics-career",
     ],
     subTabs: [
@@ -492,10 +498,12 @@ export const FM_MODULES: FMModule[] = [
     rootPath: "/social",
     matchPaths: [
       "/hub/social", "/social",
+      "/community", "/relationships", "/player", "/players",
+      "/settings/privacy/blocked-players", "/settings/safety/reports",
       "/twaater", "/dikcok", "/gettit",
       "/nightclubs", "/nightclub", "/nightclub-management",
       "/casino", "/lottery", "/underworld",
-      "/premium-store", "/blind-boxes", "/vip-subscribe",
+      "/premium-store", "/blind-boxes", "/vip-subscribe", "/vip-success", "/donation-success",
     ],
     subTabs: [
       { label: "Overview", path: "/social", icon: MessageSquare },
@@ -550,7 +558,39 @@ export const FM_MODULES: FMModule[] = [
       { label: "Browse Premium Store", path: "/premium-store", icon: Crown },
     ],
   },
-  // 9. ADMIN — gated
+  // 9. SCHEDULE — daily planning and activity booking
+  {
+    id: "schedule",
+    label: "Schedule",
+    icon: Calendar,
+    rootPath: "/schedule",
+    matchPaths: ["/schedule", "/booking"],
+    subTabs: [
+      { label: "Today", path: "/schedule", icon: Calendar },
+      { label: "Week", path: "/schedule/week", icon: Calendar },
+      { label: "Current Activity", path: "/schedule/current", icon: Sparkles },
+      { label: "Book Activity", path: "/schedule/book", icon: Ticket },
+      { label: "History", path: "/schedule/history", icon: BookOpen },
+    ],
+    sidebar: [
+      {
+        label: "Plan",
+        items: [
+          { label: "Today", path: "/schedule", icon: Calendar },
+          { label: "Week", path: "/schedule/week", icon: Calendar },
+          { label: "Current Activity", path: "/schedule/current", icon: Sparkles },
+          { label: "Book Activity", path: "/schedule/book", icon: Ticket },
+          { label: "History", path: "/schedule/history", icon: BookOpen },
+        ],
+      },
+    ],
+    quickActions: [
+      { label: "Book Activity", path: "/schedule/book", icon: Ticket, description: "Plan your next activity" },
+      { label: "View Week", path: "/schedule/week", icon: Calendar },
+      { label: "Current Activity", path: "/schedule/current", icon: Sparkles },
+    ],
+  },
+  // 10. ADMIN — gated
   {
     id: "admin",
     label: "Admin",
@@ -577,14 +617,19 @@ export const FM_MODULES: FMModule[] = [
   },
 ];
 
-export function findModuleForPath(pathname: string): FMModule {
+export function resolveModuleForPath(pathname: string): FMModule | null {
+  const normalisedPath = pathname.split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
   let best: { mod: FMModule; len: number } | null = null;
   for (const mod of FM_MODULES) {
     for (const p of mod.matchPaths) {
-      if (matchPath({ path: p, end: false }, pathname) || pathname === p || pathname.startsWith(p + "/")) {
+      if (matchPath({ path: p, end: false }, normalisedPath) || normalisedPath === p || normalisedPath.startsWith(p + "/")) {
         if (!best || p.length > best.len) best = { mod, len: p.length };
       }
     }
   }
-  return best?.mod ?? FM_MODULES[0];
+  return best?.mod ?? null;
+}
+
+export function findModuleForPath(pathname: string): FMModule {
+  return resolveModuleForPath(pathname) ?? FM_MODULES[0];
 }

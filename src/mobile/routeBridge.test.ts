@@ -9,11 +9,14 @@ describe("mobile route bridge", () => {
     expect(getMobileBridgeTarget("/wellness")).toBe("/mobile/me/wellness");
     expect(getMobileBridgeTarget("/travel")).toBe("/mobile/world/travel");
     expect(getMobileBridgeTarget("/inbox")).toBe("/mobile/social/mail");
+    expect(getMobileBridgeTarget("/media/radio")).toBe("/mobile/career");
   });
 
   it("keeps band discovery social while band management stays career-owned", () => {
     expect(getMobileBridgeTarget("/bands/browse")).toBe("/mobile/social/friends");
     expect(getMobileBridgeTarget("/bands/search")).toBe("/mobile/social/friends");
+    expect(getMobileBridgeTarget("/community/friends")).toBe("/mobile/social/friends");
+    expect(getMobileBridgeTarget("/social/players")).toBe("/mobile/social/friends");
     expect(getMobileBridgeTarget("/band/members")).toBe("/mobile/career/band");
     expect(getMobileBridgeTarget("/bands/example-band/management")).toBe("/mobile/career/band");
   });

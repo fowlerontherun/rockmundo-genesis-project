@@ -1,6 +1,6 @@
 # RockMundo Consolidated Implementation Backlog
 
-_Last updated: 2026-08-29_
+_Last updated: 2026-08-30_
 
 ## Purpose
 
@@ -1510,7 +1510,7 @@ These PRs are intentionally post-beta. They should reuse the generic event, soci
 ## PR P2 — Navigation/hub refactor completion audit
 
 **Priority:** P1  
-**Status:** PARTIAL
+**Status:** COMPLETE
 
 ### Scope
 
@@ -1520,6 +1520,16 @@ These PRs are intentionally post-beta. They should reuse the generic event, soci
 - Complete logical breadcrumb metadata.
 - Preserve legacy deep links through redirects.
 - Verify mobile quick-action navigation versus desktop-only deep gameplay rules.
+
+### Completion evidence (2026-08-30)
+
+- Added an executable authenticated-route inventory audit that rejects unowned, duplicate, or equally specific module mappings.
+- Placed every live `/admin` route, including the dynamic festival admin routes, behind one route-level `AdminRoute` boundary and added a source contract test for the boundary.
+- Made `/media` canonical, retained `/hub/media` as a query-preserving redirect, and consolidated legacy Community/Players paths onto canonical Social routes.
+- Added Schedule as an explicit module owner and corrected overlapping Band, Business, Career, Media, Social, and World ownership metadata.
+- Prevented the shell breadcrumb from competing with the logical breadcrumb rendered by Band and Schedule `HubLayout` pages.
+- Aligned desktop-to-mobile route bridging with the dedicated Schedule, practice, Social, and Media companion destinations.
+- No database changes were required for this navigation-only closure audit.
 
 ### Acceptance criteria
 

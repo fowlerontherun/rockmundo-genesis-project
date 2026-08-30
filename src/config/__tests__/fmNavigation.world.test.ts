@@ -26,6 +26,7 @@ describe("world navigation consolidation", () => {
 
     expect(isHubNavigationItemActive("/cities/london?tab=venues", cities)).toBe(true);
     expect(isHubNavigationItemActive("/festivals/festival-1", festivals)).toBe(true);
-    expect(isHubNavigationItemActive("/company/company-1", companies)).toBe(true);
+    expect(isHubNavigationItemActive("/world-companies", companies)).toBe(true);
+    expect(isHubNavigationItemActive("/company/company-1", companies)).toBe(false);
   });
 });
