@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.719",
+    date: "2026-08-30",
+    changes: [
+      { type: "feature", description: "New top-level Shop navigation tab, highlighted in the main menu, with its own store hub page" },
+      { type: "feature", description: "Shop page covers VIP plans and pricing, a full breakdown of all 13 VIP features, extra character slots with step-by-step guidance, cosmetics, blind boxes and one-off £10 project donations" },
+      { type: "improvement", description: "Premium store, VIP, blind box and character-slot pages now live under the Shop module instead of being buried in Social and Character" },
+    ],
+  },
+  {
     version: "1.1.718",
     date: "2026-08-30",
     changes: [
