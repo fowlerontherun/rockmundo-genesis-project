@@ -175,6 +175,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/tutorials", label: "Tutorials", description: "Onboarding steps" },
       { path: "/admin/game-calendar", label: "Game Calendar", description: "Time system" },
       { path: "/admin/cron-monitor", label: "Cron Monitor", description: "Scheduled jobs" },
+      { path: "/admin/gig-job-monitor", label: "Gig Job Monitor", description: "Gig start/complete workers" },
       { path: "/admin/offer-automation", label: "Offer Automation", description: "Automated offers" },
       { path: "/admin/page-graphics", label: "Page Graphics", description: "UI images" },
       { path: "/admin/releases", label: "Releases Admin", description: "Fix stuck releases" },
