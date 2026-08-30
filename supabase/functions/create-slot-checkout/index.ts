@@ -58,6 +58,16 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
+    let requestedCurrency: string | undefined;
+    try {
+      const body = await req.json();
+      requestedCurrency = body?.currency;
+    } catch {
+      requestedCurrency = undefined;
+    }
+    const currency = parseCurrency(requestedCurrency);
+    logStep("Currency resolved", { currency });
+
     const origin = req.headers.get("origin") || "https://rockmundo-genesis-project.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
@@ -70,11 +80,13 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
+      currency,
       success_url: `${origin}/slot-purchase-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/buy-character-slot`,
       metadata: {
         user_id: user.id,
         purchase_type: "character_slot",
+        currency,
       },
     });
 

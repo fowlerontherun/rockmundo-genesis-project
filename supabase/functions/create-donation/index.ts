@@ -62,7 +62,18 @@ serve(async (req) => {
     }
     logStep("Customer lookup", { customerId: customerId || "new customer" });
 
-    // Create a one-time payment session for $10 donation
+    // Determine requested currency (usd | gbp | eur)
+    let requestedCurrency: string | undefined;
+    try {
+      const body = await req.json();
+      requestedCurrency = body?.currency;
+    } catch {
+      requestedCurrency = undefined;
+    }
+    const currency = parseCurrency(requestedCurrency);
+    logStep("Currency resolved", { currency });
+
+    // Create a one-time payment session for the donation
     const origin = req.headers.get("origin") || "https://rockmundo-genesis-project.lovable.app";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -74,11 +85,13 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
+      currency,
       success_url: `${origin}/donation-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard`,
       metadata: {
         user_id: user.id,
         donation_type: "project_support",
+        currency,
       },
     });
 

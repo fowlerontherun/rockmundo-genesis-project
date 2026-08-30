@@ -49,9 +49,10 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { priceId } = await req.json();
-    if (!priceId) throw new Error("Price ID is required");
-    logStep("Price ID received", { priceId });
+    const { priceId, currency: requestedCurrency } = await req.json();
+    if (!priceId || typeof priceId !== "string") throw new Error("Price ID is required");
+    const currency = parseCurrency(requestedCurrency);
+    logStep("Price ID received", { priceId, currency });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -78,14 +79,17 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
+      currency,
       success_url: `${origin}/vip-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/vip-subscribe`,
       metadata: {
         user_id: user.id,
+        currency,
       },
       subscription_data: {
         metadata: {
           user_id: user.id,
+          currency,
         },
       },
     });
