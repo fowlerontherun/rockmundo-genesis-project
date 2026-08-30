@@ -33,14 +33,14 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint:ci
+      - name: Critical beta journeys
+        run: npm run test:critical-journeys -- --reporter=default
       - name: Unit tests
         run: npm run test:unit -- --reporter=default
       - name: Balance validation gate
         run: npm run validate:balance
       - name: Progression programme validation gate
         run: npm run validate:progression-programme
-      - name: Beta smoke tests
-        run: npm run test:smoke -- --reporter=default
       - name: Build
         run: npm run build
       - name: Setup Supabase CLI

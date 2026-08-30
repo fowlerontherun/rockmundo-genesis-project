@@ -17,7 +17,8 @@ describe("GettingStartedPanel step generation", () => {
       { skillRows: 6, songCount: 3, recordingCount: 1, activityCount: 2, bandCount: 1 },
     );
 
-    expect(steps.filter((step) => !step.optional).every((step) => step.completed)).toBe(true);
+    expect(steps.filter((step) => ["profile", "skills", "song", "activity"].includes(step.id)).every((step) => step.completed)).toBe(true);
+    expect(steps.filter((step) => !step.completed).map((step) => step.id)).toEqual(["release"]);
     expect(steps.some((step) => step.id === "release" && step.href === "/release-manager")).toBe(true);
   });
 });

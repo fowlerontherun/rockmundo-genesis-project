@@ -69,10 +69,15 @@ describe("songwriting resilient loader", () => {
     expect(result.songs[0].title).toBe("Legacy");
   });
 
-  it("deduplicates songs returned by both ownership models", async () => {
-    const client = createClient({ songs: () => response([{ id: songId, title: "Same" }]) });
+  it("keeps an active character isolated from account-wide legacy songs", async () => {
+    const queriedOwnershipFields: string[] = [];
+    const client = createClient({ songs: (s) => {
+      queriedOwnershipFields.push(...s.filters.map((filter: any[]) => filter[1]));
+      return response([{ id: songId, title: "Character song" }]);
+    } });
     const result = await loadSongsByOwnership(client, "id,title", profileId, userId);
     expect(result.songs).toHaveLength(1);
+    expect(queriedOwnershipFields).toEqual(["profile_id"]);
   });
 
   it("drops malformed sessions without breaking project loading", async () => {
@@ -84,10 +89,10 @@ describe("songwriting resilient loader", () => {
     expect(result.projects[0].songwriting_sessions).toHaveLength(1);
   });
 
-  it("returns legacy songs when profile song lookup fails", async () => {
+  it("does not expose account-wide legacy songs when a character lookup fails", async () => {
     const client = createClient({ songs: (s) => s.filters.some((f: any[]) => f[1] === "profile_id") ? response(null, { code: "PGRST205", message: "profile lookup failed" }) : response([{ id: songId, title: "Legacy survives" }]) });
     const result = await loadSongsByOwnership(client, "id,title", profileId, userId);
-    expect(result.songs).toHaveLength(1);
+    expect(result.songs).toHaveLength(0);
     expect(result.failures[0].code).toBe("PGRST205");
   });
 
