@@ -273,14 +273,24 @@ const BandCrewManagement = () => {
   const { data: availableCrew, isLoading: loadingCatalog } = useQuery<CrewCatalogRow[]>({
     queryKey: ["crew-catalog"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crew_catalog")
-        .select("*")
-        .order("star_rating", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      const rows: CrewCatalogRow[] = [];
+      const pageSize = 1000;
+      for (let page = 0; page < 10; page += 1) {
+        const { data, error } = await supabase
+          .from("crew_catalog")
+          .select("*")
+          .order("star_rating", { ascending: true })
+          .range(page * pageSize, page * pageSize + pageSize - 1);
+        if (error) throw error;
+        rows.push(...((data ?? []) as CrewCatalogRow[]));
+        if (!data || data.length < pageSize) break;
+      }
+      return rows;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+
 
   const filteredCatalog = useMemo(() => {
     if (!availableCrew) return [];
