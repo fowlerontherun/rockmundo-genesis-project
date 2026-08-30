@@ -13,7 +13,7 @@ import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Flame, Heart, Zap, LogOut, User, Gauge, Search } from "lucide-react";
+import { DollarSign, Flame, Heart, Zap, LogOut, User, Gauge, Search, MapPin } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,7 +91,7 @@ const StatusMenuRow = ({ icon: Icon, label, value, tone = "neutral" }: {
 export const TopStatusBar = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { profile } = useGameData();
+  const { profile, currentCity } = useGameData();
   const { data: calendar } = useGameCalendar();
   const { language } = useTranslation();
   const statusCopy = getFMStatusCopy(language);
@@ -103,13 +103,9 @@ export const TopStatusBar = () => {
   const name = (profile as any)?.stage_name ?? (profile as any)?.display_name ?? translateFMText(language, "artist");
 
   const dateStr = calendar
-    ? new Intl.DateTimeFormat(statusCopy.locale, {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-      }).format(new Date(Date.UTC(calendar.gameYear, calendar.gameMonth - 1, calendar.gameDay)))
+    ? `${calendar.gameDay} ${calendar.monthName} · Year ${calendar.gameYear}`
     : "—";
+
 
   const numberFormatter = new Intl.NumberFormat(statusCopy.locale);
   const cashLabel = statusCopy.cash;
@@ -163,6 +159,27 @@ export const TopStatusBar = () => {
         <span>{translateFMText(language, "gameDate")}</span>
         <span className="text-fm-fg font-medium tabular-nums">{dateStr}</span>
       </div>
+
+      {currentCity?.name && (
+        <>
+          <div className="hidden sm:block h-6 w-px bg-fm-border" />
+          <button
+            onClick={() => navigate("/world/current-city")}
+            className="flex min-w-0 items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-fm-panel-2"
+            title={`${currentCity.name}${currentCity.country ? `, ${currentCity.country}` : ""}`}
+            aria-label={`Current city: ${currentCity.name}`}
+          >
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-fm-accent" aria-hidden="true" />
+            <span className="max-w-[110px] truncate text-[12px] font-medium text-fm-fg">
+              {currentCity.name}
+            </span>
+            {currentCity.country && (
+              <span className="hidden lg:inline text-[11px] text-fm-fg-muted">{currentCity.country}</span>
+            )}
+          </button>
+        </>
+      )}
+
 
       <div className="flex-1" />
 

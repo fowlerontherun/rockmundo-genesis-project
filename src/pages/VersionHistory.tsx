@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.726",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "The top bar now shows the correct in-game year (Year 3) instead of a mis-formatted real-world date" },
+      { type: "feature", description: "Your current city (and country on wider screens) now appears in the top bar and links straight to the city page" },
+    ],
+  },
+  {
     version: "1.1.725",
     date: "2026-08-30",
     changes: [
