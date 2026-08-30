@@ -944,9 +944,6 @@ serve(async (req) => {
       .from('gigs')
       .update({
         status: 'completed',
-        production_breakdown: { score: Math.round(productionScore), setup_minutes: productionSetupMinutes, setup_access_minutes: venueSetupAccess, cost: productionCost, audience_modifier: audienceProductionBonus, complexity: productionComplexity },
-        soundcheck_breakdown: { type: soundcheckType, cost: soundcheckCost, sound_modifier: soundcheckBonus, fatigue_penalty: fatiguePenalty },
-        production_incidents: productionIncidents,
         completed_at: new Date().toISOString(),
         result_ready_at: new Date().toISOString()
       })
