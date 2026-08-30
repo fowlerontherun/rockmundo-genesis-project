@@ -40,6 +40,7 @@ import {
 } from '@/utils/tourCalculations';
 import { createBandScheduledActivities } from '@/utils/bandActivityScheduling';
 import { getGigBookingPlayerError } from '@/utils/gigBookingErrors';
+import { reduceTravelDurationHours } from '@/utils/dynamicTravel';
 
 export interface UseTourWizardOptions {
   bandId?: string;
@@ -723,7 +724,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           // Calculate real duration from city coordinates
           const from = cityCoords.get(fromVenue.cityId);
           const to = cityCoords.get(toVenue.cityId);
-          let durationHours = 4; // fallback
+          let durationHours = reduceTravelDurationHours(4); // fallback
           let resolvedMode = state.travelMode === 'tour_bus' ? 'tour_bus' : 'plane'; // default for auto
           
           if (from?.lat && from?.lon && to?.lat && to?.lon) {
@@ -742,7 +743,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
             
             const speed = speeds[resolvedMode] || 200;
             const buffer = buffers[resolvedMode] || 0.5;
-            durationHours = Math.max(1, Math.round((distanceKm / speed + buffer) * 10) / 10);
+            durationHours = reduceTravelDurationHours(distanceKm / speed + buffer);
           }
 
           const arrivalDate = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000);
@@ -755,7 +756,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
             travel_cost: 0,
             departure_date: departureDate.toISOString(),
             arrival_date: arrivalDate.toISOString(),
-            travel_duration_hours: Math.ceil(durationHours),
+            travel_duration_hours: durationHours,
             sequence_order: i,
           });
         }
@@ -802,7 +803,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
                   departure_time: leg.departure_date,
                   scheduled_departure_time: leg.departure_date,
                   arrival_time: leg.arrival_date,
-                  travel_duration_hours: Math.max(1, Math.ceil(Number(leg.travel_duration_hours) || 1)),
+                  travel_duration_hours: Math.max(0.5, Number(leg.travel_duration_hours) || 0.5),
                   status: 'scheduled',
                   tour_leg_id: leg.id,
                 });
@@ -814,7 +815,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
                   scheduled_start: leg.departure_date,
                   scheduled_end: leg.arrival_date,
                   title: `Tour Travel: ${fromName} → ${toName}`,
-                  description: `${leg.travel_mode || 'bus'} • ${Math.max(1, Math.ceil(Number(leg.travel_duration_hours) || 1))}h with the tour`,
+                  description: `${leg.travel_mode || 'bus'} • ${Math.max(0.5, Number(leg.travel_duration_hours) || 0.5)}h with the tour`,
                   location: toName,
                   metadata: {
                     tour_leg_id: leg.id,

@@ -11,6 +11,14 @@ describe("multi-character travel and notification isolation", () => {
     resolve(process.cwd(), "src/hooks/useUnifiedInbox.ts"),
     "utf8",
   );
+  const inboxSource = readFileSync(
+    resolve(process.cwd(), "src/hooks/useInbox.ts"),
+    "utf8",
+  );
+  const gameDataSource = readFileSync(
+    resolve(process.cwd(), "src/hooks/useGameData.tsx"),
+    "utf8",
+  );
   const migrationSource = readFileSync(
     resolve(
       process.cwd(),
@@ -28,6 +36,19 @@ describe("multi-character travel and notification isolation", () => {
   it("does not treat an unscoped notification as belonging to every character", () => {
     expect(unifiedInboxSource).toContain("notification.profile_id === profileId");
     expect(unifiedInboxSource).not.toContain("!notification.profile_id || !profileId");
+  });
+
+  it("does not relabel account or sibling activity rows as the active character", () => {
+    expect(gameDataSource).toContain('.eq("profile_id", effectiveProfile.id)');
+    expect(gameDataSource).toContain("record.profile_id !== fallbackProfileId");
+    expect(gameDataSource).not.toContain("fetchActivitiesWithFallback");
+    expect(gameDataSource).not.toContain("delete fallbackPayload.profile_id");
+  });
+
+  it("shows only tagged character inbox rows or explicit account-wide messages", () => {
+    expect(inboxSource).toContain("targetProfileId === profileId");
+    expect(inboxSource).toContain('message.metadata?.scope === "account"');
+    expect(inboxSource).not.toContain("return !msgProfileId || msgProfileId === profileId");
   });
 
   it("moves only the profile that owns a completed travel record", () => {

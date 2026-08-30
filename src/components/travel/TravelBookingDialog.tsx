@@ -71,7 +71,7 @@ export function TravelBookingDialog({
       setDepartureDate(null);
       setDepartureHour(null);
     }
-  }, [open, currentCityId]);
+  }, [open, currentCityId, profileId]);
 
   // Auto-select next available departure when route is selected
   useEffect(() => {
@@ -99,7 +99,7 @@ export function TravelBookingDialog({
   }, [selectedRoute]);
 
   const loadRoutesAndMoney = async () => {
-    if (!currentCityId || !user) return;
+    if (!currentCityId || !user || !profileId) return;
     
     setLoading(true);
     try {
@@ -109,8 +109,9 @@ export function TravelBookingDialog({
       const { data: profile } = await supabase
         .from("profiles")
         .select("cash")
+        .eq("id", profileId)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       setPlayerMoney(profile?.cash || 0);
     } catch (error) {

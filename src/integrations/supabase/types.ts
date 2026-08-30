@@ -58617,6 +58617,20 @@ export type Database = {
         }
         Returns: Json
       }
+      book_authoritative_travel_for_profile: {
+        Args: {
+          p_departure_time: string
+          p_destination_city_id: string
+          p_idempotency_key: string
+          p_profile_id: string
+          p_quote_snapshot?: Json
+          p_raw_duration_hours: number
+          p_raw_fare: number
+          p_transport_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       book_gig: {
         Args: {
           p_band_id: string

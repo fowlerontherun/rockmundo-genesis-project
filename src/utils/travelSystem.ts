@@ -175,6 +175,7 @@ export async function bookTravel(bookingData: TravelBookingData): Promise<Travel
 
   const { data, error } = await supabase.functions.invoke("travel-booking", {
     body: {
+      profileId: bookingData.profileId,
       destinationCityId: bookingData.toCityId,
       transportType: bookingData.transportType,
       scheduledDepartureTime: bookingData.scheduledDepartureTime ?? null,

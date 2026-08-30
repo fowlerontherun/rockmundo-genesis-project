@@ -47,11 +47,8 @@ export function useNotificationsFeed() {
       .channel(`notifications:${userId}:${profileId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        { event: "*", schema: "public", table: "notifications", filter: `profile_id=eq.${profileId}` },
         () => {
-          // The database subscription is account-filtered, but the refetch itself
-          // is character-filtered. This keeps realtime simple without allowing a
-          // sibling character's rows into the active character cache.
           qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] });
         }
       )

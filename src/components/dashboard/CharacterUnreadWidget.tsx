@@ -33,9 +33,9 @@ export function CharacterUnreadWidget() {
       if (error) throw error;
       (data ?? []).forEach((row: any) => {
         const pid = row?.metadata?.profile_id as string | undefined;
-        if (!pid) {
+        if (!pid && row?.metadata?.scope === "account") {
           sharedCount += 1;
-        } else {
+        } else if (pid) {
           counts[pid] = (counts[pid] || 0) + 1;
         }
       });

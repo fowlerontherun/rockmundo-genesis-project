@@ -24,6 +24,16 @@ export interface TravelOption {
   unavailableReason?: string;
 }
 
+export const TRAVEL_DURATION_REDUCTION_HOURS = 0.5;
+export const MINIMUM_TRAVEL_DURATION_HOURS = 0.5;
+
+export function reduceTravelDurationHours(hours: number): number {
+  return Math.max(
+    MINIMUM_TRAVEL_DURATION_HOURS,
+    Math.round((hours - TRAVEL_DURATION_REDUCTION_HOURS) * 10) / 10,
+  );
+}
+
 // Realistic transport mode configurations with region/country constraints
 export const TRANSPORT_MODES = {
   bus: { 
@@ -389,7 +399,7 @@ export function calculateDuration(distanceKm: number, mode: keyof typeof TRANSPO
   
   // Private jet has fixed duration - skip all the waiting
   if (mode === 'private_jet' && 'fixedDuration' in config) {
-    return config.fixedDuration;
+    return reduceTravelDurationHours(config.fixedDuration);
   }
   
   // Add buffer time for boarding, etc.
@@ -410,7 +420,7 @@ export function calculateDuration(distanceKm: number, mode: keyof typeof TRANSPO
   }
   
   const travelTime = distanceKm / config.speedKmh;
-  return Math.round((travelTime + bufferHours) * 10) / 10;
+  return reduceTravelDurationHours(travelTime + bufferHours);
 }
 
 // Fetch city with coordinates

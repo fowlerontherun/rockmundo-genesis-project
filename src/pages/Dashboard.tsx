@@ -189,13 +189,13 @@ const UpcomingSchedulePanel = ({ currentDate, userId }: { currentDate: Date; use
 const NotificationsPanel = ({ userId, profileId }: { userId?: string; profileId?: string }) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard-command-notifications", userId, profileId],
-    enabled: !!userId,
+    enabled: !!userId && !!profileId,
     staleTime: 30_000,
     queryFn: async () => {
       const [inboxResult, notificationsResult] = await Promise.all([
         supabase
           .from("player_inbox")
-          .select("id", { count: "exact", head: true })
+          .select("metadata")
           .eq("user_id", userId!)
           .eq("is_read", false)
           .eq("is_archived", false),
@@ -203,11 +203,15 @@ const NotificationsPanel = ({ userId, profileId }: { userId?: string; profileId?
           .from("notifications")
           .select("id", { count: "exact", head: true })
           .eq("user_id", userId!)
+          .eq("profile_id", profileId!)
           .is("read_at", null),
       ]);
       if (inboxResult.error) throw inboxResult.error;
       if (notificationsResult.error) throw notificationsResult.error;
-      return { inbox: inboxResult.count ?? 0, notifications: notificationsResult.count ?? 0 };
+      const inboxCount = (inboxResult.data ?? []).filter((row: any) =>
+        row?.metadata?.profile_id === profileId || row?.metadata?.scope === "account"
+      ).length;
+      return { inbox: inboxCount, notifications: notificationsResult.count ?? 0 };
     },
   });
 

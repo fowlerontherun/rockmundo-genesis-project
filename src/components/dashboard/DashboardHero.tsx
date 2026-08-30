@@ -186,13 +186,14 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
   const profileId = profile?.id;
 
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["dashboard-unread", userId],
-    enabled: !!userId,
+    queryKey: ["dashboard-unread", userId, profileId],
+    enabled: !!userId && !!profileId,
     queryFn: async () => {
       const { count } = await (supabase as any)
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
+        .eq("profile_id", profileId)
         .is("read_at", null);
       return count ?? 0;
     },
@@ -210,11 +211,11 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
         .eq("is_archived", false);
       if (error) return 0;
       if (!profileId) return data?.length ?? 0;
-      // Match Inbox page filtering: only count messages for the active character
-      // (rows with no profile_id in metadata are shared and still count).
+      // Match Inbox page filtering. Untagged legacy rows are not safe to assign
+      // to whichever character happens to be active.
       return (data ?? []).filter((m: any) => {
         const pid = m?.metadata?.profile_id;
-        return !pid || pid === profileId;
+        return pid === profileId || m?.metadata?.scope === "account";
       }).length;
     },
     refetchInterval: 30000,

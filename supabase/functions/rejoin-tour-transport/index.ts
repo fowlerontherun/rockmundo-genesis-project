@@ -18,7 +18,7 @@ function calculateTravelDuration(distanceKm: number, mode: string): number {
   const buffers: Record<string, number> = { bus: 0.1, train: 0.15, plane: 0.75, ship: 0.3, tour_bus: 0.1, private_jet: 0.25 }
   const speed = speeds[mode] || speeds.bus
   const buffer = buffers[mode] || 0.3
-  return Math.max(1, Math.round((distanceKm / speed + buffer) * 10) / 10)
+  return Math.max(0.5, Math.round((distanceKm / speed + buffer - 0.5) * 10) / 10)
 }
 
 Deno.serve(async (req) => {
@@ -38,20 +38,29 @@ Deno.serve(async (req) => {
     const userId = userData.user.id
 
     const body = await req.json().catch(() => ({}))
-    const { tour_leg_id: requestedLegId, tour_id: requestedTourId } = body as { tour_leg_id?: string; tour_id?: string }
+    const { tour_leg_id: requestedLegId, tour_id: requestedTourId, profile_id: requestedProfileId } = body as {
+      tour_leg_id?: string
+      tour_id?: string
+      profile_id?: string
+    }
+
+    if (!requestedProfileId) {
+      return new Response(JSON.stringify({ error: 'profile_id is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     const supabase = createClient(supabaseUrl, serviceKey)
 
-    // Find the active profile
+    // Resolve the exact character requested by the authenticated account.
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
       .select('id, current_city_id')
+      .eq('id', requestedProfileId)
       .eq('user_id', userId)
-      .eq('is_active', true)
       .is('died_at', null)
+      .is('deleted_at', null)
       .maybeSingle()
     if (profileErr || !profile) {
-      return new Response(JSON.stringify({ error: 'Active profile not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Character not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const profileId = profile.id
 
@@ -147,7 +156,7 @@ Deno.serve(async (req) => {
         const dist = calculateDistance(fromRes.data.latitude, fromRes.data.longitude, toRes.data.latitude, toRes.data.longitude)
         durationHours = calculateTravelDuration(dist, leg.travel_mode || 'tour_bus')
       } else {
-        durationHours = 4
+        durationHours = 3.5
       }
       arrivalDate = new Date(new Date(leg.departure_date).getTime() + durationHours * 3600 * 1000).toISOString()
     }
@@ -156,7 +165,7 @@ Deno.serve(async (req) => {
     const nowISO = now.toISOString()
     const arrivalTime = new Date(arrivalDate)
     const departureTime = new Date(leg.departure_date)
-    const status = arrivalTime <= now ? 'completed' : 'in_progress'
+    const status = arrivalTime <= now ? 'completed' : departureTime > now ? 'scheduled' : 'in_progress'
 
     // City names for messaging
     const [fromCityRes, toCityRes] = await Promise.all([
@@ -184,8 +193,9 @@ Deno.serve(async (req) => {
           to_city_id: leg.to_city_id,
           transport_type: leg.travel_mode || 'tour_bus',
           departure_time: leg.departure_date,
+          scheduled_departure_time: leg.departure_date,
           arrival_time: arrivalDate,
-          travel_duration_hours: Math.ceil(durationHours),
+          travel_duration_hours: durationHours,
           status,
         })
         .eq('id', existing.id)
@@ -200,8 +210,9 @@ Deno.serve(async (req) => {
           transport_type: leg.travel_mode || 'tour_bus',
           cost_paid: 0,
           departure_time: leg.departure_date,
+          scheduled_departure_time: leg.departure_date,
           arrival_time: arrivalDate,
-          travel_duration_hours: Math.ceil(durationHours),
+          travel_duration_hours: durationHours,
           status,
           tour_leg_id: leg.id,
         })
@@ -215,7 +226,7 @@ Deno.serve(async (req) => {
     const { data: existingActivity } = await supabase
       .from('player_scheduled_activities')
       .select('id')
-      .eq('user_id', userId)
+      .eq('profile_id', profileId)
       .eq('activity_type', 'travel')
       .contains('metadata', { tour_leg_id: leg.id })
       .maybeSingle()
@@ -224,11 +235,11 @@ Deno.serve(async (req) => {
       user_id: userId,
       profile_id: profileId,
       activity_type: 'travel',
-      status: status === 'completed' ? 'completed' : 'in_progress',
+      status,
       scheduled_start: leg.departure_date,
       scheduled_end: arrivalDate,
       title: `Tour Travel: ${fromCityName} → ${toCityName}`,
-      description: `${leg.travel_mode || 'tour_bus'} journey (${Math.round(durationHours)}h) — Rejoined`,
+      description: `${leg.travel_mode || 'tour_bus'} journey (${durationHours}h) — Rejoined`,
       location: toCityName,
       metadata: {
         travel_history_id: travelHistoryId,
@@ -254,11 +265,19 @@ Deno.serve(async (req) => {
         is_traveling: false,
         travel_arrives_at: null,
       }).eq('id', profileId)
-    } else {
+    } else if (status === 'in_progress') {
       await supabase.from('profiles').update({
         current_city_id: leg.from_city_id,
         is_traveling: true,
         travel_arrives_at: arrivalDate,
+      }).eq('id', profileId)
+    } else {
+      // A future leg is only scheduled. Clear any stale state left by an older
+      // rejoin attempt so the character remains usable until departure.
+      await supabase.from('profiles').update({
+        current_city_id: leg.from_city_id,
+        is_traveling: false,
+        travel_arrives_at: null,
       }).eq('id', profileId)
     }
 
@@ -276,11 +295,13 @@ Deno.serve(async (req) => {
         event_type: 'rejoined',
         message: status === 'completed'
           ? `Caught up with the tour in ${toCityName}`
-          : `Rejoined tour transport — heading to ${toCityName}`,
+          : status === 'scheduled'
+            ? `Scheduled tour transport to ${toCityName}`
+            : `Rejoined tour transport — heading to ${toCityName}`,
         new_eta: arrivalDate,
         metadata: {
           transport_type: leg.travel_mode,
-          duration_hours: Math.ceil(durationHours),
+          duration_hours: durationHours,
           status,
           source: 'rejoin-tour-transport',
         },
@@ -298,7 +319,9 @@ Deno.serve(async (req) => {
       arrival_time: arrivalDate,
       message: status === 'completed'
         ? `Caught up with the tour in ${toCityName}.`
-        : `Rejoined tour transport — arriving in ${toCityName}.`,
+        : status === 'scheduled'
+          ? `Tour transport scheduled for ${toCityName}.`
+          : `Rejoined tour transport — arriving in ${toCityName}.`,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err: any) {
     console.error('[rejoin-tour-transport] Error:', err)

@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
-import { subHours } from "date-fns";
+import { subHours, subMinutes } from "date-fns";
 
 export const CHARTER_FLIGHT_COST = 40000;
+export const CHARTER_FLIGHT_DURATION_MINUTES = 90;
 
 export interface CharterFlightResult {
   success: boolean;
@@ -29,7 +30,20 @@ export async function bookCharterFlight(
 
   // Calculate arrival time (1 hour before gig)
   const arrivalTime = subHours(gigDate, 1);
-  const departureTime = subHours(arrivalTime, 2); // 2 hour flight
+  const departureTime = subMinutes(arrivalTime, CHARTER_FLIGHT_DURATION_MINUTES);
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (profileError || !profile?.user_id) {
+    return {
+      success: false,
+      message: "The selected character could not be verified for travel.",
+    };
+  }
 
   // Start transaction - deduct cash
   const { error: updateError } = await supabase
@@ -52,7 +66,7 @@ export async function bookCharterFlight(
 
   // Log the travel
   await supabase.from("player_travel_history").insert({
-    user_id: profileId,
+    user_id: profile.user_id,
     profile_id: profileId,
     from_city_id: originCityId,
     to_city_id: destinationCityId,
@@ -60,13 +74,13 @@ export async function bookCharterFlight(
     cost_paid: CHARTER_FLIGHT_COST,
     departure_time: departureTime.toISOString(),
     arrival_time: arrivalTime.toISOString(),
-    travel_duration_hours: 2,
+    travel_duration_hours: CHARTER_FLIGHT_DURATION_MINUTES / 60,
     status: "completed",
   });
 
   // Create activity feed entry
   await supabase.from("activity_feed").insert({
-    user_id: profileId,
+    user_id: profile.user_id,
     profile_id: profileId,
     activity_type: "travel",
     message: `Chartered private jet from ${originCityName} to ${destinationCityName} for gig`,

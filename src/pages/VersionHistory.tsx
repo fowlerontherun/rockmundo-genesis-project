@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.730",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "Notifications, inbox messages and activity updates now stay with the character that generated them instead of appearing on another character in the same account" },
+      { type: "fix", description: "Band members with Follow Band Travel enabled now prepare transport for ordinary scheduled gigs as well as formal tour legs, even while another character is selected" },
+      { type: "fix", description: "Manual travel now checks the selected character's balance and books the journey against that exact character" },
+      { type: "improvement", description: "All travel options are now 30 minutes faster, with fractional half-hour durations preserved throughout booking and arrival processing" },
+    ],
+  },
+  {
     version: "1.1.729",
     date: "2026-08-30",
     changes: [

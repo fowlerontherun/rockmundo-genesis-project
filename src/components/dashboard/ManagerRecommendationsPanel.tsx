@@ -63,7 +63,7 @@ export function ManagerRecommendationsPanel({ profile, userId }: ManagerRecommen
           .or("archived.is.null,archived.eq.false"),
         supabase
           .from("player_inbox")
-          .select("id", { count: "exact", head: true })
+          .select("metadata")
           .eq("user_id", userId)
           .eq("is_read", false)
           .eq("is_archived", false)
@@ -98,7 +98,9 @@ export function ManagerRecommendationsPanel({ profile, userId }: ManagerRecommen
       return {
         songsReadyToRecord: completedSongsResult.count ?? 0,
         recordingsReadyToRelease: recordingsResult.count ?? 0,
-        unreadImportantMessages: messagesResult.count ?? 0,
+        unreadImportantMessages: (messagesResult.data ?? []).filter((row: any) =>
+          row?.metadata?.profile_id === profileId || row?.metadata?.scope === "account"
+        ).length,
         upcomingActivities: activitiesResult.data ?? [],
         upcomingActivitiesCount: activitiesResult.count ?? activitiesResult.data?.length ?? 0,
         totalSongs: totalSongsResult.count ?? 0,

@@ -14,6 +14,10 @@ const travelSystem = readFileSync("src/utils/travelSystem.ts", "utf8");
 const page = readFileSync("src/pages/Travel.tsx", "utf8");
 const financeService = readFileSync("src/services/finance/financeService.ts", "utf8");
 const config = readFileSync("supabase/config.toml", "utf8");
+const characterScopedMigration = readFileSync(
+  "supabase/migrations/20260830175331_character_scoped_band_travel_duration.sql",
+  "utf8",
+);
 
 describe("authoritative travel database contract", () => {
   it("keeps the booking outcome idempotent and service-role owned", () => {
@@ -58,17 +62,31 @@ describe("authoritative travel database contract", () => {
 });
 
 describe("authoritative travel edge boundary", () => {
-  it("resolves the active profile and route physics rather than trusting browser price fields", () => {
+  it("validates the exact character and route physics rather than trusting browser price fields", () => {
     expect(edgeFunction).toContain("service.auth.getUser(token)");
     expect(edgeFunction).toContain('.select("id,current_city_id")');
+    expect(edgeFunction).toContain('.eq("id", profileId)');
+    expect(edgeFunction).toContain('.eq("user_id", authData.user.id)');
     expect(edgeFunction).toContain("const distance = distanceKm(from, to)");
     expect(edgeFunction).toContain("const raw = quoteMode(mode, distance, from, to)");
-    expect(edgeFunction).toContain('service.rpc("book_authoritative_travel"');
-    expect(edgeFunction).not.toContain("body.profileId");
+    expect(edgeFunction).toContain('service.rpc("book_authoritative_travel_for_profile"');
+    expect(edgeFunction).toContain("body.profileId");
     expect(edgeFunction).not.toContain("body.fromCityId");
     expect(edgeFunction).not.toContain("body.cost");
     expect(edgeFunction).not.toContain("body.durationHours");
     expect(config).toContain("[functions.travel-booking]\nverify_jwt = true");
+  });
+
+  it("keeps the new exact-profile RPC service-only", () => {
+    expect(characterScopedMigration).toContain(
+      "CREATE OR REPLACE FUNCTION public.book_authoritative_travel_for_profile",
+    );
+    expect(characterScopedMigration).toContain("WHERE id = p_profile_id");
+    expect(characterScopedMigration).toContain("AND user_id = p_user_id");
+    expect(characterScopedMigration).toContain(
+      "REVOKE ALL ON FUNCTION public.book_authoritative_travel_for_profile",
+    );
+    expect(characterScopedMigration).toContain("TO service_role");
   });
 });
 

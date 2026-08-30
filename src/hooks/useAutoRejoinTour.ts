@@ -95,7 +95,7 @@ export const useAutoRejoinTour = () => {
 
         inFlightRef.current = true;
         const { data, error } = await supabase.functions.invoke("rejoin-tour-transport", {
-          body: { tour_leg_id: desyncedLeg.id },
+          body: { tour_leg_id: desyncedLeg.id, profile_id: profileId },
         });
         if (error) throw error;
         if ((data as any)?.error) throw new Error((data as any).error);

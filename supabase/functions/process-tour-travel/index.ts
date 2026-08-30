@@ -38,7 +38,7 @@ function calculateTravelDuration(distanceKm: number, mode: string): number {
   };
   const speed = speeds[mode] || speeds.bus;
   const buffer = buffers[mode] || 0.3;
-  return Math.max(1, Math.round((distanceKm / speed + buffer) * 10) / 10);
+  return Math.max(0.5, Math.round((distanceKm / speed + buffer - 0.5) * 10) / 10);
 }
 
 Deno.serve(async (req) => {
@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
       .select('id, user_id, profile_id, to_city_id, arrival_time')
       .eq('status', 'in_progress')
       .not('tour_leg_id', 'is', null)
+      .not('profile_id', 'is', null)
       .lte('arrival_time', nowISO)
 
     let travelCompleted = 0
@@ -92,9 +93,10 @@ Deno.serve(async (req) => {
           await supabase
             .from('player_scheduled_activities')
             .update({ status: 'completed' })
-            .eq('user_id', travel.user_id)
+            .eq('profile_id', travel.profile_id)
             .eq('activity_type', 'travel')
             .eq('status', 'in_progress')
+            .contains('metadata', { travel_history_id: travel.id })
             .lte('scheduled_end', nowISO)
 
           travelCompleted++
@@ -102,7 +104,7 @@ Deno.serve(async (req) => {
           
           // Track band for morale boost
           try {
-            const { data: bm } = await supabase.from('band_members').select('band_id').eq('user_id', travel.user_id).eq('is_touring_member', false).limit(1).maybeSingle();
+            const { data: bm } = await supabase.from('band_members').select('band_id').eq('profile_id', travel.profile_id).eq('is_touring_member', false).limit(1).maybeSingle();
             if (bm?.band_id) completedTravelBandIds.add(bm.band_id);
           } catch (_) {}
         } catch (err) {
@@ -212,7 +214,8 @@ Deno.serve(async (req) => {
             durationHours = calculateTravelDuration(distanceKm, leg.travel_mode || 'plane')
           } else {
             // Fallback: estimate based on mode
-            durationHours = leg.travel_mode === 'tour_bus' ? 6 : leg.travel_mode === 'bus' ? 8 : leg.travel_mode === 'train' ? 5 : 4
+            const baselineHours = leg.travel_mode === 'tour_bus' ? 6 : leg.travel_mode === 'bus' ? 8 : leg.travel_mode === 'train' ? 5 : 4
+            durationHours = Math.max(0.5, baselineHours - 0.5)
           }
 
           // Calculate actual arrival based on departure + duration
@@ -223,7 +226,7 @@ Deno.serve(async (req) => {
           await supabase
             .from('tour_travel_legs')
             .update({ 
-              travel_duration_hours: Math.ceil(durationHours),
+              travel_duration_hours: durationHours,
               arrival_date: actualArrivalDate,
             })
             .eq('id', leg.id)
@@ -266,7 +269,7 @@ Deno.serve(async (req) => {
               cost_paid: 0,
               departure_time: leg.departure_date,
               arrival_time: actualArrivalDate,
-              travel_duration_hours: Math.ceil(durationHours),
+              travel_duration_hours: durationHours,
               status: status,
               tour_leg_id: leg.id,
             })
@@ -288,7 +291,7 @@ Deno.serve(async (req) => {
               scheduled_start: leg.departure_date,
               scheduled_end: actualArrivalDate,
               title: `Tour Travel: ${fromCityName} → ${toCityName}`,
-              description: `${leg.travel_mode || 'bus'} journey (${Math.round(durationHours)}h) — Tour`,
+              description: `${leg.travel_mode || 'bus'} journey (${durationHours}h) — Tour`,
               location: toCityName,
               metadata: {
                 travel_history_id: travelRecord?.id,
@@ -325,7 +328,7 @@ Deno.serve(async (req) => {
           }
 
           travelCreated++
-          console.log(`[process-tour-travel] Created ${status} travel for user ${member.user_id} to ${toCityName} (${Math.round(durationHours)}h)`)
+          console.log(`[process-tour-travel] Created ${status} travel for user ${member.user_id} to ${toCityName} (${durationHours}h)`)
         }
 
         processedCount++

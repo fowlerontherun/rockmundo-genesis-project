@@ -67,6 +67,11 @@ serve(async (req) => {
 
     for (const travel of completedTravels || []) {
       try {
+        if (!travel.profile_id) {
+          console.warn(`[complete-travel] Skipping legacy travel ${travel.id} without profile_id`);
+          continue;
+        }
+
         // Move/clear the character first. If this fails, leave history in_progress so
         // the next reconciliation run can safely retry instead of stranding the player.
         let profileUpdate = supabase
@@ -77,9 +82,7 @@ serve(async (req) => {
             travel_arrives_at: null,
           });
 
-        profileUpdate = travel.profile_id
-          ? profileUpdate.eq("id", travel.profile_id)
-          : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
+        profileUpdate = profileUpdate.eq("id", travel.profile_id);
 
         const { error: profileError } = await profileUpdate;
         if (profileError) {
@@ -111,9 +114,7 @@ serve(async (req) => {
           .update({ status: "completed" })
           .contains("metadata", { travel_history_id: travel.id })
           .in("status", ["scheduled", "in_progress"]);
-        scheduleUpdate = travel.profile_id
-          ? scheduleUpdate.eq("profile_id", travel.profile_id)
-          : scheduleUpdate.eq("user_id", travel.user_id);
+        scheduleUpdate = scheduleUpdate.eq("profile_id", travel.profile_id);
         const { error: scheduleError } = await scheduleUpdate;
         if (scheduleError) {
           console.warn(`[complete-travel] Could not complete schedule row for ${travel.id}:`, scheduleError);
@@ -131,6 +132,7 @@ serve(async (req) => {
             to_city_id: travel.to_city_id,
             from_city_id: travel.from_city_id,
             travel_id: travel.id,
+            profile_id: travel.profile_id,
           },
         });
 
@@ -165,7 +167,13 @@ serve(async (req) => {
               category: "wellness",
               title: `Travel Incident: ${conditionLabel}`,
               message: `You developed ${conditionLabel} during your journey to ${toCityName}. Check the Wellness page for treatment options.`,
-              metadata: { condition_name: conditionDef.name, condition_type: conditionDef.type, severity },
+              metadata: {
+                condition_name: conditionDef.name,
+                condition_type: conditionDef.type,
+                severity,
+                profile_id: travel.profile_id,
+                travel_history_id: travel.id,
+              },
               action_type: "navigate",
               action_data: { route: "/wellness", tab: "conditions" },
             });
@@ -173,7 +181,7 @@ serve(async (req) => {
             console.log(`[complete-travel] Travel hazard triggered for user ${travel.user_id}: ${conditionDef.name} (severity ${severity})`);
 
             try {
-              const { data: bm } = await supabase.from('band_members').select('band_id').eq('user_id', travel.user_id).eq('is_touring_member', false).limit(1).maybeSingle();
+              const { data: bm } = await supabase.from('band_members').select('band_id').eq('profile_id', travel.profile_id).eq('is_touring_member', false).limit(1).maybeSingle();
               if (bm?.band_id) {
                 const { data: bd } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
                 if (bd) {
@@ -209,6 +217,11 @@ serve(async (req) => {
 
     if (!scheduledError && scheduledTravels) {
       for (const travel of scheduledTravels) {
+        if (!travel.profile_id) {
+          console.warn(`[complete-travel] Skipping legacy scheduled travel ${travel.id} without profile_id`);
+          continue;
+        }
+
         // Write profile travelling state first so a transient failure leaves the
         // history row scheduled and therefore retryable on the next run.
         let profileUpdate = supabase
@@ -218,9 +231,7 @@ serve(async (req) => {
             travel_arrives_at: travel.arrival_time,
           });
 
-        profileUpdate = travel.profile_id
-          ? profileUpdate.eq("id", travel.profile_id)
-          : profileUpdate.eq("user_id", travel.user_id).eq("is_active", true).is("died_at", null);
+        profileUpdate = profileUpdate.eq("id", travel.profile_id);
 
         const { error: profileError } = await profileUpdate;
         if (profileError) {
@@ -245,9 +256,7 @@ serve(async (req) => {
             .update({ status: "in_progress" })
             .contains("metadata", { travel_history_id: travel.id })
             .eq("status", "scheduled");
-          scheduleUpdate = travel.profile_id
-            ? scheduleUpdate.eq("profile_id", travel.profile_id)
-            : scheduleUpdate.eq("user_id", travel.user_id);
+          scheduleUpdate = scheduleUpdate.eq("profile_id", travel.profile_id);
           const { error: scheduleError } = await scheduleUpdate;
           if (scheduleError) {
             console.warn(`[complete-travel] Could not start schedule row for ${travel.id}:`, scheduleError);

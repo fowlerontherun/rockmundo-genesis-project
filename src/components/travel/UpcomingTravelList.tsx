@@ -243,7 +243,7 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
   const rejoinTourMutation = useMutation({
     mutationFn: async (tourLegId?: string) => {
       const { data, error } = await supabase.functions.invoke("rejoin-tour-transport", {
-        body: tourLegId ? { tour_leg_id: tourLegId } : {},
+        body: { ...(tourLegId ? { tour_leg_id: tourLegId } : {}), profile_id: profileId },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);

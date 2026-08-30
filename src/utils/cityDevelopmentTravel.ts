@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { CityWithCoords, TravelOption } from "@/utils/dynamicTravel";
+import { MINIMUM_TRAVEL_DURATION_HOURS, type CityWithCoords, type TravelOption } from "@/utils/dynamicTravel";
 
 export interface TravelDestinationQuote {
   city: CityWithCoords;
@@ -62,7 +62,10 @@ export async function applyCityDevelopmentToTravelQuotes(
       return {
         ...option,
         cost: Math.max(0, Math.round(option.cost * multipliers.cost)),
-        durationHours: Math.max(0.1, Math.round(option.durationHours * multipliers.duration * 10) / 10),
+        durationHours: Math.max(
+          MINIMUM_TRAVEL_DURATION_HOURS,
+          Math.round(option.durationHours * multipliers.duration * 10) / 10,
+        ),
       };
     });
     const available = options.filter((option) => option.available);

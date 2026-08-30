@@ -34,6 +34,15 @@ export interface InboxMessage {
   created_at: string;
 }
 
+export function isInboxMessageForProfile(
+  message: Pick<InboxMessage, "metadata">,
+  profileId: string | null | undefined,
+) {
+  if (!profileId) return false;
+  const targetProfileId = message.metadata?.profile_id;
+  return targetProfileId === profileId || message.metadata?.scope === "account";
+}
+
 export function useInbox(category?: InboxCategory | 'all') {
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
@@ -41,7 +50,7 @@ export function useInbox(category?: InboxCategory | 'all') {
   const query = useQuery({
     queryKey: ['inbox', userId, profileId, category],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!userId || !profileId) return [];
 
       let queryBuilder = supabase
         .from('player_inbox')
@@ -61,16 +70,12 @@ export function useInbox(category?: InboxCategory | 'all') {
         throw error;
       }
 
-      // Only show messages addressed to the currently active character, or
-      // legacy/system-wide messages (no profile_id tag).
+      // Untagged legacy rows are not safe to infer in a multi-character account.
+      // A genuinely account-wide message must opt in with metadata.scope=account.
       const rows = (data || []) as InboxMessage[];
-      if (!profileId) return rows;
-      return rows.filter((m) => {
-        const pid = (m.metadata as any)?.profile_id;
-        return !pid || pid === profileId;
-      });
+      return rows.filter((message) => isInboxMessageForProfile(message, profileId));
     },
-    enabled: !!profileId,
+    enabled: !!userId && !!profileId,
     refetchInterval: 30000,
   });
 
@@ -102,10 +107,14 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   const markAsRead = useMutation({
     mutationFn: async (messageId: string) => {
+      if (!query.data?.some((message) => message.id === messageId)) {
+        throw new Error("Inbox message does not belong to the active character");
+      }
       const { error } = await supabase
         .from('player_inbox')
         .update({ is_read: true })
-        .eq('id', messageId);
+        .eq('id', messageId)
+        .eq('user_id', userId!);
 
       if (error) throw error;
     },
@@ -118,11 +127,14 @@ export function useInbox(category?: InboxCategory | 'all') {
   const markAllAsRead = useMutation({
     mutationFn: async () => {
       if (!userId) return;
+      const messageIds = (query.data ?? []).filter((message) => !message.is_read).map((message) => message.id);
+      if (messageIds.length === 0) return;
 
       const { error } = await supabase
         .from('player_inbox')
         .update({ is_read: true })
         .eq('user_id', userId)
+        .in('id', messageIds)
         .eq('is_read', false);
 
       if (error) throw error;
@@ -135,10 +147,14 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   const archiveMessage = useMutation({
     mutationFn: async (messageId: string) => {
+      if (!query.data?.some((message) => message.id === messageId)) {
+        throw new Error("Inbox message does not belong to the active character");
+      }
       const { error } = await supabase
         .from('player_inbox')
         .update({ is_archived: true })
-        .eq('id', messageId);
+        .eq('id', messageId)
+        .eq('user_id', userId!);
 
       if (error) throw error;
     },
@@ -150,10 +166,14 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   const deleteMessage = useMutation({
     mutationFn: async (messageId: string) => {
+      if (!query.data?.some((message) => message.id === messageId)) {
+        throw new Error("Inbox message does not belong to the active character");
+      }
       const { error } = await supabase
         .from('player_inbox')
         .delete()
-        .eq('id', messageId);
+        .eq('id', messageId)
+        .eq('user_id', userId!);
 
       if (error) throw error;
     },
@@ -181,7 +201,7 @@ export function useUnreadInboxCount() {
   return useQuery({
     queryKey: ['inbox-unread-count', userId, profileId],
     queryFn: async () => {
-      if (!userId) return 0;
+      if (!userId || !profileId) return 0;
 
       const { data, error } = await supabase
         .from('player_inbox')
@@ -195,13 +215,11 @@ export function useUnreadInboxCount() {
         return 0;
       }
 
-      if (!profileId) return data?.length ?? 0;
-      return (data ?? []).filter((m: any) => {
-        const pid = m?.metadata?.profile_id;
-        return !pid || pid === profileId;
-      }).length;
+      return (data ?? []).filter((message: any) =>
+        isInboxMessageForProfile(message, profileId)
+      ).length;
     },
-    enabled: !!userId,
+    enabled: !!userId && !!profileId,
     refetchInterval: 30000,
   });
 }

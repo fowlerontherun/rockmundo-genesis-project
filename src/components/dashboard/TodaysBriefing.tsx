@@ -62,7 +62,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
           .limit(4),
         supabase
           .from("player_inbox")
-          .select("id", { count: "exact", head: true })
+          .select("metadata")
           .eq("user_id", userId)
           .eq("is_read", false)
           .eq("is_archived", false),
@@ -70,6 +70,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
           .from("notifications")
           .select("id, user_id, profile_id, category, type, title, message, action_path, metadata, read_at, created_at", { count: "exact" })
           .eq("user_id", userId)
+          .eq("profile_id", profileId)
           .is("read_at", null)
           .order("created_at", { ascending: false })
           .limit(5),
@@ -107,7 +108,9 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
 
       return {
         activities: activitiesResult.data ?? [],
-        unreadInbox: inboxResult.count ?? 0,
+        unreadInbox: (inboxResult.data ?? []).filter((row: any) =>
+          row?.metadata?.profile_id === profileId || row?.metadata?.scope === "account"
+        ).length,
         unreadNotifications: notificationsResult.count ?? 0,
         notificationPreviews: notificationsResult.data ?? [],
         releases: (releasesResult.data ?? []).filter((release: any) =>

@@ -117,7 +117,8 @@ function quoteMode(mode: Mode, distance: number, from: City, to: City) {
     if (distance > 5000) fare = cfg.base + 5000 * cfg.perKm + (distance - 5000) * cfg.perKm * 1.5;
     if (distance > 10000) fare += (distance - 10000) * cfg.perKm * 0.5;
   }
-  const duration = mode === "private_jet" ? 2.7 : Math.round((distance / cfg.speed + cfg.buffer) * 10) / 10;
+  const baselineDuration = mode === "private_jet" ? 2.7 : distance / cfg.speed + cfg.buffer;
+  const duration = Math.max(0.5, Math.round((baselineDuration - 0.5) * 10) / 10);
   return { rawFare: Math.round(fare), rawDurationHours: duration };
 }
 
@@ -142,8 +143,12 @@ Deno.serve(async (req) => {
     if (authError || !authData.user) return json({ error: "Unauthorized" }, 401);
 
     const body = await req.json();
+    const profileId = String(body.profileId ?? "");
     const destinationCityId = String(body.destinationCityId ?? "");
     const mode = String(body.transportType ?? "").toLowerCase() as Mode;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(profileId)) {
+      return json({ error: "A valid character is required" }, 400);
+    }
     if (!destinationCityId || !(mode in MODE)) return json({ error: "Invalid destination or transport mode" }, 400);
     if (!body.idempotencyKey || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.idempotencyKey)) {
       return json({ error: "A valid idempotency key is required" }, 400);
@@ -152,11 +157,10 @@ Deno.serve(async (req) => {
     const { data: profile, error: profileError } = await service
       .from("profiles")
       .select("id,current_city_id")
+      .eq("id", profileId)
       .eq("user_id", authData.user.id)
-      .eq("is_active", true)
       .is("died_at", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .is("deleted_at", null)
       .maybeSingle();
     if (profileError || !profile?.current_city_id) return json({ error: "travel_profile_or_city_not_found" }, 409);
 
@@ -175,7 +179,8 @@ Deno.serve(async (req) => {
     if (!departure || Number.isNaN(new Date(departure).getTime())) return json({ error: "travel_departure_required" }, 400);
 
     const quoteSnapshot = {
-      formulaVersion: "authoritative-travel-v1",
+      formulaVersion: "authoritative-travel-v2",
+      profileId: profile.id,
       fromCityId: from.id,
       toCityId: to.id,
       transportType: mode,
@@ -184,8 +189,9 @@ Deno.serve(async (req) => {
       rawDurationHours: raw.rawDurationHours,
     };
 
-    const { data: result, error: bookingError } = await service.rpc("book_authoritative_travel", {
+    const { data: result, error: bookingError } = await service.rpc("book_authoritative_travel_for_profile", {
       p_user_id: authData.user.id,
+      p_profile_id: profile.id,
       p_destination_city_id: to.id,
       p_transport_type: mode,
       p_departure_time: departure,
