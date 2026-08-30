@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.debug_travel_dry_run(uuid,uuid,text,timestamptz,integer,numeric) TO PUBLIC;

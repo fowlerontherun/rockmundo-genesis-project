@@ -11376,6 +11376,24 @@ export type Database = {
         }
         Relationships: []
       }
+      debug_travel_log: {
+        Row: {
+          created_at: string
+          id: string
+          msg: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          msg?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          msg?: string | null
+        }
+        Relationships: []
+      }
       demo_submissions: {
         Row: {
           artist_profile_id: string | null
@@ -28993,6 +29011,27 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gigs_cancellation_financial_transaction_id_fkey"
+            columns: ["cancellation_financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gigs_cancelled_by_profile_id_fkey"
+            columns: ["cancelled_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gigs_cancelled_by_profile_id_fkey"
+            columns: ["cancelled_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
@@ -56564,6 +56603,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      _evaluate_gig_day_rule: {
+        Args: {
+          p_band_id: string
+          p_end: string
+          p_exclude_gig_id?: string
+          p_local_date: string
+          p_start: string
+          p_venue_id: string
+        }
+        Returns: Json
+      }
       _festival_activate_due_upgrades: {
         Args: { p_festival_company_id: string }
         Returns: undefined
@@ -57131,6 +57181,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      _gig_cancellation_quote: {
+        Args: { p_as_of: string; p_gig_id: string }
+        Returns: Json
       }
       _has_active_vip_entitlement: {
         Args: { p_user_id: string }
@@ -58266,23 +58320,6 @@ export type Database = {
         }
         Returns: Json
       }
-      cancel_gig: {
-        Args: { p_gig_id: string; p_reason?: string }
-        Returns: Json
-      }
-      check_gig_booking_day_rule: {
-        Args: {
-          p_band_id: string
-          p_local_date: string
-          p_slot: string
-          p_venue_id: string
-        }
-        Returns: Json
-      }
-      preview_gig_cancellation: {
-        Args: { p_gig_id: string }
-        Returns: Json
-      }
       book_vip_gig_concierge_travel: {
         Args: {
           p_gig_id: string
@@ -58649,6 +58686,10 @@ export type Database = {
         Args: { friendship_id: string; requestor_profile_id?: string }
         Returns: undefined
       }
+      cancel_gig: {
+        Args: { p_gig_id: string; p_reason?: string }
+        Returns: Json
+      }
       cancel_gig_support_offer: {
         Args: { p_support_slot_id: string }
         Returns: {
@@ -58722,6 +58763,15 @@ export type Database = {
       }
       chat_channel_band_id: { Args: { p_channel: string }; Returns: string }
       check_character_health_decay: { Args: never; Returns: Json }
+      check_gig_booking_day_rule: {
+        Args: {
+          p_band_id: string
+          p_local_date: string
+          p_slot: string
+          p_venue_id: string
+        }
+        Returns: Json
+      }
       check_greatest_hits_eligibility: {
         Args: { p_band_id: string; p_user_id: string }
         Returns: Json
@@ -59626,6 +59676,17 @@ export type Database = {
       current_profile_id: { Args: never; Returns: string }
       current_profile_id_safe: { Args: never; Returns: string }
       current_user_is_platform_admin: { Args: never; Returns: boolean }
+      debug_travel_dry_run: {
+        Args: {
+          p_departure: string
+          p_dest: string
+          p_fare: number
+          p_hours: number
+          p_mode: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
       decline_festival_offer: {
         Args: {
@@ -61425,6 +61486,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      hire_band_crew: {
+        Args: { p_band_id: string; p_catalog_crew_id: string }
+        Returns: string
+      }
       hire_festival_edition_staff: {
         Args: {
           p_assignment_scope?: Json
@@ -62123,6 +62188,7 @@ export type Database = {
         Args: { p_mapping_id: string }
         Returns: Json
       }
+      preview_gig_cancellation: { Args: { p_gig_id: string }; Returns: Json }
       preview_my_band_contribution: {
         Args: {
           p_amount_minor: number
@@ -62463,6 +62529,10 @@ export type Database = {
       refresh_social_rivalry: {
         Args: { p_profile_id: string; p_rivalry_id: string }
         Returns: Json
+      }
+      release_band_crew: {
+        Args: { p_crew_member_id: string }
+        Returns: undefined
       }
       remove_social_community_member: {
         Args: {
