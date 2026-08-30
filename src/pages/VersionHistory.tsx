@@ -20,7 +20,7 @@ const versionHistory: VersionEntry[] = [
     version: "1.1.725",
     date: "2026-08-30",
     changes: [
-      { type: "bugfix", description: "Fixed 'Couldn't send request' error when adding a friend (ambiguous target_profile_id reference in the friend request function)" },
+      { type: "fix", description: "Fixed 'Couldn't send request' error when adding a friend (ambiguous target_profile_id reference in the friend request function)" },
     ],
   },
   {
