@@ -468,6 +468,10 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-8 sm:px-6">
       <div className="w-full max-w-sm sm:max-w-md">
+        {/* Language selection available before sign-in (mobile friendly) */}
+        <div className="flex justify-end mb-1">
+          <LanguageSwitcher />
+        </div>
         {/* Logo and Branding */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="flex items-center justify-center mb-4">
