@@ -9,6 +9,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useVipStatus } from "@/hooks/useVipStatus";
@@ -16,7 +17,7 @@ import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { cn } from "@/lib/utils";
 import { CurrencySelector } from "@/components/shop/CurrencySelector";
 import { useCheckoutCurrency } from "@/hooks/useCheckoutCurrency";
-import { CHECKOUT_PRICING, formatMinor, formatProductPrice, type CheckoutProductKey } from "@/lib/checkoutCurrency";
+import { CHECKOUT_PRICING, CURRENCY_META, formatMinor, formatProductPrice, type CheckoutProductKey } from "@/lib/checkoutCurrency";
 
 const VIP_PLANS: Array<{
   name: string;
@@ -52,6 +53,8 @@ export default function Shop() {
   const { data: vipStatus } = useVipStatus();
   const { slots } = useCharacterSlots();
   const [donating, setDonating] = useState(false);
+  const [customAmount, setCustomAmount] = useState("");
+
   const { currency } = useCheckoutCurrency();
   const donationPrice = formatProductPrice("donation", currency);
   const cheapestMonthly = formatMinor(
@@ -61,10 +64,12 @@ export default function Shop() {
 
   const maxSlots = slots?.maxSlots ?? 2;
 
-  const handleDonate = async () => {
+  const handleDonate = async (amountMinor?: number) => {
     setDonating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-donation", { body: { currency } });
+      const { data, error } = await supabase.functions.invoke("create-donation", {
+        body: amountMinor ? { currency, amount: amountMinor } : { currency },
+      });
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
     } catch {
@@ -73,6 +78,20 @@ export default function Shop() {
       setDonating(false);
     }
   };
+
+  const handleCustomDonate = async () => {
+    const parsed = Number(customAmount.replace(/,/g, "").trim());
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 2000) {
+      toast({
+        title: "Enter a valid amount",
+        description: `Choose an amount between ${formatMinor(100, currency)} and ${formatMinor(200000, currency)}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    await handleDonate(Math.round(parsed * 100));
+  };
+
 
   return (
     <FMPageScaffold
@@ -103,7 +122,7 @@ export default function Shop() {
             <Button size="lg" onClick={() => navigate("/vip-subscribe")} className="gap-2">
               <Crown className="h-4 w-4" /> {vipStatus?.isVip ? "Manage VIP" : "Get VIP"}
             </Button>
-            <Button size="lg" variant="outline" onClick={handleDonate} disabled={donating} className="gap-2">
+            <Button size="lg" variant="outline" onClick={() => void handleDonate()} disabled={donating} className="gap-2">
               {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
             </Button>
           </div>
@@ -218,17 +237,63 @@ export default function Shop() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <ul className="space-y-1 text-muted-foreground">
-            <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> One-off {donationPrice} donation, no subscription.</li>
+            <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Donate {donationPrice} or any amount you choose — no subscription.</li>
             <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Earns the legendary “Project Supporter” achievement.</li>
             <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Grants 1,000 bonus XP to your active character.</li>
           </ul>
           <div className="flex flex-wrap items-center gap-3">
             <CurrencySelector />
-            <Button onClick={handleDonate} disabled={donating} className="gap-2">
+            <Button onClick={() => void handleDonate()} disabled={donating} className="gap-2">
               {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
             </Button>
           </div>
+
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
+            <div>
+              <div className="font-semibold">Choose your own amount</div>
+              <p className="text-xs text-muted-foreground">
+                Any amount from {formatMinor(100, currency)} to {formatMinor(200000, currency)} in {currency.toUpperCase()}.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[500, 1000, 2500, 5000, 10000].map((preset) => (
+                <Button
+                  key={preset}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={donating}
+                  onClick={() => setCustomAmount(String(preset / 100))}
+                >
+                  {formatMinor(preset, currency)}
+                </Button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  {CURRENCY_META[currency].symbol}
+                </span>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  max={2000}
+                  step="0.01"
+                  aria-label="Custom donation amount"
+                  placeholder="25.00"
+                  value={customAmount}
+                  onChange={(event) => setCustomAmount(event.target.value)}
+                  className="w-32 pl-7"
+                />
+              </div>
+              <Button onClick={() => void handleCustomDonate()} disabled={donating || !customAmount} className="gap-2">
+                {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate custom amount
+              </Button>
+            </div>
+          </div>
         </CardContent>
+
       </Card>
     </FMPageScaffold>
   );
