@@ -154,7 +154,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
 
     data?.chartEntries?.slice(0, 2).forEach((entry: any) => {
       const song = Array.isArray(entry.songs) ? entry.songs[0] : entry.songs;
-      const movement = entry.previous_rank ? entry.previous_rank - entry.rank : 0;
+      const movement = Number(entry.trend_change ?? 0);
       next.push({
         id: `chart-${entry.id}`,
         title: `${song?.title ?? "Your track"} is charting`,
