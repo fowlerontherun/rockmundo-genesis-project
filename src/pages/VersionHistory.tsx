@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.717",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "Language switcher is now always reachable on mobile — the top bar no longer pushes it off-screen on narrow phones" },
+      { type: "feature", description: "Added a language selector to the sign-in screen so players can choose their language before logging in" },
+      { type: "improvement", description: "Language menu is now touch friendly: taller rows, viewport-aware width and a 60% height cap so all 9 languages scroll on mobile" },
+      { type: "improvement", description: "Mobile top bar tightened up — long stage names truncate and lower-priority icons hide below the small breakpoint" },
+    ],
+  },
+  {
     version: "1.1.716",
     date: "2026-08-30",
     changes: [
