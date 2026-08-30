@@ -94,6 +94,18 @@ describe('FM localisation', () => {
     expect(translateFMText('it', 'searchDestinations')).toBe('Cerca pagine e funzioni');
   });
 
+  it('uses locale-specific number formatting metadata for each maintained language', () => {
+    expect(getFMStatusCopy('en').locale).toBe('en-GB');
+    expect(getFMStatusCopy('es').locale).toBe('es-ES');
+    expect(getFMStatusCopy('zh').locale).toBe('zh-CN');
+    expect(getFMStatusCopy('pt').locale).toBe('pt-BR');
+    expect(getFMStatusCopy('ja').locale).toBe('ja-JP');
+    expect(getFMStatusCopy('de').locale).toBe('de-DE');
+    expect(getFMStatusCopy('fr').locale).toBe('fr-FR');
+    expect(getFMStatusCopy('tr').locale).toBe('tr-TR');
+    expect(getFMStatusCopy('it').locale).toBe('it-IT');
+  });
+
   it('keeps unsupported legacy language preferences safe', () => {
     expect(translateFMLabel('hi', 'Book Gigs')).toBe('Book Gigs');
     expect(translateFMText('hi', 'signOut')).toBe('Sign out');
