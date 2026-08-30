@@ -141,9 +141,20 @@ export function HubLayout({
     <div className="flex flex-wrap items-center justify-end gap-2">
       {actions.map((action) => {
         const Icon = action.icon;
+        const actionTarget = splitPathAndSearch(action.path);
+        const isSamePageAction = actionTarget.pathname === splitPathAndSearch(currentPath).pathname;
         return (
           <Button key={action.path} asChild size="sm" variant={action.variant ?? "outline"} aria-label={action.ariaLabel ?? action.label}>
-            <Link to={action.path}>
+            <Link
+              to={action.path}
+              onClick={() => {
+                if (isSamePageAction && typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("rockmundo:hub-action", {
+                    detail: { label: action.label, path: action.path },
+                  }));
+                }
+              }}
+            >
               {Icon && <Icon className="mr-1.5 h-4 w-4" aria-hidden />}
               {action.label}
             </Link>
