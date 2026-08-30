@@ -128,11 +128,20 @@ export const useRecordingSessions = (profileId?: string | null, userId?: string 
               .eq('member_status', 'active')
           : Promise.resolve({ data: [], error: null } as any),
         userId
-          ? supabase
-              .from('band_members')
-              .select('band_id')
-              .eq('user_id', userId)
-              .eq('member_status', 'active')
+          ? profileId
+            // Legacy membership rows only count when no character owns them,
+            // otherwise another character's band sessions would leak in.
+            ? supabase
+                .from('band_members')
+                .select('band_id')
+                .eq('user_id', userId)
+                .is('profile_id', null)
+                .eq('member_status', 'active')
+            : supabase
+                .from('band_members')
+                .select('band_id')
+                .eq('user_id', userId)
+                .eq('member_status', 'active')
           : Promise.resolve({ data: [], error: null } as any),
       ];
 
