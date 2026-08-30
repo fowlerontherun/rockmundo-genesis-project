@@ -53825,6 +53825,57 @@ export type Database = {
           },
         ]
       }
+      twaat_reports: {
+        Row: {
+          created_at: string
+          id: string
+          report_details: string | null
+          report_reason: string
+          reporter_account_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          twaat_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          report_details?: string | null
+          report_reason: string
+          reporter_account_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          twaat_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          report_details?: string | null
+          report_reason?: string
+          reporter_account_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          twaat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaat_reports_reporter_account_id_fkey"
+            columns: ["reporter_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaat_reports_twaat_id_fkey"
+            columns: ["twaat_id"]
+            isOneToOne: false
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       twaater_accounts: {
         Row: {
           banner_url: string | null
@@ -53927,6 +53978,42 @@ export type Database = {
             foreignKeyName: "twaater_ai_preferences_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: true
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaater_blocks: {
+        Row: {
+          blocked_account_id: string
+          blocker_account_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_account_id: string
+          blocker_account_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_account_id?: string
+          blocker_account_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_blocks_blocked_account_id_fkey"
+            columns: ["blocked_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaater_blocks_blocker_account_id_fkey"
+            columns: ["blocker_account_id"]
+            isOneToOne: false
             referencedRelation: "twaater_accounts"
             referencedColumns: ["id"]
           },
@@ -54118,6 +54205,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      twaater_filter_words: {
+        Row: {
+          auto_action: string
+          created_at: string
+          created_by: string | null
+          id: string
+          severity: string
+          word: string
+        }
+        Insert: {
+          auto_action?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          severity?: string
+          word: string
+        }
+        Update: {
+          auto_action?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          severity?: string
+          word?: string
+        }
+        Relationships: []
       }
       twaater_follows: {
         Row: {
@@ -54574,7 +54688,9 @@ export type Database = {
           body: string
           created_at: string | null
           deleted_at: string | null
+          flag_reason: string | null
           id: string
+          is_flagged: boolean
           is_promoted: boolean
           is_system_review: boolean | null
           lang: string | null
@@ -54582,6 +54698,9 @@ export type Database = {
           linked_type: Database["public"]["Enums"]["twaater_linked_type"] | null
           media_type: string | null
           media_url: string | null
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_status: string
           outcome_code: string | null
           promoted_cost: number
           promoted_until: string | null
@@ -54596,7 +54715,9 @@ export type Database = {
           body: string
           created_at?: string | null
           deleted_at?: string | null
+          flag_reason?: string | null
           id?: string
+          is_flagged?: boolean
           is_promoted?: boolean
           is_system_review?: boolean | null
           lang?: string | null
@@ -54606,6 +54727,9 @@ export type Database = {
             | null
           media_type?: string | null
           media_url?: string | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_status?: string
           outcome_code?: string | null
           promoted_cost?: number
           promoted_until?: string | null
@@ -54620,7 +54744,9 @@ export type Database = {
           body?: string
           created_at?: string | null
           deleted_at?: string | null
+          flag_reason?: string | null
           id?: string
+          is_flagged?: boolean
           is_promoted?: boolean
           is_system_review?: boolean | null
           lang?: string | null
@@ -54630,6 +54756,9 @@ export type Database = {
             | null
           media_type?: string | null
           media_url?: string | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_status?: string
           outcome_code?: string | null
           promoted_cost?: number
           promoted_until?: string | null
@@ -64681,6 +64810,10 @@ export type Database = {
       trigger_my_festival_moment: {
         Args: { p_attendance_id: string; p_idempotency_key: string }
         Returns: Json
+      }
+      twaater_account_is_mine: {
+        Args: { _account_id: string }
+        Returns: boolean
       }
       twaater_account_profile_id: {
         Args: { p_account_id: string }
