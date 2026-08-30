@@ -523,7 +523,7 @@ const BandCrewManagement = () => {
               <CardHeader>
                 <CardTitle>Active Crew</CardTitle>
                 <CardDescription>
-                  Departments are separated so hiring a merch, security, wardrobe or tour specialist cannot be mistaken for improving the music-performance crew score.
+                  Grouped by what they actually do for you, so it is clear which hires change your gig quality.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -532,8 +532,13 @@ const BandCrewManagement = () => {
                     <UserPlus className="h-12 w-12 text-muted-foreground" />
                     <div>
                       <p className="font-semibold">No crew hired yet</p>
-                      <p className="text-sm text-muted-foreground">Head to the Hire tab to recruit specialists</p>
+                      <p className="text-sm text-muted-foreground">
+                        Start with a Front of House Engineer — it is the single biggest gig-quality boost.
+                      </p>
                     </div>
+                    <Button onClick={() => handleHireRoleShortcut("Front of House Engineer")}>
+                      <UserPlus className="mr-2 h-4 w-4" /> Find a sound engineer
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-8">
