@@ -490,7 +490,7 @@ const BandCrewManagement = () => {
                 ))}
               </div>
               <Button asChild className="w-full">
-                <Link to="/band-finder">Find or create a band</Link>
+                <Link to="/bands/finder">Find or create a band</Link>
               </Button>
             </CardContent>
           </Card>
