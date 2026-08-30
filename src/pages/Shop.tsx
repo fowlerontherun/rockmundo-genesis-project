@@ -61,10 +61,12 @@ export default function Shop() {
 
   const maxSlots = slots?.maxSlots ?? 2;
 
-  const handleDonate = async () => {
+  const handleDonate = async (amountMinor?: number) => {
     setDonating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-donation", { body: { currency } });
+      const { data, error } = await supabase.functions.invoke("create-donation", {
+        body: amountMinor ? { currency, amount: amountMinor } : { currency },
+      });
       if (error) throw error;
       if (data?.url) window.open(data.url, "_blank");
     } catch {
@@ -73,6 +75,20 @@ export default function Shop() {
       setDonating(false);
     }
   };
+
+  const handleCustomDonate = async () => {
+    const parsed = Number(customAmount.replace(/,/g, "").trim());
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 2000) {
+      toast({
+        title: "Enter a valid amount",
+        description: `Choose an amount between ${formatMinor(100, currency)} and ${formatMinor(200000, currency)}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    await handleDonate(Math.round(parsed * 100));
+  };
+
 
   return (
     <FMPageScaffold
