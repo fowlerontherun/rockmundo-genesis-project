@@ -12,13 +12,15 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatDock } from "./ChatDockContext";
 import { ChatRoomView } from "./ChatRoomView";
 import { useGameData } from "@/hooks/useGameData";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { useTranslation } from "@/hooks/useTranslation";
+import { translateFMLabel } from "@/i18n/fm";
+import { fmChatText } from "@/i18n/fmChat";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { DirectMessageThread } from "@/features/social-hub/components/DirectMessageThread";
 
@@ -29,30 +31,30 @@ type RoomId = "world" | "help" | "recruit" | "band" | "friends";
 export function FMChatDock() {
   const { pathname } = useLocation();
   const { profile } = useGameData();
+  const { language } = useTranslation();
   const myProfileId = (profile as any)?.id ?? null;
   const { open, setOpen, threads, openThread, closeThread } = useChatDock();
   const { friendships, loading } = useFriendships(myProfileId);
   const { data: primaryBand } = usePrimaryBand();
   const [activeRoom, setActiveRoom] = useState<RoomId>("world");
   const bandId = (primaryBand as any)?.band_id ?? null;
-  const bandName = (primaryBand as any)?.bands?.name ?? "Band";
+  const bandName = (primaryBand as any)?.bands?.name ?? translateFMLabel(language, "Band");
 
   const rooms = useMemo(
     () => [
-      { id: "world" as RoomId, label: "World", icon: Globe },
-      { id: "help" as RoomId, label: "Help", icon: HelpCircle },
-      { id: "recruit" as RoomId, label: "Recruit", icon: UserPlus },
-      { id: "band" as RoomId, label: "Band", icon: Users },
-      { id: "friends" as RoomId, label: "Friends", icon: MessageSquare },
+      { id: "world" as RoomId, label: translateFMLabel(language, "World"), icon: Globe },
+      { id: "help" as RoomId, label: fmChatText(language, "help"), icon: HelpCircle },
+      { id: "recruit" as RoomId, label: fmChatText(language, "recruit"), icon: UserPlus },
+      { id: "band" as RoomId, label: translateFMLabel(language, "Band"), icon: Users },
+      { id: "friends" as RoomId, label: translateFMLabel(language, "Friends"), icon: MessageSquare },
     ],
-    [],
+    [language],
   );
 
   const accepted = useMemo(
     () => friendships.filter((f) => f.friendship.status === "accepted" && f.otherProfile),
     [friendships],
   );
-
 
   if (!myProfileId) return null;
   if (HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
@@ -71,7 +73,7 @@ export function FMChatDock() {
             <button
               onClick={() => closeThread(t.profileId)}
               className="text-fm-fg-muted hover:text-fm-fg"
-              aria-label="Close chat"
+              aria-label={fmChatText(language, "closeChat")}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -93,7 +95,7 @@ export function FMChatDock() {
         >
           <span className="flex items-center gap-1.5 text-[11px] tracking-tight text-fm-fg font-medium">
             <MessageSquare className="h-3.5 w-3.5 text-fm-accent" />
-            Chat
+            {fmChatText(language, "chat")}
             <span className="text-fm-fg-muted">
               ({activeRoom === "friends" ? accepted.length : rooms.find((r) => r.id === activeRoom)?.label})
             </span>
@@ -125,78 +127,76 @@ export function FMChatDock() {
             {activeRoom === "world" && (
               <ChatRoomView
                 channelKey="world"
-                emptyMessage="World Chat is quiet — start the conversation."
-                placeholder="Message World Chat…"
+                emptyMessage={fmChatText(language, "worldQuiet")}
+                placeholder={fmChatText(language, "worldPlaceholder")}
               />
             )}
             {activeRoom === "help" && (
               <ChatRoomView
                 channelKey="help"
-                emptyMessage="Ask anything — players and staff answer here."
-                placeholder="Ask for help…"
+                emptyMessage={fmChatText(language, "helpEmpty")}
+                placeholder={fmChatText(language, "helpPlaceholder")}
               />
             )}
             {activeRoom === "recruit" && (
               <ChatRoomView
                 channelKey="recruit"
-                emptyMessage="Post what you play and which band you're looking for."
-                placeholder="Looking for a band / member…"
+                emptyMessage={fmChatText(language, "recruitEmpty")}
+                placeholder={fmChatText(language, "recruitPlaceholder")}
               />
             )}
             {activeRoom === "band" && (
               <ChatRoomView
                 channelKey={bandId ? `band:${bandId}` : null}
-                lockedMessage={bandId ? null : "Join or form a band to unlock band chat."}
-                emptyMessage={`No messages in ${bandName} yet.`}
-                placeholder={`Message ${bandName}…`}
+                lockedMessage={bandId ? null : fmChatText(language, "bandLocked")}
+                emptyMessage={fmChatText(language, "bandEmpty", { band: bandName })}
+                placeholder={fmChatText(language, "bandPlaceholder", { band: bandName })}
               />
             )}
             {activeRoom === "friends" && (
               <div className="flex flex-1 min-h-0 flex-col">
-
-            {loading ? (
-              <div className="flex-1 flex items-center justify-center text-xs text-fm-fg-muted">
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Loading…
-              </div>
-            ) : accepted.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-xs text-fm-fg-muted px-3 text-center">
-                Add friends from Social to start chatting.
-              </div>
-            ) : (
-              <ScrollArea className="flex-1">
-                <div className="py-1">
-                  {accepted.map((f) => {
-                    const other = f.otherProfile!;
-                    const name = other.display_name ?? other.username ?? "Friend";
-                    const isOpen = threads.some((t) => t.profileId === other.id);
-                    return (
-                      <button
-                        key={f.friendship.id}
-                        onClick={() => openThread({ profileId: other.id, displayName: name })}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-fm-panel-2",
-                          isOpen && "bg-fm-panel-2",
-                        )}
-                      >
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={(other as any).avatar_url ?? undefined} />
-                          <AvatarFallback className="text-[10px]">
-                            {name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="truncate text-xs text-fm-fg">{name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
+                {loading ? (
+                  <div className="flex-1 flex items-center justify-center text-xs text-fm-fg-muted">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> {fmChatText(language, "loading")}
+                  </div>
+                ) : accepted.length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center text-xs text-fm-fg-muted px-3 text-center">
+                    {fmChatText(language, "addFriends")}
+                  </div>
+                ) : (
+                  <ScrollArea className="flex-1">
+                    <div className="py-1">
+                      {accepted.map((f) => {
+                        const other = f.otherProfile!;
+                        const name = other.display_name ?? other.username ?? fmChatText(language, "friend");
+                        const isOpen = threads.some((t) => t.profileId === other.id);
+                        return (
+                          <button
+                            key={f.friendship.id}
+                            onClick={() => openThread({ profileId: other.id, displayName: name })}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-fm-panel-2",
+                              isOpen && "bg-fm-panel-2",
+                            )}
+                          >
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={(other as any).avatar_url ?? undefined} />
+                              <AvatarFallback className="text-[10px]">
+                                {name.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="truncate text-xs text-fm-fg">{name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
               </div>
             )}
           </div>
         )}
       </div>
-
     </div>
   );
 }
