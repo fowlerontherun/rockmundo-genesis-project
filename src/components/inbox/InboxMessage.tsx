@@ -66,6 +66,11 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
       ? (message.action_data.collaborationId as string)
       : null;
 
+  const absenceGigId =
+    message.action_type === "gig_absence_decision" && typeof message.action_data?.gigId === "string"
+      ? (message.action_data.gigId as string)
+      : null;
+
   const handleInviteResponse = (accept: boolean) => {
     if (!collaborationId) return;
     respondToInvitation.mutate(
@@ -78,6 +83,20 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
       },
     );
   };
+
+  const handleAbsenceDecision = (decision: "perform" | "cancel") => {
+    if (!absenceGigId) return;
+    resolveAbsence.mutate(
+      { gigId: absenceGigId, decision },
+      {
+        onSuccess: () => {
+          onMarkAsRead(message.id);
+          onArchive(message.id);
+        },
+      },
+    );
+  };
+
 
   const timeAgo = formatDistanceToNow(new Date(message.created_at), { addSuffix: true });
 
