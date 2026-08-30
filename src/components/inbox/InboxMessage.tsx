@@ -171,6 +171,35 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
                 </Button>
               )}
 
+              {absenceGigId && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAbsenceDecision("perform");
+                    }}
+                    disabled={resolveAbsence.isPending}
+                  >
+                    Perform without them
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAbsenceDecision("cancel");
+                    }}
+                    disabled={resolveAbsence.isPending}
+                  >
+                    Pull the gig
+                  </Button>
+                </>
+              )}
+
               {message.action_type === "collaboration_invite" && collaborationId && (
                 <>
                   <Button
