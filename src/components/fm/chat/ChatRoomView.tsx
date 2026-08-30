@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useTranslation } from "@/hooks/useTranslation";
+import { fmChatText } from "@/i18n/fmChat";
 import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 import { useChatRoom } from "./useChatRoom";
 
@@ -17,14 +19,17 @@ interface ChatRoomViewProps {
 
 export function ChatRoomView({
   channelKey,
-  emptyMessage = "No messages yet — say hello.",
+  emptyMessage,
   lockedMessage = null,
-  placeholder = "Type a message…",
+  placeholder,
 }: ChatRoomViewProps) {
   const { profileId } = useActiveProfile();
+  const { language } = useTranslation();
   const { messages, loading, sending, sendMessage } = useChatRoom(lockedMessage ? null : channelKey);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const resolvedEmptyMessage = emptyMessage ?? fmChatText(language, "defaultEmpty");
+  const resolvedPlaceholder = placeholder ?? fmChatText(language, "defaultPlaceholder");
 
   useEffect(() => {
     const viewport = scrollRef.current?.querySelector(
@@ -54,10 +59,10 @@ export function ChatRoomView({
         <div className="space-y-1.5 p-2">
           {loading ? (
             <div className="flex items-center justify-center py-6 text-xs text-fm-fg-muted">
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Loading…
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {fmChatText(language, "loading")}
             </div>
           ) : messages.length === 0 ? (
-            <div className="py-6 text-center text-xs text-fm-fg-muted">{emptyMessage}</div>
+            <div className="py-6 text-center text-xs text-fm-fg-muted">{resolvedEmptyMessage}</div>
           ) : (
             messages.map((msg) => {
               const mine = msg.profile_id === profileId;
@@ -84,7 +89,7 @@ export function ChatRoomView({
                       reportedProfileId={msg.profile_id}
                       targetType="chat_message"
                       targetId={msg.id}
-                      triggerLabel="Report message"
+                      triggerLabel={fmChatText(language, "reportMessage")}
                       context={{ surface: "fm_room_chat", channel: msg.channel }}
                     />
                   )}
@@ -104,7 +109,7 @@ export function ChatRoomView({
               void handleSend();
             }
           }}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           maxLength={500}
           className="h-7 text-[11px]"
         />
@@ -113,7 +118,7 @@ export function ChatRoomView({
           className="h-7 w-7 shrink-0"
           onClick={() => void handleSend()}
           disabled={sending || !draft.trim()}
-          aria-label="Send message"
+          aria-label={fmChatText(language, "sendMessage")}
         >
           <Send className="h-3.5 w-3.5" />
         </Button>
