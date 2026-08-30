@@ -294,7 +294,6 @@ export default function Shop() {
           </div>
         </CardContent>
 
-        </CardContent>
       </Card>
     </FMPageScaffold>
   );
