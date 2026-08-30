@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.710",
+    date: "2026-08-30",
+    changes: [
+      { type: 'fix', description: "Fixed scheduled gigs never starting or completing: gigs where a bandmate was in the wrong city stalled forever. Two hours after the start time the show now goes ahead with whoever is present." },
+      { type: 'fix', description: "Gigs where no band member reaches the venue city within 12 hours are now automatically cancelled with a recorded reason instead of blocking the completion pipeline." },
+      { type: 'improvement', description: "The auto-start worker now records the exact reason a gig could not start on the gig itself and reports started / cancelled / deferred counts to the Gig Job Monitor." },
+    ],
+  },
+  {
     version: "1.1.709",
     date: "2026-08-30",
     changes: [

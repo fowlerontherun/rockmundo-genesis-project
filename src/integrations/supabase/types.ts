@@ -58167,7 +58167,7 @@ export type Database = {
       }
       auto_complete_travel: { Args: never; Returns: undefined }
       auto_prepare_gig_travel: { Args: never; Returns: Json }
-      auto_start_scheduled_gigs: { Args: never; Returns: undefined }
+      auto_start_scheduled_gigs: { Args: never; Returns: Json }
       auto_verify_accounts: { Args: never; Returns: undefined }
       auto_verify_twaater_accounts: { Args: never; Returns: undefined }
       award_show_invite_band: {
@@ -64085,7 +64085,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      start_gig_authoritative: { Args: { p_gig_id: string }; Returns: Json }
+      start_gig_authoritative: {
+        Args: { p_gig_id: string; p_lenient?: boolean }
+        Returns: Json
+      }
       start_self_promotion: {
         Args: {
           p_activity_type: string
