@@ -41,23 +41,26 @@ serve(async (req) => {
     });
 
     // Call the auto-start function
-    const { error } = await supabaseClient.rpc('auto_start_scheduled_gigs');
+    const { data, error } = await supabaseClient.rpc('auto_start_scheduled_gigs');
 
     if (error) {
       console.error('Error auto-starting gigs:', error);
       throw error;
     }
 
+    const summary = (data ?? {}) as Record<string, unknown>;
+    console.log('[auto-start-gigs] summary:', JSON.stringify(summary));
+
     await completeJobRun({
       jobName: "auto-start-gigs",
       runId,
       supabaseClient,
       durationMs: Date.now() - startedAt,
-      resultSummary: { message: "Checked and started scheduled gigs" },
+      resultSummary: { message: "Checked and started scheduled gigs", ...summary },
     });
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Checked and started scheduled gigs' }),
+      JSON.stringify({ success: true, message: 'Checked and started scheduled gigs', ...summary }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
