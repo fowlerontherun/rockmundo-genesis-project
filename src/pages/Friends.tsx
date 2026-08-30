@@ -9,14 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriends, useFriendRequests } from "@/hooks/usePlayerConnections";
 import { sendConnectionRequest } from "@/integrations/supabase/playerConnections";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 function FriendSection({ kind, search }: { kind: "friends" | "incoming" | "outgoing" | "recent"; search: string }) {
   const friends = useFriends(kind, search);
+  const { profileId } = useActiveProfile();
   if (friends.isLoading) return <Card><CardContent className="p-6" aria-live="polite">Loading connections…</CardContent></Card>;
   if (friends.isError) return <Card role="alert"><CardContent className="p-6 text-destructive">Friends page unavailable. Please try again.</CardContent></Card>;
   const rows = friends.data ?? [];
   if (!rows.length) return <Card><CardContent className="space-y-3 p-6 text-center"><Users className="mx-auto h-8 w-8 text-muted-foreground" /><p className="font-medium">No {kind === "incoming" ? "incoming requests" : kind === "outgoing" ? "sent requests" : "friends"} yet.</p><Button asChild><Link to="/community/players">Discover players</Link></Button></CardContent></Card>;
-  return <div className="space-y-3">{rows.map((friend) => <FriendCard key={friend.friendshipId} friend={friend} context={kind === "incoming" ? "incoming" : kind === "outgoing" ? "outgoing" : "friend"} disabled={friends.act.isPending} onAccept={() => friends.act.mutate({ friendshipId: friend.friendshipId, status: "accepted" })} onDecline={() => friends.act.mutate({ friendshipId: friend.friendshipId, status: "declined" })} onCancel={() => friends.act.mutate({ friendshipId: friend.friendshipId, status: "cancelled" })} onRemove={() => window.confirm("Remove this friend? Friends-only profile access will be lost.") && friends.act.mutate({ friendshipId: friend.friendshipId, status: "removed" })} />)}</div>;
+  return <div className="space-y-3">{rows.map((friend) => <FriendCard key={friend.friendshipId} friend={friend} myProfileId={profileId} context={kind === "incoming" ? "incoming" : kind === "outgoing" ? "outgoing" : "friend"} disabled={friends.act.isPending} onAccept={() => friends.act.mutate({ friendshipId: friend.friendshipId, status: "accepted" })} onDecline={() => friends.act.mutate({ friendshipId: friend.friendshipId, status: "declined" })} onCancel={() => friends.act.mutate({ friendshipId: friend.friendshipId, status: "cancelled" })} onRemove={() => window.confirm("Remove this friend? Friends-only profile access will be lost.") && friends.act.mutate({ friendshipId: friend.friendshipId, status: "removed" })} />)}</div>;
 }
 
 export default function FriendsPage() {
