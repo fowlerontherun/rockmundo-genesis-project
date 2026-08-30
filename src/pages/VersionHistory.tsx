@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.713",
+    date: "2026-08-30",
+    changes: [
+      { type: "improvement", description: "Band crew is much simpler to understand: every role now says in one line what it actually does for you, and the old jargon about departments and Live Setup scores is gone." },
+      { type: "feature", description: "Added a visual crew guide with a role coverage grid, a three-step how-it-works strip, and a suggested next hire so you always know who to recruit." },
+      { type: "feature", description: "Empty roles now have a one-tap 'hire from $X/gig' shortcut that jumps straight to matching candidates." },
+      { type: "improvement", description: "The hire list now hides crew you cannot recruit yet by default, sorts the best available candidates first, and shows fame progress towards your next unlock." },
+    ],
+  },
+  {
     version: "1.1.712",
     date: "2026-08-30",
     changes: [

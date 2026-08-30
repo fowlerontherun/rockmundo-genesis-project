@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,6 +14,12 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { Loader2, Lock, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { CREW_DEPARTMENTS, getCrewRoleInfo, isPerformanceCrewRole } from "@/utils/liveSetup";
+import { CrewGuide, CREW_ROLE_GUIDES, type CrewCoverageEntry } from "@/components/band/CrewGuide";
+
+const getRoleBenefit = (role: string) =>
+  CREW_ROLE_GUIDES.find((guide) => guide.role === role)?.benefit ?? "Supports the band behind the scenes.";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 import tourManagerImg from "@/assets/crew/tour-manager.jpg";
 import fohEngineerImg from "@/assets/crew/foh-engineer.jpg";
@@ -191,11 +198,11 @@ const RosterCrewCard = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-md bg-muted/40 p-3 text-xs">
-          <p className="font-medium">Gameplay area: {roleInfo.impactLabel}</p>
+          <p className="font-medium">{getRoleBenefit(crew.crew_type)}</p>
           <p className="mt-1 text-muted-foreground">
             {roleInfo.affectsLiveSetup
-              ? "Directly contributes to the Show Crew portion of Live Setup."
-              : "Kept separate from the core song-performance Live Setup score."}
+              ? "Counts towards your gig quality score."
+              : "Helps outside the gig quality score."}
           </p>
         </div>
         <StarRating rating={crew.star_rating ?? 5} />
@@ -243,6 +250,8 @@ const BandCrewManagement = () => {
 
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedTier, setSelectedTier] = useState<string>("all");
+  const [affordableOnly, setAffordableOnly] = useState(true);
+  const [activeTab, setActiveTab] = useState("roster");
   const [hireDialogOpen, setHireDialogOpen] = useState(false);
   const [selectedCrewMember, setSelectedCrewMember] = useState<CrewCatalogRow | null>(null);
 
@@ -276,21 +285,29 @@ const BandCrewManagement = () => {
   const filteredCatalog = useMemo(() => {
     if (!availableCrew) return [];
 
-    return availableCrew.filter((crew) => {
-      if (crew.hired_by_band_id !== null) return false;
-      if (selectedRole !== "all" && crew.role !== selectedRole) return false;
+    return availableCrew
+      .filter((crew) => {
+        if (crew.hired_by_band_id !== null) return false;
+        if (selectedRole !== "all" && crew.role !== selectedRole) return false;
+        if (affordableOnly && bandFame < crew.min_fame_required) return false;
 
-      if (selectedTier !== "all") {
-        const tierNum = parseInt(selectedTier);
-        const tier = FAME_TIERS[tierNum - 1];
-        if (tier && (crew.star_rating < tier.stars[0] || crew.star_rating > tier.stars[1])) {
-          return false;
+        if (selectedTier !== "all") {
+          const tierNum = parseInt(selectedTier);
+          const tier = FAME_TIERS[tierNum - 1];
+          if (tier && (crew.star_rating < tier.stars[0] || crew.star_rating > tier.stars[1])) {
+            return false;
+          }
         }
-      }
 
-      return true;
-    });
-  }, [availableCrew, selectedRole, selectedTier]);
+        return true;
+      })
+      .sort((a, b) => {
+        const aLocked = bandFame < a.min_fame_required ? 1 : 0;
+        const bLocked = bandFame < b.min_fame_required ? 1 : 0;
+        if (aLocked !== bLocked) return aLocked - bLocked;
+        return b.star_rating - a.star_rating;
+      });
+  }, [availableCrew, selectedRole, selectedTier, affordableOnly, bandFame]);
 
   const crewCount = hiredCrew?.length ?? 0;
   const showCrew = (hiredCrew || []).filter((crew) => isPerformanceCrewRole(crew.crew_type));
@@ -314,6 +331,35 @@ const BandCrewManagement = () => {
 
     return groups;
   }, [hiredCrew]);
+
+  const crewCoverage = useMemo<CrewCoverageEntry[]>(() => {
+    return CREW_ROLES.map((role) => {
+      const hired = (hiredCrew || []).find((crew) => crew.crew_type === role) ?? null;
+      const candidates = (availableCrew || []).filter(
+        (crew) => crew.role === role && crew.hired_by_band_id === null,
+      );
+      const affordable = candidates.filter((crew) => bandFame >= crew.min_fame_required);
+      const pool = affordable.length > 0 ? affordable : candidates;
+      const cheapest = pool.reduce<CrewCatalogRow | null>(
+        (best, crew) => (!best || crew.salary < best.salary ? crew : best),
+        null,
+      );
+
+      return {
+        role,
+        hiredName: hired?.name ?? null,
+        available: candidates.length > 0,
+        fameRequired: cheapest ? cheapest.min_fame_required : null,
+        lowestSalary: cheapest ? cheapest.salary : null,
+      };
+    });
+  }, [hiredCrew, availableCrew, bandFame]);
+
+  const handleHireRoleShortcut = (role: string) => {
+    setSelectedRole(role);
+    setSelectedTier("all");
+    setActiveTab("hire");
+  };
 
   const currentTier = FAME_TIERS.findIndex((tier) => bandFame >= tier.min && bandFame <= tier.max);
   const maxAccessibleStars = FAME_TIERS[currentTier]?.stars[1] ?? 2;
@@ -422,12 +468,33 @@ const BandCrewManagement = () => {
   if (!bandId) {
     return (
       <FMPageScaffold title="Crew Management" icon={Users} backTo="/hub/band">
-        <Card className="mx-auto max-w-lg">
-          <CardHeader>
-            <CardTitle>Join a Band First</CardTitle>
-            <CardDescription>You need to be in a band to hire crew members.</CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="mx-auto max-w-2xl space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Crew comes after your band</CardTitle>
+              <CardDescription>
+                Crew are the staff who make your shows better — a sound engineer, a lighting director, a road chief and
+                so on. You hire them for a band, so join or start one first.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {CREW_ROLE_GUIDES.slice(0, 4).map((guide) => (
+                  <div key={guide.role} className="rounded-lg border bg-muted/20 p-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <guide.icon className="h-4 w-4 text-primary" />
+                      {guide.role}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{guide.benefit}</p>
+                  </div>
+                ))}
+              </div>
+              <Button asChild className="w-full">
+                <Link to="/bands/finder">Find or create a band</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </FMPageScaffold>
     );
   }
@@ -436,57 +503,41 @@ const BandCrewManagement = () => {
     <FMPageScaffold title={`Crew Management • ${bandName}`} icon={Users} backTo="/hub/band">
       <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Crew Management • {bandName}</CardTitle>
-            <CardDescription>
-              Crew is split by what it actually does. Only Show Crew changes Live Setup; Touring Operations and Commercial & Image stay outside the core song-performance score.
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl">Crew snapshot • {bandName}</CardTitle>
+            <CardDescription>Four quick numbers, then the guide below tells you what to do next.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Total Crew</div>
+          <CardContent>
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Crew hired</div>
                 <div className="mt-1 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  <span className="text-2xl font-bold">{crewCount}</span>
+                  <Users className="h-4 w-4 text-primary" />
+                  <span className="text-xl font-bold">{crewCount}</span>
                 </div>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Show Crew</div>
-                <div className="mt-1 text-2xl font-bold">{showCrew.length}</div>
-                <div className="text-xs text-muted-foreground">{Math.round(showCrewSkill)}/100 avg skill · affects Live Setup</div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Gig quality crew</div>
+                <div className="mt-1 text-xl font-bold">{showCrew.length}</div>
+                <div className="text-[11px] text-muted-foreground">{Math.round(showCrewSkill)}/100 average skill</div>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Cost per Gig</div>
-                <div className="mt-1 text-2xl font-bold">${totalPayroll.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">All hired departments are paid</div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Wages per gig</div>
+                <div className="mt-1 text-xl font-bold">${totalPayroll.toLocaleString()}</div>
+                <div className="text-[11px] text-muted-foreground">Paid out of each show</div>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="text-sm text-muted-foreground">Your Fame</div>
-                <div className="mt-1 text-2xl font-bold">{bandFame.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Can hire up to {maxAccessibleStars}★ crew</div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">Band fame</div>
+                <div className="mt-1 text-xl font-bold">{bandFame.toLocaleString()}</div>
+                <div className="text-[11px] text-muted-foreground">Unlocks up to {maxAccessibleStars}★ crew</div>
               </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              {ROSTER_DEPARTMENTS.map((department) => {
-                const config = CREW_DEPARTMENTS[department];
-                return (
-                  <div key={department} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold">{config.label}</p>
-                      <Badge variant={department === "show" ? "default" : "secondary"}>{crewByDepartment[department].length}</Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{config.description}</p>
-                    <p className="mt-2 text-xs font-medium">{department === "show" ? "Counts toward Live Setup" : "Does not inflate Live Setup"}</p>
-                  </div>
-                );
-              })}
             </div>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="roster" className="space-y-4">
+        <CrewGuide bandFame={bandFame} coverage={crewCoverage} onHireRole={handleHireRoleShortcut} />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="roster">Your Crew ({crewCount})</TabsTrigger>
             <TabsTrigger value="hire">Hire Crew</TabsTrigger>
@@ -497,7 +548,7 @@ const BandCrewManagement = () => {
               <CardHeader>
                 <CardTitle>Active Crew</CardTitle>
                 <CardDescription>
-                  Departments are separated so hiring a merch, security, wardrobe or tour specialist cannot be mistaken for improving the music-performance crew score.
+                  Grouped by what they actually do for you, so it is clear which hires change your gig quality.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -506,8 +557,13 @@ const BandCrewManagement = () => {
                     <UserPlus className="h-12 w-12 text-muted-foreground" />
                     <div>
                       <p className="font-semibold">No crew hired yet</p>
-                      <p className="text-sm text-muted-foreground">Head to the Hire tab to recruit specialists</p>
+                      <p className="text-sm text-muted-foreground">
+                        Start with a Front of House Engineer — it is the single biggest gig-quality boost.
+                      </p>
                     </div>
+                    <Button onClick={() => handleHireRoleShortcut("Front of House Engineer")}>
+                      <UserPlus className="mr-2 h-4 w-4" /> Find a sound engineer
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-8">
@@ -571,10 +627,17 @@ const BandCrewManagement = () => {
                   <div>
                     <CardTitle>Available Crew</CardTitle>
                     <CardDescription>
-                      Every candidate shows a department and gameplay area before you hire them. Higher fame unlocks stronger specialists; a crew member can only work for one band at a time.
+                      Each card says in one line what that person does for you. Best candidates are listed first, and a
+                      crew member can only work for one band at a time.
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                      <Switch id="affordable-only" checked={affordableOnly} onCheckedChange={setAffordableOnly} />
+                      <Label htmlFor="affordable-only" className="cursor-pointer text-xs">
+                        Only who I can hire now
+                      </Label>
+                    </div>
                     <Select value={selectedRole} onValueChange={setSelectedRole}>
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Filter by role" />
@@ -587,16 +650,16 @@ const BandCrewManagement = () => {
                       </SelectContent>
                     </Select>
                     <Select value={selectedTier} onValueChange={setSelectedTier}>
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue placeholder="Filter by tier" />
+                      <SelectTrigger className="w-[170px]">
+                        <SelectValue placeholder="Filter by quality" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Tiers</SelectItem>
-                        <SelectItem value="1">Tier 1 (1-2★)</SelectItem>
-                        <SelectItem value="2">Tier 2 (3-4★)</SelectItem>
-                        <SelectItem value="3">Tier 3 (5-6★)</SelectItem>
-                        <SelectItem value="4">Tier 4 (7-8★)</SelectItem>
-                        <SelectItem value="5">Tier 5 (9-10★)</SelectItem>
+                        <SelectItem value="all">Any quality</SelectItem>
+                        <SelectItem value="1">Beginner (1-2★)</SelectItem>
+                        <SelectItem value="2">Rising (3-4★)</SelectItem>
+                        <SelectItem value="3">Professional (5-6★)</SelectItem>
+                        <SelectItem value="4">Elite (7-8★)</SelectItem>
+                        <SelectItem value="5">Legendary (9-10★)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -608,7 +671,14 @@ const BandCrewManagement = () => {
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
                 ) : filteredCatalog.length === 0 ? (
-                  <div className="py-10 text-center text-muted-foreground">No available crew matching your filters</div>
+                  <div className="space-y-3 py-10 text-center text-muted-foreground">
+                    <p>No crew match these filters.</p>
+                    {affordableOnly && (
+                      <Button variant="outline" size="sm" onClick={() => setAffordableOnly(false)}>
+                        Show crew I have to unlock
+                      </Button>
+                    )}
+                  </div>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredCatalog.map((crew) => {
@@ -654,11 +724,11 @@ const BandCrewManagement = () => {
                           </CardHeader>
                           <CardContent className="space-y-3">
                             <div className="rounded-md bg-muted/40 p-3 text-xs">
-                              <p className="font-medium">Gameplay area: {roleInfo.impactLabel}</p>
+                              <p className="font-medium">{getRoleBenefit(crew.role)}</p>
                               <p className="mt-1 text-muted-foreground">
                                 {roleInfo.affectsLiveSetup
-                                  ? "This Show Crew role directly improves the crew side of Live Setup."
-                                  : "This specialist is deliberately kept outside the Live Setup crew score."}
+                                  ? "Counts towards your gig quality score."
+                                  : "Helps outside the gig quality score."}
                               </p>
                             </div>
                             <StarRating rating={crew.star_rating} />
@@ -706,7 +776,7 @@ const BandCrewManagement = () => {
             <DialogTitle>Hire {selectedCrewMember?.name}?</DialogTitle>
             <DialogDescription>
               {selectedCrewMember
-                ? `${selectedCrewMember.role} joins ${getCrewRoleInfo(selectedCrewMember.role).departmentLabel} · gameplay area: ${getCrewRoleInfo(selectedCrewMember.role).impactLabel}.`
+                ? `${getRoleBenefit(selectedCrewMember.role)} Paid $${selectedCrewMember.salary.toLocaleString()} every gig you play.`
                 : "This crew member will join your band exclusively."}
             </DialogDescription>
           </DialogHeader>
@@ -741,8 +811,8 @@ const BandCrewManagement = () => {
               <p className="text-sm text-muted-foreground">{selectedCrewMember.background}</p>
               <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="mb-3 text-sm">
-                  <span className="font-medium">Gameplay area:</span>{" "}
-                  {getCrewRoleInfo(selectedCrewMember.role).impactLabel}
+                  <span className="font-medium">What they do:</span>{" "}
+                  {getRoleBenefit(selectedCrewMember.role)}
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>Skill: <span className="font-medium">{selectedCrewMember.skill}/100</span></div>
