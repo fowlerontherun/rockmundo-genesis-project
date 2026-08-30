@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.724",
+    date: "2026-08-30",
+    changes: [
+      { type: "feature", description: "You can now donate any amount you like — quick-pick buttons plus a custom amount field on the Shop page, validated between 1 and 2,000 in your selected currency" },
+    ],
+  },
+  {
     version: "1.1.723",
     date: "2026-08-30",
     changes: [

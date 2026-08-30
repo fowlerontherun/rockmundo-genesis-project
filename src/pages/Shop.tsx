@@ -9,6 +9,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useVipStatus } from "@/hooks/useVipStatus";
@@ -16,7 +17,7 @@ import { useCharacterSlots } from "@/hooks/useCharacterSlots";
 import { cn } from "@/lib/utils";
 import { CurrencySelector } from "@/components/shop/CurrencySelector";
 import { useCheckoutCurrency } from "@/hooks/useCheckoutCurrency";
-import { CHECKOUT_PRICING, formatMinor, formatProductPrice, type CheckoutProductKey } from "@/lib/checkoutCurrency";
+import { CHECKOUT_PRICING, CURRENCY_META, formatMinor, formatProductPrice, type CheckoutProductKey } from "@/lib/checkoutCurrency";
 
 const VIP_PLANS: Array<{
   name: string;
@@ -121,7 +122,7 @@ export default function Shop() {
             <Button size="lg" onClick={() => navigate("/vip-subscribe")} className="gap-2">
               <Crown className="h-4 w-4" /> {vipStatus?.isVip ? "Manage VIP" : "Get VIP"}
             </Button>
-            <Button size="lg" variant="outline" onClick={handleDonate} disabled={donating} className="gap-2">
+            <Button size="lg" variant="outline" onClick={() => void handleDonate()} disabled={donating} className="gap-2">
               {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
             </Button>
           </div>
