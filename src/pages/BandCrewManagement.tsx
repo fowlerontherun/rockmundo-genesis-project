@@ -328,6 +328,35 @@ const BandCrewManagement = () => {
     return groups;
   }, [hiredCrew]);
 
+  const crewCoverage = useMemo<CrewCoverageEntry[]>(() => {
+    return CREW_ROLES.map((role) => {
+      const hired = (hiredCrew || []).find((crew) => crew.crew_type === role) ?? null;
+      const candidates = (availableCrew || []).filter(
+        (crew) => crew.role === role && crew.hired_by_band_id === null,
+      );
+      const affordable = candidates.filter((crew) => bandFame >= crew.min_fame_required);
+      const pool = affordable.length > 0 ? affordable : candidates;
+      const cheapest = pool.reduce<CrewCatalogRow | null>(
+        (best, crew) => (!best || crew.salary < best.salary ? crew : best),
+        null,
+      );
+
+      return {
+        role,
+        hiredName: hired?.name ?? null,
+        available: candidates.length > 0,
+        fameRequired: cheapest ? cheapest.min_fame_required : null,
+        lowestSalary: cheapest ? cheapest.salary : null,
+      };
+    });
+  }, [hiredCrew, availableCrew, bandFame]);
+
+  const handleHireRoleShortcut = (role: string) => {
+    setSelectedRole(role);
+    setSelectedTier("all");
+    setActiveTab("hire");
+  };
+
   const currentTier = FAME_TIERS.findIndex((tier) => bandFame >= tier.min && bandFame <= tier.max);
   const maxAccessibleStars = FAME_TIERS[currentTier]?.stars[1] ?? 2;
 
