@@ -13,7 +13,7 @@ import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Flame, Heart, Zap, LogOut, User, Gauge, Search } from "lucide-react";
+import { DollarSign, Flame, Heart, Zap, LogOut, User, Gauge, Search, MapPin } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
