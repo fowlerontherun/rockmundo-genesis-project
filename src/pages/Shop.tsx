@@ -218,13 +218,16 @@ export default function Shop() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <ul className="space-y-1 text-muted-foreground">
-            <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> One-off £10 donation, no subscription.</li>
+            <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> One-off {donationPrice} donation, no subscription.</li>
             <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Earns the legendary “Project Supporter” achievement.</li>
             <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" /> Grants 1,000 bonus XP to your active character.</li>
           </ul>
-          <Button onClick={handleDonate} disabled={donating} className="gap-2">
-            {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <CurrencySelector />
+            <Button onClick={handleDonate} disabled={donating} className="gap-2">
+              {donating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-4 w-4" />} Donate {donationPrice}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </FMPageScaffold>
