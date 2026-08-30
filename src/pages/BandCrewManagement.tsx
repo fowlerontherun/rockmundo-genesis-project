@@ -602,10 +602,17 @@ const BandCrewManagement = () => {
                   <div>
                     <CardTitle>Available Crew</CardTitle>
                     <CardDescription>
-                      Every candidate shows a department and gameplay area before you hire them. Higher fame unlocks stronger specialists; a crew member can only work for one band at a time.
+                      Each card says in one line what that person does for you. Best candidates are listed first, and a
+                      crew member can only work for one band at a time.
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                      <Switch id="affordable-only" checked={affordableOnly} onCheckedChange={setAffordableOnly} />
+                      <Label htmlFor="affordable-only" className="cursor-pointer text-xs">
+                        Only who I can hire now
+                      </Label>
+                    </div>
                     <Select value={selectedRole} onValueChange={setSelectedRole}>
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Filter by role" />
@@ -618,16 +625,16 @@ const BandCrewManagement = () => {
                       </SelectContent>
                     </Select>
                     <Select value={selectedTier} onValueChange={setSelectedTier}>
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue placeholder="Filter by tier" />
+                      <SelectTrigger className="w-[170px]">
+                        <SelectValue placeholder="Filter by quality" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Tiers</SelectItem>
-                        <SelectItem value="1">Tier 1 (1-2★)</SelectItem>
-                        <SelectItem value="2">Tier 2 (3-4★)</SelectItem>
-                        <SelectItem value="3">Tier 3 (5-6★)</SelectItem>
-                        <SelectItem value="4">Tier 4 (7-8★)</SelectItem>
-                        <SelectItem value="5">Tier 5 (9-10★)</SelectItem>
+                        <SelectItem value="all">Any quality</SelectItem>
+                        <SelectItem value="1">Beginner (1-2★)</SelectItem>
+                        <SelectItem value="2">Rising (3-4★)</SelectItem>
+                        <SelectItem value="3">Professional (5-6★)</SelectItem>
+                        <SelectItem value="4">Elite (7-8★)</SelectItem>
+                        <SelectItem value="5">Legendary (9-10★)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -639,7 +646,14 @@ const BandCrewManagement = () => {
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
                 ) : filteredCatalog.length === 0 ? (
-                  <div className="py-10 text-center text-muted-foreground">No available crew matching your filters</div>
+                  <div className="space-y-3 py-10 text-center text-muted-foreground">
+                    <p>No crew match these filters.</p>
+                    {affordableOnly && (
+                      <Button variant="outline" size="sm" onClick={() => setAffordableOnly(false)}>
+                        Show crew I have to unlock
+                      </Button>
+                    )}
+                  </div>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredCatalog.map((crew) => {
