@@ -61,6 +61,7 @@ export const ModuleTabs = () => {
       {modules.map((mod) => {
         const Icon = mod.icon;
         const isActive = !cityHallActive && mod.id === active.id;
+        const isFeatured = mod.id === "shop";
         return (
           <Fragment key={mod.id}>
             <button
@@ -68,15 +69,25 @@ export const ModuleTabs = () => {
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "relative my-1.5 px-3 flex shrink-0 items-center gap-2 text-[12px] font-medium tracking-tight transition-colors rounded-[7px]",
+                isFeatured && "font-semibold border border-fm-accent/60 text-fm-accent shadow-[0_0_12px_hsl(var(--fm-accent)/0.35)]",
                 isActive
                   ? "text-fm-accent"
-                  : "text-fm-fg-muted hover:text-fm-fg",
+                  : isFeatured
+                    ? "hover:text-fm-accent"
+                    : "text-fm-fg-muted hover:text-fm-fg",
               )}
-              style={isActive ? { background: "hsl(var(--fm-accent) / 0.15)" } : undefined}
+              style={
+                isActive
+                  ? { background: "hsl(var(--fm-accent) / 0.15)" }
+                  : isFeatured
+                    ? { background: "hsl(var(--fm-accent) / 0.10)" }
+                    : undefined
+              }
             >
               <Icon className="h-3.5 w-3.5" aria-hidden />
               <span>{translateFMLabel(language, mod.label)}</span>
             </button>
+
             {mod.id === "world" && renderCityHall()}
           </Fragment>
         );

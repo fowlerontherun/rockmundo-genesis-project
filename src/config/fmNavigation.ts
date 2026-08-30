@@ -77,7 +77,7 @@ export const FM_MODULES: FMModule[] = [
       "/wellness", "/skin-store", "/tattoo-parlour", "/gear", "/gear-shop",
       "/inventory", "/clothing-shop", "/housing", "/personal-vehicles",
       "/family", "/legacy", "/hall-of-immortals", "/skills",
-      "/buy-character-slot", "/slot-purchase-success", "/onboarding",
+      "/onboarding",
       "/prison", "/gear-history",
     ],
     subTabs: [
@@ -503,14 +503,12 @@ export const FM_MODULES: FMModule[] = [
       "/twaater", "/dikcok", "/gettit",
       "/nightclubs", "/nightclub", "/nightclub-management",
       "/casino", "/lottery", "/underworld",
-      "/premium-store", "/blind-boxes", "/vip-subscribe", "/vip-success", "/donation-success",
     ],
     subTabs: [
       { label: "Overview", path: "/social", icon: MessageSquare },
       { label: "Twaater", path: "/twaater", icon: Newspaper },
       { label: "DikCok", path: "/dikcok", icon: Tv },
       { label: "Nightlife", path: "/nightclubs", icon: Sparkles },
-      { label: "Store", path: "/premium-store", icon: Crown },
     ],
     sidebar: [
       {
@@ -542,20 +540,11 @@ export const FM_MODULES: FMModule[] = [
           { label: "Underworld", path: "/underworld", icon: Skull },
         ],
       },
-      {
-        label: "Premium",
-        items: [
-          { label: "Premium Store", path: "/premium-store", icon: Crown },
-          { label: "Blind Boxes", path: "/blind-boxes", icon: Package },
-          { label: "VIP", path: "/vip-subscribe", icon: Star },
-        ],
-      },
     ],
     quickActions: [
       { label: "Post on Twaater", path: "/twaater", icon: Newspaper, description: "Share with fans" },
       { label: "Hit a Nightclub", path: "/nightclubs", icon: Sparkles },
       { label: "Open Messages", path: "/social/messages", icon: MessageSquare },
-      { label: "Browse Premium Store", path: "/premium-store", icon: Crown },
     ],
   },
   // 9. SCHEDULE — daily planning and activity booking
@@ -590,7 +579,54 @@ export const FM_MODULES: FMModule[] = [
       { label: "Current Activity", path: "/schedule/current", icon: Sparkles },
     ],
   },
-  // 10. ADMIN — gated
+  // 10. SHOP — real-money store, VIP and project support
+  {
+    id: "shop",
+    label: "Shop",
+    icon: ShoppingBag,
+    rootPath: "/shop",
+    matchPaths: [
+      "/shop", "/premium-store", "/blind-boxes", "/vip-subscribe", "/vip-success",
+      "/donation-success", "/buy-character-slot", "/slot-purchase-success",
+    ],
+    subTabs: [
+      { label: "Shop", path: "/shop", icon: ShoppingBag },
+      { label: "VIP", path: "/vip-subscribe", icon: Crown },
+      { label: "Characters", path: "/buy-character-slot", icon: Users },
+      { label: "Skins", path: "/skin-store", icon: Sparkles },
+      { label: "Blind Boxes", path: "/blind-boxes", icon: Package },
+    ],
+    sidebar: [
+      {
+        label: "Store",
+        items: [
+          { label: "Shop Home", path: "/shop", icon: ShoppingBag },
+          { label: "VIP Membership", path: "/vip-subscribe", icon: Crown },
+          { label: "Character Slots", path: "/buy-character-slot", icon: Users },
+        ],
+      },
+      {
+        label: "Cosmetics",
+        items: [
+          { label: "Skin Store", path: "/skin-store", icon: Sparkles },
+          { label: "Blind Boxes", path: "/blind-boxes", icon: Package },
+          { label: "Cosmetics & Boosts", path: "/premium-store", icon: Star },
+        ],
+      },
+      {
+        label: "Support",
+        items: [
+          { label: "Donate to Rockmundo", path: "/shop", icon: HandHeart },
+        ],
+      },
+    ],
+    quickActions: [
+      { label: "Get VIP", path: "/vip-subscribe", icon: Crown, description: "Unlock premium systems" },
+      { label: "Buy Character Slot", path: "/buy-character-slot", icon: Users },
+      { label: "Donate", path: "/shop", icon: HandHeart, description: "Support development" },
+    ],
+  },
+  // 11. ADMIN — gated
   {
     id: "admin",
     label: "Admin",
