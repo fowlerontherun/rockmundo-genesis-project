@@ -202,7 +202,6 @@ export default function Shop() {
             <li><span className="font-medium text-foreground">4. Switch any time.</span> Each character keeps its own band, money, skills, schedule and history — nothing is shared.</li>
           </ol>
           <div className="flex flex-wrap items-center gap-2">
-            <CurrencySelector className="w-full md:w-auto" />
             <Button onClick={() => navigate("/buy-character-slot")} className="gap-2">
               <UserPlus className="h-4 w-4" /> Buy a character slot
             </Button>
