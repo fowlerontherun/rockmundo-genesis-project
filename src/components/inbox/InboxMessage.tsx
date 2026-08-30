@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { InboxMessage as InboxMessageType, InboxCategory } from "@/hooks/useInbox";
 import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
+import { useGigAbsenceDecision } from "@/hooks/useGigAbsenceDecision";
+
 
 interface InboxMessageProps {
   message: InboxMessageType;
@@ -44,6 +46,8 @@ const categoryConfig: Record<InboxCategory, { icon: typeof Dice5; colorClass: st
 export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: InboxMessageProps) {
   const navigate = useNavigate();
   const { respondToInvitation } = useCollaborationInvites();
+  const resolveAbsence = useGigAbsenceDecision();
+
   const config = categoryConfig[message.category];
   const Icon = config.icon;
 
@@ -66,6 +70,11 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
       ? (message.action_data.collaborationId as string)
       : null;
 
+  const absenceGigId =
+    message.action_type === "gig_absence_decision" && typeof message.action_data?.gigId === "string"
+      ? (message.action_data.gigId as string)
+      : null;
+
   const handleInviteResponse = (accept: boolean) => {
     if (!collaborationId) return;
     respondToInvitation.mutate(
@@ -78,6 +87,20 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
       },
     );
   };
+
+  const handleAbsenceDecision = (decision: "perform" | "cancel") => {
+    if (!absenceGigId) return;
+    resolveAbsence.mutate(
+      { gigId: absenceGigId, decision },
+      {
+        onSuccess: () => {
+          onMarkAsRead(message.id);
+          onArchive(message.id);
+        },
+      },
+    );
+  };
+
 
   const timeAgo = formatDistanceToNow(new Date(message.created_at), { addSuffix: true });
 
@@ -146,6 +169,35 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
                   View Details
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
+              )}
+
+              {absenceGigId && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAbsenceDecision("perform");
+                    }}
+                    disabled={resolveAbsence.isPending}
+                  >
+                    Perform without them
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAbsenceDecision("cancel");
+                    }}
+                    disabled={resolveAbsence.isPending}
+                  >
+                    Pull the gig
+                  </Button>
+                </>
               )}
 
               {message.action_type === "collaboration_invite" && collaborationId && (

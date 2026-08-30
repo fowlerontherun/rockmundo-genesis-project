@@ -28911,6 +28911,12 @@ export type Database = {
       }
       gigs: {
         Row: {
+          absence_alert_sent_at: string | null
+          absence_decided_by_profile_id: string | null
+          absence_decision: string | null
+          absence_decision_at: string | null
+          absence_quality_penalty: number
+          absent_member_count: number
           attendance: number | null
           band_id: string
           booking_fee: number | null
@@ -28969,6 +28975,12 @@ export type Database = {
           venue_id: string
         }
         Insert: {
+          absence_alert_sent_at?: string | null
+          absence_decided_by_profile_id?: string | null
+          absence_decision?: string | null
+          absence_decision_at?: string | null
+          absence_quality_penalty?: number
+          absent_member_count?: number
           attendance?: number | null
           band_id: string
           booking_fee?: number | null
@@ -29027,6 +29039,12 @@ export type Database = {
           venue_id: string
         }
         Update: {
+          absence_alert_sent_at?: string | null
+          absence_decided_by_profile_id?: string | null
+          absence_decision?: string | null
+          absence_decision_at?: string | null
+          absence_quality_penalty?: number
+          absent_member_count?: number
           attendance?: number | null
           band_id?: string
           booking_fee?: number | null
@@ -62092,6 +62110,7 @@ export type Database = {
         Returns: Json
       }
       notify_blind_box_live: { Args: never; Returns: number }
+      notify_gig_absent_members: { Args: never; Returns: Json }
       offer_company_vacancy_to_player: {
         Args: {
           p_message?: string
@@ -62885,6 +62904,10 @@ export type Database = {
       }
       resolve_festival_stage_legacy_domain: {
         Args: { p_stage_id: string }
+        Returns: Json
+      }
+      resolve_gig_absence: {
+        Args: { p_decision: string; p_gig_id: string }
         Returns: Json
       }
       resolve_gig_lineup_correction: {
