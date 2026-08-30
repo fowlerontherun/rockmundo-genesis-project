@@ -382,6 +382,7 @@ const CareerBusinessHub = lazyWithRetry(() => import("./pages/hubs/CareerBusines
 const BusinessOverview = lazyWithRetry(() => import("./pages/BusinessOverview"));
 const CareerOverviewPage = lazyWithRetry(() => import("./pages/CareerOverview"));
 const PremiumStoreHub = lazyWithRetry(() => import("./pages/hubs/PremiumStoreHub"));
+const Shop = lazyWithRetry(() => import("./pages/Shop"));
 const BlindBoxStore = lazyWithRetry(() => import("./pages/BlindBoxStore"));
 const BlindBoxAnalytics = lazyWithRetry(() => import("./pages/BlindBoxAnalytics"));
 const StreamingRevenueDashboard = lazyWithRetry(() => import("./pages/StreamingRevenueDashboard"));
@@ -549,6 +550,7 @@ function App() {
                     <Route path="offers-dashboard" element={<OffersDashboard />} />
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
+                    <Route path="shop" element={<Shop />} />
                     <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="blind-boxes" element={<BlindBoxStore />} />
                     <Route path="blind-boxes/analytics" element={<BlindBoxAnalytics />} />
