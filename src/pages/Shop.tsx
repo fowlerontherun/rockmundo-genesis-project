@@ -52,6 +52,8 @@ export default function Shop() {
   const { data: vipStatus } = useVipStatus();
   const { slots } = useCharacterSlots();
   const [donating, setDonating] = useState(false);
+  const [customAmount, setCustomAmount] = useState("");
+
   const { currency } = useCheckoutCurrency();
   const donationPrice = formatProductPrice("donation", currency);
   const cheapestMonthly = formatMinor(
