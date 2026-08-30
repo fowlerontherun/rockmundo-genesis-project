@@ -8,12 +8,15 @@ import {
   MAYOR_OFFICE_MODULE_LABEL,
   MAYOR_OFFICE_TABS,
 } from "@/config/mayorOfficeNavigation";
+import { useTranslation } from "@/hooks/useTranslation";
+import { translateFMLabel, translateFMText } from "@/i18n/fm";
 import { cn } from "@/lib/utils";
 import { FMQuickActions } from "./FMQuickActions";
 
 export const SubTabs = () => {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
+  const { language } = useTranslation();
   const mod = findModuleForPath(pathname);
   const mayorOffice = isMayorOfficePath(pathname);
   const mayorCityId = getMayorOfficeCityId(pathname);
@@ -34,9 +37,13 @@ export const SubTabs = () => {
       }));
 
   const label = mayorOffice ? MAYOR_OFFICE_MODULE_LABEL : mod.label;
+  const translatedLabel = translateFMLabel(language, label);
 
   return (
-    <nav className="h-10 flex items-stretch bg-fm-panel border-b border-fm-border pl-2 pr-2 gap-1" aria-label={`${label} sections`}>
+    <nav
+      className="h-10 flex items-stretch bg-fm-panel border-b border-fm-border pl-2 pr-2 gap-1"
+      aria-label={translateFMText(language, "sections", { module: translatedLabel })}
+    >
       <div className="flex items-center overflow-x-auto fm-scrollbar-thin min-w-0 flex-1 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -54,7 +61,7 @@ export const SubTabs = () => {
               style={tab.active ? { background: "hsl(var(--fm-accent) / 0.15)" } : undefined}
             >
               {Icon && <Icon className="h-3 w-3" />}
-              {tab.label}
+              {translateFMLabel(language, tab.label)}
             </button>
           );
         })}
