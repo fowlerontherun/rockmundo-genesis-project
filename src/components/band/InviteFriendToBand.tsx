@@ -27,12 +27,45 @@ interface Friend {
   };
 }
 
-const INSTRUMENTS = ['Guitar', 'Bass', 'Drums', 'Keyboard', 'Other'];
+const BAND_ROLE_SKILL_SLUGS = [
+  'guitar',
+  'bass',
+  'drums',
+  'basic_keyboard',
+  'basic_percussions',
+  'basic_strings',
+  'basic_brass',
+  'basic_woodwinds',
+  'basic_electronic_instruments',
+  'basic_dj_controller',
+  'basic_singing',
+  'basic_rapping',
+] as const;
+
+const FALLBACK_INSTRUMENT_ROLES = [
+  'Guitar',
+  'Bass',
+  'Drums',
+  'Keyboard',
+  'Percussions',
+  'Strings',
+  'Brass',
+  'Woodwinds',
+  'Electronic Instruments',
+  'DJ Controller Skills',
+  'Singing',
+  'Rapping',
+];
+
 const VOCAL_ROLES = ['Lead Vocals', 'Backing Vocals', 'None'];
+
+const roleLabelFromSkill = (displayName: string) =>
+  displayName.replace(/^Basic\s+/i, '').trim();
 
 export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFriendToBandProps) {
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [instrumentRoles, setInstrumentRoles] = useState<string[]>(FALLBACK_INSTRUMENT_ROLES);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState('');
@@ -51,6 +84,27 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
 
     window.addEventListener('rockmundo:hub-action', handleHubAction);
     return () => window.removeEventListener('rockmundo:hub-action', handleHubAction);
+  }, []);
+
+  const loadInstrumentRoles = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('skill_definitions')
+      .select('slug, display_name')
+      .in('slug', [...BAND_ROLE_SKILL_SLUGS]);
+
+    if (error) {
+      console.error('Error loading band role skills:', error);
+      setInstrumentRoles(FALLBACK_INSTRUMENT_ROLES);
+      return;
+    }
+
+    const bySlug = new Map((data ?? []).map((skill) => [skill.slug, skill.display_name]));
+    const roles = BAND_ROLE_SKILL_SLUGS
+      .map((slug) => bySlug.get(slug))
+      .filter((name): name is string => Boolean(name))
+      .map(roleLabelFromSkill);
+
+    setInstrumentRoles(roles.length > 0 ? roles : FALLBACK_INSTRUMENT_ROLES);
   }, []);
 
   const loadFriends = useCallback(async (profileId: string) => {
@@ -153,12 +207,15 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
           return;
         }
 
-        await loadFriends(currentUserId);
+        await Promise.all([
+          loadFriends(currentUserId),
+          loadInstrumentRoles(),
+        ]);
       } catch (error) {
-        console.error('Error preparing friends:', error);
+        console.error('Error preparing band invitation:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load friends list',
+          description: 'Failed to prepare the band invitation form',
           variant: 'destructive',
         });
       } finally {
@@ -167,7 +224,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
     };
 
     void prepareFriends();
-  }, [open, currentUserId, loadFriends, toast]);
+  }, [open, currentUserId, loadFriends, loadInstrumentRoles, toast]);
 
   const handleInvite = async () => {
     if (!selectedFriend) {
@@ -230,7 +287,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
           <DialogHeader>
             <DialogTitle>Invite Friend to {bandName}</DialogTitle>
             <DialogDescription>
-              Choose a friend from your list and assign them a role in the band.
+              Choose a friend and assign a primary performance role from RockMundo's live skill catalogue.
             </DialogDescription>
           </DialogHeader>
 
@@ -262,23 +319,26 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="instrument">Instrument Role</Label>
+                  <Label htmlFor="instrument">Primary Performance Role</Label>
                   <Select value={instrumentRole} onValueChange={setInstrumentRole}>
                     <SelectTrigger id="instrument">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      {INSTRUMENTS.map((instrument) => (
+                    <SelectContent className="bg-popover z-50 max-h-72">
+                      {instrumentRoles.map((instrument) => (
                         <SelectItem key={instrument} value={instrument}>
                           {instrument}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Roles are sourced from the same instrument and performance skills used by the game.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="vocals">Vocal Role (Optional)</Label>
+                  <Label htmlFor="vocals">Vocal Assignment (Optional)</Label>
                   <Select value={vocalRole} onValueChange={setVocalRole}>
                     <SelectTrigger id="vocals">
                       <SelectValue placeholder="Select vocal role" />
