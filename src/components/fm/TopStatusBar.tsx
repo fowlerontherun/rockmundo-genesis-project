@@ -160,6 +160,27 @@ export const TopStatusBar = () => {
         <span className="text-fm-fg font-medium tabular-nums">{dateStr}</span>
       </div>
 
+      {currentCity?.name && (
+        <>
+          <div className="hidden sm:block h-6 w-px bg-fm-border" />
+          <button
+            onClick={() => navigate("/world/current-city")}
+            className="flex min-w-0 items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-fm-panel-2"
+            title={`${currentCity.name}${currentCity.country ? `, ${currentCity.country}` : ""}`}
+            aria-label={`Current city: ${currentCity.name}`}
+          >
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-fm-accent" aria-hidden="true" />
+            <span className="max-w-[110px] truncate text-[12px] font-medium text-fm-fg">
+              {currentCity.name}
+            </span>
+            {currentCity.country && (
+              <span className="hidden lg:inline text-[11px] text-fm-fg-muted">{currentCity.country}</span>
+            )}
+          </button>
+        </>
+      )}
+
+
       <div className="flex-1" />
 
       <div className="hidden xl:flex items-center gap-1.5" role="group" aria-label={characterStatus}>
