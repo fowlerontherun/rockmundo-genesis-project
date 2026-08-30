@@ -62,16 +62,33 @@ serve(async (req) => {
     }
     logStep("Customer lookup", { customerId: customerId || "new customer" });
 
-    // Determine requested currency (usd | gbp | eur)
+    // Determine requested currency (usd | gbp | eur) and optional custom amount
     let requestedCurrency: string | undefined;
+    let requestedAmount: unknown;
     try {
       const body = await req.json();
       requestedCurrency = body?.currency;
+      requestedAmount = body?.amount;
     } catch {
       requestedCurrency = undefined;
     }
     const currency = parseCurrency(requestedCurrency);
-    logStep("Currency resolved", { currency });
+
+    // Custom donation amount, in minor units (e.g. 500 = £5.00). Optional.
+    const MIN_AMOUNT = 100; // 1.00
+    const MAX_AMOUNT = 2_000_00; // 2,000.00
+    let customAmount: number | null = null;
+    if (requestedAmount !== undefined && requestedAmount !== null && requestedAmount !== "") {
+      const parsed = typeof requestedAmount === "number" ? requestedAmount : Number(requestedAmount);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        throw new Error("Donation amount must be a whole number of minor currency units");
+      }
+      if (parsed < MIN_AMOUNT || parsed > MAX_AMOUNT) {
+        throw new Error(`Donation amount must be between ${MIN_AMOUNT / 100} and ${MAX_AMOUNT / 100}`);
+      }
+      customAmount = parsed;
+    }
+    logStep("Currency resolved", { currency, customAmount });
 
     // Create a one-time payment session for the donation
     const origin = req.headers.get("origin") || "https://rockmundo-genesis-project.lovable.app";
@@ -79,10 +96,19 @@ serve(async (req) => {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
-        {
-          price: "price_1SshoXGWxwyLFaDWwxWG7Tt8", // $10 Project Donation price
-          quantity: 1,
-        },
+        customAmount
+          ? {
+              price_data: {
+                currency,
+                product: "prod_TqObBDfwRNQqrC", // Project Donation product
+                unit_amount: customAmount,
+              },
+              quantity: 1,
+            }
+          : {
+              price: "price_1SshoXGWxwyLFaDWwxWG7Tt8", // preset Project Donation price
+              quantity: 1,
+            },
       ],
       mode: "payment",
       currency,
@@ -93,8 +119,10 @@ serve(async (req) => {
         purchase_type: "donation",
         donation_type: "project_support",
         currency,
+        amount: customAmount ? String(customAmount) : "preset",
       },
     });
+
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
 
