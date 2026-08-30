@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.720",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "Enacting city laws, registering as an election candidate and voting no longer fail with 'more than one row returned by a subquery' for accounts with multiple characters" },
+      { type: "fix", description: "Sponsorship records now match any of your characters instead of assuming one character per account" },
+    ],
+  },
+  {
     version: "1.1.719",
     date: "2026-08-30",
     changes: [
