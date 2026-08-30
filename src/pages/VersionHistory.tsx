@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.714",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "Recording studios no longer show another character's recorded songs or sessions: band lookups now stay locked to the character you are playing." },
+      { type: "improvement", description: "Older band membership records are only used when they don't already belong to a character, preventing cross-character band leakage." },
+    ],
+  },
+  {
     version: "1.1.713",
     date: "2026-08-30",
     changes: [

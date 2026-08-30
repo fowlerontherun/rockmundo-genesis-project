@@ -48,8 +48,19 @@ export async function resolveActiveBandMembership(
     requests.push(
       supabase.from("band_members").select(columns).eq("profile_id", profileId),
     );
-  }
-  if (userId) {
+    // Legacy rows predate character isolation: only accept them when they are
+    // not yet claimed by any character, otherwise another character's band
+    // would leak into this character's view.
+    if (userId) {
+      requests.push(
+        supabase
+          .from("band_members")
+          .select(columns)
+          .eq("user_id", userId)
+          .is("profile_id", null),
+      );
+    }
+  } else if (userId) {
     requests.push(
       supabase.from("band_members").select(columns).eq("user_id", userId),
     );
