@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Search, X } from "lucide-react";
+import { useTranslation } from "@/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 
 /**
@@ -39,7 +40,7 @@ interface FMFilterBarProps<V extends string> {
 export function FMFilterBar<V extends string = string>({
   search,
   onSearchChange,
-  searchPlaceholder = "Search…",
+  searchPlaceholder,
   pills,
   activePill,
   onPillChange,
@@ -47,7 +48,9 @@ export function FMFilterBar<V extends string = string>({
   label,
   className,
 }: FMFilterBarProps<V>) {
+  const { t } = useTranslation();
   const hasSearch = typeof search === "string" && !!onSearchChange;
+  const resolvedSearchPlaceholder = searchPlaceholder ?? `${t('common.search', 'Search')}…`;
 
   return (
     <div
@@ -69,7 +72,7 @@ export function FMFilterBar<V extends string = string>({
             type="text"
             value={search}
             onChange={(e) => onSearchChange!(e.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
             className={cn(
               "h-8 w-full pl-8 pr-7 bg-fm-panel-2 border border-fm-border rounded-[7px]",
               "text-[12px] text-fm-fg placeholder:text-fm-fg-muted",
@@ -81,7 +84,7 @@ export function FMFilterBar<V extends string = string>({
               type="button"
               onClick={() => onSearchChange!("")}
               className="absolute right-2 text-fm-fg-muted hover:text-fm-fg"
-              aria-label="Clear search"
+              aria-label={`${t('common.clear', 'Clear')} ${t('common.search', 'search')}`}
             >
               <X className="h-3 w-3" />
             </button>
