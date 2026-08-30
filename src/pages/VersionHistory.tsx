@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.727",
+    date: "2026-08-30",
+    changes: [
+      { type: "fix", description: "Today's Briefing on the dashboard now loads again (it was failing on a missing chart column), and a single failing section no longer blanks the whole briefing" },
+    ],
+  },
+  {
     version: "1.1.726",
     date: "2026-08-30",
     changes: [

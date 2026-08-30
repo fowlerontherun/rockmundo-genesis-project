@@ -92,7 +92,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         bandIds.length > 0
           ? (supabase as any)
               .from("chart_entries")
-              .select("id, rank, previous_rank, trend, trend_change, chart_date, country, song_id, songs(title, band_id, user_id)")
+              .select("id, rank, trend, trend_change, chart_date, country, song_id, songs(title, band_id, user_id)")
               .eq("chart_date", today)
               .order("rank", { ascending: true })
               .limit(20)
@@ -100,9 +100,10 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         fetchWorldNews(6).catch(() => []),
       ]);
 
-      const results = [activitiesResult, inboxResult, notificationsResult, releasesResult, activityLogResult, chartResult];
-      const failed = results.find((result: any) => result.error);
-      if (failed?.error) throw failed.error;
+      // Individual section failures shouldn't blank the whole briefing.
+      [activitiesResult, inboxResult, notificationsResult, releasesResult, activityLogResult, chartResult]
+        .filter((result: any) => result?.error)
+        .forEach((result: any) => console.warn("[TodaysBriefing] section failed:", result.error));
 
       return {
         activities: activitiesResult.data ?? [],
@@ -154,7 +155,7 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
 
     data?.chartEntries?.slice(0, 2).forEach((entry: any) => {
       const song = Array.isArray(entry.songs) ? entry.songs[0] : entry.songs;
-      const movement = entry.previous_rank ? entry.previous_rank - entry.rank : 0;
+      const movement = Number(entry.trend_change ?? 0);
       next.push({
         id: `chart-${entry.id}`,
         title: `${song?.title ?? "Your track"} is charting`,
