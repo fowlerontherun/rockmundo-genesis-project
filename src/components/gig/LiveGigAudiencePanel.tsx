@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,13 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Users, Radio, ShieldCheck, Sparkles } from "lucide-react";
 import { AUDIENCE_REACTION_TYPES, aggregateAudienceResponse, checkAudienceReactionRateLimit, type AudienceAggregate, type AudienceReactionType, type ParticipationLevel } from "@/utils/gigAudience";
+import { ActiveGigPerformanceDialog } from "./ActiveGigPerformanceDialog";
 
 interface LiveGigAudiencePanelProps { gigId: string; liveSessionId?: string | null; currentSegmentId?: string | null; isAudienceView?: boolean; }
 interface AttendanceRow { id: string; attendance_type: string; status: string; participation_score: number; watch_duration_seconds: number; reward_status: string; last_presence_at: string | null; }
 interface AggregateRow { participation_level: string; participation_score: number; reaction_counts: Record<string, number>; unique_participants: number; encore_demand: number; singalong_strength: number; audience_modifier: number; }
 interface AggregateView { participationLevel: ParticipationLevel | string; participationScore: number; uniqueParticipants: number; encoreDemand: number; audienceModifier: number; }
+interface ActivePerformanceState { eligible: boolean; score: number | null; multiplier: number; bandName: string | null; }
 
 const reactionLabels: Record<AudienceReactionType, string> = { cheer: "Cheer", clap: "Clap", sing_along: "Sing along", hands_up: "Hands up", dance: "Dance", phone_wave: "Phone wave", chant: "Chant", encore_request: "Encore!", support_performer: "Support", highlight: "Highlight" };
 
@@ -23,12 +26,15 @@ const toAggregateView = (value: AggregateRow | AudienceAggregate): AggregateView
 };
 
 export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, isAudienceView = false }: LiveGigAudiencePanelProps) {
+  const { profileId } = useActiveProfile();
   const [attendance, setAttendance] = useState<AttendanceRow | null>(null);
   const [aggregate, setAggregate] = useState<AggregateRow | null>(null);
   const [friendCount, setFriendCount] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState<Date | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [performanceOpen, setPerformanceOpen] = useState(false);
+  const [activePerformance, setActivePerformance] = useState<ActivePerformanceState>({ eligible: false, score: null, multiplier: 0, bandName: null });
 
   const loadAudienceState = useCallback(async () => {
     const attendanceQuery = (supabase.from("gig_audience_attendance" as never) as any).select("id, attendance_type, status, participation_score, watch_duration_seconds, reward_status, last_presence_at").eq("gig_id", gigId).maybeSingle();
@@ -59,7 +65,44 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
         .in("status", ["checked_in", "watching", "completed"]);
       setFriendCount(count ?? 0);
     }
-  }, [gigId, liveSessionId]);
+
+    if (profileId) {
+      const { data: gigData } = await supabase
+        .from("gigs")
+        .select("band_id, status, started_at, result_ready_at, bands!gigs_band_id_fkey(name)")
+        .eq("id", gigId)
+        .maybeSingle();
+
+      if (gigData?.band_id) {
+        const [{ data: membership }, { data: result }] = await Promise.all([
+          supabase
+            .from("band_members")
+            .select("id")
+            .eq("band_id", gigData.band_id)
+            .eq("profile_id", profileId)
+            .eq("member_status", "active")
+            .limit(1)
+            .maybeSingle(),
+          (supabase as any)
+            .from("active_gig_performance_sessions")
+            .select("score, rating_multiplier")
+            .eq("gig_id", gigId)
+            .eq("profile_id", profileId)
+            .maybeSingle(),
+        ]);
+
+        const terminal = ["completed", "cancelled", "failed"].includes(String(gigData.status || ""));
+        setActivePerformance({
+          eligible: Boolean(membership && gigData.started_at && !gigData.result_ready_at && !terminal && !result),
+          score: result?.score ?? null,
+          multiplier: Number(result?.rating_multiplier || 0),
+          bandName: (gigData as any).bands?.name ?? null,
+        });
+      } else {
+        setActivePerformance({ eligible: false, score: null, multiplier: 0, bandName: null });
+      }
+    }
+  }, [gigId, liveSessionId, profileId]);
 
   useEffect(() => { loadAudienceState(); }, [loadAudienceState]);
 
@@ -93,47 +136,83 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
   };
 
   return (
-    <Card className={isAudienceView ? "border-primary/40 bg-primary/5" : ""}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Radio className="h-5 w-5" /> Audience participation</CardTitle>
-        <CardDescription>Server-authoritative social viewing with capped, aggregate-only influence.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div><p className="text-2xl font-bold capitalize">{derivedAggregate.participationLevel}</p><p className="text-xs text-muted-foreground">Participation</p></div>
-          <div><p className="text-2xl font-bold">{derivedAggregate.uniqueParticipants}</p><p className="text-xs text-muted-foreground">Active fans</p></div>
-          <div><p className="text-2xl font-bold">{derivedAggregate.encoreDemand}%</p><p className="text-xs text-muted-foreground">Encore demand</p></div>
-          <div><p className="text-2xl font-bold">+{Number(derivedAggregate.audienceModifier || 0).toFixed(1)}</p><p className="text-xs text-muted-foreground">Capped atmosphere</p></div>
-        </div>
-        <Progress value={derivedAggregate.participationScore} className="h-2" />
-
-        {attendance ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3">
-            <Badge variant="secondary">{attendance.attendance_type.replace("_", " ")}</Badge>
-            <Badge>{attendance.status}</Badge>
-            <span className="text-sm text-muted-foreground">Your participation score: {attendance.participation_score}/100</span>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button disabled={isCheckingIn} onClick={() => checkIn("ticket_holder")}><Users className="mr-2 h-4 w-4" /> Check in</Button>
-            <Button disabled={isCheckingIn} variant="outline" onClick={() => checkIn("remote_viewer")}><ShieldCheck className="mr-2 h-4 w-4" /> View only</Button>
-          </div>
-        )}
-
-        {attendance && !["remote_viewer", "admin_viewer"].includes(attendance.attendance_type) && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between"><p className="text-sm font-medium">Quick reactions</p>{cooldownSeconds > 0 && <Badge variant="outline">Cooldown {cooldownSeconds}s</Badge>}</div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {AUDIENCE_REACTION_TYPES.map((type) => <Button key={type} size="sm" variant={type === "encore_request" ? "default" : "outline"} disabled={cooldownSeconds > 0} onClick={() => react(type)}>{reactionLabels[type]}</Button>)}
+    <>
+      <Card className={isAudienceView ? "border-primary/40 bg-primary/5" : ""}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Radio className="h-5 w-5" /> Audience participation</CardTitle>
+          <CardDescription>Server-authoritative social viewing with capped, aggregate-only influence.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(activePerformance.eligible || activePerformance.score !== null) && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Active Performance</p>
+                  {activePerformance.score !== null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Your stage-presence score: {activePerformance.score}. Personal multiplier: {(activePerformance.multiplier * 100).toFixed(1)}%. Only the band's best result counts.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Complete the five-cue crowd-pattern challenge while the show is live. Every active member can play once; only the best result affects the gig.
+                    </p>
+                  )}
+                </div>
+                {activePerformance.eligible && (
+                  <Button size="sm" onClick={() => setPerformanceOpen(true)} className="shrink-0">
+                    Play Active Performance
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-          <Sparkles className="mr-2 inline h-4 w-4" /> Friend presence is aggregate-only here; privacy, blocking and private gig visibility are enforced by server policies.
-        </div>
-        {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
-      </CardContent>
-    </Card>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div><p className="text-2xl font-bold capitalize">{derivedAggregate.participationLevel}</p><p className="text-xs text-muted-foreground">Participation</p></div>
+            <div><p className="text-2xl font-bold">{derivedAggregate.uniqueParticipants}</p><p className="text-xs text-muted-foreground">Active fans</p></div>
+            <div><p className="text-2xl font-bold">{derivedAggregate.encoreDemand}%</p><p className="text-xs text-muted-foreground">Encore demand</p></div>
+            <div><p className="text-2xl font-bold">+{Number(derivedAggregate.audienceModifier || 0).toFixed(1)}</p><p className="text-xs text-muted-foreground">Capped atmosphere</p></div>
+          </div>
+          <Progress value={derivedAggregate.participationScore} className="h-2" />
+
+          {attendance ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border p-3">
+              <Badge variant="secondary">{attendance.attendance_type.replace("_", " ")}</Badge>
+              <Badge>{attendance.status}</Badge>
+              <span className="text-sm text-muted-foreground">Your participation score: {attendance.participation_score}/100</span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button disabled={isCheckingIn} onClick={() => checkIn("ticket_holder")}><Users className="mr-2 h-4 w-4" /> Check in</Button>
+              <Button disabled={isCheckingIn} variant="outline" onClick={() => checkIn("remote_viewer")}><ShieldCheck className="mr-2 h-4 w-4" /> View only</Button>
+            </div>
+          )}
+
+          {attendance && !["remote_viewer", "admin_viewer"].includes(attendance.attendance_type) && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between"><p className="text-sm font-medium">Quick reactions</p>{cooldownSeconds > 0 && <Badge variant="outline">Cooldown {cooldownSeconds}s</Badge>}</div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {AUDIENCE_REACTION_TYPES.map((type) => <Button key={type} size="sm" variant={type === "encore_request" ? "default" : "outline"} disabled={cooldownSeconds > 0} onClick={() => react(type)}>{reactionLabels[type]}</Button>)}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+            <Sparkles className="mr-2 inline h-4 w-4" /> Friend presence is aggregate-only here; privacy, blocking and private gig visibility are enforced by server policies.
+          </div>
+          {message && <Alert><AlertDescription>{message}</AlertDescription></Alert>}
+        </CardContent>
+      </Card>
+
+      {performanceOpen && (
+        <ActiveGigPerformanceDialog
+          open
+          onOpenChange={setPerformanceOpen}
+          gigId={gigId}
+          bandName={activePerformance.bandName || undefined}
+          onSaved={() => void loadAudienceState()}
+        />
+      )}
+    </>
   );
 }
