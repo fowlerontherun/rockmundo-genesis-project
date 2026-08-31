@@ -1,4 +1,4 @@
-import { Users, ChevronDown, Plus, Crown } from "lucide-react";
+import { Users, ChevronDown, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,11 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
+import { useGameData } from "@/hooks/useGameData";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 
 export function CharacterSwitcher() {
   const { slots, characters, switchCharacter } = useCharacterSlots();
+  const { refetch: refetchGameData } = useGameData();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -29,9 +31,9 @@ export function CharacterSwitcher() {
     if (profileId === activeChar?.id) return;
     try {
       await switchCharacter.mutateAsync(profileId);
-      toast({ title: "Character switched", description: "Reloading..." });
-      // Force full reload to reset all game state
-      window.location.reload();
+      await refetchGameData();
+      toast({ title: "Character switched", description: "Game state updated." });
+      navigate("/home", { replace: true });
     } catch {
       toast({ title: "Error", description: "Failed to switch character", variant: "destructive" });
     }
