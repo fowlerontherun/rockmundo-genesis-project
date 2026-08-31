@@ -61,7 +61,9 @@ test('direct unauthenticated access is denied when admin test bypass is disabled
   const page = await context.newPage();
   await page.goto(`${baseURL}/admin/gig-viewer-demo?no-test-admin=1`);
   await expect(page).toHaveURL(/\/auth$/);
-  await expect(page.getByRole('heading', { name: /sign in|welcome/i })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Sign In' })).toBeVisible();
+  await expect(page.getByLabel('Email')).toBeVisible();
+  await expect(page.getByLabel('Password')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Admin Gig Viewer Demo' })).toHaveCount(0);
   await context.close();
 });
