@@ -4,6 +4,7 @@ import type { Database } from "@/lib/supabase-types";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const REFERRAL_STORAGE_KEY = "rockmundo_referral_code";
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error(
@@ -21,3 +22,37 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   },
 });
+
+// Referral links use /auth?ref=CODE. Persist the code before email verification redirects
+// and bind it only after Supabase has established an authenticated session.
+if (typeof window !== "undefined") {
+  const referralParam = new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase();
+  if (referralParam && /^RM[A-Z0-9]{6,18}$/.test(referralParam)) {
+    localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
+  }
+
+  let bindingReferral = false;
+  supabase.auth.onAuthStateChange((_event, session) => {
+    const pendingCode = localStorage.getItem(REFERRAL_STORAGE_KEY);
+    if (!session?.user || !pendingCode || bindingReferral) return;
+
+    bindingReferral = true;
+    // Avoid awaiting Supabase work directly inside the auth callback.
+    setTimeout(async () => {
+      try {
+        const { error } = await (supabase as any).rpc("bind_referral_code", { p_code: pendingCode });
+        if (!error) {
+          localStorage.removeItem(REFERRAL_STORAGE_KEY);
+        } else if (/already_bound/i.test(error.message ?? "")) {
+          localStorage.removeItem(REFERRAL_STORAGE_KEY);
+        } else {
+          console.warn("[REFERRAL] Unable to bind pending referral code", error.message);
+        }
+      } catch (error) {
+        console.warn("[REFERRAL] Unable to bind pending referral code", error);
+      } finally {
+        bindingReferral = false;
+      }
+    }, 0);
+  });
+}
