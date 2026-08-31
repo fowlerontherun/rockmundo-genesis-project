@@ -68,7 +68,7 @@ const readState = async (state: string) => {
 const redirect = (siteUrl: string, status: string) =>
   new Response(null, {
     status: 302,
-    headers: { Location: `${siteUrl.replace(/\/$/, "")}/social/rewards?discord=${encodeURIComponent(status)}` },
+    headers: { Location: `${siteUrl.replace(/\/$/, "")}/social?tab=rewards&discord=${encodeURIComponent(status)}` },
   });
 
 serve(async (req) => {
@@ -80,7 +80,7 @@ serve(async (req) => {
   const discordClientId = Deno.env.get("DISCORD_CLIENT_ID");
   const discordClientSecret = Deno.env.get("DISCORD_CLIENT_SECRET");
   const discordGuildId = Deno.env.get("DISCORD_GUILD_ID");
-  const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || "https://rockmundo-genesis-project.lovable.app";
+  const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || "https://rockmundo.uk";
   const redirectUri = Deno.env.get("DISCORD_REDIRECT_URI") || `${supabaseUrl}/functions/v1/discord-community-auth`;
 
   if (!discordClientId || !discordClientSecret || !discordGuildId) {
