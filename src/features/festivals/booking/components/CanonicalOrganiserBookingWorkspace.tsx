@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FestivalArtistScheduleFinaliser } from "../../scheduling/components/FestivalArtistScheduleFinaliser";
 import { useFestivalBookingRealtime } from "../b7CollaborationVoting";
 import { useFestivalOffers, useOrganiserFestivalApplications } from "../hooks";
 import { OrganiserApplicationQueue } from "./OrganiserApplicationQueue";
@@ -18,7 +19,7 @@ export function CanonicalOrganiserBookingWorkspace({
   const appData = applications.data ?? [];
   return (
     <Tabs defaultValue="new">
-      <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-9">
+      <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-10">
         <TabsTrigger value="new">New</TabsTrigger>
         <TabsTrigger value="review">Under Review</TabsTrigger>
         <TabsTrigger value="shortlisted">Shortlisted</TabsTrigger>
@@ -27,6 +28,7 @@ export function CanonicalOrganiserBookingWorkspace({
         <TabsTrigger value="offers">Offers</TabsTrigger>
         <TabsTrigger value="signatures">Awaiting Signatures</TabsTrigger>
         <TabsTrigger value="active">Active Bookings</TabsTrigger>
+        <TabsTrigger value="lineup">Lineup</TabsTrigger>
         <TabsTrigger value="setlists">Setlists</TabsTrigger>
       </TabsList>
       <TabsContent value="new">
@@ -79,6 +81,13 @@ export function CanonicalOrganiserBookingWorkspace({
       </TabsContent>
       <TabsContent value="active">
         <OrganiserContractQueue />
+      </TabsContent>
+      <TabsContent value="lineup">
+        {editionId ? (
+          <FestivalArtistScheduleFinaliser editionId={editionId} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Select a festival edition to manage the lineup.</p>
+        )}
       </TabsContent>
       <TabsContent value="setlists">
         <OrganiserSetlistQueue editionId={editionId} />
