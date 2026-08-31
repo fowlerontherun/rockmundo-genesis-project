@@ -80,7 +80,12 @@ export const CompactSkillRow = ({
   const hasProgress = level > 0 || xp > 0;
 
   const trainMutation = useMutation({
-    mutationFn: (amount: number) => spendSkillXp({ skillSlug: skill.slug, amount }),
+    mutationFn: (amount: number) => spendSkillXp({
+      skillSlug: skill.slug,
+      amount,
+      uniqueEventId: crypto.randomUUID(),
+      metadata: { source: "compact_skill_tree" },
+    }),
     onSuccess: (_data, amount) => {
       toast.success(`${skill.display_name} trained (+${amount} SXP)`);
       queryClient.invalidateQueries({ queryKey: ["gameData"] });
