@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,8 +20,6 @@ import {
 } from 'lucide-react';
 import {
   type GameState,
-  type XpRewardResult,
-  calculateXpReward,
   INSTRUMENT_LABELS,
   DAILY_PRACTICE_XP_CAP,
 } from '@/lib/minigames/stagePracticeTypes';
@@ -35,6 +33,31 @@ interface StagePracticeResultsProps {
   onPlayAgain: () => void;
   onExit: () => void;
 }
+
+type PracticeReward = {
+  sessions_today: number;
+  xp_today: number;
+  base_xp: number;
+  level_bonus: number;
+  accuracy_bonus: number;
+  combo_bonus: number;
+  total_xp: number;
+  actual_xp_awarded: number;
+  accuracy: number;
+  level_reached: number;
+  diminishing: boolean;
+  daily_cap_hit: boolean;
+};
+
+type RpcError = { message?: string };
+type RpcClient = {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: RpcError | null }>;
+};
+
+const rpcClient = supabase as unknown as RpcClient;
 
 function formatDuration(elapsedMs: number) {
   const totalSeconds = Math.max(0, Math.round(elapsedMs / 1000));
@@ -72,127 +95,46 @@ export function StagePracticeResults({
   gameState,
   songTitle,
   instrumentSlug,
-  skillLevel,
   songId,
   onPlayAgain,
   onExit,
 }: StagePracticeResultsProps) {
   const { profileId } = useActiveProfile();
-  const [xpResult, setXpResult] = useState<XpRewardResult | null>(null);
-  const [saved, setSaved] = useState(false);
-
+  const [reward, setReward] = useState<PracticeReward | null>(null);
+  const submittedRef = useRef(false);
   const coachingTips = useMemo(() => getCoaching(gameState), [gameState]);
-
-  const { data: todayData } = useQuery({
-    queryKey: ['practice-today', profileId],
-    queryFn: async () => {
-      if (!profileId) return { sessions: 0, xp: 0 };
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { data, error } = await supabase
-        .from('stage_practice_sessions')
-        .select('xp_earned')
-        .eq('profile_id', profileId)
-        .gte('played_at', today.toISOString());
-
-      if (error) throw error;
-      return {
-        sessions: data?.length || 0,
-        xp: data?.reduce((sum, session) => sum + (session.xp_earned || 0), 0) || 0,
-      };
-    },
-    enabled: !!profileId,
-  });
-
-  useEffect(() => {
-    if (!todayData || xpResult) return;
-
-    setXpResult(
-      calculateXpReward(
-        gameState.level,
-        gameState.accuracy,
-        gameState.longestCombo,
-        todayData.sessions,
-        todayData.xp,
-      ),
-    );
-  }, [todayData, gameState, xpResult]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!profileId || !xpResult || saved) return;
-
-      const { error: sessionError } = await supabase.from('stage_practice_sessions').insert({
-        user_id: profileId,
-        profile_id: profileId,
-        instrument_slug: instrumentSlug,
-        song_id: songId.startsWith('default-') ? null : songId,
-        song_title: songTitle,
-        level_reached: gameState.level,
-        score: gameState.score,
-        accuracy_pct: gameState.accuracy,
-        longest_combo: gameState.longestCombo,
-        notes_hit: gameState.notesHit,
-        notes_missed: gameState.notesMissed,
-        xp_earned: xpResult.actualXpAwarded,
-        difficulty:
-          skillLevel <= 3
-            ? 'beginner'
-            : skillLevel <= 8
-              ? 'intermediate'
-              : skillLevel <= 14
-                ? 'advanced'
-                : 'master',
+      if (!profileId) throw new Error('No active character selected.');
+      const { data, error } = await rpcClient.rpc('submit_active_practice_session', {
+        p_profile_id: profileId,
+        p_instrument_slug: instrumentSlug,
+        p_song_id: songId.startsWith('default-') ? null : songId,
+        p_song_title: songTitle,
+        p_level_reached: gameState.level,
+        p_score: gameState.score,
+        p_longest_combo: gameState.longestCombo,
+        p_notes_hit: gameState.notesHit,
+        p_notes_missed: gameState.notesMissed,
       });
-
-      if (sessionError) throw sessionError;
-
-      if (xpResult.actualXpAwarded > 0) {
-        const { data: existingSkill, error: skillFetchError } = await supabase
-          .from('skill_progress')
-          .select('id, current_xp, required_xp, current_level')
-          .eq('profile_id', profileId)
-          .eq('skill_slug', instrumentSlug)
-          .maybeSingle();
-
-        if (skillFetchError) throw skillFetchError;
-
-        if (existingSkill) {
-          let newXp = (existingSkill.current_xp || 0) + xpResult.actualXpAwarded;
-          let requiredXp = existingSkill.required_xp || 100;
-          let newLevel = existingSkill.current_level || 0;
-
-          // Handle rewards large enough to cross more than one level boundary.
-          while (newXp >= requiredXp) {
-            newXp -= requiredXp;
-            newLevel += 1;
-            requiredXp = Math.round(requiredXp * 1.15);
-          }
-
-          const { error: skillUpdateError } = await supabase
-            .from('skill_progress')
-            .update({
-              current_xp: newXp,
-              current_level: newLevel,
-              required_xp: requiredXp,
-              last_practiced_at: new Date().toISOString(),
-            })
-            .eq('id', existingSkill.id);
-
-          if (skillUpdateError) throw skillUpdateError;
-        }
-      }
-
-      setSaved(true);
+      if (error) throw new Error(error.message || 'Could not save Active Practice');
+      const result = data as PracticeReward;
+      setReward(result);
+      return result;
     },
   });
 
   useEffect(() => {
-    if (xpResult && !saved && !saveMutation.isPending && !saveMutation.isError) {
-      saveMutation.mutate();
-    }
-  }, [xpResult, saved, saveMutation]);
+    if (!profileId || submittedRef.current) return;
+    submittedRef.current = true;
+    saveMutation.mutate();
+  }, [profileId, saveMutation]);
+
+  const retrySave = () => {
+    submittedRef.current = true;
+    saveMutation.mutate();
+  };
 
   const grade = useMemo(() => {
     if (gameState.accuracy >= 95 && gameState.longestCombo >= 20) return { grade: 'S', color: 'text-yellow-400' };
@@ -220,40 +162,14 @@ export function StagePracticeResults({
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="pb-3 pt-4 text-center">
-            <TrendingUp className="mx-auto mb-1 h-5 w-5 text-primary" />
-            <p className="text-2xl font-bold">{gameState.level}</p>
-            <p className="text-xs text-muted-foreground">Level Reached</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pb-3 pt-4 text-center">
-            <Target className="mx-auto mb-1 h-5 w-5 text-green-500" />
-            <p className="text-2xl font-bold">{gameState.accuracy}%</p>
-            <p className="text-xs text-muted-foreground">Accuracy</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pb-3 pt-4 text-center">
-            <Zap className="mx-auto mb-1 h-5 w-5 text-orange-500" />
-            <p className="text-2xl font-bold">{gameState.longestCombo}</p>
-            <p className="text-xs text-muted-foreground">Longest Combo</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pb-3 pt-4 text-center">
-            <Trophy className="mx-auto mb-1 h-5 w-5 text-yellow-500" />
-            <p className="text-2xl font-bold">{gameState.score.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Total Score</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="pb-3 pt-4 text-center"><TrendingUp className="mx-auto mb-1 h-5 w-5 text-primary" /><p className="text-2xl font-bold">{reward?.level_reached ?? gameState.level}</p><p className="text-xs text-muted-foreground">Level Reached</p></CardContent></Card>
+        <Card><CardContent className="pb-3 pt-4 text-center"><Target className="mx-auto mb-1 h-5 w-5 text-green-500" /><p className="text-2xl font-bold">{reward?.accuracy ?? gameState.accuracy}%</p><p className="text-xs text-muted-foreground">Accuracy</p></CardContent></Card>
+        <Card><CardContent className="pb-3 pt-4 text-center"><Zap className="mx-auto mb-1 h-5 w-5 text-orange-500" /><p className="text-2xl font-bold">{gameState.longestCombo}</p><p className="text-xs text-muted-foreground">Longest Combo</p></CardContent></Card>
+        <Card><CardContent className="pb-3 pt-4 text-center"><Trophy className="mx-auto mb-1 h-5 w-5 text-yellow-500" /><p className="text-2xl font-bold">{gameState.score.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total Score</p></CardContent></Card>
       </div>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Hit Breakdown</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Hit Breakdown</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           <div className="flex justify-between text-sm"><span className="text-yellow-400">Perfect</span><span className="font-medium">{gameState.perfectHits}</span></div>
           <div className="flex justify-between text-sm"><span className="text-green-400">Good</span><span className="font-medium">{gameState.goodHits}</span></div>
@@ -262,46 +178,23 @@ export function StagePracticeResults({
       </Card>
 
       <Card className="border-primary/20">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Lightbulb className="h-4 w-4 text-yellow-500" />
-            Session Coaching
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {coachingTips.map((tip) => (
-            <p key={tip} className="text-sm text-muted-foreground">• {tip}</p>
-          ))}
-        </CardContent>
+        <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Lightbulb className="h-4 w-4 text-yellow-500" />Session Coaching</CardTitle></CardHeader>
+        <CardContent className="space-y-2">{coachingTips.map((tip) => <p key={tip} className="text-sm text-muted-foreground">• {tip}</p>)}</CardContent>
       </Card>
 
-      {xpResult && (
+      {reward && (
         <Card className="border-primary/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Star className="h-4 w-4 text-yellow-500" />
-              XP Reward
-            </CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Star className="h-4 w-4 text-yellow-500" />XP Reward</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            <div className="flex justify-between text-xs text-muted-foreground"><span>Base XP</span><span>+{xpResult.baseXp}</span></div>
-            <div className="flex justify-between text-xs text-muted-foreground"><span>Level Bonus (Lvl {gameState.level} × 12)</span><span>+{xpResult.levelBonus}</span></div>
-            <div className="flex justify-between text-xs text-muted-foreground"><span>Accuracy Bonus ({gameState.accuracy}% × 0.6)</span><span>+{xpResult.accuracyBonus}</span></div>
-            <div className="flex justify-between text-xs text-muted-foreground"><span>Combo Bonus ({gameState.longestCombo} × 0.5)</span><span>+{xpResult.comboBonus}</span></div>
+            <div className="flex justify-between text-xs text-muted-foreground"><span>Base XP</span><span>+{reward.base_xp}</span></div>
+            <div className="flex justify-between text-xs text-muted-foreground"><span>Level Bonus</span><span>+{reward.level_bonus}</span></div>
+            <div className="flex justify-between text-xs text-muted-foreground"><span>Accuracy Bonus</span><span>+{reward.accuracy_bonus}</span></div>
+            <div className="flex justify-between text-xs text-muted-foreground"><span>Combo Bonus</span><span>+{reward.combo_bonus}</span></div>
             <Separator />
-            <div className="flex justify-between font-bold"><span>XP Earned</span><span className="text-primary">+{xpResult.actualXpAwarded} XP</span></div>
-            {xpResult.diminishingApplied && (
-              <div className="flex items-center gap-1 text-xs text-orange-400">
-                <AlertTriangle className="h-3 w-3" />
-                Diminishing returns applied after repeated sessions today.
-              </div>
-            )}
-            {xpResult.dailyCapHit && (
-              <div className="flex items-center gap-1 text-xs text-orange-400">
-                <AlertTriangle className="h-3 w-3" />
-                Daily practice XP cap reached ({DAILY_PRACTICE_XP_CAP} XP/day).
-              </div>
-            )}
+            <div className="flex justify-between font-bold"><span>XP Earned</span><span className="text-primary">+{reward.actual_xp_awarded} XP</span></div>
+            <p className="text-xs text-muted-foreground">Today: {reward.sessions_today} session{reward.sessions_today === 1 ? '' : 's'} · {reward.xp_today}/{DAILY_PRACTICE_XP_CAP} XP</p>
+            {reward.diminishing && <div className="flex items-center gap-1 text-xs text-orange-400"><AlertTriangle className="h-3 w-3" />Diminishing returns applied after repeated sessions today.</div>}
+            {reward.daily_cap_hit && <div className="flex items-center gap-1 text-xs text-orange-400"><AlertTriangle className="h-3 w-3" />Daily practice XP cap reached ({DAILY_PRACTICE_XP_CAP} XP/day).</div>}
           </CardContent>
         </Card>
       )}
@@ -310,23 +203,14 @@ export function StagePracticeResults({
         <Card className="border-destructive/40 bg-destructive/5">
           <CardContent className="flex items-start gap-2 py-3 text-sm text-destructive">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="space-y-2">
-              <p>Your practice result could not be saved, so no XP has been applied yet.</p>
-              <Button size="sm" variant="outline" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-                Retry save
-              </Button>
-            </div>
+            <div className="space-y-2"><p>Your practice result could not be saved, so no XP has been applied yet.</p><Button size="sm" variant="outline" onClick={retrySave} disabled={saveMutation.isPending}>Retry save</Button></div>
           </CardContent>
         </Card>
       )}
 
       <div className="flex gap-3">
-        <Button variant="outline" className="flex-1" onClick={onExit}>
-          <Home className="mr-2 h-4 w-4" /> Exit
-        </Button>
-        <Button className="flex-1" onClick={onPlayAgain}>
-          <RotateCcw className="mr-2 h-4 w-4" /> Practice Again
-        </Button>
+        <Button variant="outline" className="flex-1" onClick={onExit}><Home className="mr-2 h-4 w-4" /> Exit</Button>
+        <Button className="flex-1" onClick={onPlayAgain} disabled={saveMutation.isPending}><RotateCcw className="mr-2 h-4 w-4" /> Practice Again</Button>
       </div>
     </div>
   );
