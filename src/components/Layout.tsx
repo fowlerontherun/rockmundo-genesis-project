@@ -63,47 +63,21 @@ const Layout = () => {
   const festivalSupportRoute = isFestivalModeSupportPath(location.pathname);
   const wasFestivalModeRef = useRef(false);
 
-  // Global auto-start for gigs - runs regardless of which page user is on
   useAutoGigStart();
-
-  // Global auto-complete for rehearsals - get pending report for UI display
   const { pendingReport, clearPendingReport } = useAutoRehearsalCompletion(user?.id || null);
-
-  // Global gig execution - processes active gigs
   useGlobalGigExecution(user?.id || null);
-
-  // Track total hours played
   usePlaytimeTracker(profileId || null);
-
-  // Global auto-complete for release manufacturing
   useAutoManufacturingCompletion(user?.id || null);
-
-  // Global auto-complete for recording sessions so finished studio bookings become recorded songs
   useAutoRecordingCompletion(user?.id || null, profileId || null);
-
-  // Auto-complete major events when game date passes event date
   useAutoMajorEventCompletion(user?.id || null);
-
-  // Auto-rejoin nearest tour leg if the player missed a pickup
   useAutoRejoinTour();
-
-  // Global game event notifications (gig results, offers, completions, etc.)
   useGameEventNotifications();
-
-  // Reminders for gigs in the next 24h
   useGigDayReminders();
-
-  // Reminders when close to unlocking the next reach tier (local/regional/national)
   useReachMilestoneReminders();
-
-  // Global game calendar for seasonal effects
   const { data: calendar } = useGameCalendar();
   void profile;
   void calendar;
 
-  // Dev-only guest bypass: in `vite dev` we skip the /auth redirect and the
-  // unauthenticated null-render so pages can be inspected without logging in.
-  // Production builds keep the original behavior.
   const devGuestBypass = import.meta.env.DEV;
   const gigViewerDemoTestAccess = hasGigViewerDemoTestAccess(location);
 
@@ -113,10 +87,6 @@ const Layout = () => {
     }
   }, [user, authLoading, navigate, devGuestBypass, gigViewerDemoTestAccess]);
 
-  // Capture the route that Festival Mode interrupted once per authoritative
-  // attending session. Support routes never replace that return target. When
-  // the server moves the attendee to left/completed/cancelled/refunded, restore
-  // the captured route and clear the session marker.
   useEffect(() => {
     if (!profileId || festivalAttendanceLoading || festivalAttendanceError) return;
 
@@ -132,9 +102,6 @@ const Layout = () => {
       return;
     }
 
-    // A successful non-attending refresh is authoritative proof that any old
-    // session marker is stale, even if this component remounted after the
-    // Festival session had already ended.
     if (!wasFestivalModeRef.current) {
       clearFestivalModeReturnPath(window.sessionStorage, profileId);
       return;
@@ -176,9 +143,6 @@ const Layout = () => {
     return null;
   }
 
-  // Festival Mode is driven solely by authoritative attendee state. It sits
-  // above both desktop and mobile shells so navigation/back/refresh cannot
-  // escape the reduced experience while the active character is attending.
   if (activeFestivalAttendance) {
     return (
       <FestivalModeShell
@@ -191,8 +155,6 @@ const Layout = () => {
     );
   }
 
-  // If a refresh/reconnect cannot yet re-confirm attendance but this tab was
-  // already in Festival Mode, fail closed instead of exposing normal gameplay.
   if (
     festivalAttendanceError &&
     profileId &&
@@ -211,12 +173,15 @@ const Layout = () => {
     );
   }
 
-  if (isMobile) {
+  // The gig-viewer test fixture deliberately renders the desktop viewer at
+  // narrow viewport widths to certify its own responsive controls. Keep that
+  // one build-time-gated route out of the product mobile shell so the test is
+  // measuring the viewer, not mobile route bridging.
+  if (isMobile && !gigViewerDemoTestAccess) {
     const path = location.pathname;
     const routeMeta = getMobileRouteMeta(path);
     const bridgeTarget = getMobileBridgeTarget(path);
 
-    // Forward mobile users from desktop paths to the dedicated mobile screen.
     if (bridgeTarget && bridgeTarget !== path) {
       return <Navigate to={`${bridgeTarget}${location.search}`} replace />;
     }
@@ -246,7 +211,7 @@ const Layout = () => {
   }
 
   return (
-    <ConditionalDesktopGate bypass={isMobile}>
+    <ConditionalDesktopGate bypass={isMobile || gigViewerDemoTestAccess}>
       <FMShell>
         {profileError && (
           <Alert variant="destructive" className="mb-4 max-w-2xl">
@@ -263,7 +228,6 @@ const Layout = () => {
           </CharacterGate>
         </NoActiveCharacterGate>
         <TutorialTooltip />
-
         <EventNotificationModal />
         <InterviewModal />
         {pendingReport && (
