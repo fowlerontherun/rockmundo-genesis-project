@@ -1,14 +1,16 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle } from "lucide-react";
+import { Music, Calendar, Star, Clock, Disc3, Volume2, Flame, Search, Filter, ArrowUpDown, AlertTriangle, Sparkles } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { SongShareButtons } from "@/components/audio/SongShareButtons";
+import { ActiveRecordingDialog } from "@/components/recording/ActiveRecordingDialog";
 
 interface RecordedSongsTabProps {
   userId: string;
@@ -24,12 +26,16 @@ const recordedSongSelect = `
 ` as string;
 
 export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTabProps) {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [genreFilter, setGenreFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [activeRecording, setActiveRecording] = useState<{ id: string; songTitle: string } | null>(null);
+
+  const queryKey = ["recorded-songs-list", userId, profileId, bandId] as const;
 
   const { data: recordedSongs, isLoading, error } = useQuery({
-    queryKey: ["recorded-songs-list", userId, profileId, bandId],
+    queryKey,
     queryFn: async () => {
       const songResponses = bandId
         ? [await supabase
@@ -76,12 +82,20 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
         if (response.error) throw response.error;
       }
 
-      const songs = Array.from(new Map(songResponses.flatMap(response => response.data || []).map((song: any) => [song.id, song])).values())
-        .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      const songs = Array.from(
+        new Map(
+          songResponses
+            .flatMap((response) => response.data || [])
+            .map((song: any) => [song.id, song]),
+        ).values(),
+      ).sort(
+        (a: any, b: any) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+      );
 
-      // Get recording sessions for these songs
-      const songIds = songs.map((s: any) => s.id) || [];
+      const songIds = songs.map((song: any) => song.id);
       let sessions: any[] = [];
+      let polishedSessionIds = new Set<string>();
 
       if (songIds.length > 0) {
         const { data: sessionData, error: sessionsError } = await supabase
@@ -91,6 +105,7 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
             song_id,
             status,
             quality_improvement,
+            final_master_quality,
             completed_at,
             created_at,
             duration_hours,
@@ -105,53 +120,63 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
 
         if (sessionsError) throw sessionsError;
         sessions = sessionData || [];
+
+        const sessionIds = sessions.map((session: any) => session.id);
+        if (sessionIds.length > 0) {
+          const { data: activeRows, error: activeRowsError } = await (supabase as any)
+            .from("active_recording_sessions")
+            .select("recording_session_id")
+            .in("recording_session_id", sessionIds);
+
+          if (activeRowsError) throw activeRowsError;
+          polishedSessionIds = new Set(
+            (activeRows || []).map((row: any) => row.recording_session_id as string),
+          );
+        }
       }
 
-      // Build result combining songs with their recording history
       return songs.map((song: any) => {
-        const songRecordings = sessions.filter(s => s.song_id === song.id);
-        const totalQualityGained = songRecordings.reduce((sum, r) => sum + (r.quality_improvement || 0), 0);
+        const songRecordings = sessions.filter((session) => session.song_id === song.id);
+        const totalQualityGained = songRecordings.reduce(
+          (sum, recording) => sum + (recording.quality_improvement || 0),
+          0,
+        );
         const latestRecording = songRecordings[0]?.completed_at || song.updated_at;
+        const eligibleActiveRecording = songRecordings.find(
+          (recording) =>
+            (recording.recording_version || "standard") === "standard" &&
+            !polishedSessionIds.has(recording.id),
+        ) || null;
 
         return {
           song,
           recordings: songRecordings,
           totalQualityGained,
-          latestRecording
+          latestRecording,
+          eligibleActiveRecording,
         };
       });
     },
-    enabled: !!userId || !!profileId || !!bandId
+    enabled: !!userId || !!profileId || !!bandId,
   });
 
-  // Extract unique genres for filter dropdown
   const availableGenres = useMemo(() => {
     if (!recordedSongs) return [];
-    const genres = new Set(recordedSongs.map(item => item.song.genre).filter(Boolean));
+    const genres = new Set(recordedSongs.map((item) => item.song.genre).filter(Boolean));
     return Array.from(genres).sort();
   }, [recordedSongs]);
 
-  // Filter and sort songs
   const filteredSongs = useMemo(() => {
     if (!recordedSongs) return [];
 
-    let filtered = [...recordedSongs];
+    const filtered = recordedSongs.filter((item) => {
+      const matchesSearch = !searchQuery.trim() ||
+        item.song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.song.bands?.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesGenre = genreFilter === "all" || item.song.genre === genreFilter;
+      return matchesSearch && matchesGenre;
+    });
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.song.title.toLowerCase().includes(query) ||
-        (item.song.bands?.name || "").toLowerCase().includes(query)
-      );
-    }
-
-    // Genre filter
-    if (genreFilter !== "all") {
-      filtered = filtered.filter(item => item.song.genre === genreFilter);
-    }
-
-    // Sort
     switch (sortBy) {
       case "newest":
         filtered.sort((a, b) => new Date(b.latestRecording).getTime() - new Date(a.latestRecording).getTime());
@@ -189,7 +214,9 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
         <div>
           <p className="font-medium text-destructive">Could not load recorded songs</p>
-          <p className="text-sm text-muted-foreground mt-2">{error instanceof Error ? error.message : "Please try again from the Recording Studio."}</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            {error instanceof Error ? error.message : "Please try again from the Recording Studio."}
+          </p>
         </div>
       </div>
     );
@@ -201,9 +228,7 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
         <Disc3 className="h-12 w-12 text-muted-foreground mx-auto" />
         <div>
           <p className="text-muted-foreground font-medium">No recorded songs yet</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Start a new recording session to record your songs
-          </p>
+          <p className="text-sm text-muted-foreground mt-2">Start a new recording session to record your songs</p>
         </div>
       </div>
     );
@@ -211,14 +236,13 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
 
   return (
     <div className="space-y-4 max-w-full overflow-x-hidden">
-      {/* Filters */}
       <div className="flex flex-col gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by title or artist..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(event) => setSearchQuery(event.target.value)}
             className="pl-9"
           />
         </div>
@@ -230,12 +254,12 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Genres</SelectItem>
-              {availableGenres.map(genre => (
+              {availableGenres.map((genre) => (
                 <SelectItem key={genre} value={genre}>{genre}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
             <SelectTrigger className="w-full">
               <ArrowUpDown className="h-4 w-4 mr-2 shrink-0" />
               <SelectValue placeholder="Sort by" />
@@ -254,14 +278,14 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
       </div>
 
       <div className="text-sm text-muted-foreground">
-        {filteredSongs.length} of {recordedSongs.length} song{recordedSongs.length !== 1 ? 's' : ''} shown
+        {filteredSongs.length} of {recordedSongs.length} song{recordedSongs.length !== 1 ? "s" : ""} shown
       </div>
 
       <div className="grid gap-4 max-w-full">
         {filteredSongs.map((item) => {
-          const hasAudio = item.song.audio_url && item.song.audio_generation_status === 'completed';
-          const artistName = item.song.bands?.artist_name || item.song.bands?.name || 'Unknown Artist';
-          
+          const hasAudio = item.song.audio_url && item.song.audio_generation_status === "completed";
+          const artistName = item.song.bands?.artist_name || item.song.bands?.name || "Unknown Artist";
+
           return (
             <Card key={item.song.id}>
               <CardContent className="p-4">
@@ -273,20 +297,17 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       <Badge variant="secondary" className="text-xs">{item.song.genre}</Badge>
                       {hasAudio && (
                         <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
-                          <Volume2 className="h-3 w-3 mr-1" />
-                          AI Audio
+                          <Volume2 className="h-3 w-3 mr-1" />AI Audio
                         </Badge>
                       )}
                       {(item.song.hype || 0) > 0 && (
                         <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-500 border-orange-500/20">
-                          <Flame className="h-3 w-3 mr-1" />
-                          {item.song.hype} Hype
+                          <Flame className="h-3 w-3 mr-1" />{item.song.hype} Hype
                         </Badge>
                       )}
                       {(item.song.fame || 0) > 0 && (
                         <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-500 border-purple-500/20">
-                          <Star className="h-3 w-3 mr-1" />
-                          {item.song.fame} Fame
+                          <Star className="h-3 w-3 mr-1" />{item.song.fame} Fame
                         </Badge>
                       )}
                     </div>
@@ -298,11 +319,11 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       </div>
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Disc3 className="h-3.5 w-3.5" />
-                        <span>{item.recordings.length} recording{item.recordings.length !== 1 ? 's' : ''}</span>
+                        <span>{item.recordings.length} recording{item.recordings.length !== 1 ? "s" : ""}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Calendar className="h-3.5 w-3.5" />
-                        <span>{format(new Date(item.latestRecording), 'MMM d, yyyy')}</span>
+                        <span>{format(new Date(item.latestRecording), "MMM d, yyyy")}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
@@ -310,16 +331,35 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       </div>
                     </div>
 
-                    {/* Recording versions */}
+                    {item.eligibleActiveRecording && (
+                      <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Active Recording available</p>
+                          <p className="text-xs text-muted-foreground">
+                            Capture five keeper takes for a one-time polish of up to +2 quality.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={() => setActiveRecording({ id: item.eligibleActiveRecording.id, songTitle: item.song.title })}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Active Recording
+                        </Button>
+                      </div>
+                    )}
+
                     {item.recordings.length > 1 && (
                       <div className="mt-3 pt-3 border-t">
                         <p className="text-xs text-muted-foreground mb-2">Recording history:</p>
                         <div className="flex flex-wrap gap-2">
-                          {item.recordings.map((rec: any) => (
-                            <Badge key={rec.id} variant="outline" className="text-xs">
-                              {rec.recording_version || 'Standard'}
-                              {rec.quality_improvement > 0 && (
-                                <span className="ml-1 text-green-600">+{rec.quality_improvement}</span>
+                          {item.recordings.map((recording: any) => (
+                            <Badge key={recording.id} variant="outline" className="text-xs">
+                              {recording.recording_version || "Standard"}
+                              {recording.quality_improvement > 0 && (
+                                <span className="ml-1 text-green-600">+{recording.quality_improvement}</span>
                               )}
                             </Badge>
                           ))}
@@ -327,12 +367,11 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       </div>
                     )}
 
-                    {/* Audio Player & Share for AI-generated songs */}
                     {hasAudio && (
                       <div className="mt-3 pt-3 border-t space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs text-muted-foreground">Listen & Share:</p>
-                          <SongShareButtons 
+                          <SongShareButtons
                             songId={item.song.id}
                             songTitle={item.song.title}
                             artistName={artistName}
@@ -357,9 +396,7 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       <div className="text-xs text-muted-foreground">Quality</div>
                     </div>
                     {item.totalQualityGained > 0 && (
-                      <div className="text-xs text-green-600 lg:mt-1">
-                        +{item.totalQualityGained} total
-                      </div>
+                      <div className="text-xs text-green-600 lg:mt-1">+{item.totalQualityGained} total</div>
                     )}
                   </div>
                 </div>
@@ -368,6 +405,20 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
           );
         })}
       </div>
+
+      {activeRecording && (
+        <ActiveRecordingDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setActiveRecording(null);
+          }}
+          recordingSessionId={activeRecording.id}
+          songTitle={activeRecording.songTitle}
+          onSaved={() => {
+            void queryClient.invalidateQueries({ queryKey });
+          }}
+        />
+      )}
     </div>
   );
 }
