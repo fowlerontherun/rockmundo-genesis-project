@@ -81,7 +81,7 @@ export function CanonicalOrganiserBookingWorkspace({
         <OrganiserContractQueue />
       </TabsContent>
       <TabsContent value="setlists">
-        <OrganiserSetlistQueue />
+        <OrganiserSetlistQueue editionId={editionId} />
       </TabsContent>
     </Tabs>
   );
