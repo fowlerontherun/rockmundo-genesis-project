@@ -146,6 +146,8 @@ export const SimplifiedProjectCard = ({
               variant="secondary"
               size="sm"
               className="w-full"
+              disabled={isLocked}
+              title={isLocked ? "Finish the current songwriting session first" : "Play an optional active songwriting session"}
             >
               <Sparkles className="w-3 h-3 mr-1" />
               Active Writing (Optional)
