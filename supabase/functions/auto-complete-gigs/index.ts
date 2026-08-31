@@ -39,23 +39,46 @@ serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    console.log('[auto-complete-gigs] Checking for gigs to complete...');
+    console.log("[auto-complete-gigs] Checking for gigs to complete...");
 
-    // Find in-progress gigs that should be completed
+    let normalizationSummary = { gigsUpdated: 0, activitiesUpdated: 0 };
+    try {
+      const { data: normalization, error: normalizationError } = await supabaseClient.rpc(
+        "normalize_legacy_gig_schedules"
+      );
+
+      if (normalizationError) throw normalizationError;
+
+      normalizationSummary = {
+        gigsUpdated: Number(normalization?.gigsUpdated ?? 0),
+        activitiesUpdated: Number(normalization?.activitiesUpdated ?? 0),
+      };
+
+      if (normalizationSummary.gigsUpdated > 0 || normalizationSummary.activitiesUpdated > 0) {
+        console.log(
+          `[auto-complete-gigs] Normalized ${normalizationSummary.gigsUpdated} gig schedules and ${normalizationSummary.activitiesUpdated} linked activities`
+        );
+      }
+    } catch (normalizationError) {
+      // Do not block healthy gigs if schedule repair has an isolated failure.
+      console.error("[auto-complete-gigs] Legacy schedule normalization failed:", normalizationError);
+    }
+
+    // Include rows with a missing started_at so legacy/stuck in-progress gigs can self-repair.
     const { data: inProgressGigs, error: gigsError } = await supabaseClient
-      .from('gigs')
+      .from("gigs")
       .select(`
         id,
         started_at,
+        scheduled_date,
         setlist_id,
         current_song_position,
         setlists!inner(id)
       `)
-      .eq('status', 'in_progress')
-      .not('started_at', 'is', null);
+      .eq("status", "in_progress");
 
     if (gigsError) {
-      console.error('[auto-complete-gigs] Error fetching gigs:', gigsError);
+      console.error("[auto-complete-gigs] Error fetching gigs:", gigsError);
       throw gigsError;
     }
 
@@ -63,15 +86,52 @@ serve(async (req) => {
 
     let completedCount = 0;
     let processedCount = 0;
+    let repairedStartCount = 0;
 
     for (const gig of inProgressGigs || []) {
       try {
+        const effectiveStartValue = gig.started_at ?? gig.scheduled_date;
+        if (!effectiveStartValue) {
+          console.log(`[auto-complete-gigs] Skipping gig ${gig.id}: no start timestamp`);
+          continue;
+        }
+
+        const effectiveStartedAt = new Date(effectiveStartValue);
+        const now = new Date();
+
+        if (Number.isNaN(effectiveStartedAt.getTime())) {
+          console.log(`[auto-complete-gigs] Skipping gig ${gig.id}: invalid start timestamp`);
+          continue;
+        }
+
+        // A legacy gig can be marked in_progress before its corrected slot begins. Do not advance it early.
+        if (effectiveStartedAt.getTime() > now.getTime()) {
+          console.log(`[auto-complete-gigs] Skipping gig ${gig.id}: corrected start is still in the future`);
+          continue;
+        }
+
+        if (!gig.started_at) {
+          const { error: repairStartError } = await supabaseClient
+            .from("gigs")
+            .update({ started_at: effectiveStartedAt.toISOString() })
+            .eq("id", gig.id)
+            .eq("status", "in_progress")
+            .is("started_at", null);
+
+          if (repairStartError) {
+            console.error(`[auto-complete-gigs] Failed to repair started_at for ${gig.id}:`, repairStartError);
+          } else {
+            repairedStartCount++;
+            console.log(`[auto-complete-gigs] Repaired missing started_at for ${gig.id}`);
+          }
+        }
+
         // Get setlist songs count and total duration
         const { data: setlistSongs, error: songsError } = await supabaseClient
-          .from('setlist_songs')
-          .select('id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds),performance_items_catalog(id,name,duration_seconds)')
-          .eq('setlist_id', gig.setlist_id)
-          .order('position');
+          .from("setlist_songs")
+          .select("id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds),performance_items_catalog(id,name,duration_seconds)")
+          .eq("setlist_id", gig.setlist_id)
+          .order("position");
 
         if (songsError || !setlistSongs || setlistSongs.length === 0) {
           console.log(`[auto-complete-gigs] Skipping gig ${gig.id}: no setlist songs`);
@@ -81,62 +141,60 @@ serve(async (req) => {
         const totalSongs = setlistSongs.length;
         const currentPosition = gig.current_song_position || 0;
 
-        // Calculate total duration
         const totalDuration = setlistSongs.reduce((sum, ss) => {
           return sum + (ss.songs?.duration_seconds || ss.performance_items_catalog?.duration_seconds || 180);
         }, 0);
 
-        // Calculate elapsed time since start
-        const startedAt = new Date(gig.started_at);
-        const now = new Date();
-        const elapsedSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+        const elapsedSeconds = Math.floor((now.getTime() - effectiveStartedAt.getTime()) / 1000);
 
-        console.log(`[auto-complete-gigs] Gig ${gig.id}: position ${currentPosition}/${totalSongs}, elapsed ${elapsedSeconds}s, total duration ${totalDuration}s`);
+        console.log(
+          `[auto-complete-gigs] Gig ${gig.id}: position ${currentPosition}/${totalSongs}, elapsed ${elapsedSeconds}s, total duration ${totalDuration}s`
+        );
 
         let dueDuration = 0;
         for (let position = 0; position < totalSongs; position++) {
           const song = setlistSongs[position];
           if (elapsedSeconds >= dueDuration && position >= currentPosition) {
             const { data: outcome } = await supabaseClient
-              .from('gig_outcomes')
-              .select('id')
-              .eq('gig_id', gig.id)
+              .from("gig_outcomes")
+              .select("id")
+              .eq("gig_id", gig.id)
               .single();
+
             if (outcome?.id) {
-              const isPerformanceItem = song.item_type === 'performance_item' || (!song.song_id && !!song.performance_item_id);
-              const { error: processError } = await supabaseClient.functions.invoke('process-gig-song', {
+              const isPerformanceItem =
+                song.item_type === "performance_item" || (!song.song_id && !!song.performance_item_id);
+              const { error: processError } = await supabaseClient.functions.invoke("process-gig-song", {
                 body: {
                   gigId: gig.id,
                   outcomeId: outcome.id,
                   songId: song.song_id,
                   performanceItemId: song.performance_item_id,
-                  itemType: isPerformanceItem ? 'performance_item' : 'song',
+                  itemType: isPerformanceItem ? "performance_item" : "song",
                   position,
-                }
+                },
               });
-              if (processError) console.error(`[auto-complete-gigs] Error processing setlist item ${position}:`, processError);
-              else processedCount++;
+
+              if (processError) {
+                console.error(`[auto-complete-gigs] Error processing setlist item ${position}:`, processError);
+              } else {
+                processedCount++;
+              }
             }
           }
-          dueDuration += (song.songs?.duration_seconds || song.performance_items_catalog?.duration_seconds || 180);
+
+          dueDuration += song.songs?.duration_seconds || song.performance_items_catalog?.duration_seconds || 180;
         }
 
-        // Check if all songs should be processed
         if (elapsedSeconds >= totalDuration) {
           console.log(`[auto-complete-gigs] Gig ${gig.id} duration exceeded, completing...`);
 
-          // Just complete the gig directly - the complete-gig function handles everything
-          console.log(`[auto-complete-gigs] Completing gig ${gig.id} (all songs should be done)`);
-
-          // Complete the gig
-          console.log(`[auto-complete-gigs] Completing gig ${gig.id}`);
-          
-          const { error: completeError } = await supabaseClient.functions.invoke('complete-gig', {
-            body: { gigId: gig.id }
+          const { error: completeError } = await supabaseClient.functions.invoke("complete-gig", {
+            body: { gigId: gig.id },
           });
 
           if (completeError) {
-            console.error(`[auto-complete-gigs] Error completing gig:`, completeError);
+            console.error("[auto-complete-gigs] Error completing gig:", completeError);
           } else {
             completedCount++;
             console.log(`[auto-complete-gigs] ✅ Completed gig ${gig.id}`);
@@ -147,7 +205,9 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[auto-complete-gigs] Processed ${processedCount} songs, completed ${completedCount} gigs`);
+    console.log(
+      `[auto-complete-gigs] Processed ${processedCount} songs, repaired ${repairedStartCount} starts, completed ${completedCount} gigs`
+    );
 
     // ---- Automatic retry workflow for gigs that failed to complete ----
     const retrySummary = {
@@ -161,8 +221,8 @@ serve(async (req) => {
 
     try {
       const { data: candidates, error: candidatesError } = await supabaseClient.rpc(
-        'list_gig_completion_retry_candidates',
-        { p_limit: 25, p_overdue_minutes: 10 },
+        "list_gig_completion_retry_candidates",
+        { p_limit: 25, p_overdue_minutes: 10 }
       );
 
       if (candidatesError) throw candidatesError;
@@ -170,23 +230,23 @@ serve(async (req) => {
       retrySummary.candidates = candidates?.length ?? 0;
 
       for (const candidate of candidates ?? []) {
-        const attemptWindow = Math.floor(Date.now() / 60000); // stable per-minute window
+        const attemptWindow = Math.floor(Date.now() / 60000);
         const idempotencyKey = `gig-completion:${candidate.gig_id}:${candidate.attempt_count + 1}:${attemptWindow}`;
 
         const { data: claim, error: claimError } = await supabaseClient.rpc(
-          'claim_gig_completion_attempt',
-          { p_gig_id: candidate.gig_id, p_idempotency_key: idempotencyKey },
+          "claim_gig_completion_attempt",
+          { p_gig_id: candidate.gig_id, p_idempotency_key: idempotencyKey }
         );
 
         if (claimError) {
-          console.error('[auto-complete-gigs] Retry claim failed:', candidate.gig_id, claimError);
+          console.error("[auto-complete-gigs] Retry claim failed:", candidate.gig_id, claimError);
           retrySummary.skipped++;
           continue;
         }
 
         if (!claim?.claimed) {
           console.log(`[auto-complete-gigs] Retry skipped for ${candidate.gig_id}: ${claim?.reason}`);
-          if (claim?.reason === 'attempts_exhausted') retrySummary.exhausted++;
+          if (claim?.reason === "attempts_exhausted") retrySummary.exhausted++;
           else retrySummary.skipped++;
           continue;
         }
@@ -196,8 +256,8 @@ serve(async (req) => {
         let attemptError: string | null = null;
         try {
           const { data: retryResult, error: retryError } = await supabaseClient.functions.invoke(
-            'complete-gig',
-            { body: { gigId: candidate.gig_id, idempotencyKey } },
+            "complete-gig",
+            { body: { gigId: candidate.gig_id, idempotencyKey } }
           );
           if (retryError) attemptError = getErrorMessage(retryError);
           else if (retryResult?.error) attemptError = String(retryResult.error);
@@ -206,54 +266,59 @@ serve(async (req) => {
         }
 
         const { data: recorded, error: recordError } = await supabaseClient.rpc(
-          'record_gig_completion_attempt',
+          "record_gig_completion_attempt",
           {
             p_attempt_id: claim.attemptId,
             p_success: attemptError === null,
             p_error: attemptError,
-          },
+          }
         );
 
         if (recordError) {
-          console.error('[auto-complete-gigs] Failed to record retry outcome:', recordError);
+          console.error("[auto-complete-gigs] Failed to record retry outcome:", recordError);
         }
 
         if (attemptError === null) {
           retrySummary.recovered++;
-          console.log(`[auto-complete-gigs] ✅ Recovered gig ${candidate.gig_id} on attempt ${claim.attemptNumber}`);
+          console.log(
+            `[auto-complete-gigs] ✅ Recovered gig ${candidate.gig_id} on attempt ${claim.attemptNumber}`
+          );
         } else {
           retrySummary.failed++;
           if (recorded?.exhausted) retrySummary.exhausted++;
           console.error(
             `[auto-complete-gigs] Retry ${claim.attemptNumber} failed for gig ${candidate.gig_id}: ${attemptError}` +
-              (recorded?.retryAt ? ` — next retry ${recorded.retryAt}` : ' — no further retries'),
+              (recorded?.retryAt ? ` — next retry ${recorded.retryAt}` : " — no further retries")
           );
         }
       }
     } catch (retryPassError) {
-      console.error('[auto-complete-gigs] Retry pass error:', retryPassError);
+      console.error("[auto-complete-gigs] Retry pass error:", retryPassError);
     }
+
+    const resultSummary = {
+      completedGigs: completedCount,
+      totalChecked: inProgressGigs?.length || 0,
+      processedSongs: processedCount,
+      repairedStarts: repairedStartCount,
+      normalization: normalizationSummary,
+      retry: retrySummary,
+    };
 
     await completeJobRun({
       jobName: "auto-complete-gigs",
       runId,
       supabaseClient,
       durationMs: Date.now() - startedAt,
-      processedCount: processedCount,
-      resultSummary: {
-        completedGigs: completedCount,
-        totalChecked: inProgressGigs?.length || 0,
-        retry: retrySummary,
-      },
+      processedCount,
+      itemsAffected: completedCount + repairedStartCount,
+      resultSummary,
     });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        processedSongs: processedCount,
-        completedGigs: completedCount,
-        totalChecked: inProgressGigs?.length || 0,
-        retry: retrySummary,
+      JSON.stringify({
+        success: true,
+        ...resultSummary,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
