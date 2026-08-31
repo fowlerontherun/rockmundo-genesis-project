@@ -6,6 +6,11 @@ const forbiddenMutations = [
 ];
 
 test.beforeEach(async ({ page }) => {
+  // RockMundo's production desktop shell intentionally blocks viewports below
+  // 1440px. This suite tests the admin gig viewer itself, so keep its desktop
+  // journeys above that global shell threshold.
+  await page.setViewportSize({ width: 1440, height: 900 });
+
   const mutations: string[] = [];
   await page.route('**/*', async (route) => {
     const request = route.request();
@@ -52,7 +57,7 @@ test('admin fixture mode loads, changes controls, launches viewer, and stays rea
 });
 
 test('direct unauthenticated access is denied when admin test bypass is disabled', async ({ browser, baseURL }) => {
-  const context = await browser.newContext();
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   await page.goto(`${baseURL}/admin/gig-viewer-demo?no-test-admin=1`);
   await expect(page).toHaveURL(/\/auth$/);
