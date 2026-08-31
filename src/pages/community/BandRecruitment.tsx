@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { BandVacancyCard } from "@/features/band-recruitment/components/BandVacancyCard";
 import {
   applyToVacancy,
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const FALLBACK_ROLES = ["Guitar", "Bass", "Drums", "Keyboard", "Singing", "Rapping"];
@@ -23,10 +25,28 @@ export default function BandRecruitmentDiscovery() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [leaderBandId, setLeaderBandId] = useState<string | null>(null);
 
   useEffect(() => {
     loadBandPerformanceRoles().then((rows) => rows.length && setRoles(rows)).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!profileId) {
+      setLeaderBandId(null);
+      return;
+    }
+
+    supabase
+      .from("band_members")
+      .select("band_id, role")
+      .eq("profile_id", profileId)
+      .eq("role", "leader")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setLeaderBandId(data?.band_id ?? null))
+      .catch(() => setLeaderBandId(null));
+  }, [profileId]);
 
   useEffect(() => {
     setLoading(true);
@@ -54,10 +74,17 @@ export default function BandRecruitmentDiscovery() {
 
   return (
     <main className="container mx-auto max-w-6xl p-4 sm:p-6" aria-labelledby="band-recruitment-title">
-      <div className="mb-6">
-        <p className="text-sm text-muted-foreground">Community / Bands</p>
-        <h1 id="band-recruitment-title" className="text-3xl font-bold">Find a band</h1>
-        <p className="mt-2 text-muted-foreground">Browse roles bands are actively advertising and apply with your currently selected character.</p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Community / Bands</p>
+          <h1 id="band-recruitment-title" className="text-3xl font-bold">Band Recruitment</h1>
+          <p className="mt-2 text-muted-foreground">Browse roles bands are actively advertising and apply with your currently selected character.</p>
+        </div>
+        {leaderBandId && (
+          <Button asChild>
+            <Link to={`/bands/${leaderBandId}/recruitment`}>Advertise a band role</Link>
+          </Button>
+        )}
       </div>
 
       <section className="mb-6 grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-4" aria-label="Vacancy filters">
@@ -79,6 +106,11 @@ export default function BandRecruitmentDiscovery() {
         <div className="rounded-xl border p-8 text-center">
           <h2 className="font-semibold">No matching band roles</h2>
           <p className="text-muted-foreground">Try another instrument or commitment level.</p>
+          {leaderBandId && (
+            <Button asChild className="mt-4">
+              <Link to={`/bands/${leaderBandId}/recruitment`}>Advertise the first role</Link>
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
