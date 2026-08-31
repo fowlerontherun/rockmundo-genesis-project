@@ -19,6 +19,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('audio activation, speed muting, seek cleanup, close and reopen use one active element', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/admin/gig-viewer-demo');
   await page.getByRole('button', { name: 'Launch viewer' }).click();
   await expect(page.getByLabel('Setlist audio controls')).toContainText('idle');
@@ -46,6 +47,13 @@ test('mobile viewports keep controls in the viewport without horizontal overflow
   for (const viewport of [{ width: 360, height: 800 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1280, height: 900 }]) {
     await page.setViewportSize(viewport);
     await page.goto('/admin/gig-viewer-demo');
+
+    // The global desktop-only shell is a product guard, not part of the gig
+    // viewer layout being certified here. Its development preview action lets
+    // this suite exercise the viewer at the intentionally small viewports.
+    const previewAnyway = page.getByRole('button', { name: /Preview anyway/ });
+    if (await previewAnyway.isVisible()) await previewAnyway.click();
+
     await page.getByRole('button', { name: 'Launch viewer' }).click();
     await expect(page.getByLabel('Setlist audio controls')).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
