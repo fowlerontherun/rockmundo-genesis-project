@@ -268,11 +268,12 @@ export const SessionConfigurator = ({
     skillBonus.totalBonusPercent,
   );
 
-  // Apply type multiplier and demo cap
-  const finalQuality = Math.min(
-    Math.round(rawQuality * typeMultiplier),
-    isDemo ? demoCap : rawQuality * 10,
-  );
+  // Apply type multiplier and demo cap. Professional recordings never drop a
+  // song below its written quality; demos are capped by studio quality.
+  const typedQuality = Math.round(rawQuality * typeMultiplier);
+  const finalQuality = isDemo
+    ? Math.min(typedQuality, demoCap, 1000)
+    : Math.min(Math.max(typedQuality, songQualityScore), 1000);
 
   // Cost: professional = 2.5x studio rate, label-owned = free
   const isLabelOwnedStudio = !!(studio as any)?.isLabelOwned;
