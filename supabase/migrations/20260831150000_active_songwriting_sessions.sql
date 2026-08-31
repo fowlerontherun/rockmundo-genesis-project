@@ -72,11 +72,11 @@ begin
     raise exception 'Not authenticated' using errcode = 'P0001';
   end if;
 
-  if p_lyrics_score not between 0 and 100
-    or p_chords_score not between 0 and 100
-    or p_melody_score not between 0 and 100
-    or p_arrangement_score not between 0 and 100 then
-    raise exception 'All puzzle scores must be between 0 and 100.' using errcode = 'P0001';
+  if p_lyrics_score not in (0, 100)
+    or p_chords_score not in (0, 100)
+    or p_melody_score not in (0, 100)
+    or p_arrangement_score not in (0, 100) then
+    raise exception 'Puzzle scores must be either 0 or 100.' using errcode = 'P0001';
   end if;
 
   if not exists (
