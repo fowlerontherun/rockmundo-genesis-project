@@ -42,7 +42,7 @@ export function ActiveGigPerformanceDialog({ open, onOpenChange, gigId, bandName
   const previewAverage = previewScores.length ? Math.round(previewScores.reduce((sum, value) => sum + value, 0) / previewScores.length) : 0;
 
   useEffect(() => {
-    if (!open || !profileId || patterns || loading || startError) return;
+    if (!open || !profileId || patterns || startError) return;
     let cancelled = false;
     setLoading(true);
     void rpcClient.rpc("begin_active_gig_performance", { p_profile_id: profileId, p_gig_id: gigId }).then(({ data, error }) => {
@@ -54,7 +54,7 @@ export function ActiveGigPerformanceDialog({ open, onOpenChange, gigId, bandName
       setRound(0); setResponses([]); setCurrentResponse([]); setShowPattern(true);
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open, profileId, gigId, patterns, loading, startError]);
+  }, [open, profileId, gigId, patterns, startError]);
 
   useEffect(() => {
     if (!open || !patterns || finished || !pattern.length) return;
