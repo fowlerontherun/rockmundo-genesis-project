@@ -1,3 +1,14 @@
+-- This migration creates updated_at triggers before the shared helper was
+-- introduced later in the historical migration chain. Define the canonical
+-- helper here so a clean database rebuild is deterministic.
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ language 'plpgsql' SECURITY DEFINER SET search_path = public;
+
 -- Create enums for gear metadata
 DO $$
 BEGIN
@@ -459,21 +470,22 @@ BEGIN
       INSERT INTO public.personal_loadout_items (loadout_id, gear_item_id, slot_kind, notes)
       VALUES
         (loadout_id, splitter_id, 'pedalboard_split', 'Routes dry guitar to amp and wet blend to vocal rack.'),
-        (loadout_id, amp_head_id, 'amp_head', 'Main stage head driven from pedalboard A path.'),
-        (loadout_id, cab_id, 'speaker_cabinet', 'Backline cab mic’d plus ISO cab for broadcast mix.'),
-        (loadout_id, vocal_rig_id, 'vocal_rig', 'Handles lead vocal sweetening and delay compensation.'),
-        (loadout_id, monitoring_id, 'monitoring', 'Wireless IEMs synced to Helios clock out.')
+        (loadout_id, amp_head_id, 'amp_head', 'Primary guitar amplifier head.'),
+        (loadout_id, cab_id, 'speaker_cabinet', 'Matched cabinet paired with Thunderbolt head.'),
+        (loadout_id, vocal_rig_id, 'vocal_rig', 'Lead vocal processing rack.'),
+        (loadout_id, monitoring_id, 'monitoring', 'Wireless in-ear monitor pack shared across performers.')
       ON CONFLICT (loadout_id, gear_item_id, slot_kind) DO UPDATE
       SET notes = EXCLUDED.notes,
           updated_at = now();
 
       INSERT INTO public.personal_loadout_pedal_slots (loadout_id, slot_number, slot_type, gear_item_id, notes)
       VALUES
-        (loadout_id, 1, 'input', splitter_id, 'Buffer and split before drive section.'),
-        (loadout_id, 2, 'drive', drive_id, 'Primary gain staging with programmable channels.'),
-        (loadout_id, 3, 'modulation', modulation_id, 'Mod chorus fed only to wet split.'),
-        (loadout_id, 4, 'ambient', ambient_id, 'Stereo delays blended to FOH and IEM returns.'),
-        (loadout_id, 5, 'expression', utility_id, 'Expression pedal mapped to vocal doubler mix.')
+        (loadout_id, 1, 'input', splitter_id, 'Initial signal split from guitar/vocal combo rig.'),
+        (loadout_id, 2, 'drive', drive_id, 'Primary overdrive with boost channel.'),
+        (loadout_id, 3, 'modulation', modulation_id, 'Stereo chorus before ambient effects.'),
+        (loadout_id, 4, 'ambient', ambient_id, 'Dual delay feeding wet path.'),
+        (loadout_id, 5, 'expression', utility_id, 'Controls wet blend and vocal throw level.'),
+        (loadout_id, 6, 'output', splitter_id, 'Routes dry path to amp head and wet path to vocal rack.')
       ON CONFLICT (loadout_id, slot_number) DO UPDATE
       SET
         slot_type = EXCLUDED.slot_type,
