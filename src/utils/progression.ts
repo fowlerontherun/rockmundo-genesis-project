@@ -26,12 +26,35 @@ export interface ProgressionResponse {
   success: boolean;
   action: ProgressionAction;
   message?: string;
+  error?: string;
   profile: ProgressionProfileSummary;
   wallet: PlayerXpWallet | null;
   attributes: Record<string, unknown> | null;
   cooldowns: Record<string, number>;
   result?: unknown;
 }
+
+const getFunctionErrorMessage = async (error: unknown, fallback: string): Promise<string> => {
+  const functionError = error as { message?: string; context?: Response } | null;
+  const context = functionError?.context;
+
+  if (context) {
+    try {
+      const body = await context.clone().json() as { error?: unknown; message?: unknown };
+      if (typeof body?.error === "string" && body.error.trim()) return body.error;
+      if (typeof body?.message === "string" && body.message.trim()) return body.message;
+    } catch {
+      try {
+        const text = await context.clone().text();
+        if (text.trim()) return text;
+      } catch {
+        // Fall back to the SDK error message below.
+      }
+    }
+  }
+
+  return functionError?.message || fallback;
+};
 
 export interface AwardActionXpInput {
   amount: number;
@@ -182,12 +205,15 @@ export const spendSkillXp = async ({
   metadata = {},
   uniqueEventId,
 }: SpendSkillXpInput): Promise<ProgressionResponse> => {
+  // The database RPC requires an idempotency key. Generate it centrally so every
+  // skill-spend caller is safe, including older/stale skill-tree components.
+  const eventId = uniqueEventId || crypto.randomUUID();
   const payload = {
     action: "spend_skill_xp" as const,
     skill_slug: skillSlug,
     xp: amount,
-    metadata,
-    event_id: uniqueEventId,
+    metadata: { ...metadata, idempotency_key: eventId },
+    event_id: eventId,
   };
 
   const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
@@ -195,11 +221,11 @@ export const spendSkillXp = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(await getFunctionErrorMessage(error, "Failed to invest XP into skill"));
   }
 
   if (!data?.success) {
-    throw new Error(data?.message ?? "Failed to invest XP into skill");
+    throw new Error(data?.error ?? data?.message ?? "Failed to invest XP into skill");
   }
 
   return data;
