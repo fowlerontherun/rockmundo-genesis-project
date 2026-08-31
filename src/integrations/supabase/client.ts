@@ -39,30 +39,25 @@ if (typeof window !== "undefined") {
     localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
   }
 
-  type SignUpCredentials = Parameters<typeof supabase.auth.signUp>[0];
-  const auth = supabase.auth as typeof supabase.auth & {
-    signUp: (credentials: SignUpCredentials) => ReturnType<typeof supabase.auth.signUp>;
-  };
+  // Keep this wrapper deliberately untyped: Supabase's signUp overload is highly generic and
+  // expanding it here makes the project typecheck pathologically slow. Runtime credentials keep
+  // the same shape; we only merge referral_code into options.data when one is pending.
+  const auth = supabase.auth as any;
   const originalSignUp = auth.signUp.bind(auth);
-
-  auth.signUp = (credentials: SignUpCredentials) => {
+  auth.signUp = (credentials: any) => {
     const pendingCode = getPendingReferralCode();
     if (!pendingCode) return originalSignUp(credentials);
 
-    const withReferral = credentials as SignUpCredentials & {
-      options?: { data?: Record<string, unknown>; [key: string]: unknown };
-    };
-
     return originalSignUp({
-      ...withReferral,
+      ...credentials,
       options: {
-        ...withReferral.options,
+        ...credentials.options,
         data: {
-          ...withReferral.options?.data,
+          ...credentials.options?.data,
           referral_code: pendingCode,
         },
       },
-    } as SignUpCredentials);
+    });
   };
 
   let bindingReferral = false;
