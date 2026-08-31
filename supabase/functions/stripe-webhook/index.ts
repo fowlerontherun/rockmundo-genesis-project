@@ -28,32 +28,32 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    
+
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
+    if (!webhookSecret) throw new Error("STRIPE_WEBHOOK_SECRET is not set");
+    logStep("Stripe configuration verified");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
 
-    let event: Stripe.Event;
+    if (!signature) {
+      return new Response(JSON.stringify({ error: "Missing Stripe signature" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
 
-    // Verify webhook signature if secret is set
-    if (webhookSecret && signature) {
-      try {
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-        logStep("Webhook signature verified");
-      } catch (err) {
-        logStep("Webhook signature verification failed", { error: err });
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        });
-      }
-    } else {
-      // Parse without verification (for testing)
-      event = JSON.parse(body);
-      logStep("Webhook parsed without signature verification");
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      logStep("Webhook signature verified");
+    } catch (err) {
+      logStep("Webhook signature verification failed", { error: err });
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
     logStep("Event type", { type: event.type });
@@ -62,7 +62,7 @@ serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         logStep("Checkout session completed", { sessionId: session.id });
-        
+
         const userId = session.metadata?.user_id;
         if (!userId) {
           logStep("No user_id in metadata");
@@ -70,12 +70,9 @@ serve(async (req) => {
         }
 
         const subscriptionId = session.subscription as string;
-        
-        // Fetch subscription details
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
 
-        // Create or update VIP subscription
         const { error } = await supabaseClient
           .from("vip_subscriptions")
           .upsert({
@@ -97,10 +94,55 @@ serve(async (req) => {
         break;
       }
 
+      case "invoice.paid": {
+        const invoice = event.data.object as Stripe.Invoice;
+        logStep("Invoice paid", { invoiceId: invoice.id, amountPaid: invoice.amount_paid });
+
+        if ((invoice.amount_paid ?? 0) <= 0) {
+          logStep("Ignoring zero-value invoice for referral rewards", { invoiceId: invoice.id });
+          break;
+        }
+
+        const parent = invoice.parent;
+        const subscriptionRef = parent?.type === "subscription_details"
+          ? parent.subscription_details?.subscription
+          : null;
+        const subscriptionId = typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
+
+        if (!subscriptionId) {
+          logStep("Paid invoice is not linked to a subscription", { invoiceId: invoice.id });
+          break;
+        }
+
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const userId = subscription.metadata?.user_id || parent?.subscription_details?.metadata?.user_id;
+        if (!userId) {
+          logStep("No RockMundo user_id on paid subscription", { subscriptionId });
+          break;
+        }
+
+        const paidAt = invoice.status_transitions?.paid_at
+          ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
+          : new Date().toISOString();
+
+        const { data, error } = await supabaseClient.rpc("mark_referral_vip_paid", {
+          p_referred_user_id: userId,
+          p_invoice_id: invoice.id,
+          p_paid_at: paidAt,
+        });
+
+        if (error) {
+          logStep("Failed to mark referral VIP payment", { error, userId, invoiceId: invoice.id });
+        } else {
+          logStep("Referral VIP payment processed", { userId, invoiceId: invoice.id, referralFound: data });
+        }
+        break;
+      }
+
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
         logStep("Subscription updated", { subscriptionId: subscription.id, status: subscription.status });
-        
+
         const userId = subscription.metadata?.user_id;
         if (!userId) {
           logStep("No user_id in subscription metadata");
@@ -108,7 +150,7 @@ serve(async (req) => {
         }
 
         const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-        const status = subscription.status === "active" ? "active" : 
+        const status = subscription.status === "active" ? "active" :
                        subscription.status === "canceled" ? "cancelled" : "expired";
 
         const { error } = await supabaseClient
@@ -149,7 +191,6 @@ serve(async (req) => {
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Payment failed", { invoiceId: invoice.id, customerId: invoice.customer });
-        // Could send notification to user here
         break;
       }
 
