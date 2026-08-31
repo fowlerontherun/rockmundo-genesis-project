@@ -80,6 +80,8 @@ export const HierarchicalSkillNode = ({
     mutationFn: (amount: number) => spendSkillXp({
       skillSlug: skill.slug,
       amount,
+      uniqueEventId: crypto.randomUUID(),
+      metadata: { source: "hierarchical_skill_tree" },
     }),
     onSuccess: (_data, amount) => {
       toast.success(`${skill.display_name} trained (+${amount} SXP)`);
