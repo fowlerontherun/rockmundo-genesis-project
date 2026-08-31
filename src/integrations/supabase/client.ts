@@ -5,6 +5,7 @@ import type { Database } from "@/lib/supabase-types";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const REFERRAL_STORAGE_KEY = "rockmundo_referral_code";
+const REFERRAL_CODE_PATTERN = /^RM[A-Z0-9]{6,18}$/;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error(
@@ -23,17 +24,43 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
 });
 
-// Referral links use /auth?ref=CODE. Persist the code before email verification redirects
-// and bind it only after Supabase has established an authenticated session.
+const getPendingReferralCode = () => {
+  if (typeof window === "undefined") return null;
+  const code = localStorage.getItem(REFERRAL_STORAGE_KEY)?.trim().toUpperCase();
+  return code && REFERRAL_CODE_PATTERN.test(code) ? code : null;
+};
+
+// Referral links use /auth?ref=CODE. Persist the code before email verification redirects.
+// Also attach it to signup metadata so the database trigger can bind the referral immediately,
+// even when the player confirms their email on another browser or device.
 if (typeof window !== "undefined") {
   const referralParam = new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase();
-  if (referralParam && /^RM[A-Z0-9]{6,18}$/.test(referralParam)) {
+  if (referralParam && REFERRAL_CODE_PATTERN.test(referralParam)) {
     localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
   }
 
+  const originalSignUp = supabase.auth.signUp.bind(supabase.auth);
+  supabase.auth.signUp = ((credentials: Parameters<typeof originalSignUp>[0]) => {
+    const pendingCode = getPendingReferralCode();
+    if (!pendingCode) {
+      return originalSignUp(credentials);
+    }
+
+    return originalSignUp({
+      ...credentials,
+      options: {
+        ...credentials.options,
+        data: {
+          ...credentials.options?.data,
+          referral_code: pendingCode,
+        },
+      },
+    });
+  }) as typeof supabase.auth.signUp;
+
   let bindingReferral = false;
   supabase.auth.onAuthStateChange((_event, session) => {
-    const pendingCode = localStorage.getItem(REFERRAL_STORAGE_KEY);
+    const pendingCode = getPendingReferralCode();
     if (!session?.user || !pendingCode || bindingReferral) return;
 
     bindingReferral = true;
