@@ -5,9 +5,6 @@ const CHUNK_ERROR_PATTERNS = [
   "Importing a module script failed"
 ];
 
-const CHUNK_RELOAD_GUARD_KEY = "rockmundo:chunk-reload-attempted-at";
-const CHUNK_RELOAD_GUARD_MS = 10 * 60 * 1000;
-
 const isChunkLoadError = (error: unknown) => {
   if (!error) {
     return false;
@@ -18,23 +15,6 @@ const isChunkLoadError = (error: unknown) => {
 };
 
 const wait = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
-
-const canAttemptRecoveryReload = () => {
-  if (typeof window === "undefined") return false;
-
-  try {
-    const previousAttempt = Number(window.sessionStorage.getItem(CHUNK_RELOAD_GUARD_KEY));
-    if (Number.isFinite(previousAttempt) && Date.now() - previousAttempt < CHUNK_RELOAD_GUARD_MS) {
-      return false;
-    }
-
-    window.sessionStorage.setItem(CHUNK_RELOAD_GUARD_KEY, String(Date.now()));
-    return true;
-  } catch {
-    // If session storage is unavailable, do not risk an uncontrolled reload loop.
-    return false;
-  }
-};
 
 type LazyImport<T extends ComponentType<unknown>> = () => Promise<{ default: T }>;
 
@@ -64,19 +44,14 @@ export const lazyWithRetry = <T extends ComponentType<unknown>>(
 
         if (attempt < retries) {
           await wait(retryDelayMs * attempt);
-          continue;
-        }
-
-        // A stale deployment can legitimately require one refresh, but repeated
-        // chunk failures must surface as an error instead of continually
-        // interrupting the player with full-page reloads.
-        if (canAttemptRecoveryReload()) {
-          window.location.reload();
-          return new Promise<never>(() => undefined);
         }
       }
     }
 
+    // Never hard-reload the whole game to recover a failed route chunk.
+    // A transient CDN/network/cache problem must not destroy the player's
+    // current page state. The nearest error boundary can provide an explicit
+    // retry/recovery action instead.
     throw lastError instanceof Error ? lastError : new Error("Failed to load chunk");
   });
 };
