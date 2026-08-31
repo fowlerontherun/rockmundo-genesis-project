@@ -58645,6 +58645,22 @@ export type Database = {
         }
         Returns: Json
       }
+      book_tour: {
+        Args: {
+          p_band_id: string
+          p_end_date: string
+          p_name: string
+          p_request_id: string
+          p_rider_id?: string
+          p_setlist_id: string
+          p_start_date: string
+          p_stops: Json
+          p_ticket_operator_id?: string
+          p_ticket_price: number
+          p_travel_mode?: string
+        }
+        Returns: Json
+      }
       book_vip_gig_concierge_travel: {
         Args: {
           p_gig_id: string
@@ -59104,6 +59120,10 @@ export type Database = {
       capture_contributions_for_rehearsal: {
         Args: { p_rehearsal_id: string }
         Returns: number
+      }
+      catch_up_to_tour: {
+        Args: { p_profile_id: string; p_request_id?: string; p_tour_id: string }
+        Returns: Json
       }
       charge_band_release_cost: {
         Args: {
@@ -61355,6 +61375,7 @@ export type Database = {
         Args: { profile_a: string; profile_b: string }
         Returns: string
       }
+      get_gig_preparation_setlist: { Args: { p_gig_id: string }; Returns: Json }
       get_media_market_benchmarks: { Args: never; Returns: Json }
       get_moderation_report_queue: {
         Args: { p_limit?: number; p_status?: string }
