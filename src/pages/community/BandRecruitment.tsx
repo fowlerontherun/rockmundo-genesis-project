@@ -11,13 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { supabase } from "@/integrations/supabase/client";
+import { getUserBands } from "@/utils/bandStatus";
 import { toast } from "sonner";
 
 const FALLBACK_ROLES = ["Guitar", "Bass", "Drums", "Keyboard", "Singing", "Rapping"];
 
 export default function BandRecruitmentDiscovery() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const [vacancies, setVacancies] = useState<BandVacancy[]>([]);
   const [roles, setRoles] = useState<string[]>(FALLBACK_ROLES);
   const [instrument, setInstrument] = useState<string>("");
@@ -37,16 +37,23 @@ export default function BandRecruitmentDiscovery() {
       return;
     }
 
-    supabase
-      .from("band_members")
-      .select("band_id, role")
-      .eq("profile_id", profileId)
-      .eq("role", "leader")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setLeaderBandId(data?.band_id ?? null))
+    getUserBands(profileId)
+      .then((memberships) => {
+        const leaderMembership = memberships.find((membership: any) => {
+          const band = membership.bands;
+          if (!band || band.status === "disbanded") return false;
+
+          return (
+            membership.role === "leader" ||
+            band.leader_id === profileId ||
+            (userId && band.leader_id === userId)
+          );
+        });
+
+        setLeaderBandId(leaderMembership?.band_id ?? leaderMembership?.bands?.id ?? null);
+      })
       .catch(() => setLeaderBandId(null));
-  }, [profileId]);
+  }, [profileId, userId]);
 
   useEffect(() => {
     setLoading(true);
