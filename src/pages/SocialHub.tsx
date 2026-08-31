@@ -5,12 +5,13 @@ import { socialHubNavigation } from "@/config/hubNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarPlus, FileSignature, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
+import { CalendarPlus, FileSignature, Gift, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { MessagesTab } from "@/features/social-hub/components/MessagesTab";
 import { InvitesInbox } from "@/features/social-hub/components/InvitesInbox";
 import { SocialContractsPanel } from "@/features/social-hub/components/SocialContractsPanel";
+import CommunityRewards from "@/features/community-rewards/CommunityRewards";
 import { useIncomingInvites, useInviteRealtime } from "@/hooks/useSocialInvites";
 import { useTwaaterTrending } from "@/hooks/useTwaaterTrending";
 
@@ -52,6 +53,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button asChild><Link to="/social/players"><Compass className="mr-2 h-4 w-4" />Find players</Link></Button>
+          <Button asChild variant="outline"><Link to="/social?tab=rewards"><Gift className="mr-2 h-4 w-4" />Rewards & referrals</Link></Button>
           <Button asChild variant="outline"><Link to="/social/messages"><MessageSquare className="mr-2 h-4 w-4" />Open messages</Link></Button>
           <Button asChild variant="outline"><Link to="/social/friends"><Users className="mr-2 h-4 w-4" />View friends</Link></Button>
           <Button asChild variant="outline"><Link to="/social/contracts"><FileSignature className="mr-2 h-4 w-4" />Contracts</Link></Button>
@@ -89,7 +91,9 @@ export default function SocialHub() {
 
   const legacyParams = new URLSearchParams(search);
   const legacyTab = legacyParams.get("tab");
-  if (pathname === "/social" && legacyTab) {
+  const isRewardsTab = pathname === "/social" && legacyTab === "rewards";
+
+  if (pathname === "/social" && legacyTab && !isRewardsTab) {
     const tabTargets: Record<string, string> = {
       friends: "/social/friends",
       messages: "/social/messages",
@@ -106,7 +110,8 @@ export default function SocialHub() {
   }
 
   const child = pathname.replace(/\/$/, "").split("/")[2] ?? "overview";
-  const content = child === "friends" ? <Suspense fallback={<Fallback />}><Relationships /></Suspense>
+  const content = isRewardsTab ? <CommunityRewards profileId={profileId} />
+    : child === "friends" ? <Suspense fallback={<Fallback />}><Relationships /></Suspense>
     : child === "messages" ? <MessagesTab myProfileId={profileId} />
     : child === "players" ? <Suspense fallback={<Fallback />}><PlayerSearch /></Suspense>
     : child === "invitations" ? <InvitesInbox profileId={profileId} />
@@ -117,11 +122,11 @@ export default function SocialHub() {
   return (
     <HubLayout
       title="Social"
-      description="Find players, maintain friendships, message contacts, manage contracts, follow Twaater and discover recruitment opportunities."
+      description="Find players, maintain friendships, message contacts, manage contracts, earn community rewards, follow Twaater and discover recruitment opportunities."
       icon={Users}
       overviewPath="/social"
       navigation={socialHubNavigation}
-      actions={[{ label: "Find players", path: "/social/players", icon: Compass }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
+      actions={[{ label: "Rewards & referrals", path: "/social?tab=rewards", icon: Gift }, { label: "Find players", path: "/social/players", icon: Compass }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
     >
       {content}
     </HubLayout>
