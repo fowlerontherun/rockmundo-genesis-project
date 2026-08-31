@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const VACANCY_STATUSES = ["draft", "open", "paused", "filled", "closed", "expired", "cancelled"] as const;
 export type VacancyStatus = (typeof VACANCY_STATUSES)[number];
+export type MatchSummary = { score: number; category: string; reasons: string[] };
 
 export type BandVacancy = {
   id: string;
@@ -24,6 +25,8 @@ export type BandVacancy = {
   direct_applications_allowed: boolean;
   created_at?: string;
   bands?: { name?: string | null; genre?: string | null; logo_url?: string | null } | null;
+  match?: MatchSummary;
+  saved?: boolean;
 };
 
 export type VacancyFormInput = Partial<BandVacancy>;
@@ -131,7 +134,7 @@ export async function applyToVacancy(vacancy: BandVacancy, applicantProfileId: s
   if (existingMembership) throw new Error("You are already a member of this band.");
 
   const { data, error } = await supabase
-    .from("band_applications")
+    .from("band_applications" as never)
     .insert({
       band_id: vacancy.band_id,
       vacancy_id: vacancy.id,
@@ -140,10 +143,10 @@ export async function applyToVacancy(vacancy: BandVacancy, applicantProfileId: s
       vocal_role: vacancy.vocal_role || null,
       message: sanitizeRecruitmentText(coverMessage).slice(0, 2000),
       status: "pending",
-    })
+    } as never)
     .select("*")
     .single();
-  if (error?.code === "23505") throw new Error("You already have a pending application for this role.");
+  if ((error as any)?.code === "23505") throw new Error("You already have a pending application for this role.");
   if (error) throw error;
   return data;
 }
