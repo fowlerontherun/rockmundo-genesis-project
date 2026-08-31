@@ -246,8 +246,8 @@ export const SessionConfigurator = ({
 
   // Recording type multipliers
   const isDemo = recordingType === "demo";
-  const demoQualityMultiplier = isDemo ? 0.7 : 1.0;
-  const demoCap = isDemo ? Math.round(studioQualityRating * 0.6) : Infinity;
+  const demoQualityMultiplier = isDemo ? 0.85 : 1.0;
+  const demoCap = isDemo ? Math.round(studioQualityRating * 8) : Infinity;
   const independentPenalty =
     !isDemo && !isLabelSigned
       ? calculateIndependentPenalty(playerFame, playerLevel)
