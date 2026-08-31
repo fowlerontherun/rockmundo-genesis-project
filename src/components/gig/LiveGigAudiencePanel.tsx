@@ -15,6 +15,11 @@ interface AttendanceRow { id: string; attendance_type: string; status: string; p
 interface AggregateRow { participation_level: string; participation_score: number; reaction_counts: Record<string, number>; unique_participants: number; encore_demand: number; singalong_strength: number; audience_modifier: number; }
 interface AggregateView { participationLevel: ParticipationLevel | string; participationScore: number; uniqueParticipants: number; encoreDemand: number; audienceModifier: number; }
 interface ActivePerformanceState { eligible: boolean; score: number | null; multiplier: number; bandName: string | null; }
+interface ActivePerformanceResult { score: number | null; rating_multiplier: number | null; }
+interface GigWithBand { bands?: { name?: string | null } | null; }
+type RpcError = { message?: string };
+type RpcClient = { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: RpcError | null }> };
+const rpcClient = supabase as unknown as RpcClient;
 
 const reactionLabels: Record<AudienceReactionType, string> = { cheer: "Cheer", clap: "Clap", sing_along: "Sing along", hands_up: "Hands up", dance: "Dance", phone_wave: "Phone wave", chant: "Chant", encore_request: "Encore!", support_performer: "Support", highlight: "Highlight" };
 
@@ -37,12 +42,12 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
   const [activePerformance, setActivePerformance] = useState<ActivePerformanceState>({ eligible: false, score: null, multiplier: 0, bandName: null });
 
   const loadAudienceState = useCallback(async () => {
-    const attendanceQuery = (supabase.from("gig_audience_attendance" as never) as any).select("id, attendance_type, status, participation_score, watch_duration_seconds, reward_status, last_presence_at").eq("gig_id", gigId).maybeSingle();
+    const attendanceQuery = supabase.from("gig_audience_attendance" as never).select("id, attendance_type, status, participation_score, watch_duration_seconds, reward_status, last_presence_at").eq("gig_id", gigId).maybeSingle();
     const { data: attendanceData } = await attendanceQuery;
     setAttendance((attendanceData as AttendanceRow | null) ?? null);
 
     if (liveSessionId) {
-      const { data: aggregateData } = await (supabase.from("gig_audience_segment_aggregates" as never) as any)
+      const { data: aggregateData } = await supabase.from("gig_audience_segment_aggregates" as never)
         .select("participation_level, participation_score, reaction_counts, unique_participants, encore_demand, singalong_strength, audience_modifier")
         .eq("live_session_id", liveSessionId)
         .order("updated_at", { ascending: false })
@@ -59,7 +64,7 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
         audience_modifier: Number(row.audience_modifier ?? 0),
       } : null);
 
-      const { count } = await (supabase.from("gig_audience_attendance" as never) as any)
+      const { count } = await supabase.from("gig_audience_attendance" as never)
         .select("id", { count: "exact", head: true })
         .eq("live_session_id", liveSessionId)
         .in("status", ["checked_in", "watching", "completed"]);
@@ -74,7 +79,7 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
         .maybeSingle();
 
       if (gigData?.band_id) {
-        const [{ data: membership }, { data: result }] = await Promise.all([
+        const [{ data: membership }, performanceResponse] = await Promise.all([
           supabase
             .from("band_members")
             .select("id")
@@ -83,20 +88,21 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
             .eq("member_status", "active")
             .limit(1)
             .maybeSingle(),
-          (supabase as any)
-            .from("active_gig_performance_sessions")
+          supabase
+            .from("active_gig_performance_sessions" as never)
             .select("score, rating_multiplier")
             .eq("gig_id", gigId)
             .eq("profile_id", profileId)
             .maybeSingle(),
         ]);
-
+        const result = performanceResponse.data as ActivePerformanceResult | null;
+        const gigWithBand = gigData as typeof gigData & GigWithBand;
         const terminal = ["completed", "cancelled", "failed"].includes(String(gigData.status || ""));
         setActivePerformance({
           eligible: Boolean(membership && gigData.started_at && !gigData.result_ready_at && !terminal && !result),
           score: result?.score ?? null,
           multiplier: Number(result?.rating_multiplier || 0),
-          bandName: (gigData as any).bands?.name ?? null,
+          bandName: gigWithBand.bands?.name ?? null,
         });
       } else {
         setActivePerformance({ eligible: false, score: null, multiplier: 0, bandName: null });
@@ -121,8 +127,8 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
 
   const checkIn = async (attendanceType: "ticket_holder" | "remote_viewer") => {
     setIsCheckingIn(true); setMessage(null);
-    const { data, error } = await (supabase.rpc("check_in_gig_audience" as never, { p_gig_id: gigId, p_ticket_id: null, p_attendance_type: attendanceType } as never) as any);
-    if (error) setMessage(error.message); else { setAttendance(data); setMessage(attendanceType === "remote_viewer" ? "Viewing live presentation without attendance rewards." : "Checked in for the gig."); await loadAudienceState(); }
+    const { data, error } = await rpcClient.rpc("check_in_gig_audience", { p_gig_id: gigId, p_ticket_id: null, p_attendance_type: attendanceType });
+    if (error) setMessage(error.message ?? "Could not check in for this gig."); else { setAttendance(data as AttendanceRow); setMessage(attendanceType === "remote_viewer" ? "Viewing live presentation without attendance rewards." : "Checked in for the gig."); await loadAudienceState(); }
     setIsCheckingIn(false);
   };
 
@@ -131,8 +137,8 @@ export function LiveGigAudiencePanel({ gigId, liveSessionId, currentSegmentId, i
     const limit = checkAudienceReactionRateLimit({ lastReactionAt: cooldownUntil && cooldownUntil > new Date() ? new Date(Date.now() - 1000).toISOString() : null });
     if (!limit.allowed) { setMessage(limit.reason ?? "Reaction cooldown active."); return; }
     const idempotency = `${attendance.id}:${currentSegmentId ?? "current"}:${reactionType}:${Math.floor(Date.now() / 4000)}`;
-    const { error } = await (supabase.rpc("record_gig_audience_reaction" as never, { p_attendance_id: attendance.id, p_reaction_type: reactionType, p_segment_id: currentSegmentId ?? null, p_idempotency_key: idempotency } as never) as any);
-    if (error) setMessage(error.message); else { setCooldownUntil(new Date(Date.now() + 4000)); setMessage(`${reactionLabels[reactionType]} counted in the crowd response.`); await loadAudienceState(); }
+    const { error } = await rpcClient.rpc("record_gig_audience_reaction", { p_attendance_id: attendance.id, p_reaction_type: reactionType, p_segment_id: currentSegmentId ?? null, p_idempotency_key: idempotency });
+    if (error) setMessage(error.message ?? "Could not record crowd reaction."); else { setCooldownUntil(new Date(Date.now() + 4000)); setMessage(`${reactionLabels[reactionType]} counted in the crowd response.`); await loadAudienceState(); }
   };
 
   return (
