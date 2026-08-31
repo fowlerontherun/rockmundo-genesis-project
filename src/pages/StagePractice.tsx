@@ -43,8 +43,8 @@ const StagePractice = () => {
 
   return (
     <FMPageScaffold
-      title="Stage Practice"
-      subtitle="Rhythm minigame — earn daily XP across instruments."
+      title="Active Practice"
+      subtitle="Play an optional hands-on rhythm session, improve your instrument skill, and earn performance-based XP."
       icon={Gamepad2}
       backTo="/hub/music"
       backLabel="Back to Music Hub"
