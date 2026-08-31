@@ -24,18 +24,46 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
 });
 
-export const getPendingReferralCode = () => {
+const getPendingReferralCode = () => {
   if (typeof window === "undefined") return null;
   const code = localStorage.getItem(REFERRAL_STORAGE_KEY)?.trim().toUpperCase();
   return code && REFERRAL_CODE_PATTERN.test(code) ? code : null;
 };
 
 // Referral links use /auth?ref=CODE. Persist the code before email verification redirects.
+// When a signup follows, also attach it to user metadata so the database trigger captures
+// attribution immediately even if email confirmation happens on another browser or device.
 if (typeof window !== "undefined") {
   const referralParam = new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase();
   if (referralParam && REFERRAL_CODE_PATTERN.test(referralParam)) {
     localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
   }
+
+  type SignUpCredentials = Parameters<typeof supabase.auth.signUp>[0];
+  const auth = supabase.auth as typeof supabase.auth & {
+    signUp: (credentials: SignUpCredentials) => ReturnType<typeof supabase.auth.signUp>;
+  };
+  const originalSignUp = auth.signUp.bind(auth);
+
+  auth.signUp = (credentials: SignUpCredentials) => {
+    const pendingCode = getPendingReferralCode();
+    if (!pendingCode) return originalSignUp(credentials);
+
+    const withReferral = credentials as SignUpCredentials & {
+      options?: { data?: Record<string, unknown>; [key: string]: unknown };
+    };
+
+    return originalSignUp({
+      ...withReferral,
+      options: {
+        ...withReferral.options,
+        data: {
+          ...withReferral.options?.data,
+          referral_code: pendingCode,
+        },
+      },
+    } as SignUpCredentials);
+  };
 
   let bindingReferral = false;
   supabase.auth.onAuthStateChange((_event, session) => {
