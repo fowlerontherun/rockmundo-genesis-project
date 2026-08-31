@@ -87,6 +87,7 @@ export const careerHubNavigation: HubNavigationItem[] = [
 export const bandHubNavigation: HubNavigationItem[] = [
   { id: "overview", label: "Overview", path: "/band", icon: Music, matchPaths: ["/band/overview", "/hub/band", "/hub/live", "/hub/band-live"] },
   { id: "members", label: "Members & Roles", path: "/band/members", icon: Users },
+  { id: "recruitment", label: "Recruitment", path: "/social/recruitment", icon: Compass, matchPaths: ["/bands/:bandId/recruitment", "/bands/:bandId/recruitment/new"] },
   { id: "fame", label: "Fame & Fans", path: "/band/fame", icon: Trophy, matchPaths: ["/band-rankings", "/band-fame-map"] },
   { id: "repertoire", label: "Repertoire", path: "/band/repertoire", icon: ListMusic, matchPaths: ["/setlists"] },
   { id: "rehearsals", label: "Rehearsals", path: "/band/rehearsals", icon: Mic2, matchPaths: ["/rehearsals", "/jam-sessions", "/jams"] },
