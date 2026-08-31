@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
+const ROCKMUNDO_BASE_URL = "https://rockmundo.uk";
 const DISCORD_INVITE_URL = "https://discord.gg/KB45k3XJuZ";
 const FACEBOOK_URL = import.meta.env.VITE_ROCKMUNDO_FACEBOOK_URL as string | undefined;
 
@@ -81,7 +82,7 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
     if (status === "verified") void loadDashboard();
   }, []);
 
-  const referralUrl = useMemo(() => dashboard?.code ? `${window.location.origin}/auth?ref=${encodeURIComponent(dashboard.code)}` : "", [dashboard?.code]);
+  const referralUrl = useMemo(() => dashboard?.code ? `${ROCKMUNDO_BASE_URL}/auth?ref=${encodeURIComponent(dashboard.code)}` : "", [dashboard?.code]);
   const totalClaimable = (dashboard?.pending.signup ?? 0) + (dashboard?.pending.vip ?? 0) + (dashboard?.discord.verified && !dashboard.discord.rewarded ? 1 : 0);
 
   const copy = async (value: string, label: string) => {
