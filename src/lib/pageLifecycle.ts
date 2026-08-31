@@ -1,4 +1,4 @@
-import { focusManager } from "@tanstack/react-query";
+import { focusManager, onlineManager } from "@tanstack/react-query";
 
 const SCROLL_STORAGE_PREFIX = "rockmundo:scroll-position:";
 
@@ -42,20 +42,19 @@ const restoreScrollPosition = () => {
 };
 
 /**
- * Keeps long-lived RockMundo pages stable across mobile/tab lifecycle events.
+ * Keeps long-lived RockMundo pages stable across browser/mobile lifecycle events.
  *
- * TanStack Query refetches stale queries whenever a window regains focus by
- * default. In a large game screen that can look like a page reload and can
- * reset local UI state. We intentionally disable focus-driven refetches here;
- * queries will still refresh when mounted, explicitly invalidated, or after a
- * network reconnect.
+ * A game page can have many active TanStack queries. Browser focus and short
+ * connectivity changes used to tell TanStack Query to refetch every stale query
+ * at once. Even without a literal document reload, that can remount loading UI,
+ * reset local state and look exactly like a whole-page refresh to the player.
  *
- * We also persist the current document scroll position in sessionStorage so a
- * browser/OS tab discard can restore the player near the same point after the
- * document is recreated.
+ * RockMundo already has explicit invalidation/realtime paths for game-state
+ * changes, so global focus/reconnect driven refetching is intentionally disabled.
  */
 export const configureStablePageLifecycle = () => {
   focusManager.setEventListener(() => () => undefined);
+  onlineManager.setEventListener(() => () => undefined);
 
   const handleVisibilityChange = () => {
     if (document.visibilityState === "hidden") {
