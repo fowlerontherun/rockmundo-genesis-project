@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,12 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
+import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 export function CharacterUnreadWidget() {
   const { user } = useAuth();
   const { characters, switchCharacter } = useCharacterSlots();
+  const { refetch: refetchGameData } = useGameData();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const characterIds = characters.map((c) => c.id);
@@ -69,8 +72,9 @@ export function CharacterUnreadWidget() {
     if (isActive) return;
     try {
       await switchCharacter.mutateAsync(profileId);
-      toast({ title: "Switching character", description: "Reloading..." });
-      window.location.reload();
+      await refetchGameData();
+      toast({ title: "Character switched", description: "Game state updated." });
+      navigate("/home", { replace: true });
     } catch {
       toast({ title: "Error", description: "Failed to switch character", variant: "destructive" });
     }
@@ -95,57 +99,30 @@ export function CharacterUnreadWidget() {
           const dm = dmCounts?.[char.id] || 0;
           const total = inbox + dm;
           return (
-            <div
-              key={char.id}
-              className="flex items-center gap-2 p-2 rounded-md border bg-card/50 hover:bg-accent/50 transition-colors"
-            >
+            <div key={char.id} className="flex items-center gap-2 p-2 rounded-md border bg-card/50 hover:bg-accent/50 transition-colors">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={char.avatar_url || undefined} />
-                <AvatarFallback className="text-xs">
-                  {(char.display_name || char.username || "?")[0]?.toUpperCase()}
-                </AvatarFallback>
+                <AvatarFallback className="text-xs">{(char.display_name || char.username || "?")[0]?.toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium truncate">
-                    {char.display_name || char.username || "Unnamed"}
-                  </span>
+                  <span className="text-sm font-medium truncate">{char.display_name || char.username || "Unnamed"}</span>
                   {char.is_active && (
-                    <Badge className="text-[9px] px-1 py-0 bg-primary/20 text-primary border-primary/30">
-                      Active
-                    </Badge>
+                    <Badge className="text-[9px] px-1 py-0 bg-primary/20 text-primary border-primary/30">Active</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-0.5">
-                    <Mail className="h-2.5 w-2.5" />
-                    {inbox}
-                  </span>
-                  <span className="flex items-center gap-0.5">
-                    <MessageSquare className="h-2.5 w-2.5" />
-                    {dm}
-                  </span>
+                  <span className="flex items-center gap-0.5"><Mail className="h-2.5 w-2.5" />{inbox}</span>
+                  <span className="flex items-center gap-0.5"><MessageSquare className="h-2.5 w-2.5" />{dm}</span>
                 </div>
               </div>
               {total > 0 && (
-                <Badge variant="destructive" className="text-[10px] h-5 min-w-[20px] flex items-center justify-center">
-                  {total > 99 ? "99+" : total}
-                </Badge>
+                <Badge variant="destructive" className="text-[10px] h-5 min-w-[20px] flex items-center justify-center">{total > 99 ? "99+" : total}</Badge>
               )}
               {char.is_active ? (
-                <Button size="sm" variant="ghost" asChild className="h-7 text-xs">
-                  <Link to="/inbox">Open</Link>
-                </Button>
+                <Button size="sm" variant="ghost" asChild className="h-7 text-xs"><Link to="/inbox">Open</Link></Button>
               ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => handleSwitch(char.id, false)}
-                  disabled={switchCharacter.isPending}
-                >
-                  Switch
-                </Button>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleSwitch(char.id, false)} disabled={switchCharacter.isPending}>Switch</Button>
               )}
             </div>
           );
