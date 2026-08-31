@@ -1,5 +1,32 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type FestivalLineupSlot = {
+  id: string;
+  stageId: string;
+  stageName: string;
+  dayNumber: number;
+  slotNumber: number;
+  slotType: string;
+  startAt: string;
+  endAt: string;
+  bandId: string | null;
+  bandName: string | null;
+  contractId: string | null;
+  isNpcDj: boolean;
+  npcDjName: string | null;
+  npcDjGenre: string | null;
+  npcDjQuality: number | null;
+  allocatedSetMinutes: number | null;
+  setlistId: string | null;
+  setlistStatus: string;
+  setlistTotalSeconds: number;
+  setlistMaximumSeconds: number | null;
+  hasSetlist: boolean;
+  setlistReady: boolean;
+  withinAllocation: boolean | null;
+  remainingSeconds: number | null;
+};
+
 export type FestivalArtistScheduleQueue = {
   editionId: string;
   bookings: Array<{
@@ -27,6 +54,7 @@ export type FestivalArtistScheduleQueue = {
     startAt: string;
     endAt: string;
   }>;
+  lineup: FestivalLineupSlot[];
 };
 
 export type FestivalEditionAuditEvent = {
@@ -50,6 +78,7 @@ export async function fetchFestivalArtistScheduleQueue(editionId: string): Promi
     editionId: String(data?.editionId ?? editionId),
     bookings: Array.isArray(data?.bookings) ? data.bookings : [],
     slots: Array.isArray(data?.slots) ? data.slots : [],
+    lineup: Array.isArray(data?.lineup) ? data.lineup : [],
   };
 }
 
@@ -61,6 +90,31 @@ export async function finaliseFestivalArtistBookingSlot(input: { bookingId: stri
   });
   if (error) throw error;
   return data as { bookingId: string; contractId: string; stageSlotId: string; replayed: boolean };
+}
+
+export async function setFestivalStageSlotNpcDj(input: {
+  stageSlotId: string;
+  enabled: boolean;
+  name?: string;
+  genre?: string;
+  quality?: number;
+}) {
+  const { data, error } = await (supabase as any).rpc("set_festival_stage_slot_npc_dj", {
+    p_stage_slot_id: input.stageSlotId,
+    p_enabled: input.enabled,
+    p_name: input.name ?? null,
+    p_genre: input.genre ?? null,
+    p_quality: input.quality ?? 50,
+  });
+  if (error) throw error;
+  return data as {
+    stageSlotId: string;
+    isNpcDj: boolean;
+    npcDjName?: string | null;
+    npcDjGenre?: string | null;
+    npcDjQuality?: number | null;
+    replayed: boolean;
+  };
 }
 
 export async function fetchFestivalEditionAuditLog(editionId: string): Promise<FestivalEditionAuditEvent[]> {
