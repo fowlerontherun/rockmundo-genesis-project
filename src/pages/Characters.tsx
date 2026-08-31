@@ -9,6 +9,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
+import { useGameData } from "@/hooks/useGameData";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
 
 export default function Characters() {
   const { slots, slotsLoading, characters, switchCharacter, deleteCharacter } = useCharacterSlots();
+  const { refetch: refetchGameData } = useGameData();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [switchingToId, setSwitchingToId] = useState<string | null>(null);
@@ -38,8 +40,9 @@ export default function Characters() {
     setSwitchingToId(profileId);
     try {
       await switchCharacter.mutateAsync(profileId);
-      toast({ title: "Character switched", description: "Reloading your game state..." });
-      window.location.reload();
+      await refetchGameData();
+      toast({ title: "Character switched", description: "Game state updated." });
+      navigate("/home", { replace: true });
     } catch {
       toast({ title: "Error", description: "Failed to switch character", variant: "destructive" });
     } finally {
@@ -66,7 +69,6 @@ export default function Characters() {
       icon={Users}
       backTo="/hub/character"
     >
-
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr]">
         <Card>
           <CardHeader>
@@ -128,22 +130,17 @@ export default function Characters() {
                 <div key={character.id} className="flex items-center gap-3 rounded-md border p-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={character.avatar_url ?? undefined} />
-                    <AvatarFallback>
-                      {charName[0]?.toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarFallback>{charName[0]?.toUpperCase()}</AvatarFallback>
                   </Avatar>
-
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{charName}</p>
                     <p className="text-xs text-muted-foreground">
                       Level {character.level} • {(character.fame || 0).toLocaleString()} fame
                     </p>
                   </div>
-
                   {character.generation_number > 1 && (
                     <Badge variant="outline" className="text-[10px]">Gen {character.generation_number}</Badge>
                   )}
-
                   {isActive ? (
                     <Badge className="bg-primary/20 text-primary border-primary/30">Active</Badge>
                   ) : (
@@ -175,19 +172,14 @@ export default function Characters() {
               const slotNumber = characters.length + index + 1;
               const canCreate = slots?.canCreateNew;
               return (
-                <div
-                  key={`empty-slot-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-md border border-dashed p-3"
-                >
+                <div key={`empty-slot-${index}`} className="flex items-center justify-between gap-3 rounded-md border border-dashed p-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium">Slot #{slotNumber} — Free</p>
                       <Badge variant="outline" className="text-[10px] py-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400">Available</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {canCreate
-                        ? "Ready to be filled with a new character."
-                        : "Slot exists but creation is locked — buy a slot or check requirements."}
+                      {canCreate ? "Ready to be filled with a new character." : "Slot exists but creation is locked — buy a slot or check requirements."}
                     </p>
                   </div>
                   {canCreate ? (
@@ -196,9 +188,7 @@ export default function Characters() {
                       Add Character
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => navigate("/buy-character-slot")}>
-                      Buy Slot
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate("/buy-character-slot")}>Buy Slot</Button>
                   )}
                 </div>
               );
@@ -223,10 +213,7 @@ export default function Characters() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleteCharacter.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Delete Character
             </AlertDialogAction>
