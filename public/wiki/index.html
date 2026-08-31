@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="The player-facing RockMundo Compendium: guides, systems, mechanics and world knowledge without exposing hidden formulas."
+    />
+    <meta name="robots" content="index,follow" />
+    <title>RockMundo Compendium</title>
+    <link rel="stylesheet" href="./wiki.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#article">Skip to article</a>
+
+    <header class="wiki-header">
+      <div class="wiki-header__brand">
+        <a href="#home" class="wiki-wordmark" aria-label="RockMundo Compendium home">
+          <span class="wiki-wordmark__mark">RM</span>
+          <span>
+            <strong>RockMundo</strong>
+            <small>Compendium</small>
+          </span>
+        </a>
+        <p>The unofficial-looking official guide to life in the music world.</p>
+      </div>
+
+      <form class="wiki-search" id="search-form" role="search">
+        <label class="sr-only" for="wiki-search">Search the RockMundo Compendium</label>
+        <input
+          id="wiki-search"
+          name="q"
+          type="search"
+          autocomplete="off"
+          placeholder="Search bands, gigs, skills, releases…"
+        />
+        <button type="submit">Search</button>
+      </form>
+    </header>
+
+    <div class="wiki-strip" aria-label="Compendium notice">
+      <span>Player guide</span>
+      <span>Mechanics are intentionally described without exploitable hidden formulas</span>
+      <a href="#mechanics-disclosure">How this wiki handles hidden mechanics</a>
+    </div>
+
+    <main class="wiki-layout">
+      <aside class="wiki-sidebar" aria-label="Compendium navigation">
+        <nav>
+          <a class="sidebar-home" href="#home">Main page</a>
+          <div id="category-navigation"></div>
+        </nav>
+
+        <section class="sidebar-box">
+          <h2>Quick links</h2>
+          <a href="#getting-started">New player guide</a>
+          <a href="#gigs">Playing live</a>
+          <a href="#songwriting">Writing songs</a>
+          <a href="#recording">Recording music</a>
+          <a href="#releases">Releases & streaming</a>
+          <a href="#bands">Bands</a>
+        </section>
+
+        <section class="sidebar-box sidebar-box--muted">
+          <h2>About this guide</h2>
+          <p>
+            The Compendium explains systems, choices and broad influences. Exact coefficients,
+            hidden thresholds and abuse-prone optimisation routes stay behind the curtain.
+          </p>
+        </section>
+      </aside>
+
+      <section class="wiki-content" id="article" tabindex="-1">
+        <div id="search-results" class="search-results" hidden></div>
+        <article id="article-content" class="wiki-article" aria-live="polite"></article>
+      </section>
+
+      <aside class="wiki-toc" aria-label="On this page">
+        <div class="toc-card">
+          <h2>On this page</h2>
+          <ol id="page-toc"></ol>
+        </div>
+        <div class="toc-card toc-card--tip">
+          <h2>Compendium rule</h2>
+          <p>
+            If a mechanic can be understood through sensible play, we explain it. If publishing
+            an exact number would encourage formula gaming, we describe the factors instead.
+          </p>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="wiki-footer">
+      <p>
+        RockMundo Compendium · Knowledge changes as the world is balanced and expanded.
+      </p>
+      <a href="#mechanics-disclosure">Mechanics disclosure policy</a>
+    </footer>
+
+    <noscript>
+      <div class="noscript-notice">
+        This Compendium needs JavaScript enabled to browse its articles and search index.
+      </div>
+    </noscript>
+
+    <script src="./wiki.js" defer></script>
+  </body>
+</html>
