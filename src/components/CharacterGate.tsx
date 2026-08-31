@@ -6,6 +6,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useTravelStatus } from "@/hooks/useTravelStatus";
 import { TravelProgressOverlay } from "@/components/travel/TravelProgressOverlay";
 import { Lock } from "lucide-react";
+import { hasGigViewerDemoTestAccess } from "@/lib/gigViewerDemoTestAccess";
 
 interface CharacterGateProps {
   children: ReactNode;
@@ -16,6 +17,14 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
   const { travelStatus, cancelTravel } = useTravelStatus();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // The admin gig-viewer Playwright fixture has its own deliberately narrow,
+  // build-time gated access exception. It must not require a game character,
+  // otherwise the character creation screen intercepts the fixture before the
+  // read-only admin viewer can render.
+  if (hasGigViewerDemoTestAccess(location)) {
+    return <>{children}</>;
+  }
 
   // Dev-only guest bypass: skip every gate so unauthenticated visitors can
   // inspect pages in `vite dev`. Production builds keep all gates intact.
@@ -34,9 +43,9 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
 
   // Paths allowed while traveling (limited activities)
   const allowedWhileTraveling = [
-    "/songwriting", 
-    "/education", 
-    "/twaater", 
+    "/songwriting",
+    "/education",
+    "/twaater",
     "/dikcok",
     "/my-character",
     "/travel",
@@ -110,7 +119,7 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
         cancelTravel(travelStatus.travel_id);
       }
     };
-    
+
     return (
       <TravelProgressOverlay
         destinationCity={travelStatus.destination_city_name}

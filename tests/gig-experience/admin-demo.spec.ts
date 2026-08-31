@@ -36,18 +36,18 @@ test('admin fixture mode loads, changes controls, launches viewer, and stays rea
     ['Momentum selector', 'Recovery'], ['Encore selector', 'Excellent encore'], ['Audio preset selector', 'Mixed audio'],
     ['Device preview selector', '390 × 844'],
   ] as const) {
-    await page.getByLabel(label).click();
-    await page.getByRole('option', { name: option }).click();
+    await page.getByLabel(label, { exact: true }).click();
+    await page.getByRole('option', { name: option, exact: true }).click();
   }
-  await page.getByLabel('Reduced-motion toggle').click();
-  await page.getByRole('button', { name: 'Launch viewer' }).click();
-  await expect(page.getByRole('heading', { name: 'Gig Replay' })).toBeVisible();
-  await expect(page.getByLabel('Setlist audio controls')).toBeVisible();
-  await page.getByRole('button', { name: 'Launch report preview' }).click();
-  await expect(page.getByRole('heading', { name: 'Audio Diagnostics' })).toBeVisible();
-  await page.getByLabel('Search gig ID').fill('fixture');
-  await page.getByRole('button', { name: 'Search completed gigs' }).click();
-  await expect(page.getByText('metadata loaded read-only')).toBeVisible();
+  await page.getByLabel('Reduced-motion toggle', { exact: true }).click();
+  await page.getByRole('button', { name: 'Launch viewer', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gig Replay', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Setlist audio controls', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Launch report preview', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Audio Diagnostics', exact: true })).toBeVisible();
+  await page.getByLabel('Search gig ID', { exact: true }).fill('fixture');
+  await page.getByRole('button', { name: 'Search completed gigs', exact: true }).click();
+  await expect(page.getByText('metadata loaded read-only', { exact: false })).toBeVisible();
   await expect(page.getByText(/https:\/\//)).toHaveCount(0);
   const failures = await page.evaluate(() => {
     const getFailures = (window as Window & { __phase5MutationFailures?: () => string[] }).__phase5MutationFailures;
@@ -61,7 +61,9 @@ test('direct unauthenticated access is denied when admin test bypass is disabled
   const page = await context.newPage();
   await page.goto(`${baseURL}/admin/gig-viewer-demo?no-test-admin=1`);
   await expect(page).toHaveURL(/\/auth$/);
-  await expect(page.getByRole('heading', { name: /sign in|welcome/i })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Admin Gig Viewer Demo' })).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Sign In', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Admin Gig Viewer Demo', exact: true })).toHaveCount(0);
   await context.close();
 });
