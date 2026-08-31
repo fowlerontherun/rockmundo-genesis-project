@@ -8,17 +8,13 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { useAutoGigStart } from "@/hooks/useAutoGigStart";
-import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
 import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
-import { useAutoManufacturingCompletion } from "@/hooks/useAutoManufacturingCompletion";
 import { useAutoMajorEventCompletion } from "@/hooks/useAutoMajorEventCompletion";
 import { useAutoRejoinTour } from "@/hooks/useAutoRejoinTour";
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
-import { RehearsalCompletionReport } from "@/components/rehearsal/RehearsalCompletionReport";
 import { useGigDayReminders } from "@/hooks/useGigDayReminders";
 import { useReachMilestoneReminders } from "@/hooks/useReachMilestoneReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
@@ -35,7 +31,6 @@ import { getMobileRouteMeta } from "@/mobile/routeRegistry";
 import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
-import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
 import { hasGigViewerDemoTestAccess } from "@/lib/gigViewerDemoTestAccess";
 import { useMyFestivalAttendance } from "@/features/festival-company/attendance/useFestivalAttendance";
 import { FestivalModeShell } from "@/features/festival-company/attendance/FestivalModeShell";
@@ -63,12 +58,12 @@ const Layout = () => {
   const festivalSupportRoute = isFestivalModeSupportPath(location.pathname);
   const wasFestivalModeRef = useRef(false);
 
-  useAutoGigStart();
-  const { pendingReport, clearPendingReport } = useAutoRehearsalCompletion(user?.id || null);
+  // Server cron owns periodic gig starts, rehearsal completion, recording completion,
+  // and release manufacturing. Do not run those world-simulation loops in every
+  // player's browser: they cause repeated network activity and broad query refreshes
+  // on every route. Keep only client work that is genuinely session-specific here.
   useGlobalGigExecution(user?.id || null);
   usePlaytimeTracker(profileId || null);
-  useAutoManufacturingCompletion(user?.id || null);
-  useAutoRecordingCompletion(user?.id || null, profileId || null);
   useAutoMajorEventCompletion(user?.id || null);
   useAutoRejoinTour();
   useGameEventNotifications();
@@ -230,16 +225,6 @@ const Layout = () => {
         <TutorialTooltip />
         <EventNotificationModal />
         <InterviewModal />
-        {pendingReport && (
-          <RehearsalCompletionReport
-            open={!!pendingReport}
-            onClose={clearPendingReport}
-            results={pendingReport.results}
-            chemistryGain={pendingReport.chemistryGain}
-            xpGained={pendingReport.xpGained}
-            durationHours={pendingReport.durationHours}
-          />
-        )}
       </FMShell>
     </ConditionalDesktopGate>
   );
