@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
+import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { CurrencySelector } from "@/components/shop/CurrencySelector";
@@ -16,6 +17,7 @@ import { formatProductPrice } from "@/lib/checkoutCurrency";
 
 export default function BuyCharacterSlot() {
   const { slots, slotsLoading, characters, switchCharacter } = useCharacterSlots();
+  const { refetch: refetchGameData } = useGameData();
   const [purchasing, setPurchasing] = useState(false);
   const [switchingToId, setSwitchingToId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -49,8 +51,9 @@ export default function BuyCharacterSlot() {
     setSwitchingToId(profileId);
     try {
       await switchCharacter.mutateAsync(profileId);
-      toast({ title: "Character switched", description: "Reloading your game state..." });
-      window.location.reload();
+      await refetchGameData();
+      toast({ title: "Character switched", description: "Game state updated." });
+      navigate("/home", { replace: true });
     } catch {
       toast({ title: "Error", description: "Failed to switch character", variant: "destructive" });
     } finally {
@@ -65,8 +68,6 @@ export default function BuyCharacterSlot() {
       icon={Users}
       backTo="/hub/premium-store"
     >
-
-
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         <Card>
           <CardHeader>
@@ -85,36 +86,24 @@ export default function BuyCharacterSlot() {
                   <span className="font-bold">{slots?.usedSlots ?? 0} / {currentMax}</span>
                 </div>
                 <Progress value={((slots?.usedSlots ?? 0) / currentMax) * 100} />
-
                 <div className="space-y-2 pt-1">
                   {characters.map((char) => {
                     const isActive = char.is_active;
                     const isSwitching = switchingToId === char.id;
-
                     return (
                       <div key={char.id} className="flex items-center gap-2 text-sm rounded-md border p-2.5">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={char.avatar_url ?? undefined} />
-                          <AvatarFallback className="text-xs">
-                            {(char.display_name || char.username || "?")[0]?.toUpperCase()}
-                          </AvatarFallback>
+                          <AvatarFallback className="text-xs">{(char.display_name || char.username || "?")[0]?.toUpperCase()}</AvatarFallback>
                         </Avatar>
-
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">{char.display_name || char.username || "Unnamed"}</p>
                           <p className="text-xs text-muted-foreground">Lv.{char.level} • {(char.fame || 0).toLocaleString()} fame</p>
                         </div>
-
                         {isActive ? (
                           <Badge className="text-[10px] bg-primary/20 text-primary">Active</Badge>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7"
-                            onClick={() => handleSwitch(char.id)}
-                            disabled={isSwitching || switchCharacter.isPending}
-                          >
+                          <Button size="sm" variant="outline" className="h-7" onClick={() => handleSwitch(char.id)} disabled={isSwitching || switchCharacter.isPending}>
                             {isSwitching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Switch</>}
                           </Button>
                         )}
@@ -122,17 +111,13 @@ export default function BuyCharacterSlot() {
                     );
                   })}
                 </div>
-
                 {slots?.canCreateNew && (
-                  <Button className="w-full" onClick={() => navigate("/characters/new")}> 
+                  <Button className="w-full" onClick={() => navigate("/characters/new")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create New Character
                   </Button>
                 )}
-
-                <div className="text-xs text-muted-foreground">
-                  Extra slots purchased: {slots?.extraSlotsPurchased ?? 0}
-                </div>
+                <div className="text-xs text-muted-foreground">Extra slots purchased: {slots?.extraSlotsPurchased ?? 0}</div>
               </>
             )}
           </CardContent>
@@ -150,41 +135,17 @@ export default function BuyCharacterSlot() {
               <div className="text-3xl font-bold">{slotPrice}</div>
               <CurrencySelector showLabel={false} />
             </div>
-            <p className="text-sm text-muted-foreground">
-              One-time purchase. Adds a permanent extra character slot to your account.
-            </p>
-
+            <p className="text-sm text-muted-foreground">One-time purchase. Adds a permanent extra character slot to your account.</p>
             <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <span>Switch between characters any time</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <span>Each character has independent progression</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <span>VIP benefits apply to all characters on your account</span>
-              </div>
+              <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /><span>Switch between characters any time</span></div>
+              <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /><span>Each character has independent progression</span></div>
+              <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /><span>VIP benefits apply to all characters on your account</span></div>
             </div>
-
-            <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-              All players start with <strong>2 character slots</strong> and can purchase more up to 5 total.
-            </div>
-
+            <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">All players start with <strong>2 character slots</strong> and can purchase more up to 5 total.</div>
             {!canBuyMore && currentMax >= 5 && (
-              <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                You've reached the maximum of 5 character slots!
-              </div>
+              <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">You've reached the maximum of 5 character slots!</div>
             )}
-
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={handlePurchase}
-              disabled={purchasing || !canBuyMore}
-            >
+            <Button className="w-full" size="lg" onClick={handlePurchase} disabled={purchasing || !canBuyMore}>
               {purchasing ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
               ) : !canBuyMore ? (
