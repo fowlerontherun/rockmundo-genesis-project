@@ -37,7 +37,10 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 vi.mock("@/components/ui/use-toast", () => ({ useToast: () => ({ toast: mocks.toast }) }));
-vi.mock("@/hooks/useTranslation", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/hooks/useTranslation", () => ({
+  useTranslation: () => ({ t: (key: string) => key, language: "en" }),
+  useLanguageStore: () => ({ language: "en", setLanguage: vi.fn() }),
+}));
 vi.mock("@/hooks/useSiteConfig", () => ({ useSiteConfig: () => ({ data: undefined }) }));
 vi.mock("@/hooks/usePlayerPresenceStats", () => ({
   usePlayerPresenceStats: () => ({ totalPlayers: 10, onlinePlayers: 2, loading: false, error: null }),
