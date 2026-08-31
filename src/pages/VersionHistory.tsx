@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.731",
+    date: "2026-08-31",
+    changes: [
+      { type: "fix", description: "Recording a song can no longer reduce its quality below the quality it was written at" },
+      { type: "improvement", description: "Raised the recorded quality ceiling: diminishing returns now start at 850 instead of 600, so great songs recorded in great conditions can reach 1000" },
+      { type: "improvement", description: "Demo recordings are less punishing (0.85x instead of 0.7x) and the demo cap now scales with studio quality on the 0-1000 scale instead of the old 0-100 value" },
+    ],
+  },
+  {
     version: "1.1.730",
     date: "2026-08-30",
     changes: [
