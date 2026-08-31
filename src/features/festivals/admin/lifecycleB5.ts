@@ -92,6 +92,27 @@ export async function finaliseFestivalArtistBookingSlot(input: { bookingId: stri
   return data as { bookingId: string; contractId: string; stageSlotId: string; replayed: boolean };
 }
 
+export async function moveFestivalArtistBookingSlot(input: {
+  contractId: string;
+  targetStageSlotId: string;
+  expectedCurrentStageSlotId: string;
+}) {
+  const { data, error } = await (supabase as any).rpc("move_festival_artist_booking_slot", {
+    p_contract_id: input.contractId,
+    p_target_stage_slot_id: input.targetStageSlotId,
+    p_expected_current_stage_slot_id: input.expectedCurrentStageSlotId,
+  });
+  if (error) throw error;
+  return data as {
+    contractId: string;
+    bookingId?: string;
+    previousStageSlotId: string;
+    stageSlotId: string;
+    contractVersion: number;
+    replayed: boolean;
+  };
+}
+
 export async function setFestivalStageSlotNpcDj(input: {
   stageSlotId: string;
   enabled: boolean;
