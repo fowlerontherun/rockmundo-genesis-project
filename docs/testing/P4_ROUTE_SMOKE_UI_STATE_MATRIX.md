@@ -8,7 +8,7 @@ P4 closes the consolidated backlog requirement for a route inventory smoke matri
 
 ## Implementation
 
-- `src/__tests__/App.routeRender.test.tsx` now discovers literal routes directly from `src/App.tsx`, materialises dynamic parameters, includes canonical Festival route patterns, and server-renders every discovered route through the real App provider/route tree. The test also guards against accidentally shrinking back to a small hand-maintained shortlist.
+- `src/__tests__/App.p4RouteSmoke.test.tsx` discovers literal routes directly from `src/App.tsx`, materialises dynamic parameters, includes canonical Festival route patterns, and server-renders every discovered route through the real App provider/route tree. The test also guards against accidentally shrinking back to a small hand-maintained shortlist. The existing Festival-specific `App.routeRender.test.tsx` is intentionally unchanged so P4 does not broaden an unrelated release gate.
 - `src/testing/route-smoke-matrix.json` is the P4 coverage manifest. It records unauthenticated, new-player, established desktop, established mobile, shared page-state, and browser-history scenarios together with the executable tests that own each scenario.
 - `src/testing/routeSmokeMatrix.test.ts` validates that every required P4 context/state remains represented and that all referenced test files still exist.
 - `src/components/ui/page-state.routeSmoke.test.tsx` verifies accessible loading, explicit empty, actionable error, and retry behaviour using the shared page-state components.
