@@ -123,7 +123,6 @@
     "20270615120000_handle_new_user_username_retry.sql"
   ],
   "20250602130000": [
-    "20250602130000_expand_equipment_categories_and_currency.sql",
     "20250602130000_extend_personal_loadouts_with_slots.sql",
     "20250602130000_seed_more_achievements_and_unlock_xp.sql"
   ],
