@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "unauthenticated",
+      "label": "Unauthenticated public/auth routes",
+      "states": ["loading", "success", "error"],
+      "tests": [
+        "src/pages/Auth.criticalJourney.test.tsx",
+        "src/hooks/__tests__/auth.smoke.test.tsx",
+        "src/__tests__/App.p4RouteSmoke.test.tsx"
+      ]
+    },
+    {
+      "id": "new-player",
+      "label": "Authenticated account without an established character",
+      "states": ["loading", "empty", "success", "error"],
+      "tests": [
+        "src/hooks/__tests__/useCharacterSlots.criticalJourney.test.tsx",
+        "src/components/dashboard/GettingStartedPanel.test.ts"
+      ]
+    },
+    {
+      "id": "existing-player-desktop",
+      "label": "Established player desktop routes",
+      "states": ["loading", "empty", "success", "error"],
+      "tests": [
+        "src/config/__tests__/routeOwnershipAudit.test.ts",
+        "src/__tests__/App.p4RouteSmoke.test.tsx"
+      ]
+    },
+    {
+      "id": "existing-player-mobile",
+      "label": "Established player mobile routes and desktop companions",
+      "states": ["loading", "empty", "success", "error"],
+      "tests": [
+        "src/mobile/pages/MobileDailyLoop.test.ts",
+        "src/mobile/navigationAudit.test.ts",
+        "src/mobile/routeRegistry.test.ts"
+      ]
+    },
+    {
+      "id": "page-states",
+      "label": "Shared loading, empty, error and retry surfaces",
+      "states": ["loading", "empty", "error", "retry"],
+      "tests": [
+        "src/components/ui/page-state.routeSmoke.test.tsx"
+      ]
+    },
+    {
+      "id": "browser-history",
+      "label": "Back, forward and replace navigation semantics",
+      "states": ["back", "forward", "replace"],
+      "tests": [
+        "src/config/__tests__/navigationHistory.routeSmoke.test.tsx",
+        "src/config/__tests__/routeOwnershipAudit.test.ts"
+      ]
+    }
+  ]
+}
