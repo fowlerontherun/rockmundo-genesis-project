@@ -104,6 +104,28 @@ const AdminBugReportsPanel = () => {
     setSavingId(null);
   };
 
+  const sendReply = async (report: BugReport) => {
+    const message = (replyDrafts[report.id] ?? "").trim();
+    if (!message) return;
+
+    setRespondingId(report.id);
+    const { error } = await (supabase as any).rpc("respond_to_bug_report", {
+      p_report_id: report.id,
+      p_message: message,
+      p_status: report.status,
+    });
+
+    if (error) {
+      toast.error("Could not send the update", { description: error.message });
+    } else {
+      setReplyDrafts((current) => ({ ...current, [report.id]: "" }));
+      toast.success("Update sent to the player's inbox");
+    }
+    setRespondingId(null);
+  };
+
+
+
   return (
     <Card className="border-destructive/30">
       <CardHeader>
