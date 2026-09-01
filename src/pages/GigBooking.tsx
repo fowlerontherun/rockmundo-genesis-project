@@ -39,6 +39,7 @@ type VenueWithCity = VenueRow & { cities?: CityRow | null };
 type GigWithVenue = GigRow & { venues: VenueRow | null };
 
 const DEFAULT_GIG_OFFSET_DAYS = 7;
+const UPCOMING_GIG_LOAD_RETRY_DELAYS_MS = [250, 750];
 
 const VENUE_SIZE_FILTERS = [
   { label: 'All Sizes', value: 'all', min: 0, max: Infinity },
@@ -220,27 +221,46 @@ const GigBooking = () => {
   }, [profileId]);
 
   const loadUpcomingGigs = useCallback(async (bandId: string) => {
-    const { data, error } = await supabase
-      .from('gigs')
-      .select(`
-        *,
-        venues:venues!gigs_venue_id_fkey (*)
-      `)
-      .eq('band_id', bandId)
-      .in('status', ['scheduled', 'confirmed', 'in_progress', 'ready_for_completion'])
-      .order('scheduled_date', { ascending: true });
+    let lastError: GigBookingErrorLike | null = null;
 
-    if (error) {
-      console.error('Error loading gigs:', error);
-      toast({
-        title: 'Unable to load gigs',
-        description: 'We could not fetch your scheduled performances. Please try again.',
-        variant: 'destructive',
+    for (let attempt = 0; attempt <= UPCOMING_GIG_LOAD_RETRY_DELAYS_MS.length; attempt += 1) {
+      const { data, error } = await supabase
+        .from('gigs')
+        .select(`
+          *,
+          venues:venues!gigs_venue_id_fkey (*)
+        `)
+        .eq('band_id', bandId)
+        .in('status', ['scheduled', 'confirmed', 'in_progress', 'ready_for_completion'])
+        .order('scheduled_date', { ascending: true });
+
+      if (!error) {
+        setUpcomingGigs((data ?? []) as any);
+        return;
+      }
+
+      lastError = error as GigBookingErrorLike;
+      console.warn('Upcoming gigs load attempt failed', {
+        bandId,
+        attempt: attempt + 1,
+        code: lastError.code,
+        message: lastError.message,
+        details: lastError.details,
+        hint: lastError.hint,
       });
-      return;
+
+      const retryDelay = UPCOMING_GIG_LOAD_RETRY_DELAYS_MS[attempt];
+      if (retryDelay !== undefined) {
+        await new Promise((resolve) => window.setTimeout(resolve, retryDelay));
+      }
     }
 
-    setUpcomingGigs((data ?? []) as any);
+    console.error('Error loading gigs after retries:', lastError);
+    toast({
+      title: 'Unable to load gigs',
+      description: 'We could not fetch your scheduled performances. Please try again.',
+      variant: 'destructive',
+    });
   }, [toast]);
 
   const updateBandLockout = useCallback(async (bandId: string) => {
