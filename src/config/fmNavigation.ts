@@ -33,7 +33,7 @@ export const FM_MODULES: FMModule[] = [
     label: "Home",
     icon: Home,
     rootPath: "/home",
-    matchPaths: ["/home", "/dashboard", "/hub", "/inbox", "/journal", "/todays-news", "/statistics", "/advisor", "/version-history"],
+    matchPaths: ["/home", "/dashboard", "/hub", "/inbox", "/my-bug-reports", "/journal", "/todays-news", "/statistics", "/advisor", "/version-history"],
     subTabs: [
       { label: "Home", path: "/home", icon: Home },
       { label: "Inbox", path: "/inbox", icon: InboxIcon },
