@@ -16,13 +16,16 @@ const roleFromDefinition = (definition: SkillDefinitionRecord): string | null =>
 
   if (!isInstrumentPerformance && !isLegacyVocalPerformance) return null;
 
-  const role = definition.display_name.replace(/^Basic\s+/i, "").trim();
+  const displayName = definition.display_name?.trim();
+  if (!displayName) return null;
+
+  const role = displayName.replace(/^Basic\s+/i, "").trim();
   return role || null;
 };
 
 export const BAND_PERFORMANCE_ROLES = Array.from(
   new Set(
-    (SKILL_TREE_DEFINITIONS as SkillDefinitionRecord[])
+    SKILL_TREE_DEFINITIONS
       .map(roleFromDefinition)
       .filter((role): role is string => Boolean(role)),
   ),
