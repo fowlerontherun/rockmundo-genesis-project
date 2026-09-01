@@ -1,3 +1,10 @@
+if (!document.querySelector('link[href="./wiki-directory.css"]')) {
+  const directoryStyles = document.createElement("link");
+  directoryStyles.rel = "stylesheet";
+  directoryStyles.href = "./wiki-directory.css";
+  document.head.append(directoryStyles);
+}
+
 const homeDirectoryTemplate = document.getElementById("wiki-home-directory-template");
 const deepDiveTemplate = document.getElementById("wiki-deep-dive-links");
 const articleContent = document.getElementById("article-content");
