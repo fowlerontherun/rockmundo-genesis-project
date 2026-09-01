@@ -2,6 +2,7 @@ import { Music } from 'lucide-react';
 import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 import { usePrimaryBand } from '@/hooks/usePrimaryBand';
 import { CanonicalPlayerFestivalHub } from '@/features/festivals/booking/components';
+import { FestivalDirectoryPosters } from '@/features/festivals/components/FestivalDirectoryPosters';
 
 export default function FestivalBrowser() {
   const { data: primaryBandRecord } = usePrimaryBand();
@@ -10,11 +11,14 @@ export default function FestivalBrowser() {
   return (
     <FMPageScaffold
       title="Festivals"
-      subtitle="Canonical applications, offers, contracts and setlist preparation"
+      subtitle="Discover festival line-ups, apply to play and manage your festival bookings"
       icon={Music}
       backTo="/hub/band-live"
     >
-      <CanonicalPlayerFestivalHub bandId={band?.id} />
+      <div className="space-y-6">
+        <FestivalDirectoryPosters />
+        <CanonicalPlayerFestivalHub bandId={band?.id} />
+      </div>
     </FMPageScaffold>
   );
 }
