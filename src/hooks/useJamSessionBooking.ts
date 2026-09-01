@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { REHEARSAL_SLOTS, getSlotTimeRange } from "@/utils/facilitySlots";
-import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
+import { validateBookingWindow } from "@/utils/activityBookingTime";
 
 export interface BookJamSessionParams {
   name: string;
@@ -23,13 +23,21 @@ export interface BookJamSessionParams {
   totalCost: number;
 }
 
+const getRpcErrorMessage = (error: unknown, fallback: string) => {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message?: unknown }).message ?? "").trim();
+    if (message) return message;
+  }
+  return fallback;
+};
+
 export const useJamSessionBooking = () => {
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isBooking, setIsBooking] = useState(false);
+  const bookingKeys = useRef(new Map<string, string>());
 
-  // Fetch active profile with current city
   const { data: profile } = useQuery({
     queryKey: ["profile-jam", profileId],
     queryFn: async () => {
@@ -45,402 +53,119 @@ export const useJamSessionBooking = () => {
     enabled: !!profileId,
   });
 
-  // Check if user has conflicting activities during a time range
-  const checkActivityConflict = async (
-    userId: string,
-    startTime: Date,
-    endTime: Date
-  ): Promise<{ hasConflict: boolean; conflictTitle?: string }> => {
-    const { data: conflicts, error } = await supabase
-      .from("player_scheduled_activities")
-      .select("title")
-      .eq("profile_id", userId)
-      .in("status", ["scheduled", "in_progress"])
-      .lt("scheduled_start", endTime.toISOString())
-      .gt("scheduled_end", startTime.toISOString())
-      .limit(1);
-
-    if (error) throw new Error(error.message || "Failed to check schedule conflicts");
-
-    if (conflicts && conflicts.length > 0) {
-      return { hasConflict: true, conflictTitle: conflicts[0].title };
-    }
-    return { hasConflict: false };
+  const invalidateJamState = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["jam-sessions"] }),
+      queryClient.invalidateQueries({ queryKey: ["jam-session-workspace"] }),
+      queryClient.invalidateQueries({ queryKey: ["jam-session-outcomes"] }),
+      queryClient.invalidateQueries({ queryKey: ["profile"] }),
+      queryClient.invalidateQueries({ queryKey: ["profile-jam"] }),
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+    ]);
   };
 
-  // Check if user is already in an active/waiting jam session
-  const checkExistingJamParticipation = async (profileId: string): Promise<boolean> => {
-    const { data: existing } = await supabase
-      .from("jam_session_participants")
-      .select("jam_session_id, jam_sessions!inner(status)")
-      .eq("profile_id", profileId)
-      .is("left_at", null);
-
-    // Filter to only waiting/active sessions
-    const activeParticipations = (existing || []).filter((p: any) => 
-      p.jam_sessions?.status === "waiting" || p.jam_sessions?.status === "active"
-    );
-
-    return activeParticipations.length > 0;
-  };
-
-  // Create scheduled activity for jam session
-  const createScheduledActivity = async (
-    userId: string,
-    profileId: string,
-    sessionId: string,
-    sessionName: string,
-    scheduledStart: Date,
-    scheduledEnd: Date,
-    cityName?: string
-  ) => {
-    const { error } = await (supabase as any).from("player_scheduled_activities").insert({
-      user_id: userId,
-      profile_id: profileId,
-      activity_type: "jam",
-      scheduled_start: scheduledStart.toISOString(),
-      scheduled_end: scheduledEnd.toISOString(),
-      
-      status: "scheduled",
-      title: `Jam Session: ${sessionName}`,
-      location: cityName || "Rehearsal Room",
-      linked_jam_session_id: sessionId,
-      metadata: { jam_session_id: sessionId },
-    });
-
-    if (error) throw new Error(error.message || "Failed to add jam session to schedule");
-  };
-
-  // Check jam session availability for a room and date
   const checkAvailability = async (roomId: string, date: Date) => {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const { data: existingJams } = await supabase
+    const { data, error } = await supabase
       .from("jam_sessions")
       .select("id, scheduled_start, scheduled_end")
       .eq("rehearsal_room_id", roomId)
       .gte("scheduled_start", startOfDay.toISOString())
       .lte("scheduled_start", endOfDay.toISOString())
-      .neq("status", "completed");
+      .in("status", ["waiting", "active"]);
 
-    return existingJams || [];
+    if (error) throw error;
+    return data || [];
   };
 
   const bookJamSession = async (params: BookJamSessionParams): Promise<string> => {
     if (!profile) throw new Error("Profile not found");
     if (isBooking) throw new Error("Booking already in progress");
 
+    const slot = REHEARSAL_SLOTS.find((candidate) => candidate.id === params.slotId);
+    if (!slot) throw new Error("Invalid slot selected");
+
+    const { start: scheduledStart } = getSlotTimeRange(slot, params.selectedDate);
+    const scheduledEnd = new Date(
+      scheduledStart.getTime() + params.durationHours * 60 * 60 * 1000,
+    );
+    const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
+    if (bookingError) throw new Error(bookingError);
+
+    const fingerprint = [
+      profile.id,
+      params.name.trim(),
+      params.rehearsalRoomId,
+      scheduledStart.toISOString(),
+      params.durationHours,
+    ].join(":");
+    const idempotencyKey =
+      bookingKeys.current.get(fingerprint) ?? globalThis.crypto.randomUUID();
+    bookingKeys.current.set(fingerprint, idempotencyKey);
+
     setIsBooking(true);
-
     try {
-      // Calculate scheduled times
-      const slot = REHEARSAL_SLOTS.find(s => s.id === params.slotId);
-      if (!slot) throw new Error("Invalid slot selected");
-
-      const { start: scheduledStart } = getSlotTimeRange(slot, params.selectedDate);
-      const scheduledEnd = new Date(scheduledStart.getTime() + params.durationHours * 60 * 60 * 1000);
-      const bookingError = validateBookingWindow(scheduledStart, scheduledEnd);
-      if (bookingError) throw new Error(bookingError);
-
-      // Check for activity conflicts
-      const { hasConflict, conflictTitle } = await checkActivityConflict(
-        profile.id,
-        scheduledStart,
-        scheduledEnd
-      );
-      if (hasConflict) {
-        throw new Error(`You have a scheduling conflict with "${conflictTitle}". Cancel that activity first.`);
-      }
-
-      // Check if already in a jam session
-      const alreadyInJam = await checkExistingJamParticipation(profile.id);
-      if (alreadyInJam) {
-        throw new Error("You're already participating in another jam session. Leave that session first.");
-      }
-
-      // Cost per participant estimate (will be recalculated as people join)
-      const costPerParticipant = Math.ceil(params.totalCost / params.maxParticipants);
-
-      // Check if user can afford it
-      if ((profile.cash || 0) < params.totalCost) {
-        throw new Error("Insufficient funds to book this session");
-      }
-
-      // Get city name for the activity
-      const { data: cityData } = await supabase
-        .from("cities")
-        .select("name")
-        .eq("id", params.cityId)
-        .maybeSingle();
-
-      // Create the jam session with venue booking
-      const { data: session, error: sessionError } = await supabase
-        .from("jam_sessions")
-        .insert({
-          host_id: profile.id,
-          name: params.name.trim(),
-          description: params.description?.trim() || null,
-          genre: params.genre,
-          tempo: params.tempo,
-          max_participants: params.maxParticipants,
-          skill_requirement: params.skillRequirement,
-          is_private: params.isPrivate,
-          access_code: params.isPrivate ? params.accessCode?.trim() : null,
-          status: "waiting",
-          rehearsal_room_id: params.rehearsalRoomId,
-          city_id: params.cityId,
-          scheduled_start: scheduledStart.toISOString(),
-          scheduled_end: scheduledEnd.toISOString(),
-          duration_hours: params.durationHours,
-          total_cost: params.totalCost,
-          creator_profile_id: profile.id,
-          cost_per_participant: costPerParticipant,
-        })
-        .select("id")
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      // Deduct cost from creator's profile
-      await supabase
-        .from("profiles")
-        .update({ cash: (profile.cash || 0) - params.totalCost })
-        .eq("id", profile.id);
-
-      // Add creator as first participant
-      await supabase
-        .from("jam_session_participants")
-        .insert({
-          jam_session_id: session.id,
-          profile_id: profile.id,
-          cost_paid: params.totalCost,
-          joined_at: new Date().toISOString(),
-        });
-
-      // Create scheduled activity for the creator
-      await createScheduledActivity(
-        profile.user_id,
-        profile.id,
-        session.id,
-        params.name,
-        scheduledStart,
-        scheduledEnd,
-        cityData?.name
-      );
-
-      // Add system message to chat
-      await supabase
-        .from("jam_session_chat")
-        .insert({
-          session_id: session.id,
-          profile_id: profile.id,
-          message: `Session "${params.name}" created! Waiting for musicians to join...`,
-          message_type: "system",
-        });
-
-      toast({
-        title: "Jam Session Booked!",
-        description: `${params.name} scheduled for ${scheduledStart.toLocaleString()}`,
+      const { data, error } = await (supabase.rpc as any)("book_jam_session_v2", {
+        p_name: params.name.trim(),
+        p_description: params.description?.trim() || null,
+        p_genre: params.genre,
+        p_tempo: params.tempo,
+        p_max_participants: params.maxParticipants,
+        p_skill_requirement: params.skillRequirement,
+        p_is_private: params.isPrivate,
+        p_access_code: params.isPrivate ? params.accessCode?.trim() || null : null,
+        p_rehearsal_room_id: params.rehearsalRoomId,
+        p_scheduled_start: scheduledStart.toISOString(),
+        p_duration_hours: params.durationHours,
+        p_idempotency_key: idempotencyKey,
+        p_band_id: null,
+        p_challenge_id: null,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      if (error) throw error;
+      const sessionId = data?.session_id ?? data?.id;
+      if (!sessionId) throw new Error("Jam session booking did not return a session id");
 
-      return session.id;
+      bookingKeys.current.delete(fingerprint);
+      await invalidateJamState();
+      toast({
+        title: "Jam Session Booked!",
+        description: `${params.name} is reserved for ${scheduledStart.toLocaleString()}.`,
+      });
+      return String(sessionId);
+    } catch (error) {
+      throw new Error(getRpcErrorMessage(error, "Unable to book jam session"));
     } finally {
       setIsBooking(false);
     }
   };
 
-  const joinJamSession = async (sessionId: string): Promise<void> => {
-    if (!profile) throw new Error("Profile not found");
+  const joinJamSession = async (sessionId: string, accessCode?: string): Promise<void> => {
+    const { error } = await (supabase.rpc as any)("join_jam_session", {
+      p_session_id: sessionId,
+      p_access_code: accessCode?.trim() || null,
+    });
+    if (error) throw new Error(getRpcErrorMessage(error, "Unable to join jam session"));
 
-    // Get session details with city info
-    const { data: session } = await supabase
-      .from("jam_sessions")
-      .select("*, current_participants:jam_session_participants(count), city:cities(id, name)")
-      .eq("id", sessionId)
-      .single();
-
-    if (!session) throw new Error("Session not found");
-    if (session.status !== "waiting") throw new Error("Session is not accepting participants");
-
-    // Check if user is in the same city as the session
-    if (session.city_id && profile.current_city_id !== session.city_id) {
-      const cityName = (session.city as any)?.name || "the session city";
-      throw new Error(`You must be in ${cityName} to join this jam session. Travel there first!`);
-    }
-
-    // Check for activity conflicts during the session time
-    if (session.scheduled_start && session.scheduled_end) {
-      const { hasConflict, conflictTitle } = await checkActivityConflict(
-        profile.id,
-        new Date(session.scheduled_start),
-        new Date(session.scheduled_end)
-      );
-      if (hasConflict) {
-        throw new Error(`You have a scheduling conflict with "${conflictTitle}". Cancel that activity first.`);
-      }
-    }
-
-    // Check if already in a jam session
-    const alreadyInJam = await checkExistingJamParticipation(profile.id);
-    if (alreadyInJam) {
-      throw new Error("You're already participating in another jam session. Leave that session first.");
-    }
-
-    // Calculate new cost per person
-    const currentCount = session.current_participants?.[0]?.count || 1;
-    const newCount = currentCount + 1;
-    const newCostPerPerson = Math.ceil(session.total_cost / Math.min(newCount + 1, session.max_participants));
-
-    // Check if user can afford their share
-    if ((profile.cash || 0) < newCostPerPerson) {
-      throw new Error("Insufficient funds to join this session");
-    }
-
-    // Add as participant
-    const { error: insertError } = await supabase
-      .from("jam_session_participants")
-      .insert({
-        jam_session_id: sessionId,
-        profile_id: profile.id,
-        cost_paid: newCostPerPerson,
-        joined_at: new Date().toISOString(),
-      });
-
-    if (insertError) {
-      console.error("Error inserting participant:", insertError);
-      throw new Error(insertError.message || "Failed to join session");
-    }
-
-    // Deduct cost
-    await supabase
-      .from("profiles")
-      .update({ cash: (profile.cash || 0) - newCostPerPerson })
-      .eq("id", profile.id);
-
-    // Update session participant count and ids
-    const updatedParticipantIds = [...(session.participant_ids || []), profile.id];
-    await supabase
-      .from("jam_sessions")
-      .update({
-        cost_per_participant: newCostPerPerson,
-        current_participants: newCount,
-        participant_ids: updatedParticipantIds,
-      })
-      .eq("id", sessionId);
-
-    // Create scheduled activity for the joiner
-    if (session.scheduled_start && session.scheduled_end) {
-      await createScheduledActivity(
-        profile.user_id,
-        profile.id,
-        sessionId,
-        session.name,
-        new Date(session.scheduled_start),
-        new Date(session.scheduled_end),
-        (session.city as any)?.name
-      );
-    }
-
-    // Add join message to chat
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("display_name, username")
-      .eq("id", profile.id)
-      .single();
-
-    await supabase
-      .from("jam_session_chat")
-      .insert({
-        session_id: sessionId,
-        profile_id: profile.id,
-        message: `${profileData?.display_name || profileData?.username || 'A musician'} joined the session!`,
-        message_type: "join",
-      });
-
-    toast({ title: "Joined session!" });
-    queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
-    queryClient.invalidateQueries({ queryKey: ["profile"] });
-    queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+    await invalidateJamState();
+    toast({
+      title: "Joined session!",
+      description: "Your schedule and contribution were updated together.",
+    });
   };
 
   const leaveJamSession = async (sessionId: string): Promise<void> => {
-    if (!profile) throw new Error("Profile not found");
-
-    // Get session details
-    const { data: session } = await supabase
-      .from("jam_sessions")
-      .select("*")
-      .eq("id", sessionId)
-      .single();
-
-    if (!session) throw new Error("Session not found");
-
-    const now = new Date();
-    const scheduledEnd = session.scheduled_end ? new Date(session.scheduled_end) : null;
-    const startedAt = session.started_at ? new Date(session.started_at) : null;
-
-    // Calculate penalty if session is active
-    let rewardMultiplier = 1.0;
-    if (session.status === "active" && scheduledEnd && startedAt) {
-      const totalDuration = scheduledEnd.getTime() - startedAt.getTime();
-      const elapsed = now.getTime() - startedAt.getTime();
-      const percentageLeft = ((totalDuration - elapsed) / totalDuration) * 100;
-
-      if (percentageLeft > 75) rewardMultiplier = 0.10;
-      else if (percentageLeft > 50) rewardMultiplier = 0.25;
-      else if (percentageLeft > 25) rewardMultiplier = 0.50;
-      else if (percentageLeft > 10) rewardMultiplier = 0.75;
-    }
-
-    // Update participant record
-    await supabase
-      .from("jam_session_participants")
-      .update({
-        left_at: now.toISOString(),
-        participation_percentage: Math.floor((1 - rewardMultiplier) * 100) || 100,
-        reward_multiplier: rewardMultiplier,
-      })
-      .eq("jam_session_id", sessionId)
-      .eq("profile_id", profile.id);
-
-    // Cancel the scheduled activity
-    await (supabase as any)
-      .from("player_scheduled_activities")
-      .update({ status: "cancelled" })
-      .eq("profile_id", profile.id)
-      .eq("linked_jam_session_id", sessionId);
-
-    // Add leave message
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("display_name, username")
-      .eq("id", profile.id)
-      .single();
-
-    await supabase
-      .from("jam_session_chat")
-      .insert({
-        session_id: sessionId,
-        profile_id: profile.id,
-        message: `${profileData?.display_name || profileData?.username || 'A musician'} left the session${rewardMultiplier < 1 ? ' (early leave penalty applied)' : ''}.`,
-        message_type: "leave",
-      });
-
-    toast({
-      title: "Left session",
-      description: rewardMultiplier < 1 ? `Early leave penalty applied (${Math.floor(rewardMultiplier * 100)}% rewards)` : undefined,
-      variant: rewardMultiplier < 1 ? "destructive" : "default",
+    const { error } = await (supabase.rpc as any)("leave_jam_session_v2", {
+      p_session_id: sessionId,
     });
+    if (error) throw new Error(getRpcErrorMessage(error, "Unable to leave jam session"));
 
-    queryClient.invalidateQueries({ queryKey: ["jam-sessions"] });
-    queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+    await invalidateJamState();
+    toast({ title: "Left session", description: "Your jam reservation has been released." });
   };
 
   return {
