@@ -214,6 +214,29 @@ const AdminBugReportsPanel = () => {
                   disabled={savingId === report.id}
                 />
               </div>
+
+              <div className="space-y-2 rounded-md border border-primary/30 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Reply to player {report.user_id ? "" : "(no player attached — reply disabled)"}
+                </p>
+                <Textarea
+                  value={replyDrafts[report.id] ?? ""}
+                  placeholder="Send an update that lands in the player's inbox…"
+                  onChange={(event) =>
+                    setReplyDrafts((current) => ({ ...current, [report.id]: event.target.value }))
+                  }
+                  disabled={!report.user_id || respondingId === report.id}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => void sendReply(report)}
+                  disabled={!report.user_id || respondingId === report.id || !(replyDrafts[report.id] ?? "").trim()}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {respondingId === report.id ? "Sending…" : "Send update to player"}
+                </Button>
+              </div>
+
             </div>
           ))
         )}
