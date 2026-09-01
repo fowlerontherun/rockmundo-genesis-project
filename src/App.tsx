@@ -525,7 +525,7 @@ function App() {
                   </Route>
                   <Route element={<Layout />}>
                     <Route path="home" element={<Dashboard />} />
-                    <Route path="inbox" element={<Inbox />} />
+                    <Route path="my-bug-reports" element={<MyBugReportsPage />} />
 
 
                     <Route path="todays-news" element={<TodaysNewsPage />} />
