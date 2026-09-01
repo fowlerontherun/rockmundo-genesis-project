@@ -5344,6 +5344,44 @@ export type Database = {
           },
         ]
       }
+      bug_report_responses: {
+        Row: {
+          bug_report_id: string
+          created_at: string
+          id: string
+          message: string
+          responder_user_id: string | null
+          status_at_response: string | null
+          updated_at: string
+        }
+        Insert: {
+          bug_report_id: string
+          created_at?: string
+          id?: string
+          message: string
+          responder_user_id?: string | null
+          status_at_response?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bug_report_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          responder_user_id?: string | null
+          status_at_response?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_report_responses_bug_report_id_fkey"
+            columns: ["bug_report_id"]
+            isOneToOne: false
+            referencedRelation: "bug_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bug_reports: {
         Row: {
           admin_notes: string | null
@@ -64218,6 +64256,24 @@ export type Database = {
       respond_social_rivalry: {
         Args: { p_accept: boolean; p_profile_id: string; p_rivalry_id: string }
         Returns: Json
+      }
+      respond_to_bug_report: {
+        Args: { p_message: string; p_report_id: string; p_status?: string }
+        Returns: {
+          bug_report_id: string
+          created_at: string
+          id: string
+          message: string
+          responder_user_id: string | null
+          status_at_response: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bug_report_responses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       respond_to_company_offer: {
         Args: { p_accept: boolean; p_application_id: string }
