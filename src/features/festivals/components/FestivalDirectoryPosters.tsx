@@ -87,7 +87,7 @@ export function FestivalPosterCard({ festival }: { festival: FestivalDirectoryCa
                 ) : null}
               </div>
               <Badge className="border border-white/35 bg-black/25 text-white backdrop-blur-sm hover:bg-black/25">
-                {festival.status.replace(/_/g, " ")}
+                Upcoming
               </Badge>
             </div>
 
