@@ -70,6 +70,6 @@ describe("P4 route smoke matrix contract", () => {
   it("anchors desktop route coverage to the live route inventory rather than a static shortlist", () => {
     const desktop = manifest.scenarios.find((scenario) => scenario.id === "existing-player-desktop");
     expect(desktop?.tests).toContain("src/config/__tests__/routeOwnershipAudit.test.ts");
-    expect(desktop?.tests).toContain("src/__tests__/App.routeRender.test.tsx");
+    expect(desktop?.tests).toContain("src/__tests__/App.p4RouteSmoke.test.tsx");
   });
 });
