@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { JamOutcomeReportDialog } from "./JamOutcomeReportDialog";
 import { JamSessionMoodMeter } from "./JamSessionMoodMeter";
 import { JamSessionVenueTraits } from "./JamSessionVenueTraits";
 import { JamSessionChallengeCard } from "./JamSessionChallengeCard";
+import { JamSessionH1Workspace } from "./JamSessionH1Workspace";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Music4, Zap, Users, Play, Plus, CalendarDays, Clock, DollarSign, Target } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -25,7 +26,6 @@ export const JamSessionsEnhanced = () => {
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const {
-    sessions,
     activeSessions,
     completedSessions,
     myOutcomes,
@@ -39,49 +39,39 @@ export const JamSessionsEnhanced = () => {
     lastResults,
     clearResults,
   } = useJamSessions();
-  
+
   const { joinJamSession, profile } = useJamSessionBooking();
   const { challenges } = useJamSessionChallenges();
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showResultsDialog, setShowResultsDialog] = useState(false);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
 
-  // Find user's active session for chat/commentary
   useEffect(() => {
-    if (!profileId || !profile?.id) return;
-    
-    const myActiveSession = activeSessions.find(s => 
-      s.status === 'active' && 
-      (s.host_id === profile.id || s.participant_ids?.includes(profile.id))
-    );
-    
-    if (myActiveSession) {
-      setActiveSessionId(myActiveSession.id);
-    } else {
-      setActiveSessionId(null);
-    }
-  }, [activeSessions, profileId, profile?.id]);
-
-  // Show results dialog when session completes
-  useEffect(() => {
-    if (lastResults) {
-      setShowResultsDialog(true);
-    }
+    if (lastResults) setShowResultsDialog(true);
   }, [lastResults]);
 
-  const totalXpEarned = myOutcomes.reduce((sum, o) => sum + o.xp_earned, 0);
+  const totalXpEarned = myOutcomes.reduce((sum, outcome) => sum + outcome.xp_earned, 0);
   const sessionsCompleted = myOutcomes.length;
 
-  const handleJoinSession = async (sessionId: string) => {
+  const isUserParticipant = (session: (typeof activeSessions)[number]) => {
+    if (!profile?.id) return false;
+    return session.host_id === profile.id || session.participant_ids?.includes(profile.id) || false;
+  };
+
+  const myCurrentSession = useMemo(
+    () => activeSessions.find((session) => isUserParticipant(session)) ?? null,
+    [activeSessions, profile?.id],
+  );
+
+  const handleJoinSession = async (sessionId: string, accessCode?: string) => {
     setJoiningSessionId(sessionId);
     try {
-      await joinJamSession(sessionId);
-    } catch (error: any) {
+      await joinJamSession(sessionId, accessCode);
+    } catch (error: unknown) {
       toast({
         title: "Unable to join session",
-        description: error.message || "An error occurred",
+        description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     } finally {
@@ -89,16 +79,13 @@ export const JamSessionsEnhanced = () => {
     }
   };
 
-  // Check if user is a participant of a session
-  const isUserParticipant = (session: any) => {
-    if (!profile?.id) return false;
-    return session.host_id === profile.id || session.participant_ids?.includes(profile.id);
-  };
+  const currentIsH1 = Number(myCurrentSession?.engine_version || 1) >= 2;
+  const currentIsActive = myCurrentSession?.status === "active";
 
   return (
     <FMPageScaffold
       title="Jam Sessions"
-      subtitle="Book rehearsal rooms, collaborate with musicians, and earn XP rewards."
+      subtitle="Book rehearsal rooms, assign session jobs, shape each slot, and keep progressing even while offline."
       icon={Music4}
       backTo="/hub/band-live"
       headerActions={
@@ -108,15 +95,13 @@ export const JamSessionsEnhanced = () => {
         </Button>
       }
     >
-
-      {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <Play className="h-8 w-8 text-green-500" />
             <div>
               <p className="text-2xl font-bold">{activeSessions.length}</p>
-              <p className="text-sm text-muted-foreground">Active Sessions</p>
+              <p className="text-sm text-muted-foreground">Open Sessions</p>
             </div>
           </CardContent>
         </Card>
@@ -143,76 +128,79 @@ export const JamSessionsEnhanced = () => {
             <CalendarDays className="h-8 w-8 text-purple-500" />
             <div>
               <p className="text-2xl font-bold">{completedSessions.length}</p>
-              <p className="text-sm text-muted-foreground">All Completed</p>
+              <p className="text-sm text-muted-foreground">World Completed</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Active Session Panel with Chat & Commentary */}
-      {activeSessionId && (
+      {myCurrentSession && currentIsH1 && (
+        <JamSessionH1Workspace sessionId={myCurrentSession.id} />
+      )}
+
+      {myCurrentSession && currentIsActive && currentIsH1 && (
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
+                  Session room
+                </CardTitle>
+                <CardDescription>
+                  Chat and voice remain live while the authoritative slot engine runs independently.
+                </CardDescription>
+              </div>
+              <Badge>LIVE</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <JamVoiceChat sessionId={myCurrentSession.id} />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="h-[400px]">
+                <JamSessionChat sessionId={myCurrentSession.id} sessionName={myCurrentSession.name} />
+              </div>
+              <div className="h-[400px]">
+                <JamCommentaryFeed sessionId={myCurrentSession.id} isActive />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {myCurrentSession && currentIsActive && !currentIsH1 && (
         <Card className="border-2 border-primary/30">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                Active Jam Session
+                <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
+                Legacy Jam Session
               </CardTitle>
-              <Badge variant="default" className="bg-green-500">LIVE</Badge>
+              <Badge>LIVE</Badge>
             </div>
-            <CardDescription>
-              You're currently in a jam session. Chat with other musicians and watch the live commentary!
-            </CardDescription>
+            <CardDescription>This older session is displayed with the legacy presentation.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Mood Meter & Venue Traits */}
-            {(() => {
-              const activeSession = activeSessions.find(s => s.id === activeSessionId);
-              return activeSession ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <JamSessionMoodMeter 
-                    mood={(activeSession as any).mood_score || 50} 
-                    synergy={(activeSession as any).synergy_score || 50} 
-                  />
-                  <div className="space-y-3">
-                    <JamSessionVenueTraits venueTrait={(activeSession as any).venue_trait} />
-                    {(activeSession as any).challenge_id && (
-                      <div className="space-y-1">
-                        <span className="text-xs font-medium flex items-center gap-1">
-                          <Target className="h-3 w-3" /> Active Challenge
-                        </span>
-                        {challenges.filter(c => c.id === (activeSession as any).challenge_id).map(c => (
-                          <JamSessionChallengeCard 
-                            key={c.id} 
-                            challenge={c} 
-                            isActive 
-                            isCompleted={(activeSession as any).challenge_completed} 
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : null;
-            })()}
-
-            {/* Voice Chat */}
-            <JamVoiceChat sessionId={activeSessionId} />
-            
-            {/* Chat & Commentary */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <JamSessionMoodMeter mood={myCurrentSession.mood_score || 50} synergy={myCurrentSession.synergy_score || 50} />
+              <div className="space-y-3">
+                <JamSessionVenueTraits venueTrait={myCurrentSession.venue_trait} />
+                {myCurrentSession.challenge_id && challenges
+                  .filter((challenge) => challenge.id === myCurrentSession.challenge_id)
+                  .map((challenge) => (
+                    <JamSessionChallengeCard
+                      key={challenge.id}
+                      challenge={challenge}
+                      isActive
+                      isCompleted={myCurrentSession.challenge_completed}
+                    />
+                  ))}
+              </div>
+            </div>
+            <JamVoiceChat sessionId={myCurrentSession.id} />
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="h-[400px]">
-                <JamSessionChat 
-                  sessionId={activeSessionId} 
-                  sessionName="Active Session" 
-                />
-              </div>
-              <div className="h-[400px]">
-                <JamCommentaryFeed 
-                  sessionId={activeSessionId} 
-                  isActive={true} 
-                />
-              </div>
+              <div className="h-[400px]"><JamSessionChat sessionId={myCurrentSession.id} sessionName={myCurrentSession.name} /></div>
+              <div className="h-[400px]"><JamCommentaryFeed sessionId={myCurrentSession.id} isActive /></div>
             </div>
           </CardContent>
         </Card>
@@ -236,10 +224,8 @@ export const JamSessionsEnhanced = () => {
             <Card>
               <CardContent className="p-12 text-center">
                 <Music4 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-semibold">No active sessions</h3>
-                <p className="text-muted-foreground mb-4">
-                  Book a rehearsal room and start jamming!
-                </p>
+                <h3 className="text-lg font-semibold">No open sessions</h3>
+                <p className="text-muted-foreground mb-4">Book a rehearsal room and start jamming.</p>
                 <Button onClick={() => setIsBookingOpen(true)}>
                   <CalendarDays className="mr-2 h-4 w-4" />
                   Book a Session
@@ -251,14 +237,14 @@ export const JamSessionsEnhanced = () => {
               {activeSessions.map((session) => {
                 const isHost = session.host_id === profile?.id;
                 const isParticipant = isUserParticipant(session);
-                
+
                 return (
                   <Card key={session.id} className="relative">
                     <JamSessionCard
                       session={session}
                       isHost={isHost}
                       isParticipant={isParticipant}
-                      onJoin={() => handleJoinSession(session.id)}
+                      onJoin={(accessCode) => handleJoinSession(session.id, accessCode)}
                       onStart={() => startSession(session.id)}
                       onComplete={() => completeSession({ sessionId: session.id, participants: session.participant_ids || [] })}
                       onCancel={() => cancelSession(session.id)}
@@ -267,29 +253,25 @@ export const JamSessionsEnhanced = () => {
                       isCompleting={isCompleting}
                       isCancelling={isCancelling}
                     />
-                    
-                    {/* Show session details - scheduled time, cost, etc. */}
-                    {(session as any).scheduled_start && (
+
+                    {session.scheduled_start && (
                       <div className="px-4 pb-4 flex flex-wrap gap-2 text-xs text-muted-foreground border-t pt-3 mt-2">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {new Date((session as any).scheduled_start).toLocaleString()}
+                          {new Date(session.scheduled_start).toLocaleString()}
                         </span>
-                        {(session as any).duration_hours && (
-                          <span>• {(session as any).duration_hours}h duration</span>
-                        )}
-                        {(session as any).cost_per_participant && (
+                        {session.duration_hours && <span>• {session.duration_hours}h duration</span>}
+                        {Number(session.cost_per_participant || 0) > 0 && (
                           <span className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            ${((session as any).cost_per_participant / 100).toFixed(2)}/person
+                            ${Number(session.cost_per_participant).toLocaleString()}/person contribution
                           </span>
                         )}
                       </div>
                     )}
-                    {/* Venue Trait */}
-                    {(session as any).venue_trait && (
+                    {session.venue_trait && (
                       <div className="px-4 pb-3">
-                        <JamSessionVenueTraits venueTrait={(session as any).venue_trait} />
+                        <JamSessionVenueTraits venueTrait={session.venue_trait} />
                       </div>
                     )}
                   </Card>
@@ -303,18 +285,15 @@ export const JamSessionsEnhanced = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Target className="h-5 w-5" />
-                Session Challenges
+                <Target className="h-5 w-5" /> Session Challenges
               </CardTitle>
               <CardDescription>
-                Complete challenges during jam sessions to earn bonus XP. Challenges are checked when a session ends.
+                Hosts can attach an eligible challenge during pre-jam setup. Completion is resolved from the final server-side slot results.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {challenges.map((challenge) => (
-                  <JamSessionChallengeCard key={challenge.id} challenge={challenge} />
-                ))}
+                {challenges.map((challenge) => <JamSessionChallengeCard key={challenge.id} challenge={challenge} />)}
               </div>
               {challenges.length === 0 && (
                 <p className="text-center text-muted-foreground py-8">No challenges available right now.</p>
@@ -328,19 +307,14 @@ export const JamSessionsEnhanced = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Booking Dialog */}
       <JamSessionBookingDialog
         open={isBookingOpen}
         onOpenChange={setIsBookingOpen}
-        onSuccess={(sessionId) => {
-          toast({
-            title: "Session booked!",
-            description: "Your jam session has been scheduled.",
-          });
+        onSuccess={() => {
+          toast({ title: "Session booked!", description: "Your jam session has been scheduled." });
         }}
       />
 
-      {/* Results Dialog */}
       <JamOutcomeReportDialog
         open={showResultsDialog}
         onOpenChange={(open) => {
