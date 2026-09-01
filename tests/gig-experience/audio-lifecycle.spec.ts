@@ -29,7 +29,14 @@ test('audio activation, speed muting, seek cleanup, close and reopen use one act
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/admin/gig-viewer-demo');
   await page.getByRole('button', { name: 'Launch viewer', exact: true }).click();
-  await expect(page.getByLabel('Setlist audio controls', { exact: true })).toContainText('idle');
+
+  // The replay now opens in the crowd-entry phase, where song audio is
+  // intentionally unavailable. Move to the first song before exercising the
+  // setlist-audio lifecycle so this test verifies audio rather than pre-show UI.
+  await expect(page.getByLabel('Setlist audio controls', { exact: true })).toContainText('Audio unavailable');
+  await page.getByRole('button', { name: 'Next song', exact: true }).click();
+  await expect(page.getByLabel('Setlist audio controls', { exact: true })).not.toContainText('Audio unavailable');
+
   await page.getByRole('button', { name: 'Enable Audio', exact: true }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   await expect.poll(() => page.evaluate(readCounter, 'playing')).toBe(1);

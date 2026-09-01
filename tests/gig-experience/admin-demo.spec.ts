@@ -41,7 +41,7 @@ test('admin fixture mode loads, changes controls, launches viewer, and stays rea
   }
   await page.getByLabel('Reduced-motion toggle', { exact: true }).click();
   await page.getByRole('button', { name: 'Launch viewer', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Gig Replay', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Gig Replay\b/ })).toBeVisible();
   await expect(page.getByLabel('Setlist audio controls', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Launch report preview', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Audio Diagnostics', exact: true })).toBeVisible();
