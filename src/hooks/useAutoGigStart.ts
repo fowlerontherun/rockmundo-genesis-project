@@ -2,30 +2,43 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Hook that periodically checks for gigs that should auto-start
- * Runs every minute when the component is mounted
+ * Periodically asks the server-side auto-start job to advance eligible gigs.
+ * The underlying RPC is service-role only, so browser clients must invoke the
+ * edge function rather than calling auto_start_scheduled_gigs directly.
  */
 export const useAutoGigStart = () => {
   useEffect(() => {
+    let disposed = false;
+
     const checkGigs = async () => {
+      if (disposed) return;
+
       try {
-        // Call the database function to auto-start eligible gigs
-        const { error } = await supabase.rpc('auto_start_scheduled_gigs');
-        
+        const { error } = await supabase.functions.invoke('auto-start-gigs', {
+          body: { triggeredBy: 'gig-page' },
+        });
+
         if (error) {
-          console.error('Error auto-starting gigs:', error);
+          console.warn('Unable to run auto-start gig check:', error);
         }
       } catch (error) {
-        console.error('Error in auto-start check:', error);
+        console.warn('Unable to run auto-start gig check:', error);
       }
     };
 
-    // Check immediately on mount
-    checkGigs();
+    // Do not compete with the page's initial band/gig reads on mount.
+    const initialTimeout = window.setTimeout(() => {
+      void checkGigs();
+    }, 5000);
 
-    // Then check every minute
-    const interval = setInterval(checkGigs, 60000);
+    const interval = window.setInterval(() => {
+      void checkGigs();
+    }, 60000);
 
-    return () => clearInterval(interval);
+    return () => {
+      disposed = true;
+      window.clearTimeout(initialTimeout);
+      window.clearInterval(interval);
+    };
   }, []);
 };
