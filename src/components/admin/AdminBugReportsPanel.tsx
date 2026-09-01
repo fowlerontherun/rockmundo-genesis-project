@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bug, CheckCircle2, ExternalLink, RefreshCw } from "lucide-react";
+import { AlertTriangle, Bug, CheckCircle2, ExternalLink, RefreshCw, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
