@@ -1,0 +1,440 @@
+.guide-body {
+  background: #f4efe3;
+}
+
+.guide-toplink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--rule-dark);
+  background: var(--sheet);
+  color: var(--forest-dark);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.guide-toplink:hover {
+  background: #f8f2e5;
+}
+
+.guide-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 920px) 220px;
+  gap: 30px;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 30px clamp(16px, 3vw, 44px) 56px;
+}
+
+.guide-side,
+.guide-on-page {
+  align-self: start;
+  position: sticky;
+  top: 18px;
+}
+
+.guide-side h2,
+.guide-on-page h2 {
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule-dark);
+  color: var(--forest-dark);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guide-side nav,
+.guide-on-page nav {
+  display: grid;
+  gap: 7px;
+}
+
+.guide-side a,
+.guide-on-page a {
+  font-size: 0.9rem;
+}
+
+.guide-side a[aria-current="page"] {
+  padding-left: 8px;
+  border-left: 3px solid var(--burgundy);
+  color: var(--burgundy);
+  font-weight: 700;
+}
+
+.guide-note {
+  margin-top: 22px;
+  padding: 12px 13px;
+  border: 1px solid var(--rule);
+  background: rgba(255, 253, 247, 0.68);
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.guide-article {
+  min-width: 0;
+  padding: clamp(22px, 4vw, 48px);
+  border: 1px solid var(--rule-dark);
+  background: var(--sheet);
+  box-shadow: 0 3px 16px var(--shadow);
+}
+
+.guide-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.78rem;
+}
+
+.guide-breadcrumbs span:not(:last-child)::after,
+.guide-breadcrumbs a::after {
+  content: "›";
+  margin-left: 6px;
+  color: var(--rule-dark);
+}
+
+.guide-kicker {
+  margin: 0 0 8px;
+  color: var(--burgundy);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.guide-article h1 {
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule-dark);
+  color: #25231f;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.guide-lead {
+  max-width: 760px;
+  margin: 18px 0 26px;
+  color: #4d483f;
+  font-size: 1.13rem;
+  line-height: 1.7;
+}
+
+.guide-hero {
+  margin: 28px 0 34px;
+  border: 1px solid var(--rule-dark);
+  background: var(--paper-deep);
+}
+
+.guide-hero img,
+.guide-figure img,
+.guide-visual-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.guide-hero img {
+  max-height: 430px;
+  object-fit: cover;
+}
+
+.guide-hero figcaption,
+.guide-figure figcaption {
+  padding: 9px 12px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.guide-summary {
+  margin: 26px 0 34px;
+  padding: 18px 20px;
+  border-left: 5px solid var(--forest);
+  background: #edf1e9;
+}
+
+.guide-summary h2 {
+  margin: 0 0 8px;
+  border: 0;
+  color: var(--forest-dark);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 1rem;
+}
+
+.guide-summary p,
+.guide-summary ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.guide-article section {
+  scroll-margin-top: 24px;
+}
+
+.guide-article section + section {
+  margin-top: 42px;
+}
+
+.guide-article section > h2 {
+  margin: 0 0 14px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--forest-dark);
+  font-size: 1.65rem;
+  font-weight: 500;
+}
+
+.guide-article h3 {
+  margin: 24px 0 8px;
+  color: #443d32;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 1rem;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.guide-card {
+  padding: 15px 16px;
+  border: 1px solid var(--rule);
+  background: #faf7ef;
+}
+
+.guide-card h3 {
+  margin-top: 0;
+}
+
+.guide-card p:last-child,
+.guide-card ul:last-child {
+  margin-bottom: 0;
+}
+
+.guide-flow {
+  display: grid;
+  gap: 13px;
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: guide-step;
+}
+
+.guide-flow > li {
+  position: relative;
+  min-height: 56px;
+  padding: 12px 14px 12px 58px;
+  border: 1px solid var(--rule);
+  background: #fbf8f0;
+  counter-increment: guide-step;
+}
+
+.guide-flow > li::before {
+  content: counter(guide-step);
+  position: absolute;
+  top: 11px;
+  left: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--forest-dark);
+  color: white;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-weight: 800;
+}
+
+.guide-flow strong {
+  display: block;
+  color: #332f28;
+}
+
+.guide-callout {
+  margin: 24px 0;
+  padding: 15px 17px;
+  border: 1px solid #c9b687;
+  border-left-width: 5px;
+  background: #fff6d9;
+}
+
+.guide-callout--mechanics {
+  border-color: #a9b8b2;
+  background: #edf3f0;
+}
+
+.guide-callout--warning {
+  border-color: #c89b9e;
+  background: #fae9e9;
+}
+
+.guide-callout strong:first-child {
+  display: block;
+  margin-bottom: 4px;
+  color: #493e2d;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+}
+
+.guide-figure {
+  margin: 28px auto;
+  border: 1px solid var(--rule-dark);
+  background: var(--paper-deep);
+}
+
+.guide-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.guide-visual-card {
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: #faf7ef;
+}
+
+.guide-visual-card img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.guide-visual-card div {
+  padding: 10px 11px;
+}
+
+.guide-visual-card strong {
+  display: block;
+  margin-bottom: 3px;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.87rem;
+}
+
+.guide-visual-card span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.guide-checklist {
+  padding: 16px 18px 16px 42px;
+  border: 1px solid var(--rule);
+  background: #faf7ef;
+}
+
+.guide-checklist li + li {
+  margin-top: 7px;
+}
+
+.guide-related {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.guide-related a {
+  display: block;
+  padding: 13px 14px;
+  border: 1px solid var(--rule);
+  background: #faf7ef;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.guide-related a:hover {
+  border-color: var(--forest);
+  background: #f2f0e6;
+}
+
+.guide-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 44px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.84rem;
+}
+
+.guide-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 12px 0 0;
+}
+
+.guide-meta span {
+  padding: 3px 7px;
+  border: 1px solid var(--rule);
+  background: #f6f0e4;
+  color: var(--muted);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1120px) {
+  .guide-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+
+  .guide-on-page {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .guide-layout {
+    display: block;
+    padding: 14px 10px 34px;
+  }
+
+  .guide-side {
+    position: static;
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid var(--rule);
+    background: #eee6d6;
+  }
+
+  .guide-side nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guide-note {
+    display: none;
+  }
+
+  .guide-article {
+    padding: 20px 17px 28px;
+  }
+
+  .guide-grid,
+  .guide-related,
+  .guide-visual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-hero img {
+    max-height: 300px;
+  }
+
+  .wiki-header__brand p {
+    display: none;
+  }
+}
