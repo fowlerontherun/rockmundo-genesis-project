@@ -39,6 +39,8 @@ const AdminBugReportsPanel = () => {
   const [statusFilter, setStatusFilter] = useState("open");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [respondingId, setRespondingId] = useState<string | null>(null);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
