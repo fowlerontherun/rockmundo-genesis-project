@@ -22,7 +22,7 @@ test('admin demo and viewer states have no serious or critical axe findings', as
 test('keyboard-only viewer flow remains operable', async ({ page }) => {
   await page.goto('/admin/gig-viewer-demo');
   await page.keyboard.press('Tab');
-  await page.getByLabel('Preset selector').focus();
+  await page.getByLabel('Preset selector', { exact: true }).focus();
   await page.keyboard.press('Enter');
   await page.getByRole('option', { name: 'Sold-out club' }).click();
   await page.getByRole('button', { name: 'Launch viewer' }).focus();
