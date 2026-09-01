@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Clock, Music, Users, Zap, Lock, Play, CheckCircle, XCircle } from "lucide-react";
 import type { JamSession } from "@/hooks/useJamSessions";
@@ -9,7 +11,7 @@ interface JamSessionCardProps {
   session: JamSession;
   isHost: boolean;
   isParticipant: boolean;
-  onJoin: () => void;
+  onJoin: (accessCode?: string) => void;
   onStart: () => void;
   onComplete: () => void;
   onCancel: () => void;
@@ -32,25 +34,29 @@ export const JamSessionCard = ({
   isCompleting,
   isCancelling,
 }: JamSessionCardProps) => {
+  const [accessCode, setAccessCode] = useState("");
   const hostName = session.host?.display_name || session.host?.username || "Unknown";
   const participantCount = session.current_participants || 0;
   const maxParticipants = session.max_participants;
   const fillPercent = (participantCount / maxParticipants) * 100;
+  const isH1 = Number(session.engine_version || 1) >= 2;
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     waiting: "bg-yellow-500/20 text-yellow-600",
     active: "bg-green-500/20 text-green-600",
     completed: "bg-muted text-muted-foreground",
+    cancelled: "bg-destructive/10 text-destructive",
   };
 
-  const statusLabels = {
+  const statusLabels: Record<string, string> = {
     waiting: "Waiting",
     active: "In Progress",
     completed: "Completed",
+    cancelled: "Cancelled",
   };
 
   return (
-    <Card className={session.status === "completed" ? "opacity-75" : ""}>
+    <Card className={["completed", "cancelled"].includes(session.status) ? "opacity-75" : ""}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1">
@@ -60,8 +66,8 @@ export const JamSessionCard = ({
             </CardTitle>
             <p className="text-sm text-muted-foreground">Hosted by {hostName}</p>
           </div>
-          <Badge className={statusColors[session.status as keyof typeof statusColors] || statusColors.waiting}>
-            {statusLabels[session.status as keyof typeof statusLabels] || session.status}
+          <Badge className={statusColors[session.status] || statusColors.waiting}>
+            {statusLabels[session.status] || session.status}
           </Badge>
         </div>
       </CardHeader>
@@ -79,6 +85,7 @@ export const JamSessionCard = ({
             <Clock className="h-3 w-3" />
             {session.tempo} BPM
           </Badge>
+          {isH1 && <Badge variant="outline">Jam 2.0</Badge>}
           {session.skill_requirement > 0 && (
             <Badge variant="outline" className="flex items-center gap-1">
               <Zap className="h-3 w-3" />
@@ -98,41 +105,65 @@ export const JamSessionCard = ({
           <Progress value={fillPercent} className="h-2" />
         </div>
 
-        {session.status === "completed" && session.total_xp_awarded > 0 && (
+        {session.status === "completed" && Number(session.total_xp_awarded || 0) > 0 && (
           <div className="flex items-center gap-2 text-sm text-green-600 bg-green-500/10 p-2 rounded">
             <CheckCircle className="h-4 w-4" />
             <span>{session.total_xp_awarded} XP awarded</span>
           </div>
         )}
 
-        <div className="flex gap-2">
+        {session.status === "waiting" && !isParticipant && session.is_private && participantCount < maxParticipants && (
+          <div className="space-y-2">
+            <Input
+              type="password"
+              placeholder="Private session access code"
+              value={accessCode}
+              onChange={(event) => setAccessCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && accessCode.trim() && !isJoining) onJoin(accessCode);
+              }}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
           {session.status === "waiting" && !isParticipant && participantCount < maxParticipants && (
-            <Button onClick={onJoin} disabled={isJoining} className="flex-1">
+            <Button
+              onClick={() => onJoin(session.is_private ? accessCode : undefined)}
+              disabled={isJoining || (session.is_private && !accessCode.trim())}
+              className="flex-1"
+            >
               {isJoining ? "Joining..." : "Join Session"}
             </Button>
           )}
-          
-          {session.status === "waiting" && isHost && participantCount >= 2 && (
+
+          {session.status === "waiting" && isHost && participantCount >= 1 && (
             <Button onClick={onStart} disabled={isStarting} variant="default" className="flex-1">
               <Play className="h-4 w-4 mr-2" />
               {isStarting ? "Starting..." : "Start Jam"}
             </Button>
           )}
 
-          {session.status === "active" && isHost && (
+          {session.status === "active" && isHost && !isH1 && (
             <Button onClick={onComplete} disabled={isCompleting} variant="default" className="flex-1">
               <CheckCircle className="h-4 w-4 mr-2" />
               {isCompleting ? "Completing..." : "End Session"}
             </Button>
           )}
 
-          {session.status === "active" && isParticipant && !isHost && (
+          {session.status === "active" && isH1 && isParticipant && (
+            <Badge variant="secondary" className="flex-1 justify-center py-2">
+              Resolves automatically while offline
+            </Badge>
+          )}
+
+          {session.status === "active" && isParticipant && !isHost && !isH1 && (
             <Badge variant="secondary" className="flex-1 justify-center py-2">
               Jamming in progress...
             </Badge>
           )}
 
-          {isParticipant && session.status === "waiting" && (
+          {isParticipant && session.status === "waiting" && !isHost && (
             <Badge variant="outline" className="flex-1 justify-center py-2">
               You're in!
             </Badge>
