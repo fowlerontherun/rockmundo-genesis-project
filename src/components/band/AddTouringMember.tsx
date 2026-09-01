@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DEFAULT_BAND_PERFORMANCE_ROLE } from '@/data/bandPerformanceRoles';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus } from 'lucide-react';
@@ -17,7 +18,7 @@ export function AddTouringMember({ bandId, onAdded }: AddTouringMemberProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [tier, setTier] = useState(1);
-  const [instrument, setInstrument] = useState('Guitar');
+  const [instrument, setInstrument] = useState(DEFAULT_BAND_PERFORMANCE_ROLE);
   const [loading, setLoading] = useState(false);
 
   const selectedTier = TOURING_MEMBER_TIERS.find(t => t.tier === tier) || TOURING_MEMBER_TIERS[0];

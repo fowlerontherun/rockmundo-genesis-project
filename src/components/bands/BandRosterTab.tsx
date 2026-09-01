@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
+import { BAND_PERFORMANCE_ROLES } from "@/data/bandPerformanceRoles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,21 +61,7 @@ const statusColors: Record<string, string> = {
   probation: "bg-sky-500/20 text-sky-700",
 };
 
-const performanceRoleOptions = [
-  "Vocals",
-  "Lead Vocals",
-  "Backing Vocals",
-  "Guitar",
-  "Lead Guitar",
-  "Rhythm Guitar",
-  "Bass",
-  "Drums",
-  "Keyboard",
-  "DJ",
-  "Producer",
-  "Multi-instrumentalist",
-  "Other",
-];
+const performanceRoleOptions = BAND_PERFORMANCE_ROLES;
 
 function getMemberRoles(member: MemberWithProfile): string[] {
   const stored = (member as unknown as { instrument_roles?: string[] | null }).instrument_roles;
@@ -104,7 +91,6 @@ function formatDate(value?: string | null) {
   return parsed.toLocaleDateString();
 }
 
-// Avatar status component
 function AvatarStatusIndicator({ profile }: { profile: MemberWithProfile['profiles'] }) {
   if (!profile) {
     return (
@@ -213,7 +199,6 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
     const fetchRoster = async () => {
       setLoading(true);
       try {
-        // Fetch band info for leader check
         const { data: bandData } = await supabase
           .from("bands")
           .select("leader_id")
@@ -224,7 +209,6 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
           setBandLeaderId(bandData.leader_id);
         }
 
-        // Fetch band members
         const { data: memberData, error: memberError } = await supabase
           .from("band_members")
           .select("*")
@@ -234,8 +218,6 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
 
         if (memberError) throw memberError;
 
-        // Fetch profiles by profile_id first so active characters show the correct name/avatar.
-        // Fall back to user_id for legacy/touring member records that may not have profile_id populated.
         const profileIds = memberData?.map(m => m.profile_id).filter(Boolean) ?? [];
         const userIds = memberData?.map(m => m.user_id).filter(Boolean) ?? [];
         const profileData: Array<MemberWithProfile["profiles"]> = [];
@@ -261,7 +243,6 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         const profilesById = new Map(profileData.filter(Boolean).map(p => [p!.id, p]));
         const profilesByUserId = new Map(profileData.filter(Boolean).map(p => [p!.user_id, p]));
 
-        // Merge members with profiles
         const membersWithProfiles: MemberWithProfile[] = (memberData ?? []).map(member => ({
           ...member,
           profiles: (member.profile_id ? profilesById.get(member.profile_id) : null)
@@ -269,7 +250,6 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
             ?? null
         }));
 
-        // Fetch status history
         const { data: historyData, error: historyError } = await (supabase as any)
           .from("band_membership_status_history")
           .select("*")
@@ -339,16 +319,16 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
 
       if (error) throw error;
 
-      setMembers(prev => 
-        prev.map(m => 
+      setMembers(prev =>
+        prev.map(m =>
           m.id === memberId ? { ...m, travels_with_band: !currentValue } : m
         )
       );
 
       toast({
         title: "Travel setting saved",
-        description: !currentValue 
-          ? "Member will now travel with the band" 
+        description: !currentValue
+          ? "Member will now travel with the band"
           : "Member will arrange their own travel",
       });
     } catch (error) {

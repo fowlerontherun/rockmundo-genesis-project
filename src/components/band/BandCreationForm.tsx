@@ -26,6 +26,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import logger from "@/lib/logger";
 import { Users, User, MapPin } from "lucide-react";
 import { INSTRUMENT_ROLES, VOCAL_ROLES } from "@/utils/touringMembers";
+import { DEFAULT_BAND_PERFORMANCE_ROLE } from "@/data/bandPerformanceRoles";
 import { MUSIC_GENRES } from "@/data/genres";
 import { getErrorMessage, validateRequired } from "@/utils/formValidation";
 
@@ -67,7 +68,7 @@ export function BandCreationForm({
   const [genre, setGenre] = useState("Rock");
   const [description, setDescription] = useState("");
   const [maxMembers, setMaxMembers] = useState(4);
-  const [instrumentRole, setInstrumentRole] = useState("Guitar");
+  const [instrumentRole, setInstrumentRole] = useState(DEFAULT_BAND_PERFORMANCE_ROLE);
   const [vocalRole, setVocalRole] = useState("None");
   const [homeCityId, setHomeCityId] = useState<string>("");
   const [loading, setLoading] = useState(false);
