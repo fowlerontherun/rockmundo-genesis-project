@@ -11,9 +11,12 @@ It intentionally lives under `public/wiki` instead of the React game shell so it
 
 ## Files
 
-- `index.html` — standalone shell and accessible structure.
+- `index.html` — standalone shell, templates and accessible structure.
 - `wiki.css` — Compendium-only visual system.
-- `wiki.js` — article catalogue, navigation, search and article rendering.
+- `wiki.js` — short reference article catalogue, navigation, search and article rendering.
+- `wiki-enhancements.css` — visual polish and responsive Compendium navigation.
+- `wiki-directory.css` — goal/directory/deep-dive presentation.
+- `wiki-directory.js` — goal directory integration, long-form search results, deep-dive links and specialist-guide integration.
 - `guide.css` — styling shared by long-form editorial guides.
 - `guides/*.html` — deeper walkthroughs for the main player journeys and systems.
 
@@ -42,7 +45,7 @@ The second guide set explains larger systems in more depth:
 
 ## Practical guides
 
-The fourth guide set covers systems players are likely to revisit regularly once the basic career loop is established:
+The practical guide set covers systems players are likely to revisit regularly once the basic career loop is established:
 
 1. `guides/early-performances.html` — busking, open mics, Battle of the Bands and choosing an early live route.
 2. `guides/wellness-and-lifestyle.html` — condition, fatigue, recovery, schedule pressure and unexpected setbacks.
@@ -55,13 +58,26 @@ The fourth guide set covers systems players are likely to revisit regularly once
 
 ## Mechanics explainers
 
-A third set explains important outcome systems in player language while deliberately stopping short of exploitable formulas:
+These guides explain important outcome systems in player language while deliberately stopping short of exploitable formulas:
 
 1. `guides/what-affects-a-gig.html` — member execution, ensemble tightness, setlist/song performance, production, stage performance and audience response.
 2. `guides/fame-and-fans.html` — fame, fans, local popularity, momentum, expectations and regional audience growth.
 3. `guides/understanding-song-quality.html` — songwriting completion, potential, quality dimensions, consistency, polish, originality and the distinction between song and recording quality.
 
-The main Compendium sidebar links to starter guides, deep dives, practical guides and mechanics explainers separately from the shorter reference articles.
+## Specialist guides
+
+The specialist set covers deeper career, commercial and character-life systems that sit around the core music loop:
+
+1. `guides/record-labels.html` — label rosters, artist contracts, advances, royalty terms, specialist staff and label management.
+2. `guides/producer-career.html` — production skills, recording sessions, staff-producer work and building a production career.
+3. `guides/sponsorships.html` — sponsorship types, offers, displayed benefits, brand fit and active contracts.
+4. `guides/achievements-and-awards.html` — achievement progress, rarity/categories, awards, nominations, trophies and legacy.
+5. `guides/relationships-and-social.html` — friendship, romance, rivalry, mentorship, interactions, privacy and shared history.
+6. `guides/housing-and-property.html` — rentals, property ownership, recovery, wellness, creativity, housing market and personal finances.
+
+There are now **30 long-form Compendium guides** across the starter, deep-dive, practical, mechanics and specialist sets.
+
+The Compendium home page also provides a goal-based directory. `wiki-directory.js` adds the specialist group into that directory, makes the pages available to long-form search, adds a Specialist guides section to desktop/mobile browsing, and connects appropriate short reference articles to the relevant specialist deep dive.
 
 ## Editorial rule
 
@@ -85,6 +101,8 @@ Do not publish:
 
 When balance changes, prefer updating the explanation of the mechanic rather than publishing values that will quickly become stale.
 
+Implementation code can contain exact balance values. Those values are not automatically suitable for the Compendium. For example, housing currently has concrete tier values and relationship pages derive internal compatibility/stage scores; the player guide describes their direction and visible consequences rather than copying those equations into public documentation.
+
 ## Visuals and screenshots
 
 Long-form guides can contain two types of visual:
@@ -93,7 +111,7 @@ Long-form guides can contain two types of visual:
 
 Existing artwork under `public/hub-tiles` may be reused where it helps explain a system. It must be captioned as a **Game illustration** so players do not mistake stylised art for a screenshot of the live interface.
 
-The current guide sets use artwork for systems such as skills, education, wellness, songwriting, rehearsal, recording, gigs, venues, stage equipment, releases, streaming, charts, cities, travel, festivals, sponsorships, touring, finances, employment, companies, open mics, busking, social media, merchandise and World Pulse.
+The current guide sets use artwork for systems such as skills, education, wellness, songwriting, rehearsal, recording, gigs, venues, stage equipment, releases, streaming, charts, cities, travel, festivals, sponsorships, touring, finances, employment, companies, labels, producers, achievements, relationships, housing, personal vehicles, social media, merchandise and World Pulse.
 
 ### Interface screenshots
 
@@ -117,12 +135,14 @@ Add an object to the `articles` array in `wiki.js` with:
 - one or more sections;
 - optional related article IDs.
 
-The sidebar, search index, table of contents and related-article cards are generated automatically.
+The sidebar, short-article search index, table of contents and related-article cards are generated automatically.
 
 ## Adding a long-form guide
 
 Create an HTML page under `guides/` that loads both `../wiki.css` and `../guide.css`. Keep the standard Compendium header, breadcrumb, guide navigation, article structure and mechanics-disclosure language so the site feels consistent.
 
 Long-form guides should answer a player journey or explain how a larger system fits together rather than duplicate the encyclopaedia. For example, “How do I prepare my first gig?” is a guide; “What is a setlist?” is better suited to a reference article.
+
+Add discoverable long-form pages to the goal/directory system. Long-form search reads the guide directory rather than maintaining a separate duplicate search catalogue. If a short reference article has a genuinely useful longer counterpart, add a selective deep-dive mapping rather than attaching a generic guide to every article.
 
 Mechanics explainers should describe the layers/factors a player can reasonably understand while explicitly avoiding implementation coefficients, random bounds, anti-abuse thresholds and deterministic optimisation advice.
