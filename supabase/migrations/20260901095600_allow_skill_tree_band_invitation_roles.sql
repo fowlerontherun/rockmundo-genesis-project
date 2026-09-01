@@ -98,4 +98,5 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.send_band_invitation(uuid, uuid, text, text, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.send_band_invitation(uuid, uuid, text, text, text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.send_band_invitation(uuid, uuid, text, text, text) TO authenticated;
