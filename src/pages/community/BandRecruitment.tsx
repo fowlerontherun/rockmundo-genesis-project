@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { BandVacancyCard } from "@/features/band-recruitment/components/BandVacancyCard";
 import {
   applyToVacancy,
-  loadBandPerformanceRoles,
   searchBandVacancies,
   type BandVacancy,
 } from "@/features/band-recruitment/services/recruitment";
+import { BAND_PERFORMANCE_ROLES } from "@/data/bandPerformanceRoles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,22 +14,16 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getUserBands } from "@/utils/bandStatus";
 import { toast } from "sonner";
 
-const FALLBACK_ROLES = ["Guitar", "Bass", "Drums", "Keyboard", "Singing", "Rapping"];
-
 export default function BandRecruitmentDiscovery() {
   const { profileId, userId } = useActiveProfile();
   const [vacancies, setVacancies] = useState<BandVacancy[]>([]);
-  const [roles, setRoles] = useState<string[]>(FALLBACK_ROLES);
+  const roles = BAND_PERFORMANCE_ROLES;
   const [instrument, setInstrument] = useState<string>("");
   const [commitment, setCommitment] = useState<string>("");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [leaderBandId, setLeaderBandId] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadBandPerformanceRoles().then((rows) => rows.length && setRoles(rows)).catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     if (!profileId) {
