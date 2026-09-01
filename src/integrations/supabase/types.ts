@@ -95,6 +95,300 @@ export type Database = {
         }
         Relationships: []
       }
+      active_gig_performance_sessions: {
+        Row: {
+          band_id: string
+          challenge: Json | null
+          completed_at: string | null
+          cue_scores: number[]
+          gig_id: string
+          id: string
+          played_at: string
+          profile_id: string
+          rating_multiplier: number
+          score: number
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          challenge?: Json | null
+          completed_at?: string | null
+          cue_scores: number[]
+          gig_id: string
+          id?: string
+          played_at?: string
+          profile_id: string
+          rating_multiplier?: number
+          score: number
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          challenge?: Json | null
+          completed_at?: string | null
+          cue_scores?: number[]
+          gig_id?: string
+          id?: string
+          played_at?: string
+          profile_id?: string
+          rating_multiplier?: number
+          score?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_gig_performance_sessions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_gig_performance_sessions_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_gig_performance_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_gig_performance_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      active_recording_sessions: {
+        Row: {
+          good_takes: number
+          id: string
+          perfect_takes: number
+          played_at: string
+          profile_id: string
+          quality_bonus: number
+          recording_session_id: string
+          rough_takes: number
+          score: number
+          user_id: string
+        }
+        Insert: {
+          good_takes?: number
+          id?: string
+          perfect_takes?: number
+          played_at?: string
+          profile_id: string
+          quality_bonus?: number
+          recording_session_id: string
+          rough_takes?: number
+          score: number
+          user_id: string
+        }
+        Update: {
+          good_takes?: number
+          id?: string
+          perfect_takes?: number
+          played_at?: string
+          profile_id?: string
+          quality_bonus?: number
+          recording_session_id?: string
+          rough_takes?: number
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_recording_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_recording_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_recording_sessions_recording_session_id_fkey"
+            columns: ["recording_session_id"]
+            isOneToOne: true
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      active_rehearsal_sessions: {
+        Row: {
+          band_id: string
+          cohesion_gained: number
+          familiarity_minutes_gained: number
+          id: string
+          lost_hits: number
+          perfect_hits: number
+          played_at: string
+          profile_id: string
+          recovery_hits: number
+          score: number
+          song_id: string
+          tight_hits: number
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          cohesion_gained?: number
+          familiarity_minutes_gained?: number
+          id?: string
+          lost_hits?: number
+          perfect_hits?: number
+          played_at?: string
+          profile_id: string
+          recovery_hits?: number
+          score: number
+          song_id: string
+          tight_hits?: number
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          cohesion_gained?: number
+          familiarity_minutes_gained?: number
+          id?: string
+          lost_hits?: number
+          perfect_hits?: number
+          played_at?: string
+          profile_id?: string
+          recovery_hits?: number
+          score?: number
+          song_id?: string
+          tight_hits?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_rehearsal_sessions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_rehearsal_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_rehearsal_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_rehearsal_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "active_rehearsal_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "active_rehearsal_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_rehearsal_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      active_songwriting_sessions: {
+        Row: {
+          id: string
+          lyrics_progress_gained: number
+          music_progress_gained: number
+          played_at: string
+          profile_id: string
+          project_id: string
+          score: number
+          score_breakdown: Json
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          lyrics_progress_gained?: number
+          music_progress_gained?: number
+          played_at?: string
+          profile_id: string
+          project_id: string
+          score: number
+          score_breakdown?: Json
+          user_id: string
+        }
+        Update: {
+          id?: string
+          lyrics_progress_gained?: number
+          music_progress_gained?: number
+          played_at?: string
+          profile_id?: string
+          project_id?: string
+          score?: number
+          score_breakdown?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_songwriting_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_songwriting_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_songwriting_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "songwriting_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_feed: {
         Row: {
           activity_type: string
@@ -1536,6 +1830,7 @@ export type Database = {
           message: string | null
           responded_at: string | null
           status: string
+          vacancy_id: string | null
           vocal_role: string | null
         }
         Insert: {
@@ -1547,6 +1842,7 @@ export type Database = {
           message?: string | null
           responded_at?: string | null
           status?: string
+          vacancy_id?: string | null
           vocal_role?: string | null
         }
         Update: {
@@ -1558,6 +1854,7 @@ export type Database = {
           message?: string | null
           responded_at?: string | null
           status?: string
+          vacancy_id?: string | null
           vocal_role?: string | null
         }
         Relationships: [
@@ -1580,6 +1877,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_applications_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "band_vacancies"
             referencedColumns: ["id"]
           },
         ]
@@ -4074,6 +4378,100 @@ export type Database = {
             columns: ["treasury_id"]
             isOneToOne: false
             referencedRelation: "band_treasuries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_vacancies: {
+        Row: {
+          application_deadline: string | null
+          audition_required: boolean
+          band_id: string
+          commitment_level: string
+          created_at: string
+          created_by_profile_id: string | null
+          description: string
+          direct_applications_allowed: boolean
+          genres: string[]
+          id: string
+          instrument: string
+          positions_available: number
+          positions_filled: number
+          remote_or_travel_allowed: boolean
+          role_type: string
+          short_description: string | null
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+          vocal_role: string | null
+        }
+        Insert: {
+          application_deadline?: string | null
+          audition_required?: boolean
+          band_id: string
+          commitment_level?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          description?: string
+          direct_applications_allowed?: boolean
+          genres?: string[]
+          id?: string
+          instrument: string
+          positions_available?: number
+          positions_filled?: number
+          remote_or_travel_allowed?: boolean
+          role_type?: string
+          short_description?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          visibility?: string
+          vocal_role?: string | null
+        }
+        Update: {
+          application_deadline?: string | null
+          audition_required?: boolean
+          band_id?: string
+          commitment_level?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          description?: string
+          direct_applications_allowed?: boolean
+          genres?: string[]
+          id?: string
+          instrument?: string
+          positions_available?: number
+          positions_filled?: number
+          remote_or_travel_allowed?: boolean
+          role_type?: string
+          short_description?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+          vocal_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_vacancies_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_vacancies_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_vacancies_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -8280,6 +8678,39 @@ export type Database = {
           required_busking_sessions?: number
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      community_verifications: {
+        Row: {
+          external_account_id: string
+          id: string
+          metadata: Json
+          platform: string
+          rewarded_at: string | null
+          status: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          external_account_id: string
+          id?: string
+          metadata?: Json
+          platform: string
+          rewarded_at?: string | null
+          status?: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          external_account_id?: string
+          id?: string
+          metadata?: Json
+          platform?: string
+          rewarded_at?: string | null
+          status?: string
+          user_id?: string
+          verified_at?: string
         }
         Relationships: []
       }
@@ -43499,6 +43930,7 @@ export type Database = {
           created_at: string | null
           current_activity: string | null
           current_city_id: string | null
+          current_location: string | null
           death_cause: string | null
           debt_started_at: string | null
           deleted_at: string | null
@@ -43536,6 +43968,7 @@ export type Database = {
           overall_wellness: number
           parent_profile_id: string | null
           physical_health: number
+          popularity: number
           premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
@@ -43572,6 +44005,7 @@ export type Database = {
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
+          current_location?: string | null
           death_cause?: string | null
           debt_started_at?: string | null
           deleted_at?: string | null
@@ -43609,6 +44043,7 @@ export type Database = {
           overall_wellness?: number
           parent_profile_id?: string | null
           physical_health?: number
+          popularity?: number
           premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
@@ -43645,6 +44080,7 @@ export type Database = {
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
+          current_location?: string | null
           death_cause?: string | null
           debt_started_at?: string | null
           deleted_at?: string | null
@@ -43682,6 +44118,7 @@ export type Database = {
           overall_wellness?: number
           parent_profile_id?: string | null
           physical_health?: number
+          popularity?: number
           premium_tokens?: number
           rest_required_until?: string | null
           resurrection_lives?: number
@@ -44963,6 +45400,75 @@ export type Database = {
           },
         ]
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          bound_at: string
+          id: string
+          metadata: Json
+          referral_code: string
+          referred_user_id: string
+          referrer_user_id: string
+          risk_flags: Json
+          risk_score: number
+          signup_qualified_at: string | null
+          signup_rewarded_at: string | null
+          vip_eligible_at: string | null
+          vip_invoice_id: string | null
+          vip_paid_at: string | null
+          vip_rewarded_at: string | null
+        }
+        Insert: {
+          bound_at?: string
+          id?: string
+          metadata?: Json
+          referral_code: string
+          referred_user_id: string
+          referrer_user_id: string
+          risk_flags?: Json
+          risk_score?: number
+          signup_qualified_at?: string | null
+          signup_rewarded_at?: string | null
+          vip_eligible_at?: string | null
+          vip_invoice_id?: string | null
+          vip_paid_at?: string | null
+          vip_rewarded_at?: string | null
+        }
+        Update: {
+          bound_at?: string
+          id?: string
+          metadata?: Json
+          referral_code?: string
+          referred_user_id?: string
+          referrer_user_id?: string
+          risk_flags?: Json
+          risk_score?: number
+          signup_qualified_at?: string | null
+          signup_rewarded_at?: string | null
+          vip_eligible_at?: string | null
+          vip_invoice_id?: string | null
+          vip_paid_at?: string | null
+          vip_rewarded_at?: string | null
+        }
+        Relationships: []
+      }
       rehearsal_attendance_correction_requests: {
         Row: {
           band_id: string
@@ -46190,6 +46696,126 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_config: {
+        Row: {
+          ap_amount: number
+          band_fame_amount: number
+          cash_amount: number
+          enabled: boolean
+          player_fame_amount: number
+          reward_key: string
+          updated_at: string
+          xp_amount: number
+        }
+        Insert: {
+          ap_amount?: number
+          band_fame_amount?: number
+          cash_amount?: number
+          enabled?: boolean
+          player_fame_amount?: number
+          reward_key: string
+          updated_at?: string
+          xp_amount?: number
+        }
+        Update: {
+          ap_amount?: number
+          band_fame_amount?: number
+          cash_amount?: number
+          enabled?: boolean
+          player_fame_amount?: number
+          reward_key?: string
+          updated_at?: string
+          xp_amount?: number
+        }
+        Relationships: []
+      }
+      reward_grants: {
+        Row: {
+          ap_amount: number
+          band_fame_amount: number
+          band_id: string | null
+          beneficiary_profile_id: string
+          beneficiary_user_id: string
+          cash_amount: number
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          player_fame_amount: number
+          referral_id: string | null
+          reward_key: string
+          xp_amount: number
+        }
+        Insert: {
+          ap_amount?: number
+          band_fame_amount?: number
+          band_id?: string | null
+          beneficiary_profile_id: string
+          beneficiary_user_id: string
+          cash_amount?: number
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          player_fame_amount?: number
+          referral_id?: string | null
+          reward_key: string
+          xp_amount?: number
+        }
+        Update: {
+          ap_amount?: number
+          band_fame_amount?: number
+          band_id?: string | null
+          beneficiary_profile_id?: string
+          beneficiary_user_id?: string
+          cash_amount?: number
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          player_fame_amount?: number
+          referral_id?: string | null
+          reward_key?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_grants_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_grants_beneficiary_profile_id_fkey"
+            columns: ["beneficiary_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_grants_beneficiary_profile_id_fkey"
+            columns: ["beneficiary_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_grants_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_grants_reward_key_fkey"
+            columns: ["reward_key"]
+            isOneToOne: false
+            referencedRelation: "reward_config"
+            referencedColumns: ["reward_key"]
           },
         ]
       }
@@ -56803,6 +57429,17 @@ export type Database = {
       }
     }
     Functions: {
+      _apply_game_reward: {
+        Args: {
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_profile_id: string
+          p_referral_id?: string
+          p_reward_key: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       _apply_simplified_festival_company_effects: {
         Args: { p_result_id: string }
         Returns: string
@@ -56914,6 +57551,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      _ensure_referral_code: { Args: { p_user_id: string }; Returns: string }
       _evaluate_gig_day_rule: {
         Args: {
           p_band_id: string
@@ -57552,6 +58190,11 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: undefined
       }
+      _refresh_festival_season_awards_internal: {
+        Args: { p_year: number }
+        Returns: Json
+      }
+      _refresh_festival_world_records_internal: { Args: never; Returns: Json }
       _replace_tour_operations_plan: {
         Args: { p_plan: Json; p_template_id?: string; p_tour_id: string }
         Returns: number
@@ -58482,6 +59125,10 @@ export type Database = {
         Args: { p_account_id: string; p_amount_cents: number }
         Returns: number
       }
+      begin_active_gig_performance: {
+        Args: { p_gig_id: string; p_profile_id: string }
+        Returns: Json
+      }
       begin_festival_launch_review: {
         Args: {
           p_expected_version: number
@@ -58538,6 +59185,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      bind_referral_code: { Args: { p_code: string }; Returns: Json }
       block_player: {
         Args: {
           private_note?: string
@@ -58828,6 +59476,10 @@ export type Database = {
       }
       can_manage_band_gigs: {
         Args: { p_band_id: string; p_user_id?: string }
+        Returns: boolean
+      }
+      can_manage_band_members: {
+        Args: { target_band_id: string }
         Returns: boolean
       }
       can_manage_festival_booking: {
@@ -59258,6 +59910,7 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_referral_rewards: { Args: { p_profile_id: string }; Returns: Json }
       clamp_city_rating: { Args: { p_value: number }; Returns: number }
       cleanup_stuck_cron_runs: { Args: never; Returns: number }
       cleanup_timed_out_generations: { Args: never; Returns: number }
@@ -59624,6 +60277,7 @@ export type Database = {
           created_at: string | null
           current_activity: string | null
           current_city_id: string | null
+          current_location: string | null
           death_cause: string | null
           debt_started_at: string | null
           deleted_at: string | null
@@ -59661,6 +60315,7 @@ export type Database = {
           overall_wellness: number
           parent_profile_id: string | null
           physical_health: number
+          popularity: number
           premium_tokens: number
           rest_required_until: string | null
           resurrection_lives: number
@@ -60806,32 +61461,80 @@ export type Database = {
         }[]
       }
       finalise_social_season: { Args: { p_season_id: string }; Returns: Json }
-      finance_credit_owner: {
-        Args: {
-          p_amount_minor: number
-          p_category: Database["public"]["Enums"]["financial_transaction_category"]
-          p_created_by_profile_id?: string
-          p_description: string
-          p_idempotency_key: string
-          p_metadata?: Json
-          p_owner_id: string
-          p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
-        }
-        Returns: string
-      }
-      finance_debit_owner: {
-        Args: {
-          p_amount_minor: number
-          p_category: Database["public"]["Enums"]["financial_transaction_category"]
-          p_created_by_profile_id?: string
-          p_description: string
-          p_idempotency_key: string
-          p_metadata?: Json
-          p_owner_id: string
-          p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
-        }
-        Returns: string
-      }
+      finance_credit_owner:
+        | {
+            Args: {
+              p_amount_minor: number
+              p_category: Database["public"]["Enums"]["financial_transaction_category"]
+              p_description: string
+              p_idempotency_key: string
+              p_owner_id: string
+              p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount_minor: number
+              p_category: Database["public"]["Enums"]["financial_transaction_category"]
+              p_created_by_profile_id: string
+              p_description: string
+              p_idempotency_key: string
+              p_owner_id: string
+              p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount_minor: number
+              p_category: Database["public"]["Enums"]["financial_transaction_category"]
+              p_created_by_profile_id: string
+              p_description: string
+              p_idempotency_key: string
+              p_metadata: Json
+              p_owner_id: string
+              p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
+            }
+            Returns: string
+          }
+      finance_debit_owner:
+        | {
+            Args: {
+              p_amount_minor: number
+              p_category: Database["public"]["Enums"]["financial_transaction_category"]
+              p_description: string
+              p_idempotency_key: string
+              p_owner_id: string
+              p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount_minor: number
+              p_category: Database["public"]["Enums"]["financial_transaction_category"]
+              p_created_by_profile_id: string
+              p_description: string
+              p_idempotency_key: string
+              p_owner_id: string
+              p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount_minor: number
+              p_category: Database["public"]["Enums"]["financial_transaction_category"]
+              p_created_by_profile_id: string
+              p_description: string
+              p_idempotency_key: string
+              p_metadata: Json
+              p_owner_id: string
+              p_owner_type: Database["public"]["Enums"]["financial_owner_type"]
+            }
+            Returns: string
+          }
       finance_release_reserve_owner: {
         Args: {
           p_amount_minor: number
@@ -61032,6 +61735,10 @@ export type Database = {
           billed_company_id: string
           billed_period: string
         }[]
+      }
+      get_active_recording_polished_session_ids: {
+        Args: { p_profile_id: string; p_recording_session_ids: string[] }
+        Returns: string[]
       }
       get_authoritative_busking_options: {
         Args: { p_user_id: string }
@@ -61585,6 +62292,7 @@ export type Database = {
         Returns: Json
       }
       get_recent_twaat_count: { Args: never; Returns: number }
+      get_referral_dashboard: { Args: { p_profile_id: string }; Returns: Json }
       get_rehearsal_attendance_correction_resolution_eligibilities: {
         Args: { p_rehearsal_id: string }
         Returns: {
@@ -61616,14 +62324,24 @@ export type Database = {
           unknown_cost_cents: number
         }[]
       }
-      get_release_manager_city_analytics: {
-        Args: {
-          p_band_id: string
-          p_period_kind?: string
-          p_release_id?: string
-        }
-        Returns: Json
-      }
+      get_release_manager_city_analytics:
+        | {
+            Args: {
+              p_band_id: string
+              p_period_kind?: string
+              p_release_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_activity_filter: string
+              p_band_id: string
+              p_period_kind: string
+              p_release_id: string
+            }
+            Returns: Json
+          }
       get_release_sale_dates: {
         Args: { p_release_id: string }
         Returns: {
@@ -61891,6 +62609,43 @@ export type Database = {
       hire_band_crew: {
         Args: { p_band_id: string; p_catalog_crew_id: string }
         Returns: string
+      }
+      hire_band_touring_member: {
+        Args: {
+          p_band_id: string
+          p_instrument_role: string
+          p_member_name: string
+          p_tier: number
+          p_weekly_cost: number
+        }
+        Returns: {
+          band_id: string
+          can_be_leader: boolean | null
+          chemistry_contribution: number | null
+          current_city_id: string | null
+          id: string
+          instrument_role: string
+          instrument_roles: string[]
+          is_touring_member: boolean | null
+          joined_at: string | null
+          leadership_votes: number | null
+          member_status: string | null
+          profile_id: string | null
+          role: string
+          salary: number | null
+          skill_contribution: number | null
+          touring_member_cost: number | null
+          touring_member_tier: number | null
+          travels_with_band: boolean | null
+          user_id: string | null
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       hire_festival_edition_staff: {
         Args: {
@@ -62323,6 +63078,15 @@ export type Database = {
         }
         Returns: string
       }
+      mark_community_verified: {
+        Args: {
+          p_external_account_id: string
+          p_metadata?: Json
+          p_platform: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       mark_conversation_read: {
         Args: { conversation_id: string; read_message_id?: string }
         Returns: boolean
@@ -62330,6 +63094,14 @@ export type Database = {
       mark_gig_position_processed: {
         Args: { p_gig_id: string; p_position: number }
         Returns: Json
+      }
+      mark_referral_vip_paid: {
+        Args: {
+          p_invoice_id: string
+          p_paid_at?: string
+          p_referred_user_id: string
+        }
+        Returns: boolean
       }
       materialize_festival_edition_foundations: {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
@@ -62378,6 +63150,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      move_festival_artist_booking_slot: {
+        Args: {
+          p_contract_id: string
+          p_expected_current_stage_slot_id?: string
+          p_target_stage_slot_id: string
+        }
+        Returns: Json
+      }
       mute_profile: {
         Args: { mute_until?: string; note?: string; target_profile_id: string }
         Returns: {
@@ -62399,6 +63179,10 @@ export type Database = {
       }
       normalize_gig_viewer_crowd_settings: {
         Args: { p_settings: Json }
+        Returns: Json
+      }
+      normalize_legacy_gig_schedules: {
+        Args: { p_gig_id?: string }
         Returns: Json
       }
       notify_blind_box_live: { Args: never; Returns: number }
@@ -63338,6 +64122,7 @@ export type Database = {
           message: string | null
           responded_at: string | null
           status: string
+          vacancy_id: string | null
           vocal_role: string | null
         }
         SetofOptions: {
@@ -63985,7 +64770,38 @@ export type Database = {
         Args: { p_rehearsal_id: string }
         Returns: number
       }
+      select_gig_setlist: {
+        Args: { p_gig_id: string; p_setlist_id: string }
+        Returns: Json
+      }
       sell_personal_gear: { Args: { p_gear_id: string }; Returns: Json }
+      send_band_invitation: {
+        Args: {
+          invite_message?: string
+          requested_instrument_role?: string
+          requested_vocal_role?: string
+          target_band_id: string
+          target_profile_id: string
+        }
+        Returns: {
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          invited_user_id: string
+          inviter_user_id: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_invitations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       send_conversation_message: {
         Args: {
           client_message_id?: string
@@ -64255,6 +65071,16 @@ export type Database = {
         }
         Returns: Json
       }
+      set_festival_stage_slot_npc_dj: {
+        Args: {
+          p_enabled: boolean
+          p_genre?: string
+          p_name?: string
+          p_quality?: number
+          p_stage_slot_id: string
+        }
+        Returns: Json
+      }
       set_gig_lineup: {
         Args: { p_gig_id: string; p_profile_ids: string[] }
         Returns: {
@@ -64474,6 +65300,67 @@ export type Database = {
         Args: { _company_id: string }
         Returns: string
       }
+      submit_active_gig_performance: {
+        Args: { p_cue_scores: number[]; p_gig_id: string; p_profile_id: string }
+        Returns: Json
+      }
+      submit_active_gig_performance_v2: {
+        Args: { p_gig_id: string; p_profile_id: string; p_responses: Json }
+        Returns: Json
+      }
+      submit_active_practice_session: {
+        Args: {
+          p_instrument_slug: string
+          p_level_reached: number
+          p_longest_combo: number
+          p_notes_hit: number
+          p_notes_missed: number
+          p_profile_id: string
+          p_score: number
+          p_song_id: string
+          p_song_title: string
+        }
+        Returns: Json
+      }
+      submit_active_recording_session: {
+        Args: {
+          p_good_takes: number
+          p_perfect_takes: number
+          p_profile_id: string
+          p_recording_session_id: string
+          p_rough_takes: number
+          p_score: number
+        }
+        Returns: Json
+      }
+      submit_active_rehearsal_session: {
+        Args: {
+          p_band_id: string
+          p_lost_hits: number
+          p_perfect_hits: number
+          p_profile_id: string
+          p_recovery_hits: number
+          p_score: number
+          p_song_id: string
+          p_tight_hits: number
+        }
+        Returns: Json
+      }
+      submit_active_songwriting_answers: {
+        Args: { p_answers: Json; p_profile_id: string; p_project_id: string }
+        Returns: Json
+      }
+      submit_active_songwriting_session: {
+        Args: {
+          p_arrangement_score: number
+          p_chords_score: number
+          p_lyrics_score: number
+          p_melody_score: number
+          p_profile_id: string
+          p_project_id: string
+        }
+        Returns: Json
+      }
       submit_band_application: {
         Args: { band_id: string; message?: string; requested_role: string }
         Returns: {
@@ -64485,6 +65372,7 @@ export type Database = {
           message: string | null
           responded_at: string | null
           status: string
+          vacancy_id: string | null
           vocal_role: string | null
         }
         SetofOptions: {
@@ -65104,6 +65992,7 @@ export type Database = {
           message: string | null
           responded_at: string | null
           status: string
+          vacancy_id: string | null
           vocal_role: string | null
         }
         SetofOptions: {
