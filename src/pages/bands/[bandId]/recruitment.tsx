@@ -5,30 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BAND_PERFORMANCE_ROLES, DEFAULT_BAND_PERFORMANCE_ROLE } from "@/data/bandPerformanceRoles";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   createBandVacancy,
   listBandVacancies,
-  loadBandPerformanceRoles,
   updateBandVacancyStatus,
   type BandVacancy,
   type VacancyFormInput,
 } from "@/features/band-recruitment/services/recruitment";
 import { toast } from "sonner";
 
-const FALLBACK_ROLES = ["Guitar", "Bass", "Drums", "Keyboard", "Singing", "Rapping"];
-
 export default function BandRecruitmentManagement() {
   const { bandId } = useParams();
   const { profileId } = useActiveProfile();
-  const [roles, setRoles] = useState<string[]>(FALLBACK_ROLES);
+  const roles = BAND_PERFORMANCE_ROLES;
   const [vacancies, setVacancies] = useState<BandVacancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<VacancyFormInput>({
     title: "",
     description: "",
-    instrument: "Guitar",
+    instrument: DEFAULT_BAND_PERFORMANCE_ROLE,
     commitment_level: "flexible",
     positions_available: 1,
     visibility: "public",
@@ -50,10 +48,6 @@ export default function BandRecruitmentManagement() {
     }
   };
 
-  useEffect(() => {
-    loadBandPerformanceRoles().then((rows) => rows.length && setRoles(rows)).catch(() => undefined);
-  }, []);
-
   useEffect(() => { void refresh(); }, [bandId]);
 
   const save = async (publish: boolean) => {
@@ -65,7 +59,7 @@ export default function BandRecruitmentManagement() {
     try {
       await createBandVacancy(bandId, profileId, form, publish);
       toast.success(publish ? "Band role advertised" : "Vacancy draft saved");
-      setForm({ title: "", description: "", instrument: roles[0] ?? "Guitar", commitment_level: "flexible", positions_available: 1, visibility: "public", direct_applications_allowed: true });
+      setForm({ title: "", description: "", instrument: DEFAULT_BAND_PERFORMANCE_ROLE, commitment_level: "flexible", positions_available: 1, visibility: "public", direct_applications_allowed: true });
       setDirty(false);
       await refresh();
     } catch (error) {
