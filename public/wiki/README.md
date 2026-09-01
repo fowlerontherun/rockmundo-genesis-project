@@ -40,7 +40,15 @@ The second guide set explains larger systems in more depth:
 6. `guides/careers-and-jobs.html` — employment, education, specialist careers, offers and balancing work with music.
 7. `guides/businesses.html` — company types, staffing, capacity, finance, growth and links to the wider music economy.
 
-The main Compendium sidebar links to starter guides and deep dives separately from the shorter reference articles.
+## Mechanics explainers
+
+A third set explains important outcome systems in player language while deliberately stopping short of exploitable formulas:
+
+1. `guides/what-affects-a-gig.html` — member execution, ensemble tightness, setlist/song performance, production, stage performance and audience response.
+2. `guides/fame-and-fans.html` — fame, fans, local popularity, momentum, expectations and regional audience growth.
+3. `guides/understanding-song-quality.html` — songwriting completion, potential, quality dimensions, consistency, polish, originality and the distinction between song and recording quality.
+
+The main Compendium sidebar links to starter guides, deep dives and mechanics explainers separately from the shorter reference articles.
 
 ## Editorial rule
 
@@ -103,3 +111,5 @@ The sidebar, search index, table of contents and related-article cards are gener
 Create an HTML page under `guides/` that loads both `../wiki.css` and `../guide.css`. Keep the standard Compendium header, breadcrumb, guide navigation, article structure and mechanics-disclosure language so the site feels consistent.
 
 Long-form guides should answer a player journey or explain how a larger system fits together rather than duplicate the encyclopaedia. For example, “How do I prepare my first gig?” is a guide; “What is a setlist?” is better suited to a reference article.
+
+Mechanics explainers should describe the layers/factors a player can reasonably understand while explicitly avoiding implementation coefficients, random bounds, anti-abuse thresholds and deterministic optimisation advice.
