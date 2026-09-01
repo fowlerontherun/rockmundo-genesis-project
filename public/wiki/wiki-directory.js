@@ -9,6 +9,9 @@ const homeDirectoryTemplate = document.getElementById("wiki-home-directory-templ
 const deepDiveTemplate = document.getElementById("wiki-deep-dive-links");
 const articleContent = document.getElementById("article-content");
 const pageToc = document.getElementById("page-toc");
+const directorySearchForm = document.getElementById("search-form");
+const directorySearchInput = document.getElementById("wiki-search");
+const directorySearchResults = document.getElementById("search-results");
 
 function currentCompendiumHash() {
   return window.location.hash.replace(/^#/, "") || "home";
@@ -86,6 +89,76 @@ function addDeepDive(articleId) {
   }
 }
 
+function longFormGuideEntries() {
+  if (!homeDirectoryTemplate) return [];
+  const entries = new Map();
+  const links = homeDirectoryTemplate.content.querySelectorAll(
+    ".guide-directory-group a, .explainer-grid a"
+  );
+
+  for (const link of links) {
+    const href = link.getAttribute("href");
+    if (!href || entries.has(href)) continue;
+    entries.set(href, {
+      href,
+      title: link.querySelector("strong")?.textContent?.trim() || link.textContent.trim(),
+      summary: link.querySelector("span")?.textContent?.trim() || "Long-form Compendium guide"
+    });
+  }
+
+  return [...entries.values()];
+}
+
+function appendLongFormSearchResults(query) {
+  if (!directorySearchResults) return;
+  directorySearchResults.querySelector("[data-long-form-search]")?.remove();
+
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return;
+
+  const matches = longFormGuideEntries()
+    .map((guide) => {
+      const title = guide.title.toLowerCase();
+      const summary = guide.summary.toLowerCase();
+      let score = 0;
+      for (const token of tokens) {
+        if (title.includes(token)) score += 6;
+        if (summary.includes(token)) score += 2;
+      }
+      return { guide, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || a.guide.title.localeCompare(b.guide.title))
+    .slice(0, 6);
+
+  if (!matches.length) return;
+
+  const section = document.createElement("section");
+  section.dataset.longFormSearch = "true";
+  section.setAttribute("aria-label", "Long-form guide matches");
+
+  const heading = document.createElement("h3");
+  heading.textContent = "Long-form guides";
+  section.append(heading);
+
+  for (const { guide } of matches) {
+    const link = document.createElement("a");
+    link.className = "search-result";
+    link.href = guide.href;
+
+    const strong = document.createElement("strong");
+    strong.textContent = guide.title;
+    const span = document.createElement("span");
+    span.textContent = `Full walkthrough — ${guide.summary}`;
+
+    link.append(strong, span);
+    section.append(link);
+  }
+
+  directorySearchResults.append(section);
+  directorySearchResults.hidden = false;
+}
+
 function enhanceCompendiumPage() {
   if (!articleContent) return;
   removeDirectoryEnhancements();
@@ -100,6 +173,11 @@ function enhanceCompendiumPage() {
 
 window.addEventListener("hashchange", () => {
   queueMicrotask(enhanceCompendiumPage);
+});
+
+directorySearchForm?.addEventListener("submit", () => {
+  const query = directorySearchInput?.value || "";
+  queueMicrotask(() => appendLongFormSearchResults(query));
 });
 
 enhanceCompendiumPage();
