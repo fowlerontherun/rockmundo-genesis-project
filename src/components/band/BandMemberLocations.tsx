@@ -39,7 +39,7 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
     try {
       const { data: bandMembers, error: memberError } = await supabase
         .from("band_members")
-        .select("id, profile_id, user_id, is_touring_member, touring_member_name")
+        .select("id, profile_id, user_id, role, is_touring_member")
         .eq("band_id", bandId)
         .order("joined_at", { ascending: true });
 
@@ -85,7 +85,7 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
             displayName:
               profile?.display_name ||
               profile?.username ||
-              member.touring_member_name ||
+              (member.is_touring_member ? member.role : null) ||
               "Band member",
             avatarUrl: profile?.avatar_url ?? null,
             cityId: profile?.current_city_id ?? null,
@@ -155,7 +155,7 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
             Member Locations
           </CardTitle>
           <CardDescription>
-            See where each band member currently is and quickly ask someone to correct their location.
+            See where every band member currently is and quickly contact anyone who is in the wrong place.
           </CardDescription>
         </div>
         <Button
@@ -182,6 +182,18 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
           <div className="divide-y rounded-lg border">
             {members.map((member) => {
               const isSelf = member.profileId === currentProfileId;
+              const sameCity = Boolean(
+                !isSelf &&
+                currentMember?.cityId &&
+                member.cityId &&
+                currentMember.cityId === member.cityId,
+              );
+              const differentCity = Boolean(
+                !isSelf &&
+                currentMember?.cityId &&
+                member.cityId &&
+                currentMember.cityId !== member.cityId,
+              );
               const canMessage = Boolean(member.profileId && !isSelf && !member.isTouringMember);
 
               return (
@@ -198,6 +210,8 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate font-medium">{member.displayName}</p>
                         {isSelf && <Badge variant="secondary">You</Badge>}
+                        {sameCity && <Badge variant="secondary">Same location</Badge>}
+                        {differentCity && <Badge variant="destructive">Different location</Badge>}
                         {member.isTouringMember && <Badge variant="outline">Touring</Badge>}
                       </div>
                       <p className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -214,7 +228,7 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
                   {canMessage && (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant={differentCity ? "default" : "outline"}
                       size="sm"
                       disabled={sendingTo === member.profileId}
                       onClick={() => void handleLocationMessage(member)}
