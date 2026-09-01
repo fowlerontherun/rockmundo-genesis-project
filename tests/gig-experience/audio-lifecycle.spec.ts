@@ -34,7 +34,7 @@ test('audio activation, speed muting, seek cleanup, close and reopen use one act
   // intentionally unavailable. Move to the first song before exercising the
   // setlist-audio lifecycle so this test verifies audio rather than pre-show UI.
   await expect(page.getByLabel('Setlist audio controls', { exact: true })).toContainText('Audio unavailable');
-  await page.getByRole('button', { name: 'Next song', exact: true }).click();
+  await page.getByRole('button', { name: 'Skip to next song', exact: true }).click();
   await expect(page.getByLabel('Setlist audio controls', { exact: true })).not.toContainText('Audio unavailable');
 
   await page.getByRole('button', { name: 'Enable Audio', exact: true }).click();
@@ -46,10 +46,10 @@ test('audio activation, speed muting, seek cleanup, close and reopen use one act
   await expect(page.getByLabel('Setlist audio controls', { exact: true })).toContainText('Audio is available at normal speed');
   await expect.poll(() => page.evaluate(readCounter, 'playing')).toBe(0);
   await page.getByRole('button', { name: '1×', exact: true }).click();
-  await page.getByRole('button', { name: 'Next song', exact: true }).click();
-  await page.getByRole('button', { name: 'Previous song', exact: true }).click();
+  await page.getByRole('button', { name: 'Skip to next song', exact: true }).click();
+  await page.getByRole('button', { name: 'Skip to previous song', exact: true }).click();
   await page.getByRole('button', { name: 'Restart', exact: true }).click();
-  await page.getByRole('button', { name: 'Skip to result', exact: true }).click();
+  await page.getByRole('button', { name: 'Skip to result reveal', exact: true }).click();
   await expect.poll(() => page.evaluate(readCounter, 'playing')).toBe(0);
   const createdAfterFirstRun = await page.evaluate(readCounter, 'created');
   await page.getByRole('button', { name: 'Close Viewer', exact: true }).click();
