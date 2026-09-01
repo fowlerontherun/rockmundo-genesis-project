@@ -53,7 +53,16 @@ function formatFestivalDates(startsOn: string, endsOn: string) {
   return `${formatter.format(start)} – ${formatter.format(end)} ${end.getFullYear()}`;
 }
 
-function FestivalPosterCard({ festival }: { festival: FestivalDirectoryCard }) {
+function formatArtistDate(date: string | null) {
+  if (!date) return null;
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(`${date}T12:00:00`));
+}
+
+export function FestivalPosterCard({ festival }: { festival: FestivalDirectoryCard }) {
   const theme = themeForFestival(festival.festivalEditionId);
   const artists = festival.confirmedArtists;
 
@@ -78,7 +87,7 @@ function FestivalPosterCard({ festival }: { festival: FestivalDirectoryCard }) {
                 ) : null}
               </div>
               <Badge className="border border-white/35 bg-black/25 text-white backdrop-blur-sm hover:bg-black/25">
-                {festival.status.replaceAll("_", " ")}
+                {festival.status.replace(/_/g, " ")}
               </Badge>
             </div>
 
@@ -103,15 +112,23 @@ function FestivalPosterCard({ festival }: { festival: FestivalDirectoryCard }) {
           <div className="mt-10 rounded-2xl border border-white/20 bg-black/20 p-5 backdrop-blur-sm">
             <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-white/70">
               <Music2 className="h-4 w-4" />
-              Confirmed artists
+              Confirmed lineup
             </div>
             {artists.length ? (
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-                {artists.map((artist, index) => (
-                  <span key={artist.id} className={index === 0 ? "text-2xl font-black uppercase" : "text-lg font-extrabold uppercase"}>
-                    {artist.name}
-                  </span>
-                ))}
+              <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
+                {artists.map((artist, index) => {
+                  const performanceDate = formatArtistDate(artist.performanceDate);
+                  return (
+                    <span key={artist.id} className="inline-flex flex-col">
+                      <span className={index === 0 ? "text-2xl font-black uppercase" : "text-lg font-extrabold uppercase"}>
+                        {artist.name}
+                      </span>
+                      {performanceDate ? (
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-white/65">{performanceDate}</span>
+                      ) : null}
+                    </span>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm font-semibold text-white/70">Line-up announcements coming soon.</p>
