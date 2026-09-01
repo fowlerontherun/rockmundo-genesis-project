@@ -10,13 +10,13 @@ const EXTRA_PERFORMANCE_SLUGS = new Set([
 ]);
 
 const roleFromDefinition = (definition: SkillDefinitionRecord): string | null => {
-  const metadata = definition.metadata as { category?: string; tier?: string; track?: string } | null | undefined;
+  const metadata = definition.metadata as { category?: string; tier?: string } | null | undefined;
   const isInstrumentPerformance = metadata?.category === PERFORMANCE_CATEGORY && metadata?.tier === BASIC_TIER;
   const isLegacyVocalPerformance = EXTRA_PERFORMANCE_SLUGS.has(definition.slug);
 
   if (!isInstrumentPerformance && !isLegacyVocalPerformance) return null;
 
-  const role = metadata?.track || definition.display_name.replace(/^Basic\s+/i, "").trim();
+  const role = definition.display_name.replace(/^Basic\s+/i, "").trim();
   return role || null;
 };
 
