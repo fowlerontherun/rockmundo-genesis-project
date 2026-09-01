@@ -1,0 +1,349 @@
+:root {
+  --sheet-raised: rgba(255, 253, 247, 0.92);
+  --forest-soft: #dfe8e2;
+  --burgundy-soft: #efe0e2;
+  --gold-soft: #f3ead7;
+}
+
+body {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(179, 140, 72, 0.10), transparent 28rem),
+    radial-gradient(circle at 92% 12%, rgba(47, 81, 67, 0.08), transparent 32rem),
+    linear-gradient(rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.24)),
+    repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(68, 57, 40, 0.025) 32px),
+    var(--paper);
+}
+
+.wiki-header {
+  position: relative;
+  z-index: 20;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 46%),
+    #ece5d5;
+  box-shadow: 0 2px 12px rgba(53, 44, 31, 0.08);
+}
+
+.wiki-header__tools {
+  display: grid;
+  gap: 8px;
+}
+
+.wiki-utility-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px 14px;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.78rem;
+}
+
+.wiki-utility-nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.wiki-utility-nav a:hover,
+.wiki-utility-nav a:focus-visible {
+  color: var(--forest-dark);
+  text-decoration: underline;
+}
+
+.wiki-search {
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(53, 44, 31, 0.10);
+}
+
+.wiki-search input::placeholder {
+  color: #847b6e;
+}
+
+.wiki-strip {
+  box-shadow: inset 0 -1px rgba(255, 255, 255, 0.08);
+}
+
+.wiki-mobile-nav {
+  display: none;
+}
+
+.wiki-sidebar {
+  padding: 4px 16px 8px 2px;
+}
+
+.sidebar-home {
+  padding: 9px 10px;
+  border: 1px solid var(--rule);
+  background: rgba(255, 253, 247, 0.58);
+}
+
+.nav-group {
+  padding: 10px 10px 8px;
+  border: 1px solid transparent;
+}
+
+.nav-group:hover {
+  border-color: rgba(159, 146, 124, 0.45);
+  background: rgba(255, 253, 247, 0.38);
+}
+
+.nav-group a,
+.sidebar-box a {
+  margin: 1px -6px;
+  padding: 4px 6px;
+  border-left: 3px solid transparent;
+  border-radius: 2px;
+}
+
+.nav-group a:hover,
+.sidebar-box a:hover {
+  background: rgba(40, 90, 120, 0.07);
+}
+
+.nav-group a[aria-current="page"] {
+  border-left-color: var(--burgundy);
+  background: var(--burgundy-soft);
+  color: var(--burgundy);
+}
+
+.sidebar-box {
+  padding: 13px 10px 4px;
+}
+
+.sidebar-box--featured {
+  border: 1px solid #c9b687;
+  border-top-width: 3px;
+  background: rgba(255, 246, 217, 0.42);
+}
+
+.wiki-article {
+  position: relative;
+  overflow: hidden;
+  border-top: 4px solid var(--forest);
+  background: var(--sheet-raised);
+  box-shadow: 0 8px 26px rgba(53, 44, 31, 0.12);
+}
+
+.wiki-article::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+  background: linear-gradient(135deg, transparent 48%, rgba(179, 140, 72, 0.07));
+}
+
+.wiki-article h1 {
+  color: #24211c;
+}
+
+.article-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 3px 8px;
+  border: 1px solid #d0bd93;
+  background: var(--gold-soft);
+}
+
+.article-meta span {
+  border-radius: 999px;
+  background: #f8f3e9;
+}
+
+.portal-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.portal-card,
+.article-link {
+  position: relative;
+  min-height: 94px;
+  border-top: 3px solid var(--forest);
+  background: linear-gradient(180deg, #fffdf8, #f8f2e7);
+  box-shadow: 0 2px 8px rgba(53, 44, 31, 0.06);
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.portal-card::after,
+.article-link::after {
+  content: "→";
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  color: var(--rule-dark);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+}
+
+.portal-card:hover,
+.article-link:hover {
+  transform: translateY(-2px);
+  border-color: var(--forest);
+  box-shadow: 0 6px 14px rgba(53, 44, 31, 0.10);
+}
+
+.info-box,
+.note-box,
+.hidden-box,
+.tip-box {
+  border-top: 1px solid rgba(159, 146, 124, 0.35);
+  border-right: 1px solid rgba(159, 146, 124, 0.35);
+  border-bottom: 1px solid rgba(159, 146, 124, 0.35);
+}
+
+.toc-card {
+  box-shadow: 0 2px 8px rgba(53, 44, 31, 0.05);
+}
+
+.toc-card--home {
+  border-top: 3px solid var(--burgundy);
+}
+
+.toc-home-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.search-results {
+  border-top: 4px solid var(--link);
+}
+
+.search-result {
+  margin: 0 -8px;
+  padding: 11px 8px;
+}
+
+.search-result:hover {
+  background: rgba(40, 90, 120, 0.06);
+}
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(40, 90, 120, 0.28);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1260px) {
+  .portal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .wiki-header {
+    padding: 15px 14px 13px;
+  }
+
+  .wiki-header__tools {
+    gap: 10px;
+  }
+
+  .wiki-utility-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+
+  .wiki-utility-nav a {
+    flex: 0 0 auto;
+  }
+
+  .wiki-strip {
+    gap: 5px 10px;
+    padding: 7px 14px;
+  }
+
+  .wiki-strip span:nth-child(2),
+  .wiki-strip a {
+    font-size: 0.72rem;
+  }
+
+  .wiki-mobile-nav {
+    display: block;
+    margin: 12px 10px 0;
+    border: 1px solid var(--rule-dark);
+    background: rgba(255, 253, 247, 0.9);
+    box-shadow: 0 2px 8px rgba(53, 44, 31, 0.08);
+  }
+
+  .wiki-mobile-nav summary {
+    cursor: pointer;
+    padding: 11px 13px;
+    color: var(--forest-dark);
+    font-family: "Trebuchet MS", Arial, sans-serif;
+    font-size: 0.88rem;
+    font-weight: 800;
+  }
+
+  .wiki-mobile-nav[open] summary {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .wiki-mobile-nav__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 12px 13px 15px;
+  }
+
+  .wiki-mobile-nav__grid section {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+  }
+
+  .wiki-mobile-nav__grid strong {
+    margin-bottom: 3px;
+    color: var(--burgundy);
+    font-family: "Trebuchet MS", Arial, sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .wiki-mobile-nav__grid a {
+    font-size: 0.84rem;
+    text-decoration: none;
+  }
+
+  .wiki-sidebar {
+    display: none;
+  }
+
+  .wiki-layout {
+    padding: 12px 10px 36px;
+  }
+
+  .wiki-article {
+    border-top-width: 3px;
+    box-shadow: 0 4px 14px rgba(53, 44, 31, 0.10);
+  }
+
+  .portal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .wiki-wordmark__mark {
+    width: 46px;
+    height: 46px;
+  }
+
+  .wiki-wordmark strong {
+    font-size: 1.25rem;
+  }
+
+  .wiki-mobile-nav__grid {
+    grid-template-columns: 1fr;
+  }
+}

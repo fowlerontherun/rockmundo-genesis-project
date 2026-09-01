@@ -1,0 +1,33 @@
+name: Compendium Link Check
+
+on:
+  pull_request:
+    paths:
+      - "public/wiki/**"
+      - "src/pages/Landing.tsx"
+      - "scripts/check-wiki-links.mjs"
+      - ".github/workflows/wiki-link-check.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "public/wiki/**"
+      - "src/pages/Landing.tsx"
+      - "scripts/check-wiki-links.mjs"
+      - ".github/workflows/wiki-link-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-compendium-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate Compendium links and assets
+        run: node scripts/check-wiki-links.mjs

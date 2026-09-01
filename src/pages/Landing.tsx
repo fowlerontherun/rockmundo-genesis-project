@@ -33,6 +33,7 @@ import {
   Mail,
   CheckCircle2,
   Rocket,
+  BookOpen,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -107,7 +108,6 @@ const Landing = () => {
   const serverMessage = siteConfig?.server.message ?? "";
   const announcement = siteConfig?.announcement;
 
-
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
@@ -156,6 +156,14 @@ const Landing = () => {
           >
             About
           </Link>
+          <a
+            href="/wiki/"
+            className="inline-flex items-center gap-1.5 text-xs font-oswald text-muted-foreground hover:text-foreground px-2 py-1"
+            title="Open the RockMundo Compendium"
+          >
+            <BookOpen className="h-4 w-4" />
+            <span className="hidden sm:inline">Compendium</span>
+          </a>
           {isDev && (
             <Button
               variant="ghost"
@@ -179,7 +187,6 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* Server status + Beta V2 announcement banners */}
       {/* Server status + announcement banners (admin-controlled) */}
       {(serverStatus === "down" || serverStatus === "degraded") && (
         <div className={`${serverStatus === "down" ? "bg-destructive/15 border-destructive/40 text-destructive" : "bg-yellow-500/10 border-yellow-500/40 text-yellow-500"} border-b`}>
@@ -298,6 +305,14 @@ const Landing = () => {
               </Button>
             )}
           </div>
+          <div className="mt-4 text-center">
+            <a
+              href="/wiki/guides/getting-started.html"
+              className="inline-flex items-center gap-1.5 text-xs font-oswald text-muted-foreground hover:text-foreground underline underline-offset-4"
+            >
+              <BookOpen className="h-3.5 w-3.5" /> New here? Read the Getting Started guide
+            </a>
+          </div>
 
           {/* World snapshot stats */}
           <div className="mt-10 sm:mt-14 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
@@ -352,6 +367,48 @@ const Landing = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Compendium */}
+      <section id="compendium" className="border-b border-border/40 bg-card/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          <div className="max-w-3xl mx-auto rounded-lg border border-border/50 bg-card/80 overflow-hidden">
+            <div className="p-5 sm:p-7 flex flex-col md:flex-row gap-5 md:items-center">
+              <div className="h-12 w-12 rounded-full border border-primary/30 bg-primary/10 text-primary grid place-items-center shrink-0">
+                <BookOpen className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] sm:text-xs font-oswald text-primary mb-1">RockMundo Compendium</div>
+                <h2 className="font-bebas text-2xl sm:text-3xl tracking-wide mb-2">Learn the world without spoiling it</h2>
+                <p className="text-sm text-muted-foreground font-oswald leading-relaxed">
+                  Browse guides for songwriting, gigs, bands, tours, recording, careers, businesses and the wider world. The Compendium explains what matters without publishing hidden formulas or turning the game into a solved spreadsheet.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 md:shrink-0">
+                <Button asChild className="font-oswald tracking-wide">
+                  <a href="/wiki/">Open Compendium</a>
+                </Button>
+                <Button asChild variant="outline" className="font-oswald tracking-wide">
+                  <a href="/wiki/guides/getting-started.html">Getting Started</a>
+                </Button>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-3 border-t border-border/40 divide-y sm:divide-y-0 sm:divide-x divide-border/40">
+              <a href="/wiki/guides/song-to-release.html" className="p-4 hover:bg-background/50 transition-colors">
+                <div className="text-xs font-oswald font-semibold">Song to release</div>
+                <div className="text-[11px] text-muted-foreground font-oswald mt-1">Follow the core music lifecycle.</div>
+              </a>
+              <a href="/wiki/guides/first-gig.html" className="p-4 hover:bg-background/50 transition-colors">
+                <div className="text-xs font-oswald font-semibold">Your first gig</div>
+                <div className="text-[11px] text-muted-foreground font-oswald mt-1">Prepare a show properly.</div>
+              </a>
+              <a href="/wiki/guides/skills-and-xp.html" className="p-4 hover:bg-background/50 transition-colors">
+                <div className="text-xs font-oswald font-semibold">Skills & XP</div>
+                <div className="text-[11px] text-muted-foreground font-oswald mt-1">Plan long-term progression.</div>
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -449,9 +506,13 @@ const Landing = () => {
             <img src={logo} alt="" className="h-4 w-4 object-contain" />©{" "}
             {new Date().getFullYear()} RockMundo · v{version}
           </div>
-          <Link to="/about" className="hover:text-foreground">
-            About · Press · Contact
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/about" className="hover:text-foreground">About · Press · Contact</Link>
+            <span aria-hidden="true">·</span>
+            <a href="/wiki/" className="hover:text-foreground inline-flex items-center gap-1">
+              <BookOpen className="h-3.5 w-3.5" /> Compendium
+            </a>
+          </div>
         </div>
       </footer>
 
@@ -552,7 +613,6 @@ const Landing = () => {
           </form>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };
