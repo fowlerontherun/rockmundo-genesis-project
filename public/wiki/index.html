@@ -10,6 +10,7 @@
     <meta name="robots" content="index,follow" />
     <title>RockMundo Compendium</title>
     <link rel="stylesheet" href="./wiki.css" />
+    <link rel="stylesheet" href="./wiki-enhancements.css" />
   </head>
   <body>
     <a class="skip-link" href="#article">Skip to article</a>
@@ -26,17 +27,24 @@
         <p>The unofficial-looking official guide to life in the music world.</p>
       </div>
 
-      <form class="wiki-search" id="search-form" role="search">
-        <label class="sr-only" for="wiki-search">Search the RockMundo Compendium</label>
-        <input
-          id="wiki-search"
-          name="q"
-          type="search"
-          autocomplete="off"
-          placeholder="Search bands, gigs, skills, releases…"
-        />
-        <button type="submit">Search</button>
-      </form>
+      <div class="wiki-header__tools">
+        <form class="wiki-search" id="search-form" role="search">
+          <label class="sr-only" for="wiki-search">Search the RockMundo Compendium</label>
+          <input
+            id="wiki-search"
+            name="q"
+            type="search"
+            autocomplete="off"
+            placeholder="Search bands, gigs, skills, releases…"
+          />
+          <button type="submit">Search</button>
+        </form>
+        <nav class="wiki-utility-nav" aria-label="Compendium shortcuts">
+          <a href="/">← RockMundo home</a>
+          <a href="./guides/getting-started.html">New player guide</a>
+          <a href="./guides/early-performances.html">Start performing</a>
+        </nav>
+      </div>
     </header>
 
     <div class="wiki-strip" aria-label="Compendium notice">
@@ -45,6 +53,30 @@
       <a href="#mechanics-disclosure">How this wiki handles hidden mechanics</a>
     </div>
 
+    <details class="wiki-mobile-nav">
+      <summary>Browse Compendium guides</summary>
+      <div class="wiki-mobile-nav__grid">
+        <section>
+          <strong>Start here</strong>
+          <a href="./guides/getting-started.html">Getting started</a>
+          <a href="./guides/song-to-release.html">Song to release</a>
+          <a href="./guides/first-gig.html">Your first gig</a>
+        </section>
+        <section>
+          <strong>Go deeper</strong>
+          <a href="./guides/skills-and-xp.html">Skills & XP</a>
+          <a href="./guides/finances-and-banking.html">Finances & banking</a>
+          <a href="./guides/tours.html">Tours</a>
+        </section>
+        <section>
+          <strong>Practical guides</strong>
+          <a href="./guides/early-performances.html">Early performances</a>
+          <a href="./guides/wellness-and-lifestyle.html">Wellness & lifestyle</a>
+          <a href="./guides/promotion-and-media.html">Promotion & media</a>
+        </section>
+      </div>
+    </details>
+
     <main class="wiki-layout">
       <aside class="wiki-sidebar" aria-label="Compendium navigation">
         <nav>
@@ -52,7 +84,7 @@
           <div id="category-navigation"></div>
         </nav>
 
-        <section class="sidebar-box">
+        <section class="sidebar-box sidebar-box--featured">
           <h2>Starter guides</h2>
           <a href="./guides/getting-started.html">Getting started</a>
           <a href="./guides/song-to-release.html">From song to release</a>
@@ -81,7 +113,7 @@
           <a href="./guides/promotion-and-media.html">Promotion & media</a>
           <a href="./guides/merchandise.html">Merchandise</a>
           <a href="./guides/charts-and-world-pulse.html">Charts & World Pulse</a>
-          <a href="./guides/covers-rights-and-royalties.html">Covers & royalties</a>
+          <a href="./guides/covers-rights-and-royalties.html">Covers, rights & royalties</a>
           <a href="./guides/education-and-teaching.html">Education & teaching</a>
         </section>
 
@@ -128,6 +160,11 @@
             an exact number would encourage formula gaming, we describe the factors instead.
           </p>
         </div>
+        <div class="toc-card toc-card--home">
+          <h2>Back to the game</h2>
+          <p>Finished reading? Return to RockMundo without hunting for another route.</p>
+          <a class="toc-home-link" href="/">RockMundo home →</a>
+        </div>
       </aside>
     </main>
 
@@ -136,6 +173,7 @@
         RockMundo Compendium · Knowledge changes as the world is balanced and expanded.
       </p>
       <a href="#mechanics-disclosure">Mechanics disclosure policy</a>
+      <a href="/">Return to RockMundo</a>
     </footer>
 
     <noscript>
