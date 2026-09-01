@@ -49,7 +49,7 @@ const VENUE_SIZE_FILTERS = [
 ];
 
 const GigBooking = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, isLoading: isActiveProfileLoading } = useActiveProfile();
   const { profile, skills, attributes, addActivity, currentCity } = useGameData();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -142,8 +142,6 @@ const GigBooking = () => {
     setCountries(uniqueCountries);
   }, [toast]);
 
-
-
   // Cities available under the selected country
   const availableCities = useMemo(() => {
     const filtered = selectedCountry === 'all'
@@ -180,7 +178,6 @@ const GigBooking = () => {
       return true;
     });
   }, [venues, selectedCountry, selectedCity, selectedVenueSize]);
-
 
   const resolveBand = useCallback(async (): Promise<BandRow | null> => {
     if (!profileId) {
@@ -258,6 +255,10 @@ const GigBooking = () => {
   }, []);
 
   const loadData = useCallback(async () => {
+    if (!profileId) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -278,21 +279,30 @@ const GigBooking = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadVenues, resolveBand, loadUpcomingGigs, updateBandLockout]);
+  }, [profileId, loadVenues, resolveBand, loadUpcomingGigs, updateBandLockout]);
 
+  // Initial page load should only run once the active character is known.
   useEffect(() => {
+    if (isActiveProfileLoading || !profileId) {
+      return;
+    }
+
     void loadData();
-    
-    // Reload gigs every 10 seconds to catch status changes
+  }, [isActiveProfileLoading, profileId, loadData]);
+
+  // Refresh gig status without re-running the whole page initialisation when band state changes.
+  useEffect(() => {
+    if (!band?.id) {
+      return;
+    }
+
     const interval = setInterval(() => {
-      if (band?.id) {
-        loadUpcomingGigs(band.id);
-        updateBandLockout(band.id);
-      }
+      void loadUpcomingGigs(band.id);
+      void updateBandLockout(band.id);
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [loadData, band?.id, loadUpcomingGigs, updateBandLockout]);
+  }, [band?.id, loadUpcomingGigs, updateBandLockout]);
 
   // Load venue cooldowns when band and venues are available
   useEffect(() => {
