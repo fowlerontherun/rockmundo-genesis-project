@@ -1,3 +1,5 @@
+@import url("./wiki-enhancements.css");
+
 .guide-body {
   background: #f4efe3;
 }
@@ -79,8 +81,9 @@
   min-width: 0;
   padding: clamp(22px, 4vw, 48px);
   border: 1px solid var(--rule-dark);
+  border-top: 4px solid var(--forest);
   background: var(--sheet);
-  box-shadow: 0 3px 16px var(--shadow);
+  box-shadow: 0 8px 26px rgba(53, 44, 31, 0.12);
 }
 
 .guide-breadcrumbs {
@@ -101,7 +104,11 @@
 }
 
 .guide-kicker {
+  display: inline-flex;
   margin: 0 0 8px;
+  padding: 3px 8px;
+  border: 1px solid #d0bd93;
+  background: var(--gold-soft, #f3ead7);
   color: var(--burgundy);
   font-family: "Trebuchet MS", Arial, sans-serif;
   font-size: 0.78rem;
@@ -129,9 +136,11 @@
 }
 
 .guide-hero {
+  overflow: hidden;
   margin: 28px 0 34px;
   border: 1px solid var(--rule-dark);
   background: var(--paper-deep);
+  box-shadow: 0 3px 12px rgba(53, 44, 31, 0.08);
 }
 
 .guide-hero img,
@@ -159,6 +168,7 @@
 .guide-summary {
   margin: 26px 0 34px;
   padding: 18px 20px;
+  border: 1px solid #bdc8c0;
   border-left: 5px solid var(--forest);
   background: #edf1e9;
 }
@@ -211,7 +221,9 @@
 .guide-card {
   padding: 15px 16px;
   border: 1px solid var(--rule);
-  background: #faf7ef;
+  border-top: 3px solid var(--forest);
+  background: linear-gradient(180deg, #fffdf8, #faf7ef);
+  box-shadow: 0 2px 8px rgba(53, 44, 31, 0.05);
 }
 
 .guide-card h3 {
@@ -288,9 +300,11 @@
 }
 
 .guide-figure {
+  overflow: hidden;
   margin: 28px auto;
   border: 1px solid var(--rule-dark);
   background: var(--paper-deep);
+  box-shadow: 0 3px 12px rgba(53, 44, 31, 0.08);
 }
 
 .guide-visual-grid {
@@ -304,6 +318,7 @@
   overflow: hidden;
   border: 1px solid var(--rule);
   background: #faf7ef;
+  box-shadow: 0 2px 8px rgba(53, 44, 31, 0.05);
 }
 
 .guide-visual-card img {
@@ -347,14 +362,17 @@
   display: block;
   padding: 13px 14px;
   border: 1px solid var(--rule);
+  border-left: 3px solid var(--forest);
   background: #faf7ef;
   font-family: "Trebuchet MS", Arial, sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
   text-decoration: none;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
 }
 
 .guide-related a:hover {
+  transform: translateY(-1px);
   border-color: var(--forest);
   background: #f2f0e6;
 }
@@ -381,11 +399,24 @@
 .guide-meta span {
   padding: 3px 7px;
   border: 1px solid var(--rule);
+  border-radius: 999px;
   background: #f6f0e4;
   color: var(--muted);
   font-family: "Trebuchet MS", Arial, sans-serif;
   font-size: 0.72rem;
   text-transform: uppercase;
+}
+
+.guide-side a,
+.guide-on-page a {
+  padding: 3px 6px;
+  border-radius: 2px;
+  text-decoration: none;
+}
+
+.guide-side a:hover,
+.guide-on-page a:hover {
+  background: rgba(40, 90, 120, 0.07);
 }
 
 @media (max-width: 1120px) {
@@ -409,6 +440,7 @@
     margin-bottom: 14px;
     padding: 12px;
     border: 1px solid var(--rule);
+    border-top: 3px solid var(--forest);
     background: #eee6d6;
   }
 
@@ -422,6 +454,7 @@
 
   .guide-article {
     padding: 20px 17px 28px;
+    border-top-width: 3px;
   }
 
   .guide-grid,
