@@ -1,3 +1,4 @@
+import { BAND_PERFORMANCE_ROLES, DEFAULT_BAND_PERFORMANCE_ROLE } from "@/data/bandPerformanceRoles";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface BandApplicationResult {
@@ -16,21 +17,8 @@ export type BandApplicationDecision = "approve" | "reject";
 export type BandApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn";
 
 export const BAND_APPLICATION_MESSAGE_MAX_LENGTH = 500;
-export const BAND_APPLICATION_ROLES = [
-  "Guitar",
-  "Bass",
-  "Drums",
-  "Vocals",
-  "Keyboard",
-  "Rhythm Guitar",
-  "Lead Guitar",
-  "Saxophone",
-  "Trumpet",
-  "Violin",
-  "Other",
-] as const;
-
-export type BandApplicationRole = (typeof BAND_APPLICATION_ROLES)[number];
+export const BAND_APPLICATION_ROLES = BAND_PERFORMANCE_ROLES;
+export type BandApplicationRole = string;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HTML_PATTERN = /<[^>]*>/;
@@ -45,9 +33,9 @@ function assertUuid(value: string | undefined | null, message: string): string {
 
 export function normalizeBandApplicationSubmissionInput(bandId: string | undefined | null, requestedRole: string, message: string) {
   const normalizedBandId = assertUuid(bandId, "Choose a valid band before applying.");
-  const normalizedRole = requestedRole.trim() || "Guitar";
-  if (!BAND_APPLICATION_ROLES.includes(normalizedRole as BandApplicationRole)) {
-    throw new Error("Choose a valid instrument role.");
+  const normalizedRole = requestedRole.trim() || DEFAULT_BAND_PERFORMANCE_ROLE;
+  if (!BAND_APPLICATION_ROLES.includes(normalizedRole)) {
+    throw new Error("Choose a valid performance role.");
   }
   const trimmedMessage = message.trim();
   if (trimmedMessage.length > BAND_APPLICATION_MESSAGE_MAX_LENGTH) {
@@ -99,7 +87,6 @@ export async function respondBandApplication(applicationId: string, decision: Ba
   }
   return data as BandApplicationResult;
 }
-
 
 export function normalizeBandApplicationWithdrawalInput(applicationId: string | undefined | null) {
   return { applicationId: assertUuid(applicationId, "Choose a valid band application.") };
