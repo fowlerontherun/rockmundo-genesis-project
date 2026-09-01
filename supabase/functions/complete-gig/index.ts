@@ -239,8 +239,6 @@ serve(async (req) => {
       console.log(`[complete-gig] Absence penalty applied: ${(absencePenalty * 100).toFixed(0)}% (${(gig as any).absent_member_count || 0} missing member(s))`);
     }
 
-
-
     // Commerce is a single transactional authority. The RPC serializes on the
     // gig, returns the immutable existing settlement on retry, locks inventory,
     // and writes orders, stock, venue finance and outcome aggregates together.
@@ -303,12 +301,22 @@ serve(async (req) => {
     const moraleMod = parseFloat((0.7 + (Math.max(0, Math.min(100, bandMorale)) / 100) * 0.5).toFixed(2));
     console.log(`Band morale: ${bandMorale} → performance modifier ${moraleMod}x`);
 
-    // Calculate fame gained - balanced formula with variance
+    // Long-tail progression: gig rewards shrink as the band grows, and lower-billing
+    // slots are useful stepping stones rather than a shortcut to headline-level fame.
+    const slotKey = String((gig as any).time_slot || (gig as any).show_type || 'headline').toLowerCase();
+    const slotProgressionMultiplier = ({ kids: 0.18, opening: 0.30, support: 0.45, headline: 1.0 } as Record<string, number>)[slotKey] ?? 0.70;
+    const currentBandFame = Math.max(0, Number(gig.bands?.fame || 0));
+    const currentBandFans = Math.max(0, Number(gig.bands?.total_fans || 0));
+    const fameDiminishingMultiplier = Math.max(0.08, 1 / (1 + Math.sqrt(currentBandFame / 2500)));
+    const fanbaseDiminishingMultiplier = Math.max(0.20, 1 / (1 + Math.sqrt(currentBandFans / 7500) * 0.55));
+
+    // Calculate fame gained - performance, attendance, billing position and career scale all matter.
     const attendanceMultiplier = 1.0 + Math.log10(Math.max(1, outcome.actual_attendance / 100)) * 0.5;
     const baseFame = (avgRating / 25) * 200;
     // Add ±25% random variance to fame for more unpredictable outcomes
     const fameVariance = 0.75 + Math.random() * 0.50; // 0.75 to 1.25
-    const fameGained = clampInt4(Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod));
+    const fameGained = clampInt4(Math.max(0, Math.floor(baseFame * Math.min(3.0, attendanceMultiplier) * fameVariance * moraleMod * slotProgressionMultiplier * fameDiminishingMultiplier)));
+    console.log(`Progression modifiers: slot=${slotKey} ${slotProgressionMultiplier.toFixed(2)}x, fame=${fameDiminishingMultiplier.toFixed(2)}x, fans=${fanbaseDiminishingMultiplier.toFixed(2)}x`);
     
     // Calculate individual member XP (higher for good performances)
     const memberXpBase = Math.floor(fameGained * 1.5);
@@ -348,7 +356,7 @@ serve(async (req) => {
     const fanSentT = (Math.max(-100, Math.min(100, fanSentVal)) + 100) / 200;
     const fanSentMod = parseFloat((0.6 + fanSentT * 0.8).toFixed(2)); // 0.6x–1.4x
     console.log(`Fan conversion sentiment modifier: ${fanSentMod}x (sentiment=${fanSentVal})`);
-    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus * moraleMod * fanSentMod;
+    const conversionRate = BASE_CONVERSION_RATE * gradeMultiplier * (1 + ratingBonus) * famePenalty * fanVariance * clothingFanBonus * moraleMod * fanSentMod * slotProgressionMultiplier * fanbaseDiminishingMultiplier;
     
     // === TICKET OPERATOR TOUT MECHANICS ===
     // If a ticket operator was used, calculate tout impact on attendance and fan gains
@@ -998,7 +1006,6 @@ serve(async (req) => {
           message: `${ratingStars} Performance Rating: ${avgRating.toFixed(1)}/25\n💰 Net Profit: $${netProfit.toLocaleString()}\n👥 New Fans: ${newFansTotal}\n🎤 Attendance: ${outcome.actual_attendance}${merchWarning}`,
           metadata: {
             gig_id: gigId,
-            band_id: gig.band_id,
             rating: avgRating,
             profit: netProfit,
             fans: newFansTotal,
