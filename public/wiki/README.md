@@ -15,7 +15,7 @@ It intentionally lives under `public/wiki` instead of the React game shell so it
 - `wiki.css` — Compendium-only visual system.
 - `wiki.js` — article catalogue, navigation, search and article rendering.
 - `guide.css` — styling shared by long-form editorial guides.
-- `guides/*.html` — deeper walkthroughs for the main player journeys.
+- `guides/*.html` — deeper walkthroughs for the main player journeys and systems.
 
 ## Starter guides
 
@@ -28,7 +28,19 @@ The first long-form guide set is:
 5. `guides/releases-and-streaming.html` — release types, formats, streaming, sales, promotion and charts.
 6. `guides/cities-and-travel.html` — cities, physical opportunities, travel, touring and schedule planning.
 
-The main Compendium sidebar links to these guides separately from the shorter reference articles.
+## Deep-dive guides
+
+The second guide set explains larger systems in more depth:
+
+1. `guides/skills-and-xp.html` — skill planning, XP, education, learning and specialisation.
+2. `guides/recording-studios.html` — studio choice, performer readiness, role coverage, producers/engineers and payment source.
+3. `guides/festivals.html` — festival identity, stages, lineup, tickets, sponsorship, operations and performer preparation.
+4. `guides/tours.html` — routing, band travel, schedules, show preparation, economics and cancellation.
+5. `guides/finances-and-banking.html` — personal, band and company money, accounts, transfers, payment sources and cashflow.
+6. `guides/careers-and-jobs.html` — employment, education, specialist careers, offers and balancing work with music.
+7. `guides/businesses.html` — company types, staffing, capacity, finance, growth and links to the wider music economy.
+
+The main Compendium sidebar links to starter guides and deep dives separately from the shorter reference articles.
 
 ## Editorial rule
 
@@ -60,7 +72,7 @@ Long-form guides can contain two types of visual:
 
 Existing artwork under `public/hub-tiles` may be reused where it helps explain a system. It must be captioned as a **Game illustration** so players do not mistake stylised art for a screenshot of the live interface.
 
-The starter guides currently use artwork for systems such as skills, education, wellness, songwriting, rehearsal, recording, gigs, venues, stage equipment, releases, streaming, charts, cities and travel.
+The current guide sets use artwork for systems such as skills, education, wellness, songwriting, rehearsal, recording, gigs, venues, stage equipment, releases, streaming, charts, cities, travel, festivals, sponsorships, touring, finances, employment and companies.
 
 ### Interface screenshots
 
@@ -88,6 +100,6 @@ The sidebar, search index, table of contents and related-article cards are gener
 
 ## Adding a long-form guide
 
-Create an HTML page under `guides/` that loads both `../wiki.css` and `../guide.css`. Keep the standard Compendium header, breadcrumb, starter-guide navigation, article structure and mechanics-disclosure language so the site feels consistent.
+Create an HTML page under `guides/` that loads both `../wiki.css` and `../guide.css`. Keep the standard Compendium header, breadcrumb, guide navigation, article structure and mechanics-disclosure language so the site feels consistent.
 
-Long-form guides should answer a player journey rather than duplicate the encyclopaedia. For example, “How do I prepare my first gig?” is a guide; “What is a setlist?” is better suited to a reference article.
+Long-form guides should answer a player journey or explain how a larger system fits together rather than duplicate the encyclopaedia. For example, “How do I prepare my first gig?” is a guide; “What is a setlist?” is better suited to a reference article.
