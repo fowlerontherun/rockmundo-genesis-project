@@ -23,6 +23,7 @@ export type BandVacancy = {
   audition_required: boolean;
   remote_or_travel_allowed: boolean;
   direct_applications_allowed: boolean;
+  application_questions?: { type: string; prompt?: string }[] | null;
   created_at?: string;
   bands?: { name?: string | null; genre?: string | null; logo_url?: string | null } | null;
   match?: MatchSummary;
@@ -40,8 +41,26 @@ export const validateVacancyDraft = (input: VacancyFormInput) => {
   if (!sanitizeRecruitmentText(input.instrument ?? "")) errors.instrument = "Choose the role you are recruiting for.";
   if (sanitizeRecruitmentText(input.description ?? "").length > 4000) errors.description = "Description must be 4,000 characters or fewer.";
   if ((input.positions_available ?? 1) < 1) errors.positions_available = "At least one position is required.";
+  if ((input.application_questions?.length ?? 0) > 8) errors.application_questions = "Use 8 application questions or fewer.";
   return errors;
 };
+
+export const buildVacancyPayload = (input: VacancyFormInput) => ({
+  title: sanitizeRecruitmentText(input.title ?? ""),
+  short_description: sanitizeRecruitmentText(input.short_description ?? "").slice(0, 240) || null,
+  description: sanitizeRecruitmentText(input.description ?? "").slice(0, 4000),
+  visibility: input.visibility ?? "public",
+  instrument: sanitizeRecruitmentText(input.instrument ?? ""),
+  vocal_role: input.vocal_role || null,
+  genres: input.genres ?? [],
+  commitment_level: input.commitment_level ?? "flexible",
+  positions_available: input.positions_available ?? 1,
+  audition_required: input.audition_required ?? false,
+  remote_or_travel_allowed: input.remote_or_travel_allowed ?? true,
+  direct_applications_allowed: input.direct_applications_allowed ?? true,
+  application_deadline: input.application_deadline || null,
+  application_questions: input.application_questions ?? [],
+});
 
 export async function loadBandPerformanceRoles() {
   const slugs = [

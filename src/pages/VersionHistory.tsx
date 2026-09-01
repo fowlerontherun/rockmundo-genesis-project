@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.732",
+    date: "2026-09-01",
+    changes: [
+      { type: "feature", description: "Admins can now reply to a player's bug report and the update is delivered straight to that player's inbox" },
+      { type: "feature", description: "New My Bug Reports page where players can track their reports and read every update from the team" },
+    ],
+  },
+  {
     version: "1.1.731",
     date: "2026-08-31",
     changes: [

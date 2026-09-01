@@ -244,6 +244,7 @@ const PlayersBrowser = lazyWithRetry(() => import("./pages/PlayersBrowser"));
 const FriendsPage = lazyWithRetry(() => import("./pages/Friends"));
 const BlockedPlayersPage = lazyWithRetry(() => import("./pages/settings/BlockedPlayers"));
 const MyReportsPage = lazyWithRetry(() => import("./pages/settings/MyReports"));
+const MyBugReportsPage = lazyWithRetry(() => import("./pages/MyBugReports"));
 const PlayerProfile = lazyWithRetry(() => import("./pages/PlayerProfile"));
 const PlayerProfileEdit = lazyWithRetry(() => import("./pages/PlayerProfileEdit"));
 const BandBrowser = lazyWithRetry(() => import("./pages/BandBrowser"));
@@ -525,6 +526,7 @@ function App() {
                   <Route element={<Layout />}>
                     <Route path="home" element={<Dashboard />} />
                     <Route path="inbox" element={<Inbox />} />
+                    <Route path="my-bug-reports" element={<MyBugReportsPage />} />
 
 
                     <Route path="todays-news" element={<TodaysNewsPage />} />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bug, CheckCircle2, ExternalLink, RefreshCw } from "lucide-react";
+import { AlertTriangle, Bug, CheckCircle2, ExternalLink, RefreshCw, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ const AdminBugReportsPanel = () => {
   const [statusFilter, setStatusFilter] = useState("open");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [respondingId, setRespondingId] = useState<string | null>(null);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -101,6 +103,28 @@ const AdminBugReportsPanel = () => {
     }
     setSavingId(null);
   };
+
+  const sendReply = async (report: BugReport) => {
+    const message = (replyDrafts[report.id] ?? "").trim();
+    if (!message) return;
+
+    setRespondingId(report.id);
+    const { error } = await (supabase as any).rpc("respond_to_bug_report", {
+      p_report_id: report.id,
+      p_message: message,
+      p_status: report.status,
+    });
+
+    if (error) {
+      toast.error("Could not send the update", { description: error.message });
+    } else {
+      setReplyDrafts((current) => ({ ...current, [report.id]: "" }));
+      toast.success("Update sent to the player's inbox");
+    }
+    setRespondingId(null);
+  };
+
+
 
   return (
     <Card className="border-destructive/30">
@@ -214,6 +238,29 @@ const AdminBugReportsPanel = () => {
                   disabled={savingId === report.id}
                 />
               </div>
+
+              <div className="space-y-2 rounded-md border border-primary/30 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Reply to player {report.user_id ? "" : "(no player attached — reply disabled)"}
+                </p>
+                <Textarea
+                  value={replyDrafts[report.id] ?? ""}
+                  placeholder="Send an update that lands in the player's inbox…"
+                  onChange={(event) =>
+                    setReplyDrafts((current) => ({ ...current, [report.id]: event.target.value }))
+                  }
+                  disabled={!report.user_id || respondingId === report.id}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => void sendReply(report)}
+                  disabled={!report.user_id || respondingId === report.id || !(replyDrafts[report.id] ?? "").trim()}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {respondingId === report.id ? "Sending…" : "Send update to player"}
+                </Button>
+              </div>
+
             </div>
           ))
         )}
