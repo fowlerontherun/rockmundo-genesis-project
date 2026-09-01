@@ -1,3 +1,4 @@
+import { BAND_PERFORMANCE_ROLES } from "@/data/bandPerformanceRoles";
 import { supabase } from "@/integrations/supabase/client";
 
 export const VACANCY_STATUSES = ["draft", "open", "paused", "filled", "closed", "expired", "cancelled"] as const;
@@ -44,21 +45,7 @@ export const validateVacancyDraft = (input: VacancyFormInput) => {
 };
 
 export async function loadBandPerformanceRoles() {
-  const slugs = [
-    "guitar", "bass", "drums", "basic_keyboard", "basic_percussions", "basic_strings",
-    "basic_brass", "basic_woodwinds", "basic_electronic_instruments", "basic_dj_controller",
-    "basic_singing", "basic_rapping",
-  ];
-  const { data, error } = await supabase
-    .from("skill_definitions")
-    .select("slug, display_name")
-    .in("slug", slugs);
-  if (error) throw error;
-  const bySlug = new Map((data ?? []).map((row) => [row.slug, row.display_name]));
-  return slugs
-    .map((slug) => bySlug.get(slug))
-    .filter((name): name is string => Boolean(name))
-    .map((name) => name.replace(/^Basic\s+/i, "").trim());
+  return BAND_PERFORMANCE_ROLES;
 }
 
 export async function createBandVacancy(bandId: string, profileId: string, input: VacancyFormInput, publish = false) {
