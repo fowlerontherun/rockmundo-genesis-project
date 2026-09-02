@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { format, isToday, isYesterday, isThisWeek } from "date-fns";
 import { RefreshCw } from "lucide-react";
 import { TwaatCard } from "./TwaatCard";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface TwaatData {
   id: string;
@@ -50,15 +48,13 @@ function getDateLabel(dateString: string): string {
 
 function groupTwaatsByDate(twaats: TwaatData[]): Map<string, TwaatData[]> {
   const groups = new Map<string, TwaatData[]>();
-  
-  twaats.forEach(twaat => {
+
+  twaats.forEach((twaat) => {
     const label = getDateLabel(twaat.created_at);
-    if (!groups.has(label)) {
-      groups.set(label, []);
-    }
+    if (!groups.has(label)) groups.set(label, []);
     groups.get(label)!.push(twaat);
   });
-  
+
   return groups;
 }
 
@@ -69,21 +65,7 @@ export default function TwaaterTimeline({
   currentAccountId,
   showDateSeparators = true,
 }: TwaaterTimelineProps) {
-  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
-
   const groupedTwaats = showDateSeparators ? groupTwaatsByDate(twaats) : null;
-
-  const toggleThread = (twaatId: string) => {
-    setExpandedThreads(prev => {
-      const next = new Set(prev);
-      if (next.has(twaatId)) {
-        next.delete(twaatId);
-      } else {
-        next.add(twaatId);
-      }
-      return next;
-    });
-  };
 
   if (isLoading) {
     return (
@@ -103,26 +85,21 @@ export default function TwaaterTimeline({
 
   const renderTwaat = (twaat: TwaatData, isLast: boolean, showConnector: boolean = true) => (
     <div key={twaat.id} className="relative">
-      {/* Timeline connector line */}
       {showConnector && !isLast && (
-        <div 
+        <div
           className="absolute left-6 top-14 bottom-0 w-0.5 bg-[#a855f7]/20"
           aria-hidden="true"
         />
       )}
-      
-      {/* Retwaat header */}
+
       {twaat.retwaat_by && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground ml-12 mb-1">
           <RefreshCw className="h-3 w-3" />
           <span>@{twaat.retwaat_by.handle} retwaated</span>
         </div>
       )}
-      
-      <TwaatCard
-        twaat={twaat}
-        viewerAccountId={currentAccountId}
-      />
+
+      <TwaatCard twaat={twaat} viewerAccountId={currentAccountId} />
     </div>
   );
 
@@ -142,10 +119,9 @@ export default function TwaaterTimeline({
             </Button>
           </div>
         )}
-        
+
         {Array.from(groupedTwaats.entries()).map(([dateLabel, dateTwaats]) => (
           <div key={dateLabel}>
-            {/* Date separator */}
             <div className="flex items-center gap-3 py-3">
               <div className="flex-1 h-px bg-[#a855f7]/20" />
               <span className="text-xs font-medium text-[#a855f7] px-2 py-1 bg-[#a855f7]/10 rounded-full">
@@ -153,12 +129,9 @@ export default function TwaaterTimeline({
               </span>
               <div className="flex-1 h-px bg-[#a855f7]/20" />
             </div>
-            
-            {/* Twaats for this date */}
+
             <div className="space-y-1">
-              {dateTwaats.map((twaat, index) => 
-                renderTwaat(twaat, index === dateTwaats.length - 1)
-              )}
+              {dateTwaats.map((twaat, index) => renderTwaat(twaat, index === dateTwaats.length - 1))}
             </div>
           </div>
         ))}
@@ -166,7 +139,6 @@ export default function TwaaterTimeline({
     );
   }
 
-  // Without date separators
   return (
     <div className="space-y-1">
       {onRefresh && (
@@ -182,10 +154,8 @@ export default function TwaaterTimeline({
           </Button>
         </div>
       )}
-      
-      {twaats.map((twaat, index) => 
-        renderTwaat(twaat, index === twaats.length - 1, false)
-      )}
+
+      {twaats.map((twaat, index) => renderTwaat(twaat, index === twaats.length - 1, false))}
     </div>
   );
 }
