@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,6 @@ import {
   Calendar,
   Star,
   Clock,
-  CheckCircle,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -36,13 +35,19 @@ const filmTypeLabels: Record<string, { label: string; icon: string }> = {
   lead: { label: "Lead Role", icon: "👑" },
 };
 
+function getOfferDateTime(offer: any): Date | null {
+  if (!offer?.proposed_date) return null;
+  const slot = /^\d{2}:\d{2}$/.test(offer.time_slot || "") ? offer.time_slot : "08:00";
+  const parsed = parseISO(`${offer.proposed_date}T${slot}:00Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelProps) {
   const queryClient = useQueryClient();
   const currentYear = new Date().getFullYear();
   const isFameLocked = bandFame < FILM_FAME_REQUIREMENT;
   const fameProgress = Math.min((bandFame / FILM_FAME_REQUIREMENT) * 100, 100);
 
-  // Fetch film offers
   const { data: filmOffers, isLoading: offersLoading } = useQuery({
     queryKey: ["film-offers", bandId],
     queryFn: async () => {
@@ -52,6 +57,7 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
         .eq("band_id", bandId)
         .eq("media_type", "film")
         .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
         .order("proposed_date", { ascending: true });
 
       if (error) throw error;
@@ -61,7 +67,6 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch film contracts this year
   const { data: filmContracts, isLoading: contractsLoading } = useQuery({
     queryKey: ["film-contracts", userId, currentYear],
     queryFn: async () => {
@@ -83,7 +88,6 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
 
   const acceptFilmMutation = useMutation({
     mutationFn: async (offerId: string) => {
-      // Create film contract
       const offer = filmOffers?.find(o => o.id === offerId);
       if (!offer) throw new Error("Offer not found");
 
@@ -105,8 +109,7 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
 
       if (contractError) throw contractError;
 
-      // Process the PR activity
-      const { data, error } = await supabase.functions.invoke("process-pr-activity", {
+      const { data, error } = await supabase.functions.invoke("respond-pr-offer", {
         body: { offerId, action: "accept" },
       });
 
@@ -115,14 +118,19 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
           await getEdgeFunctionErrorMessage(error, "This film offer could not be accepted."),
         );
       }
+      if (!data?.success) throw new Error(data?.message || "This film offer could not be accepted.");
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["film-offers", bandId] });
       queryClient.invalidateQueries({ queryKey: ["film-contracts", userId, currentYear] });
       queryClient.invalidateQueries({ queryKey: ["pr-stats", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      const scheduledFor = data?.scheduledFor ? new Date(data.scheduledFor) : null;
       toast.success("Film role accepted!", {
-        description: "Your schedule has been blocked for filming.",
+        description: scheduledFor && !Number.isNaN(scheduledFor.getTime())
+          ? `Filming starts ${format(scheduledFor, "MMM d, yyyy 'at' HH:mm 'UTC'")}.`
+          : "Your band's schedule has been blocked for filming.",
       });
     },
     onError: (error: Error) => {
@@ -158,7 +166,6 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
 
   return (
     <div className="space-y-4">
-      {/* Film Career Status */}
       <Card className="bg-card/50 backdrop-blur">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -184,7 +191,6 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
         </CardContent>
       </Card>
 
-      {/* Film Offers */}
       {offersLoading ? (
         <div className="space-y-4">
           {[...Array(2)].map((_, i) => (
@@ -205,7 +211,7 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
         <div className="space-y-4">
           {filmOffers.map((offer) => {
             const typeConfig = filmTypeLabels.cameo;
-            const proposedDate = offer.proposed_date ? parseISO(offer.proposed_date) : null;
+            const proposedDateTime = getOfferDateTime(offer);
 
             return (
               <Card key={offer.id} className="bg-gradient-to-r from-amber-900/20 to-card backdrop-blur">
@@ -222,10 +228,10 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-xs">
-                        {proposedDate && (
+                        {proposedDateTime && (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            Filming: {format(proposedDate, "MMM d, yyyy")}
+                            Filming: {format(proposedDateTime, "MMM d, yyyy 'at' HH:mm 'UTC'")}
                           </span>
                         )}
                         <span className="flex items-center gap-1">
@@ -266,7 +272,6 @@ export function FilmOffersPanel({ bandId, bandFame, userId }: FilmOffersPanelPro
         </div>
       )}
 
-      {/* Film History */}
       {contractsLoading ? null : filmContracts && filmContracts.length > 0 && (
         <Card className="bg-card/50 backdrop-blur">
           <CardHeader className="pb-2">

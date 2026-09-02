@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +49,13 @@ const offerTypeLabels: Record<string, string> = {
   personal_promo: "Personal Promotion",
 };
 
+function getOfferDateTime(offer: any): Date | null {
+  if (!offer?.proposed_date) return null;
+  const timeSlot = /^\d{2}:\d{2}$/.test(offer.time_slot || "") ? offer.time_slot : "10:00";
+  const parsed = parseISO(`${offer.proposed_date}T${timeSlot}:00Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function PROffersList({ bandId, bandFame }: PROffersListProps) {
   const queryClient = useQueryClient();
 
@@ -60,6 +67,7 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
         .select("*")
         .eq("band_id", bandId)
         .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
         .order("proposed_date", { ascending: true });
 
       if (error) throw error;
@@ -71,7 +79,7 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
 
   const respondMutation = useMutation({
     mutationFn: async ({ offerId, action }: { offerId: string; action: "accept" | "decline" }) => {
-      const { data, error } = await supabase.functions.invoke("process-pr-activity", {
+      const { data, error } = await supabase.functions.invoke("respond-pr-offer", {
         body: { offerId, action },
       });
       if (error) {
@@ -79,16 +87,21 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
           await getEdgeFunctionErrorMessage(error, "This PR offer could not be processed."),
         );
       }
+      if (!data?.success) throw new Error(data?.message || "This PR offer could not be processed.");
       return data;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["pr-offers", bandId] });
       queryClient.invalidateQueries({ queryKey: ["pr-stats", bandId] });
       queryClient.invalidateQueries({ queryKey: ["pr-appearances", bandId] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
       
       if (variables.action === "accept") {
+        const scheduledFor = data?.scheduledFor ? new Date(data.scheduledFor) : null;
         toast.success("Offer accepted!", {
-          description: `Scheduled for ${data.scheduledFor}`,
+          description: scheduledFor && !Number.isNaN(scheduledFor.getTime())
+            ? `Scheduled for ${format(scheduledFor, "MMM d, yyyy 'at' HH:mm 'UTC'")}`
+            : "The appearance has been added to the band's schedule.",
         });
       } else {
         toast.info("Offer declined");
@@ -100,7 +113,6 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
   });
 
   const getOutletName = (offer: any): string => {
-    // Use outlet_name directly from the offer
     return offer.outlet_name || offer.show_name || `${offer.media_type?.toUpperCase() || 'Media'} Outlet`;
   };
 
@@ -139,13 +151,12 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
           const Icon = config.icon;
           const outletName = getOutletName(offer);
           const expiresAt = offer.expires_at ? parseISO(offer.expires_at) : null;
-          const proposedDate = offer.proposed_date ? parseISO(offer.proposed_date) : null;
+          const proposedDateTime = getOfferDateTime(offer);
 
           return (
             <Card key={offer.id} className="bg-card/80 backdrop-blur transition-all hover:bg-card">
               <CardContent className="p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  {/* Left side - offer details */}
                   <div className="flex gap-3">
                     <div className={`rounded-lg bg-muted p-2 ${config.color}`}>
                       <Icon className="h-6 w-6" />
@@ -161,10 +172,10 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
                         {offerTypeLabels[offer.offer_type] || offer.offer_type}
                       </p>
                       <div className="flex flex-wrap items-center gap-3 text-xs">
-                        {proposedDate && (
+                        {proposedDateTime && (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(proposedDate, "MMM d, yyyy")}
+                            {format(proposedDateTime, "MMM d, yyyy 'at' HH:mm 'UTC'")}
                           </span>
                         )}
                         {expiresAt && (
@@ -177,7 +188,6 @@ export function PROffersList({ bandId, bandFame }: PROffersListProps) {
                     </div>
                   </div>
 
-                  {/* Right side - rewards and actions */}
                   <div className="flex flex-col gap-2 sm:items-end">
                     <div className="flex flex-wrap gap-2">
                       {offer.compensation > 0 && (
