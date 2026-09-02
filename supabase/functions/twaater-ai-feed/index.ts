@@ -112,6 +112,7 @@ Deno.serve(async (req) => {
       `)
       .in("visibility", ["public", "followers"])
       .is("deleted_at", null)
+      .is("scheduled_for", null)
       .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
       .order("created_at", { ascending: false })
       .limit(200);
