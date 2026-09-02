@@ -28,6 +28,7 @@ export default function TwaaterHashtagView() {
         .ilike("body", `%#${hashtag}%`)
         .eq("visibility", "public")
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(50);
 
