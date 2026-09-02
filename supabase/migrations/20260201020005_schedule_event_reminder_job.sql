@@ -1,5 +1,5 @@
--- Ensure pg_cron is available for scheduling reminder processing
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+-- pg_cron is established earlier in the migration chain. Do not reinstall it
+-- here because Supabase-managed extension privileges make a repeated install fail.
 
 -- Ensure reminder support columns are present on schedule events
 ALTER TABLE public.schedule_events
