@@ -194,7 +194,7 @@ BEGIN
   PERFORM cron.schedule(
     'refresh_global_charts',
     '0 1 * * *',
-    $$select public.refresh_global_charts();$$
+    $cron$select public.refresh_global_charts();$cron$
   );
 END;
 $$;
