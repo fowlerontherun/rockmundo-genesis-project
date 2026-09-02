@@ -47,7 +47,7 @@ export const useTwaaterReplies = (twaatId: string) => {
     onError: (error: any) => {
       toast({
         title: "Failed to reply",
-        description: error.message,
+        description: error?.message || "We couldn't post that reply. Please try again.",
         variant: "destructive",
       });
     },
@@ -57,6 +57,7 @@ export const useTwaaterReplies = (twaatId: string) => {
     replies,
     isLoading,
     postReply: postReplyMutation.mutate,
+    postReplyAsync: postReplyMutation.mutateAsync,
     isPosting: postReplyMutation.isPending,
   };
 };
