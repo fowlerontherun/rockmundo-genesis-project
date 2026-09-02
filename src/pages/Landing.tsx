@@ -4,12 +4,19 @@ import {
   Activity,
   AlertCircle,
   BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  CalendarDays,
   ChevronRight,
   Globe,
+  Guitar,
+  HeartPulse,
   LogIn,
+  MapPin,
   MessageCircle,
   Mic2,
   Music,
+  Plane,
   PlayCircle,
   Radio,
   Rocket,
@@ -61,27 +68,98 @@ const FEATURES = [
   {
     icon: Radio,
     title: "Media & PR",
-    body: "Pitch to 235 radio stations, podcasts, magazines, newspapers and streaming playlists.",
+    body: "Pitch to radio, podcasts, magazines, newspapers and streaming playlists.",
   },
   {
     icon: Globe,
     title: "Global Career",
-    body: "Build regional fame across 20 tiers per country, with 20% spillover into neighbours.",
+    body: "Travel between cities, build regional fame and grow from a local act into an international name.",
   },
   {
     icon: Trophy,
     title: "Awards & Charts",
-    body: "Climb weekly charts, get nominated, win trophies and enter the Hall of Immortals.",
+    body: "Climb weekly charts, get nominated, win trophies and earn a place in RockMundo history.",
   },
   {
     icon: TrendingUp,
     title: "Run an Empire",
-    body: "Found a label, sign artists, buy venues, launch merch lines and corporate subsidiaries.",
+    body: "Build businesses, operate venues, run labels and turn music success into something much bigger.",
   },
   {
     icon: Sparkles,
     title: "Live a Life",
-    body: "Relationships, marriage, children, wellness, addictions, prison stints — full simulation.",
+    body: "Relationships, wellness, family, ageing and major life events all continue alongside your career.",
+  },
+];
+
+const CAREER_STEPS = [
+  {
+    step: "01",
+    title: "Learn your craft",
+    body: "Develop instrument, vocal, performance and career skills through practice, education and experience.",
+  },
+  {
+    step: "02",
+    title: "Create music",
+    body: "Write songs, improve them, rehearse with your band and take them into the recording studio.",
+  },
+  {
+    step: "03",
+    title: "Build an audience",
+    body: "Play open mics and gigs, release music, promote yourself and turn attention into fans and fame.",
+  },
+  {
+    step: "04",
+    title: "Go bigger",
+    body: "Tour new cities, compete in charts and awards, headline larger venues and build a worldwide reputation.",
+  },
+  {
+    step: "05",
+    title: "Shape the world",
+    body: "Lead bands, run companies, operate venues and labels, launch festivals and leave a lasting legacy.",
+  },
+];
+
+const GAME_FACTS = [
+  {
+    icon: CalendarDays,
+    title: "Persistent time",
+    body: "RockMundo keeps moving when you log off. Gigs, travel, charts, festivals and scheduled activities happen on a shared world clock.",
+  },
+  {
+    icon: MapPin,
+    title: "A global music world",
+    body: "Your location matters. Travel between cities to find opportunities, audiences, venues, studios, jobs and other players.",
+  },
+  {
+    icon: Guitar,
+    title: "Music has depth",
+    body: "Song quality, rehearsal, skills, equipment, studio choices, band chemistry and preparation all feed into results.",
+  },
+  {
+    icon: Users,
+    title: "Real multiplayer bands",
+    body: "Create or join bands with other players, assign roles, share songs, rehearse together and make decisions as a group.",
+  },
+  {
+    icon: Plane,
+    title: "Touring is a system",
+    body: "Plan routes, move between cities, manage transport and timing, and prepare each stop rather than teleporting from gig to gig.",
+  },
+  {
+    icon: BriefcaseBusiness,
+    title: "More than performing",
+    body: "Build careers around teaching, production, media, business and other parts of the music world alongside your artist career.",
+  },
+  {
+    icon: Building2,
+    title: "Player-driven ambition",
+    body: "Success can expand into labels, venues, festivals and other organisations that affect opportunities across the world.",
+  },
+  {
+    icon: HeartPulse,
+    title: "Your character is a person",
+    body: "Wellness, relationships, ageing, family and lifestyle choices sit alongside music progression instead of existing as separate minigames.",
   },
 ];
 
@@ -153,9 +231,8 @@ const Landing = () => {
             Beta V2
           </Badge>
           <div className="flex-1" />
-          <Link to="/about" className="hidden px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground sm:inline-block">
-            About
-          </Link>
+          <a href="#how-it-works" className="hidden px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground md:inline-block">How it works</a>
+          <Link to="/about" className="hidden px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground sm:inline-block">About</Link>
           <a href="/wiki/" className="inline-flex items-center gap-1.5 px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground" title="Open the RockMundo Compendium">
             <BookOpen className="h-4 w-4" />
             <span className="hidden sm:inline">Compendium</span>
@@ -219,8 +296,8 @@ const Landing = () => {
               Live the dream.<br />
               <span className="text-primary">Build a music career.</span>
             </h1>
-            <p className="mx-auto max-w-xl font-oswald text-sm text-muted-foreground sm:text-base">
-              RockMundo is a deep, persistent simulation of a musician&apos;s life — from busking on a street corner to selling out arenas, running a label and shaping the global charts.
+            <p className="mx-auto max-w-2xl font-oswald text-sm text-muted-foreground sm:text-base">
+              RockMundo is a persistent online music career simulation. Start with a new character, learn your craft, write songs, form a band, play live, record releases, tour the world and build a career that can last generations.
             </p>
           </div>
 
@@ -259,12 +336,38 @@ const Landing = () => {
         </div>
       </section>
 
+      <section id="how-it-works" className="border-b border-border/40 bg-card/20">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mb-8 text-center sm:mb-10">
+            <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">Your career</div>
+            <h2 className="font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">From first chord to world tour</h2>
+            <p className="mx-auto mt-3 max-w-2xl font-oswald text-sm text-muted-foreground">
+              There is no fixed story to finish. You build your own career over time, choosing what to practise, who to work with, where to travel and what kind of musician you want to become.
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-5">
+            {CAREER_STEPS.map((item) => (
+              <Card key={item.step} className="border-border/40 bg-background/70">
+                <CardContent className="p-4">
+                  <div className="mb-3 font-bebas text-3xl tracking-wide text-primary/60">{item.step}</div>
+                  <h3 className="mb-2 font-bebas text-xl tracking-wide">{item.title}</h3>
+                  <p className="font-oswald text-xs leading-relaxed text-muted-foreground">{item.body}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="features" className="border-b border-border/40">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
           <div className="mb-8 text-center sm:mb-10">
             <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">What you can do</div>
             <h2 className="font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">A career, fully simulated</h2>
-            <p className="mx-auto mt-3 max-w-xl font-oswald text-sm text-muted-foreground">Every system feeds the next. Songs feed charts, charts feed tours, tours feed your label, your label feeds your empire.</p>
+            <p className="mx-auto mt-3 max-w-2xl font-oswald text-sm text-muted-foreground">
+              Your music career is connected rather than a collection of isolated menus. Skills affect songs, songs affect shows and releases, success creates new opportunities, and your choices build a history around your character and band.
+            </p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((feature) => (
@@ -280,42 +383,52 @@ const Landing = () => {
         </div>
       </section>
 
-      <section id="compendium" className="border-b border-border/40 bg-card/30">
+      <section id="details" className="border-b border-border/40 bg-card/30">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-          <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/50 bg-card/80">
-            <div className="flex flex-col gap-5 p-5 sm:p-7 md:flex-row md:items-center">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/10 text-primary"><BookOpen className="h-6 w-6" /></div>
-              <div className="flex-1">
-                <div className="mb-1 font-oswald text-[10px] text-primary sm:text-xs">RockMundo Compendium</div>
-                <h2 className="mb-2 font-bebas text-2xl tracking-wide sm:text-3xl">Learn the world without spoiling it</h2>
-                <p className="font-oswald text-sm leading-relaxed text-muted-foreground">Browse guides for songwriting, gigs, bands, tours, recording, careers, businesses and the wider world.</p>
-              </div>
-              <div className="flex flex-col gap-2 md:shrink-0">
-                <Button asChild className="font-oswald tracking-wide"><a href="/wiki/">Open Compendium</a></Button>
-                <Button asChild variant="outline" className="font-oswald tracking-wide"><a href="/wiki/guides/getting-started.html">Getting Started</a></Button>
-              </div>
-            </div>
+          <div className="mb-8 text-center sm:mb-10">
+            <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">Inside RockMundo</div>
+            <h2 className="font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">A living music world, not just a career ladder</h2>
+            <p className="mx-auto mt-3 max-w-2xl font-oswald text-sm text-muted-foreground">
+              The world is designed around long-term decisions and interconnected systems. You can play casually, optimise every detail, specialise in one path or try to build an entire music empire.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {GAME_FACTS.map((fact) => (
+              <Card key={fact.title} className="border-border/40 bg-background/70">
+                <CardContent className="p-5">
+                  <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+                    <fact.icon className="h-4.5 w-4.5" />
+                  </div>
+                  <h3 className="mb-2 font-bebas text-xl tracking-wide">{fact.title}</h3>
+                  <p className="font-oswald text-xs leading-relaxed text-muted-foreground">{fact.body}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      <section id="world" className="border-b border-border/40 bg-card/30">
+      <section id="world" className="border-b border-border/40">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
           <div className="mb-8 text-center">
-            <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">The world</div>
-            <h2 className="mb-3 font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">A world that doesn&apos;t wait for you</h2>
-            <p className="mx-auto max-w-xl font-oswald text-sm text-muted-foreground">NPC artists release songs, fans get older, mayors get elected, festivals happen on a fixed calendar, and the charts roll over every week — whether you&apos;re playing or not.</p>
+            <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">The world keeps moving</div>
+            <h2 className="mb-3 font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">Your decisions happen in a shared timeline</h2>
+            <p className="mx-auto max-w-2xl font-oswald text-sm text-muted-foreground">
+              Other artists release music, players form bands, charts change, festivals happen and your scheduled activities complete even while you are away. Logging in means returning to a world that has continued without you.
+            </p>
           </div>
-          <Card className="mx-auto max-w-3xl border-border/40 bg-card/80 backdrop-blur-sm">
+          <Card className="mx-auto max-w-4xl border-border/40 bg-card/80 backdrop-blur-sm">
             <CardContent className="p-0">
               <ul className="divide-y divide-border/40">
                 {[
-                  ["TIME", "1 in-game year = 120 real days, shared global clock"],
-                  ["ECONOMY", "Weekly charts, monthly tax cycles, yearly mayoral elections"],
-                  ["SOCIAL", "Multiplayer band recruitment, jam sessions, song trading"],
-                  ["LIFE", "Permadeath with limited resurrections, children, inheritance"],
+                  ["TIME", "1 in-game year = 120 real days, using a shared global clock"],
+                  ["MUSIC", "Songs, recordings, releases, streams, sales and charts create a connected music economy"],
+                  ["LIVE", "Open mics, gigs, tours, festivals and competitive events reward preparation and progression"],
+                  ["SOCIAL", "Band recruitment, rehearsals, collaboration, messaging and shared decisions connect players"],
+                  ["LIFE", "Wellness, relationships, ageing, family and legacy continue beyond your next release"],
                 ].map(([key, value]) => (
-                  <li key={key} className="flex items-center gap-3 px-4 py-3 sm:gap-4">
+                  <li key={key} className="flex items-start gap-3 px-4 py-3 sm:items-center sm:gap-4">
                     <span className="w-16 shrink-0 font-oswald text-[10px] text-primary sm:w-20 sm:text-xs">{key}</span>
                     <span className="font-oswald text-sm text-muted-foreground">{value}</span>
                   </li>
@@ -326,11 +439,34 @@ const Landing = () => {
         </div>
       </section>
 
+      <section id="compendium" className="border-b border-border/40 bg-card/30">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mx-auto max-w-4xl overflow-hidden rounded-lg border border-border/50 bg-card/80">
+            <div className="flex flex-col gap-5 p-5 sm:p-7 md:flex-row md:items-center">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/10 text-primary"><BookOpen className="h-6 w-6" /></div>
+              <div className="flex-1">
+                <div className="mb-1 font-oswald text-[10px] text-primary sm:text-xs">RockMundo Compendium</div>
+                <h2 className="mb-2 font-bebas text-2xl tracking-wide sm:text-3xl">Learn the systems as you need them</h2>
+                <p className="font-oswald text-sm leading-relaxed text-muted-foreground">
+                  The Compendium has guides for getting started, songwriting, skills, bands, gigs, recording, releases, tours, businesses and the wider world without exposing every hidden formula.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 md:shrink-0">
+                <Button asChild className="font-oswald tracking-wide"><a href="/wiki/">Open Compendium</a></Button>
+                <Button asChild variant="outline" className="font-oswald tracking-wide"><a href="/wiki/guides/getting-started.html">Getting Started</a></Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="border-b border-border/40">
         <div className="mx-auto max-w-6xl px-4 py-12 text-center sm:px-6 sm:py-16">
-          <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">Next cycle</div>
-          <h2 className="mb-3 font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">Ready to plug in?</h2>
-          <p className="mx-auto mb-6 max-w-xl font-oswald text-sm text-muted-foreground">The next chart cycle starts soon. Sign in and write your first song.</p>
+          <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">Start small. Dream big.</div>
+          <h2 className="mb-3 font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">What will your music career become?</h2>
+          <p className="mx-auto mb-6 max-w-2xl font-oswald text-sm text-muted-foreground">
+            Join a band or go your own way. Chase chart success, become the best live act in the world, build a business empire or simply see how far one musician can go.
+          </p>
           <div className="mx-auto flex max-w-md flex-col items-center justify-center gap-3 sm:max-w-none sm:flex-row">
             <Button size="lg" className="w-full font-oswald tracking-wide sm:w-auto" onClick={() => setOpen(true)}><LogIn className="mr-2 h-4 w-4" /> Log in</Button>
             <Button asChild size="lg" variant="outline" className="w-full font-oswald tracking-wide sm:w-auto"><Link to="/auth">Create account</Link></Button>
