@@ -16,6 +16,7 @@ import {
   List,
   Filter,
   GraduationCap,
+  Palette,
 } from "lucide-react";
 import { HierarchicalSkillNode } from "./skills/HierarchicalSkillNode";
 import { CompactSkillRow } from "./skills/CompactSkillRow";
@@ -156,6 +157,12 @@ const SKILL_CATEGORIES: SkillCategory[] = [
       "trumpet",
       "harmonica",
     ],
+  },
+  {
+    key: "tattooing",
+    name: "Tattooing",
+    icon: <Palette className="h-5 w-5" />,
+    patterns: ["tattooing_"],
   },
   {
     key: "stage",
@@ -656,8 +663,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                       24 && (
                       <div className="p-2 text-xs text-muted-foreground">
                         +
-                        {skills.filter((s) => !learnedSlugs.has(s.slug))
-                          .length - 24}{" "}
+                        {skills.filter((s) => !learnedSlugs.has(s.slug)).length -
+                          24}{" "}
                         more
                       </div>
                     )}
