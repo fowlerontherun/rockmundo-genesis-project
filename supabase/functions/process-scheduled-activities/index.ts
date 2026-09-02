@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 import {
   completeJobRun,
@@ -29,17 +28,13 @@ interface ScheduledActivity {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
-
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
-
   let runId: string | null = null;
   const startedAt = Date.now();
 
@@ -57,66 +52,41 @@ Deno.serve(async (req) => {
     let processedCount = 0;
     let startedCount = 0;
     let completedCount = 0;
+    const scheduledTwaatResult = await publishDueScheduledTwaats(supabase, now, supabaseUrl, supabaseKey);
 
-    // Scheduled Twaats share this existing five-minute worker. Publishing is a
-    // compare-and-set so overlapping worker runs cannot publish the same row twice.
-    const scheduledTwaatResult = await publishDueScheduledTwaats(supabase, now);
-
-    // 1. Auto-start activities that should have started
     const { data: toStart, error: startError } = await supabase
       .from('player_scheduled_activities')
       .select('*')
       .eq('status', 'scheduled')
       .lte('scheduled_start', now)
       .gt('scheduled_end', now);
-
     if (startError) throw startError;
 
     for (const activity of toStart || []) {
-      console.log(`Starting activity ${activity.id}: ${activity.title}`);
-      
-      // Update to in_progress
       await supabase
         .from('player_scheduled_activities')
-        .update({ 
-          status: 'in_progress',
-          started_at: now 
-        })
+        .update({ status: 'in_progress', started_at: now })
         .eq('id', activity.id);
-
       startedCount++;
     }
 
-    // 2. Complete activities that have ended
     const { data: toComplete, error: completeError } = await supabase
       .from('player_scheduled_activities')
       .select('*')
       .eq('status', 'in_progress')
       .lte('scheduled_end', now);
-
     if (completeError) throw completeError;
 
     for (const activity of toComplete || []) {
-      console.log(`Completing activity ${activity.id}: ${activity.title}`);
-      
       try {
-        // Process the activity based on type
         await processActivityCompletion(supabase, activity);
-        
-        // Mark as completed
         await supabase
           .from('player_scheduled_activities')
-          .update({ 
-            status: 'completed',
-            completed_at: now 
-          })
+          .update({ status: 'completed', completed_at: now })
           .eq('id', activity.id);
-
         completedCount++;
       } catch (error) {
         console.error(`Error processing activity ${activity.id}:`, error);
-        // Practice rewards are transactional and retryable. Never turn a reward
-        // failure into an apparently legitimate completion (or a missed session).
         if (activity.activity_type === 'skill_practice') {
           await supabase
             .from('player_scheduled_activities')
@@ -125,7 +95,6 @@ Deno.serve(async (req) => {
             .eq('status', 'in_progress');
           continue;
         }
-        // Preserve the established failure behaviour for unrelated activities.
         await supabase
           .from('player_scheduled_activities')
           .update({ status: 'missed' })
@@ -133,14 +102,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Mark missed activities (scheduled time passed but never started)
     const { data: toMiss } = await supabase
       .from('player_scheduled_activities')
       .select('id')
       .eq('status', 'scheduled')
       .lt('scheduled_end', now);
 
-    if (toMiss && toMiss.length > 0) {
+    if (toMiss?.length) {
       await supabase
         .from('player_scheduled_activities')
         .update({ status: 'missed' })
@@ -148,6 +116,15 @@ Deno.serve(async (req) => {
     }
 
     processedCount = startedCount + completedCount + scheduledTwaatResult.publishedCount;
+    const resultSummary = {
+      startedCount,
+      completedCount,
+      missedCount: toMiss?.length || 0,
+      publishedTwaatCount: scheduledTwaatResult.publishedCount,
+      scheduledOutcomeAttempts: scheduledTwaatResult.outcomeAttempts,
+      scheduledOutcomeFailures: scheduledTwaatResult.outcomeFailures,
+      scheduledOutcomeErrors: scheduledTwaatResult.outcomeErrors,
+    };
 
     await completeJobRun({
       jobName: "process-scheduled-activities",
@@ -155,30 +132,14 @@ Deno.serve(async (req) => {
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
       processedCount,
-      resultSummary: {
-        startedCount,
-        completedCount,
-        missedCount: toMiss?.length || 0,
-        publishedTwaatCount: scheduledTwaatResult.publishedCount,
-        scheduledOutcomeAttempts: scheduledTwaatResult.outcomeAttempts,
-      },
+      resultSummary,
     });
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        processedCount,
-        startedCount,
-        completedCount,
-        missedCount: toMiss?.length || 0,
-        publishedTwaatCount: scheduledTwaatResult.publishedCount,
-        scheduledOutcomeAttempts: scheduledTwaatResult.outcomeAttempts,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: true, processedCount, ...resultSummary }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error processing scheduled activities:', error);
-
     await failJobRun({
       jobName: "process-scheduled-activities",
       runId,
@@ -186,18 +147,19 @@ Deno.serve(async (req) => {
       durationMs: Date.now() - startedAt,
       error,
     });
-
-    return new Response(
-      JSON.stringify({ error: getErrorMessage(error) }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+    return new Response(JSON.stringify({ error: getErrorMessage(error) }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
 
-async function publishDueScheduledTwaats(supabase: any, now: string) {
+async function publishDueScheduledTwaats(
+  supabase: any,
+  now: string,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+) {
   const { data: dueTwaats, error: dueError } = await supabase
     .from('twaats')
     .select('id, scheduled_for')
@@ -206,40 +168,26 @@ async function publishDueScheduledTwaats(supabase: any, now: string) {
     .lte('scheduled_for', now)
     .order('scheduled_for', { ascending: true })
     .limit(100);
-
   if (dueError) throw dueError;
 
   let publishedCount = 0;
-
   for (const twaat of dueTwaats || []) {
     if (!twaat.scheduled_for) continue;
-
     const { data: published, error: publishError } = await supabase
       .from('twaats')
-      .update({
-        scheduled_for: null,
-        scheduled_published_at: now,
-        created_at: now,
-      })
+      .update({ scheduled_for: null, scheduled_published_at: now, created_at: now })
       .eq('id', twaat.id)
       .eq('scheduled_for', twaat.scheduled_for)
       .is('deleted_at', null)
       .select('id')
       .maybeSingle();
-
     if (publishError) {
       console.error(`Failed to publish scheduled Twaat ${twaat.id}:`, publishError);
       continue;
     }
-
-    if (published) {
-      publishedCount++;
-      console.log(`Published scheduled Twaat ${twaat.id}`);
-    }
+    if (published) publishedCount++;
   }
 
-  // Retry outcomes for scheduled posts until the idempotent outcome engine has
-  // successfully finalised them. The marker survives transient function errors.
   const { data: pendingOutcomes, error: pendingError } = await supabase
     .from('twaats')
     .select('id')
@@ -248,36 +196,50 @@ async function publishDueScheduledTwaats(supabase: any, now: string) {
     .is('deleted_at', null)
     .order('scheduled_published_at', { ascending: true })
     .limit(100);
-
   if (pendingError) throw pendingError;
 
   let outcomeAttempts = 0;
+  let outcomeFailures = 0;
+  const outcomeErrors: string[] = [];
+
   for (const twaat of pendingOutcomes || []) {
     outcomeAttempts++;
-    const { error: outcomeError } = await supabase.functions.invoke('twaater-outcome-engine', {
-      body: { twaat_id: twaat.id },
-    });
-
-    if (outcomeError) {
-      console.error(`Outcome processing failed for scheduled Twaat ${twaat.id}:`, outcomeError);
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/twaater-outcome-engine`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'apikey': serviceRoleKey,
+        },
+        body: JSON.stringify({ twaat_id: twaat.id }),
+      });
+      if (!response.ok) {
+        outcomeFailures++;
+        const detail = `${twaat.id}: ${response.status} ${(await response.text()).slice(0, 500)}`;
+        outcomeErrors.push(detail);
+        console.error(`Outcome processing failed for scheduled Twaat ${detail}`);
+      }
+    } catch (error) {
+      outcomeFailures++;
+      const detail = `${twaat.id}: ${getErrorMessage(error)}`;
+      outcomeErrors.push(detail);
+      console.error(`Outcome processing request failed for scheduled Twaat ${detail}`);
     }
   }
 
-  return { publishedCount, outcomeAttempts };
+  return { publishedCount, outcomeAttempts, outcomeFailures, outcomeErrors };
 }
 
 async function processActivityCompletion(supabase: any, activity: ScheduledActivity) {
-  const duration = (new Date(activity.scheduled_end).getTime() - new Date(activity.scheduled_start).getTime()) / (1000 * 60 * 60);
-  
+  const duration = (new Date(activity.scheduled_end).getTime() - new Date(activity.scheduled_start).getTime()) / 3600000;
+
   switch (activity.activity_type) {
     case 'skill_practice': {
-      const { error } = await supabase.rpc('complete_skill_practice', {
-        p_activity_id: activity.id,
-      });
+      const { error } = await supabase.rpc('complete_skill_practice', { p_activity_id: activity.id });
       if (error) throw error;
       break;
     }
-
     case 'gig':
       if (activity.linked_gig_id) {
         const { data: gig } = await supabase
@@ -285,63 +247,34 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
           .select('status, completed_at')
           .eq('id', activity.linked_gig_id)
           .maybeSingle();
-
-        if (gig?.status === 'completed' || gig?.completed_at) {
-          console.log(`Gig ${activity.linked_gig_id} already completed; skipping duplicate completion`);
-          break;
-        }
-
-        // Trigger gig completion
-        await supabase.functions.invoke('complete-gig', {
-          body: { gigId: activity.linked_gig_id }
-        });
+        if (gig?.status === 'completed' || gig?.completed_at) break;
+        await supabase.functions.invoke('complete-gig', { body: { gigId: activity.linked_gig_id } });
       }
       break;
-
     case 'rehearsal':
-      if (activity.linked_rehearsal_id) {
-        // Complete rehearsal
-        await supabase.functions.invoke('complete-rehearsals');
-      }
+      if (activity.linked_rehearsal_id) await supabase.functions.invoke('complete-rehearsals');
       break;
-
     case 'recording':
-      if (activity.linked_recording_id) {
-        // Complete recording session
-        await supabase.functions.invoke('complete-recording-sessions');
-      }
+      if (activity.linked_recording_id) await supabase.functions.invoke('complete-recording-sessions');
       break;
-
     case 'work':
-      if (activity.linked_job_shift_id) {
-        // Clock out from shift
-        await supabase.functions.invoke('shift-clock-out');
-      }
+      if (activity.linked_job_shift_id) await supabase.functions.invoke('shift-clock-out');
       break;
-
     case 'university':
-      // Process university attendance
       await supabase.functions.invoke('university-attendance');
       break;
-
     case 'reading':
-      // Process book reading
       await supabase.functions.invoke('book-reading-attendance');
       break;
-
     case 'songwriting':
-      // Auto-complete songwriting session
       await supabase.functions.invoke('cleanup-songwriting');
       break;
-
     case 'health': {
-      // Award health restoration to the exact character attached to this booking.
       const { data: profile } = await supabase
         .from('profiles')
         .select('id, health')
         .eq('id', activity.profile_id)
         .maybeSingle();
-
       if (profile) {
         const healthGain = Math.min(20 * duration, 100 - (profile.health || 0));
         await supabase
@@ -351,66 +284,44 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       }
       break;
     }
-
     case 'pr_appearance':
-      // Complete PR appearance and apply rewards
       if (activity.metadata?.offer_id) {
         await supabase.functions.invoke('process-pr-activity', {
-          body: { 
-            action: 'complete',
-            offerId: activity.metadata.offer_id 
-          }
+          body: { action: 'complete', offerId: activity.metadata.offer_id },
         });
       }
       break;
-
     case 'self_promotion':
-      // Complete self-promotion activity and apply rewards
       if (activity.metadata?.self_promotion_id) {
         await supabase.functions.invoke('process-self-promotion', {
-          body: { 
-            activityId: activity.metadata.self_promotion_id 
-          }
+          body: { activityId: activity.metadata.self_promotion_id },
         });
       }
       break;
-
     case 'film_production':
-      // Complete film production and apply rewards
       if (activity.metadata?.contract_id) {
-        // Update film contract to completed
         await supabase
           .from('player_film_contracts')
           .update({ status: 'completed' })
           .eq('id', activity.metadata.contract_id);
-        
-        // Get film details and award rewards
         const { data: contract } = await supabase
           .from('player_film_contracts')
           .select('*, film_productions(*)')
           .eq('id', activity.metadata.contract_id)
           .single();
-        
         if (contract?.film_productions) {
           const film = contract.film_productions;
-          
-          // Award cash
           await supabase.rpc('increment_user_cash', {
             p_user_id: activity.user_id,
-            p_amount: film.compensation || 0
+            p_amount: film.compensation || 0,
           });
-          
-          // Award fame
           await supabase.rpc('increment_user_fame', {
             p_user_id: activity.user_id,
-            p_amount: film.fame_boost || 0
+            p_amount: film.fame_boost || 0,
           });
-          
-          console.log(`Film production completed: ${film.title}, awarded $${film.compensation}`);
         }
       }
       break;
-
     default:
       console.log(`No specific processing for activity type: ${activity.activity_type}`);
   }
