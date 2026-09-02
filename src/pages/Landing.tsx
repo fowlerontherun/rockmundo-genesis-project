@@ -1,9 +1,28 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Activity,
+  AlertCircle,
+  BookOpen,
+  ChevronRight,
+  Globe,
+  LogIn,
+  MessageCircle,
+  Mic2,
+  Music,
+  PlayCircle,
+  Radio,
+  Rocket,
+  ServerCrash,
+  Sparkles,
+  TrendingUp,
+  Trophy,
+  Users,
+} from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -13,34 +32,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Music,
-  Mic2,
-  Globe,
-  TrendingUp,
-  Users,
-  Radio,
-  Trophy,
-  Sparkles,
-  PlayCircle,
-  LogIn,
-  AlertCircle,
-  ChevronRight,
-  Activity,
-  ServerCrash,
-  MessageCircle,
-  Mail,
-  CheckCircle2,
-  Rocket,
-  BookOpen,
-} from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import logo from "@/assets/rockmundo-new-logo.png";
-import heroImage from "@/assets/landing-hero.jpg";
 import { version } from "@/components/VersionHeader";
+import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { supabase } from "@/integrations/supabase/client";
+import heroImage from "@/assets/landing-hero.jpg";
+import logo from "@/assets/rockmundo-new-logo.png";
 
 const FEATURES = [
   {
@@ -85,15 +85,15 @@ const FEATURES = [
   },
 ];
 
-const STATS = [
-  { label: "Cities", value: "180" },
-  { label: "Radio Stations", value: "235" },
-  { label: "Jobs", value: "1,700+" },
-  { label: "Genres", value: "52" },
-];
-
 const isDev = import.meta.env.DEV;
 const DEFAULT_DISCORD_URL = "https://discord.gg/lovable-dev";
+const numberFormatter = new Intl.NumberFormat("en-GB");
+
+const formatStat = (value: number | null, loading: boolean) => {
+  if (loading && value === null) return "…";
+  if (value === null) return "—";
+  return numberFormatter.format(value);
+};
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -104,23 +104,38 @@ const Landing = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { data: siteConfig } = useSiteConfig();
+  const {
+    totalPlayers,
+    totalBands,
+    newPlayersThisWeek,
+    onlinePlayers,
+    loading: statsLoading,
+  } = usePlayerPresenceStats({ refreshInterval: 60_000, publicMode: true });
+
   const serverStatus = siteConfig?.server.status ?? "up";
   const serverMessage = siteConfig?.server.message ?? "";
   const announcement = siteConfig?.announcement;
+
+  const worldStats = [
+    { label: "Players", value: formatStat(totalPlayers, statsLoading) },
+    { label: "Bands", value: formatStat(totalBands, statsLoading) },
+    { label: "New this week", value: formatStat(newPlayersThisWeek, statsLoading) },
+    { label: "Online now", value: formatStat(onlinePlayers, statsLoading) },
+  ];
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
     setLoading(false);
     if (signInError) {
       setError(signInError.message);
       return;
     }
+
     toast({ title: "Welcome back", description: "Loading your career…" });
     setOpen(false);
     navigate("/home");
@@ -128,242 +143,136 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-sm border-b border-border/40">
-        <div className="h-14 px-3 sm:px-6 flex items-center gap-3 max-w-6xl mx-auto">
-          <Link to="/" className="flex items-center gap-2 min-w-0">
-            <img
-              src={logo}
-              alt="RockMundo"
-              className="h-8 w-8 object-contain shrink-0"
-              width={32}
-              height={32}
-            />
-            <span className="font-bebas text-xl tracking-wide leading-none pt-0.5">
-              ROCKMUNDO
-            </span>
+      <header className="sticky top-0 z-30 border-b border-border/40 bg-card/90 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 sm:px-6">
+          <Link to="/" className="flex min-w-0 items-center gap-2">
+            <img src={logo} alt="RockMundo" className="h-8 w-8 shrink-0 object-contain" width={32} height={32} />
+            <span className="pt-0.5 font-bebas text-xl leading-none tracking-wide">ROCKMUNDO</span>
           </Link>
-          <Badge
-            variant="outline"
-            className="hidden sm:inline-flex bg-warning/10 text-warning border-warning/30 text-[10px] px-1.5 py-0 font-oswald"
-          >
+          <Badge variant="outline" className="hidden bg-warning/10 px-1.5 py-0 font-oswald text-[10px] text-warning sm:inline-flex">
             Beta V2
           </Badge>
           <div className="flex-1" />
-          <Link
-            to="/about"
-            className="hidden sm:inline-block text-xs font-oswald text-muted-foreground hover:text-foreground px-2 py-1"
-          >
+          <Link to="/about" className="hidden px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground sm:inline-block">
             About
           </Link>
-          <a
-            href="/wiki/"
-            className="inline-flex items-center gap-1.5 text-xs font-oswald text-muted-foreground hover:text-foreground px-2 py-1"
-            title="Open the RockMundo Compendium"
-          >
+          <a href="/wiki/" className="inline-flex items-center gap-1.5 px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground" title="Open the RockMundo Compendium">
             <BookOpen className="h-4 w-4" />
             <span className="hidden sm:inline">Compendium</span>
           </a>
           {isDev && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 px-2 text-xs font-oswald tracking-wide"
-              onClick={() => navigate("/home")}
-              title="Dev-only: enters the app as a guest with mock data"
-            >
+            <Button variant="ghost" size="sm" className="h-9 px-2 font-oswald text-xs tracking-wide" onClick={() => navigate("/home")} title="Dev-only: enters the app as a guest with mock data">
               <PlayCircle className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Demo</span>
             </Button>
           )}
-          <Button
-            size="sm"
-            className="h-9 px-3 sm:px-4 font-oswald tracking-wide text-xs"
-            onClick={() => setOpen(true)}
-          >
+          <Button size="sm" className="h-9 px-3 font-oswald text-xs tracking-wide sm:px-4" onClick={() => setOpen(true)}>
             <LogIn className="h-4 w-4 sm:mr-1.5" />
             <span className="hidden sm:inline">Log in</span>
           </Button>
         </div>
       </header>
 
-      {/* Server status + announcement banners (admin-controlled) */}
       {(serverStatus === "down" || serverStatus === "degraded") && (
-        <div className={`${serverStatus === "down" ? "bg-destructive/15 border-destructive/40 text-destructive" : "bg-yellow-500/10 border-yellow-500/40 text-yellow-500"} border-b`}>
-          <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex items-start sm:items-center gap-2.5 text-xs sm:text-sm font-oswald">
-            <ServerCrash className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0" />
+        <div className={`${serverStatus === "down" ? "border-destructive/40 bg-destructive/15 text-destructive" : "border-yellow-500/40 bg-yellow-500/10 text-yellow-500"} border-b`}>
+          <div className="mx-auto flex max-w-6xl items-start gap-2.5 px-3 py-2.5 font-oswald text-xs sm:items-center sm:px-6 sm:text-sm">
+            <ServerCrash className="mt-0.5 h-4 w-4 shrink-0 sm:mt-0" />
             <div className="flex-1 leading-snug">
-              <span className="font-semibold mr-1.5">
-                Server status · {serverStatus === "down" ? "Down" : "Degraded"}
-              </span>
+              <span className="mr-1.5 font-semibold">Server status · {serverStatus === "down" ? "Down" : "Degraded"}</span>
               <span className="opacity-90">{serverMessage}</span>
             </div>
           </div>
         </div>
       )}
+
       {announcement?.enabled && (announcement.title || announcement.body) && (
-        <div className="bg-primary/10 border-b border-primary/30">
-          <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm font-oswald">
-            <div className="flex items-start sm:items-center gap-2 flex-1 leading-snug">
-              <Rocket className="h-4 w-4 mt-0.5 sm:mt-0 shrink-0 text-primary" />
+        <div className="border-b border-primary/30 bg-primary/10">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2.5 font-oswald text-xs sm:flex-row sm:items-center sm:px-6 sm:text-sm">
+            <div className="flex flex-1 items-start gap-2 leading-snug sm:items-center">
+              <Rocket className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:mt-0" />
               <span>
-                {announcement.title && (
-                  <span className="font-semibold text-primary mr-1.5">
-                    {announcement.title}
-                  </span>
-                )}
-                {announcement.body && (
-                  <span className="text-foreground/90">{announcement.body}</span>
-                )}
+                {announcement.title && <span className="mr-1.5 font-semibold text-primary">{announcement.title}</span>}
+                {announcement.body && <span className="text-foreground/90">{announcement.body}</span>}
               </span>
             </div>
             {announcement.cta_label && announcement.cta_url && (
-              <div className="flex items-center gap-2 sm:shrink-0">
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2.5 font-oswald tracking-wide text-[10px]"
-                >
-                  <a href={announcement.cta_url || DEFAULT_DISCORD_URL} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="h-3.5 w-3.5 mr-1" /> {announcement.cta_label}
-                  </a>
-                </Button>
-              </div>
+              <Button asChild size="sm" variant="outline" className="h-7 px-2.5 font-oswald text-[10px] tracking-wide">
+                <a href={announcement.cta_url || DEFAULT_DISCORD_URL} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="mr-1 h-3.5 w-3.5" /> {announcement.cta_label}
+                </a>
+              </Button>
             )}
           </div>
         </div>
       )}
 
-      {/* Hero */}
-      <section
-        id="overview"
-        className="relative border-b border-border/40 overflow-hidden"
-      >
-        <img
-          src={heroImage}
-          alt="Concert stage with crowd and stage lights"
-          width={1920}
-          height={1080}
-          className="absolute inset-0 w-full h-full object-cover opacity-25"
-        />
+      <section id="overview" className="relative overflow-hidden border-b border-border/40">
+        <img src={heroImage} alt="Concert stage with crowd and stage lights" width={1920} height={1080} className="absolute inset-0 h-full w-full object-cover opacity-25" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/85 to-background" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20">
-          <div className="text-center mb-8 sm:mb-10">
-            <img
-              src={logo}
-              alt="RockMundo"
-              className="h-24 sm:h-32 md:h-40 w-auto mx-auto object-contain drop-shadow-2xl mb-5"
-            />
-            <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs font-oswald text-primary mb-4">
-              <Activity className="h-3 w-3" />
-              Season 2026 · Open Beta · v{version}
+        <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
+          <div className="mb-8 text-center sm:mb-10">
+            <img src={logo} alt="RockMundo" className="mx-auto mb-5 h-24 w-auto object-contain drop-shadow-2xl sm:h-32 md:h-40" />
+            <div className="mb-4 flex items-center justify-center gap-2 font-oswald text-[10px] text-primary sm:text-xs">
+              <Activity className="h-3 w-3" /> Season 2026 · Open Beta · v{version}
             </div>
-            <h1 className="font-bebas text-4xl sm:text-6xl md:text-7xl tracking-wide leading-[0.95] mb-4">
-              Live the dream.
-              <br />
+            <h1 className="mb-4 font-bebas text-4xl leading-[0.95] tracking-wide sm:text-6xl md:text-7xl">
+              Live the dream.<br />
               <span className="text-primary">Build a music career.</span>
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto font-oswald">
-              RockMundo is a deep, persistent simulation of a musician's life —
-              from busking on a street corner to selling out arenas, running a
-              label and shaping the global charts.
+            <p className="mx-auto max-w-xl font-oswald text-sm text-muted-foreground sm:text-base">
+              RockMundo is a deep, persistent simulation of a musician&apos;s life — from busking on a street corner to selling out arenas, running a label and shaping the global charts.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto sm:max-w-none">
-            <Button
-              size="lg"
-              className="font-oswald tracking-wide w-full sm:w-auto"
-              onClick={() => setOpen(true)}
-            >
-              <LogIn className="h-4 w-4 mr-2" />
-              Continue Career
-              <ChevronRight className="h-4 w-4 ml-1" />
+          <div className="mx-auto flex max-w-md flex-col justify-center gap-3 sm:max-w-none sm:flex-row">
+            <Button size="lg" className="w-full font-oswald tracking-wide sm:w-auto" onClick={() => setOpen(true)}>
+              <LogIn className="mr-2 h-4 w-4" /> Continue Career <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
             {isDev ? (
-              <Button
-                size="lg"
-                variant="outline"
-                className="font-oswald tracking-wide w-full sm:w-auto"
-                onClick={() => navigate("/home")}
-              >
-                <PlayCircle className="h-4 w-4 mr-2" />
-                Demo (Dev)
+              <Button size="lg" variant="outline" className="w-full font-oswald tracking-wide sm:w-auto" onClick={() => navigate("/home")}>
+                <PlayCircle className="mr-2 h-4 w-4" /> Demo (Dev)
               </Button>
             ) : (
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="font-oswald tracking-wide w-full sm:w-auto"
-              >
-                <Link to="/auth">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  New Career
-                </Link>
+              <Button asChild size="lg" variant="outline" className="w-full font-oswald tracking-wide sm:w-auto">
+                <Link to="/auth"><Sparkles className="mr-2 h-4 w-4" /> New Career</Link>
               </Button>
             )}
           </div>
+
           <div className="mt-4 text-center">
-            <a
-              href="/wiki/guides/getting-started.html"
-              className="inline-flex items-center gap-1.5 text-xs font-oswald text-muted-foreground hover:text-foreground underline underline-offset-4"
-            >
+            <a href="/wiki/guides/getting-started.html" className="inline-flex items-center gap-1.5 font-oswald text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
               <BookOpen className="h-3.5 w-3.5" /> New here? Read the Getting Started guide
             </a>
           </div>
 
-          {/* World snapshot stats */}
-          <div className="mt-10 sm:mt-14 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
-            {STATS.map((s) => (
-              <Card
-                key={s.label}
-                className="bg-card/80 backdrop-blur-sm border-border/40"
-              >
+          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-3 sm:mt-14 sm:grid-cols-4" aria-label="Live RockMundo community statistics">
+            {worldStats.map((stat) => (
+              <Card key={stat.label} className="border-border/40 bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-4 text-center">
-                  <div className="text-[10px] sm:text-xs font-oswald text-muted-foreground mb-1">
-                    {s.label}
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bebas tracking-wide text-foreground tabular-nums">
-                    {s.value}
-                  </div>
+                  <div className="mb-1 font-oswald text-[10px] text-muted-foreground sm:text-xs">{stat.label}</div>
+                  <div className="font-bebas text-2xl tracking-wide text-foreground tabular-nums sm:text-3xl" aria-live="polite">{stat.value}</div>
                 </CardContent>
               </Card>
             ))}
           </div>
+          <p className="mt-2 text-center font-oswald text-[10px] text-muted-foreground/70">Live game data · refreshes every minute</p>
         </div>
       </section>
 
-      {/* Features */}
       <section id="features" className="border-b border-border/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-          <div className="text-center mb-8 sm:mb-10">
-            <div className="text-[10px] sm:text-xs font-oswald text-primary mb-2">
-              What you can do
-            </div>
-            <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl tracking-wide">
-              A career, fully simulated
-            </h2>
-            <p className="text-sm text-muted-foreground max-w-xl mx-auto mt-3 font-oswald">
-              Every system feeds the next. Songs feed charts, charts feed tours,
-              tours feed your label, your label feeds your empire.
-            </p>
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mb-8 text-center sm:mb-10">
+            <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">What you can do</div>
+            <h2 className="font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">A career, fully simulated</h2>
+            <p className="mx-auto mt-3 max-w-xl font-oswald text-sm text-muted-foreground">Every system feeds the next. Songs feed charts, charts feed tours, tours feed your label, your label feeds your empire.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {FEATURES.map((f) => (
-              <Card
-                key={f.title}
-                className="bg-card/80 backdrop-blur-sm border-border/40 hover:border-primary/40 transition-colors"
-              >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((feature) => (
+              <Card key={feature.title} className="border-border/40 bg-card/80 backdrop-blur-sm transition-colors hover:border-primary/40">
                 <CardContent className="p-4">
-                  <f.icon className="h-5 w-5 text-primary mb-3" />
-                  <h3 className="font-bebas text-lg tracking-wide mb-1.5">
-                    {f.title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed font-oswald">
-                    {f.body}
-                  </p>
+                  <feature.icon className="mb-3 h-5 w-5 text-primary" />
+                  <h3 className="mb-1.5 font-bebas text-lg tracking-wide">{feature.title}</h3>
+                  <p className="font-oswald text-xs leading-relaxed text-muted-foreground">{feature.body}</p>
                 </CardContent>
               </Card>
             ))}
@@ -371,95 +280,44 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Compendium */}
       <section id="compendium" className="border-b border-border/40 bg-card/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-          <div className="max-w-3xl mx-auto rounded-lg border border-border/50 bg-card/80 overflow-hidden">
-            <div className="p-5 sm:p-7 flex flex-col md:flex-row gap-5 md:items-center">
-              <div className="h-12 w-12 rounded-full border border-primary/30 bg-primary/10 text-primary grid place-items-center shrink-0">
-                <BookOpen className="h-6 w-6" />
-              </div>
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border/50 bg-card/80">
+            <div className="flex flex-col gap-5 p-5 sm:p-7 md:flex-row md:items-center">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/10 text-primary"><BookOpen className="h-6 w-6" /></div>
               <div className="flex-1">
-                <div className="text-[10px] sm:text-xs font-oswald text-primary mb-1">RockMundo Compendium</div>
-                <h2 className="font-bebas text-2xl sm:text-3xl tracking-wide mb-2">Learn the world without spoiling it</h2>
-                <p className="text-sm text-muted-foreground font-oswald leading-relaxed">
-                  Browse guides for songwriting, gigs, bands, tours, recording, careers, businesses and the wider world. The Compendium explains what matters without publishing hidden formulas or turning the game into a solved spreadsheet.
-                </p>
+                <div className="mb-1 font-oswald text-[10px] text-primary sm:text-xs">RockMundo Compendium</div>
+                <h2 className="mb-2 font-bebas text-2xl tracking-wide sm:text-3xl">Learn the world without spoiling it</h2>
+                <p className="font-oswald text-sm leading-relaxed text-muted-foreground">Browse guides for songwriting, gigs, bands, tours, recording, careers, businesses and the wider world.</p>
               </div>
               <div className="flex flex-col gap-2 md:shrink-0">
-                <Button asChild className="font-oswald tracking-wide">
-                  <a href="/wiki/">Open Compendium</a>
-                </Button>
-                <Button asChild variant="outline" className="font-oswald tracking-wide">
-                  <a href="/wiki/guides/getting-started.html">Getting Started</a>
-                </Button>
+                <Button asChild className="font-oswald tracking-wide"><a href="/wiki/">Open Compendium</a></Button>
+                <Button asChild variant="outline" className="font-oswald tracking-wide"><a href="/wiki/guides/getting-started.html">Getting Started</a></Button>
               </div>
-            </div>
-            <div className="grid sm:grid-cols-3 border-t border-border/40 divide-y sm:divide-y-0 sm:divide-x divide-border/40">
-              <a href="/wiki/guides/song-to-release.html" className="p-4 hover:bg-background/50 transition-colors">
-                <div className="text-xs font-oswald font-semibold">Song to release</div>
-                <div className="text-[11px] text-muted-foreground font-oswald mt-1">Follow the core music lifecycle.</div>
-              </a>
-              <a href="/wiki/guides/first-gig.html" className="p-4 hover:bg-background/50 transition-colors">
-                <div className="text-xs font-oswald font-semibold">Your first gig</div>
-                <div className="text-[11px] text-muted-foreground font-oswald mt-1">Prepare a show properly.</div>
-              </a>
-              <a href="/wiki/guides/skills-and-xp.html" className="p-4 hover:bg-background/50 transition-colors">
-                <div className="text-xs font-oswald font-semibold">Skills & XP</div>
-                <div className="text-[11px] text-muted-foreground font-oswald mt-1">Plan long-term progression.</div>
-              </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Living world */}
       <section id="world" className="border-b border-border/40 bg-card/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-          <div className="text-center mb-8">
-            <div className="text-[10px] sm:text-xs font-oswald text-primary mb-2">
-              The world
-            </div>
-            <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl tracking-wide mb-3">
-              A world that doesn't wait for you
-            </h2>
-            <p className="text-sm text-muted-foreground max-w-xl mx-auto font-oswald">
-              NPC artists release songs, fans get older, mayors get elected,
-              festivals happen on a fixed calendar, and the charts roll over
-              every week — whether you're playing or not.
-            </p>
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mb-8 text-center">
+            <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">The world</div>
+            <h2 className="mb-3 font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">A world that doesn&apos;t wait for you</h2>
+            <p className="mx-auto max-w-xl font-oswald text-sm text-muted-foreground">NPC artists release songs, fans get older, mayors get elected, festivals happen on a fixed calendar, and the charts roll over every week — whether you&apos;re playing or not.</p>
           </div>
-          <Card className="bg-card/80 backdrop-blur-sm border-border/40 max-w-3xl mx-auto">
+          <Card className="mx-auto max-w-3xl border-border/40 bg-card/80 backdrop-blur-sm">
             <CardContent className="p-0">
               <ul className="divide-y divide-border/40">
                 {[
-                  [
-                    "TIME",
-                    "1 in-game year = 120 real days, shared global clock",
-                  ],
-                  [
-                    "ECONOMY",
-                    "Weekly charts, monthly tax cycles, yearly mayoral elections",
-                  ],
-                  [
-                    "SOCIAL",
-                    "Multiplayer band recruitment, jam sessions, song trading",
-                  ],
-                  [
-                    "LIFE",
-                    "Permadeath with limited resurrections, children, inheritance",
-                  ],
-                ].map(([k, v]) => (
-                  <li
-                    key={k}
-                    className="flex items-center gap-3 sm:gap-4 px-4 py-3"
-                  >
-                    <span className="text-[10px] sm:text-xs font-oswald text-primary w-16 sm:w-20 shrink-0">
-                      {k}
-                    </span>
-                    <span className="text-sm text-muted-foreground font-oswald">
-                      {v}
-                    </span>
+                  ["TIME", "1 in-game year = 120 real days, shared global clock"],
+                  ["ECONOMY", "Weekly charts, monthly tax cycles, yearly mayoral elections"],
+                  ["SOCIAL", "Multiplayer band recruitment, jam sessions, song trading"],
+                  ["LIFE", "Permadeath with limited resurrections, children, inheritance"],
+                ].map(([key, value]) => (
+                  <li key={key} className="flex items-center gap-3 px-4 py-3 sm:gap-4">
+                    <span className="w-16 shrink-0 font-oswald text-[10px] text-primary sm:w-20 sm:text-xs">{key}</span>
+                    <span className="font-oswald text-sm text-muted-foreground">{value}</span>
                   </li>
                 ))}
               </ul>
@@ -468,146 +326,56 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="border-b border-border/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
-          <div className="text-[10px] sm:text-xs font-oswald text-primary mb-2">
-            Next cycle
-          </div>
-          <h2 className="font-bebas text-3xl sm:text-4xl md:text-5xl tracking-wide mb-3">
-            Ready to plug in?
-          </h2>
-          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-6 font-oswald">
-            The next chart cycle starts soon. Sign in and write your first song.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto sm:max-w-none">
-            <Button
-              size="lg"
-              className="font-oswald tracking-wide w-full sm:w-auto"
-              onClick={() => setOpen(true)}
-            >
-              <LogIn className="h-4 w-4 mr-2" /> Log in
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="font-oswald tracking-wide w-full sm:w-auto"
-            >
-              <Link to="/auth">Create account</Link>
-            </Button>
+        <div className="mx-auto max-w-6xl px-4 py-12 text-center sm:px-6 sm:py-16">
+          <div className="mb-2 font-oswald text-[10px] text-primary sm:text-xs">Next cycle</div>
+          <h2 className="mb-3 font-bebas text-3xl tracking-wide sm:text-4xl md:text-5xl">Ready to plug in?</h2>
+          <p className="mx-auto mb-6 max-w-xl font-oswald text-sm text-muted-foreground">The next chart cycle starts soon. Sign in and write your first song.</p>
+          <div className="mx-auto flex max-w-md flex-col items-center justify-center gap-3 sm:max-w-none sm:flex-row">
+            <Button size="lg" className="w-full font-oswald tracking-wide sm:w-auto" onClick={() => setOpen(true)}><LogIn className="mr-2 h-4 w-4" /> Log in</Button>
+            <Button asChild size="lg" variant="outline" className="w-full font-oswald tracking-wide sm:w-auto"><Link to="/auth">Create account</Link></Button>
           </div>
         </div>
       </section>
 
-      <footer className="bg-card/50 border-t border-border/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] sm:text-xs font-oswald text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="" className="h-4 w-4 object-contain" />©{" "}
-            {new Date().getFullYear()} RockMundo · v{version}
-          </div>
+      <footer className="border-t border-border/40 bg-card/50">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-4 font-oswald text-[10px] text-muted-foreground sm:flex-row sm:px-6 sm:text-xs">
+          <div className="flex items-center gap-2"><img src={logo} alt="" className="h-4 w-4 object-contain" />© {new Date().getFullYear()} RockMundo · v{version}</div>
           <div className="flex items-center gap-3">
             <Link to="/about" className="hover:text-foreground">About · Press · Contact</Link>
             <span aria-hidden="true">·</span>
-            <a href="/wiki/" className="hover:text-foreground inline-flex items-center gap-1">
-              <BookOpen className="h-3.5 w-3.5" /> Compendium
-            </a>
+            <a href="/wiki/" className="inline-flex items-center gap-1 hover:text-foreground"><BookOpen className="h-3.5 w-3.5" /> Compendium</a>
           </div>
         </div>
       </footer>
 
-      {/* Login dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-sm border-border/40">
+        <DialogContent className="bg-card/95 backdrop-blur-sm sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 font-bebas tracking-wide text-xl">
-              <LogIn className="h-5 w-5 text-primary" />
-              Continue Career
-            </DialogTitle>
-            <DialogDescription className="font-oswald">
-              Enter your credentials. New here?{""}
-              <Link
-                to="/auth"
-                className="underline text-foreground"
-                onClick={() => setOpen(false)}
-              >
-                Start a new career
-              </Link>
-              .
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2 font-bebas text-xl tracking-wide"><LogIn className="h-5 w-5 text-primary" /> Continue Career</DialogTitle>
+            <DialogDescription className="font-oswald">Enter your credentials. New here? <Link to="/auth" className="text-foreground underline" onClick={() => setOpen(false)}>Start a new career</Link>.</DialogDescription>
           </DialogHeader>
-
           <form onSubmit={handleLogin} className="space-y-3">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
             <div className="space-y-1.5">
-              <Label
-                htmlFor="landing-email"
-                className="text-xs font-oswald text-muted-foreground"
-              >
-                Email
-              </Label>
-              <Input
-                id="landing-email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              <Label htmlFor="landing-email" className="font-oswald text-xs text-muted-foreground">Email</Label>
+              <Input id="landing-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="landing-password"
-                  className="text-xs font-oswald text-muted-foreground"
-                >
-                  Password
-                </Label>
-                <Link
-                  to="/auth"
-                  className="text-xs font-oswald text-muted-foreground hover:text-foreground"
-                  onClick={() => setOpen(false)}
-                >
-                  Forgot?
-                </Link>
+                <Label htmlFor="landing-password" className="font-oswald text-xs text-muted-foreground">Password</Label>
+                <Link to="/auth" className="font-oswald text-xs text-muted-foreground hover:text-foreground" onClick={() => setOpen(false)}>Forgot?</Link>
               </div>
-              <Input
-                id="landing-password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <Input id="landing-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
             </div>
-
-            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <DialogFooter className="gap-2 pt-2 sm:gap-0">
               {isDev && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="font-oswald tracking-wide text-xs"
-                  onClick={() => {
-                    setOpen(false);
-                    navigate("/home");
-                  }}
-                >
-                  <PlayCircle className="h-4 w-4 mr-1.5" />
-                  Skip · Demo
+                <Button type="button" variant="ghost" className="font-oswald text-xs tracking-wide" onClick={() => { setOpen(false); navigate("/home"); }}>
+                  <PlayCircle className="mr-1.5 h-4 w-4" /> Skip · Demo
                 </Button>
               )}
-              <Button
-                type="submit"
-                disabled={loading}
-                className="font-oswald tracking-wide"
-              >
-                {loading ? "Signing in…" : "Continue"}
-                <ChevronRight className="h-4 w-4 ml-1" />
+              <Button type="submit" disabled={loading} className="font-oswald tracking-wide">
+                {loading ? "Signing in…" : "Continue"}<ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </DialogFooter>
           </form>
