@@ -1,12 +1,4 @@
 {
-  "20260201020000": [
-    "20260201020000_add_travel_time_and_rest_days_to_tour_venues.sql",
-    "20260201020000_create_chat_participants_table.sql",
-    "20260201020000_create_equipment_upgrades_table.sql",
-    "20260201020000_create_fan_campaigns_table.sql",
-    "20260201020000_extend_gig_performances_with_results.sql",
-    "20260201020000_schedule_event_reminder_job.sql"
-  ],
   "20260202090000": [
     "20260202090000_create_fan_messages_table.sql",
     "20260202090000_update_social_posts_with_media_and_schedule.sql"

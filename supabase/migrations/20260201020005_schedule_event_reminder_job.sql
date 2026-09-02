@@ -140,7 +140,7 @@ BEGIN
   PERFORM cron.schedule(
     'schedule_event_reminders_job',
     '*/1 * * * *',
-    $$SELECT public.process_schedule_event_reminders();$$
+    $cron$SELECT public.process_schedule_event_reminders();$cron$
   );
 END;
 $$;
