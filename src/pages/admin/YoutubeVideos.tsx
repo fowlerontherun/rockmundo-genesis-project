@@ -1,99 +1,153 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ExternalLink, Plus, Star, Trash2, Youtube } from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Youtube, Plus, Trash2, ExternalLink } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  youtubeResourceSchema,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+
+import {
   defaultResourceFormValues,
+  mapResourceFormToPayload,
+  mapResourceRowToFormValues,
   type YoutubeResourceFormValues,
   type YoutubeResourceRow,
-  mapResourceFormToPayload,
-  mapResourceRowToFormValues
+  youtubeResourceSchema,
 } from "./youtubeVideos.helpers";
+
+interface SkillOption {
+  slug: string;
+  display_name: string;
+}
 
 const YoutubeVideos = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<YoutubeResourceRow | null>(null);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<YoutubeResourceFormValues>({
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<YoutubeResourceFormValues>({
     resolver: zodResolver(youtubeResourceSchema),
     defaultValues: defaultResourceFormValues,
   });
 
-  // Fetch all YouTube resources
   const { data: resources = [], isLoading } = useQuery({
-    queryKey: ["youtube-resources"],
+    queryKey: ["youtube-resources", "admin"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("education_youtube_resources")
         .select("*")
-        .order("created_at", { ascending: false });
-      
+        .order("is_featured", { ascending: false })
+        .order("updated_at", { ascending: false });
+
       if (error) throw error;
-      return data as YoutubeResourceRow[];
+      return (data ?? []) as YoutubeResourceRow[];
     },
   });
 
-  // Create/Update mutation
+  const { data: skillOptions = [] } = useQuery({
+    queryKey: ["youtube-resources", "skill-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("skill_definitions")
+        .select("slug, display_name")
+        .order("display_name", { ascending: true });
+
+      if (error) throw error;
+      return (data ?? []) as SkillOption[];
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const filteredResources = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return resources;
+    return resources.filter((resource) =>
+      [
+        resource.title,
+        resource.description ?? "",
+        resource.category ?? "",
+        resource.skill_slug ?? "",
+        resource.channel_name ?? "",
+        ...(resource.tags ?? []),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(term),
+    );
+  }, [resources, search]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: YoutubeResourceFormValues) => {
       const payload = mapResourceFormToPayload(values);
 
       if (editingResource) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("education_youtube_resources")
-          .update(payload as any)
+          .update(payload)
           .eq("id", editingResource.id);
-        
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("education_youtube_resources")
-          .insert([payload as any]);
-        
+          .insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["youtube-resources"] });
-      toast.success(editingResource ? "Resource updated" : "Resource created");
+      queryClient.invalidateQueries({ queryKey: ["education", "youtube-resources"] });
+      toast.success(editingResource ? "Lesson updated" : "Lesson added");
       setIsDialogOpen(false);
       setEditingResource(null);
       reset(defaultResourceFormValues);
     },
-    onError: (error: any) => {
-      toast.error("Failed to save resource", { description: error.message });
+    onError: (error: Error) => {
+      toast.error("Failed to save lesson", { description: error.message });
     },
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("education_youtube_resources")
         .delete()
         .eq("id", id);
-      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["youtube-resources"] });
-      toast.success("Resource deleted");
+      queryClient.invalidateQueries({ queryKey: ["education", "youtube-resources"] });
+      toast.success("Lesson deleted");
     },
-    onError: (error: any) => {
-      toast.error("Failed to delete resource", { description: error.message });
+    onError: (error: Error) => {
+      toast.error("Failed to delete lesson", { description: error.message });
     },
   });
 
@@ -109,189 +163,197 @@ const YoutubeVideos = () => {
     setIsDialogOpen(true);
   };
 
-  const onSubmit = (values: YoutubeResourceFormValues) => {
-    saveMutation.mutate(values);
-  };
-
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto space-y-6 py-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Youtube className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">PooTube Resources</h1>
-            <p className="text-muted-foreground">Manage educational video resources</p>
+            <h1 className="text-3xl font-bold">PooTube Learning</h1>
+            <p className="text-muted-foreground">
+              Manage skill-linked lessons, channels, difficulty and featured recommendations.
+            </p>
           </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Resource
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingResource ? "Edit Resource" : "Add New Resource"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="collectionKey">Collection Key</Label>
-                  <Input id="collectionKey" {...register("collectionKey")} />
-                  {errors.collectionKey && (
-                    <p className="text-sm text-destructive">{errors.collectionKey.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="collectionSortOrder">Collection Sort Order</Label>
-                  <Input
-                    id="collectionSortOrder"
-                    type="number"
-                    {...register("collectionSortOrder", { valueAsNumber: true })}
-                  />
-                  {errors.collectionSortOrder && (
-                    <p className="text-sm text-destructive">{errors.collectionSortOrder.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="collectionTitle">Collection Title</Label>
-                <Input id="collectionTitle" {...register("collectionTitle")} />
-                {errors.collectionTitle && (
-                  <p className="text-sm text-destructive">{errors.collectionTitle.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="collectionDescription">Collection Description</Label>
-                <Textarea id="collectionDescription" {...register("collectionDescription")} rows={2} />
-                {errors.collectionDescription && (
-                  <p className="text-sm text-destructive">{errors.collectionDescription.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="resourceName">Resource Name</Label>
-                <Input id="resourceName" {...register("resourceName")} />
-                {errors.resourceName && (
-                  <p className="text-sm text-destructive">{errors.resourceName.message}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="resourceFormat">Format</Label>
-                  <Input id="resourceFormat" {...register("resourceFormat")} placeholder="e.g., Tutorial" />
-                  {errors.resourceFormat && (
-                    <p className="text-sm text-destructive">{errors.resourceFormat.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="resourceSortOrder">Resource Sort Order</Label>
-                  <Input
-                    id="resourceSortOrder"
-                    type="number"
-                    {...register("resourceSortOrder", { valueAsNumber: true })}
-                  />
-                  {errors.resourceSortOrder && (
-                    <p className="text-sm text-destructive">{errors.resourceSortOrder.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="resourceFocus">Focus</Label>
-                <Input id="resourceFocus" {...register("resourceFocus")} />
-                {errors.resourceFocus && (
-                  <p className="text-sm text-destructive">{errors.resourceFocus.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="resourceSummary">Summary</Label>
-                <Textarea id="resourceSummary" {...register("resourceSummary")} rows={3} />
-                {errors.resourceSummary && (
-                  <p className="text-sm text-destructive">{errors.resourceSummary.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="resourceUrl">PooTube URL</Label>
-                <Input id="resourceUrl" {...register("resourceUrl")} placeholder="https://pootube.com/..." />
-                {errors.resourceUrl && (
-                  <p className="text-sm text-destructive">{errors.resourceUrl.message}</p>
-                )}
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Saving..." : editingResource ? "Update" : "Create"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add lesson
+        </Button>
       </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          className="max-w-xl"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search title, skill, channel or tag..."
+        />
+        <div className="flex gap-2 text-sm text-muted-foreground">
+          <Badge variant="secondary">{resources.length} lessons</Badge>
+          <Badge variant="outline">{resources.filter((resource) => resource.is_featured).length} featured</Badge>
+        </div>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingResource ? "Edit lesson" : "Add PooTube lesson"}</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit((values) => saveMutation.mutate(values))} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input id="title" {...register("title")} />
+              {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" rows={3} {...register("description")} />
+              {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="videoUrl">YouTube URL</Label>
+              <Input id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." {...register("videoUrl")} />
+              {errors.videoUrl && <p className="text-sm text-destructive">{errors.videoUrl.message}</p>}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Skill rewarded</Label>
+                <Controller
+                  control={control}
+                  name="skillSlug"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose skill" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {skillOptions.map((skill) => (
+                          <SelectItem key={skill.slug} value={skill.slug}>
+                            {skill.display_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.skillSlug && <p className="text-sm text-destructive">{errors.skillSlug.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Library category</Label>
+                <Input id="category" placeholder="guitar, production, dj..." {...register("category")} />
+                {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="channelName">Channel</Label>
+                <Input id="channelName" placeholder="e.g. Drumeo" {...register("channelName")} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="durationMinutes">Duration (minutes)</Label>
+                <Input id="durationMinutes" type="number" {...register("durationMinutes", { valueAsNumber: true })} />
+                {errors.durationMinutes && <p className="text-sm text-destructive">{errors.durationMinutes.message}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Difficulty</Label>
+              <Controller
+                control={control}
+                name="difficultyLevel"
+                render={({ field }) => (
+                  <Select value={String(field.value)} onValueChange={(value) => field.onChange(Number(value))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Beginner</SelectItem>
+                      <SelectItem value="2">Intermediate</SelectItem>
+                      <SelectItem value="3">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tagsText">Tags</Label>
+              <Input id="tagsText" placeholder="chords, rhythm, beginner" {...register("tagsText")} />
+              <p className="text-xs text-muted-foreground">Comma-separated. These power the player-facing topic filters.</p>
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-3 rounded-md border p-3">
+              <input type="checkbox" className="h-4 w-4" {...register("isFeatured")} />
+              <span>
+                <span className="block text-sm font-medium">Featured lesson</span>
+                <span className="block text-xs text-muted-foreground">Featured lessons rank higher in recommendations.</span>
+              </span>
+            </label>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? "Saving..." : editingResource ? "Update lesson" : "Add lesson"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {isLoading ? (
         <Card>
-          <CardContent className="p-12 text-center text-muted-foreground">
-            Loading resources...
-          </CardContent>
+          <CardContent className="p-12 text-center text-muted-foreground">Loading lessons...</CardContent>
         </Card>
-      ) : resources.length === 0 ? (
+      ) : filteredResources.length === 0 ? (
         <Card>
-          <CardContent className="p-12 text-center text-muted-foreground">
-            No PooTube resources yet. Click "Add Resource" to create one.
-          </CardContent>
+          <CardContent className="p-12 text-center text-muted-foreground">No lessons match your search.</CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {resources.map((resource) => (
-            <Card key={resource.id}>
-              <CardHeader>
-                <CardTitle className="text-lg line-clamp-2">
-                  {(resource as any).resource_name || resource.title}
-                </CardTitle>
-                <div className="flex gap-2 flex-wrap">
-                  {(resource as any).resource_format && (
-                    <Badge variant="secondary">{(resource as any).resource_format}</Badge>
+          {filteredResources.map((resource) => (
+            <Card key={resource.id} className="flex h-full flex-col">
+              <CardHeader className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {resource.is_featured && (
+                    <Badge>
+                      <Star className="mr-1 h-3 w-3" /> Featured
+                    </Badge>
                   )}
-                  {resource.category && (
-                    <Badge variant="outline">{resource.category}</Badge>
-                  )}
+                  {resource.skill_slug && <Badge variant="secondary">{resource.skill_slug}</Badge>}
+                  <Badge variant="outline">Level {resource.difficulty_level ?? 1}</Badge>
+                </div>
+                <CardTitle className="text-lg leading-snug">{resource.title}</CardTitle>
+                <div className="text-xs text-muted-foreground">
+                  {resource.channel_name || "Channel not set"}
+                  {resource.duration_minutes ? ` · ${resource.duration_minutes} min` : ""}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {(resource as any).resource_summary || resource.description}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open((resource as any).resource_url || resource.video_url, "_blank")}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    View
+              <CardContent className="flex flex-1 flex-col gap-4">
+                <p className="text-sm text-muted-foreground line-clamp-3">{resource.description}</p>
+                <div className="flex flex-wrap gap-1">
+                  {(resource.tags ?? []).slice(0, 5).map((tag) => (
+                    <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>
+                  ))}
+                </div>
+                <div className="mt-auto flex flex-wrap gap-2 pt-2">
+                  <Button size="sm" variant="outline" onClick={() => window.open(resource.video_url, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink className="mr-1 h-4 w-4" /> View
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleEdit(resource)}>
-                    Edit
-                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleEdit(resource)}>Edit</Button>
                   <Button
                     size="sm"
                     variant="destructive"
+                    disabled={deleteMutation.isPending}
                     onClick={() => {
-                      if (confirm("Delete this resource?")) {
-                        deleteMutation.mutate(resource.id);
-                      }
+                      if (window.confirm(`Delete "${resource.title}"?`)) deleteMutation.mutate(resource.id);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
