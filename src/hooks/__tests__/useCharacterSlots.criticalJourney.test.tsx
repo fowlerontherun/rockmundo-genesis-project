@@ -20,7 +20,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 import { useCharacterSlots } from "../useCharacterSlots";
 
 const createQueryBuilder = () => {
-  const builder: any = {};
+  const builder: Record<string, unknown> = {};
   for (const method of ["select", "eq", "is", "order", "limit", "neq", "update", "upsert"]) {
     builder[method] = vi.fn(() => builder);
   }
