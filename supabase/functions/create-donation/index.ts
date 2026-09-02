@@ -100,13 +100,13 @@ serve(async (req) => {
           ? {
               price_data: {
                 currency,
-                product: "prod_TqObBDfwRNQqrC", // Project Donation product
+                product: "prod_VBbikEF4yse2uA", // Project Donation product
                 unit_amount: customAmount,
               },
               quantity: 1,
             }
           : {
-              price: "price_1SshoXGWxwyLFaDWwxWG7Tt8", // preset Project Donation price
+              price: "price_1UBEVqAzic6whdususa1Zkg2yC", // preset Project Donation price
               quantity: 1,
             },
       ],
