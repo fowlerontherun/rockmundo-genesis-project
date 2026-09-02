@@ -54,7 +54,7 @@ export const BottomActionBar = () => {
         <span className="font-bebas text-[14px] tracking-[0.18em] text-fm-fg-muted leading-none">
           ROCKMUNDO
         </span>
-        <span className="text-[10px] text-fm-fg-muted/70">© 2026</span>
+        <span className="text-[10px] text-fm-fg-muted">© 2026</span>
       </div>
     </footer>
   );
