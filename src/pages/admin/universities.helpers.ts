@@ -9,7 +9,7 @@ export const sortColumnOptions = [
   { value: "name", label: "Name" },
   { value: "prestige", label: "Prestige" },
   { value: "quality_of_learning", label: "Quality of Learning" },
-  { value: "course_cost", label: "Course Cost" },
+  { value: "course_cost_modifier", label: "Effective Course Cost" },
 ] as const;
 
 export type SortColumn = (typeof sortColumnOptions)[number]["value"];
@@ -33,10 +33,6 @@ export const universitySchema = z.object({
     .number({ invalid_type_error: "Quality must be a number" })
     .min(0, "Quality must be at least 0")
     .max(100, "Quality cannot exceed 100"),
-  courseCost: z
-    .coerce
-    .number({ invalid_type_error: "Course cost must be a number" })
-    .min(0, "Course cost cannot be negative"),
 });
 
 export type UniversityFormValues = z.infer<typeof universitySchema>;
@@ -48,24 +44,27 @@ export type UniversitiesTable = Database["public"]["Tables"] extends { universit
         id: string;
         name: string;
         city: string;
+        city_id: string;
         prestige: number | null;
         quality_of_learning: number | null;
-        course_cost: number | null;
+        academic_cost_modifier: number | null;
+        mayor_fee_modifier: number | null;
+        course_cost_modifier: number | null;
         created_at: string | null;
       };
       Insert: {
         name: string;
         city: string;
+        city_id: string;
         prestige?: number | null;
         quality_of_learning?: number | null;
-        course_cost?: number | null;
       };
       Update: {
         name?: string;
         city?: string;
+        city_id?: string;
         prestige?: number | null;
         quality_of_learning?: number | null;
-        course_cost?: number | null;
       };
     };
 
