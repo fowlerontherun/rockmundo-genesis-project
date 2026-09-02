@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -37,10 +36,18 @@ interface University {
   id: string;
   name: string;
   city: string | null;
+  city_id: string;
   prestige: number | null;
   quality_of_learning: number | null;
+  academic_cost_modifier: number | null;
+  mayor_fee_modifier: number | null;
   course_cost_modifier: number | null;
   description: string | null;
+}
+
+interface CityOption {
+  id: string;
+  name: string;
 }
 
 export default function Universities() {
@@ -54,13 +61,12 @@ export default function Universities() {
     city: "",
     prestige: 50,
     qualityOfLearning: 50,
-    courseCost: 1.0,
   });
 
   const { data: universities, isLoading } = useQuery({
     queryKey: ["universities"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("universities")
         .select("*")
         .order("prestige", { ascending: false });
@@ -70,35 +76,38 @@ export default function Universities() {
   });
 
   const { data: cities } = useQuery({
-    queryKey: ["cities"],
+    queryKey: ["cities", "university-admin"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cities")
-        .select("name")
+        .select("id, name")
         .order("name");
       if (error) throw error;
-      return data.map((c) => c.name);
+      return data as CityOption[];
     },
   });
 
   const saveMutation = useMutation({
     mutationFn: async (values: UniversityFormValues) => {
+      const selectedCity = cities?.find((city) => city.name === values.city);
+      if (!selectedCity) throw new Error("Select a valid city before saving.");
+
       const payload = {
         name: values.name,
-        city: values.city,
+        city: selectedCity.name,
+        city_id: selectedCity.id,
         prestige: values.prestige,
         quality_of_learning: values.qualityOfLearning,
-        course_cost_modifier: values.courseCost,
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("universities")
           .update(payload)
           .eq("id", editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("universities").insert(payload);
+        const { error } = await (supabase as any).from("universities").insert(payload);
         if (error) throw error;
       }
     },
@@ -106,7 +115,7 @@ export default function Universities() {
       queryClient.invalidateQueries({ queryKey: ["universities"] });
       toast({
         title: editingId ? "University updated" : "University created",
-        description: "Changes saved successfully.",
+        description: "Changes saved successfully. Academic pricing was recalculated automatically.",
       });
       handleCloseDialog();
     },
@@ -121,7 +130,7 @@ export default function Universities() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("universities").delete().eq("id", id);
+      const { error } = await (supabase as any).from("universities").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -145,10 +154,9 @@ export default function Universities() {
       setEditingId(university.id);
       setFormData({
         name: university.name,
-        city: university.city || "",
-        prestige: university.prestige || 50,
-        qualityOfLearning: university.quality_of_learning || 50,
-        courseCost: university.course_cost_modifier || 1.0,
+        city: university.city ?? "",
+        prestige: university.prestige ?? 50,
+        qualityOfLearning: university.quality_of_learning ?? 50,
       });
     } else {
       setEditingId(null);
@@ -157,7 +165,6 @@ export default function Universities() {
         city: "",
         prestige: 50,
         qualityOfLearning: 50,
-        courseCost: 1.0,
       });
     }
     setIsDialogOpen(true);
@@ -182,8 +189,8 @@ export default function Universities() {
     saveMutation.mutate(result.data);
   };
 
-  const filteredUniversities = universities?.filter(uni => 
-    filterCity === "all" || uni.city === filterCity
+  const filteredUniversities = universities?.filter(
+    (university) => filterCity === "all" || university.city === filterCity,
   );
 
   if (isLoading) {
@@ -195,7 +202,9 @@ export default function Universities() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Universities</h1>
-          <p className="text-muted-foreground">Manage educational institutions</p>
+          <p className="text-muted-foreground">
+            Manage academic quality and prestige. Student pricing is derived from the academic baseline and local mayor fee policy.
+          </p>
         </div>
         <Button onClick={() => handleOpenDialog()}>
           <Plus className="mr-2 h-4 w-4" />
@@ -211,8 +220,8 @@ export default function Universities() {
           <SelectContent>
             <SelectItem value="all">All Cities</SelectItem>
             {cities?.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
+              <SelectItem key={city.id} value={city.name}>
+                {city.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -226,30 +235,34 @@ export default function Universities() {
             <TableHead>City</TableHead>
             <TableHead>Prestige</TableHead>
             <TableHead>Quality</TableHead>
-            <TableHead>Cost Modifier</TableHead>
+            <TableHead>Academic Cost</TableHead>
+            <TableHead>Mayor Fee</TableHead>
+            <TableHead>Effective Cost</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredUniversities?.map((uni) => (
-            <TableRow key={uni.id}>
-              <TableCell className="font-medium">{uni.name}</TableCell>
-              <TableCell>{uni.city || "—"}</TableCell>
-              <TableCell>{uni.prestige}</TableCell>
-              <TableCell>{uni.quality_of_learning}</TableCell>
-              <TableCell>{uni.course_cost_modifier}x</TableCell>
+          {filteredUniversities?.map((university) => (
+            <TableRow key={university.id}>
+              <TableCell className="font-medium">{university.name}</TableCell>
+              <TableCell>{university.city || "—"}</TableCell>
+              <TableCell>{university.prestige}</TableCell>
+              <TableCell>{university.quality_of_learning}</TableCell>
+              <TableCell>{Number(university.academic_cost_modifier ?? 1).toFixed(2)}x</TableCell>
+              <TableCell>{Number(university.mayor_fee_modifier ?? 1).toFixed(2)}x</TableCell>
+              <TableCell className="font-semibold">{Number(university.course_cost_modifier ?? 1).toFixed(2)}x</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleOpenDialog(uni)}
+                  onClick={() => handleOpenDialog(university)}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => deleteMutation.mutate(uni.id)}
+                  onClick={() => deleteMutation.mutate(university.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -266,7 +279,7 @@ export default function Universities() {
               {editingId ? "Edit University" : "Add University"}
             </DialogTitle>
             <DialogDescription>
-              Enter the university details below.
+              Set the institution's academic attributes. Mayors can later invest in quality and set local course fees, but cannot alter prestige.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -275,9 +288,7 @@ export default function Universities() {
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
@@ -285,17 +296,15 @@ export default function Universities() {
               <Label htmlFor="city">City</Label>
               <Select
                 value={formData.city}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, city: value })
-                }
+                onValueChange={(value) => setFormData({ ...formData, city: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a city" />
                 </SelectTrigger>
                 <SelectContent>
                   {cities?.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
+                    <SelectItem key={city.id} value={city.name}>
+                      {city.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -309,11 +318,12 @@ export default function Universities() {
                 min="0"
                 max="100"
                 value={formData.prestige}
-                onChange={(e) =>
-                  setFormData({ ...formData, prestige: Number(e.target.value) })
-                }
+                onChange={(e) => setFormData({ ...formData, prestige: Number(e.target.value) })}
                 required
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Prestige is an admin-set long-term reputation value and is never changed by mayor university upgrades.
+              </p>
             </div>
             <div>
               <Label htmlFor="quality">Quality of Learning (0-100)</Label>
@@ -332,20 +342,8 @@ export default function Universities() {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="cost">Course Cost Modifier (0.5-2.0)</Label>
-              <Input
-                id="cost"
-                type="number"
-                step="0.1"
-                min="0.5"
-                max="2.0"
-                value={formData.courseCost}
-                onChange={(e) =>
-                  setFormData({ ...formData, courseCost: Number(e.target.value) })
-                }
-                required
-              />
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Course pricing is calculated automatically from prestige and quality, then adjusted by the current mayor's fee policy. The final multiplier is intentionally read-only here so the two systems cannot drift apart.
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
