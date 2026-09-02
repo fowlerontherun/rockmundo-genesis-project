@@ -48,16 +48,16 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!token) return jsonResponse({ error: "Authentication required" }, 401);
+    const apiKey = req.headers.get("apikey");
+    const isInternalServiceRequest = token === serviceRoleKey || apiKey === serviceRoleKey;
 
-    // Normal callers must be real end users who own the posting account. The
-    // exact service-role secret is accepted only for trusted internal workers
-    // such as the scheduled-publishing job.
-    const isInternalServiceRequest = token === serviceRoleKey;
+    if (!isInternalServiceRequest && !token) {
+      return jsonResponse({ error: "Authentication required" }, 401);
+    }
+
     let userId: string | null = null;
-
     if (!isInternalServiceRequest) {
-      const { data: authData, error: authError } = await supabase.auth.getUser(token);
+      const { data: authData, error: authError } = await supabase.auth.getUser(token!);
       const user = authData?.user;
       if (authError || !user) return jsonResponse({ error: "Invalid authentication" }, 401);
       userId = user.id;
@@ -169,8 +169,6 @@ serve(async (req) => {
       .eq("twaat_id", twaatId);
     if (metricsError) throw metricsError;
 
-    // Finalise before non-critical gameplay side effects so repeated requests
-    // cannot duplicate followers, sentiment or release hype.
     const processedAt = new Date().toISOString();
     const { data: finalised, error: outcomeError } = await supabase
       .from("twaats")
