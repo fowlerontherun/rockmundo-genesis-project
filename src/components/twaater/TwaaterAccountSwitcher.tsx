@@ -58,7 +58,7 @@ export const TwaaterAccountSwitcher = ({
         return BAND_POSTING_ROLES.has(role) || leaderId === userId || leaderId === profileId;
       });
 
-      const bandIds = manageableMemberships.map((membership: any) => membership.band_id);
+      const bandIds = Array.from(new Set(manageableMemberships.map((membership: any) => membership.band_id)));
       let bandAccounts: any[] = [];
 
       if (bandIds.length > 0) {
@@ -90,14 +90,32 @@ export const TwaaterAccountSwitcher = ({
               display_name: band.name,
             })
             .select("id, owner_type, display_name, handle, owner_id")
-            .single();
+            .maybeSingle();
 
-          if (createError) throw createError;
+          if (createError) {
+            if (createError.code !== "23505") throw createError;
+
+            const { data: racedAccount, error: racedAccountError } = await supabase
+              .from("twaater_accounts")
+              .select("id, owner_type, display_name, handle, owner_id")
+              .eq("owner_type", "band")
+              .eq("owner_id", band.id)
+              .maybeSingle();
+
+            if (racedAccountError) throw racedAccountError;
+            if (racedAccount) bandAccounts.push(racedAccount);
+            continue;
+          }
+
           if (newAccount) bandAccounts.push(newAccount);
         }
       }
 
-      return [personalAccount, ...bandAccounts].filter(Boolean);
+      const uniqueAccounts = new Map<string, any>();
+      for (const account of [personalAccount, ...bandAccounts].filter(Boolean)) {
+        uniqueAccounts.set(account.id, account);
+      }
+      return Array.from(uniqueAccounts.values());
     },
     enabled: !!userId && !!profileId,
   });
