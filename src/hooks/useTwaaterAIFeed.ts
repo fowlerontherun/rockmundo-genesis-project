@@ -20,6 +20,7 @@ const fetchChronologicalFeed = async (accountId?: string) => {
       .select(twaatSelect)
       .eq("visibility", "public")
       .is("deleted_at", null)
+      .is("scheduled_for", null)
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw error;
@@ -39,6 +40,7 @@ const fetchChronologicalFeed = async (accountId?: string) => {
     .select(twaatSelect)
     .in("account_id", uniqueAccountIds)
     .is("deleted_at", null)
+    .is("scheduled_for", null)
     .order("created_at", { ascending: false })
     .limit(50);
 
