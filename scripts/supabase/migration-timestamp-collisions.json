@@ -1,8 +1,4 @@
 {
-  "20260301090000": [
-    "20260301090000_manage_game_event_status.sql",
-    "20260301090000_restrict_profile_select.sql"
-  ],
   "20260316093000": [
     "20260316093000_behavior_settings_per_character.sql",
     "20260316093000_fix_promotional_campaigns_rls.sql"
