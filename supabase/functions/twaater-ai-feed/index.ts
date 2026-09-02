@@ -33,9 +33,7 @@ Deno.serve(async (req) => {
     if (authError || !user) return respond({ error: "Invalid authentication" }, 401);
 
     const { account_id } = await req.json();
-    if (!account_id || typeof account_id !== "string") {
-      return respond({ error: "account_id is required" }, 400);
-    }
+    if (!account_id || typeof account_id !== "string") return respond({ error: "account_id is required" }, 400);
 
     const { data: account, error: accountError } = await supabase
       .from("twaater_accounts")
@@ -92,6 +90,7 @@ Deno.serve(async (req) => {
     if (blocksError) throw blocksError;
 
     const followedIds = follows?.map((follow: any) => follow.followed_account_id) || [];
+    const permittedFollowerOnlyIds = new Set<string>([account_id, ...followedIds]);
     const blockedIds = new Set<string>();
     for (const row of blockRows || []) {
       if (row.blocker_account_id === account_id) blockedIds.add(row.blocked_account_id);
@@ -111,14 +110,17 @@ Deno.serve(async (req) => {
           account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
         )
       `)
-      .eq("visibility", "public")
+      .in("visibility", ["public", "followers"])
       .is("deleted_at", null)
       .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
       .order("created_at", { ascending: false })
       .limit(200);
 
     if (twaatsError) throw twaatsError;
-    const twaats = (twaatsData || []).filter((twaat: any) => !blockedIds.has(twaat.account_id));
+    const twaats = (twaatsData || []).filter((twaat: any) => {
+      if (blockedIds.has(twaat.account_id)) return false;
+      return twaat.visibility === "public" || permittedFollowerOnlyIds.has(twaat.account_id);
+    });
     if (twaats.length === 0) return respond({ ranked_feed: [] });
 
     const getMetrics = (metrics: any) => {
