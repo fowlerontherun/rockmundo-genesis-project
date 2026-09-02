@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { asAny } from "@/lib/type-helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,34 @@ interface RecordedSongsTabProps {
 }
 
 type SortOption = "newest" | "oldest" | "quality_high" | "quality_low" | "hype" | "fame" | "title";
+
+type RecordedSong = {
+  id: string;
+  title: string;
+  genre: string | null;
+  quality_score: number | null;
+  updated_at: string;
+  audio_url: string | null;
+  audio_generation_status: string | null;
+  hype: number | null;
+  fame: number | null;
+  bands: {
+    name: string | null;
+    artist_name: string | null;
+  } | null;
+};
+
+type RecordingSessionSummary = {
+  id: string;
+  song_id: string | null;
+  quality_improvement: number | null;
+  completed_at: string | null;
+  recording_version: string | null;
+};
+
+type ActiveRecordingSessionSummary = {
+  recording_session_id: string;
+};
 
 const recordedSongSelect = `
   id, user_id, profile_id, band_id, title, genre, quality_score, status, updated_at, created_at, audio_url, audio_generation_status, hype, fame,
@@ -55,7 +84,7 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                   .is("band_id", null)
                   .order("updated_at", { ascending: false })
                   .limit(200)
-              : Promise.resolve({ data: [], error: null } as any),
+              : Promise.resolve({ data: [] as RecordedSong[], error: null }),
             userId
               ? profileId
                 ? supabase
@@ -75,7 +104,7 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                     .is("band_id", null)
                     .order("updated_at", { ascending: false })
                     .limit(200)
-              : Promise.resolve({ data: [], error: null } as any),
+              : Promise.resolve({ data: [] as RecordedSong[], error: null }),
           ]);
 
       for (const response of songResponses) {
@@ -83,18 +112,17 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
       }
 
       const songs = Array.from(
-        new Map(
+        new Map<string, RecordedSong>(
           songResponses
-            .flatMap((response) => response.data || [])
-            .map((song: any) => [song.id, song]),
+            .flatMap((response) => (response.data || []) as RecordedSong[])
+            .map((song) => [song.id, song] as const),
         ).values(),
       ).sort(
-        (a: any, b: any) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
       );
 
-      const songIds = songs.map((song: any) => song.id);
-      let sessions: any[] = [];
+      const songIds = songs.map((song) => song.id);
+      let sessions: RecordingSessionSummary[] = [];
       let polishedSessionIds = new Set<string>();
 
       if (songIds.length > 0) {
@@ -119,23 +147,23 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
           .order("completed_at", { ascending: false });
 
         if (sessionsError) throw sessionsError;
-        sessions = sessionData || [];
+        sessions = (sessionData || []) as RecordingSessionSummary[];
 
-        const sessionIds = sessions.map((session: any) => session.id);
+        const sessionIds = sessions.map((session) => session.id);
         if (sessionIds.length > 0) {
-          const { data: activeRows, error: activeRowsError } = await (supabase as any)
+          const { data: activeRows, error: activeRowsError } = await asAny(supabase)
             .from("active_recording_sessions")
             .select("recording_session_id")
             .in("recording_session_id", sessionIds);
 
           if (activeRowsError) throw activeRowsError;
           polishedSessionIds = new Set(
-            (activeRows || []).map((row: any) => row.recording_session_id as string),
+            ((activeRows || []) as ActiveRecordingSessionSummary[]).map((row) => row.recording_session_id),
           );
         }
       }
 
-      return songs.map((song: any) => {
+      return songs.map((song) => {
         const songRecordings = sessions.filter((session) => session.song_id === song.id);
         const totalQualityGained = songRecordings.reduce(
           (sum, recording) => sum + (recording.quality_improvement || 0),
@@ -162,8 +190,10 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
 
   const availableGenres = useMemo(() => {
     if (!recordedSongs) return [];
-    const genres = new Set(recordedSongs.map((item) => item.song.genre).filter(Boolean));
-    return Array.from(genres).sort();
+    const genres = recordedSongs
+      .map((item) => item.song.genre)
+      .filter((genre): genre is string => Boolean(genre));
+    return Array.from(new Set(genres)).sort();
   }, [recordedSongs]);
 
   const filteredSongs = useMemo(() => {
@@ -355,10 +385,10 @@ export function RecordedSongsTab({ userId, profileId, bandId }: RecordedSongsTab
                       <div className="mt-3 pt-3 border-t">
                         <p className="text-xs text-muted-foreground mb-2">Recording history:</p>
                         <div className="flex flex-wrap gap-2">
-                          {item.recordings.map((recording: any) => (
+                          {item.recordings.map((recording) => (
                             <Badge key={recording.id} variant="outline" className="text-xs">
                               {recording.recording_version || "Standard"}
-                              {recording.quality_improvement > 0 && (
+                              {(recording.quality_improvement || 0) > 0 && (
                                 <span className="ml-1 text-green-600">+{recording.quality_improvement}</span>
                               )}
                             </Badge>
