@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Star, AlertTriangle, Palette, ShieldAlert, Sparkles, Type, Crosshair } from "lucide-react";
+import { AlertTriangle, Crosshair, Palette, ShieldAlert, Sparkles, Star, Type } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { TattooBodyPreview } from "@/components/tattoo/TattooBodyPreview";
 import { TattooDesignCard } from "@/components/tattoo/TattooDesignCard";
@@ -26,10 +27,18 @@ import {
   getTattooDifficulty,
   rollForInfection,
   type BodySlot,
+  type TattooCategory,
   type TattooDesign,
   type PlayerTattoo,
-  type TattooCategory,
 } from "@/data/tattooDesigns";
+
+type PurchaseResult = {
+  tattoo_id: string;
+  price: number;
+  quality_score: number;
+  is_infected: boolean;
+  cash_remaining: number;
+};
 
 export default function TattooParlour() {
   const { profileId } = useActiveProfile();
@@ -37,29 +46,26 @@ export default function TattooParlour() {
   const [selectedParlour, setSelectedParlour] = useState<string | null>(null);
   const [selectedDesign, setSelectedDesign] = useState<TattooDesign | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<TattooArtist | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<TattooCategory | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<TattooCategory | "all">("all");
   const [selectedSlot, setSelectedSlot] = useState<BodySlot | null>(null);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [customArtist, setCustomArtist] = useState<TattooArtist | null>(null);
   const [tattooingSession, setTattooingSession] = useState(false);
 
   const { data: profile } = useQuery({
-    queryKey: ['profile-city', profileId],
+    queryKey: ["profile-city", profileId],
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('current_city_id, cash').eq('id', profileId!).single();
+      const { data, error } = await supabase.from("profiles").select("current_city_id, cash, user_id").eq("id", profileId!).single();
+      if (error) throw error;
       return data;
     },
     enabled: !!profileId,
   });
 
   const { data: tattooSkillProgress } = useQuery({
-    queryKey: ['tattoo-skill-progress', profileId],
+    queryKey: ["tattoo-skill-progress", profileId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('skill_progress')
-        .select('skill_slug,current_level,current_xp')
-        .eq('profile_id', profileId!)
-        .like('skill_slug', 'tattooing_%');
+      const { data } = await (supabase as any).from("skill_progress").select("skill_slug,current_level,current_xp").eq("profile_id", profileId!).like("skill_slug", "tattooing_%");
       return data || [];
     },
     enabled: !!profileId,
@@ -69,219 +75,246 @@ export default function TattooParlour() {
   const tattooSkillValue = Math.min(1000, Math.round((tattooSkillLevel / 30) * 1000));
 
   const { data: parlours } = useQuery({
-    queryKey: ['tattoo-parlours', profile?.current_city_id],
+    queryKey: ["tattoo-parlours", profile?.current_city_id],
     queryFn: async () => {
-      const { data } = await supabase.from('tattoo_parlours').select('*').eq('city_id', profile!.current_city_id);
+      const { data, error } = await supabase.from("tattoo_parlours").select("*").eq("city_id", profile!.current_city_id);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!profile?.current_city_id,
   });
 
+  useEffect(() => {
+    if (!selectedParlour && parlours?.length === 1) setSelectedParlour(parlours[0].id);
+  }, [parlours, selectedParlour]);
+
   const { data: artists } = useQuery({
-    queryKey: ['tattoo-artists', selectedParlour],
+    queryKey: ["tattoo-artists", selectedParlour],
     queryFn: async () => {
-      const { data } = await supabase.from('tattoo_artists').select('*').eq('parlour_id', selectedParlour!).order('fame_level', { ascending: false });
+      const { data, error } = await supabase.from("tattoo_artists").select("*").eq("parlour_id", selectedParlour!).order("fame_level", { ascending: false });
+      if (error) throw error;
       return (data || []) as TattooArtist[];
     },
     enabled: !!selectedParlour,
   });
 
   const { data: designs } = useQuery({
-    queryKey: ['tattoo-designs'],
+    queryKey: ["tattoo-designs"],
     queryFn: async () => {
-      const { data } = await supabase.from('tattoo_designs').select('*');
+      const { data, error } = await supabase.from("tattoo_designs").select("*");
+      if (error) throw error;
       return (data || []) as TattooDesign[];
     },
   });
 
   const { data: playerTattoos } = useQuery({
-    queryKey: ['player-tattoos', profileId],
+    queryKey: ["player-tattoos", profileId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('player_tattoos')
-        .select('*, tattoo_designs(*), tattoo_artists(*)')
-        .eq('profile_id', profileId!);
-      return (data || []).map((t: any) => ({ ...t, design: t.tattoo_designs, artist: t.tattoo_artists })) as (PlayerTattoo & { artist?: TattooArtist })[];
+      const { data, error } = await (supabase as any).from("player_tattoos").select("*, tattoo_designs(*), tattoo_artists(*)").eq("profile_id", profileId!);
+      if (error) throw error;
+      return (data || []).map((tattoo: any) => ({ ...tattoo, design: tattoo.tattoo_designs, artist: tattoo.tattoo_artists })) as (PlayerTattoo & { artist?: TattooArtist })[];
     },
     enabled: !!profileId,
   });
 
   const { data: customRequests } = useQuery({
-    queryKey: ['custom-tattoo-requests', profileId],
+    queryKey: ["custom-tattoo-requests", profileId],
     queryFn: async () => {
-      const { data } = await (supabase as any).from('custom_tattoo_requests').select('*, tattoo_artists(*)').eq('profile_id', profileId!).order('created_at', { ascending: false });
+      const { data } = await (supabase as any).from("custom_tattoo_requests").select("*, tattoo_artists(*)").eq("profile_id", profileId!).order("created_at", { ascending: false });
       return data || [];
     },
     enabled: !!profileId,
   });
 
-  const currentParlour = parlours?.find(p => p.id === selectedParlour);
-  const occupiedSlots = new Set(playerTattoos?.map(t => t.body_slot) || []);
-
+  const currentParlour = parlours?.find((parlour) => parlour.id === selectedParlour);
+  const occupiedSlots = new Set(playerTattoos?.map((tattoo) => tattoo.body_slot) || []);
   const filteredDesigns = useMemo(() => {
     if (!designs) return [];
     let filtered = designs;
-    if (categoryFilter !== 'all') filtered = filtered.filter(d => d.category === categoryFilter);
-    if (selectedSlot) filtered = filtered.filter(d => d.body_slot === selectedSlot);
-    return filtered.filter(d => !occupiedSlots.has(d.body_slot));
-  }, [designs, categoryFilter, playerTattoos, selectedSlot]);
+    if (categoryFilter !== "all") filtered = filtered.filter((design) => design.category === categoryFilter);
+    if (selectedSlot) filtered = filtered.filter((design) => design.body_slot === selectedSlot);
+    return filtered.filter((design) => !occupiedSlots.has(design.body_slot));
+  }, [designs, categoryFilter, selectedSlot, playerTattoos]);
 
-  const getPrice = (basePrice: number) => {
-    if (!currentParlour) return basePrice;
-    return Math.round(basePrice * currentParlour.price_multiplier * (selectedArtist?.price_premium || 1.0));
-  };
+  const getPrice = (basePrice: number) => currentParlour ? Math.round(basePrice * currentParlour.price_multiplier * (selectedArtist?.price_premium || 1)) : basePrice;
 
   const purchaseMutation = useMutation({
     mutationFn: async (game: TattooMinigameResult) => {
-      if (!selectedDesign || !currentParlour || !profileId) throw new Error('Missing data');
-      const price = getPrice(selectedDesign.base_price);
-      if ((profile?.cash || 0) < price) throw new Error('Insufficient funds');
-
-      const parlourQuality = calculateTattooQuality(currentParlour.quality_tier);
-      const artistBonus = selectedArtist?.quality_bonus || 0;
-      const specialtyBonus = selectedArtist?.specialty === selectedDesign.category ? 5 : 0;
-      const executionModifier = Math.round((game.score - 50) * 0.45);
-      const skillQualityBonus = Math.min(8, Math.round(tattooSkillValue / 125));
-      const qualityScore = Math.max(1, Math.min(100, parlourQuality + artistBonus + specialtyBonus + executionModifier + skillQualityBonus));
-      const isInfected = rollForInfection(currentParlour.infection_risk);
-
-      const { error: cashError } = await supabase.from('profiles').update({ cash: (profile?.cash || 0) - price }).eq('id', profileId!);
-      if (cashError) throw cashError;
-
-      const { error: tattooError } = await (supabase as any).from('player_tattoos').insert({
-        profile_id: profileId,
-        tattoo_design_id: selectedDesign.id,
-        parlour_id: currentParlour.id,
-        artist_id: selectedArtist?.id || null,
-        body_slot: selectedDesign.body_slot,
-        quality_score: qualityScore,
-        ink_color: selectedDesign.ink_color_primary,
-        price_paid: price,
-        is_infected: isInfected,
-        minigame_score: game.score,
-        minigame_accuracy: game.accuracy,
-        minigame_coverage: game.coverage,
-        minigame_mistakes: game.mistakes,
-        minigame_difficulty: game.difficulty,
+      if (!profileId || !selectedDesign || !currentParlour) throw new Error("Select a parlour and tattoo first");
+      const { data, error } = await (supabase as any).rpc("purchase_tattoo", {
+        p_profile_id: profileId,
+        p_design_id: selectedDesign.id,
+        p_parlour_id: currentParlour.id,
+        p_artist_id: selectedArtist?.id || null,
+        p_game_score: game.score,
+        p_game_accuracy: game.accuracy,
+        p_game_coverage: game.coverage,
+        p_game_mistakes: game.mistakes,
+        p_game_difficulty: game.difficulty,
       });
-      if (tattooError) throw tattooError;
-
-      if (selectedArtist) await supabase.from('tattoo_artists').update({ total_tattoos_done: selectedArtist.total_tattoos_done + 1 }).eq('id', selectedArtist.id);
-      return { qualityScore, isInfected, price, game };
+      if (error) throw error;
+      return { ...(data as PurchaseResult), game };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['player-tattoos'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-city'] });
-      queryClient.invalidateQueries({ queryKey: ['tattoo-artists'] });
+      queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["tattoo-artists"] });
       setTattooingSession(false);
       setSelectedDesign(null);
-      if (result.isInfected) toast.error(`Tattoo finished at ${result.game.score}% execution but became infected. Quality: ${result.qualityScore}/100.`);
-      else toast.success(`Tattoo complete! Execution ${result.game.score}%, final quality ${result.qualityScore}/100. Paid $${result.price}.`);
+      setSelectedSlot(null);
+      if (result.is_infected) toast.error(`Tattoo completed but became infected. Execution ${result.game.score}%, quality ${result.quality_score}/100.`);
+      else toast.success(`Tattoo complete! Execution ${result.game.score}%, quality ${result.quality_score}/100. Paid $${result.price}.`);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (error: Error) => toast.error(error.message || "Tattoo purchase failed. No money was taken."),
   });
 
   const customMutation = useMutation({
     mutationFn: async (data: { description: string; bodySlot: BodySlot; quotedPrice: number; estimatedQuality: number }) => {
-      if (!customArtist || !currentParlour || !profileId) throw new Error('Missing data');
-      if ((profile?.cash || 0) < data.quotedPrice) throw new Error('Insufficient funds');
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.quotedPrice }).eq('id', profileId!);
+      if (!customArtist || !currentParlour || !profileId) throw new Error("Missing data");
+      if ((profile?.cash || 0) < data.quotedPrice) throw new Error("Insufficient funds");
       const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + customArtist.quality_bonus + 10);
-      const { data: tattoo, error: tattooError } = await (supabase as any).from('player_tattoos').insert({ profile_id: profileId, tattoo_design_id: null, parlour_id: currentParlour.id, artist_id: customArtist.id, body_slot: data.bodySlot, quality_score: qualityScore, ink_color: '#1a1a2e', price_paid: data.quotedPrice, is_infected: false }).select().single();
-      if (tattooError) throw tattooError;
-      await (supabase as any).from('custom_tattoo_requests').insert({ profile_id: profileId, artist_id: customArtist.id, description: data.description, body_slot: data.bodySlot, status: 'completed', quoted_price: data.quotedPrice, estimated_quality: qualityScore, completed_tattoo_id: tattoo.id });
-      await supabase.from('tattoo_artists').update({ total_tattoos_done: customArtist.total_tattoos_done + 1 }).eq('id', customArtist.id);
+      const { error: cashError } = await supabase.from("profiles").update({ cash: (profile?.cash || 0) - data.quotedPrice }).eq("id", profileId);
+      if (cashError) throw cashError;
+      const { data: tattoo, error } = await (supabase as any).from("player_tattoos").insert({ profile_id: profileId, tattoo_design_id: null, parlour_id: currentParlour.id, artist_id: customArtist.id, body_slot: data.bodySlot, quality_score: qualityScore, ink_color: "#1a1a2e", price_paid: data.quotedPrice, is_infected: false }).select().single();
+      if (error) throw error;
+      await (supabase as any).from("custom_tattoo_requests").insert({ profile_id: profileId, artist_id: customArtist.id, description: data.description, body_slot: data.bodySlot, status: "completed", quoted_price: data.quotedPrice, estimated_quality: qualityScore, completed_tattoo_id: tattoo.id });
       return { qualityScore, price: data.quotedPrice };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['player-tattoos'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-city'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-tattoo-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['tattoo-artists'] });
+      queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
       setCustomDialogOpen(false);
-      toast.success(`Custom tattoo complete! Quality: ${result.qualityScore}/100. Paid $${result.price}`);
+      toast.success(`Custom tattoo complete! Quality ${result.qualityScore}/100. Paid $${result.price}.`);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const textTattooMutation = useMutation({
     mutationFn: async (data: { text: string; fontStyle: string; bodySlot: BodySlot; price: number }) => {
-      if (!currentParlour || !profileId) throw new Error('Missing data');
-      if ((profile?.cash || 0) < data.price) throw new Error('Insufficient funds');
+      if (!currentParlour || !profileId) throw new Error("Select a parlour first");
+      if ((profile?.cash || 0) < data.price) throw new Error("Insufficient funds");
       const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + (selectedArtist?.quality_bonus || 0));
       const isInfected = rollForInfection(currentParlour.infection_risk);
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - data.price }).eq('id', profileId!);
-      const { error } = await (supabase as any).from('player_tattoos').insert({ profile_id: profileId, tattoo_design_id: null, parlour_id: currentParlour.id, artist_id: selectedArtist?.id || null, body_slot: data.bodySlot, quality_score: qualityScore, ink_color: '#1a1a2e', price_paid: data.price, is_infected: isInfected, custom_text: data.text, font_style: data.fontStyle });
+      const { error: cashError } = await supabase.from("profiles").update({ cash: (profile?.cash || 0) - data.price }).eq("id", profileId);
+      if (cashError) throw cashError;
+      const { error } = await (supabase as any).from("player_tattoos").insert({ profile_id: profileId, tattoo_design_id: null, parlour_id: currentParlour.id, artist_id: selectedArtist?.id || null, body_slot: data.bodySlot, quality_score: qualityScore, ink_color: "#1a1a2e", price_paid: data.price, is_infected: isInfected, custom_text: data.text, font_style: data.fontStyle });
       if (error) throw error;
-      if (selectedArtist) await supabase.from('tattoo_artists').update({ total_tattoos_done: selectedArtist.total_tattoos_done + 1 }).eq('id', selectedArtist.id);
       return { qualityScore, isInfected, price: data.price };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['player-tattoos'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-city'] });
-      if (result.isInfected) toast.error(`Text tattoo applied but got INFECTED! Quality: ${result.qualityScore}/100`);
-      else toast.success(`Text tattoo applied! Quality: ${result.qualityScore}/100. Paid $${result.price}`);
+      queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
+      result.isInfected ? toast.error(`Text tattoo completed but became infected. Quality ${result.qualityScore}/100.`) : toast.success(`Text tattoo complete! Quality ${result.qualityScore}/100. Paid $${result.price}.`);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const treatMutation = useMutation({
     mutationFn: async (tattooId: string) => {
-      if ((profile?.cash || 0) < 200) throw new Error('Need $200 for treatment');
-      await supabase.from('profiles').update({ cash: (profile?.cash || 0) - 200 }).eq('id', profileId!);
-      await supabase.from('player_tattoos').update({ is_infected: false, infection_cleared_at: new Date().toISOString() }).eq('id', tattooId);
+      if ((profile?.cash || 0) < 200) throw new Error("Need $200 for treatment");
+      const { error: cashError } = await supabase.from("profiles").update({ cash: (profile?.cash || 0) - 200 }).eq("id", profileId!);
+      if (cashError) throw cashError;
+      const { error } = await (supabase as any).from("player_tattoos").update({ is_infected: false, infection_cleared_at: new Date().toISOString() }).eq("id", tattooId);
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['player-tattoos'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-city'] });
-      toast.success('Infection treated! $200 paid.');
+      queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
+      toast.success("Infection treated. $200 paid.");
     },
+    onError: (error: Error) => toast.error(error.message),
   });
 
-  const qualityEstimate = () => {
-    if (!currentParlour) return '';
-    const base = currentParlour.quality_tier >= 4 ? '80-100' : currentParlour.quality_tier >= 3 ? '50-80' : '20-50';
-    return selectedArtist ? `${base} +${selectedArtist.quality_bonus} artist + execution` : `${base} + execution`;
+  const selectDesign = (design: TattooDesign) => {
+    setSelectedDesign(design);
+    setSelectedSlot(design.body_slot);
+    setTattooingSession(false);
   };
 
   return (
-    <FMPageScaffold title="Tattoo Parlour" subtitle="Choose your placement, pick your ink, then control the tattoo machine." icon={Palette} backTo="/hub/character" headerActions={profile?.cash != null ? <Badge variant="outline" className="text-xs tabular-nums">${profile.cash.toLocaleString()}</Badge> : null}>
+    <FMPageScaffold title="Tattoo Parlour" subtitle="Choose your ink, then take control of the tattoo machine." icon={Palette} backTo="/hub/character" headerActions={profile?.cash != null ? <Badge variant="outline">${profile.cash.toLocaleString()}</Badge> : null}>
       {playerTattoos && <TattooInfectionAlert tattoos={playerTattoos} onTreat={(id) => treatMutation.mutate(id)} />}
+
       <Tabs defaultValue="shop">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="shop">🏪 Shop</TabsTrigger><TabsTrigger value="text-tattoo">✍️ Text</TabsTrigger><TabsTrigger value="my-tattoos">🎨 My ({playerTattoos?.length || 0})</TabsTrigger><TabsTrigger value="custom">✨ Custom</TabsTrigger>
+          <TabsTrigger value="shop">🏪 Shop</TabsTrigger>
+          <TabsTrigger value="text-tattoo">✍️ Text</TabsTrigger>
+          <TabsTrigger value="my-tattoos">🎨 My ({playerTattoos?.length || 0})</TabsTrigger>
+          <TabsTrigger value="custom">✨ Custom</TabsTrigger>
         </TabsList>
 
         <TabsContent value="shop" className="space-y-4">
-          {!parlours?.length ? <Card><CardContent className="p-6 text-center text-muted-foreground">No tattoo parlours in your current city. Travel to a bigger city!</CardContent></Card> : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">{parlours.map(p => <Card key={p.id} className={`cursor-pointer transition-all ${selectedParlour === p.id ? 'ring-2 ring-primary' : 'hover:bg-muted/30'}`} onClick={() => { setSelectedParlour(p.id); setSelectedArtist(null); setSelectedDesign(null); setTattooingSession(false); }}><CardContent className="p-4 space-y-2"><div className="flex items-center justify-between"><h3 className="font-semibold text-sm">{p.name}</h3><div className="flex">{Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`h-3.5 w-3.5 ${i < p.quality_tier ? 'text-yellow-400 fill-yellow-400' : 'text-muted'}`} />)}</div></div><p className="text-xs text-muted-foreground">{p.description}</p><div className="flex gap-2"><Badge variant="outline" className="text-[10px]">Price: x{p.price_multiplier}</Badge><Badge variant="outline" className={`text-[10px] ${p.infection_risk > 0.15 ? 'text-destructive border-destructive/50' : p.infection_risk > 0.05 ? 'text-yellow-500 border-yellow-500/50' : 'text-green-500 border-green-500/50'}`}><ShieldAlert className="h-3 w-3 mr-1" />Infection: {Math.round(p.infection_risk * 100)}%</Badge></div>{p.specialties?.length > 0 && <div className="flex gap-1 flex-wrap">{p.specialties.map((s: string) => <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>)}</div>}</CardContent></Card>)}</div>
+          {!parlours?.length ? (
+            <Card><CardContent className="p-6 text-center text-muted-foreground">No tattoo parlour is available in this city.</CardContent></Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {parlours.map((parlour) => (
+                <Card key={parlour.id} className={`cursor-pointer transition-all ${selectedParlour === parlour.id ? "ring-2 ring-primary" : "hover:bg-muted/30"}`} onClick={() => { setSelectedParlour(parlour.id); setSelectedArtist(null); setSelectedDesign(null); setTattooingSession(false); }}>
+                  <CardContent className="space-y-2 p-4">
+                    <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">{parlour.name}</h3><div className="flex">{Array.from({ length: 5 }).map((_, index) => <Star key={index} className={`h-3.5 w-3.5 ${index < parlour.quality_tier ? "fill-yellow-400 text-yellow-400" : "text-muted"}`} />)}</div></div>
+                    <p className="text-xs text-muted-foreground">{parlour.description}</p>
+                    <div className="flex gap-2"><Badge variant="outline" className="text-[10px]">Price x{parlour.price_multiplier}</Badge><Badge variant="outline" className="text-[10px]"><ShieldAlert className="mr-1 h-3 w-3" />Risk {Math.round(parlour.infection_risk * 100)}%</Badge></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
 
-          {currentParlour && artists && artists.length > 0 && <div className="space-y-2"><h3 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />Artists at {currentParlour.name}<span className="text-muted-foreground font-normal">— artist quality combines with your execution</span></h3><div className="grid grid-cols-1 md:grid-cols-3 gap-3">{artists.map(a => <TattooArtistCard key={a.id} artist={a} selected={selectedArtist?.id === a.id} onSelect={setSelectedArtist} onBookCustom={(artist) => { setCustomArtist(artist); setCustomDialogOpen(true); }} />)}</div>{selectedArtist && <div className="flex items-center gap-2"><Badge className="text-xs">Artist: {selectedArtist.name}</Badge><Badge variant="outline" className="text-xs text-green-400 border-green-400/30">+{selectedArtist.quality_bonus} Quality</Badge><Badge variant="outline" className="text-xs">x{selectedArtist.price_premium} Price</Badge><Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setSelectedArtist(null)}>Clear</Button></div>}</div>}
-
-          {currentParlour && <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Choose Body Placement</CardTitle></CardHeader><CardContent><TattooBodyPreview tattoos={playerTattoos || []} selectedSlot={selectedSlot} onSlotClick={(slot) => { setSelectedSlot(slot === selectedSlot ? null : slot); setSelectedDesign(null); setTattooingSession(false); }} />{selectedSlot && <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setSelectedSlot(null)}>Show all body areas</Button>}</CardContent></Card>
-            <div className="lg:col-span-2 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold text-sm">Tattoo Designs</h3><p className="text-xs text-muted-foreground">{selectedSlot ? `Showing designs for ${BODY_SLOTS[selectedSlot].label}` : 'Choose a body area or browse every available design.'}</p></div><Badge variant="secondary"><Crosshair className="mr-1 h-3 w-3" />Tattoo skill Lv {tattooSkillLevel}</Badge></div>
-              <ScrollArea className="w-full"><div className="flex gap-1.5 pb-2"><Badge variant={categoryFilter === 'all' ? 'default' : 'outline'} className="cursor-pointer text-xs" onClick={() => setCategoryFilter('all')}>All</Badge>{TATTOO_CATEGORIES.map(cat => <Badge key={cat} variant={categoryFilter === cat ? 'default' : 'outline'} className="cursor-pointer text-xs whitespace-nowrap" onClick={() => setCategoryFilter(cat)}>{CATEGORY_LABELS[cat]}</Badge>)}</div></ScrollArea>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{filteredDesigns.map(d => <TattooDesignCard key={d.id} design={d} parlourPriceMultiplier={currentParlour.price_multiplier * (selectedArtist?.price_premium || 1.0)} selected={selectedDesign?.id === d.id} onSelect={(design) => { setSelectedDesign(design); setSelectedSlot(design.body_slot); setTattooingSession(false); }} artistSpecialty={selectedArtist?.specialty || undefined} />)}{filteredDesigns.length === 0 && <p className="col-span-full text-center text-muted-foreground text-sm py-8">No available designs for this body area and category.</p>}</div>
-
-              {selectedDesign && !tattooingSession && <Card className="border-primary/50"><CardContent className="p-4 space-y-3"><div className="flex items-center justify-between gap-2"><div><h3 className="font-semibold">{selectedDesign.name}</h3><p className="text-xs text-muted-foreground">{BODY_SLOTS[selectedDesign.body_slot].label} · difficulty {getTattooDifficulty(selectedDesign)}/5</p></div><Badge>{CATEGORY_LABELS[selectedDesign.category]}</Badge></div>{selectedArtist && <p className="text-xs text-muted-foreground">Artist: <span className="text-foreground font-medium">{selectedArtist.name}</span>{selectedArtist.specialty === selectedDesign.category && <Badge variant="secondary" className="ml-2 text-[10px] bg-primary/20 text-primary">Specialty Match +5</Badge>}</p>}<div className="grid grid-cols-3 gap-2 text-sm"><div><span className="text-muted-foreground">Price:</span><p className="font-bold">${getPrice(selectedDesign.base_price)}</p></div><div><span className="text-muted-foreground">Quality:</span><p className="font-bold">{qualityEstimate()}</p></div><div><span className="text-muted-foreground">Risk:</span><p className={`font-bold ${currentParlour.infection_risk > 0.15 ? 'text-destructive' : 'text-muted-foreground'}`}>{Math.round(currentParlour.infection_risk * 100)}%</p></div></div>{currentParlour.infection_risk > 0.15 && <div className="flex items-center gap-2 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" />High infection risk! Consider a better parlour.</div>}<div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">Your tattooing skill reduces machine wobble and increases tracing tolerance. Higher-level designs use larger, more complex stencils.</div><div className="flex gap-2"><Button onClick={() => setTattooingSession(true)} disabled={(profile?.cash || 0) < getPrice(selectedDesign.base_price)} className="flex-1"><Crosshair className="mr-2 h-4 w-4" />Start Tattooing</Button><Button variant="outline" onClick={() => { setSelectedDesign(null); setTattooingSession(false); }}>Cancel</Button></div></CardContent></Card>}
-
-              {selectedDesign && tattooingSession && <TattooArtistMinigame difficulty={getTattooDifficulty(selectedDesign)} skillLevel={tattooSkillValue} designName={selectedDesign.name} onCancel={() => setTattooingSession(false)} onComplete={(result) => purchaseMutation.mutate(result)} />}
-              {purchaseMutation.isPending && <Card><CardContent className="p-4 text-center text-sm text-muted-foreground">Saving your finished tattoo…</CardContent></Card>}
+          {currentParlour && artists && artists.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-primary" />Artists at {currentParlour.name}</h3>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">{artists.map((artist) => <TattooArtistCard key={artist.id} artist={artist} selected={selectedArtist?.id === artist.id} onSelect={setSelectedArtist} onBookCustom={(value) => { setCustomArtist(value); setCustomDialogOpen(true); }} />)}</div>
             </div>
-          </div>}
+          )}
+
+          {currentParlour && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">1. Choose body placement</CardTitle></CardHeader><CardContent><TattooBodyPreview tattoos={playerTattoos || []} selectedSlot={selectedSlot} onSlotClick={(slot) => { setSelectedSlot(slot === selectedSlot ? null : slot); setSelectedDesign(null); }} />{selectedSlot && <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setSelectedSlot(null)}>Show all areas</Button>}</CardContent></Card>
+
+              <div className="space-y-3 lg:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold text-sm">2. Choose a tattoo design</h3><p className="text-xs text-muted-foreground">Selecting a design reveals the mini-game button directly below.</p></div><Badge variant="secondary"><Crosshair className="mr-1 h-3 w-3" />Tattoo skill Lv {tattooSkillLevel}</Badge></div>
+                <ScrollArea className="w-full"><div className="flex gap-1.5 pb-2"><Badge variant={categoryFilter === "all" ? "default" : "outline"} className="cursor-pointer" onClick={() => setCategoryFilter("all")}>All</Badge>{TATTOO_CATEGORIES.map((category) => <Badge key={category} variant={categoryFilter === category ? "default" : "outline"} className="cursor-pointer whitespace-nowrap" onClick={() => setCategoryFilter(category)}>{CATEGORY_LABELS[category]}</Badge>)}</div></ScrollArea>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">{filteredDesigns.map((design) => <TattooDesignCard key={design.id} design={design} parlourPriceMultiplier={currentParlour.price_multiplier * (selectedArtist?.price_premium || 1)} selected={selectedDesign?.id === design.id} onSelect={selectDesign} artistSpecialty={selectedArtist?.specialty || undefined} />)}{filteredDesigns.length === 0 && <p className="col-span-full py-8 text-center text-sm text-muted-foreground">No available designs for this body area/category.</p>}</div>
+
+                {selectedDesign && (
+                  <Card className="sticky bottom-3 z-10 border-primary/60 bg-background/95 shadow-xl backdrop-blur">
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-medium uppercase tracking-wide text-primary">3. Ready to tattoo</p><h3 className="font-semibold">{selectedDesign.name}</h3><p className="text-xs text-muted-foreground">{BODY_SLOTS[selectedDesign.body_slot].label} · difficulty {getTattooDifficulty(selectedDesign)}/5 · ${getPrice(selectedDesign.base_price)}</p></div><Badge>{CATEGORY_LABELS[selectedDesign.category]}</Badge></div>
+                      {currentParlour.infection_risk > 0.15 && <div className="flex items-center gap-2 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" />High infection risk.</div>}
+                      <Button size="lg" className="w-full" onClick={() => setTattooingSession(true)} disabled={(profile?.cash || 0) < getPrice(selectedDesign.base_price)}><Crosshair className="mr-2 h-5 w-5" />Get Tattoo — Play Mini-game</Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="text-tattoo" className="space-y-4">{!currentParlour ? <Card><CardContent className="p-6 text-center text-muted-foreground"><Type className="h-8 w-8 mx-auto mb-2 opacity-50" />Select a parlour first from the Shop tab to create text tattoos.</CardContent></Card> : <TextTattooCreator parlourPriceMultiplier={currentParlour.price_multiplier} artistPricePremium={selectedArtist?.price_premium || 1.0} artistName={selectedArtist?.name} occupiedSlots={occupiedSlots} onPurchase={(data) => textTattooMutation.mutate(data)} isPending={textTattooMutation.isPending} playerCash={profile?.cash || 0} />}</TabsContent>
+        <TabsContent value="text-tattoo" className="space-y-4">
+          {!currentParlour ? <Card><CardContent className="p-6 text-center text-muted-foreground"><Type className="mx-auto mb-2 h-8 w-8 opacity-50" />Select a parlour first.</CardContent></Card> : <TextTattooCreator parlourPriceMultiplier={currentParlour.price_multiplier} artistPricePremium={selectedArtist?.price_premium || 1} artistName={selectedArtist?.name} occupiedSlots={occupiedSlots} onPurchase={(data) => textTattooMutation.mutate(data)} isPending={textTattooMutation.isPending} playerCash={profile?.cash || 0} />}
+        </TabsContent>
 
-        <TabsContent value="my-tattoos" className="space-y-4"><div className="grid grid-cols-1 lg:grid-cols-3 gap-4"><Card><CardHeader className="pb-2"><CardTitle className="text-sm">Body Map</CardTitle></CardHeader><CardContent><TattooBodyPreview tattoos={playerTattoos || []} /></CardContent></Card><div className="lg:col-span-2">{!playerTattoos?.length ? <Card><CardContent className="p-6 text-center text-muted-foreground">No tattoos yet. Visit a parlour to get your first ink!</CardContent></Card> : <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{playerTattoos.map(t => <Card key={t.id} className={t.is_infected ? 'border-destructive/50' : ''}><CardContent className="p-4 space-y-2"><div className="flex items-center justify-between"><h4 className="font-semibold text-sm">{t.custom_text ? `\"${t.custom_text}\"` : t.design?.name || 'Custom Tattoo'}</h4><div className="flex gap-1">{t.custom_text && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">✍️ Text</Badge>}{!t.design && !t.custom_text && <Badge variant="secondary" className="text-[10px] bg-primary/20 text-primary">Custom</Badge>}{t.is_infected && <Badge variant="destructive" className="text-[10px]">🦠 Infected</Badge>}</div></div>{t.custom_text && t.font_style && <div className="bg-muted/50 rounded p-2 text-center"><span className="text-sm text-foreground" style={getFontCss(t.font_style)}>{t.custom_text}</span></div>}{(t as any).artist && <p className="text-[10px] text-muted-foreground">by <span className="text-foreground">{(t as any).artist.name}</span></p>}<div className="flex gap-2 flex-wrap"><Badge variant="outline" className="text-[10px]">{BODY_SLOTS[t.body_slot as BodySlot]?.label || t.body_slot}</Badge><Badge variant="outline" className={`text-[10px] ${t.quality_score >= 80 ? 'text-green-400' : t.quality_score >= 50 ? 'text-yellow-400' : 'text-orange-400'}`}>Quality: {t.quality_score}/100</Badge>{(t as any).minigame_score != null && <Badge variant="outline" className="text-[10px]">Execution: {(t as any).minigame_score}%</Badge>}</div><div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full border" style={{ backgroundColor: t.ink_color }} /><span className="text-xs text-muted-foreground">Paid ${t.price_paid}</span></div>{t.design?.genre_affinity && <div className="flex flex-wrap gap-1">{Object.entries(t.design.genre_affinity).filter(([_, v]) => (v as number) !== 0).sort((a, b) => Math.abs(b[1] as number) - Math.abs(a[1] as number)).slice(0, 3).map(([genre, value]) => <Badge key={genre} variant="secondary" className={`text-[10px] ${(value as number) > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{genre}: {(value as number) > 0 ? '+' : ''}{Math.round((value as number) * (t.quality_score / 100) * 100)}%</Badge>)}</div>}</CardContent></Card>)}</div>}</div></div></TabsContent>
+        <TabsContent value="my-tattoos" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card><CardHeader><CardTitle className="text-sm">Body Map</CardTitle></CardHeader><CardContent><TattooBodyPreview tattoos={playerTattoos || []} /></CardContent></Card>
+            <div className="lg:col-span-2">{!playerTattoos?.length ? <Card><CardContent className="p-6 text-center text-muted-foreground">No tattoos yet.</CardContent></Card> : <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{playerTattoos.map((tattoo) => <Card key={tattoo.id} className={tattoo.is_infected ? "border-destructive/50" : ""}><CardContent className="space-y-2 p-4"><div className="flex items-center justify-between"><h4 className="font-semibold text-sm">{tattoo.custom_text ? `“${tattoo.custom_text}”` : tattoo.design?.name || "Custom Tattoo"}</h4>{tattoo.is_infected && <Badge variant="destructive">Infected</Badge>}</div>{tattoo.custom_text && tattoo.font_style && <div className="rounded bg-muted/50 p-2 text-center" style={getFontCss(tattoo.font_style)}>{tattoo.custom_text}</div>}<div className="flex flex-wrap gap-2"><Badge variant="outline">{BODY_SLOTS[tattoo.body_slot as BodySlot]?.label || tattoo.body_slot}</Badge><Badge variant="outline">Quality {tattoo.quality_score}/100</Badge>{(tattoo as any).minigame_score != null && <Badge variant="outline">Execution {(tattoo as any).minigame_score}%</Badge>}</div></CardContent></Card>)}</div>}</div>
+          </div>
+        </TabsContent>
 
-        <TabsContent value="custom" className="space-y-4"><Card><CardHeader><CardTitle className="text-sm flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />Custom Design Commissions</CardTitle></CardHeader><CardContent>{!customRequests?.length ? <p className="text-sm text-muted-foreground text-center py-6">No custom designs yet. Find a famous artist (fame 46+) and book a custom piece!</p> : <div className="space-y-3">{customRequests.map((req: any) => <Card key={req.id}><CardContent className="p-3 space-y-2"><div className="flex items-center justify-between"><h4 className="font-semibold text-sm">{req.tattoo_artists?.name || 'Unknown Artist'}</h4><Badge variant={req.status === 'completed' ? 'default' : 'secondary'} className="text-[10px]">{req.status}</Badge></div><p className="text-xs text-muted-foreground italic">“{req.description}”</p><div className="flex gap-2"><Badge variant="outline" className="text-[10px]">{BODY_SLOTS[req.body_slot as BodySlot]?.label || req.body_slot}</Badge><Badge variant="outline" className="text-[10px]">${req.quoted_price}</Badge><Badge variant="outline" className="text-[10px] text-green-400 border-green-400/30">Quality: {req.estimated_quality}</Badge></div></CardContent></Card>)}</div>}</CardContent></Card></TabsContent>
+        <TabsContent value="custom" className="space-y-4">
+          <Card><CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" />Custom commissions</CardTitle></CardHeader><CardContent>{!customRequests?.length ? <p className="py-6 text-center text-sm text-muted-foreground">No custom designs yet. Choose an artist who accepts custom work.</p> : <div className="space-y-3">{customRequests.map((request: any) => <Card key={request.id}><CardContent className="p-3"><h4 className="font-semibold text-sm">{request.tattoo_artists?.name || "Artist"}</h4><p className="text-xs text-muted-foreground">{request.description}</p></CardContent></Card>)}</div>}</CardContent></Card>
+        </TabsContent>
       </Tabs>
 
-      <CustomTattooDialog open={customDialogOpen} onOpenChange={setCustomDialogOpen} artist={customArtist} parlourTier={currentParlour?.quality_tier || 3} parlourPriceMultiplier={currentParlour?.price_multiplier || 1.0} occupiedSlots={occupiedSlots} onSubmit={(data) => customMutation.mutate(data)} isPending={customMutation.isPending} />
+      <Dialog open={tattooingSession && !!selectedDesign} onOpenChange={(open) => { if (!purchaseMutation.isPending) setTattooingSession(open); }}>
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+          <DialogHeader><DialogTitle>Tattoo mini-game</DialogTitle><DialogDescription>Trace the stencil with the tattoo machine. Your result directly affects the finished tattoo quality.</DialogDescription></DialogHeader>
+          {selectedDesign && <TattooArtistMinigame difficulty={getTattooDifficulty(selectedDesign)} skillLevel={tattooSkillValue} designName={selectedDesign.name} designCategory={selectedDesign.category} onCancel={() => setTattooingSession(false)} onComplete={(result) => purchaseMutation.mutate(result)} />}
+          {purchaseMutation.isPending && <p className="text-center text-sm text-muted-foreground">Saving tattoo and payment together…</p>}
+        </DialogContent>
+      </Dialog>
+
+      <CustomTattooDialog open={customDialogOpen} onOpenChange={setCustomDialogOpen} artist={customArtist} parlourTier={currentParlour?.quality_tier || 3} parlourPriceMultiplier={currentParlour?.price_multiplier || 1} occupiedSlots={occupiedSlots} onSubmit={(data) => customMutation.mutate(data)} isPending={customMutation.isPending} />
     </FMPageScaffold>
   );
 }
