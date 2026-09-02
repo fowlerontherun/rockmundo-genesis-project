@@ -50,9 +50,18 @@ serve(async (req) => {
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!token) return jsonResponse({ error: "Authentication required" }, 401);
 
-    const { data: authData, error: authError } = await supabase.auth.getUser(token);
-    const user = authData?.user;
-    if (authError || !user) return jsonResponse({ error: "Invalid authentication" }, 401);
+    // Normal callers must be real end users who own the posting account. The
+    // exact service-role secret is accepted only for trusted internal workers
+    // such as the scheduled-publishing job.
+    const isInternalServiceRequest = token === serviceRoleKey;
+    let userId: string | null = null;
+
+    if (!isInternalServiceRequest) {
+      const { data: authData, error: authError } = await supabase.auth.getUser(token);
+      const user = authData?.user;
+      if (authError || !user) return jsonResponse({ error: "Invalid authentication" }, 401);
+      userId = user.id;
+    }
 
     const body = await req.json();
     twaatId = typeof body?.twaat_id === "string" ? body.twaat_id : null;
@@ -67,52 +76,15 @@ serve(async (req) => {
     if (twaatError) throw twaatError;
     if (!twaat || !twaat.account) return jsonResponse({ error: "Twaat not found" }, 404);
     if (twaat.deleted_at) return jsonResponse({ error: "Deleted Twaats cannot be processed" }, 409);
+    if (twaat.scheduled_for) return jsonResponse({ error: "Scheduled Twaat has not been published yet" }, 409);
 
-    // Authorise against the authenticated user before using the service role for effects.
-    let ownsAccount = false;
     const ownerType = String(twaat.account.owner_type);
     const ownerId = String(twaat.account.owner_id);
 
-    const { data: userProfiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id);
-    if (profilesError) throw profilesError;
-    const profileIds = (userProfiles || []).map((profile: any) => String(profile.id));
-
-    if (ownerType === "persona") {
-      ownsAccount = ownerId === user.id || profileIds.includes(ownerId);
-    } else if (ownerType === "band") {
-      const { data: band, error: bandError } = await supabase
-        .from("bands")
-        .select("id, leader_id")
-        .eq("id", ownerId)
-        .maybeSingle();
-      if (bandError) throw bandError;
-
-      const leaderId = band?.leader_id ? String(band.leader_id) : "";
-      ownsAccount = leaderId === user.id || profileIds.includes(leaderId);
-
-      if (!ownsAccount) {
-        let membershipQuery = supabase
-          .from("band_members")
-          .select("role, user_id, profile_id, member_status, is_touring_member")
-          .eq("band_id", ownerId)
-          .eq("member_status", "active");
-
-        const ownershipTerms = [`user_id.eq.${user.id}`];
-        for (const profileId of profileIds) ownershipTerms.push(`profile_id.eq.${profileId}`);
-        membershipQuery = membershipQuery.or(ownershipTerms.join(","));
-
-        const { data: memberships, error: membershipsError } = await membershipQuery;
-        if (membershipsError) throw membershipsError;
-        ownsAccount = (memberships || []).some((membership: any) =>
-          !membership.is_touring_member && BAND_POSTING_ROLES.has(String(membership.role || "").toLowerCase()),
-        );
-      }
+    if (!isInternalServiceRequest) {
+      const ownsAccount = await userOwnsTwaaterAccount(supabase, userId!, ownerType, ownerId);
+      if (!ownsAccount) return jsonResponse({ error: "You cannot process outcomes for this Twaat" }, 403);
     }
-
-    if (!ownsAccount) return jsonResponse({ error: "You cannot process outcomes for this Twaat" }, 403);
 
     if (twaat.outcome_code) {
       return jsonResponse({ success: true, already_processed: true, outcome: twaat.outcome_code });
@@ -339,3 +311,50 @@ serve(async (req) => {
     return jsonResponse({ error: error instanceof Error ? error.message : "Unknown outcome processing error" }, 500);
   }
 });
+
+async function userOwnsTwaaterAccount(
+  supabase: any,
+  userId: string,
+  ownerType: string,
+  ownerId: string,
+): Promise<boolean> {
+  const { data: userProfiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("user_id", userId);
+  if (profilesError) throw profilesError;
+  const profileIds = (userProfiles || []).map((profile: any) => String(profile.id));
+
+  if (ownerType === "persona") {
+    return ownerId === userId || profileIds.includes(ownerId);
+  }
+
+  if (ownerType !== "band") return false;
+
+  const { data: band, error: bandError } = await supabase
+    .from("bands")
+    .select("id, leader_id")
+    .eq("id", ownerId)
+    .maybeSingle();
+  if (bandError) throw bandError;
+
+  const leaderId = band?.leader_id ? String(band.leader_id) : "";
+  if (leaderId === userId || profileIds.includes(leaderId)) return true;
+
+  let membershipQuery = supabase
+    .from("band_members")
+    .select("role, user_id, profile_id, member_status, is_touring_member")
+    .eq("band_id", ownerId)
+    .eq("member_status", "active");
+
+  const ownershipTerms = [`user_id.eq.${userId}`];
+  for (const profileId of profileIds) ownershipTerms.push(`profile_id.eq.${profileId}`);
+  membershipQuery = membershipQuery.or(ownershipTerms.join(","));
+
+  const { data: memberships, error: membershipsError } = await membershipQuery;
+  if (membershipsError) throw membershipsError;
+
+  return (memberships || []).some((membership: any) =>
+    !membership.is_touring_member && BAND_POSTING_ROLES.has(String(membership.role || "").toLowerCase()),
+  );
+}
