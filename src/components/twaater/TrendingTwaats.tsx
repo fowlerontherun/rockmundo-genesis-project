@@ -16,22 +16,23 @@ export function TrendingTwaats({ viewerAccountId }: TrendingTwaatsProps) {
         .from("twaats")
         .select(`
           *,
-          account:twaater_accounts(*),
+          account:twaater_accounts!twaats_account_id_fkey(*),
           metrics:twaat_metrics(*),
           replies:twaater_replies(count)
         `)
-        .eq("deleted_at", null)
+        .is("deleted_at", null)
+        .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
       // Calculate engagement score and sort
-      const scored = data.map(twaat => ({
+      const scored = data.map((twaat) => ({
         ...twaat,
-        score: (twaat.metrics?.[0]?.likes || 0) * 2 + 
+        score: (twaat.metrics?.[0]?.likes || 0) * 2 +
                (twaat.metrics?.[0]?.retwaats || 0) * 3 +
-               (twaat.metrics?.[0]?.replies || 0)
+               (twaat.metrics?.[0]?.replies || 0),
       }));
 
       return scored.sort((a, b) => b.score - a.score).slice(0, 20);

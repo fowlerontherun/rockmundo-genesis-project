@@ -109,7 +109,7 @@ const TwaaterAdmin = () => {
           id,
           body,
           created_at,
-          account:twaater_accounts(handle, display_name, owner_type)
+          account:twaater_accounts!twaats_account_id_fkey(handle, display_name, owner_type)
         `)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })

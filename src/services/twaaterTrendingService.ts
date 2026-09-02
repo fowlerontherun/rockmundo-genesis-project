@@ -45,6 +45,7 @@ export const fetchRecentTwaatsForTrending = async (): Promise<TrendingTwaatRow[]
         views
       )
     `)
+    .is("scheduled_for", null)
     .gte("created_at", getYesterdayIso())
     .order("created_at", { ascending: false })
     .limit(100);

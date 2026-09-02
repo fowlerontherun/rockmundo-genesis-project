@@ -30,6 +30,22 @@ const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringif
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
 
+const describeError = (error: unknown) => {
+  if (error instanceof Error) {
+    return { message: error.message, name: error.name };
+  }
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    return {
+      message: typeof value.message === "string" ? value.message : undefined,
+      code: typeof value.code === "string" ? value.code : undefined,
+      details: typeof value.details === "string" ? value.details : undefined,
+      hint: typeof value.hint === "string" ? value.hint : undefined,
+    };
+  }
+  return { message: String(error) };
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
@@ -44,75 +60,53 @@ serve(async (req) => {
 
   let twaatId: string | null = null;
   let claimTimestamp: string | null = null;
+  let isInternalServiceRequest = false;
+  let stage = "authenticate";
 
   try {
     const authHeader = req.headers.get("Authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!token) return jsonResponse({ error: "Authentication required" }, 401);
+    const apiKey = req.headers.get("apikey");
+    isInternalServiceRequest = token === serviceRoleKey || apiKey === serviceRoleKey;
 
-    const { data: authData, error: authError } = await supabase.auth.getUser(token);
-    const user = authData?.user;
-    if (authError || !user) return jsonResponse({ error: "Invalid authentication" }, 401);
+    if (!isInternalServiceRequest && !token) {
+      return jsonResponse({ error: "Authentication required" }, 401);
+    }
 
+    let userId: string | null = null;
+    if (!isInternalServiceRequest) {
+      stage = "validate-user";
+      const { data: authData, error: authError } = await supabase.auth.getUser(token!);
+      const user = authData?.user;
+      if (authError || !user) return jsonResponse({ error: "Invalid authentication" }, 401);
+      userId = user.id;
+    }
+
+    stage = "parse-request";
     const body = await req.json();
     twaatId = typeof body?.twaat_id === "string" ? body.twaat_id : null;
     if (!twaatId) return jsonResponse({ error: "twaat_id is required" }, 400);
 
+    stage = "load-twaat";
     const { data: twaat, error: twaatError } = await supabase
       .from("twaats")
-      .select("*, account:twaater_accounts(*)")
+      .select("*, account:twaater_accounts!twaats_account_id_fkey(*)")
       .eq("id", twaatId)
       .maybeSingle();
 
     if (twaatError) throw twaatError;
     if (!twaat || !twaat.account) return jsonResponse({ error: "Twaat not found" }, 404);
     if (twaat.deleted_at) return jsonResponse({ error: "Deleted Twaats cannot be processed" }, 409);
+    if (twaat.scheduled_for) return jsonResponse({ error: "Scheduled Twaat has not been published yet" }, 409);
 
-    // Authorise against the authenticated user before using the service role for effects.
-    let ownsAccount = false;
     const ownerType = String(twaat.account.owner_type);
     const ownerId = String(twaat.account.owner_id);
 
-    const { data: userProfiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id);
-    if (profilesError) throw profilesError;
-    const profileIds = (userProfiles || []).map((profile: any) => String(profile.id));
-
-    if (ownerType === "persona") {
-      ownsAccount = ownerId === user.id || profileIds.includes(ownerId);
-    } else if (ownerType === "band") {
-      const { data: band, error: bandError } = await supabase
-        .from("bands")
-        .select("id, leader_id")
-        .eq("id", ownerId)
-        .maybeSingle();
-      if (bandError) throw bandError;
-
-      const leaderId = band?.leader_id ? String(band.leader_id) : "";
-      ownsAccount = leaderId === user.id || profileIds.includes(leaderId);
-
-      if (!ownsAccount) {
-        let membershipQuery = supabase
-          .from("band_members")
-          .select("role, user_id, profile_id, member_status, is_touring_member")
-          .eq("band_id", ownerId)
-          .eq("member_status", "active");
-
-        const ownershipTerms = [`user_id.eq.${user.id}`];
-        for (const profileId of profileIds) ownershipTerms.push(`profile_id.eq.${profileId}`);
-        membershipQuery = membershipQuery.or(ownershipTerms.join(","));
-
-        const { data: memberships, error: membershipsError } = await membershipQuery;
-        if (membershipsError) throw membershipsError;
-        ownsAccount = (memberships || []).some((membership: any) =>
-          !membership.is_touring_member && BAND_POSTING_ROLES.has(String(membership.role || "").toLowerCase()),
-        );
-      }
+    if (!isInternalServiceRequest) {
+      stage = "authorize-account";
+      const ownsAccount = await userOwnsTwaaterAccount(supabase, userId!, ownerType, ownerId);
+      if (!ownsAccount) return jsonResponse({ error: "You cannot process outcomes for this Twaat" }, 403);
     }
-
-    if (!ownsAccount) return jsonResponse({ error: "You cannot process outcomes for this Twaat" }, 403);
 
     if (twaat.outcome_code) {
       return jsonResponse({ success: true, already_processed: true, outcome: twaat.outcome_code });
@@ -123,6 +117,7 @@ serve(async (req) => {
       return jsonResponse({ success: true, processing: true });
     }
 
+    stage = "claim-outcome";
     claimTimestamp = new Date().toISOString();
     let claimQuery = supabase
       .from("twaats")
@@ -138,12 +133,14 @@ serve(async (req) => {
     if (claimError) throw claimError;
     if (!claimed) return jsonResponse({ success: true, processing: true });
 
+    stage = "load-catalog";
     const { data: catalog, error: catalogError } = await supabase
       .from("twaater_outcome_catalog")
       .select("code, outcome_group, weight_base, description_template, effects");
     if (catalogError) throw catalogError;
     if (!catalog?.length) throw new Error("Twaater outcome catalogue is empty");
 
+    stage = "calculate-outcome";
     const fame = Number(twaat.account.fame_score) || 0;
     const isLinked = Boolean(twaat.linked_type);
     const contentLength = String(twaat.body || "").length;
@@ -191,14 +188,14 @@ serve(async (req) => {
       sales: baseMetrics.sales + (effects.sales_add || 0),
     };
 
+    stage = "update-metrics";
     const { error: metricsError } = await supabase
       .from("twaat_metrics")
       .update(finalMetrics)
       .eq("twaat_id", twaatId);
     if (metricsError) throw metricsError;
 
-    // Finalise before non-critical gameplay side effects so repeated requests
-    // cannot duplicate followers, sentiment or release hype.
+    stage = "finalize-outcome";
     const processedAt = new Date().toISOString();
     const { data: finalised, error: outcomeError } = await supabase
       .from("twaats")
@@ -326,7 +323,8 @@ serve(async (req) => {
 
     return jsonResponse({ success: true, outcome: selectedOutcome.code, metrics: finalMetrics });
   } catch (error) {
-    console.error("[twaater-outcome-engine] error", error);
+    const detail = describeError(error);
+    console.error("[twaater-outcome-engine] error", { stage, detail });
 
     if (twaatId && claimTimestamp) {
       await supabase
@@ -336,6 +334,57 @@ serve(async (req) => {
         .eq("outcome_processing_at", claimTimestamp);
     }
 
-    return jsonResponse({ error: error instanceof Error ? error.message : "Unknown outcome processing error" }, 500);
+    if (isInternalServiceRequest) {
+      return jsonResponse({ error: "Outcome processing failed", stage, detail }, 500);
+    }
+
+    return jsonResponse({ error: detail.message || "Outcome processing failed" }, 500);
   }
 });
+
+async function userOwnsTwaaterAccount(
+  supabase: any,
+  userId: string,
+  ownerType: string,
+  ownerId: string,
+): Promise<boolean> {
+  const { data: userProfiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("user_id", userId);
+  if (profilesError) throw profilesError;
+  const profileIds = (userProfiles || []).map((profile: any) => String(profile.id));
+
+  if (ownerType === "persona") {
+    return ownerId === userId || profileIds.includes(ownerId);
+  }
+
+  if (ownerType !== "band") return false;
+
+  const { data: band, error: bandError } = await supabase
+    .from("bands")
+    .select("id, leader_id")
+    .eq("id", ownerId)
+    .maybeSingle();
+  if (bandError) throw bandError;
+
+  const leaderId = band?.leader_id ? String(band.leader_id) : "";
+  if (leaderId === userId || profileIds.includes(leaderId)) return true;
+
+  let membershipQuery = supabase
+    .from("band_members")
+    .select("role, user_id, profile_id, member_status, is_touring_member")
+    .eq("band_id", ownerId)
+    .eq("member_status", "active");
+
+  const ownershipTerms = [`user_id.eq.${userId}`];
+  for (const profileId of profileIds) ownershipTerms.push(`profile_id.eq.${profileId}`);
+  membershipQuery = membershipQuery.or(ownershipTerms.join(","));
+
+  const { data: memberships, error: membershipsError } = await membershipQuery;
+  if (membershipsError) throw membershipsError;
+
+  return (memberships || []).some((membership: any) =>
+    !membership.is_touring_member && BAND_POSTING_ROLES.has(String(membership.role || "").toLowerCase()),
+  );
+}
