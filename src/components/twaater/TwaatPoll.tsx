@@ -10,11 +10,11 @@ interface TwaatPollProps {
 }
 
 export const TwaatPoll = ({ twaatId, accountId }: TwaatPollProps) => {
-  const { poll, userVote, isLoading, vote, isVoting } = useTwaaterPolls(twaatId);
+  const { poll, userVote, isLoading, vote, isVoting } = useTwaaterPolls(twaatId, accountId);
 
   if (isLoading || !poll) return null;
 
-  const totalVotes = poll.options?.reduce((sum: number, opt: any) => sum + opt.vote_count, 0) || 0;
+  const totalVotes = poll.options?.reduce((sum: number, option: any) => sum + option.vote_count, 0) || 0;
   const isExpired = new Date(poll.expires_at) < new Date();
   const hasVoted = !!userVote;
 
@@ -30,10 +30,7 @@ export const TwaatPoll = ({ twaatId, accountId }: TwaatPollProps) => {
             <div key={option.id}>
               {hasVoted || isExpired ? (
                 <div className="relative">
-                  <div 
-                    className="absolute inset-0 bg-primary/20 rounded transition-all"
-                    style={{ width: `${percentage}%` }}
-                  />
+                  <div className="absolute inset-0 bg-primary/20 rounded transition-all" style={{ width: `${percentage}%` }} />
                   <div className="relative p-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
@@ -57,13 +54,8 @@ export const TwaatPoll = ({ twaatId, accountId }: TwaatPollProps) => {
         })}
       </div>
       <div className="mt-3 text-xs text-muted-foreground flex items-center justify-between">
-        <span>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
-        <span>
-          {isExpired 
-            ? 'Poll closed' 
-            : `Closes ${formatDistanceToNow(new Date(poll.expires_at), { addSuffix: true })}`
-          }
-        </span>
+        <span>{totalVotes} {totalVotes === 1 ? "vote" : "votes"}</span>
+        <span>{isExpired ? "Poll closed" : `Closes ${formatDistanceToNow(new Date(poll.expires_at), { addSuffix: true })}`}</span>
       </div>
     </Card>
   );
