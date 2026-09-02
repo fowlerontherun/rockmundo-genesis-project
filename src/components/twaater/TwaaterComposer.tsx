@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTwaats } from "@/hooks/useTwaats";
-import { Music, Calendar, X, Disc, Route, Hash, BarChart3, Globe2, Users } from "lucide-react";
+import { Music, Calendar, X, Disc, Route, Hash, BarChart3, Globe2, Users, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TwaatMediaUpload } from "./TwaatMediaUpload";
 import { QuotedTwaat } from "./QuotedTwaat";
@@ -62,6 +64,11 @@ const formatBandHashtag = (bandName: string): string => {
     .join("");
 };
 
+const toLocalDateTimeInput = (date: Date): string => {
+  const timezoneOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
+};
+
 export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
@@ -75,6 +82,8 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const [visibility, setVisibility] = useState<"public" | "followers">("public");
   const [pollDraft, setPollDraft] = useState<PollDraft | null>(null);
   const [showPollDialog, setShowPollDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
   const { createTwaatAsync, isPosting } = useTwaats();
 
   const [showSongDialog, setShowSongDialog] = useState(false);
@@ -120,10 +129,12 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
     setQuotedTwaat(null);
     setVisibility("public");
     setPollDraft(null);
+    setScheduledFor("");
   };
 
-  const createPoll = async (twaatId: string, draft: PollDraft) => {
-    const expiresAt = new Date(Date.now() + draft.durationHours * 60 * 60 * 1000).toISOString();
+  const createPoll = async (twaatId: string, draft: PollDraft, publishAt?: string | null) => {
+    const publishBaseMs = publishAt ? new Date(publishAt).getTime() : Date.now();
+    const expiresAt = new Date(publishBaseMs + draft.durationHours * 60 * 60 * 1000).toISOString();
     const { data: poll, error: pollError } = await supabase
       .from("twaater_polls")
       .insert({ twaat_id: twaatId, question: draft.question, expires_at: expiresAt })
@@ -146,6 +157,20 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const handlePost = async () => {
     if (!body.trim()) return;
 
+    let scheduledIso: string | undefined;
+    if (scheduledFor) {
+      const scheduledDate = new Date(scheduledFor);
+      if (Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
+        toast({
+          title: "Choose a future time",
+          description: "Scheduled Twaats must be set for a time in the future.",
+          variant: "destructive",
+        });
+        return;
+      }
+      scheduledIso = scheduledDate.toISOString();
+    }
+
     try {
       const twaat = await createTwaatAsync({
         account_id: accountId,
@@ -156,15 +181,18 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         media_url: mediaUrl || undefined,
         media_type: mediaType || undefined,
         quoted_twaat_id: quotedTwaat?.id || undefined,
+        scheduled_for: scheduledIso,
       });
 
       if (pollDraft) {
         try {
-          await createPoll(twaat.id, pollDraft);
+          await createPoll(twaat.id, pollDraft, twaat.scheduled_for);
         } catch (error: any) {
           toast({
-            title: "Twaat posted, poll failed",
-            description: error?.message || "The post is live but the poll could not be attached.",
+            title: twaat.scheduled_for ? "Twaat scheduled, poll failed" : "Twaat posted, poll failed",
+            description: error?.message || (twaat.scheduled_for
+              ? "The Twaat is queued but its poll could not be attached."
+              : "The post is live but the poll could not be attached."),
             variant: "destructive",
           });
         }
@@ -222,6 +250,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const charCount = body.length;
   const maxChars = 500;
   const isOverLimit = charCount > maxChars;
+  const scheduledDate = scheduledFor ? new Date(scheduledFor) : null;
 
   return (
     <div className="space-y-3">
@@ -243,6 +272,16 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
             </div>
             <Button variant="ghost" size="icon" onClick={() => setPollDraft(null)}><X className="h-4 w-4" /></Button>
           </div>
+        </div>
+      )}
+
+      {scheduledDate && !Number.isNaN(scheduledDate.getTime()) && (
+        <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "hsl(var(--twaater-border))" }}>
+          <Clock className="h-4 w-4 text-[hsl(var(--twaater-purple))]" />
+          <span>Scheduled for {scheduledDate.toLocaleString()}</span>
+          <Button variant="ghost" size="icon" className="ml-auto h-7 w-7" onClick={() => setScheduledFor("")}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       )}
 
@@ -302,6 +341,10 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
             <BarChart3 className="h-4 w-4" /><span className="hidden sm:inline ml-1">Poll</span>
           </Button>
 
+          <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowScheduleDialog(true)}>
+            <Clock className="h-4 w-4" /><span className="hidden sm:inline ml-1">Schedule</span>
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8">
@@ -327,7 +370,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
             className="rounded-full h-9 px-4 font-bold"
             style={{ backgroundColor: "hsl(var(--twaater-purple))", color: "white" }}
           >
-            {isPosting ? "Posting..." : "Post"}
+            {isPosting ? (scheduledFor ? "Scheduling..." : "Posting...") : (scheduledFor ? "Schedule" : "Post")}
           </Button>
         </div>
       </div>
@@ -357,6 +400,53 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
               setShowPollDialog(false);
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Schedule Twaat</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="twaater-scheduled-for">Publish date and time</Label>
+              <Input
+                id="twaater-scheduled-for"
+                type="datetime-local"
+                value={scheduledFor}
+                min={toLocalDateTimeInput(new Date(Date.now() + 60 * 1000))}
+                onChange={(event) => setScheduledFor(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Scheduled posts are private until publication. The server checks the queue every 5 minutes.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              {scheduledFor && (
+                <Button variant="outline" onClick={() => {
+                  setScheduledFor("");
+                  setShowScheduleDialog(false);
+                }}>
+                  Clear
+                </Button>
+              )}
+              <Button
+                onClick={() => {
+                  const chosen = new Date(scheduledFor);
+                  if (!scheduledFor || Number.isNaN(chosen.getTime()) || chosen.getTime() <= Date.now()) {
+                    toast({
+                      title: "Choose a future time",
+                      description: "Select when this Twaat should be published.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  setShowScheduleDialog(false);
+                }}
+              >
+                Use schedule
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
