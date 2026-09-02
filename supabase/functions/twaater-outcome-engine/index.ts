@@ -30,6 +30,22 @@ const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringif
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
 
+const describeError = (error: unknown) => {
+  if (error instanceof Error) {
+    return { message: error.message, name: error.name };
+  }
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    return {
+      message: typeof value.message === "string" ? value.message : undefined,
+      code: typeof value.code === "string" ? value.code : undefined,
+      details: typeof value.details === "string" ? value.details : undefined,
+      hint: typeof value.hint === "string" ? value.hint : undefined,
+    };
+  }
+  return { message: String(error) };
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
@@ -44,12 +60,14 @@ serve(async (req) => {
 
   let twaatId: string | null = null;
   let claimTimestamp: string | null = null;
+  let isInternalServiceRequest = false;
+  let stage = "authenticate";
 
   try {
     const authHeader = req.headers.get("Authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const apiKey = req.headers.get("apikey");
-    const isInternalServiceRequest = token === serviceRoleKey || apiKey === serviceRoleKey;
+    isInternalServiceRequest = token === serviceRoleKey || apiKey === serviceRoleKey;
 
     if (!isInternalServiceRequest && !token) {
       return jsonResponse({ error: "Authentication required" }, 401);
@@ -57,16 +75,19 @@ serve(async (req) => {
 
     let userId: string | null = null;
     if (!isInternalServiceRequest) {
+      stage = "validate-user";
       const { data: authData, error: authError } = await supabase.auth.getUser(token!);
       const user = authData?.user;
       if (authError || !user) return jsonResponse({ error: "Invalid authentication" }, 401);
       userId = user.id;
     }
 
+    stage = "parse-request";
     const body = await req.json();
     twaatId = typeof body?.twaat_id === "string" ? body.twaat_id : null;
     if (!twaatId) return jsonResponse({ error: "twaat_id is required" }, 400);
 
+    stage = "load-twaat";
     const { data: twaat, error: twaatError } = await supabase
       .from("twaats")
       .select("*, account:twaater_accounts(*)")
@@ -82,6 +103,7 @@ serve(async (req) => {
     const ownerId = String(twaat.account.owner_id);
 
     if (!isInternalServiceRequest) {
+      stage = "authorize-account";
       const ownsAccount = await userOwnsTwaaterAccount(supabase, userId!, ownerType, ownerId);
       if (!ownsAccount) return jsonResponse({ error: "You cannot process outcomes for this Twaat" }, 403);
     }
@@ -95,6 +117,7 @@ serve(async (req) => {
       return jsonResponse({ success: true, processing: true });
     }
 
+    stage = "claim-outcome";
     claimTimestamp = new Date().toISOString();
     let claimQuery = supabase
       .from("twaats")
@@ -110,12 +133,14 @@ serve(async (req) => {
     if (claimError) throw claimError;
     if (!claimed) return jsonResponse({ success: true, processing: true });
 
+    stage = "load-catalog";
     const { data: catalog, error: catalogError } = await supabase
       .from("twaater_outcome_catalog")
       .select("code, outcome_group, weight_base, description_template, effects");
     if (catalogError) throw catalogError;
     if (!catalog?.length) throw new Error("Twaater outcome catalogue is empty");
 
+    stage = "calculate-outcome";
     const fame = Number(twaat.account.fame_score) || 0;
     const isLinked = Boolean(twaat.linked_type);
     const contentLength = String(twaat.body || "").length;
@@ -163,12 +188,14 @@ serve(async (req) => {
       sales: baseMetrics.sales + (effects.sales_add || 0),
     };
 
+    stage = "update-metrics";
     const { error: metricsError } = await supabase
       .from("twaat_metrics")
       .update(finalMetrics)
       .eq("twaat_id", twaatId);
     if (metricsError) throw metricsError;
 
+    stage = "finalize-outcome";
     const processedAt = new Date().toISOString();
     const { data: finalised, error: outcomeError } = await supabase
       .from("twaats")
@@ -296,7 +323,8 @@ serve(async (req) => {
 
     return jsonResponse({ success: true, outcome: selectedOutcome.code, metrics: finalMetrics });
   } catch (error) {
-    console.error("[twaater-outcome-engine] error", error);
+    const detail = describeError(error);
+    console.error("[twaater-outcome-engine] error", { stage, detail });
 
     if (twaatId && claimTimestamp) {
       await supabase
@@ -306,7 +334,11 @@ serve(async (req) => {
         .eq("outcome_processing_at", claimTimestamp);
     }
 
-    return jsonResponse({ error: error instanceof Error ? error.message : "Unknown outcome processing error" }, 500);
+    if (isInternalServiceRequest) {
+      return jsonResponse({ error: "Outcome processing failed", stage, detail }, 500);
+    }
+
+    return jsonResponse({ error: detail.message || "Outcome processing failed" }, 500);
   }
 });
 
