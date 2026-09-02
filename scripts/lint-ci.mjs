@@ -36,6 +36,9 @@ if (newErrors > 0) {
     "/src/components/songwriting/SimplifiedProjectCard.tsx",
     "/src/components/stage-practice/StagePracticeResults.tsx",
     "/src/pages/Rehearsals.tsx",
+    "/src/components/ui/slider.tsx",
+    "/src/features/gig-experience/viewer/GigCrowdMoodGraph.tsx",
+    "/tests/gig-experience/a11y.spec.ts",
   ];
   const focused = report.filter((file) =>
     file.errorCount > 0 && activeSessionPaths.some((path) => file.filePath.replaceAll("\\", "/").endsWith(path)),
