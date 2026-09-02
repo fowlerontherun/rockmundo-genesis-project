@@ -13,7 +13,7 @@ test('admin demo and viewer states have no serious or critical axe findings', as
   await expect(page.getByRole('heading', { name: 'Gig Replay' })).toBeVisible();
   await expectNoSeriousOrCritical(page);
   await page.getByRole('button', { name: 'Enable Audio' }).click();
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
   await expectNoSeriousOrCritical(page);
   await page.getByRole('button', { name: 'Skip to result' }).click();
   await expectNoSeriousOrCritical(page);
