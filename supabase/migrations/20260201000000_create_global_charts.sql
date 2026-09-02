@@ -37,8 +37,8 @@ BEFORE UPDATE ON public.global_charts
 FOR EACH ROW
 EXECUTE FUNCTION public.update_global_charts_updated_at();
 
--- Ensure pg_cron extension is available for scheduling
-CREATE EXTENSION IF NOT EXISTS "pg_cron";
+-- pg_cron is established by earlier scheduler migrations in the canonical chain.
+-- Do not recreate it here: Supabase owns the extension and its dependent privileges.
 
 -- Function to calculate trend and streak information based on the previous period
 CREATE OR REPLACE FUNCTION public.update_global_chart_trends(p_chart_type text, p_chart_date date)
