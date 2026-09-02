@@ -100,7 +100,7 @@ export const useEducationVideoPlaylists = (): UseQueryResult<VideoPlaylist[]> =>
   useQuery({
     queryKey: PLAYLIST_QUERY_KEY,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("education_youtube_resources")
         .select("*")
         .order("is_featured", { ascending: false })
