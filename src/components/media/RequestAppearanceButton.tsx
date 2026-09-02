@@ -87,8 +87,8 @@ export function RequestAppearanceButton({
       });
       if (error) throw error;
 
-      // Immediately confirm the booking so the slot is scheduled and blocks the diary.
-      const { data: result, error: fnError } = await supabase.functions.invoke("process-pr-activity", {
+      // Immediately confirm the booking using the same band-wide conflict checks as inbound PR offers.
+      const { data: result, error: fnError } = await supabase.functions.invoke("respond-pr-offer", {
         body: { offerId, action: "accept" },
       });
       if (fnError) {
@@ -107,7 +107,7 @@ export function RequestAppearanceButton({
       queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
       toast.success("Appearance booked", {
         description: result?.scheduledFor
-          ? `${outletName} — ${result.scheduledFor}`
+          ? `${outletName} — ${new Date(result.scheduledFor).toLocaleString()}`
           : `${outletName} confirmed your slot.`,
       });
     },
