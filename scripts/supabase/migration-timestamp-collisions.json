@@ -1,8 +1,4 @@
 {
-  "20260202090000": [
-    "20260202090000_create_fan_messages_table.sql",
-    "20260202090000_update_social_posts_with_media_and_schedule.sql"
-  ],
   "20260301090000": [
     "20260301090000_manage_game_event_status.sql",
     "20260301090000_restrict_profile_select.sql"
