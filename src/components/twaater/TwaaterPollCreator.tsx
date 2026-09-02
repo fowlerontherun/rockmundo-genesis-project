@@ -8,13 +8,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { BarChart3, Plus, Trash2, Clock } from "lucide-react";
 
 interface TwaaterPollCreatorProps {
-  accountId: string;
+  accountId?: string;
   onCreatePoll?: (question: string, options: string[], durationHours: number) => void;
 }
 
-export const TwaaterPollCreator = ({ accountId, onCreatePoll }: TwaaterPollCreatorProps) => {
+export const TwaaterPollCreator = ({ onCreatePoll }: TwaaterPollCreatorProps) => {
   const { toast } = useToast();
-
   const [pollData, setPollData] = useState({
     question: "",
     options: ["", ""],
@@ -23,28 +22,28 @@ export const TwaaterPollCreator = ({ accountId, onCreatePoll }: TwaaterPollCreat
 
   const addOption = () => {
     if (pollData.options.length < 4) {
-      setPollData(prev => ({ ...prev, options: [...prev.options, ""] }));
+      setPollData((previous) => ({ ...previous, options: [...previous.options, ""] }));
     }
   };
 
   const removeOption = (index: number) => {
     if (pollData.options.length > 2) {
-      setPollData(prev => ({
-        ...prev,
-        options: prev.options.filter((_, i) => i !== index),
+      setPollData((previous) => ({
+        ...previous,
+        options: previous.options.filter((_, optionIndex) => optionIndex !== index),
       }));
     }
   };
 
   const updateOption = (index: number, value: string) => {
-    setPollData(prev => ({
-      ...prev,
-      options: prev.options.map((opt, i) => (i === index ? value : opt)),
+    setPollData((previous) => ({
+      ...previous,
+      options: previous.options.map((option, optionIndex) => optionIndex === index ? value : option),
     }));
   };
 
   const handleCreatePoll = () => {
-    const validOptions = pollData.options.filter(opt => opt.trim());
+    const validOptions = pollData.options.filter((option) => option.trim());
     if (!pollData.question.trim()) {
       toast({ title: "Please enter a question", variant: "destructive" });
       return;
@@ -54,20 +53,19 @@ export const TwaaterPollCreator = ({ accountId, onCreatePoll }: TwaaterPollCreat
       return;
     }
 
-    // Polls require a twaat_id - they must be attached to a twaat
-    // This component is for UI preview - actual creation happens via TwaaterComposer
     if (onCreatePoll) {
-      onCreatePoll(pollData.question, validOptions, pollData.durationHours);
+      onCreatePoll(pollData.question.trim(), validOptions, pollData.durationHours);
       setPollData({ question: "", options: ["", ""], durationHours: 24 });
-    } else {
-      toast({ 
-        title: "Poll Ready", 
-        description: "Add this poll to your twaat using the composer" 
-      });
+      return;
     }
+
+    toast({
+      title: "Poll Ready",
+      description: "Add this poll to your Twaat using the composer",
+    });
   };
 
-  const isValid = pollData.question.trim() && pollData.options.filter(o => o.trim()).length >= 2;
+  const isValid = Boolean(pollData.question.trim()) && pollData.options.filter((option) => option.trim()).length >= 2;
 
   return (
     <Card>
@@ -83,7 +81,7 @@ export const TwaaterPollCreator = ({ accountId, onCreatePoll }: TwaaterPollCreat
           <Input
             placeholder="What's your favorite genre?"
             value={pollData.question}
-            onChange={(e) => setPollData(prev => ({ ...prev, question: e.target.value }))}
+            onChange={(event) => setPollData((previous) => ({ ...previous, question: event.target.value }))}
             maxLength={200}
           />
         </div>
@@ -95,16 +93,11 @@ export const TwaaterPollCreator = ({ accountId, onCreatePoll }: TwaaterPollCreat
               <Input
                 placeholder={`Option ${index + 1}`}
                 value={option}
-                onChange={(e) => updateOption(index, e.target.value)}
+                onChange={(event) => updateOption(index, event.target.value)}
                 maxLength={50}
               />
               {pollData.options.length > 2 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeOption(index)}
-                  className="shrink-0"
-                >
+                <Button variant="ghost" size="icon" onClick={() => removeOption(index)} className="shrink-0">
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               )}
@@ -123,11 +116,9 @@ export const TwaaterPollCreator = ({ accountId, onCreatePoll }: TwaaterPollCreat
           </Label>
           <Select
             value={String(pollData.durationHours)}
-            onValueChange={(v) => setPollData(prev => ({ ...prev, durationHours: Number(v) }))}
+            onValueChange={(value) => setPollData((previous) => ({ ...previous, durationHours: Number(value) }))}
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="1">1 hour</SelectItem>
               <SelectItem value="6">6 hours</SelectItem>
@@ -139,15 +130,11 @@ export const TwaaterPollCreator = ({ accountId, onCreatePoll }: TwaaterPollCreat
           </Select>
         </div>
 
-        <Button
-          onClick={handleCreatePoll}
-          disabled={!isValid}
-          className="w-full"
-        >
+        <Button onClick={handleCreatePoll} disabled={!isValid} className="w-full">
           Add Poll to Twaat
         </Button>
         <p className="text-xs text-muted-foreground text-center">
-          Polls are attached to twaats - compose your twaat first
+          The poll will publish with your Twaat.
         </p>
       </CardContent>
     </Card>
