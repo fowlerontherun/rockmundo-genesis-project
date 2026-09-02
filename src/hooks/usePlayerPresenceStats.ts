@@ -6,12 +6,14 @@ import { usePublicPresence } from "./usePublicPresence";
 
 interface UsePlayerPresenceStatsOptions {
   refreshInterval?: number | null;
-  /** Use public presence (doesn't require auth) - for login page */
+  /** Use public presence (doesn't require auth) - for login/landing pages */
   publicMode?: boolean;
 }
 
 interface PlayerPresenceStats {
   totalPlayers: number | null;
+  totalBands: number | null;
+  newPlayersThisWeek: number | null;
   onlinePlayers: number | null;
   loading: boolean;
   error: string | null;
@@ -51,14 +53,17 @@ export const usePlayerPresenceStats = (
   const publicMode = options.publicMode ?? false;
   const mountedRef = useRef(true);
   const [totalPlayers, setTotalPlayers] = useState<number | null>(null);
+  const [totalBands, setTotalBands] = useState<number | null>(null);
+  const [newPlayersThisWeek, setNewPlayersThisWeek] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  // Use public presence for unauthenticated pages (login), otherwise use authenticated presence
+  // Use public presence for unauthenticated pages (login/landing), otherwise use authenticated presence
   const { onlineCount: authOnlineCount } = useRealtimePresence();
   const { onlineCount: publicOnlineCount } = usePublicPresence();
   const onlineCount = publicMode ? publicOnlineCount : authOnlineCount;
+
   useEffect(() => {
     mountedRef.current = true;
 
@@ -76,23 +81,36 @@ export const usePlayerPresenceStats = (
     setError(null);
 
     try {
-      let nextTotalPlayers = 0;
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      const totalResult = await supabase.from("profiles").select("*", { count: "exact", head: true });
+      const [playersResult, bandsResult, newPlayersResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .is("deleted_at", null),
+        supabase
+          .from("bands")
+          .select("id", { count: "exact", head: true }),
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .is("deleted_at", null)
+          .gte("created_at", weekAgo),
+      ]);
 
-      if (totalResult.error) {
-        if (!isMissingRelationError(totalResult.error)) {
-          throw totalResult.error;
+      for (const result of [playersResult, bandsResult, newPlayersResult]) {
+        if (result.error && !isMissingRelationError(result.error)) {
+          throw result.error;
         }
-      } else {
-        nextTotalPlayers = totalResult.count ?? 0;
       }
 
       if (!mountedRef.current) {
         return;
       }
 
-      setTotalPlayers(nextTotalPlayers);
+      setTotalPlayers(playersResult.error ? 0 : playersResult.count ?? 0);
+      setTotalBands(bandsResult.error ? 0 : bandsResult.count ?? 0);
+      setNewPlayersThisWeek(newPlayersResult.error ? 0 : newPlayersResult.count ?? 0);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -102,7 +120,7 @@ export const usePlayerPresenceStats = (
         return;
       }
 
-      setError("Player counts are temporarily unavailable.");
+      setError("Community stats are temporarily unavailable.");
     } finally {
       if (mountedRef.current) {
         setLoading(false);
@@ -128,6 +146,8 @@ export const usePlayerPresenceStats = (
 
   return {
     totalPlayers,
+    totalBands,
+    newPlayersThisWeek,
     onlinePlayers: onlineCount,
     loading,
     error,
@@ -135,4 +155,3 @@ export const usePlayerPresenceStats = (
     refresh: fetchStats,
   };
 };
-
