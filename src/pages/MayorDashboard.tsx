@@ -12,6 +12,7 @@ import { useCityLaws } from "@/hooks/useCityLaws";
 import { useMayorPolitics } from "@/hooks/useMayorPolitics";
 import { MayorBudgetTab } from "@/components/city/MayorBudgetTab";
 import { MayorProjectsTab } from "@/components/city/MayorProjectsTab";
+import { MayorUniversitiesTab } from "@/components/city/MayorUniversitiesTab";
 import { MayorPublicRelationsTab } from "@/components/city/MayorPublicRelationsTab";
 import { MayorPromiseTracker } from "@/components/city/MayorPromiseTracker";
 import { MayorOfficeOverview } from "@/components/city/MayorOfficeOverview";
@@ -126,6 +127,8 @@ export default function MayorDashboard() {
 
       {section === "projects" && <MayorProjectsTab cityId={cityId} politics={politics} />}
 
+      {section === "education" && <MayorUniversitiesTab cityId={cityId} />}
+
       {section === "laws" &&
         (currentLaws ? (
           <MayorLawPolicyEditor cityId={cityId} currentLaws={currentLaws} />
@@ -153,7 +156,6 @@ export default function MayorDashboard() {
             </CardContent>
           </Card>
         ))}
-
 
       {section === "opinion" && <MayorPublicOpinionTab cityId={cityId} mayor={mayor} />}
 
