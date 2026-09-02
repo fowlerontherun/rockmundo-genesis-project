@@ -58,6 +58,10 @@ Deno.serve(async (req) => {
     let startedCount = 0;
     let completedCount = 0;
 
+    // Scheduled Twaats share this existing five-minute worker. Publishing is a
+    // compare-and-set so overlapping worker runs cannot publish the same row twice.
+    const scheduledTwaatResult = await publishDueScheduledTwaats(supabase, now);
+
     // 1. Auto-start activities that should have started
     const { data: toStart, error: startError } = await supabase
       .from('player_scheduled_activities')
@@ -143,7 +147,7 @@ Deno.serve(async (req) => {
         .in('id', toMiss.map(a => a.id));
     }
 
-    processedCount = startedCount + completedCount;
+    processedCount = startedCount + completedCount + scheduledTwaatResult.publishedCount;
 
     await completeJobRun({
       jobName: "process-scheduled-activities",
@@ -151,7 +155,13 @@ Deno.serve(async (req) => {
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
       processedCount,
-      resultSummary: { startedCount, completedCount, missedCount: toMiss?.length || 0 },
+      resultSummary: {
+        startedCount,
+        completedCount,
+        missedCount: toMiss?.length || 0,
+        publishedTwaatCount: scheduledTwaatResult.publishedCount,
+        scheduledOutcomeAttempts: scheduledTwaatResult.outcomeAttempts,
+      },
     });
 
     return new Response(
@@ -160,7 +170,9 @@ Deno.serve(async (req) => {
         processedCount,
         startedCount,
         completedCount,
-        missedCount: toMiss?.length || 0
+        missedCount: toMiss?.length || 0,
+        publishedTwaatCount: scheduledTwaatResult.publishedCount,
+        scheduledOutcomeAttempts: scheduledTwaatResult.outcomeAttempts,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -184,6 +196,75 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function publishDueScheduledTwaats(supabase: any, now: string) {
+  const { data: dueTwaats, error: dueError } = await supabase
+    .from('twaats')
+    .select('id, scheduled_for')
+    .not('scheduled_for', 'is', null)
+    .is('deleted_at', null)
+    .lte('scheduled_for', now)
+    .order('scheduled_for', { ascending: true })
+    .limit(100);
+
+  if (dueError) throw dueError;
+
+  let publishedCount = 0;
+
+  for (const twaat of dueTwaats || []) {
+    if (!twaat.scheduled_for) continue;
+
+    const { data: published, error: publishError } = await supabase
+      .from('twaats')
+      .update({
+        scheduled_for: null,
+        scheduled_published_at: now,
+        created_at: now,
+      })
+      .eq('id', twaat.id)
+      .eq('scheduled_for', twaat.scheduled_for)
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+
+    if (publishError) {
+      console.error(`Failed to publish scheduled Twaat ${twaat.id}:`, publishError);
+      continue;
+    }
+
+    if (published) {
+      publishedCount++;
+      console.log(`Published scheduled Twaat ${twaat.id}`);
+    }
+  }
+
+  // Retry outcomes for scheduled posts until the idempotent outcome engine has
+  // successfully finalised them. The marker survives transient function errors.
+  const { data: pendingOutcomes, error: pendingError } = await supabase
+    .from('twaats')
+    .select('id')
+    .not('scheduled_published_at', 'is', null)
+    .is('outcome_code', null)
+    .is('deleted_at', null)
+    .order('scheduled_published_at', { ascending: true })
+    .limit(100);
+
+  if (pendingError) throw pendingError;
+
+  let outcomeAttempts = 0;
+  for (const twaat of pendingOutcomes || []) {
+    outcomeAttempts++;
+    const { error: outcomeError } = await supabase.functions.invoke('twaater-outcome-engine', {
+      body: { twaat_id: twaat.id },
+    });
+
+    if (outcomeError) {
+      console.error(`Outcome processing failed for scheduled Twaat ${twaat.id}:`, outcomeError);
+    }
+  }
+
+  return { publishedCount, outcomeAttempts };
+}
 
 async function processActivityCompletion(supabase: any, activity: ScheduledActivity) {
   const duration = (new Date(activity.scheduled_end).getTime() - new Date(activity.scheduled_start).getTime()) / (1000 * 60 * 60);
@@ -253,7 +334,7 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       await supabase.functions.invoke('cleanup-songwriting');
       break;
 
-    case 'health':
+    case 'health': {
       // Award health restoration to the exact character attached to this booking.
       const { data: profile } = await supabase
         .from('profiles')
@@ -269,6 +350,7 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
           .eq('id', profile.id);
       }
       break;
+    }
 
     case 'pr_appearance':
       // Complete PR appearance and apply rewards
