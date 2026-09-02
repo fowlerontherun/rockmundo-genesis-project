@@ -8,6 +8,7 @@ import {
   Crown,
   FileText,
   Gavel,
+  GraduationCap,
   Hammer,
   Landmark,
   Megaphone,
@@ -19,6 +20,7 @@ export type MayorOfficeSection =
   | "overview"
   | "treasury"
   | "projects"
+  | "education"
   | "laws"
   | "services"
   | "opinion"
@@ -39,6 +41,7 @@ export const MAYOR_OFFICE_TABS: MayorOfficeNavItem[] = [
   { label: "Overview", section: "overview", icon: Landmark },
   { label: "Treasury", section: "treasury", icon: CircleDollarSign },
   { label: "Projects", section: "projects", icon: Hammer },
+  { label: "Universities", section: "education", icon: GraduationCap },
   { label: "Laws", section: "laws", icon: Gavel },
   { label: "Opinion", section: "opinion", icon: BarChart3 },
   { label: "Elections", section: "elections", icon: CalendarDays },
@@ -54,6 +57,7 @@ export const MAYOR_OFFICE_SIDEBAR: Array<{
       { label: "Command Centre", section: "overview", icon: Crown },
       { label: "Treasury & Budget", section: "treasury", icon: CircleDollarSign },
       { label: "Projects & Upgrades", section: "projects", icon: Hammer },
+      { label: "Universities", section: "education", icon: GraduationCap },
     ],
   },
   {
@@ -105,6 +109,7 @@ export const MAYOR_OFFICE_SECTION_TITLES: Record<MayorOfficeSection, string> = {
   overview: "Command Centre",
   treasury: "Treasury & Budget",
   projects: "Projects & Upgrades",
+  education: "Universities",
   laws: "Laws & Taxes",
   services: "City Services",
   opinion: "Public Opinion",
@@ -118,6 +123,7 @@ export const MAYOR_OFFICE_SECTION_DESCRIPTIONS: Record<MayorOfficeSection, strin
   overview: "A live view of your term, city finances, development and political pressure.",
   treasury: "Track the treasury, committed spending, tax receipts and mayoral expenditure.",
   projects: "Plan and monitor the upgrades that permanently change the city.",
+  education: "Invest in university teaching quality and set local course fee policy without changing institutional prestige.",
   laws: "Set taxes, permits, nightlife rules and music policy for the city.",
   services: "Review the city attributes and services influenced by laws and investment.",
   opinion: "Monitor approval, integrity and the decisions shaping public confidence.",
