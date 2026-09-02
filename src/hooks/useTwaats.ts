@@ -42,6 +42,7 @@ export const useTwaats = (accountId?: string) => {
         .from("twaats")
         .select(twaatDetailsSelect)
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -63,23 +64,34 @@ export const useTwaats = (accountId?: string) => {
 
       if (twaatError) throw twaatError;
 
-      // Metrics are created by the database trigger. Outcome processing is
-      // idempotent server-side, so waiting for this request is safe while a
-      // failure here does not roll back the already-published Twaat.
-      const { error: outcomeError } = await supabase.functions.invoke("twaater-outcome-engine", {
-        body: { twaat_id: twaat.id },
-      });
-      if (outcomeError) {
-        console.warn("Twaater outcome processing will remain pending:", outcomeError);
+      // Scheduled Twaats are deliberately inert until the server worker publishes
+      // them. Immediate Twaats can safely run the idempotent outcome engine now.
+      if (!twaat.scheduled_for) {
+        const { error: outcomeError } = await supabase.functions.invoke("twaater-outcome-engine", {
+          body: { twaat_id: twaat.id },
+        });
+        if (outcomeError) {
+          console.warn("Twaater outcome processing will remain pending:", outcomeError);
+        }
       }
 
       return twaat;
     },
-    onSuccess: () => {
+    onSuccess: (twaat) => {
       queryClient.invalidateQueries({ queryKey: ["twaats"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-trending"] });
+
+      if (twaat.scheduled_for) {
+        const scheduledTime = new Date(twaat.scheduled_for).toLocaleString();
+        toast({
+          title: "Twaat scheduled",
+          description: `Queued for ${scheduledTime}. It will publish on the next scheduler run after that time.`,
+        });
+        return;
+      }
+
       toast({
         title: "Twaat posted!",
         description: "Your post is now live.",
@@ -135,6 +147,7 @@ export const useTwaaterFeed = (viewerAccountId?: string) => {
           .select(twaatDetailsSelect)
           .eq("visibility", "public")
           .is("deleted_at", null)
+          .is("scheduled_for", null)
           .order("created_at", { ascending: false })
           .limit(100);
 
@@ -157,6 +170,7 @@ export const useTwaaterFeed = (viewerAccountId?: string) => {
         .select(twaatDetailsSelect)
         .in("account_id", followedIds)
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(100);
 
