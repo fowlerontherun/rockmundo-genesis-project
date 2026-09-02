@@ -51,6 +51,7 @@ export interface TattooDesign {
   ink_color_secondary: string | null;
   description: string;
   genre_affinity: Record<string, number>;
+  difficulty?: number;
 }
 
 export interface PlayerTattoo {
@@ -68,13 +69,27 @@ export interface PlayerTattoo {
   artist_id?: string | null;
   custom_text?: string | null;
   font_style?: string | null;
-  // Joined
   design?: TattooDesign;
 }
 
-/**
- * Calculate quality score based on parlour tier with variance
- */
+export function getTattooDifficulty(design: Pick<TattooDesign, 'category' | 'base_price' | 'difficulty'>): number {
+  if (design.difficulty != null) return Math.max(1, Math.min(5, Math.round(design.difficulty)));
+  const categoryDifficulty: Record<TattooCategory, number> = {
+    text: 1,
+    musical: 2,
+    tribal: 2,
+    geometric: 3,
+    abstract: 3,
+    skull: 3,
+    japanese: 4,
+    sleeve: 4,
+    portrait: 5,
+  };
+  const priceBump = design.base_price >= 2500 ? 1 : 0;
+  return Math.max(1, Math.min(5, categoryDifficulty[design.category] + priceBump));
+}
+
+/** Calculate quality score based on parlour tier with variance. */
 export function calculateTattooQuality(parlourTier: number, artistQualityBonus: number = 0): number {
   const tierRanges: Record<number, [number, number]> = {
     1: [20, 50],
@@ -87,22 +102,12 @@ export function calculateTattooQuality(parlourTier: number, artistQualityBonus: 
   return Math.min(100, Math.round(min + Math.random() * (max - min)) + artistQualityBonus);
 }
 
-/**
- * Calculate infection chance based on parlour tier
- */
 export function rollForInfection(infectionRisk: number): boolean {
   return Math.random() < infectionRisk;
 }
 
-/**
- * Check sleeve completion for an arm
- */
 export function getSleeveProgress(tattoos: PlayerTattoo[], arm: 'left' | 'right'): { filled: number; total: number; isComplete: boolean } {
   const slots = arm === 'left' ? LEFT_SLEEVE_SLOTS : RIGHT_SLEEVE_SLOTS;
   const filledSlots = slots.filter(slot => tattoos.some(t => t.body_slot === slot));
-  return {
-    filled: filledSlots.length,
-    total: slots.length,
-    isComplete: filledSlots.length >= slots.length,
-  };
+  return { filled: filledSlots.length, total: slots.length, isComplete: filledSlots.length >= slots.length };
 }
