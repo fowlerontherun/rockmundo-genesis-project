@@ -5,273 +5,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Crosshair, RotateCcw } from "lucide-react";
 
-export type TattooMinigameResult = {
-  accuracy: number;
-  coverage: number;
-  mistakes: number;
-  score: number;
-  difficulty: number;
-};
+export type TattooMinigameResult = { accuracy:number; coverage:number; mistakes:number; score:number; difficulty:number };
+type Props = { difficulty?:number; skillLevel?:number; designName?:string; designCategory?:string; onComplete:(result:TattooMinigameResult)=>void; onCancel?:()=>void };
+type Point = {x:number;y:number};
 
-type Props = {
-  difficulty?: number;
-  skillLevel?: number;
-  designName?: string;
-  onComplete: (result: TattooMinigameResult) => void;
-  onCancel?: () => void;
-};
-
-type Point = { x: number; y: number };
-
-const SHAPES = [
-  "M70 176 C83 130 105 96 150 72 C195 96 217 130 230 176 C205 158 181 151 150 169 C119 151 95 158 70 176",
-  "M62 190 C88 151 88 108 125 89 C145 79 156 54 150 37 C184 61 198 92 180 120 C219 108 242 133 247 164 C214 150 190 158 174 188 C155 218 108 221 62 190",
-  "M150 30 L176 106 L258 106 L192 156 L217 236 L150 188 L83 236 L108 156 L42 106 L124 106 Z",
-  "M43 210 C68 126 102 64 150 36 C198 64 232 126 257 210 C210 177 185 143 150 114 C115 143 90 177 43 210 M96 213 C120 177 136 154 150 144 C164 154 180 177 204 213",
-  "M34 205 C57 102 109 52 150 29 C191 52 243 102 266 205 C218 170 190 132 150 109 C110 132 82 170 34 205 M66 224 C106 193 130 179 150 179 C170 179 194 193 234 224 M88 105 C111 83 130 75 150 75 C170 75 189 83 212 105",
+const STENCILS = [
+  "M75 176 C90 130 112 99 150 76 C188 99 210 130 225 176 C200 158 178 153 150 169 C122 153 100 158 75 176",
+  "M150 46 C127 73 108 94 82 109 C105 116 119 132 123 157 C132 143 141 134 150 129 C159 134 168 143 177 157 C181 132 195 116 218 109 C192 94 173 73 150 46",
+  "M150 31 L175 105 L254 105 L190 152 L215 228 L150 183 L85 228 L110 152 L46 105 L125 105 Z",
+  "M53 200 C72 135 101 78 150 42 C199 78 228 135 247 200 C209 177 184 146 150 117 C116 146 91 177 53 200 M92 207 C117 178 134 157 150 148 C166 157 183 178 208 207",
+  "M42 207 C64 111 107 58 150 32 C193 58 236 111 258 207 C216 174 187 135 150 108 C113 135 84 174 42 207 M70 225 C105 196 129 181 150 181 C171 181 195 196 230 225 M88 108 C109 87 130 76 150 76 C170 76 191 87 212 108",
+  "M62 188 C78 118 107 78 150 50 C193 78 222 118 238 188 M78 189 C104 169 125 158 150 158 C175 158 196 169 222 189 M108 93 C121 109 135 118 150 118 C165 118 179 109 192 93",
+  "M57 198 C88 170 92 121 72 90 C111 106 133 89 150 51 C167 89 189 106 228 90 C208 121 212 170 243 198 C207 178 179 185 150 216 C121 185 93 178 57 198",
+  "M150 34 C167 72 193 86 230 82 C204 111 205 141 236 174 C198 168 174 184 150 225 C126 184 102 168 64 174 C95 141 96 111 70 82 C107 86 133 72 150 34",
+  "M50 177 C78 140 92 104 90 66 C113 84 133 91 150 91 C167 91 187 84 210 66 C208 104 222 140 250 177 C215 166 183 176 150 211 C117 176 85 166 50 177",
+  "M48 205 C70 143 91 111 117 94 C112 71 126 48 150 35 C174 48 188 71 183 94 C209 111 230 143 252 205 C213 179 181 164 150 164 C119 164 87 179 48 205",
 ];
+const hash=(value:string)=>Array.from(value).reduce((n,c)=>((n<<5)-n+c.charCodeAt(0))|0,0);
+const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value));
-
-export function TattooArtistMinigame({
-  difficulty = 1,
-  skillLevel = 0,
-  designName = "Stencil",
-  onComplete,
-  onCancel,
-}: Props) {
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const [drawing, setDrawing] = useState(false);
-  const [points, setPoints] = useState<Point[]>([]);
-  const [coveredSamples, setCoveredSamples] = useState<number[]>([]);
-  const [mistakes, setMistakes] = useState(0);
-  const [onStencilMoves, setOnStencilMoves] = useState(0);
-  const [totalMoves, setTotalMoves] = useState(0);
-  const [finished, setFinished] = useState(false);
-
-  const level = clamp(Math.round(difficulty), 1, 5);
-  const steadiness = clamp(skillLevel / 1000, 0, 1);
-  const tolerance = 17 - level * 1.65 + steadiness * 8;
-  const wobble = Math.max(0.7, 5.5 + level * 1.2 - steadiness * 7.5);
-  const sampleCount = 70 + level * 22;
-  const minimumCoverage = 68 + level * 3;
-  const scale = 0.84 + level * 0.04;
-  const transform = `translate(150 130) scale(${scale}) translate(-150 -130)`;
-
-  const trace = useMemo(
-    () =>
-      points.length < 2
-        ? ""
-        : points
-            .map(
-              (point, index) =>
-                `${index ? "L" : "M"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`,
-            )
-            .join(" "),
-    [points],
-  );
-
-  const coverage = clamp(
-    Math.round((coveredSamples.length / sampleCount) * 100),
-    0,
-    100,
-  );
-  const hitRate = totalMoves > 0 ? onStencilMoves / totalMoves : 1;
-  const accuracy = clamp(
-    Math.round(hitRate * 100 - mistakes * (0.8 + level * 0.2)),
-    0,
-    100,
-  );
-
-  const getWobbledPoint = (event: React.PointerEvent<SVGSVGElement>): Point => {
-    const rect = svgRef.current!.getBoundingClientRect();
-    const time = performance.now() / 90;
-    return {
-      x:
-        ((event.clientX - rect.left) / rect.width) * 300 +
-        Math.sin(time * 1.7) * wobble +
-        Math.cos(time * 0.72) * wobble * 0.35,
-      y:
-        ((event.clientY - rect.top) / rect.height) * 260 +
-        Math.cos(time * 1.35) * wobble +
-        Math.sin(time * 0.84) * wobble * 0.35,
-    };
-  };
-
-  const move = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!drawing || finished) return;
-
-    const point = getWobbledPoint(event);
-    setPoints((previous) => [...previous, point]);
-    setTotalMoves((value) => value + 1);
-
-    const target = event.currentTarget.querySelector<SVGPathElement>("#tattoo-stencil");
-    if (!target) return;
-
-    const totalLength = target.getTotalLength();
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    let nearestIndex = -1;
-
-    for (let index = 0; index < sampleCount; index += 1) {
-      const sample = target.getPointAtLength(
-        (totalLength * index) / Math.max(1, sampleCount - 1),
-      );
-      const transformedSample = {
-        x: 150 + (sample.x - 150) * scale,
-        y: 130 + (sample.y - 130) * scale,
-      };
-      const distance = Math.hypot(
-        transformedSample.x - point.x,
-        transformedSample.y - point.y,
-      );
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = index;
-      }
-    }
-
-    if (nearestDistance <= tolerance) {
-      setOnStencilMoves((value) => value + 1);
-      setCoveredSamples((previous) => {
-        const next = new Set(previous);
-        for (let offset = -1; offset <= 1; offset += 1) {
-          const index = nearestIndex + offset;
-          if (index >= 0 && index < sampleCount) next.add(index);
-        }
-        return Array.from(next);
-      });
-    } else if (totalMoves % 3 === 0) {
-      setMistakes((value) => value + 1);
-    }
-  };
-
-  const reset = () => {
-    setDrawing(false);
-    setPoints([]);
-    setCoveredSamples([]);
-    setMistakes(0);
-    setOnStencilMoves(0);
-    setTotalMoves(0);
-    setFinished(false);
-  };
-
-  const finish = () => {
-    const score = clamp(
-      Math.round(accuracy * 0.62 + coverage * 0.38 - mistakes * 0.25),
-      0,
-      100,
-    );
-    setFinished(true);
-    onComplete({ accuracy, coverage, mistakes, score, difficulty: level });
-  };
-
-  const canFinish = coverage >= minimumCoverage && totalMoves >= 30 && !finished;
-
-  return (
-    <Card className="border-primary/30">
-      <CardHeader>
-        <div className="flex flex-wrap justify-between gap-2">
-          <CardTitle className="flex items-center gap-2">
-            <Crosshair className="h-5 w-5" />
-            Tattoo Machine: {designName}
-          </CardTitle>
-          <div className="flex gap-2">
-            <Badge>Level {level}</Badge>
-            <Badge variant="outline">Need {minimumCoverage}% coverage</Badge>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Hold down and trace the faint stencil. Only stencil sections you actually
-          pass over count as coverage. Your tattooing skill steadies the machine.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          <div className="rounded bg-muted p-2">
-            <b>{accuracy}%</b>
-            <br />Accuracy
-          </div>
-          <div className="rounded bg-muted p-2">
-            <b>{coverage}%</b>
-            <br />Stencil covered
-          </div>
-          <div className="rounded bg-muted p-2">
-            <b>{mistakes}</b>
-            <br />Mistakes
-          </div>
-        </div>
-        <Progress value={coverage} />
-        <div className="rounded-xl border bg-amber-100 p-2">
-          <svg
-            ref={svgRef}
-            viewBox="0 0 300 260"
-            className="w-full touch-none cursor-crosshair"
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture(event.pointerId);
-              setDrawing(true);
-            }}
-            onPointerMove={move}
-            onPointerUp={() => setDrawing(false)}
-            onPointerCancel={() => setDrawing(false)}
-          >
-            <rect width="300" height="260" rx="18" fill="hsl(28 55% 76%)" />
-            <path
-              id="tattoo-stencil"
-              d={SHAPES[level - 1]}
-              transform={transform}
-              fill="none"
-              stroke="black"
-              strokeWidth={Math.max(4, tolerance * 0.55)}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity=".18"
-            />
-            <path
-              d={SHAPES[level - 1]}
-              transform={transform}
-              fill="none"
-              stroke="black"
-              strokeWidth="1.3"
-              strokeDasharray="5 5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity=".55"
-            />
-            {trace && (
-              <path
-                d={trace}
-                fill="none"
-                stroke="hsl(220 25% 9%)"
-                strokeWidth="3.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-          </svg>
-        </div>
-        <div className="flex flex-wrap justify-between gap-2 text-xs">
-          <span>
-            Wobble {wobble.toFixed(1)} · tolerance {tolerance.toFixed(1)} · design
-            scale {Math.round(scale * 100)}%
-          </span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={reset}>
-              <RotateCcw className="mr-1 h-4 w-4" />Retry
-            </Button>
-            {onCancel && (
-              <Button variant="ghost" size="sm" onClick={onCancel}>
-                Cancel
-              </Button>
-            )}
-            <Button size="sm" disabled={!canFinish} onClick={finish}>
-              {coverage < minimumCoverage
-                ? `Cover ${minimumCoverage - coverage}% more`
-                : "Finish tattoo"}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+export function TattooArtistMinigame({difficulty=1,skillLevel=0,designName="Stencil",designCategory="",onComplete,onCancel}:Props){
+ const svgRef=useRef<SVGSVGElement|null>(null); const [drawing,setDrawing]=useState(false); const [points,setPoints]=useState<Point[]>([]); const [covered,setCovered]=useState<number[]>([]); const [mistakes,setMistakes]=useState(0); const [hits,setHits]=useState(0); const [moves,setMoves]=useState(0); const [finished,setFinished]=useState(false); const [pressure,setPressure]=useState(0);
+ const level=clamp(Math.round(difficulty),1,5); const steadiness=clamp(skillLevel/1000,0,1); const tolerance=17-level*1.65+steadiness*8; const wobble=Math.max(.7,5.5+level*1.2-steadiness*7.5); const sampleCount=70+level*22; const minimumCoverage=68+level*3; const scale=.84+level*.04; const stencil=STENCILS[Math.abs(hash(`${designName}:${designCategory}`))%STENCILS.length]; const transform=`translate(150 130) scale(${scale}) translate(-150 -130)`;
+ const trace=useMemo(()=>points.length<2?"":points.map((p,i)=>`${i?"L":"M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" "),[points]); const coverage=clamp(Math.round(covered.length/sampleCount*100),0,100); const hitRate=moves?hits/moves:1; const accuracy=clamp(Math.round(hitRate*100-mistakes*(.8+level*.2)-Math.max(0,pressure-25)*.15),0,100);
+ const point=(e:React.PointerEvent<SVGSVGElement>)=>{const r=svgRef.current!.getBoundingClientRect(),t=performance.now()/90;return{x:(e.clientX-r.left)/r.width*300+Math.sin(t*1.7)*wobble+Math.cos(t*.72)*wobble*.35,y:(e.clientY-r.top)/r.height*260+Math.cos(t*1.35)*wobble+Math.sin(t*.84)*wobble*.35}};
+ const move=(e:React.PointerEvent<SVGSVGElement>)=>{if(!drawing||finished)return; const p=point(e); setPoints(v=>[...v,p]); setMoves(v=>v+1); setPressure(v=>clamp(v+(e.pressure>.65?2:-1),0,100)); const target=e.currentTarget.querySelector<SVGPathElement>("#tattoo-stencil"); if(!target)return; const len=target.getTotalLength();let nearest=Infinity,index=-1;for(let i=0;i<sampleCount;i++){const s=target.getPointAtLength(len*i/Math.max(1,sampleCount-1)),x=150+(s.x-150)*scale,y=130+(s.y-130)*scale,d=Math.hypot(x-p.x,y-p.y);if(d<nearest){nearest=d;index=i}} if(nearest<=tolerance){setHits(v=>v+1);setCovered(v=>{const n=new Set(v);for(let o=-1;o<=1;o++){const x=index+o;if(x>=0&&x<sampleCount)n.add(x)}return Array.from(n)})}else if(moves%3===0)setMistakes(v=>v+1)};
+ const reset=()=>{setDrawing(false);setPoints([]);setCovered([]);setMistakes(0);setHits(0);setMoves(0);setFinished(false);setPressure(0)};
+ const finish=()=>{const score=clamp(Math.round(accuracy*.62+coverage*.38-mistakes*.25),0,100);setFinished(true);onComplete({accuracy,coverage,mistakes,score,difficulty:level})}; const canFinish=coverage>=minimumCoverage&&moves>=30&&!finished;
+ return <Card className="border-primary/30"><CardHeader><div className="flex flex-wrap justify-between gap-2"><CardTitle className="flex items-center gap-2"><Crosshair className="h-5 w-5"/>Tattoo Machine: {designName}</CardTitle><div className="flex gap-2"><Badge>Level {level}</Badge><Badge variant="outline">{minimumCoverage}% required</Badge></div></div><p className="text-sm text-muted-foreground">Hold down and trace the stencil. Each tattoo now has its own deterministic stencil variation. Stay on the line, cover the whole design and avoid overworking the skin.</p></CardHeader><CardContent className="space-y-4"><div className="grid grid-cols-4 gap-2 text-center text-xs"><div className="rounded bg-muted p-2"><b>{accuracy}%</b><br/>Accuracy</div><div className="rounded bg-muted p-2"><b>{coverage}%</b><br/>Coverage</div><div className="rounded bg-muted p-2"><b>{mistakes}</b><br/>Mistakes</div><div className="rounded bg-muted p-2"><b>{pressure}%</b><br/>Skin stress</div></div><Progress value={coverage}/><div className="rounded-xl border bg-amber-100 p-2"><svg ref={svgRef} viewBox="0 0 300 260" className="w-full touch-none cursor-crosshair" onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);setDrawing(true)}} onPointerMove={move} onPointerUp={()=>setDrawing(false)} onPointerCancel={()=>setDrawing(false)}><rect width="300" height="260" rx="18" fill="hsl(28 55% 76%)"/><path id="tattoo-stencil" d={stencil} transform={transform} fill="none" stroke="black" strokeWidth={Math.max(4,tolerance*.55)} strokeLinecap="round" strokeLinejoin="round" opacity=".18"/><path d={stencil} transform={transform} fill="none" stroke="black" strokeWidth="1.3" strokeDasharray="5 5" strokeLinecap="round" strokeLinejoin="round" opacity=".55"/>{trace&&<path d={trace} fill="none" stroke="hsl(220 25% 9%)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"/>}</svg></div><div className="flex flex-wrap justify-between gap-2 text-xs"><span>Wobble {wobble.toFixed(1)} · tolerance {tolerance.toFixed(1)} · {STENCILS.length} stencil families</span><div className="flex gap-2"><Button variant="outline" size="sm" onClick={reset}><RotateCcw className="mr-1 h-4 w-4"/>Retry</Button>{onCancel&&<Button variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>}<Button size="sm" disabled={!canFinish} onClick={finish}>{coverage<minimumCoverage?`Cover ${minimumCoverage-coverage}% more`:"Finish tattoo"}</Button></div></div></CardContent></Card>
 }
