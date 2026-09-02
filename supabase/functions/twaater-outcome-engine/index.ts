@@ -90,7 +90,7 @@ serve(async (req) => {
     stage = "load-twaat";
     const { data: twaat, error: twaatError } = await supabase
       .from("twaats")
-      .select("*, account:twaater_accounts(*)")
+      .select("*, account:twaater_accounts!twaats_account_id_fkey(*)")
       .eq("id", twaatId)
       .maybeSingle();
 
