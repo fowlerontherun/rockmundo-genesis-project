@@ -174,6 +174,7 @@ export type Database = {
       }
       active_recording_sessions: {
         Row: {
+          difficulty_level: number
           good_takes: number
           id: string
           perfect_takes: number
@@ -186,6 +187,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          difficulty_level?: number
           good_takes?: number
           id?: string
           perfect_takes?: number
@@ -198,6 +200,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          difficulty_level?: number
           good_takes?: number
           id?: string
           perfect_takes?: number
@@ -781,6 +784,10 @@ export type Database = {
           id: string
           label_id: string
           last_action_by: string
+          last_statement_at: string | null
+          lifetime_artist_payout: number | null
+          lifetime_gross_revenue: number | null
+          lifetime_label_profit: number | null
           manufacturing_covered: boolean | null
           marketing_support: number | null
           masters_owned_by_artist: boolean | null
@@ -820,6 +827,10 @@ export type Database = {
           id?: string
           label_id: string
           last_action_by?: string
+          last_statement_at?: string | null
+          lifetime_artist_payout?: number | null
+          lifetime_gross_revenue?: number | null
+          lifetime_label_profit?: number | null
           manufacturing_covered?: boolean | null
           marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
@@ -859,6 +870,10 @@ export type Database = {
           id?: string
           label_id?: string
           last_action_by?: string
+          last_statement_at?: string | null
+          lifetime_artist_payout?: number | null
+          lifetime_gross_revenue?: number | null
+          lifetime_label_profit?: number | null
           manufacturing_covered?: boolean | null
           marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
@@ -8682,6 +8697,97 @@ export type Database = {
             columns: ["match_id"]
             isOneToOne: false
             referencedRelation: "community_mentorship_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_post_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          profile_id: string
+          reaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          profile_id: string
+          reaction_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          profile_id?: string
+          reaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_post_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_post_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          media_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          media_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          media_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -30445,6 +30551,49 @@ export type Database = {
         }
         Relationships: []
       }
+      jam_session_booking_requests: {
+        Row: {
+          created_at: string
+          idempotency_key: string
+          profile_id: string
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          idempotency_key: string
+          profile_id: string
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          idempotency_key?: string
+          profile_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_booking_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_booking_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_booking_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_session_challenges: {
         Row: {
           created_at: string | null
@@ -30583,6 +30732,32 @@ export type Database = {
             foreignKeyName: "jam_session_commentary_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_finalizations: {
+        Row: {
+          applied_at: string
+          outcome: Json
+          session_id: string
+        }
+        Insert: {
+          applied_at?: string
+          outcome?: Json
+          session_id: string
+        }
+        Update: {
+          applied_at?: string
+          outcome?: Json
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_finalizations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
             referencedRelation: "jam_sessions"
             referencedColumns: ["id"]
           },
@@ -30727,6 +30902,8 @@ export type Database = {
         Row: {
           co_play_count: number | null
           cost_paid: number | null
+          fatigue_level: number
+          fatigue_start: number
           id: string
           instrument: string | null
           instrument_skill_slug: string | null
@@ -30735,8 +30912,10 @@ export type Database = {
           joined_at: string | null
           left_at: string | null
           participation_percentage: number | null
+          performance_score: number
           profile_id: string
           reward_multiplier: number | null
+          role_locked_at: string | null
           session_role: string | null
           skill_tier: string | null
           updated_at: string | null
@@ -30744,6 +30923,8 @@ export type Database = {
         Insert: {
           co_play_count?: number | null
           cost_paid?: number | null
+          fatigue_level?: number
+          fatigue_start?: number
           id?: string
           instrument?: string | null
           instrument_skill_slug?: string | null
@@ -30752,8 +30933,10 @@ export type Database = {
           joined_at?: string | null
           left_at?: string | null
           participation_percentage?: number | null
+          performance_score?: number
           profile_id: string
           reward_multiplier?: number | null
+          role_locked_at?: string | null
           session_role?: string | null
           skill_tier?: string | null
           updated_at?: string | null
@@ -30761,6 +30944,8 @@ export type Database = {
         Update: {
           co_play_count?: number | null
           cost_paid?: number | null
+          fatigue_level?: number
+          fatigue_start?: number
           id?: string
           instrument?: string | null
           instrument_skill_slug?: string | null
@@ -30769,8 +30954,10 @@ export type Database = {
           joined_at?: string | null
           left_at?: string | null
           participation_percentage?: number | null
+          performance_score?: number
           profile_id?: string
           reward_multiplier?: number | null
+          role_locked_at?: string | null
           session_role?: string | null
           skill_tier?: string | null
           updated_at?: string | null
@@ -30799,19 +30986,337 @@ export type Database = {
           },
         ]
       }
+      jam_session_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          payee_profile_id: string | null
+          payer_profile_id: string
+          payment_type: string
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          payee_profile_id?: string | null
+          payer_profile_id: string
+          payment_type: string
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          payee_profile_id?: string | null
+          payer_profile_id?: string
+          payment_type?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_payments_payee_profile_id_fkey"
+            columns: ["payee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_payments_payee_profile_id_fkey"
+            columns: ["payee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_payments_payer_profile_id_fkey"
+            columns: ["payer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_payments_payer_profile_id_fkey"
+            columns: ["payer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_payments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_setlist_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          focus_action: string
+          id: string
+          position: number
+          session_id: string
+          song_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          focus_action?: string
+          id?: string
+          position: number
+          session_id: string
+          song_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          focus_action?: string
+          id?: string
+          position?: number
+          session_id?: string
+          song_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_setlist_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_setlist_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_setlist_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_setlist_items_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_session_setlist_items_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_session_setlist_items_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_setlist_items_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_slot_participants: {
+        Row: {
+          created_at: string
+          fatigue_after: number
+          fatigue_before: number
+          id: string
+          performance_score: number
+          profile_id: string
+          result: Json
+          role_bonus: number
+          session_id: string
+          session_role: string
+          skill_score: number
+          slot_id: string
+        }
+        Insert: {
+          created_at?: string
+          fatigue_after: number
+          fatigue_before: number
+          id?: string
+          performance_score: number
+          profile_id: string
+          result?: Json
+          role_bonus?: number
+          session_id: string
+          session_role?: string
+          skill_score: number
+          slot_id: string
+        }
+        Update: {
+          created_at?: string
+          fatigue_after?: number
+          fatigue_before?: number
+          id?: string
+          performance_score?: number
+          profile_id?: string
+          result?: Json
+          role_bonus?: number
+          session_id?: string
+          session_role?: string
+          skill_score?: number
+          slot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_slot_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_slot_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_slot_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_slot_participants_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "jam_session_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jam_session_slots: {
+        Row: {
+          challenge_score: number
+          created_at: string
+          deterministic_seed: number
+          focus_action: string
+          id: string
+          mood_after: number | null
+          mood_before: number | null
+          resolved_at: string | null
+          result: Json
+          scheduled_for: string
+          session_id: string
+          slot_index: number
+          song_id: string | null
+          status: string
+          synergy_score: number | null
+          venue_score: number
+        }
+        Insert: {
+          challenge_score?: number
+          created_at?: string
+          deterministic_seed: number
+          focus_action?: string
+          id?: string
+          mood_after?: number | null
+          mood_before?: number | null
+          resolved_at?: string | null
+          result?: Json
+          scheduled_for: string
+          session_id: string
+          slot_index: number
+          song_id?: string | null
+          status?: string
+          synergy_score?: number | null
+          venue_score?: number
+        }
+        Update: {
+          challenge_score?: number
+          created_at?: string
+          deterministic_seed?: number
+          focus_action?: string
+          id?: string
+          mood_after?: number | null
+          mood_before?: number | null
+          resolved_at?: string | null
+          result?: Json
+          scheduled_for?: string
+          session_id?: string
+          slot_index?: number
+          song_id?: string | null
+          status?: string
+          synergy_score?: number | null
+          venue_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_session_slots_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "jam_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_slots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_session_slots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "jam_session_slots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jam_session_slots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jam_sessions: {
         Row: {
           access_code: string | null
+          band_id: string | null
           challenge_completed: boolean | null
           challenge_id: string | null
           city_id: string | null
           completed_at: string | null
+          configured_at: string | null
           cost_per_participant: number | null
           created_at: string | null
           creator_profile_id: string | null
           current_participants: number
           description: string | null
           duration_hours: number | null
+          duration_slots: number
+          engine_version: number
+          finalised_at: string | null
           genre: string
           gifted_song_id: string | null
           host_id: string
@@ -30829,6 +31334,7 @@ export type Database = {
           scheduled_end: string | null
           scheduled_start: string | null
           skill_requirement: number
+          slot_minutes: number
           started_at: string | null
           status: string
           synergy_score: number | null
@@ -30841,16 +31347,21 @@ export type Database = {
         }
         Insert: {
           access_code?: string | null
+          band_id?: string | null
           challenge_completed?: boolean | null
           challenge_id?: string | null
           city_id?: string | null
           completed_at?: string | null
+          configured_at?: string | null
           cost_per_participant?: number | null
           created_at?: string | null
           creator_profile_id?: string | null
           current_participants?: number
           description?: string | null
           duration_hours?: number | null
+          duration_slots?: number
+          engine_version?: number
+          finalised_at?: string | null
           genre: string
           gifted_song_id?: string | null
           host_id: string
@@ -30868,6 +31379,7 @@ export type Database = {
           scheduled_end?: string | null
           scheduled_start?: string | null
           skill_requirement?: number
+          slot_minutes?: number
           started_at?: string | null
           status?: string
           synergy_score?: number | null
@@ -30880,16 +31392,21 @@ export type Database = {
         }
         Update: {
           access_code?: string | null
+          band_id?: string | null
           challenge_completed?: boolean | null
           challenge_id?: string | null
           city_id?: string | null
           completed_at?: string | null
+          configured_at?: string | null
           cost_per_participant?: number | null
           created_at?: string | null
           creator_profile_id?: string | null
           current_participants?: number
           description?: string | null
           duration_hours?: number | null
+          duration_slots?: number
+          engine_version?: number
+          finalised_at?: string | null
           genre?: string
           gifted_song_id?: string | null
           host_id?: string
@@ -30907,6 +31424,7 @@ export type Database = {
           scheduled_end?: string | null
           scheduled_start?: string | null
           skill_requirement?: number
+          slot_minutes?: number
           started_at?: string | null
           status?: string
           synergy_score?: number | null
@@ -30918,6 +31436,13 @@ export type Database = {
           venue_trait_bonus?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "jam_sessions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "jam_sessions_city_id_fkey"
             columns: ["city_id"]
@@ -31430,10 +31955,13 @@ export type Database = {
         Row: {
           contract_id: string
           created_at: string | null
+          digital_revenue: number | null
           id: string
           marketing_budget: number | null
           masters_cost: number | null
           notes: string | null
+          other_revenue: number | null
+          physical_revenue: number | null
           promotion_budget: number | null
           release_date: string | null
           release_id: string | null
@@ -31441,6 +31969,8 @@ export type Database = {
           revenue_generated: number | null
           scheduled_date: string | null
           status: string | null
+          streaming_revenue: number | null
+          sync_revenue: number | null
           territory_strategy: string | null
           title: string
           units_sold: number | null
@@ -31449,10 +31979,13 @@ export type Database = {
         Insert: {
           contract_id: string
           created_at?: string | null
+          digital_revenue?: number | null
           id?: string
           marketing_budget?: number | null
           masters_cost?: number | null
           notes?: string | null
+          other_revenue?: number | null
+          physical_revenue?: number | null
           promotion_budget?: number | null
           release_date?: string | null
           release_id?: string | null
@@ -31460,6 +31993,8 @@ export type Database = {
           revenue_generated?: number | null
           scheduled_date?: string | null
           status?: string | null
+          streaming_revenue?: number | null
+          sync_revenue?: number | null
           territory_strategy?: string | null
           title: string
           units_sold?: number | null
@@ -31468,10 +32003,13 @@ export type Database = {
         Update: {
           contract_id?: string
           created_at?: string | null
+          digital_revenue?: number | null
           id?: string
           marketing_budget?: number | null
           masters_cost?: number | null
           notes?: string | null
+          other_revenue?: number | null
+          physical_revenue?: number | null
           promotion_budget?: number | null
           release_date?: string | null
           release_id?: string | null
@@ -31479,6 +32017,8 @@ export type Database = {
           revenue_generated?: number | null
           scheduled_date?: string | null
           status?: string | null
+          streaming_revenue?: number | null
+          sync_revenue?: number | null
           territory_strategy?: string | null
           title?: string
           units_sold?: number | null
@@ -31857,8 +32397,10 @@ export type Database = {
         Row: {
           a_and_r_budget: number | null
           advance_pool: number | null
+          annual_revenue_target: number | null
           balance: number | null
           balance_went_negative_at: string | null
+          cash_reserves: number | null
           company_id: string | null
           created_at: string | null
           created_by: string | null
@@ -31892,8 +32434,10 @@ export type Database = {
         Insert: {
           a_and_r_budget?: number | null
           advance_pool?: number | null
+          annual_revenue_target?: number | null
           balance?: number | null
           balance_went_negative_at?: string | null
+          cash_reserves?: number | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -31927,8 +32471,10 @@ export type Database = {
         Update: {
           a_and_r_budget?: number | null
           advance_pool?: number | null
+          annual_revenue_target?: number | null
           balance?: number | null
           balance_went_negative_at?: string | null
+          cash_reserves?: number | null
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -48312,6 +48858,129 @@ export type Database = {
           },
         ]
       }
+      side_hustle_minigame_attempts: {
+        Row: {
+          accuracy: number
+          activity_id: string
+          cash_reward: number
+          created_at: string
+          difficulty: number
+          duration_seconds: number
+          id: string
+          metadata: Json | null
+          minigame_type: string
+          profile_id: string
+          score: number
+          success: boolean
+          xp_earned: number
+        }
+        Insert: {
+          accuracy: number
+          activity_id: string
+          cash_reward: number
+          created_at?: string
+          difficulty: number
+          duration_seconds: number
+          id?: string
+          metadata?: Json | null
+          minigame_type: string
+          profile_id: string
+          score: number
+          success?: boolean
+          xp_earned: number
+        }
+        Update: {
+          accuracy?: number
+          activity_id?: string
+          cash_reward?: number
+          created_at?: string
+          difficulty?: number
+          duration_seconds?: number
+          id?: string
+          metadata?: Json | null
+          minigame_type?: string
+          profile_id?: string
+          score?: number
+          success?: boolean
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "side_hustle_minigame_attempts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "side_hustle_minigame_attempts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      side_hustle_progress: {
+        Row: {
+          activity_id: string
+          best_score: number
+          created_at: string
+          experience: number
+          id: string
+          last_played_at: string | null
+          last_result: string | null
+          level: number
+          minigame_type: string
+          profile_id: string
+          total_attempts: number
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          best_score?: number
+          created_at?: string
+          experience?: number
+          id?: string
+          last_played_at?: string | null
+          last_result?: string | null
+          level?: number
+          minigame_type: string
+          profile_id: string
+          total_attempts?: number
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          best_score?: number
+          created_at?: string
+          experience?: number
+          id?: string
+          last_played_at?: string | null
+          last_result?: string | null
+          level?: number
+          minigame_type?: string
+          profile_id?: string
+          total_attempts?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "side_hustle_progress_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "side_hustle_progress_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skill_books: {
         Row: {
           author: string | null
@@ -55366,10 +56035,13 @@ export type Database = {
           moderated_by: string | null
           moderation_status: string
           outcome_code: string | null
+          outcome_processed_at: string | null
+          outcome_processing_at: string | null
           promoted_cost: number
           promoted_until: string | null
           quoted_twaat_id: string | null
           scheduled_for: string | null
+          scheduled_published_at: string | null
           sentiment: number | null
           visibility: Database["public"]["Enums"]["twaater_visibility"] | null
           xp_awarded: number | null
@@ -55395,10 +56067,13 @@ export type Database = {
           moderated_by?: string | null
           moderation_status?: string
           outcome_code?: string | null
+          outcome_processed_at?: string | null
+          outcome_processing_at?: string | null
           promoted_cost?: number
           promoted_until?: string | null
           quoted_twaat_id?: string | null
           scheduled_for?: string | null
+          scheduled_published_at?: string | null
           sentiment?: number | null
           visibility?: Database["public"]["Enums"]["twaater_visibility"] | null
           xp_awarded?: number | null
@@ -55424,10 +56099,13 @@ export type Database = {
           moderated_by?: string | null
           moderation_status?: string
           outcome_code?: string | null
+          outcome_processed_at?: string | null
+          outcome_processing_at?: string | null
           promoted_cost?: number
           promoted_until?: string | null
           quoted_twaat_id?: string | null
           scheduled_for?: string | null
+          scheduled_published_at?: string | null
           sentiment?: number | null
           visibility?: Database["public"]["Enums"]["twaater_visibility"] | null
           xp_awarded?: number | null
@@ -58177,6 +58855,23 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      _jam_h1_finalize: { Args: { p_session_id: string }; Returns: undefined }
+      _jam_h1_percent: {
+        Args: { p_salt?: number; p_seed: number }
+        Returns: number
+      }
+      _jam_h1_resolve_due_slots: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
+      _jam_h1_seed: {
+        Args: {
+          p_profile_id?: string
+          p_session_id: string
+          p_slot_index: number
+        }
+        Returns: number
+      }
       _journal_profile_wallet_delta: {
         Args: { p_context?: Json; p_delta_minor: number; p_profile_id: string }
         Returns: string
@@ -59066,6 +59761,7 @@ export type Database = {
       }
       auto_complete_travel: { Args: never; Returns: undefined }
       auto_prepare_gig_travel: { Args: never; Returns: Json }
+      auto_prepare_recording_travel: { Args: never; Returns: Json }
       auto_start_scheduled_gigs: { Args: never; Returns: Json }
       auto_verify_accounts: { Args: never; Returns: undefined }
       auto_verify_twaater_accounts: { Args: never; Returns: undefined }
@@ -59331,6 +60027,25 @@ export type Database = {
         }
         Returns: Json
       }
+      book_jam_session_v2: {
+        Args: {
+          p_access_code: string
+          p_band_id?: string
+          p_challenge_id?: string
+          p_description: string
+          p_duration_hours: number
+          p_genre: string
+          p_idempotency_key: string
+          p_is_private: boolean
+          p_max_participants: number
+          p_name: string
+          p_rehearsal_room_id: string
+          p_scheduled_start: string
+          p_skill_requirement: number
+          p_tempo: number
+        }
+        Returns: Json
+      }
       book_tour: {
         Args: {
           p_band_id: string
@@ -59429,6 +60144,16 @@ export type Database = {
           p_band_id: string
           p_scheduled_date: string
           p_venue_capacity: number
+        }
+        Returns: number
+      }
+      calculate_realistic_gig_demand: {
+        Args: {
+          p_band_id: string
+          p_scheduled_date: string
+          p_slot_multiplier?: number
+          p_ticket_price?: number
+          p_venue_id: string
         }
         Returns: number
       }
@@ -59532,6 +60257,7 @@ export type Database = {
         Args: { p_edition_id: string }
         Returns: boolean
       }
+      can_manage_twaater_band: { Args: { _band_id: string }; Returns: boolean }
       can_negotiate_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
@@ -59773,6 +60499,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_jam_session_v2: { Args: { p_session_id: string }; Returns: Json }
       cancel_launched_festival: {
         Args: {
           p_confirmation_token: string
@@ -59793,6 +60520,14 @@ export type Database = {
       }
       cancel_player_education_class_enrolment: {
         Args: { p_class_id: string; p_student_profile_id: string }
+        Returns: Json
+      }
+      cancel_recording_session_atomic: {
+        Args: {
+          p_idempotency_key: string
+          p_reason: string
+          p_recording_id: string
+        }
         Returns: Json
       }
       cancel_social_contract: {
@@ -60163,6 +60898,15 @@ export type Database = {
         Returns: Json
       }
       complete_wellness_habit: { Args: { _habit_id: string }; Returns: Json }
+      configure_jam_session_v2: {
+        Args: {
+          p_challenge_id?: string
+          p_roles?: Json
+          p_session_id: string
+          p_setlist?: Json
+        }
+        Returns: Json
+      }
       confirm_recording_session_atomic: {
         Args: {
           p_band_id: string
@@ -60650,6 +61394,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_jam_session_v2: {
+        Args: {
+          p_access_code?: string
+          p_band_id?: string
+          p_challenge_id?: string
+          p_description: string
+          p_duration_slots?: number
+          p_genre: string
+          p_is_private?: boolean
+          p_max_participants?: number
+          p_name: string
+          p_rehearsal_room_id?: string
+          p_skill_requirement?: number
+          p_tempo?: number
+        }
+        Returns: Json
+      }
       create_music_collaboration_contract: {
         Args: { p_client_idempotency_key: string; p_payload: Json }
         Returns: Json
@@ -60995,6 +61756,7 @@ export type Database = {
         }[]
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
+      expire_stale_pr_offers: { Args: never; Returns: number }
       festival_application_eligibility: {
         Args: { p_band_id: string; p_edition_id: string }
         Returns: Json
@@ -61977,6 +62739,7 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_directory_cards: { Args: never; Returns: Json }
       get_festival_edition_annual_plan: {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
@@ -62121,6 +62884,10 @@ export type Database = {
         Returns: string
       }
       get_gig_preparation_setlist: { Args: { p_gig_id: string }; Returns: Json }
+      get_jam_session_workspace: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
       get_media_market_benchmarks: { Args: never; Returns: Json }
       get_moderation_report_queue: {
         Args: { p_limit?: number; p_status?: string }
@@ -62857,6 +63624,10 @@ export type Database = {
       is_storefront_open: { Args: { _company_id: string }; Returns: boolean }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      join_jam_session: {
+        Args: { p_access_code?: string; p_session_id: string }
+        Returns: Json
+      }
       join_social_community: {
         Args: { p_community_id: string; p_profile_id: string }
         Returns: boolean
@@ -62888,6 +63659,7 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: boolean
       }
+      leave_jam_session_v2: { Args: { p_session_id: string }; Returns: Json }
       leave_social_band_rivalry: {
         Args: { p_profile_id: string; p_rivalry_id: string }
         Returns: boolean
@@ -63460,6 +64232,7 @@ export type Database = {
         Returns: Json
       }
       process_company_weekly_finances: { Args: never; Returns: number }
+      process_due_jam_slots: { Args: never; Returns: number }
       process_gear_sale: {
         Args: {
           p_buyer_user_id: string
@@ -63473,6 +64246,7 @@ export type Database = {
         Returns: Json
       }
       process_inactive_character_comas: { Args: never; Returns: Json }
+      process_jam_session_v2: { Args: { p_session_id: string }; Returns: Json }
       process_media_submission_reviews: {
         Args: { p_limit?: number }
         Returns: Json
@@ -65158,6 +65932,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      set_jam_slot_focus_v2: {
+        Args: {
+          p_focus_action: string
+          p_session_id: string
+          p_slot_index: number
+          p_song_id?: string
+        }
+        Returns: Json
+      }
       settle_cover_recording_royalty: {
         Args: {
           p_covering_band_id: string
@@ -65327,6 +66110,7 @@ export type Database = {
         Args: { p_gig_id: string; p_lenient?: boolean }
         Returns: Json
       }
+      start_jam_session_v2: { Args: { p_session_id: string }; Returns: Json }
       start_self_promotion: {
         Args: {
           p_activity_type: string
@@ -65380,6 +66164,7 @@ export type Database = {
       }
       submit_active_recording_session: {
         Args: {
+          p_difficulty_level?: number
           p_good_takes: number
           p_perfect_takes: number
           p_profile_id: string
@@ -65616,6 +66401,10 @@ export type Database = {
           p_podcast_id: string
         }
         Returns: string
+      }
+      support_fan_gain_for_gig: {
+        Args: { p_attendance: number; p_band_id: string; p_rating?: number }
+        Returns: number
       }
       support_gig_demand_multiplier: {
         Args: { p_gig_id: string }
@@ -66395,12 +67184,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -66424,11 +67213,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -66449,11 +67238,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -66474,11 +67263,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -66491,11 +67280,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
