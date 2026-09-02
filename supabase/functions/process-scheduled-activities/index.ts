@@ -123,7 +123,6 @@ Deno.serve(async (req) => {
       publishedTwaatCount: scheduledTwaatResult.publishedCount,
       scheduledOutcomeAttempts: scheduledTwaatResult.outcomeAttempts,
       scheduledOutcomeFailures: scheduledTwaatResult.outcomeFailures,
-      scheduledOutcomeErrors: scheduledTwaatResult.outcomeErrors,
     };
 
     await completeJobRun({
@@ -200,7 +199,6 @@ async function publishDueScheduledTwaats(
 
   let outcomeAttempts = 0;
   let outcomeFailures = 0;
-  const outcomeErrors: string[] = [];
 
   for (const twaat of pendingOutcomes || []) {
     outcomeAttempts++;
@@ -216,19 +214,17 @@ async function publishDueScheduledTwaats(
       });
       if (!response.ok) {
         outcomeFailures++;
-        const detail = `${twaat.id}: ${response.status} ${(await response.text()).slice(0, 500)}`;
-        outcomeErrors.push(detail);
-        console.error(`Outcome processing failed for scheduled Twaat ${detail}`);
+        console.error(
+          `Outcome processing failed for scheduled Twaat ${twaat.id}: ${response.status} ${(await response.text()).slice(0, 500)}`,
+        );
       }
     } catch (error) {
       outcomeFailures++;
-      const detail = `${twaat.id}: ${getErrorMessage(error)}`;
-      outcomeErrors.push(detail);
-      console.error(`Outcome processing request failed for scheduled Twaat ${detail}`);
+      console.error(`Outcome processing request failed for scheduled Twaat ${twaat.id}: ${getErrorMessage(error)}`);
     }
   }
 
-  return { publishedCount, outcomeAttempts, outcomeFailures, outcomeErrors };
+  return { publishedCount, outcomeAttempts, outcomeFailures };
 }
 
 async function processActivityCompletion(supabase: any, activity: ScheduledActivity) {
