@@ -1,21 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const fetchChronologicalFeed = async () => {
+const twaatSelect = `
+  *,
+  account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
+  metrics:twaat_metrics(*),
+  quoted_twaat:twaats!twaats_quoted_twaat_id_fkey(
+    id,
+    body,
+    created_at,
+    account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
+  )
+`;
+
+const fetchChronologicalFeed = async (accountId?: string) => {
+  if (!accountId) {
+    const { data, error } = await supabase
+      .from("twaats")
+      .select(twaatSelect)
+      .eq("visibility", "public")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    return data || [];
+  }
+
+  const { data: follows, error: followsError } = await supabase
+    .from("twaater_follows")
+    .select("followed_account_id")
+    .eq("follower_account_id", accountId);
+  if (followsError) throw followsError;
+
+  const accountIds = [accountId, ...(follows || []).map((follow) => follow.followed_account_id)];
+  const uniqueAccountIds = Array.from(new Set(accountIds));
   const { data, error } = await supabase
     .from("twaats")
-    .select(`
-      *,
-      account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
-      metrics:twaat_metrics(*),
-      quoted_twaat:twaats!twaats_quoted_twaat_id_fkey(
-        id,
-        body,
-        created_at,
-        account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
-      )
-    `)
-    .eq("visibility", "public")
+    .select(twaatSelect)
+    .in("account_id", uniqueAccountIds)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -37,18 +59,18 @@ export const useTwaaterAIFeed = (accountId?: string) => {
 
         if (aiError) {
           console.error("AI feed error:", aiError);
-          return fetchChronologicalFeed();
+          return fetchChronologicalFeed(accountId);
         }
 
         const rankedFeed = aiData?.ranked_feed;
         if (!rankedFeed || !Array.isArray(rankedFeed) || rankedFeed.length === 0) {
-          return fetchChronologicalFeed();
+          return fetchChronologicalFeed(accountId);
         }
 
         return rankedFeed;
       } catch (error) {
         console.error("AI feed exception:", error);
-        return fetchChronologicalFeed();
+        return fetchChronologicalFeed(accountId);
       }
     },
     enabled: true,
