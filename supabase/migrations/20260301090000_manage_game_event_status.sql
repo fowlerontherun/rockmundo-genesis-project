@@ -1,5 +1,5 @@
--- Ensure pg_cron is available for scheduling automatic event updates
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+-- pg_cron is established earlier in the migration chain. Do not reinstall it
+-- here because Supabase-managed extension privileges make a repeated install fail.
 
 -- Function to activate or deactivate game events based on their schedule
 CREATE OR REPLACE FUNCTION public.refresh_game_event_statuses()
@@ -44,7 +44,7 @@ BEGIN
   PERFORM cron.schedule(
     'game_events_status_refresh_job',
     '*/5 * * * *',
-    $$SELECT public.refresh_game_event_statuses();$$
+    $cron$SELECT public.refresh_game_event_statuses();$cron$
   );
 END;
 $$;
