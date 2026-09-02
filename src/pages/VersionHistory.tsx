@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.733",
+    date: "2026-09-02",
+    changes: [
+      { type: "fix", description: "Switched live Stripe account to the new Rockmundo account; recreated VIP monthly/quarterly/annual prices, character-slot price, and donation product/preset price under the new account" },
+      { type: "fix", description: "Updated checkout code to use the new Stripe product and price IDs so VIP subscriptions, character-slot purchases, and donations continue to work" },
+    ],
+  },
+  {
     version: "1.1.732",
     date: "2026-09-01",
     changes: [
