@@ -7,11 +7,12 @@ import { RecordingWizard } from "@/components/recording/RecordingWizard";
 import { CompleteRecordingDialog } from "@/components/recording/CompleteRecordingDialog";
 import { RecordedSongsTab } from "@/components/recording/RecordedSongsTab";
 import { useRecordingSessions } from "@/hooks/useRecordingData";
+import { useCancelRecordingSession } from "@/hooks/useCancelRecordingSession";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
-import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic, CalendarClock } from "lucide-react";
+import { Music, Plus, Clock, CheckCircle2, X, AlertCircle, Disc3, ListMusic, CalendarClock, RotateCcw, Trash2 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
@@ -28,6 +29,8 @@ export default function RecordingStudio() {
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [userBandId, setUserBandId] = useState<string | null>(null);
   const [labelCompanyId, setLabelCompanyId] = useState<string | null>(null);
+  const [bookingActionSessionId, setBookingActionSessionId] = useState<string | null>(null);
+  const cancelRecording = useCancelRecordingSession();
   
   const currentCityId = currentCity?.id || "";
   
@@ -45,7 +48,6 @@ export default function RecordingStudio() {
       if (bandMemberships?.band_id) {
         setUserBandId(bandMemberships.band_id);
         
-        // Check for active label contract to get label's company_id
         const { data: contract } = await supabase
           .from('artist_label_contracts')
           .select('labels(company_id)')
@@ -92,6 +94,65 @@ export default function RecordingStudio() {
       default:
         return <Badge variant="outline">{t('gigs.scheduled')}</Badge>;
     }
+  };
+
+  const canChangeBooking = (recordingSession: any) =>
+    recordingSession?.status === 'scheduled' &&
+    !!recordingSession?.scheduled_start &&
+    new Date(recordingSession.scheduled_start) > new Date();
+
+  const handleBookingAction = async (recordingSession: any, mode: 'cancel' | 'reschedule') => {
+    if (!canChangeBooking(recordingSession) || bookingActionSessionId) return;
+
+    const songTitle = recordingSession.songs?.title || 'this recording session';
+    const confirmed = window.confirm(
+      mode === 'reschedule'
+        ? `Reschedule “${songTitle}”? The existing booking will be cancelled and refunded, then you can choose a new studio date and time.`
+        : `Cancel “${songTitle}”? The studio slot will be released, diary blocks removed and the original payment source refunded.`,
+    );
+    if (!confirmed) return;
+
+    setBookingActionSessionId(recordingSession.id);
+    try {
+      await cancelRecording.mutateAsync({
+        sessionId: recordingSession.id,
+        reason: mode === 'reschedule' ? 'rescheduled_by_player' : 'cancelled_by_player',
+      });
+
+      if (mode === 'reschedule') {
+        setWizardOpen(true);
+      }
+    } finally {
+      setBookingActionSessionId(null);
+    }
+  };
+
+  const renderBookingActions = (recordingSession: any) => {
+    if (!canChangeBooking(recordingSession)) return null;
+    const isWorking = bookingActionSessionId === recordingSession.id && cancelRecording.isPending;
+
+    return (
+      <div className="flex flex-wrap justify-end gap-2 pt-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isWorking || !!bookingActionSessionId}
+          onClick={() => void handleBookingAction(recordingSession, 'reschedule')}
+        >
+          <RotateCcw className="h-4 w-4 mr-1" />
+          {isWorking ? 'Updating…' : 'Reschedule'}
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          disabled={isWorking || !!bookingActionSessionId}
+          onClick={() => void handleBookingAction(recordingSession, 'cancel')}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          {isWorking ? 'Cancelling…' : 'Cancel'}
+        </Button>
+      </div>
+    );
   };
 
   return (
@@ -191,58 +252,61 @@ export default function RecordingStudio() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {sessions.map((session: any) => (
-                    <Card key={session.id}>
+                  {sessions.map((recordingSession: any) => (
+                    <Card key={recordingSession.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              {getStatusIcon(session.status)}
+                              {getStatusIcon(recordingSession.status)}
                               <h3 className="font-semibold truncate">
-                                {session.songs?.title || 'Unknown Song'}
+                                {recordingSession.songs?.title || 'Unknown Song'}
                               </h3>
-                              {getStatusBadge(session.status)}
+                              {getStatusBadge(recordingSession.status)}
                             </div>
                             
                             <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                              <div>{t('recording.selectStudio', 'Studio')}: {session.city_studios?.name || 'N/A'}</div>
-                              <div>{t('recording.selectSong', 'Producer')}: {session.recording_producers?.name || 'N/A'}</div>
-                              <div>{t('recording.duration')}: {session.duration_hours} {t('time.hours')}</div>
-                              <div>{t('releases.cost')}: ${session.total_cost.toLocaleString()}</div>
+                              <div>{t('recording.selectStudio', 'Studio')}: {recordingSession.city_studios?.name || 'N/A'}</div>
+                              <div>{t('recording.selectSong', 'Producer')}: {recordingSession.recording_producers?.name || 'N/A'}</div>
+                              <div>{t('recording.duration')}: {recordingSession.duration_hours} {t('time.hours')}</div>
+                              <div>{t('releases.cost')}: ${Number(recordingSession.total_cost || 0).toLocaleString()}</div>
                             </div>
 
-                            {session.status === 'completed' && session.quality_improvement > 0 && (
+                            {recordingSession.status === 'completed' && recordingSession.quality_improvement > 0 && (
                               <div className="mt-2 text-sm">
                                 <span className="text-muted-foreground">{t('recording.qualityBoost')}: </span>
                                 <span className="font-semibold text-green-600">
-                                  +{session.quality_improvement}
+                                  +{recordingSession.quality_improvement}
                                 </span>
                               </div>
                             )}
 
-                            {session.status === 'failed' && (
+                            {recordingSession.status === 'failed' && (
                               <div className="mt-2 text-sm text-red-500">
                                 <AlertCircle className="h-3 w-3 inline mr-1" />
-                                {(session as any).session_data?.failure_reason || 'Band members were not in the studio city'}
+                                {(recordingSession as any).session_data?.failure_reason || 'Band members were not in the studio city'}
                               </div>
                             )}
                           </div>
 
                           <div className="flex flex-col items-end gap-2">
-                            <div className="text-sm text-muted-foreground">
-                              {session.completed_at ? (
-                                <div>{t('common.completed')} {formatDistanceToNow(new Date(session.completed_at))} {t('time.ago')}</div>
-                              ) : session.status === 'in_progress' ? (
-                                <div>{t('recording.endSession', 'Ends')} {formatDistanceToNow(new Date(session.scheduled_end))}</div>
+                            <div className="text-sm text-muted-foreground text-right">
+                              {recordingSession.completed_at ? (
+                                <div>{t('common.completed')} {formatDistanceToNow(new Date(recordingSession.completed_at))} {t('time.ago')}</div>
+                              ) : recordingSession.status === 'in_progress' ? (
+                                <div>{t('recording.endSession', 'Ends')} {formatDistanceToNow(new Date(recordingSession.scheduled_end))}</div>
+                              ) : recordingSession.status === 'scheduled' && recordingSession.scheduled_start ? (
+                                <div>Starts in {formatDistanceToNow(new Date(recordingSession.scheduled_start))}</div>
                               ) : (
-                                <div>{t('common.create', 'Created')} {formatDistanceToNow(new Date(session.created_at))} {t('time.ago')}</div>
+                                <div>{t('common.create', 'Created')} {formatDistanceToNow(new Date(recordingSession.created_at))} {t('time.ago')}</div>
                               )}
                             </div>
-                            {session.status === 'in_progress' && new Date(session.scheduled_end) <= new Date() && (
+                            {renderBookingActions(recordingSession)}
+                            {recordingSession.status === 'in_progress' && new Date(recordingSession.scheduled_end) <= new Date() && (
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  setSelectedSession(session);
+                                  setSelectedSession(recordingSession);
                                   setCompleteDialogOpen(true);
                                 }}
                               >
@@ -269,7 +333,7 @@ export default function RecordingStudio() {
                 Upcoming Recording Sessions
               </CardTitle>
               <CardDescription>
-                Sessions you've booked that are scheduled or still in progress
+                Manage future bookings or view sessions already in progress
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -291,31 +355,34 @@ export default function RecordingStudio() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {upcomingSessions.map((s: any) => (
-                    <Card key={s.id} className="border-primary/30">
+                  {upcomingSessions.map((recordingSession: any) => (
+                    <Card key={recordingSession.id} className="border-primary/30">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <Clock className="h-4 w-4 text-yellow-500" />
-                              <h3 className="font-semibold truncate">{s.songs?.title || 'Unknown Song'}</h3>
-                              <Badge variant="outline">{t('gigs.scheduled', 'Scheduled')}</Badge>
+                              {getStatusIcon(recordingSession.status)}
+                              <h3 className="font-semibold truncate">{recordingSession.songs?.title || 'Unknown Song'}</h3>
+                              {getStatusBadge(recordingSession.status)}
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                              <div>Studio: {s.city_studios?.name || 'N/A'}</div>
-                              <div>Producer: {s.recording_producers?.name || 'Self-produced'}</div>
-                              <div>Duration: {s.duration_hours}h</div>
-                              <div>Cost: ${Number(s.total_cost || 0).toLocaleString()}</div>
+                              <div>Studio: {recordingSession.city_studios?.name || 'N/A'}</div>
+                              <div>Producer: {recordingSession.recording_producers?.name || 'Self-produced'}</div>
+                              <div>Duration: {recordingSession.duration_hours}h</div>
+                              <div>Cost: ${Number(recordingSession.total_cost || 0).toLocaleString()}</div>
                             </div>
                           </div>
-                          <div className="text-right text-sm">
-                            <div className="text-xs uppercase text-muted-foreground">Starts</div>
+                          <div className="text-right text-sm min-w-[190px]">
+                            <div className="text-xs uppercase text-muted-foreground">
+                              {recordingSession.status === 'in_progress' ? 'Ends' : 'Starts'}
+                            </div>
                             <div className="font-semibold">
-                              {new Date(s.scheduled_start).toLocaleString()}
+                              {new Date(recordingSession.status === 'in_progress' ? recordingSession.scheduled_end : recordingSession.scheduled_start).toLocaleString()}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              in {formatDistanceToNow(new Date(s.scheduled_start))}
+                              in {formatDistanceToNow(new Date(recordingSession.status === 'in_progress' ? recordingSession.scheduled_end : recordingSession.scheduled_start))}
                             </div>
+                            {renderBookingActions(recordingSession)}
                           </div>
                         </div>
                       </CardContent>
