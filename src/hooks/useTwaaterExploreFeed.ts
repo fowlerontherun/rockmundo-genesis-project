@@ -49,6 +49,7 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
         `)
         .eq("visibility", "public")
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .gte("created_at", fourteenDaysAgo.toISOString())
         .order("created_at", { ascending: false })
         .limit(200);
@@ -100,7 +101,7 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
       });
 
       // Filter out own posts if excludeAccountId provided
-      const filtered = excludeAccountId 
+      const filtered = excludeAccountId
         ? scoredTwaats.filter((t: any) => t.account?.id !== excludeAccountId)
         : scoredTwaats;
 
