@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { BarChart3, Plus, Trash2, Clock } from "lucide-react";
 
 interface TwaaterPollCreatorProps {
+  accountId?: string;
   onCreatePoll?: (question: string, options: string[], durationHours: number) => void;
 }
 
