@@ -57,7 +57,7 @@ export default function TattooParlour() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('skill_progress')
-        .select('skill_slug,current_value,current_level')
+        .select('skill_slug,current_level,current_xp')
         .eq('profile_id', profileId!)
         .like('skill_slug', 'tattooing_%');
       return data || [];
@@ -65,10 +65,8 @@ export default function TattooParlour() {
     enabled: !!profileId,
   });
 
-  const tattooSkillValue = useMemo(() => {
-    const rows = tattooSkillProgress || [];
-    return Math.max(0, ...rows.map((row: any) => Number(row.current_value ?? ((row.current_level || 0) * 10) ?? 0)));
-  }, [tattooSkillProgress]);
+  const tattooSkillLevel = useMemo(() => Math.max(0, ...(tattooSkillProgress || []).map((row: any) => Number(row.current_level || 0))), [tattooSkillProgress]);
+  const tattooSkillValue = Math.min(1000, Math.round((tattooSkillLevel / 30) * 1000));
 
   const { data: parlours } = useQuery({
     queryKey: ['tattoo-parlours', profile?.current_city_id],
@@ -168,9 +166,7 @@ export default function TattooParlour() {
       });
       if (tattooError) throw tattooError;
 
-      if (selectedArtist) {
-        await supabase.from('tattoo_artists').update({ total_tattoos_done: selectedArtist.total_tattoos_done + 1 }).eq('id', selectedArtist.id);
-      }
+      if (selectedArtist) await supabase.from('tattoo_artists').update({ total_tattoos_done: selectedArtist.total_tattoos_done + 1 }).eq('id', selectedArtist.id);
       return { qualityScore, isInfected, price, game };
     },
     onSuccess: (result) => {
@@ -266,7 +262,7 @@ export default function TattooParlour() {
           {currentParlour && <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Choose Body Placement</CardTitle></CardHeader><CardContent><TattooBodyPreview tattoos={playerTattoos || []} selectedSlot={selectedSlot} onSlotClick={(slot) => { setSelectedSlot(slot === selectedSlot ? null : slot); setSelectedDesign(null); setTattooingSession(false); }} />{selectedSlot && <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setSelectedSlot(null)}>Show all body areas</Button>}</CardContent></Card>
             <div className="lg:col-span-2 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold text-sm">Tattoo Designs</h3><p className="text-xs text-muted-foreground">{selectedSlot ? `Showing designs for ${BODY_SLOTS[selectedSlot].label}` : 'Choose a body area or browse every available design.'}</p></div><Badge variant="secondary"><Crosshair className="mr-1 h-3 w-3" />Tattoo skill {Math.round(tattooSkillValue)}</Badge></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold text-sm">Tattoo Designs</h3><p className="text-xs text-muted-foreground">{selectedSlot ? `Showing designs for ${BODY_SLOTS[selectedSlot].label}` : 'Choose a body area or browse every available design.'}</p></div><Badge variant="secondary"><Crosshair className="mr-1 h-3 w-3" />Tattoo skill Lv {tattooSkillLevel}</Badge></div>
               <ScrollArea className="w-full"><div className="flex gap-1.5 pb-2"><Badge variant={categoryFilter === 'all' ? 'default' : 'outline'} className="cursor-pointer text-xs" onClick={() => setCategoryFilter('all')}>All</Badge>{TATTOO_CATEGORIES.map(cat => <Badge key={cat} variant={categoryFilter === cat ? 'default' : 'outline'} className="cursor-pointer text-xs whitespace-nowrap" onClick={() => setCategoryFilter(cat)}>{CATEGORY_LABELS[cat]}</Badge>)}</div></ScrollArea>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{filteredDesigns.map(d => <TattooDesignCard key={d.id} design={d} parlourPriceMultiplier={currentParlour.price_multiplier * (selectedArtist?.price_premium || 1.0)} selected={selectedDesign?.id === d.id} onSelect={(design) => { setSelectedDesign(design); setSelectedSlot(design.body_slot); setTattooingSession(false); }} artistSpecialty={selectedArtist?.specialty || undefined} />)}{filteredDesigns.length === 0 && <p className="col-span-full text-center text-muted-foreground text-sm py-8">No available designs for this body area and category.</p>}</div>
 
