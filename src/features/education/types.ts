@@ -47,6 +47,13 @@ export interface VideoResource {
   url: string;
   summary: string;
   sortOrder: number;
+  difficulty: number;
+  durationMinutes: number | null;
+  tags: string[];
+  skillSlug: string | null;
+  skillName: string;
+  channelName: string | null;
+  featured: boolean;
 }
 
 export interface VideoPlaylist {
