@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen,
   GraduationCap,
@@ -8,20 +9,35 @@ import {
   Clock,
   MapPin,
   Video,
-  Wifi,
   WifiOff,
   TrendingUp,
   Loader2,
   AlertCircle,
+  LogOut,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { useEducationSummary } from "../hooks/useEducationSummary";
 
 export const SummaryTab = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const {
     currentCityName,
     activeBooks,
@@ -31,6 +47,37 @@ export const SummaryTab = () => {
     skillProgress,
     isLoading,
   } = useEducationSummary();
+
+  const dropCourseMutation = useMutation({
+    mutationFn: async (enrollmentId: string) => {
+      const { error } = await supabase
+        .from("player_university_enrollments")
+        .update({ status: "dropped", auto_attend: false })
+        .eq("id", enrollmentId);
+
+      if (error) throw error;
+      return enrollmentId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["education-summary-active-enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-skills"] });
+      queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
+      queryClient.invalidateQueries({ queryKey: ["current_enrollment_full"] });
+      queryClient.invalidateQueries({ queryKey: ["university_course_enrollment_counts"] });
+      queryClient.invalidateQueries({ queryKey: ["course_enrollment_usage"] });
+      toast({
+        title: "Course dropped",
+        description: "You are no longer enrolled. XP and skill progress already earned have been kept.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not drop course",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   if (isLoading) {
     return (
@@ -234,6 +281,7 @@ export const SummaryTab = () => {
               const skill = enrollment.university_courses?.skill_slug || "";
               const skillData = skillProgress[skill];
               const isRemote = currentCityName && enrollment.universities?.city !== currentCityName;
+              const isDropping = dropCourseMutation.isPending && dropCourseMutation.variables === enrollment.id;
 
               return (
                 <Card key={enrollment.id} className={isRemote ? "border-amber-500/30" : ""}>
@@ -246,9 +294,46 @@ export const SummaryTab = () => {
                           {enrollment.universities?.name} • {enrollment.universities?.city}
                         </CardDescription>
                       </div>
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/university/${enrollment.university_id}`}>View</Link>
-                      </Button>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button asChild size="sm" variant="outline">
+                          <Link to={`/university/${enrollment.university_id}`}>View</Link>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={dropCourseMutation.isPending}
+                            >
+                              {isDropping ? (
+                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                              )}
+                              {isDropping ? "Dropping..." : "Drop out"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Drop out of this course?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                You will stop attending {enrollment.university_courses?.name || "this course"} immediately.
+                                Your course fee will not be refunded. XP and skill progress already earned will be kept,
+                                but future classes and auto-attendance will stop.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep studying</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => dropCourseMutation.mutate(enrollment.id)}
+                              >
+                                Drop out of course
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
