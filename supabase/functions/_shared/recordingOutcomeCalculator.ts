@@ -88,7 +88,7 @@ const aliases: Record<string, string> = { vocals: "lead_vocals", singer: "lead_v
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, Number.isFinite(v) ? v : 0));
 const avg = (xs: number[], fallback = 0) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : fallback;
 const level = (m: Record<string, number | undefined> | undefined, k: string) => clamp(Number(m?.[k] ?? 0));
-const normRole = (role: string) => aliases[role.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] ?? role.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "_");
+const normRole = (role: string) => aliases[role.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")] ?? role.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
 export function seededVariance(seed: string, width = 0.035) {
   let h = 2166136261;
