@@ -122,7 +122,7 @@ BEGIN
   END IF;
 
   IF position('ticketCountUsed' in pg_get_functiondef('public._try_finalise_festival_owner_engagement(uuid)'::regprocedure))=0
-     OR position("'ticketCountUsed',false" in replace(pg_get_functiondef('public._try_finalise_festival_owner_engagement(uuid)'::regprocedure),' ',''))=0 THEN
+     OR position('''ticketCountUsed'',false' in replace(pg_get_functiondef('public._try_finalise_festival_owner_engagement(uuid)'::regprocedure),' ',''))=0 THEN
     RAISE EXCEPTION 'Festival real-attendance progression does not explicitly exclude raw ticket count';
   END IF;
 END;
