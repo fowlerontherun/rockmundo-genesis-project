@@ -1,18 +1,26 @@
-// Stub implementation for universities functionality
-// This table will be implemented in a future update
+import { supabase } from "./client";
 
 export interface University {
   id: string;
   name: string;
-  city?: string;
-  prestige: number;
-  quality_of_learning: number;
-  course_cost: number;
-  created_at: string;
-  updated_at: string;
+  city: string | null;
+  prestige: number | null;
+  quality_of_learning: number | null;
+  course_cost_modifier: number | null;
+  description: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export const fetchUniversities = async (): Promise<University[]> => {
-  console.warn('Universities table not yet implemented');
-  return [];
+  const { data, error } = await supabase
+    .from("universities")
+    .select(
+      "id, name, city, prestige, quality_of_learning, course_cost_modifier, description, created_at, updated_at",
+    )
+    .order("prestige", { ascending: false })
+    .order("quality_of_learning", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as University[];
 };

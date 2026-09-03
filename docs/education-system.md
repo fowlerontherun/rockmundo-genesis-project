@@ -49,6 +49,17 @@ Players can also manually attend class during class hours (10 AM - 2 PM):
 - `base_duration_days` - expected course length
 - `required_skill_level` - prerequisite skill level
 
+## University and course balance
+
+- Every university has a 0-100 **quality** rating and a separate 0-100 **prestige** rating.
+- Quality has the larger effect on XP and also shortens the effective course duration.
+- Prestige contributes to XP and increases the university's tuition modifier.
+- Institution types occupy different bands: local schools are affordable entry routes, conservatories are stronger mid/high-tier choices, and named flagship universities sit at the top.
+- Courses are balanced by their progression tier. Foundation, professional, and mastery courses use successively higher price, duration, and XP bands.
+- A stable course-and-university hash adds variation within each tier. It is based on names and skill slugs rather than generated IDs, so clean environments reproduce the same catalogue.
+- `base_price` and `base_duration_days` are catalogue inputs. Player-facing screens must show the final price after `course_cost_modifier` and the effective duration after university quality is applied.
+- Existing enrolments retain their snapshotted payment and completion date. Current and future attendance uses the course's current XP range.
+
 ## Skill Progression Formula
 - Starting XP requirement: 100
 - Each level multiplies requirement by 1.5x

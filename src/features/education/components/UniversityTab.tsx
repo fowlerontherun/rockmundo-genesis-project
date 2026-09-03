@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Loader2, GraduationCap, Search, MapPin, Globe, Filter, Music, Mic, Headphones, Radio, Zap, PenTool, Cpu, X } from "lucide-react";
+import { Loader2, GraduationCap, Search, MapPin, Globe, Filter, Music, Mic, Headphones, Radio, Zap, PenTool, Cpu, X, Clock, DollarSign, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  calculateUniversityCourseDuration,
+  calculateUniversityCoursePrice,
+  calculateUniversityCourseXpRange,
+  getUniversityPrestigeBand,
+  getUniversityQualityBand,
+  normalizeUniversityRating,
+} from "@/lib/universityBalance";
 
 interface University {
   id: string;
@@ -40,12 +48,16 @@ interface CourseWithUniversity {
   base_price: number;
   base_duration_days: number | null;
   required_skill_level: number | null;
+  xp_per_day_min: number | null;
+  xp_per_day_max: number | null;
   university_id: string;
   universities: {
     id: string;
     name: string;
     city: string | null;
     prestige: number | null;
+    quality_of_learning: number | null;
+    course_cost_modifier: number | null;
   } | null;
 }
 
@@ -120,7 +132,7 @@ export const UniversityTab = () => {
     enabled: !!profileId,
   });
 
-  const currentCityName = (profile?.cities as any)?.name || null;
+  const currentCityName = (profile?.cities as { name?: string } | null)?.name ?? null;
 
   const { data: currentEnrollment } = useQuery({
     queryKey: ["current_enrollment", profile?.id],
@@ -182,12 +194,16 @@ export const UniversityTab = () => {
             base_price,
             base_duration_days,
             required_skill_level,
+            xp_per_day_min,
+            xp_per_day_max,
             university_id,
             universities (
               id,
               name,
               city,
-              prestige
+              prestige,
+              quality_of_learning,
+              course_cost_modifier
             )
           `)
           .eq("is_active", true)
@@ -356,7 +372,7 @@ export const UniversityTab = () => {
       <div>
         <h2 className="text-xl font-semibold">Academic Routes</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Explore universities and courses across the globe.
+          Compare universities across the globe. Better quality means faster, higher-XP learning, while prestigious institutions charge more.
         </p>
       </div>
 
@@ -520,6 +536,10 @@ export const UniversityTab = () => {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {cityUniversities.map((uni) => {
                     const courseCount = courseCounts?.find((cc) => cc.university_id === uni.id)?.count ?? 0;
+                    const prestigeRating = normalizeUniversityRating(uni.prestige);
+                    const qualityRating = normalizeUniversityRating(uni.quality_of_learning);
+                    const prestigeBand = getUniversityPrestigeBand(prestigeRating);
+                    const qualityBand = getUniversityQualityBand(qualityRating);
 
                     return (
                       <Card key={uni.id} className="transition-all hover:border-primary/50 hover:shadow-md">
@@ -527,10 +547,10 @@ export const UniversityTab = () => {
                           <CardTitle className="text-base leading-snug">{uni.name}</CardTitle>
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary" className="text-xs">
-                              Prestige {uni.prestige}
+                              Prestige {prestigeRating}/100 · {prestigeBand.label}
                             </Badge>
                             <Badge variant="outline" className="text-xs">
-                              Quality {uni.quality_of_learning}
+                              Quality {qualityRating}/100 · {qualityBand.label}
                             </Badge>
                           </div>
                         </CardHeader>
@@ -594,48 +614,71 @@ export const UniversityTab = () => {
                 {selectedCategory !== "all" ? ` in ${SKILL_CATEGORIES.find(c => c.value === selectedCategory)?.label}` : ""}
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredCourses.slice(0, 50).map((course) => (
-                  <Card key={course.id} className="transition-all hover:border-primary/50">
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <h4 className="font-medium leading-tight">{course.name}</h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          <Badge variant="outline" className="text-xs">
-                            {formatSkillSlug(course.skill_slug)}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            ${course.base_price}
-                          </Badge>
-                          {course.base_duration_days && (
-                            <Badge variant="secondary" className="text-xs">
-                              {course.base_duration_days}d
+                {filteredCourses.slice(0, 50).map((course) => {
+                  const effectivePrice = calculateUniversityCoursePrice(
+                    course.base_price,
+                    course.universities?.course_cost_modifier,
+                  );
+                  const effectiveDuration = calculateUniversityCourseDuration(
+                    course.base_duration_days,
+                    course.universities?.quality_of_learning,
+                  );
+                  const totalXpRange = calculateUniversityCourseXpRange(
+                    course.xp_per_day_min,
+                    course.xp_per_day_max,
+                    effectiveDuration,
+                  );
+
+                  return (
+                    <Card key={course.id} className="transition-all hover:border-primary/50">
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium leading-tight">{course.name}</h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge variant="outline" className="text-xs">
+                              {formatSkillSlug(course.skill_slug)}
                             </Badge>
-                          )}
-                          {course.required_skill_level != null && course.required_skill_level > 0 && (
-                            <Badge variant="outline" className="text-xs text-muted-foreground">
-                              Lvl {course.required_skill_level}+
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <DollarSign className="h-3 w-3" />
+                              {effectivePrice.toLocaleString()}
                             </Badge>
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <Clock className="h-3 w-3" />
+                              {effectiveDuration}d
+                            </Badge>
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <TrendingUp className="h-3 w-3" />
+                              {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
+                            </Badge>
+                            {course.required_skill_level != null && course.required_skill_level > 0 && (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                Lvl {course.required_skill_level}+
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Expected total: {totalXpRange.minimum.toLocaleString()}-{totalXpRange.maximum.toLocaleString()} XP
+                          </div>
+                          {course.universities && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <GraduationCap className="h-3 w-3" />
+                              <span className="truncate">{course.universities.name}</span>
+                            </div>
                           )}
+                          {course.universities?.city && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              <span>{course.universities.city}</span>
+                            </div>
+                          )}
+                          <Button asChild variant="ghost" size="sm" className="mt-2 w-full">
+                            <Link to={`/university/${course.university_id}`}>View University</Link>
+                          </Button>
                         </div>
-                        {course.universities && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <GraduationCap className="h-3 w-3" />
-                            <span className="truncate">{course.universities.name}</span>
-                          </div>
-                        )}
-                        {course.universities?.city && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{course.universities.city}</span>
-                          </div>
-                        )}
-                        <Button asChild variant="ghost" size="sm" className="mt-2 w-full">
-                          <Link to={`/university/${course.university_id}`}>View University</Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
               {filteredCourses.length > 50 && (
                 <p className="text-center text-sm text-muted-foreground">

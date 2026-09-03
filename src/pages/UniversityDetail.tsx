@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, CalendarCheck, Search, X } from "lucide-react";
+import { GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, CalendarCheck, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
@@ -19,6 +19,14 @@ import { useUniversityAttendance } from "@/hooks/useUniversityAttendance";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
+import {
+  calculateUniversityCourseDuration,
+  calculateUniversityCoursePrice,
+  calculateUniversityCourseXpRange,
+  getUniversityPrestigeBand,
+  getUniversityQualityBand,
+  normalizeUniversityRating,
+} from "@/lib/universityBalance";
 
 const formatClassWindowLabel = (startHour: number, endHour: number) => {
   const sanitizedStart = Math.min(Math.max(Math.floor(startHour), 0), 23);
@@ -237,8 +245,9 @@ export default function UniversityDetail() {
       const course = courses?.find((c) => c.id === courseId);
       if (!course) throw new Error("Course not found");
 
-      const finalPrice = Math.floor(
-        course.base_price * (university.course_cost_modifier || 1.0)
+      const finalPrice = calculateUniversityCoursePrice(
+        course.base_price,
+        university.course_cost_modifier,
       );
 
       if (profile.cash < finalPrice) {
@@ -260,9 +269,10 @@ export default function UniversityDetail() {
       }
 
       // Calculate duration based on quality
-      const quality = university.quality_of_learning || 50;
-      const durationMultiplier = (200 - quality) / 100;
-      const adjustedDays = Math.ceil(course.base_duration_days * durationMultiplier);
+      const adjustedDays = calculateUniversityCourseDuration(
+        course.base_duration_days,
+        university.quality_of_learning,
+      );
 
       const scheduledEndDate = new Date();
       scheduledEndDate.setDate(scheduledEndDate.getDate() + adjustedDays);
@@ -319,17 +329,17 @@ export default function UniversityDetail() {
   });
 
   const calculateDuration = (baseDays: number) => {
-    if (!university) return baseDays;
-    const quality = university.quality_of_learning || 50;
-    const durationMultiplier = (200 - quality) / 100;
-    return Math.ceil(baseDays * durationMultiplier);
+    return calculateUniversityCourseDuration(
+      baseDays,
+      university?.quality_of_learning,
+    );
   };
 
   const calculatePrice = (basePrice?: number | null): number => {
-    const normalizedPrice = typeof basePrice === "number" && !Number.isNaN(basePrice) ? basePrice : 0;
-    if (!university) return normalizedPrice;
-    const calculatedPrice = Math.floor(normalizedPrice * (university.course_cost_modifier || 1.0));
-    return Number.isFinite(calculatedPrice) ? calculatedPrice : 0;
+    return calculateUniversityCoursePrice(
+      basePrice,
+      university?.course_cost_modifier,
+    );
   };
 
   const getSkillLevel = (skillSlug: string) => {
@@ -380,6 +390,11 @@ export default function UniversityDetail() {
       course.class_start_hour ?? 10,
       course.class_end_hour ?? 14,
     );
+    const totalXpRange = calculateUniversityCourseXpRange(
+      course.xp_per_day_min,
+      course.xp_per_day_max,
+      duration,
+    );
 
     return (
       <Card key={course.id} className={atCapacity ? "border-destructive/40" : undefined}>
@@ -414,7 +429,12 @@ export default function UniversityDetail() {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
               <span>
-                {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
+                <span className="block">
+                  {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {totalXpRange.minimum.toLocaleString()}-{totalXpRange.maximum.toLocaleString()} expected total
+                </span>
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -537,6 +557,11 @@ export default function UniversityDetail() {
     );
   }
 
+  const prestigeRating = normalizeUniversityRating(university.prestige);
+  const qualityRating = normalizeUniversityRating(university.quality_of_learning);
+  const prestigeBand = getUniversityPrestigeBand(prestigeRating);
+  const qualityBand = getUniversityQualityBand(qualityRating);
+
   return (
     <FMPageScaffold
       title={university.name}
@@ -592,16 +617,25 @@ export default function UniversityDetail() {
                 <CardTitle className="text-3xl">{university.name}</CardTitle>
                 <CardDescription className="text-lg mt-2">
                   {university.city && `${university.city} • `}
-                  <Badge variant="secondary">Prestige: {university.prestige}</Badge>
+                  <Badge variant="secondary">
+                    Prestige: {prestigeRating}/100 · {prestigeBand.label}
+                  </Badge>
                   {" "}
-                  <Badge variant="secondary">Quality: {university.quality_of_learning}</Badge>
+                  <Badge variant="secondary">
+                    Quality: {qualityRating}/100 · {qualityBand.label}
+                  </Badge>
                 </CardDescription>
               </div>
               <GraduationCap className="h-12 w-12 text-muted-foreground" />
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">{university.description}</p>
+            <div className="space-y-2">
+              <p className="text-muted-foreground">{university.description}</p>
+              <p className="text-xs text-muted-foreground">
+                Quality controls learning speed and course length. Prestige contributes to both XP potential and tuition pricing.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
