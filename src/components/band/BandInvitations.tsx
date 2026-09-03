@@ -18,7 +18,18 @@ interface BandInvitation {
   bands: {
     name: string;
     genre: string | null;
+    status: string | null;
+    is_solo_artist: boolean | null;
   };
+}
+
+interface ActiveMembership {
+  band_id: string;
+  bands: {
+    name: string;
+    status: string | null;
+    is_solo_artist: boolean | null;
+  } | null;
 }
 
 interface BandInvitationsProps {
@@ -34,7 +45,7 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
     queryKey: ["band-invitations", userId, profileId],
     queryFn: async () => {
       if (!userId || !profileId) return [];
-      
+
       const { data, error } = await supabase
         .from("band_invitations")
         .select(`
@@ -44,7 +55,7 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
           vocal_role,
           message,
           created_at,
-          bands(name, genre)
+          bands(name, genre, status, is_solo_artist)
         `)
         .eq("invited_user_id", userId)
         .or(`invited_profile_id.eq.${profileId},invited_profile_id.is.null`)
@@ -57,9 +68,46 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
     enabled: !!userId && !!profileId,
   });
 
+  const { data: activeMembership, isLoading: isMembershipLoading } = useQuery<ActiveMembership | null>({
+    queryKey: ["active-band-membership", profileId],
+    queryFn: async () => {
+      if (!profileId) return null;
+
+      const { data, error } = await supabase
+        .from("band_members")
+        .select("band_id, bands:band_id(name, status, is_solo_artist)")
+        .eq("profile_id", profileId)
+        .eq("member_status", "active")
+        .eq("is_touring_member", false);
+
+      if (error) throw error;
+      return ((data || []).find((membership: any) => membership.bands?.status === "active") || null) as ActiveMembership | null;
+    },
+    enabled: !!profileId,
+    staleTime: 15_000,
+  });
+
+  const getAcceptanceBlockReason = (invitation: BandInvitation): string | null => {
+    if (invitation.bands?.status !== "active") {
+      return "This invitation is no longer valid because the band is not active.";
+    }
+    if (invitation.bands?.is_solo_artist) {
+      return "This invitation is no longer valid because solo artist projects cannot add regular band members.";
+    }
+    if (activeMembership && activeMembership.band_id !== invitation.band_id) {
+      const currentBandName = activeMembership.bands?.name || "another active band";
+      return `You are already an active member of ${currentBandName}. Leave that band or solo project before accepting this invitation.`;
+    }
+    return null;
+  };
+
   const responseMutation = useMutation({
-    mutationFn: async ({ invitationId, status }: { invitationId: string; status: "accepted" | "declined" }) => {
-      return respondBandInvitation(invitationId, status);
+    mutationFn: async ({ invitation, status }: { invitation: BandInvitation; status: "accepted" | "declined" }) => {
+      if (status === "accepted") {
+        const blockReason = getAcceptanceBlockReason(invitation);
+        if (blockReason) throw new Error(blockReason);
+      }
+      return respondBandInvitation(invitation.id, status);
     },
     onSuccess: async (invitation) => {
       const accepted = invitation.status === "accepted";
@@ -71,6 +119,8 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
       queryClient.invalidateQueries({ queryKey: ["band-members"] });
       queryClient.invalidateQueries({ queryKey: ["user-bands"] });
       queryClient.invalidateQueries({ queryKey: ["primary-band"] });
+      queryClient.invalidateQueries({ queryKey: ["active-band-membership"] });
+      queryClient.invalidateQueries({ queryKey: ["band-join-eligibility"] });
       if (accepted) await onMembershipChanged?.();
     },
     onError: (error: Error) => {
@@ -153,54 +203,64 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {invitations.map((invitation) => (
-            <div
-              key={invitation.id}
-              className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-start sm:justify-between"
-            >
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{invitation.bands.name}</span>
-                  {invitation.bands.genre && (
-                    <Badge variant="secondary">{invitation.bands.genre}</Badge>
+          {invitations.map((invitation) => {
+            const acceptanceBlockReason = getAcceptanceBlockReason(invitation);
+            return (
+              <div
+                key={invitation.id}
+                className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{invitation.bands.name}</span>
+                    {invitation.bands.genre && (
+                      <Badge variant="secondary">{invitation.bands.genre}</Badge>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Role: {invitation.instrument_role}
+                    {invitation.vocal_role && ` / ${invitation.vocal_role}`}
+                  </div>
+                  {invitation.message && (
+                    <p className="text-sm italic text-muted-foreground">
+                      "{invitation.message}"
+                    </p>
+                  )}
+                  {acceptanceBlockReason && (
+                    <div className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive" role="alert">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{acceptanceBlockReason}</span>
+                    </div>
                   )}
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Role: {invitation.instrument_role}
-                  {invitation.vocal_role && ` / ${invitation.vocal_role}`}
+                <div className="flex w-full gap-2 sm:w-auto" aria-label={`Respond to invitation from ${invitation.bands.name}`}>
+                  <Button
+                    size="sm"
+                    className="flex-1 sm:flex-none"
+                    onClick={() => responseMutation.mutate({ invitation, status: "accepted" })}
+                    disabled={responseMutation.isPending || isMembershipLoading || !!acceptanceBlockReason}
+                    aria-label={`Accept invitation from ${invitation.bands.name}`}
+                    title={acceptanceBlockReason || undefined}
+                  >
+                    <CheckCircle2 className="mr-1 h-4 w-4" />
+                    {responseMutation.isPending ? "Saving..." : isMembershipLoading ? "Checking..." : "Accept"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 sm:flex-none"
+                    variant="outline"
+                    onClick={() => responseMutation.mutate({ invitation, status: "declined" })}
+                    disabled={responseMutation.isPending}
+                    aria-label={`Decline invitation from ${invitation.bands.name}`}
+                  >
+                    <XCircle className="mr-1 h-4 w-4" />
+                    Decline
+                  </Button>
                 </div>
-                {invitation.message && (
-                  <p className="text-sm italic text-muted-foreground">
-                    "{invitation.message}"
-                  </p>
-                )}
               </div>
-              <div className="flex w-full gap-2 sm:w-auto" aria-label={`Respond to invitation from ${invitation.bands.name}`}>
-                <Button
-                  size="sm"
-                  className="flex-1 sm:flex-none"
-                  onClick={() => responseMutation.mutate({ invitationId: invitation.id, status: "accepted" })}
-                  disabled={responseMutation.isPending}
-                  aria-label={`Accept invitation from ${invitation.bands.name}`}
-                >
-                  <CheckCircle2 className="mr-1 h-4 w-4" />
-                  {responseMutation.isPending ? "Saving..." : "Accept"}
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 sm:flex-none"
-                  variant="outline"
-                  onClick={() => responseMutation.mutate({ invitationId: invitation.id, status: "declined" })}
-                  disabled={responseMutation.isPending}
-                  aria-label={`Decline invitation from ${invitation.bands.name}`}
-                >
-                  <XCircle className="mr-1 h-4 w-4" />
-                  Decline
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
