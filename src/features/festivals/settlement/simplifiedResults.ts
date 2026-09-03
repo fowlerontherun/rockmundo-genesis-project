@@ -7,6 +7,20 @@ export interface SimplifiedFestivalFinancials {
   taxMinor: number;
   totalRevenueMinor: number;
   netProfitMinor: number;
+  ledgerFrozenAt: string | null;
+  ledgerReconciled: boolean;
+}
+
+export interface SimplifiedFestivalRealAttendance {
+  calculationVersion?: string;
+  verifiedCheckedIn?: number;
+  verifiedCompleted?: number;
+  completedActivities?: number;
+  resolvedMoments?: number;
+  engagementPoints?: number;
+  ownerBoostPercent?: number;
+  reputationBonus?: number;
+  ticketCountUsed?: boolean;
 }
 
 export interface SimplifiedFestivalCompanyImpact {
@@ -17,7 +31,12 @@ export interface SimplifiedFestivalCompanyImpact {
   balanceAfterMinor: number | null;
   reputationBefore: number | null;
   reputationAfter: number | null;
+  baseReputationChange: number;
+  engagementReputationBonus: number;
   reputationChange: number;
+  engagementFinalised: boolean;
+  engagementFinalisedAt: string | null;
+  realAttendance: SimplifiedFestivalRealAttendance;
 }
 
 export interface SimplifiedFestivalResults {
@@ -62,6 +81,18 @@ const requiredNumber = (object: Record<string, unknown>, key: string) => {
   return value;
 };
 
+const optionalNumber = (value: unknown) => {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number") throw new Error("Invalid optional numeric response field");
+  return value;
+};
+
+const optionalString = (value: unknown) => {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new Error("Invalid optional string response field");
+  return value;
+};
+
 const nullableNumber = (value: unknown) => {
   if (value === null) return null;
   if (typeof value !== "number") throw new Error("Invalid nullable numeric response field");
@@ -72,6 +103,24 @@ const requiredArray = (object: Record<string, unknown>, key: string) => {
   const value = object[key];
   if (!Array.isArray(value)) throw new Error(`Invalid response field: ${key}`);
   return value;
+};
+
+const parseRealAttendance = (value: unknown): SimplifiedFestivalRealAttendance => {
+  const realAttendance = asObject(value, "Festival real attendance");
+  return {
+    calculationVersion: optionalString(realAttendance.calculationVersion),
+    verifiedCheckedIn: optionalNumber(realAttendance.verifiedCheckedIn),
+    verifiedCompleted: optionalNumber(realAttendance.verifiedCompleted),
+    completedActivities: optionalNumber(realAttendance.completedActivities),
+    resolvedMoments: optionalNumber(realAttendance.resolvedMoments),
+    engagementPoints: optionalNumber(realAttendance.engagementPoints),
+    ownerBoostPercent: optionalNumber(realAttendance.ownerBoostPercent),
+    reputationBonus: optionalNumber(realAttendance.reputationBonus),
+    ticketCountUsed:
+      typeof realAttendance.ticketCountUsed === "boolean"
+        ? realAttendance.ticketCountUsed
+        : undefined,
+  };
 };
 
 export function parseSimplifiedFestivalResults(value: unknown): SimplifiedFestivalResults | null {
@@ -106,6 +155,8 @@ export function parseSimplifiedFestivalResults(value: unknown): SimplifiedFestiv
       taxMinor: requiredNumber(financials, "taxMinor"),
       totalRevenueMinor: requiredNumber(financials, "totalRevenueMinor"),
       netProfitMinor: requiredNumber(financials, "netProfitMinor"),
+      ledgerFrozenAt: nullableString(financials.ledgerFrozenAt),
+      ledgerReconciled: Boolean(financials.ledgerReconciled),
     },
     companyImpact: {
       settlementApplied: Boolean(companyImpact.settlementApplied),
@@ -115,7 +166,12 @@ export function parseSimplifiedFestivalResults(value: unknown): SimplifiedFestiv
       balanceAfterMinor: nullableNumber(companyImpact.balanceAfterMinor),
       reputationBefore: nullableNumber(companyImpact.reputationBefore),
       reputationAfter: nullableNumber(companyImpact.reputationAfter),
+      baseReputationChange: requiredNumber(companyImpact, "baseReputationChange"),
+      engagementReputationBonus: requiredNumber(companyImpact, "engagementReputationBonus"),
       reputationChange: requiredNumber(companyImpact, "reputationChange"),
+      engagementFinalised: Boolean(companyImpact.engagementFinalised),
+      engagementFinalisedAt: nullableString(companyImpact.engagementFinalisedAt),
+      realAttendance: parseRealAttendance(companyImpact.realAttendance),
     },
   };
 }
