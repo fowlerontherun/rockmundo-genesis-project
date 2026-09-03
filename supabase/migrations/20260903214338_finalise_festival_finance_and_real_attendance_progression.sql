@@ -1,0 +1,6 @@
+-- Production migration history marker.
+-- The live RockMundo database applied this Festival reconciliation on 2026-09-03.
+-- Its dependencies are supplied later by the repository's inherited 2029 Festival
+-- bootstrap, so clean builds replay the final SQL through the post-bootstrap
+-- reconciliation extension instead of executing dependency-heavy DDL here.
+-- See scripts/supabase/festival-production-reconciliation.json.

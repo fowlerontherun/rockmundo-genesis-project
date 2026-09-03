@@ -1,0 +1,5 @@
+-- Production migration history marker.
+-- The live RockMundo database applied this Festival Results reconciliation on
+-- 2026-09-03. Clean builds receive the final RPC definitions only after the
+-- inherited 2029 Festival bootstrap through the post-bootstrap reconciliation
+-- extension. See scripts/supabase/festival-production-reconciliation.json.

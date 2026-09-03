@@ -403,12 +403,19 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Banknote className="h-5 w-5" /> Festival finances
-              </CardTitle>
-              <CardDescription>
-                Final revenue and operating costs from this annual Festival.
-              </CardDescription>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Banknote className="h-5 w-5" /> Festival finances
+                  </CardTitle>
+                  <CardDescription>
+                    Final revenue and operating costs from this annual Festival.
+                  </CardDescription>
+                </div>
+                <Badge variant={result.financials.ledgerReconciled ? "secondary" : "outline"}>
+                  {result.financials.ledgerReconciled ? "Finance reconciled" : "Reconciliation pending"}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <ResultValue label="Ticket revenue" value={formatMoney(result.financials.ticketRevenueMinor, result.currencyCode)} />
@@ -431,7 +438,7 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
               <CardTitle>Company impact</CardTitle>
               <CardDescription>
                 {result.companyImpact.settlementApplied
-                  ? "The financial result and reputation change have been posted automatically to the Festival company."
+                  ? "The financial result and base reputation change have been posted automatically to the Festival company."
                   : "The Festival completed, but the company settlement has not been confirmed."}
               </CardDescription>
             </CardHeader>
@@ -445,6 +452,14 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
                 value={result.companyImpact.balanceAfterMinor === null ? "—" : formatMoney(result.companyImpact.balanceAfterMinor, result.currencyCode)}
               />
               <ResultValue
+                label="Base reputation"
+                value={`${result.companyImpact.baseReputationChange >= 0 ? "+" : ""}${result.companyImpact.baseReputationChange}`}
+              />
+              <ResultValue
+                label="Real-player bonus"
+                value={`${result.companyImpact.engagementReputationBonus >= 0 ? "+" : ""}${result.companyImpact.engagementReputationBonus}`}
+              />
+              <ResultValue
                 label="Reputation before"
                 value={result.companyImpact.reputationBefore?.toString() ?? "—"}
               />
@@ -453,6 +468,54 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
                 value={result.companyImpact.reputationAfter?.toString() ?? "—"}
               />
             </CardContent>
+          </Card>
+
+          <Card className={result.companyImpact.engagementFinalised ? "border-primary/20" : "border-amber-500/40 bg-amber-500/5"}>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Real audience engagement</CardTitle>
+                  <CardDescription>
+                    Verified player attendance and Festival Mode activity can add a small permanent reputation bonus. Raw ticket count is not used.
+                  </CardDescription>
+                </div>
+                <Badge variant={result.companyImpact.engagementFinalised ? "secondary" : "outline"}>
+                  {result.companyImpact.engagementFinalised ? "Progression finalised" : "Waiting for attendees"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <ResultValue
+                label="Verified check-ins"
+                value={result.companyImpact.realAttendance.verifiedCheckedIn?.toLocaleString("en-GB") ?? "—"}
+              />
+              <ResultValue
+                label="Completed visits"
+                value={result.companyImpact.realAttendance.verifiedCompleted?.toLocaleString("en-GB") ?? "—"}
+              />
+              <ResultValue
+                label="Festival Mode actions"
+                value={result.companyImpact.realAttendance.completedActivities?.toLocaleString("en-GB") ?? "—"}
+              />
+              <ResultValue
+                label="Engagement points"
+                value={result.companyImpact.realAttendance.engagementPoints?.toLocaleString("en-GB") ?? "—"}
+              />
+              <ResultValue
+                label="Owner boost"
+                value={result.companyImpact.realAttendance.ownerBoostPercent === undefined ? "—" : `${result.companyImpact.realAttendance.ownerBoostPercent.toFixed(2)}%`}
+              />
+              <ResultValue
+                label="Reputation bonus"
+                value={`${result.companyImpact.engagementReputationBonus >= 0 ? "+" : ""}${result.companyImpact.engagementReputationBonus}`}
+                emphasis
+              />
+            </CardContent>
+            {!result.companyImpact.engagementFinalised ? (
+              <CardContent className="pt-0 text-sm text-muted-foreground">
+                Final progression will lock automatically after all real attendees have completed, left early, cancelled or been refunded.
+              </CardContent>
+            ) : null}
           </Card>
         </div>
       )}

@@ -10,6 +10,7 @@ on:
       - 'scripts/festivals/**'
       - 'scripts/supabase/festival-production-reconciliation.json'
       - 'src/features/festival-company/**'
+      - 'src/features/festivals/**'
       - 'src/testing/**'
       - 'src/integrations/supabase/types.ts'
       - 'vitest.setup.ts'
@@ -62,7 +63,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Never certify a synthetic merge or a moving branch ref.
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
@@ -154,6 +154,7 @@ jobs:
         run: |
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_simplified_production_overlay_regression.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_finance_engagement_regression.sql
       - name: Run Festival upgrade post-deployment diagnostic
         run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/diagnostics/festival_upgrade_v2_postdeploy.sql
       - name: Run authenticated Festival upgrade database gate
@@ -182,6 +183,7 @@ jobs:
         run: |
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_simplified_production_overlay_regression.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_finance_engagement_regression.sql
       - name: Rerun authenticated Festival upgrade database gate
         run: |
           set -o pipefail
