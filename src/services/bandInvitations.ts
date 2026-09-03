@@ -13,6 +13,7 @@ export interface BandInvitationResult {
   band_id: string;
   inviter_user_id: string;
   invited_user_id: string;
+  invited_profile_id: string | null;
   instrument_role: string;
   vocal_role: string | null;
   message: string | null;
@@ -66,11 +67,11 @@ export function normalizeBandInvitationResponseInput(invitationId: string, statu
 export async function sendBandInvitation(input: SendBandInvitationInput): Promise<BandInvitationResult> {
   const normalized = normalizeBandInvitationInput(input);
 
-  const { data, error } = await (supabase.rpc as any)("send_band_invitation", {
+  const { data, error } = await supabase.rpc("send_band_invitation", {
     target_band_id: normalized.bandId,
     target_profile_id: normalized.targetProfileId,
-    invited_instrument_role: normalized.instrumentRole,
-    invited_vocal_role: normalized.vocalRole,
+    requested_instrument_role: normalized.instrumentRole,
+    requested_vocal_role: normalized.vocalRole,
     invite_message: normalized.message,
   });
 
@@ -87,7 +88,7 @@ export async function sendBandInvitation(input: SendBandInvitationInput): Promis
 
 export async function respondBandInvitation(invitationId: string, status: BandInvitationResponseStatus): Promise<BandInvitationResult> {
   const normalized = normalizeBandInvitationResponseInput(invitationId, status);
-  const { data, error } = await (supabase.rpc as any)("respond_band_invitation", {
+  const { data, error } = await supabase.rpc("respond_band_invitation", {
     invitation_id: normalized.invitationId,
     response_status: normalized.status,
   });
@@ -103,7 +104,7 @@ export async function respondBandInvitation(invitationId: string, status: BandIn
 
 export async function cancelBandInvitation(invitationId: string): Promise<BandInvitationResult> {
   const normalizedInvitationId = assertUuid(invitationId, "Choose a valid band invitation.");
-  const { data, error } = await (supabase.rpc as any)("cancel_band_invitation", {
+  const { data, error } = await supabase.rpc("cancel_band_invitation", {
     invitation_id: normalizedInvitationId,
   });
 

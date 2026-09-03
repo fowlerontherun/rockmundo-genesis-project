@@ -46,6 +46,9 @@ export default function BandProfile() {
           created_at,
           logo_url,
           is_recruiting,
+          allow_applications,
+          is_solo_artist,
+          status,
           band_members:band_members!band_members_band_id_fkey(
             id,
             instrument_role,
@@ -151,7 +154,13 @@ export default function BandProfile() {
 
   const activeApplication = submittedApplication || existingApplication;
   const activeApplicationStatus = getRecruitmentStatusMeta(activeApplication?.status);
-  const canApply = band.is_recruiting && !isMember && (!activeApplication || activeApplication.status === "withdrawn" || activeApplication.status === "rejected") && profileId;
+  const canApply = band.status === "active"
+    && band.is_recruiting
+    && band.allow_applications !== false
+    && !band.is_solo_artist
+    && !isMember
+    && (!activeApplication || activeApplication.status === "withdrawn" || activeApplication.status === "rejected")
+    && profileId;
 
 
   return (
@@ -175,7 +184,7 @@ export default function BandProfile() {
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">{band.name}</h1>
                 {band.genre && <Badge variant="secondary">{band.genre}</Badge>}
-                {band.is_recruiting && (
+                {band.is_recruiting && band.allow_applications !== false && !band.is_solo_artist && (
                   <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                     Recruiting
                   </Badge>

@@ -10,6 +10,7 @@ import { UserPlus } from "lucide-react";
 import {
   BAND_APPLICATION_MESSAGE_MAX_LENGTH,
   BAND_APPLICATION_ROLES,
+  DEFAULT_BAND_PERFORMANCE_ROLE,
   normalizeBandApplicationSubmissionInput,
   submitBandApplication,
   type BandApplicationResult,
@@ -24,7 +25,7 @@ interface BandApplicationDialogProps {
 
 export function BandApplicationDialog({ bandId, bandName, profileId, onSubmitted }: BandApplicationDialogProps) {
   const [open, setOpen] = useState(false);
-  const [instrumentRole, setInstrumentRole] = useState("Guitar");
+  const [instrumentRole, setInstrumentRole] = useState(DEFAULT_BAND_PERFORMANCE_ROLE);
   const [message, setMessage] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const statusId = useId();
@@ -42,8 +43,9 @@ export function BandApplicationDialog({ bandId, bandName, profileId, onSubmitted
       setMessage("");
       setValidationError(null);
     },
-    onError: (error: any) => {
-      const msg = error.message?.includes("duplicate") ? "You have already applied to this band." : error.message;
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : "";
+      const msg = errorMessage.includes("duplicate") ? "You have already applied to this band." : errorMessage;
       setValidationError(msg || "Could not submit your application.");
       toast({ title: "Error", description: msg, variant: "destructive" });
     },

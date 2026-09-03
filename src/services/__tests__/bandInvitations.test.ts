@@ -74,8 +74,8 @@ describe("band invitation service", () => {
     expect(supabase.rpc).toHaveBeenCalledWith("send_band_invitation", {
       target_band_id: validBandId,
       target_profile_id: validProfileId,
-      invited_instrument_role: "Guitar",
-      invited_vocal_role: null,
+      requested_instrument_role: "Guitar",
+      requested_vocal_role: null,
       invite_message: null,
     });
   });

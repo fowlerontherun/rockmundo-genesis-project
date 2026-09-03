@@ -2763,6 +2763,7 @@ export type Database = {
           created_at: string
           id: string
           instrument_role: string
+          invited_profile_id: string | null
           invited_user_id: string
           inviter_user_id: string
           message: string | null
@@ -2775,6 +2776,7 @@ export type Database = {
           created_at?: string
           id?: string
           instrument_role?: string
+          invited_profile_id?: string | null
           invited_user_id: string
           inviter_user_id: string
           message?: string | null
@@ -2787,6 +2789,7 @@ export type Database = {
           created_at?: string
           id?: string
           instrument_role?: string
+          invited_profile_id?: string | null
           invited_user_id?: string
           inviter_user_id?: string
           message?: string | null
@@ -2800,6 +2803,20 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_invitations_invited_profile_id_fkey"
+            columns: ["invited_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_invitations_invited_profile_id_fkey"
+            columns: ["invited_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -60241,6 +60258,10 @@ export type Database = {
         Args: { p_band_id: string; p_user_id?: string }
         Returns: boolean
       }
+      can_manage_band_invitations: {
+        Args: { actor_user_id?: string; target_band_id: string }
+        Returns: boolean
+      }
       can_manage_band_members: {
         Args: { target_band_id: string }
         Returns: boolean
@@ -60262,6 +60283,10 @@ export type Database = {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
       }
+      can_receive_band_invitation: {
+        Args: { inviter_profile_id: string; target_profile_id: string }
+        Returns: boolean
+      }
       can_sign_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
@@ -60273,6 +60298,28 @@ export type Database = {
       can_view_social_contract: {
         Args: { p_contract_id: string; p_profile_id?: string }
         Returns: boolean
+      }
+      cancel_band_invitation: {
+        Args: { invitation_id: string }
+        Returns: {
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          invited_profile_id: string | null
+          invited_user_id: string
+          inviter_user_id: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_invitations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       cancel_band_objective: {
         Args: { p_objective_id: string }
@@ -64944,6 +64991,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      respond_band_invitation: {
+        Args: { invitation_id: string; response_status: string }
+        Returns: {
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          invited_profile_id: string | null
+          invited_user_id: string
+          inviter_user_id: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_invitations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       respond_child_parenting_decision: {
         Args: { p_accept: boolean; p_decision_id: string; p_note?: string }
         Returns: {
@@ -65618,6 +65687,7 @@ export type Database = {
           created_at: string
           id: string
           instrument_role: string
+          invited_profile_id: string | null
           invited_user_id: string
           inviter_user_id: string
           message: string | null
@@ -66204,6 +66274,27 @@ export type Database = {
       }
       submit_band_application: {
         Args: { band_id: string; message?: string; requested_role: string }
+        Returns: {
+          applicant_profile_id: string
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vacancy_id: string | null
+          vocal_role: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_band_vacancy_application: {
+        Args: { answers?: Json; cover?: string; target_vacancy_id: string }
         Returns: {
           applicant_profile_id: string
           band_id: string

@@ -129,30 +129,15 @@ export async function searchBandVacancies(filters: Record<string, string | boole
   return (data ?? []) as unknown as BandVacancy[];
 }
 
-export async function applyToVacancy(vacancy: BandVacancy, applicantProfileId: string, coverMessage: string) {
+export async function applyToVacancy(vacancy: BandVacancy, _applicantProfileId: string, coverMessage: string) {
   if (!vacancy.direct_applications_allowed) throw new Error("This band is not accepting direct applications for this role.");
-  const { data: existingMembership } = await supabase
-    .from("band_members")
-    .select("id")
-    .eq("band_id", vacancy.band_id)
-    .eq("profile_id", applicantProfileId)
-    .maybeSingle();
-  if (existingMembership) throw new Error("You are already a member of this band.");
-
-  const { data, error } = await supabase
-    .from("band_applications" as never)
-    .insert({
-      band_id: vacancy.band_id,
-      vacancy_id: vacancy.id,
-      applicant_profile_id: applicantProfileId,
-      instrument_role: vacancy.instrument,
-      vocal_role: vacancy.vocal_role || null,
-      message: sanitizeRecruitmentText(coverMessage).slice(0, 2000),
-      status: "pending",
-    } as never)
-    .select("*")
-    .single();
-  if ((error as any)?.code === "23505") throw new Error("You already have a pending application for this role.");
+  const { data, error } = await supabase.rpc("submit_band_vacancy_application", {
+    target_vacancy_id: vacancy.id,
+    cover: sanitizeRecruitmentText(coverMessage).slice(0, 500),
+    answers: {},
+  });
+  if (error?.code === "23505") throw new Error("You already have a pending application for this role.");
   if (error) throw error;
+  if (!data) throw new Error("Band application could not be submitted.");
   return data;
 }

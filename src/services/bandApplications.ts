@@ -18,6 +18,7 @@ export type BandApplicationStatus = "pending" | "accepted" | "rejected" | "withd
 
 export const BAND_APPLICATION_MESSAGE_MAX_LENGTH = 500;
 export const BAND_APPLICATION_ROLES = BAND_PERFORMANCE_ROLES;
+export { DEFAULT_BAND_PERFORMANCE_ROLE };
 export type BandApplicationRole = string;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -49,7 +50,7 @@ export function normalizeBandApplicationSubmissionInput(bandId: string | undefin
 
 export async function submitBandApplication(bandId: string, requestedRole: string, message: string): Promise<BandApplicationResult> {
   const normalized = normalizeBandApplicationSubmissionInput(bandId, requestedRole, message);
-  const { data, error } = await (supabase.rpc as any)("submit_band_application", {
+  const { data, error } = await supabase.rpc("submit_band_application", {
     band_id: normalized.bandId,
     requested_role: normalized.requestedRole,
     message: normalized.message,
@@ -74,7 +75,7 @@ export function normalizeBandApplicationResponseInput(applicationId: string, dec
 
 export async function respondBandApplication(applicationId: string, decision: BandApplicationDecision): Promise<BandApplicationResult> {
   const normalized = normalizeBandApplicationResponseInput(applicationId, decision);
-  const { data, error } = await (supabase.rpc as any)("respond_band_application", {
+  const { data, error } = await supabase.rpc("respond_band_application", {
     application_id: normalized.applicationId,
     decision: normalized.decision,
   });
@@ -94,7 +95,7 @@ export function normalizeBandApplicationWithdrawalInput(applicationId: string | 
 
 export async function withdrawBandApplication(applicationId: string): Promise<BandApplicationResult> {
   const normalized = normalizeBandApplicationWithdrawalInput(applicationId);
-  const { data, error } = await (supabase.rpc as any)("withdraw_band_application", {
+  const { data, error } = await supabase.rpc("withdraw_band_application", {
     application_id: normalized.applicationId,
   });
 

@@ -303,7 +303,7 @@ export default function BandManager() {
               </Button>
             </CardContent>
           </Card>
-          <BandInvitations />
+          <BandInvitations onMembershipChanged={loadUserBands} />
           <div className="lg:col-span-2">
             <BandCreationForm onBandCreated={loadUserBands} />
           </div>
@@ -328,12 +328,12 @@ export default function BandManager() {
     ? selectedBand.artist_name || selectedBand.name
     : selectedBand.name;
   const hubActions = [
-    {
+    ...(!selectedBand.is_solo_artist ? [{
       label: "Invite member",
       path: "/band/members",
       icon: Plus,
       variant: "outline" as const,
-    },
+    }] : []),
     {
       label: "Schedule rehearsal",
       path: "/band/rehearsals",
@@ -434,7 +434,7 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
-          <BandInvitations />
+          <BandInvitations onMembershipChanged={loadUserBands} />
 
           {/* Pending Applications (Leader only) */}
           {isLeader && selectedBand.status === "active" && (
@@ -457,11 +457,13 @@ export default function BandManager() {
                 </div>
                 {isLeader && selectedBand.status === "active" && (
                   <div className="flex gap-2">
-                    <InviteFriendToBand
-                      bandId={selectedBand.id}
-                      bandName={selectedBand.name}
-                      currentUserId={profileId!}
-                    />
+                    {!selectedBand.is_solo_artist && (
+                      <InviteFriendToBand
+                        bandId={selectedBand.id}
+                        bandName={selectedBand.name}
+                        currentUserId={profileId!}
+                      />
+                    )}
                     <AddTouringMember
                       bandId={selectedBand.id}
                       onAdded={() => loadBandMembers(selectedBand.id)}

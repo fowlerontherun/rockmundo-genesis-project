@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { CheckCircle2, Mail, Users, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Mail, RefreshCw, Users, XCircle } from "lucide-react";
 
 interface BandInvitation {
   id: string;
@@ -21,15 +21,19 @@ interface BandInvitation {
   };
 }
 
-export const BandInvitations = () => {
-  const { userId } = useActiveProfile();
+interface BandInvitationsProps {
+  onMembershipChanged?: () => void | Promise<void>;
+}
+
+export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) => {
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: invitations, isLoading } = useQuery({
-    queryKey: ["band-invitations", userId],
+  const { data: invitations, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["band-invitations", userId, profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!userId || !profileId) return [];
       
       const { data, error } = await supabase
         .from("band_invitations")
@@ -43,20 +47,21 @@ export const BandInvitations = () => {
           bands(name, genre)
         `)
         .eq("invited_user_id", userId)
+        .or(`invited_profile_id.eq.${profileId},invited_profile_id.is.null`)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as BandInvitation[];
     },
-    enabled: !!userId,
+    enabled: !!userId && !!profileId,
   });
 
   const responseMutation = useMutation({
     mutationFn: async ({ invitationId, status }: { invitationId: string; status: "accepted" | "declined" }) => {
       return respondBandInvitation(invitationId, status);
     },
-    onSuccess: (invitation) => {
+    onSuccess: async (invitation) => {
       const accepted = invitation.status === "accepted";
       toast({
         title: accepted ? "Invitation Accepted" : "Invitation Declined",
@@ -65,6 +70,8 @@ export const BandInvitations = () => {
       queryClient.invalidateQueries({ queryKey: ["band-invitations"] });
       queryClient.invalidateQueries({ queryKey: ["band-members"] });
       queryClient.invalidateQueries({ queryKey: ["user-bands"] });
+      queryClient.invalidateQueries({ queryKey: ["primary-band"] });
+      if (accepted) await onMembershipChanged?.();
     },
     onError: (error: Error) => {
       toast({
@@ -94,8 +101,30 @@ export const BandInvitations = () => {
     );
   }
 
-  if (!userId) {
+  if (!userId || !profileId) {
     return null;
+  }
+
+  if (isError) {
+    return (
+      <Card role="alert">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            Band Invitations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-destructive">
+            {(error as Error)?.message || "Band invitations could not be loaded."}
+          </p>
+          <Button size="sm" variant="outline" onClick={() => void refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Try again
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!invitations || invitations.length === 0) {

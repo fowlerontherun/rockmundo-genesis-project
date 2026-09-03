@@ -6,6 +6,7 @@ import {
   submitBandApplication,
   normalizeBandApplicationWithdrawalInput,
   withdrawBandApplication,
+  DEFAULT_BAND_PERFORMANCE_ROLE,
 } from "../bandApplications";
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -24,40 +25,40 @@ describe("band application service", () => {
 
 
   it("normalizes valid submission input", () => {
-    expect(normalizeBandApplicationSubmissionInput(` ${validBandId} `, "Guitar", "  Ready to rehearse.  ")).toEqual({
+    expect(normalizeBandApplicationSubmissionInput(` ${validBandId} `, DEFAULT_BAND_PERFORMANCE_ROLE, "  Ready to rehearse.  ")).toEqual({
       bandId: validBandId,
-      requestedRole: "Guitar",
+      requestedRole: DEFAULT_BAND_PERFORMANCE_ROLE,
       message: "Ready to rehearse.",
     });
   });
 
   it("rejects invalid submission input before calling the backend", async () => {
-    expect(() => normalizeBandApplicationSubmissionInput("bad-id", "Guitar", "")).toThrow("valid band");
-    expect(() => normalizeBandApplicationSubmissionInput(validBandId, "leader", "")).toThrow("valid instrument");
-    expect(() => normalizeBandApplicationSubmissionInput(validBandId, "Guitar", "<b>hi</b>")).toThrow("plain text");
-    expect(() => normalizeBandApplicationSubmissionInput(validBandId, "Guitar", "x".repeat(501))).toThrow("500 characters");
-    await expect(submitBandApplication("bad-id", "Guitar", "")).rejects.toThrow("valid band");
+    expect(() => normalizeBandApplicationSubmissionInput("bad-id", DEFAULT_BAND_PERFORMANCE_ROLE, "")).toThrow("valid band");
+    expect(() => normalizeBandApplicationSubmissionInput(validBandId, "leader", "")).toThrow("valid performance role");
+    expect(() => normalizeBandApplicationSubmissionInput(validBandId, DEFAULT_BAND_PERFORMANCE_ROLE, "<b>hi</b>")).toThrow("plain text");
+    expect(() => normalizeBandApplicationSubmissionInput(validBandId, DEFAULT_BAND_PERFORMANCE_ROLE, "x".repeat(501))).toThrow("500 characters");
+    await expect(submitBandApplication("bad-id", DEFAULT_BAND_PERFORMANCE_ROLE, "")).rejects.toThrow("valid band");
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
   it("calls guarded submission RPC for application requests", async () => {
-    const row = { id: validApplicationId, band_id: validBandId, status: "pending", instrument_role: "Guitar" };
+    const row = { id: validApplicationId, band_id: validBandId, status: "pending", instrument_role: DEFAULT_BAND_PERFORMANCE_ROLE };
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: row, error: null } as never);
 
-    await expect(submitBandApplication(validBandId, "Guitar", " Let me join. ")).resolves.toBe(row);
+    await expect(submitBandApplication(validBandId, DEFAULT_BAND_PERFORMANCE_ROLE, " Let me join. ")).resolves.toBe(row);
     expect(supabase.rpc).toHaveBeenCalledWith("submit_band_application", {
       band_id: validBandId,
-      requested_role: "Guitar",
+      requested_role: DEFAULT_BAND_PERFORMANCE_ROLE,
       message: "Let me join.",
     });
   });
 
   it("surfaces submission backend failures and empty responses", async () => {
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: { message: "This band is not accepting applications right now." } } as never);
-    await expect(submitBandApplication(validBandId, "Guitar", "")).rejects.toThrow("not accepting applications");
+    await expect(submitBandApplication(validBandId, DEFAULT_BAND_PERFORMANCE_ROLE, "")).rejects.toThrow("not accepting applications");
 
     vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as never);
-    await expect(submitBandApplication(validBandId, "Guitar", "")).rejects.toThrow("could not be submitted");
+    await expect(submitBandApplication(validBandId, DEFAULT_BAND_PERFORMANCE_ROLE, "")).rejects.toThrow("could not be submitted");
   });
 
   it("normalizes valid response input and rejects invalid decisions", () => {

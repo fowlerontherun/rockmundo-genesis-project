@@ -6,9 +6,15 @@ const invalidateQueries = vi.fn();
 const toast = vi.fn();
 let mutationPending = false;
 
+type MutationOptions = {
+  mutationFn: () => Promise<unknown>;
+  onSuccess?: (result: unknown) => void;
+  onError?: (error: unknown) => void;
+};
+
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries }),
-  useMutation: (options: any) => {
+  useMutation: (options: MutationOptions) => {
     mutate.mockImplementation(async () => {
       try {
         const result = await options.mutationFn();
@@ -29,7 +35,10 @@ vi.mock("@/services/bandApplications", async (importOriginal) => {
   };
 });
 
-import { submitBandApplication } from "@/services/bandApplications";
+import {
+  DEFAULT_BAND_PERFORMANCE_ROLE,
+  submitBandApplication,
+} from "@/services/bandApplications";
 import { BandApplicationDialog } from "./BandApplicationDialog";
 
 const bandId = "11111111-1111-4111-8111-111111111111";
@@ -48,7 +57,11 @@ describe("BandApplicationDialog", () => {
     fireEvent.change(screen.getByLabelText(/message/i), { target: { value: "Ready to rehearse." } });
     fireEvent.click(screen.getByRole("button", { name: /send application/i }));
 
-    await waitFor(() => expect(submitBandApplication).toHaveBeenCalledWith(bandId, "Guitar", "Ready to rehearse."));
+    await waitFor(() => expect(submitBandApplication).toHaveBeenCalledWith(
+      bandId,
+      DEFAULT_BAND_PERFORMANCE_ROLE,
+      "Ready to rehearse.",
+    ));
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Application Sent" }));
     expect(onSubmitted).toHaveBeenCalledWith(expect.objectContaining({ status: "pending" }));
   });
@@ -59,7 +72,7 @@ describe("BandApplicationDialog", () => {
     fireEvent.change(screen.getByLabelText(/message/i), { target: { value: "<b>bad</b>" } });
     fireEvent.click(screen.getByRole("button", { name: /send application/i }));
     expect(submitBandApplication).not.toHaveBeenCalled();
-    expect(await screen.findByText(/plain text/i)).toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("Band application messages must be plain text.");
   });
 
   it("disables submit while saving", () => {
