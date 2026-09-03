@@ -3,7 +3,6 @@ import {
   Bell,
   BellOff,
   Clock,
-  ExternalLink,
   Leaf,
   Loader2,
   Play,
@@ -223,10 +222,6 @@ export const VideosTab = () => {
   };
 
   const handleWatch = (video: VideoResource) => {
-    const opened = window.open(video.url, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      toast.info("Open the lesson in a new tab to watch it.");
-    }
     watchVideo.mutate({
       videoId: video.id,
       videoName: video.name,
@@ -495,9 +490,9 @@ export const VideosTab = () => {
                       {watchingThis ? (
                         <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                       ) : (
-                        <ExternalLink className="mr-1 h-4 w-4" />
+                        <Play className="mr-1 h-4 w-4" />
                       )}
-                      Watch & earn
+                      Learn & earn
                     </Button>
                   </div>
                 </CardContent>
