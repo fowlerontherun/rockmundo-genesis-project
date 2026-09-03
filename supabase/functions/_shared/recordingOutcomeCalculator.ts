@@ -1,4 +1,4 @@
-export const RECORDING_BALANCE_VERSION = "recording_outcome_v1";
+export const RECORDING_BALANCE_VERSION = "recording_outcome_v2_quality_scale";
 
 export type RecordingSessionMode = "professional" | "chilled" | "party" | string;
 export type SkillMap = Record<string, number | undefined>;
@@ -166,15 +166,24 @@ export function calculateRecordingOutcome(input: RecordingOutcomeInput): Recordi
   const sessionEfficiency = clamp(durationBenefit * .45 + avg(performerBreakdowns.map((p) => p.condition), 75) * .25 + producer * .15 + engineer * .15);
   const readinessContribution = clamp(ensembleTightness * modeCfg.readiness);
   const variance = seededVariance(input.seed, modeCfg.variance) * (1 - clamp((producer + engineer + readiness) / 600, 0, .32));
-  const preVariance = clamp(input.sourceSongQuality) * .35 + performerExecution * .30 + ((productionQuality + engineeringQuality + mixQuality) / 3) * .20 + studioCapture * .08 + readinessContribution * .07;
-  const sourceCeiling = clamp(58 + clamp(input.sourceSongQuality) * .42 + performerExecution * .16 + productionQuality * .12 + studioCapture * .08 - (1 - missingPenalty) * 18, 35, 100);
+
+  // Songs use a 0-1000 quality scale throughout RockMundo, while the recording
+  // performance/studio/staff subscores use 0-100. Normalize only for the
+  // weighted calculation, then convert the master back to the canonical 0-1000
+  // song scale. Previously sourceSongQuality was clamped directly to 100,
+  // making completed recordings dramatically lower than the booking estimate.
+  const sourceSongQuality = clamp(Number(input.sourceSongQuality), 0, 1000);
+  const sourcePotential = sourceSongQuality / 10;
+  const preVariance = sourcePotential * .35 + performerExecution * .30 + ((productionQuality + engineeringQuality + mixQuality) / 3) * .20 + studioCapture * .08 + readinessContribution * .07;
+  const sourceCeiling = clamp(58 + sourcePotential * .42 + performerExecution * .16 + productionQuality * .12 + studioCapture * .08 - (1 - missingPenalty) * 18, 35, 100);
   const floor = clamp(12 + performerExecution * .18 + engineeringQuality * .10 + studioCapture * .08, 0, 72);
-  const finalMasterQuality = Math.round(clamp(preVariance * (1 + variance), floor, sourceCeiling));
-  const qualityImprovement = Math.round(finalMasterQuality - clamp(input.sourceSongQuality));
+  const finalMasterScore = clamp(preVariance * (1 + variance), floor, sourceCeiling);
+  const finalMasterQuality = Math.round(clamp(finalMasterScore * 10, 0, 1000));
+  const qualityImprovement = Math.round(finalMasterQuality - sourceSongQuality);
   const strengths = [performerExecution >= 75 && "Strong role execution", studioCapture >= 75 && "High-quality studio capture", producer >= 75 && "Producer elevated consistency", readiness >= 75 && "Rehearsal and cohesion were strong"].filter(Boolean) as string[];
   const weaknesses = [performerExecution < 45 && "Performer execution held the master back", studioCapture < 45 && "Studio capture limited fidelity", readiness < 45 && "Low familiarity or cohesion increased retakes", warnings.length > 0 && "Role coverage or attendance issues reduced the ceiling"].filter(Boolean) as string[];
   const xpAwards = performerBreakdowns.map((p) => ({ profileId: p.profileId, skill: roleSkill(p.role).primary, amount: Math.max(8, Math.round(days * (10 + p.score / 10))), reason: `Recorded ${p.role}` }));
   if (input.producer?.id && input.producer.kind === "player") xpAwards.push({ profileId: input.producer.id, skill: "production", amount: Math.max(8, Math.round(days * (12 + producer / 10))), reason: "Produced recording session" });
   if (input.engineer?.id && input.engineer.kind === "player") xpAwards.push({ profileId: input.engineer.id, skill: "engineering", amount: Math.max(8, Math.round(days * (12 + engineer / 10))), reason: "Engineered recording session" });
-  return { balanceVersion, finalMasterQuality, sourceSongQuality: clamp(input.sourceSongQuality), appliedVariance: Number(variance.toFixed(4)), qualityImprovement, warnings, strengths, weaknesses, xpAwards, breakdown: { balanceVersion, weights: { sourceSong: .35, performerExecution: .30, productionEngineeringMix: .20, studioCapture: .08, readinessCohesion: .07 }, songPotential: clamp(input.sourceSongQuality), performerExecution, vocalPerformance, instrumentalPerformance, ensembleTightness, arrangementReadiness: readiness, captureQuality: studioCapture, productionQuality, engineeringQuality, mixQuality, sessionEfficiency, durationBenefit, mode, missingPenalty, sourceCeiling, floor, performerBreakdowns, warnings, strengths, weaknesses } };
+  return { balanceVersion, finalMasterQuality, sourceSongQuality, appliedVariance: Number(variance.toFixed(4)), qualityImprovement, warnings, strengths, weaknesses, xpAwards, breakdown: { balanceVersion, weights: { sourceSong: .35, performerExecution: .30, productionEngineeringMix: .20, studioCapture: .08, readinessCohesion: .07 }, songPotential: sourceSongQuality, normalizedSongPotential: sourcePotential, performerExecution, vocalPerformance, instrumentalPerformance, ensembleTightness, arrangementReadiness: readiness, captureQuality: studioCapture, productionQuality, engineeringQuality, mixQuality, sessionEfficiency, durationBenefit, mode, missingPenalty, sourceCeiling: Math.round(sourceCeiling * 10), floor: Math.round(floor * 10), performerBreakdowns, warnings, strengths, weaknesses } };
 }
