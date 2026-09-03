@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useFestivalEditionOperations } from "@/features/festivals/admin/hooks";
+import { FestivalModernAttendeeDiagnostics } from "@/features/festivals/admin/components/FestivalModernAttendeeDiagnostics";
 
 const numberOrZero = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -206,6 +207,8 @@ export function FestivalRuntimeDashboard({ editionId }: { editionId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      <FestivalModernAttendeeDiagnostics />
     </div>
   );
 }
