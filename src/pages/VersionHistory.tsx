@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.734",
+    date: "2026-09-04",
+    changes: [
+      { type: "feature", description: "New Subscription Status page showing your live Stripe subscription, price, current billing period, next payment date and payment method" },
+      { type: "feature", description: "Subscription page explains exactly what happens when you cancel, including the date VIP access ends and what you keep" },
+      { type: "improvement", description: "Recent Stripe invoices are now listed with links to the hosted invoices, and the receipt page links straight to subscription status" },
+    ],
+  },
+  {
     version: "1.1.733",
     date: "2026-09-02",
     changes: [

@@ -286,6 +286,9 @@ export default function CheckoutReceipt() {
               <Button size="sm" onClick={() => void openPortal()} disabled={portalLoading} className="gap-2">
                 <ExternalLink className="h-3.5 w-3.5" /> Manage billing
               </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/subscription")}>
+                Subscription status
+              </Button>
               <Button size="sm" variant="outline" onClick={() => navigate("/shop")}>
                 Back to Shop
               </Button>
