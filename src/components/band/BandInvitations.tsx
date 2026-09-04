@@ -81,7 +81,7 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
         .eq("is_touring_member", false);
 
       if (error) throw error;
-      return ((data || []).find((membership: any) => membership.bands?.status === "active") || null) as ActiveMembership | null;
+      return (((data || []) as any[]).find((membership: any) => membership.bands?.status === "active") || null) as ActiveMembership | null;
     },
     enabled: !!profileId,
     staleTime: 15_000,
