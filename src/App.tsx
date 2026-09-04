@@ -555,6 +555,8 @@ function App() {
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="checkout-receipt" element={<CheckoutReceipt />} />
+                    <Route path="subscription" element={<SubscriptionStatus />} />
+                    <Route path="subscription-status" element={<Navigate to="/subscription" replace />} />
                     <Route path="shop" element={<Shop />} />
                     <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="blind-boxes" element={<BlindBoxStore />} />
