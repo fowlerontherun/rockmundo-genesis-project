@@ -12809,11 +12809,14 @@ export type Database = {
       education_youtube_resources: {
         Row: {
           category: string | null
+          channel_name: string | null
           created_at: string
           description: string | null
           difficulty_level: number | null
           duration_minutes: number | null
           id: string
+          is_featured: boolean
+          skill_slug: string | null
           tags: string[] | null
           title: string
           updated_at: string
@@ -12821,11 +12824,14 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          channel_name?: string | null
           created_at?: string
           description?: string | null
           difficulty_level?: number | null
           duration_minutes?: number | null
           id?: string
+          is_featured?: boolean
+          skill_slug?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -12833,17 +12839,68 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          channel_name?: string | null
           created_at?: string
           description?: string | null
           difficulty_level?: number | null
           duration_minutes?: number | null
           id?: string
+          is_featured?: boolean
+          skill_slug?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
           video_url?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "education_youtube_resources_skill_slug_fkey"
+            columns: ["skill_slug"]
+            isOneToOne: false
+            referencedRelation: "skill_definitions"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      education_youtube_skill_subscriptions: {
+        Row: {
+          created_at: string
+          profile_id: string
+          skill_slug: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          skill_slug: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          skill_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_youtube_skill_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_youtube_skill_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_youtube_skill_subscriptions_skill_slug_fkey"
+            columns: ["skill_slug"]
+            isOneToOne: false
+            referencedRelation: "skill_definitions"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       election_news_articles: {
         Row: {
@@ -20507,6 +20564,82 @@ export type Database = {
           },
         ]
       }
+      festival_owner_engagement_applications: {
+        Row: {
+          applied_at: string
+          completed_activities: number
+          engagement_points: number
+          festival_company_id: string
+          festival_edition_id: string
+          festival_result_id: string
+          owner_boost_percent: number
+          reputation_after: number
+          reputation_before: number
+          reputation_bonus: number
+          resolved_moments: number
+          signal_snapshot: Json
+          signal_version: string
+          verified_checked_in: number
+          verified_completed: number
+        }
+        Insert: {
+          applied_at?: string
+          completed_activities: number
+          engagement_points: number
+          festival_company_id: string
+          festival_edition_id: string
+          festival_result_id: string
+          owner_boost_percent: number
+          reputation_after: number
+          reputation_before: number
+          reputation_bonus: number
+          resolved_moments: number
+          signal_snapshot?: Json
+          signal_version: string
+          verified_checked_in: number
+          verified_completed: number
+        }
+        Update: {
+          applied_at?: string
+          completed_activities?: number
+          engagement_points?: number
+          festival_company_id?: string
+          festival_edition_id?: string
+          festival_result_id?: string
+          owner_boost_percent?: number
+          reputation_after?: number
+          reputation_before?: number
+          reputation_bonus?: number
+          resolved_moments?: number
+          signal_snapshot?: Json
+          signal_version?: string
+          verified_checked_in?: number
+          verified_completed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_owner_engagement_applications_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_owner_engagement_applications_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: true
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_owner_engagement_applications_festival_result_id_fkey"
+            columns: ["festival_result_id"]
+            isOneToOne: true
+            referencedRelation: "festival_simplified_edition_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_ownership_history: {
         Row: {
           festival_id: string
@@ -23258,8 +23391,11 @@ export type Database = {
           completion_digest_id: string
           created_at: string
           currency_code: string
+          engagement_finalised_at: string | null
+          engagement_reputation_bonus: number
           festival_company_id: string
           festival_edition_id: string
+          finance_ledger_frozen_at: string | null
           food_and_drink_revenue_minor: number
           headliners: Json
           id: string
@@ -23269,6 +23405,7 @@ export type Database = {
           operating_cost_minor: number
           profitability_band: string
           published_schedule: Json
+          real_attendance_signal: Json
           reputation_change: number
           result_snapshot: Json
           rules_version: string
@@ -23290,8 +23427,11 @@ export type Database = {
           completion_digest_id: string
           created_at?: string
           currency_code: string
+          engagement_finalised_at?: string | null
+          engagement_reputation_bonus?: number
           festival_company_id: string
           festival_edition_id: string
+          finance_ledger_frozen_at?: string | null
           food_and_drink_revenue_minor?: number
           headliners?: Json
           id?: string
@@ -23301,6 +23441,7 @@ export type Database = {
           operating_cost_minor?: number
           profitability_band: string
           published_schedule?: Json
+          real_attendance_signal?: Json
           reputation_change?: number
           result_snapshot?: Json
           rules_version?: string
@@ -23322,8 +23463,11 @@ export type Database = {
           completion_digest_id?: string
           created_at?: string
           currency_code?: string
+          engagement_finalised_at?: string | null
+          engagement_reputation_bonus?: number
           festival_company_id?: string
           festival_edition_id?: string
+          finance_ledger_frozen_at?: string | null
           food_and_drink_revenue_minor?: number
           headliners?: Json
           id?: string
@@ -23333,6 +23477,7 @@ export type Database = {
           operating_cost_minor?: number
           profitability_band?: string
           published_schedule?: Json
+          real_attendance_signal?: Json
           reputation_change?: number
           result_snapshot?: Json
           rules_version?: string
@@ -23376,6 +23521,70 @@ export type Database = {
             columns: ["runtime_id"]
             isOneToOne: true
             referencedRelation: "festival_edition_runtimes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_simplified_finance_ledger: {
+        Row: {
+          affects_net: boolean
+          amount_minor: number
+          created_at: string
+          currency_code: string
+          direction: string
+          festival_company_id: string
+          festival_edition_id: string
+          festival_result_id: string
+          id: string
+          line_key: string
+          source_snapshot: Json
+        }
+        Insert: {
+          affects_net?: boolean
+          amount_minor: number
+          created_at?: string
+          currency_code: string
+          direction: string
+          festival_company_id: string
+          festival_edition_id: string
+          festival_result_id: string
+          id?: string
+          line_key: string
+          source_snapshot?: Json
+        }
+        Update: {
+          affects_net?: boolean
+          amount_minor?: number
+          created_at?: string
+          currency_code?: string
+          direction?: string
+          festival_company_id?: string
+          festival_edition_id?: string
+          festival_result_id?: string
+          id?: string
+          line_key?: string
+          source_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_simplified_finance_ledger_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_simplified_finance_ledger_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_simplified_finance_ledger_festival_result_id_fkey"
+            columns: ["festival_result_id"]
+            isOneToOne: false
+            referencedRelation: "festival_simplified_edition_results"
             referencedColumns: ["id"]
           },
         ]
@@ -42760,10 +42969,16 @@ export type Database = {
           infection_cleared_at: string | null
           ink_color: string
           is_infected: boolean
+          minigame_accuracy: number | null
+          minigame_coverage: number | null
+          minigame_difficulty: number | null
+          minigame_mistakes: number | null
+          minigame_score: number | null
           parlour_id: string | null
           price_paid: number
+          profile_id: string | null
           quality_score: number
-          tattoo_design_id: string
+          tattoo_design_id: string | null
           user_id: string
         }
         Insert: {
@@ -42776,11 +42991,17 @@ export type Database = {
           infection_cleared_at?: string | null
           ink_color?: string
           is_infected?: boolean
+          minigame_accuracy?: number | null
+          minigame_coverage?: number | null
+          minigame_difficulty?: number | null
+          minigame_mistakes?: number | null
+          minigame_score?: number | null
           parlour_id?: string | null
           price_paid?: number
+          profile_id?: string | null
           quality_score?: number
-          tattoo_design_id: string
-          user_id: string
+          tattoo_design_id?: string | null
+          user_id?: string
         }
         Update: {
           applied_at?: string
@@ -42792,10 +43013,16 @@ export type Database = {
           infection_cleared_at?: string | null
           ink_color?: string
           is_infected?: boolean
+          minigame_accuracy?: number | null
+          minigame_coverage?: number | null
+          minigame_difficulty?: number | null
+          minigame_mistakes?: number | null
+          minigame_score?: number | null
           parlour_id?: string | null
           price_paid?: number
+          profile_id?: string | null
           quality_score?: number
-          tattoo_design_id?: string
+          tattoo_design_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -42811,6 +43038,20 @@ export type Database = {
             columns: ["parlour_id"]
             isOneToOne: false
             referencedRelation: "tattoo_parlours"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_tattoos_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_tattoos_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
           {
@@ -56303,39 +56544,65 @@ export type Database = {
       }
       universities: {
         Row: {
+          academic_cost_modifier: number
           city: string | null
+          city_id: string
           course_cost_modifier: number | null
           created_at: string | null
           description: string | null
+          fee_updated_at: string | null
           id: string
+          last_quality_upgrade_at: string | null
+          mayor_fee_modifier: number
           name: string
           prestige: number | null
+          quality_investment_total: number
           quality_of_learning: number | null
           updated_at: string | null
         }
         Insert: {
+          academic_cost_modifier?: number
           city?: string | null
+          city_id: string
           course_cost_modifier?: number | null
           created_at?: string | null
           description?: string | null
+          fee_updated_at?: string | null
           id?: string
+          last_quality_upgrade_at?: string | null
+          mayor_fee_modifier?: number
           name: string
           prestige?: number | null
+          quality_investment_total?: number
           quality_of_learning?: number | null
           updated_at?: string | null
         }
         Update: {
+          academic_cost_modifier?: number
           city?: string | null
+          city_id?: string
           course_cost_modifier?: number | null
           created_at?: string | null
           description?: string | null
+          fee_updated_at?: string | null
           id?: string
+          last_quality_upgrade_at?: string | null
+          mayor_fee_modifier?: number
           name?: string
           prestige?: number | null
+          quality_investment_total?: number
           quality_of_learning?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "universities_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       university_courses: {
         Row: {
@@ -58845,6 +59112,10 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      _freeze_simplified_festival_finance_ledger: {
+        Args: { p_result_id: string }
+        Returns: string
+      }
       _get_or_create_band_treasury: {
         Args: { p_band_id: string; p_currency_code: string }
         Returns: {
@@ -58996,6 +59267,10 @@ export type Database = {
         Returns: undefined
       }
       _tour_operations_access: { Args: { p_tour_id: string }; Returns: Json }
+      _try_finalise_festival_owner_engagement: {
+        Args: { p_edition_id: string }
+        Returns: string
+      }
       accept_festival_offer: {
         Args: {
           p_idempotency_key?: string
@@ -59251,6 +59526,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_festival_attendee_diagnostics: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
       admin_festival_audit_events: { Args: { p_filters?: Json }; Returns: Json }
       admin_festival_catalogue: {
         Args: never
@@ -59366,12 +59645,22 @@ export type Database = {
           table_count: number
         }[]
       }
+      admin_modern_festival_editions: { Args: never; Returns: Json }
       admin_preview_festival_seed: {
         Args: { p_country_id?: string; p_strategy?: string; p_year?: number }
         Returns: Json
       }
       admin_preview_legacy_festival_migration: {
         Args: { p_game_event_id: string }
+        Returns: Json
+      }
+      admin_reconcile_festival_attendance: {
+        Args: {
+          p_attendance_id: string
+          p_edition_id: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
         Returns: Json
       }
       admin_restore_gig_viewer_crowd_settings: {
@@ -64525,6 +64814,20 @@ export type Database = {
         }
         Returns: string
       }
+      purchase_tattoo: {
+        Args: {
+          p_artist_id?: string
+          p_design_id: string
+          p_game_accuracy?: number
+          p_game_coverage?: number
+          p_game_difficulty?: number
+          p_game_mistakes?: number
+          p_game_score?: number
+          p_parlour_id: string
+          p_profile_id: string
+        }
+        Returns: Json
+      }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
       quote_festival_edition_insurance: {
         Args: {
@@ -66011,6 +66314,14 @@ export type Database = {
         }
         Returns: Json
       }
+      set_university_course_fee: {
+        Args: {
+          p_fee_modifier: number
+          p_profile_id: string
+          p_university_id: string
+        }
+        Returns: Json
+      }
       settle_cover_recording_royalty: {
         Args: {
           p_covering_band_id: string
@@ -66883,6 +67194,10 @@ export type Database = {
       update_song_hype_for_pr: {
         Args: { p_hype_boost: number; p_song_id: string }
         Returns: undefined
+      }
+      upgrade_university_quality: {
+        Args: { p_profile_id: string; p_university_id: string }
+        Returns: Json
       }
       user_has_band_access: { Args: { _band_id: string }; Returns: boolean }
       validate_festival_application_transition: {
