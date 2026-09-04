@@ -55,7 +55,9 @@ export class FestivalAdminServiceError extends Error {
 // Only genuine transport failures count as network errors: a Postgres or RLS
 // error can arrive without a code and must keep its own mapped meaning.
 const isNetworkFailure = (error: { message?: string; code?: string }) =>
-  /failed to fetch|network ?error|networkerror|load failed|aborted?$/i.test(error.message ?? "");
+  /failed to fetch|network ?error|networkerror|load failed|aborted?$/i.test(
+    error.message ?? "",
+  );
 
 const rpc = async <T>(
   fn: RpcName,
@@ -75,15 +77,21 @@ const rpc = async <T>(
   return parsed.data;
 };
 
-export function mapFestivalError(error: {
-  message?: string;
-  code?: string;
-  details?: string;
-  hint?: string;
-}, rpcName?: string) {
+export function mapFestivalError(
+  error: {
+    message?: string;
+    code?: string;
+    details?: string;
+    hint?: string;
+  },
+  rpcName?: string,
+) {
   const message = error.message ?? "Festival operation failed.";
   const diagnostic = { ...error, rpcName };
-  if (error.code === "PGRST202" || /could not find the function|schema cache/i.test(message))
+  if (
+    error.code === "PGRST202" ||
+    /could not find the function|schema cache/i.test(message)
+  )
     return new FestivalAdminServiceError(
       "Festival administration services have not been deployed.",
       "FESTIVAL_RPC_NOT_DEPLOYED",
@@ -137,7 +145,11 @@ export function mapFestivalError(error: {
       "FESTIVAL_CREATE_STAGE_DUPLICATE",
       error,
     );
-  if (/permission|permission_denied|not authorised|not authorized|rls|FESTIVAL_CREATE_PERMISSION_DENIED/i.test(message))
+  if (
+    /permission|permission_denied|not authorised|not authorized|rls|FESTIVAL_CREATE_PERMISSION_DENIED/i.test(
+      message,
+    )
+  )
     return new FestivalAdminServiceError(
       "You do not have permission to perform this festival operation.",
       "FESTIVAL_PERMISSION_DENIED",
@@ -199,7 +211,12 @@ const ownerEditionSchema = z
   .passthrough();
 const jsonRecord = z.record(z.unknown());
 const uuidLike = z.string().min(1);
-const nullableDateString = z.string().datetime({ offset: true }).or(z.string().date()).nullable().optional();
+const nullableDateString = z
+  .string()
+  .datetime({ offset: true })
+  .or(z.string().date())
+  .nullable()
+  .optional();
 const nonnegativeInteger = z.coerce.number().int().nonnegative();
 const accessSchema = z.enum(["granted", "limited", "denied"]);
 const financeAccessSchema = z.enum(["granted", "denied"]);
@@ -319,13 +336,62 @@ export const operationsSummarySchema = z
     lifecycle: festivalLifecycleSchema.optional(),
   })
   .passthrough();
+const attendeeIssueSchema = z.object({
+  code: z.string(),
+  severity: z.enum(["repairable", "blocked"]),
+});
+const attendeeDiagnosticRowSchema = z.object({
+  attendanceId: uuidLike,
+  editionId: uuidLike,
+  profileId: uuidLike,
+  ticketId: uuidLike,
+  ticketReference: z.string().nullable(),
+  attendanceStatus: z.string(),
+  ticketStatus: z.string().nullable(),
+  lifecycleVersion: z.coerce.number().int().nonnegative(),
+  checkedInAt: nullableDateString,
+  leftAt: nullableDateString,
+  completedAt: nullableDateString,
+  wristbandCount: nonnegativeInteger,
+  activeScheduleLocks: nonnegativeInteger,
+  health: z.enum(["healthy", "repairable", "blocked"]),
+  issues: z.array(attendeeIssueSchema),
+  recommendedRepair: z.string().nullable(),
+  lastTransition: z.object({
+    source: z.string().nullable(),
+    reason: z.string().nullable(),
+    at: nullableDateString,
+  }),
+});
+export const attendeeDiagnosticsSchema = z.object({
+  editionId: uuidLike,
+  generatedAt: z.string(),
+  summary: z.object({
+    total: nonnegativeInteger,
+    healthy: nonnegativeInteger,
+    repairable: nonnegativeInteger,
+    blocked: nonnegativeInteger,
+  }),
+  rows: z.array(attendeeDiagnosticRowSchema),
+  orphanTickets: z.array(
+    z.object({
+      ticketId: uuidLike,
+      ticketReference: z.string().nullable(),
+      ticketStatus: z.string(),
+      issue: z.string(),
+      health: z.literal("blocked"),
+    }),
+  ),
+});
+export type FestivalAttendeeDiagnostics = z.infer<
+  typeof attendeeDiagnosticsSchema
+>;
 const nonNullJson = z
   .unknown()
   .refine(
     (value) => value !== null && value !== undefined,
     "RPC returned no result",
   );
-
 
 export async function fetchCurrentUserIsPlatformAdmin(): Promise<boolean> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -415,19 +481,43 @@ export async function createFestivalEditionFromWizard(
     created: data.created,
   };
 }
-const referenceDataSchema = z.object({
-  festivalTypes: z.array(z.string()).default([]),
-  genres: z.array(z.string()).default([]),
-  currencies: z.array(z.string()).default([]),
-  countries: z.array(z.object({ code: z.string(), name: z.string() })).default([]),
-  cities: z.array(z.object({ id: z.string(), name: z.string(), country: z.string(), countryName: z.string().optional(), timezone: z.string(), currencyCode: z.string() })).default([]),
-  venues: z.array(z.object({ id: z.string(), name: z.string(), cityId: z.string(), capacity: z.coerce.number().nullable() })).default([]),
-  stageTypes: z.array(z.string()).default([]),
-  weatherOptions: z.array(z.string()).default([]),
-  soundOptions: z.array(z.string()).default([]),
-  lightingOptions: z.array(z.string()).default([]),
-  commercialDefaults: z.record(z.unknown()).default({}),
-}).passthrough();
+const referenceDataSchema = z
+  .object({
+    festivalTypes: z.array(z.string()).default([]),
+    genres: z.array(z.string()).default([]),
+    currencies: z.array(z.string()).default([]),
+    countries: z
+      .array(z.object({ code: z.string(), name: z.string() }))
+      .default([]),
+    cities: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          country: z.string(),
+          countryName: z.string().optional(),
+          timezone: z.string(),
+          currencyCode: z.string(),
+        }),
+      )
+      .default([]),
+    venues: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          cityId: z.string(),
+          capacity: z.coerce.number().nullable(),
+        }),
+      )
+      .default([]),
+    stageTypes: z.array(z.string()).default([]),
+    weatherOptions: z.array(z.string()).default([]),
+    soundOptions: z.array(z.string()).default([]),
+    lightingOptions: z.array(z.string()).default([]),
+    commercialDefaults: z.record(z.unknown()).default({}),
+  })
+  .passthrough();
 
 export async function fetchFestivalReferenceData(): Promise<FestivalReferenceData> {
   try {
@@ -488,22 +578,34 @@ export async function createAdminFestivalEdition(input: AdminEditionInput) {
 export async function fetchAdminFestivalLifecycleOptions(
   editionId: string,
 ): Promise<FestivalLifecycleOptions> {
-  const schema = z.object({
-    editionId: z.string(),
-    currentState: z.string(),
-    transitions: z.array(z.object({
-      targetState: z.string(),
-      available: z.boolean(),
-      blockers: z.array(z.string()).default([]),
-      warnings: z.array(z.string()).default([]),
-      adminOverrideAllowed: z.boolean().default(false),
-      reasonRequired: z.boolean().default(false),
-      confirmationRequired: z.boolean().default(false),
-      severity: z.enum(["standard", "warning", "destructive"]).default("standard"),
-      explanation: z.string().default(""),
-    })).default([]),
-  }).passthrough();
-  return rpc("admin_festival_edition_lifecycle_options" as RpcName, { p_edition_id: editionId }, schema) as Promise<FestivalLifecycleOptions>;
+  const schema = z
+    .object({
+      editionId: z.string(),
+      currentState: z.string(),
+      transitions: z
+        .array(
+          z.object({
+            targetState: z.string(),
+            available: z.boolean(),
+            blockers: z.array(z.string()).default([]),
+            warnings: z.array(z.string()).default([]),
+            adminOverrideAllowed: z.boolean().default(false),
+            reasonRequired: z.boolean().default(false),
+            confirmationRequired: z.boolean().default(false),
+            severity: z
+              .enum(["standard", "warning", "destructive"])
+              .default("standard"),
+            explanation: z.string().default(""),
+          }),
+        )
+        .default([]),
+    })
+    .passthrough();
+  return rpc(
+    "admin_festival_edition_lifecycle_options" as RpcName,
+    { p_edition_id: editionId },
+    schema,
+  ) as Promise<FestivalLifecycleOptions>;
 }
 
 export async function transitionAdminFestivalEdition(
@@ -690,9 +792,11 @@ export async function quoteFestivalEditionInsurance(
     jsonRecord,
   );
 }
-export async function purchaseFestivalEditionInsurance(
-  input: { editionId: string; coverageType: string; idempotencyKey: string },
-) {
+export async function purchaseFestivalEditionInsurance(input: {
+  editionId: string;
+  coverageType: string;
+  idempotencyKey: string;
+}) {
   return rpc(
     "purchase_festival_edition_insurance" as RpcName,
     {
@@ -734,7 +838,9 @@ const callMaybeRpc = async <T>(
   try {
     return await rpc(fn as RpcName, args, schema);
   } catch (error) {
-    const mapped = mapFestivalError(error as { message?: string; code?: string });
+    const mapped = mapFestivalError(
+      error as { message?: string; code?: string },
+    );
     if (mapped.code === "FESTIVAL_PERMISSION_DENIED") throw mapped;
     if (fallback) {
       try {
@@ -803,6 +909,36 @@ export async function fetchFestivalEditionOperations(editionId: string) {
       };
     },
     operationsSummarySchema,
+  );
+}
+
+export async function fetchFestivalAttendeeDiagnostics(editionId: string) {
+  return rpc(
+    "admin_get_festival_attendee_diagnostics" as RpcName,
+    { p_edition_id: editionId },
+    attendeeDiagnosticsSchema,
+  );
+}
+
+export async function repairFestivalAttendee(input: {
+  attendanceId: string;
+  expectedLifecycleVersion: number;
+  repairCode: string;
+  reason: string;
+  idempotencyKey: string;
+  apply: boolean;
+}) {
+  return rpc<Record<string, unknown>>(
+    "admin_repair_festival_attendee" as RpcName,
+    {
+      p_attendance_id: input.attendanceId,
+      p_expected_lifecycle_version: input.expectedLifecycleVersion,
+      p_repair_code: input.repairCode,
+      p_reason: input.reason,
+      p_idempotency_key: input.idempotencyKey,
+      p_apply: input.apply,
+    },
+    jsonRecord,
   );
 }
 

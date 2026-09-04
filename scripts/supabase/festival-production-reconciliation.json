@@ -1,12 +1,15 @@
 {
-  "date": "2026-09-03",
+  "date": "2026-09-04",
   "scope": "simplified-festival-production-reconciliation",
   "reason": "Production had not received the inherited 2029 Festival migration chain. The live schema was reconciled forward without replaying incompatible historical migrations.",
   "historyMarkers": [
     ["20260822092642", "reconcile_simplified_festival_planning_foundations"],
     ["20260822092947", "reconcile_simplified_festival_annual_plan_api"],
     ["20260822093314", "reconcile_simplified_festival_internal_projections"],
-    ["20260822093549", "reconcile_simplified_festival_projection_read_contracts"],
+    [
+      "20260822093549",
+      "reconcile_simplified_festival_projection_read_contracts"
+    ],
     ["20260822093811", "reconcile_simplified_festival_lineup_manager_actions"],
     ["20260822094039", "reconcile_simplified_festival_runtime_foundations"],
     ["20260822094158", "reconcile_simplified_festival_run_api"],
@@ -14,11 +17,17 @@
     ["20260822095104", "reconcile_simplified_festival_automatic_results"],
     ["20260822095200", "fix_simplified_festival_results_legacy_fk_boundary"],
     ["20260822102107", "harden_simplified_festival_results_trigger_privileges"],
-    ["20260822102248", "defer_simplified_festival_results_until_runtime_finalised"],
+    [
+      "20260822102248",
+      "defer_simplified_festival_results_until_runtime_finalised"
+    ],
     ["20260822104919", "complete_simplified_festival_company_settlement"],
     ["20260822153456", "fix_festival_owner_pgcrypto_search_paths"],
     ["20260822153540", "fix_festival_annual_plan_city_binding"],
-    ["20260822153742", "restore_festival_artist_request_terminal_status_compatibility"],
+    [
+      "20260822153742",
+      "restore_festival_artist_request_terminal_status_compatibility"
+    ],
     ["20260822154434", "align_festival_upgrade_currency_with_home_city"],
     ["20260822160017", "rebalance_festival_upgrade_purchase_cadence"],
     ["20260822160647", "clarify_festival_licence_plan_blockers"],
@@ -35,8 +44,12 @@
     ["20260823103133", "harden_festival_artist_opportunities_privileges"],
     ["20260823120848", "simplify_festival_permits_to_automatic_simulation"],
     ["20260823122134", "add_festival_runtime_currency_code"],
-    ["20260903214338", "finalise_festival_finance_and_real_attendance_progression"],
-    ["20260903214434", "expose_festival_finance_engagement_results"]
+    [
+      "20260903214338",
+      "finalise_festival_finance_and_real_attendance_progression"
+    ],
+    ["20260903214434", "expose_festival_finance_engagement_results"],
+    ["20260904055034", "festival_attendee_admin_diagnostics"]
   ],
   "postBootstrapOverlay": "supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql",
   "postBootstrapExtensions": [
@@ -57,7 +70,8 @@
     "supabase/reconciliation/festival/20260823_simplify_festival_permits_to_automatic_simulation.sql",
     "supabase/reconciliation/festival/20260823_festival_runtime_currency_code.sql",
     "supabase/reconciliation/festival/20260903_festival_finance_engagement_authority.sql",
-    "supabase/reconciliation/festival/20260903_festival_finance_engagement_results_api.sql"
+    "supabase/reconciliation/festival/20260903_festival_finance_engagement_results_api.sql",
+    "supabase/reconciliation/festival/20260904_festival_attendee_admin_diagnostics.sql"
   ],
   "verification": "supabase/tests/festival_simplified_production_overlay_regression.sql"
 }

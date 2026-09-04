@@ -155,6 +155,7 @@ jobs:
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_simplified_production_overlay_regression.sql
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_finance_engagement_regression.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_attendee_admin_diagnostics_regression.sql
       - name: Run Festival upgrade post-deployment diagnostic
         run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/diagnostics/festival_upgrade_v2_postdeploy.sql
       - name: Run authenticated Festival upgrade database gate
@@ -184,6 +185,7 @@ jobs:
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_simplified_production_overlay_regression.sql
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_finance_engagement_regression.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_attendee_admin_diagnostics_regression.sql
       - name: Rerun authenticated Festival upgrade database gate
         run: |
           set -o pipefail

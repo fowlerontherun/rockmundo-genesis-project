@@ -12,15 +12,18 @@ import {
 import { Link } from "react-router-dom";
 import { useAdminFestivalCatalogue } from "../hooks";
 import { formatFestivalMoney } from "../mappers";
+import { FestivalRuntimeDashboard } from "./FestivalRuntimeDashboard";
 
 export function AdminFestivalCatalogue({
   selectedFestivalId,
+  selectedEditionId,
   onSelectFestival,
   onCreateFestival,
   onCreateEdition,
   onOpenManagement,
 }: {
   selectedFestivalId?: string;
+  selectedEditionId?: string;
   onSelectFestival?: (festivalId: string) => void;
   onCreateFestival?: () => void;
   onCreateEdition?: (
@@ -41,7 +44,6 @@ export function AdminFestivalCatalogue({
       ),
     [data, filter],
   );
-
   if (isLoading)
     return (
       <Card>
@@ -101,6 +103,11 @@ export function AdminFestivalCatalogue({
           <CardContent className="text-2xl font-bold">{warnings}</CardContent>
         </Card>
       </div>
+
+      {selectedEditionId && (
+        <FestivalRuntimeDashboard editionId={selectedEditionId} />
+      )}
+
       <Input
         placeholder="Filter by festival, city or lifecycle…"
         value={filter}
