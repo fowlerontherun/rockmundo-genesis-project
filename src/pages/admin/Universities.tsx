@@ -94,11 +94,11 @@ export default function Universities() {
       if (editingId) {
         const { error } = await supabase
           .from("universities")
-          .update(payload)
+          .update(payload as any)
           .eq("id", editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("universities").insert(payload);
+        const { error } = await supabase.from("universities").insert(payload as any);
         if (error) throw error;
       }
     },

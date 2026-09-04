@@ -72,7 +72,7 @@ export function BandApplicationDialog({ bandId, bandName, profileId, onSubmitted
         return { eligible: false, reason: "This band is not currently accepting applications." };
       }
 
-      const activeMembership = (memberships || []).find((membership: any) => membership.bands?.status === "active");
+      const activeMembership = ((memberships || []) as any[]).find((membership: any) => membership.bands?.status === "active");
       if (activeMembership) {
         if (activeMembership.band_id === bandId) {
           return { eligible: false, reason: "You are already a member of this band." };

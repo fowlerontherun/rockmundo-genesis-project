@@ -355,6 +355,7 @@ const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
 const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
 const CheckoutReceipt = lazyWithRetry(() => import("./pages/CheckoutReceipt"));
+const SubscriptionStatus = lazyWithRetry(() => import("./pages/SubscriptionStatus"));
 const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
 const WorldParliament = lazyWithRetry(() => import("./pages/WorldParliament"));
@@ -554,6 +555,8 @@ function App() {
                     <Route path="vip-subscribe" element={<VipSubscribe />} />
                     <Route path="vip-success" element={<VipSuccess />} />
                     <Route path="checkout-receipt" element={<CheckoutReceipt />} />
+                    <Route path="subscription" element={<SubscriptionStatus />} />
+                    <Route path="subscription-status" element={<Navigate to="/subscription" replace />} />
                     <Route path="shop" element={<Shop />} />
                     <Route path="premium-store" element={<PremiumStoreHub />} />
                     <Route path="blind-boxes" element={<BlindBoxStore />} />
