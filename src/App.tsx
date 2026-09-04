@@ -355,6 +355,7 @@ const VipSubscribe = lazyWithRetry(() => import("./pages/VipSubscribe"));
 const DonationSuccess = lazyWithRetry(() => import("./pages/DonationSuccess"));
 const VipSuccess = lazyWithRetry(() => import("./pages/VipSuccess"));
 const CheckoutReceipt = lazyWithRetry(() => import("./pages/CheckoutReceipt"));
+const SubscriptionStatus = lazyWithRetry(() => import("./pages/SubscriptionStatus"));
 const CityElection = lazyWithRetry(() => import("./pages/CityElection"));
 const MayorDashboard = lazyWithRetry(() => import("./pages/MayorDashboard"));
 const WorldParliament = lazyWithRetry(() => import("./pages/WorldParliament"));
