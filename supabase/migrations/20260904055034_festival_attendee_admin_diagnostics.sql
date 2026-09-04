@@ -1,0 +1,3 @@
+-- Production history marker. The dependency-heavy implementation is replayed
+-- after the inherited Festival bootstrap by the reconciliation manifest.
+-- See supabase/reconciliation/festival/20260904_festival_attendee_admin_diagnostics.sql.

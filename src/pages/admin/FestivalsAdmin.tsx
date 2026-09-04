@@ -54,7 +54,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
-
 const getCatalogueErrorMessage = (error: unknown) => {
   if (!(error instanceof FestivalAdminServiceError))
     return "Festival administration could not be loaded. Retry or inspect the error details.";
@@ -82,7 +81,13 @@ const getCatalogueErrorMessage = (error: unknown) => {
 const getCatalogueDiagnostic = (error: unknown) => {
   if (!(error instanceof FestivalAdminServiceError)) return null;
   const cause = error.cause as
-    | { code?: string; message?: string; details?: string; hint?: string; rpcName?: string }
+    | {
+        code?: string;
+        message?: string;
+        details?: string;
+        hint?: string;
+        rpcName?: string;
+      }
     | undefined;
   return {
     domainCode: error.code,
@@ -245,6 +250,7 @@ function Overview({
       <div className="space-y-4">
         <AdminFestivalCatalogue
           selectedFestivalId={selectedFestival?.festivalId}
+          selectedEditionId={selectedEdition?.id}
           onCreateFestival={onCreateFestival}
           onCreateEdition={onCreateEdition}
           onSelectFestival={onSelectFestival}
@@ -262,6 +268,7 @@ function Overview({
     <div className="space-y-4">
       <AdminFestivalCatalogue
         selectedFestivalId={selectedFestival.festivalId}
+        selectedEditionId={selectedEdition?.id}
         onCreateFestival={onCreateFestival}
         onCreateEdition={onCreateEdition}
         onSelectFestival={onSelectFestival}
@@ -347,9 +354,19 @@ function Applications({
   const [adminNotes, setAdminNotes] = useState("");
   const [offeredPayment, setOfferedPayment] = useState("");
   const { applications, isLoading, reviewApplication, isReviewing } =
-    useFestivalSlotApplications(editionId ? { scope: "edition", editionId, festivalId } : festivalId ? { scope: "festival", festivalId } : undefined);
-  const pending = ((applications as any[]) ?? []).filter((a: any) => a.status === "pending");
-  const reviewed = ((applications as any[]) ?? []).filter((a: any) => a.status !== "pending");
+    useFestivalSlotApplications(
+      editionId
+        ? { scope: "edition", editionId, festivalId }
+        : festivalId
+          ? { scope: "festival", festivalId }
+          : undefined,
+    );
+  const pending = ((applications as any[]) ?? []).filter(
+    (a: any) => a.status === "pending",
+  );
+  const reviewed = ((applications as any[]) ?? []).filter(
+    (a: any) => a.status !== "pending",
+  );
   const submit = (status: "accepted" | "rejected") => {
     if (!selectedApplication) return;
     reviewApplication({
@@ -555,7 +572,11 @@ export default function FestivalsAdminPage() {
             <p>{getCatalogueErrorMessage(catalogue.error)}</p>
             {import.meta.env.DEV && getCatalogueDiagnostic(catalogue.error) && (
               <pre className="overflow-auto rounded bg-muted p-3 text-xs text-muted-foreground">
-                {JSON.stringify(getCatalogueDiagnostic(catalogue.error), null, 2)}
+                {JSON.stringify(
+                  getCatalogueDiagnostic(catalogue.error),
+                  null,
+                  2,
+                )}
               </pre>
             )}
             <Button
@@ -581,125 +602,131 @@ export default function FestivalsAdminPage() {
         />
       )}
       {!catalogue.isLoading && !catalogue.error && (
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="flex h-auto flex-wrap">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="schedule">Schedule</TabsTrigger>
-          <TabsTrigger value="operations">Operations</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview">
-          <Overview
-            selectedFestival={selectedFestival}
-            selectedEdition={selectedEdition}
-            onCreateFestival={() =>
-              setWizard({ open: true, mode: "create_festival" })
-            }
-            onCreateEdition={openCreateEdition}
-            onSelectFestival={setSelectedFestivalId}
-            onOpenManagement={openManagement}
-          />
-        </TabsContent>
-        <TabsContent value="applications">
-          <Applications
-            festivalId={selectedFestivalId}
-            editionId={selectedEditionId}
-          />
-        </TabsContent>
-        <TabsContent value="schedule">
-          <EditionRequired editionId={selectedEditionId} onCreateFirstEdition={() => selectedFestivalId && openCreateEdition(selectedFestivalId, "create_first_edition")}>
-            <FestivalScheduleWorkspace editionId={selectedEditionId} />
-          </EditionRequired>
-        </TabsContent>
-        <TabsContent value="operations">
-          <EditionRequired
-            editionId={selectedEditionId}
-            onCreateFirstEdition={() =>
-              selectedFestivalId &&
-              openCreateEdition(selectedFestivalId, "create_first_edition")
-            }
-          >
-            <Tabs defaultValue="stages">
-              <TabsList className="flex h-auto flex-wrap">
-                <TabsTrigger value="stages">Stages</TabsTrigger>
-                <TabsTrigger value="staff">Staff</TabsTrigger>
-                <TabsTrigger value="permits">Permits</TabsTrigger>
-                <TabsTrigger value="insurance">Insurance</TabsTrigger>
-                <TabsTrigger value="live">Live event</TabsTrigger>
-              </TabsList>
-              <TabsContent value="stages">
-                <FestivalStageManagement
-                  editionId={selectedEditionId}
-                  scope="admin"
-                />
-              </TabsContent>
-              <TabsContent value="staff">
-                <FestivalStaffManagement
-                  editionId={selectedEditionId}
-                  scope="admin"
-                />
-              </TabsContent>
-              <TabsContent value="permits">
-                <FestivalPermitManagement
-                  editionId={selectedEditionId}
-                  scope="admin"
-                />
-              </TabsContent>
-              <TabsContent value="insurance">
-                <FestivalInsuranceManagement
-                  editionId={selectedEditionId}
-                  scope="admin"
-                />
-              </TabsContent>
-              <TabsContent value="live">
-                <FestivalOutcomesManagement
-                  editionId={selectedEditionId}
-                  scope="admin"
-                />
-              </TabsContent>
-            </Tabs>
-          </EditionRequired>
-        </TabsContent>
-        <TabsContent value="results">
-          <EditionRequired
-            editionId={selectedEditionId}
-            onCreateFirstEdition={() =>
-              selectedFestivalId &&
-              openCreateEdition(selectedFestivalId, "create_first_edition")
-            }
-          >
-            <FestivalOutcomesManagement
-              editionId={selectedEditionId}
-              scope="admin"
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="flex h-auto flex-wrap">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="applications">Applications</TabsTrigger>
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            <TabsTrigger value="operations">Operations</TabsTrigger>
+            <TabsTrigger value="results">Results</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview">
+            <Overview
+              selectedFestival={selectedFestival}
+              selectedEdition={selectedEdition}
+              onCreateFestival={() =>
+                setWizard({ open: true, mode: "create_festival" })
+              }
+              onCreateEdition={openCreateEdition}
+              onSelectFestival={setSelectedFestivalId}
+              onOpenManagement={openManagement}
             />
-            <FestivalSettlementManagement editionId={selectedEditionId} />
-          </EditionRequired>
-        </TabsContent>
-        <TabsContent value="advanced">
-          <Card>
-            <CardHeader>
-              <CardTitle>Advanced technical support tools</CardTitle>
-              <CardDescription>
-                These tools are for migration support, system checks and audit
-                review. They are not required for normal festival management.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline">
-                <Link to="/admin/festivals#system-checks">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  System checks
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-          <FestivalLegacyRecordsManagement />
-          <FestivalDataHealthManagement />
-          <FestivalAuditLog />
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+          <TabsContent value="applications">
+            <Applications
+              festivalId={selectedFestivalId}
+              editionId={selectedEditionId}
+            />
+          </TabsContent>
+          <TabsContent value="schedule">
+            <EditionRequired
+              editionId={selectedEditionId}
+              onCreateFirstEdition={() =>
+                selectedFestivalId &&
+                openCreateEdition(selectedFestivalId, "create_first_edition")
+              }
+            >
+              <FestivalScheduleWorkspace editionId={selectedEditionId} />
+            </EditionRequired>
+          </TabsContent>
+          <TabsContent value="operations">
+            <EditionRequired
+              editionId={selectedEditionId}
+              onCreateFirstEdition={() =>
+                selectedFestivalId &&
+                openCreateEdition(selectedFestivalId, "create_first_edition")
+              }
+            >
+              <Tabs defaultValue="stages">
+                <TabsList className="flex h-auto flex-wrap">
+                  <TabsTrigger value="stages">Stages</TabsTrigger>
+                  <TabsTrigger value="staff">Staff</TabsTrigger>
+                  <TabsTrigger value="permits">Permits</TabsTrigger>
+                  <TabsTrigger value="insurance">Insurance</TabsTrigger>
+                  <TabsTrigger value="live">Live event</TabsTrigger>
+                </TabsList>
+                <TabsContent value="stages">
+                  <FestivalStageManagement
+                    editionId={selectedEditionId}
+                    scope="admin"
+                  />
+                </TabsContent>
+                <TabsContent value="staff">
+                  <FestivalStaffManagement
+                    editionId={selectedEditionId}
+                    scope="admin"
+                  />
+                </TabsContent>
+                <TabsContent value="permits">
+                  <FestivalPermitManagement
+                    editionId={selectedEditionId}
+                    scope="admin"
+                  />
+                </TabsContent>
+                <TabsContent value="insurance">
+                  <FestivalInsuranceManagement
+                    editionId={selectedEditionId}
+                    scope="admin"
+                  />
+                </TabsContent>
+                <TabsContent value="live">
+                  <FestivalOutcomesManagement
+                    editionId={selectedEditionId}
+                    scope="admin"
+                  />
+                </TabsContent>
+              </Tabs>
+            </EditionRequired>
+          </TabsContent>
+          <TabsContent value="results">
+            <EditionRequired
+              editionId={selectedEditionId}
+              onCreateFirstEdition={() =>
+                selectedFestivalId &&
+                openCreateEdition(selectedFestivalId, "create_first_edition")
+              }
+            >
+              <FestivalOutcomesManagement
+                editionId={selectedEditionId}
+                scope="admin"
+              />
+              <FestivalSettlementManagement editionId={selectedEditionId} />
+            </EditionRequired>
+          </TabsContent>
+          <TabsContent value="advanced">
+            <Card>
+              <CardHeader>
+                <CardTitle>Advanced technical support tools</CardTitle>
+                <CardDescription>
+                  These tools are for migration support, system checks and audit
+                  review. They are not required for normal festival management.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline">
+                  <Link to="/admin/festivals#system-checks">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    System checks
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+            <FestivalLegacyRecordsManagement />
+            <FestivalDataHealthManagement />
+            <FestivalAuditLog />
+          </TabsContent>
+        </Tabs>
       )}
       <FestivalCreationWizard
         open={wizard.open}

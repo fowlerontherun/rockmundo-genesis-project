@@ -22,6 +22,8 @@ import {
   createFestivalEditionFromWizard,
   fetchFestivalReferenceData,
   fetchAdminFestivalLifecycleOptions,
+  fetchFestivalAttendeeDiagnostics,
+  repairFestivalAttendee,
 } from "./service";
 import { festivalAdminQueryKeys } from "./queryKeys";
 import type {
@@ -59,7 +61,12 @@ export function useOwnerFestivalEditions(festivalId: string | undefined) {
 }
 export function useAdminFestivalLifecycleOptions(editionId?: string) {
   return useQuery({
-    queryKey: ["festivals", "admin", "lifecycle-options", editionId ?? "missing"],
+    queryKey: [
+      "festivals",
+      "admin",
+      "lifecycle-options",
+      editionId ?? "missing",
+    ],
     queryFn: () => fetchAdminFestivalLifecycleOptions(editionId as string),
     enabled: Boolean(editionId),
   });
@@ -72,6 +79,30 @@ export function useFestivalEditionOperations(
     queryKey: festivalAdminQueryKeys.operations(scope, editionId ?? "missing"),
     queryFn: () => fetchFestivalEditionOperations(editionId as string),
     enabled: Boolean(editionId),
+  });
+}
+export function useFestivalAttendeeDiagnostics(editionId?: string) {
+  return useQuery({
+    queryKey: festivalAdminQueryKeys.attendeeDiagnostics(
+      editionId ?? "missing",
+    ),
+    queryFn: () => fetchFestivalAttendeeDiagnostics(editionId as string),
+    enabled: Boolean(editionId),
+  });
+}
+
+export function useRepairFestivalAttendee(editionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: repairFestivalAttendee,
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.attendeeDiagnostics(editionId),
+      });
+      qc.invalidateQueries({
+        queryKey: festivalAdminQueryKeys.operations("admin", editionId),
+      });
+    },
   });
 }
 export function useFestivalEditionFinance(
