@@ -158,21 +158,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Pre-fetch all release hype scores for streaming releases
+    // Pre-fetch release hype and today's paid label-marketing power. Marketing
+    // remains effective even when ordinary hype has already reached its cap.
     const songIds = (streamingReleases || []).map(r => r.song_id).filter(Boolean);
     let releaseHypeMap = new Map<string, number>();
+    let releaseMarketingPowerMap = new Map<string, number>();
     if (songIds.length > 0) {
       const { data: releaseSongData } = await supabase
         .from("release_songs")
-        .select("song_id, release:releases(id, hype_score, manufacturing_complete_at)")
+        .select("song_id, release:releases(id, hype_score, label_marketing_power, manufacturing_complete_at)")
         .in("song_id", songIds);
       
       if (releaseSongData) {
         for (const rs of releaseSongData) {
           const rel = (rs as any).release;
-          if (rel && rel.hype_score) {
-            const existing = releaseHypeMap.get(rs.song_id) || 0;
-            releaseHypeMap.set(rs.song_id, Math.max(existing, rel.hype_score));
+          if (rel) {
+            const existingHype = releaseHypeMap.get(rs.song_id) || 0;
+            releaseHypeMap.set(rs.song_id, Math.max(existingHype, rel.hype_score || 0));
+            const existingPower = releaseMarketingPowerMap.get(rs.song_id) || 0;
+            releaseMarketingPowerMap.set(rs.song_id, Math.max(existingPower, rel.label_marketing_power || 0));
           }
         }
       }
@@ -216,7 +220,6 @@ Deno.serve(async (req) => {
     const analyticsDate = new Date().toISOString().split('T')[0];
 
     // === GENRE TREND & SEASONAL MODIFIERS (v1.0.932) ===
-    // Deterministic genre trend using sine waves (mirrors client genreTrends.ts)
     const GAME_EPOCH_MS = new Date("2026-01-01T00:00:00Z").getTime();
     const gameDaysElapsed = Math.max(0, Math.floor((Date.now() - GAME_EPOCH_MS) / (1000 * 60 * 60 * 24)));
     function genreHash(s: string): number {
@@ -233,15 +236,13 @@ Deno.serve(async (req) => {
       return Math.max(0.5, Math.min(1.5, 1.0 + wave * 0.35 + drift));
     }
 
-    // Seasonal streaming modifier
-    const monthIndex = new Date().getMonth(); // 0-11
+    const monthIndex = new Date().getMonth();
     const season = monthIndex >= 2 && monthIndex <= 4 ? 'spring'
       : monthIndex >= 5 && monthIndex <= 7 ? 'summer'
       : monthIndex >= 8 && monthIndex <= 10 ? 'autumn' : 'winter';
     const SEASONAL_STREAM_MOD: Record<string, number> = { spring: 1.05, summer: 0.9, autumn: 1.1, winter: 1.25 };
     const seasonalStreamMod = SEASONAL_STREAM_MOD[season] || 1.0;
 
-    // Pre-fetch band genres and sentiment for trend/loyalty lookup
     let bandGenreMap = new Map<string, string>();
     let bandSentimentMap = new Map<string, number>();
     let bandReputationMap = new Map<string, number>();
@@ -270,31 +271,19 @@ Deno.serve(async (req) => {
         const bandFame = bandStats?.fame || 0;
         const bandTotalFans = bandStats?.totalFans || 0;
 
-        // Genre trend multiplier
         const bandGenre = bandId ? (bandGenreMap.get(bandId) || '') : '';
         const genreTrendMult = bandGenre ? getGenreTrendScore(bandGenre) : 1.0;
-
-        // Fan sentiment stream loyalty modifier (v1.0.941)
         const sentimentScore = bandId ? (bandSentimentMap.get(bandId) ?? 0) : 0;
-        const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0-1
-        const streamLoyaltyMod = parseFloat((0.7 + sentimentT * 0.6).toFixed(2)); // 0.7–1.3
-
-        // === REPUTATION → STREAMING ALGORITHM FAVOR (v1.0.989) ===
-        // Streaming platforms subtly favor reputable artists in recommendations
+        const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200;
+        const streamLoyaltyMod = parseFloat((0.7 + sentimentT * 0.6).toFixed(2));
         const repScore = bandId ? (bandReputationMap.get(bandId) ?? 0) : 0;
         const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200;
-        const streamRepMod = parseFloat((0.9 + repT * 0.2).toFixed(2)); // 0.9x toxic → 1.1x iconic
+        const streamRepMod = parseFloat((0.9 + repT * 0.2).toFixed(2));
 
-        // Fame-scaled base streams (v1.1.031 — logarithmic scaling to prevent runaway values)
-        // Old formula used power scaling which exploded at high fame (25M fame → 36M multiplier)
-        // New: log10-based with caps — fame 100→7x, 1K→10x, 100K→16x, 1M→19x, 25M→23x
         const fameScale = 1 + Math.min(Math.log10(Math.max(bandFame, 1)) * 3, 25);
-        // Old: linear (500K fans → 1001x). New: log10-based — 1K→7x, 100K→11x, 500K→12x
         const fanBoost = 1 + Math.min(Math.log10(Math.max(bandTotalFans, 1)) * 2, 15);
         const combinedFameMultiplier = Math.sqrt(fameScale * fanBoost);
-        
         const baseStreams = Math.floor((Math.random() * 200 + 50) * combinedFameMultiplier);
-        
         const releaseDate = release.created_at ? new Date(release.created_at) : new Date();
         const daysSinceRelease = (Date.now() - releaseDate.getTime()) / (1000 * 60 * 60 * 24);
         const ageDecay = daysSinceRelease <= 7 ? 1.5
@@ -305,35 +294,26 @@ Deno.serve(async (req) => {
           : 0.2;
         
         const songHype = releaseHypeMap.get(release.song_id) || 0;
-        // Cap hype multiplier at 3x to prevent runaway feedback loop where hype
-        // drove daily streams which drove hype which drove streams (caused
-        // single-day spikes of 100M+ streams per song in early March 2026).
         const streamHypeMultiplier = Math.min(3, 1 + (songHype / 500));
+        const labelMarketingPower = Math.max(0, Math.min(100, releaseMarketingPowerMap.get(release.song_id) || 0));
+        const paidLabelMarketingMultiplier = 1 + (labelMarketingPower / 250); // 0-100 power => 1.0x-1.4x
 
-        // Get territories for this release
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.release_id);
         const hasTerritories = releaseTerritories.length > 0;
         const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
-
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        // Apply genre trend + seasonal + sentiment + reputation modifier to daily streams.
-        // Hard cap per release at 5M streams/day — even global megahits don't reach
-        // 100M+ streams/day on a single song-platform combo.
-        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
+        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * paidLabelMarketingMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
         const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
-        // Build deterministic region breakdown based on territories/fans
         let regionBreakdown: Array<{ region: string; streams: number; revenue: number }> = [];
-        
         if (hasTerritories) {
           const weightedCountries = releaseTerritories.map(t => {
             const fame = bandFans?.get(t.country) || 1;
             return { country: t.country, weight: fame };
           });
           const totalWeight = weightedCountries.reduce((s, c) => s + c.weight, 0);
-          
           for (const wc of weightedCountries) {
             const fraction = wc.weight / totalWeight;
             const regionStreams = Math.max(1, Math.round(dailyStreams * fraction));
@@ -350,7 +330,6 @@ Deno.serve(async (req) => {
           }
         }
 
-        // FIX: Use Math.round for integer-safe total_revenue accumulation
         const { error: updateError } = await supabase
           .from('song_releases')
           .update({
@@ -363,13 +342,11 @@ Deno.serve(async (req) => {
           throw updateError;
         }
 
-        // Insert analytics rows per region
         for (const rb of regionBreakdown) {
           const listenerRatio = 0.4 + Math.random() * 0.4;
           const uniqueListeners = Math.max(1, Math.floor(rb.streams * listenerRatio));
           const skipRate = Number((10 + Math.random() * 25).toFixed(1));
           const completionRate = Number((55 + Math.random() * 35).toFixed(1));
-          
           const ageRoll = Math.random();
           let cumWeight = 0;
           let ageGroup = AGE_GROUPS[1];
@@ -395,7 +372,6 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Update song fame based on streams
         if (release.song_id) {
           const fameGain = Math.floor(dailyStreams / 1000);
           if (fameGain > 0) {
@@ -405,7 +381,6 @@ Deno.serve(async (req) => {
               p_source: 'streaming'
             });
           }
-          
           const hypeChange = Math.floor(dailyStreams / 5000) - 1;
           await supabase.rpc('update_song_hype', {
             p_song_id: release.song_id,
@@ -413,11 +388,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── Label Revenue Split for Streaming (Deal-Type Aware) ──
         const contractInfo = release.release_id ? releaseContractMap.get(release.release_id) : null;
-
-        // Distribution Deal: does NOT take a cut of streaming (only physical/digital sales)
-        // Licensing Deal: if contract expired, skip label cut
         const isDealExcluded = contractInfo && (
           contractInfo.dealTypeName === "Distribution Deal" ||
           (contractInfo.dealTypeName === "Licensing Deal" && new Date(contractInfo.endDate) < new Date())
@@ -426,20 +397,15 @@ Deno.serve(async (req) => {
         if (contractInfo && !isDealExcluded && bandId && dailyRevenueDollars > 0) {
           const labelShareDollars = Math.round(dailyRevenueDollars * contractInfo.labelCutPct);
           const bandShareDollars = dailyRevenueDollars - labelShareDollars;
-
-          // Recoupment tracking
           const advanceRemaining = Math.max(0, contractInfo.advanceAmount - contractInfo.recoupedAmount);
           const recoupmentFromThis = Math.min(labelShareDollars, advanceRemaining);
           contractInfo.recoupedAmount += recoupmentFromThis;
-
-          // Accumulate label revenue
           const labelKey = `${contractInfo.labelId}:${contractInfo.contractId}`;
           const existing = labelRevenueAccumulator.get(labelKey) || { labelRevenue: 0, recoupmentApplied: 0, contractId: contractInfo.contractId };
           existing.labelRevenue += labelShareDollars;
           existing.recoupmentApplied += recoupmentFromThis;
           labelRevenueAccumulator.set(labelKey, existing);
 
-          // Pay band their reduced share
           if (bandShareDollars > 0) {
             await supabase.from('band_earnings').insert({
               band_id: bandId,
@@ -451,13 +417,12 @@ Deno.serve(async (req) => {
                 streams: dailyStreams,
                 platform_id: release.platform_id,
                 label_share: labelShareDollars,
+                label_marketing_power: labelMarketingPower,
               },
             });
-            // Track for morale (v1.0.978)
             bandStreamingRevenueAccumulator.set(bandId, (bandStreamingRevenueAccumulator.get(bandId) || 0) + bandShareDollars);
           }
         } else if (bandId && dailyRevenueDollars > 0) {
-          // No label contract — 100% to band
           await supabase.from('band_earnings').insert({
             band_id: bandId,
             amount: dailyRevenueDollars,
@@ -466,10 +431,10 @@ Deno.serve(async (req) => {
             metadata: { 
               song_release_id: release.id, 
               streams: dailyStreams,
-              platform_id: release.platform_id 
+              platform_id: release.platform_id,
+              label_marketing_power: labelMarketingPower,
             },
           });
-          // Track for morale (v1.0.978)
           bandStreamingRevenueAccumulator.set(bandId, (bandStreamingRevenueAccumulator.get(bandId) || 0) + dailyRevenueDollars);
         }
 
@@ -484,7 +449,6 @@ Deno.serve(async (req) => {
     }
 
     // === DAILY STREAMING REVENUE → MORALE (v1.0.978) ===
-    // Aggregate streaming income per band and apply morale boosts
     for (const [bandId, totalRevenue] of bandStreamingRevenueAccumulator.entries()) {
       if (totalRevenue <= 0) continue;
       try {
@@ -495,7 +459,6 @@ Deno.serve(async (req) => {
           const newMorale = Math.min(100, curM + moraleBoost);
           await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bandId);
           console.log(`Streaming revenue morale: band ${bandId} earned $${totalRevenue} → morale +${moraleBoost}`);
-          // === HEALTH EVENT LOG (v1.0.996) ===
           try {
             await supabase.from('band_health_events').insert({
               band_id: bandId,
@@ -510,13 +473,8 @@ Deno.serve(async (req) => {
       } catch (_e) { /* non-critical */ }
     }
 
-    // ── Legacy physical/digital sales block REMOVED (v1.1.241) ──
-    // Daily physical and digital sales are now exclusively handled by `generate-daily-sales`
-    // which applies the full revenue pipeline: tax, distribution fee, band/label split,
-    // advance recoupment, and per-format inventory deduction. The previous block here
-    // bypassed all of that and produced untracked, unsplit revenue rows.
+    // Daily physical and digital sales are exclusively handled by generate-daily-sales.
 
-    // ── Batch credit labels with accumulated streaming revenue ──
     let labelsCredited = 0;
     for (const [labelKey, labelRevenue] of labelRevenueAccumulator.entries()) {
       if (labelRevenue.labelRevenue <= 0) continue;
@@ -524,8 +482,6 @@ Deno.serve(async (req) => {
         const [labelId] = labelKey.split(":");
         const labelAmount = Math.round(labelRevenue.labelRevenue);
         const recoupAmount = Math.round(labelRevenue.recoupmentApplied);
-
-        // Credit label balance
         const { data: currentLabel } = await supabase
           .from("labels")
           .select("balance")
@@ -539,7 +495,6 @@ Deno.serve(async (req) => {
             .eq("id", labelId);
         }
 
-        // Record label financial transaction
         await supabase.from("label_financial_transactions").insert({
           label_id: labelId,
           transaction_type: "revenue",
@@ -548,7 +503,6 @@ Deno.serve(async (req) => {
           related_contract_id: labelRevenue.contractId,
         });
 
-        // Update contract recouped_amount
         if (recoupAmount > 0) {
           const { data: currentContract } = await supabase
             .from("artist_label_contracts")
