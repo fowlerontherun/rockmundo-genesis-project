@@ -29,6 +29,7 @@ export interface TravelDisruption {
 const DAYS_PER_GAME_MONTH = 30;
 const MONTHS_PER_YEAR = 12;
 const DAYS_PER_GAME_YEAR = DAYS_PER_GAME_MONTH * MONTHS_PER_YEAR;
+const MS_PER_REAL_DAY = 1000 * 60 * 60 * 24;
 
 /** Fixed epoch: January 1, 2026 = Game Year 1, Month 1, Day 1 */
 export const GAME_EPOCH = new Date("2026-01-01T00:00:00Z");
@@ -36,10 +37,9 @@ export const GAME_EPOCH = new Date("2026-01-01T00:00:00Z");
 /**
  * Calculate current in-game date based on the fixed epoch (Jan 1 2026).
  *
- * A game month is 30 game days. With the default 10 real-world days per game
- * month, every real day therefore advances the calendar by 3 game days. The
- * previous implementation rounded real days into whole game months first,
- * which made gameDay effectively stay on day 1 and prevented most birthdays.
+ * The accelerated calendar advances continuously through the real day. With
+ * the default 10 real-world days per 30-day game month, one game day lasts
+ * eight real hours, so every date from 1-30 is reachable.
  */
 export function calculateInGameDate(
   _characterCreatedAt?: Date,
@@ -47,15 +47,16 @@ export function calculateInGameDate(
   daysPerGameMonth: number = 10
 ): InGameDate {
   const now = new Date();
-  const msElapsed = now.getTime() - GAME_EPOCH.getTime();
-  const realWorldDaysElapsed = Math.max(0, Math.floor(msElapsed / (1000 * 60 * 60 * 24)));
+  const msElapsed = Math.max(0, now.getTime() - GAME_EPOCH.getTime());
+  const exactRealWorldDaysElapsed = msElapsed / MS_PER_REAL_DAY;
+  const realWorldDaysElapsed = Math.floor(exactRealWorldDaysElapsed);
 
   const safeDaysPerMonth = Number.isFinite(daysPerGameMonth) && daysPerGameMonth > 0
     ? daysPerGameMonth
     : Math.max(1, daysPerGameYear / MONTHS_PER_YEAR);
 
   const gameDaysPerRealDay = DAYS_PER_GAME_MONTH / safeDaysPerMonth;
-  const gameDaysElapsed = Math.floor(realWorldDaysElapsed * gameDaysPerRealDay);
+  const gameDaysElapsed = Math.floor(exactRealWorldDaysElapsed * gameDaysPerRealDay);
 
   const gameYear = Math.floor(gameDaysElapsed / DAYS_PER_GAME_YEAR) + 1;
   const remainingDays = gameDaysElapsed % DAYS_PER_GAME_YEAR;
