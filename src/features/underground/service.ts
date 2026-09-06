@@ -11,14 +11,14 @@ export async function getUndergroundState(profileId: string): Promise<Undergroun
   if (error) throw error;
   if (data) return data as UndergroundState;
 
-  const { data: created, error: createError } = await (supabase as any)
-    .from("player_underground_state")
-    .insert({ profile_id: profileId })
-    .select("profile_id, underground_cred, heat, notoriety, scene_connections, last_event_at")
-    .single();
-
-  if (createError) throw createError;
-  return created as UndergroundState;
+  return {
+    profile_id: profileId,
+    underground_cred: 0,
+    heat: 0,
+    notoriety: 0,
+    scene_connections: 0,
+    last_event_at: null,
+  };
 }
 
 export async function listUndergroundEvents(): Promise<UndergroundEvent[]> {
