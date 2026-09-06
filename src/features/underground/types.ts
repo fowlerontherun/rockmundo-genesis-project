@@ -44,3 +44,49 @@ export interface UndergroundResolution {
     sceneConnections: number;
   };
 }
+
+export type SubstanceCategory = "alcohol" | "stimulant" | "depressant" | "psychedelic";
+
+export interface SubstanceCatalogItem {
+  id: string;
+  slug: string;
+  name: string;
+  category: SubstanceCategory;
+  description: string;
+  minimum_age: number;
+  risk_tier: number;
+  cash_cost: number;
+  intoxication_gain: number;
+  tolerance_gain: number;
+  dependency_gain: number;
+  immediate_effects: Record<string, number>;
+  crash_effects: Record<string, number>;
+}
+
+export interface PlayerSubstanceState {
+  profile_id: string;
+  substance_slug: string;
+  intoxication: number;
+  tolerance: number;
+  dependency: number;
+  total_uses: number;
+  last_used_at: string | null;
+  hangover_until: string | null;
+  crash_until: string | null;
+}
+
+export interface SubstanceUseResolution {
+  ok: boolean;
+  reason?: string;
+  minimumAge?: number;
+  cashCost?: number;
+  substance?: string;
+  category?: SubstanceCategory;
+  effects?: Record<string, number>;
+  intoxication?: number;
+  tolerance?: number;
+  dependency?: number;
+  hangoverUntil?: string | null;
+  crashUntil?: string | null;
+  highRisk?: boolean;
+}
