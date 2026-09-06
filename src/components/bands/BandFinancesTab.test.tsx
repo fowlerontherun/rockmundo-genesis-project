@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const from = vi.fn();
-const rpc = vi.fn();
+const { from, rpc } = vi.hoisted(() => ({
+  from: vi.fn(),
+  rpc: vi.fn(),
+}));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from, rpc },
@@ -155,6 +157,45 @@ describe("BandFinancesTab treasury regression handling", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/£1,234.00/)).toBeInTheDocument();
     expect(screen.queryByText(/£0\.00/)).not.toBeInTheDocument();
+  });
+
+  it("renders the deployed treasury transaction shape without crashing on a missing contributionType", async () => {
+    rpc.mockImplementation((fn: string) => {
+      if (fn === "get_band_treasury_dashboard") {
+        return Promise.resolve({
+          data: {
+            status: "ok",
+            canViewBalance: true,
+            canViewDetails: true,
+            primaryCurrencyCode: "GBP",
+            treasuries: [],
+            contributions: [
+              {
+                id: "transaction-1",
+                amountMinor: 2500,
+                currencyCode: "GBP",
+                category: "member_deposit",
+                sourceKind: "wallet",
+                note: "Tour fund",
+                createdAt: "2026-09-05T10:00:00Z",
+                contributorName: "Active Player",
+              },
+            ],
+          },
+          error: null,
+        });
+      }
+      return Promise.resolve({
+        data: { status: "no_eligible_accounts", accounts: [] },
+        error: null,
+      });
+    });
+
+    render(<BandFinancesTab bandId="band-1" />);
+
+    expect(await screen.findByText(/Active Player/)).toBeInTheDocument();
+    expect(screen.getByText(/Member Deposit/)).toBeInTheDocument();
+    expect(screen.getByText("Tour fund")).toBeInTheDocument();
   });
 
   it("does not activate legacy fallback after treasury permission denial", async () => {

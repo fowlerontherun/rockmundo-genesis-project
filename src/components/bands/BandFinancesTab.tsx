@@ -96,7 +96,8 @@ const sourceIcons: Record<string, React.ReactNode> = {
   weekly_pay: <Users className="h-3.5 w-3.5" />,
 };
 
-function getSourceLabel(source: string) {
+function getSourceLabel(source: string | null | undefined) {
+  if (!source?.trim()) return "Other";
   return (
     sourceLabels[source] ??
     source
@@ -162,12 +163,16 @@ interface DashboardContribution {
   id: string;
   amountMinor: number;
   currencyCode: string;
-  contributionType: string;
-  refundableStatus: string;
-  notes: string | null;
+  contributionType?: string | null;
+  refundableStatus?: string | null;
+  notes?: string | null;
   createdAt: string;
-  contributorDisplayName: string;
-  contributorAvatarUrl: string | null;
+  contributorDisplayName?: string | null;
+  contributorAvatarUrl?: string | null;
+  category?: string | null;
+  sourceKind?: string | null;
+  note?: string | null;
+  contributorName?: string | null;
 }
 
 interface TreasuryDashboard {
@@ -847,8 +852,10 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                   <div key={c.id} className="rounded-md border p-2 text-sm">
                     <div className="flex justify-between gap-2">
                       <span className="font-medium">
-                        {c.contributorDisplayName} ·{" "}
-                        {getSourceLabel(c.contributionType)}
+                        {c.contributorDisplayName ?? c.contributorName ?? "Band member"} ·{" "}
+                        {getSourceLabel(
+                          c.contributionType ?? c.category ?? c.sourceKind,
+                        )}
                       </span>
                       <Badge>
                         {formatCurrency(
@@ -859,10 +866,12 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {c.currencyCode} · {formatDateTime(c.createdAt)} · refund:{" "}
-                      {c.refundableStatus}
+                      {c.refundableStatus ?? "not applicable"}
                     </p>
 
-                    {c.notes && <p className="text-xs">{c.notes}</p>}
+                    {(c.notes ?? c.note) && (
+                      <p className="text-xs">{c.notes ?? c.note}</p>
+                    )}
                   </div>
                 ))}
               </div>
