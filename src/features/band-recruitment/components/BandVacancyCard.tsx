@@ -24,8 +24,8 @@ export function BandVacancyCard({ vacancy, onApply, onSave }: { vacancy: BandVac
       {vacancy.genres?.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{vacancy.genres.slice(0, 4).map((g) => <Badge key={g} variant="outline">{g}</Badge>)}</div>}
       {vacancy.match?.reasons?.length ? <ul className="mt-3 list-disc pl-5 text-sm text-muted-foreground">{vacancy.match.reasons.map((r) => <li key={r}>{r}</li>)}</ul> : null}
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button asChild size="sm"><Link to={`/bands/${vacancy.band_id}/vacancies/${vacancy.id}`}>View vacancy</Link></Button>
-        {onApply && <Button size="sm" variant="secondary" onClick={() => onApply(vacancy)}>Apply</Button>}
+        <Button asChild size="sm"><Link to={`/social/recruitment?vacancy=${vacancy.id}`}>View vacancy</Link></Button>
+        {onApply && vacancy.direct_applications_allowed && remaining > 0 && <Button size="sm" variant="secondary" onClick={() => onApply(vacancy)}>Apply</Button>}
         {onSave && <Button size="sm" variant="outline" onClick={() => onSave(vacancy)}>{vacancy.saved ? "Saved" : "Save"}</Button>}
       </div>
     </article>
