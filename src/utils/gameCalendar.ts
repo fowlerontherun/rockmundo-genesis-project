@@ -28,14 +28,18 @@ export interface TravelDisruption {
 
 const DAYS_PER_GAME_MONTH = 30;
 const MONTHS_PER_YEAR = 12;
+const DAYS_PER_GAME_YEAR = DAYS_PER_GAME_MONTH * MONTHS_PER_YEAR;
 
 /** Fixed epoch: January 1, 2026 = Game Year 1, Month 1, Day 1 */
 export const GAME_EPOCH = new Date("2026-01-01T00:00:00Z");
 
 /**
- * Calculate current in-game date based on fixed epoch (Jan 1 2026).
- * All players share the same in-game date.
- * characterCreatedAt param is kept for backwards compat but ignored.
+ * Calculate current in-game date based on the fixed epoch (Jan 1 2026).
+ *
+ * A game month is 30 game days. With the default 10 real-world days per game
+ * month, every real day therefore advances the calendar by 3 game days. The
+ * previous implementation rounded real days into whole game months first,
+ * which made gameDay effectively stay on day 1 and prevented most birthdays.
  */
 export function calculateInGameDate(
   _characterCreatedAt?: Date,
@@ -46,14 +50,15 @@ export function calculateInGameDate(
   const msElapsed = now.getTime() - GAME_EPOCH.getTime();
   const realWorldDaysElapsed = Math.max(0, Math.floor(msElapsed / (1000 * 60 * 60 * 24)));
 
-  // Calculate game days elapsed
-  const gameDaysElapsed = Math.floor(
-    (realWorldDaysElapsed / daysPerGameMonth) * DAYS_PER_GAME_MONTH
-  );
+  const safeDaysPerMonth = Number.isFinite(daysPerGameMonth) && daysPerGameMonth > 0
+    ? daysPerGameMonth
+    : Math.max(1, daysPerGameYear / MONTHS_PER_YEAR);
 
-  // Calculate game years, months, and days
-  const gameYear = Math.floor(gameDaysElapsed / (DAYS_PER_GAME_MONTH * MONTHS_PER_YEAR)) + 1;
-  const remainingDays = gameDaysElapsed % (DAYS_PER_GAME_MONTH * MONTHS_PER_YEAR);
+  const gameDaysPerRealDay = DAYS_PER_GAME_MONTH / safeDaysPerMonth;
+  const gameDaysElapsed = Math.floor(realWorldDaysElapsed * gameDaysPerRealDay);
+
+  const gameYear = Math.floor(gameDaysElapsed / DAYS_PER_GAME_YEAR) + 1;
+  const remainingDays = gameDaysElapsed % DAYS_PER_GAME_YEAR;
   const gameMonth = Math.floor(remainingDays / DAYS_PER_GAME_MONTH) + 1;
   const gameDay = (remainingDays % DAYS_PER_GAME_MONTH) + 1;
 
@@ -68,19 +73,14 @@ export function calculateInGameDate(
   };
 }
 
-/**
- * Get current season based on game month
- */
+/** Get current season based on game month. */
 export function getCurrentSeason(gameMonth: number): Season {
   if (gameMonth >= 3 && gameMonth <= 5) return "spring";
   if (gameMonth >= 6 && gameMonth <= 8) return "summer";
   if (gameMonth >= 9 && gameMonth <= 11) return "autumn";
-  return "winter"; // 12, 1, 2
+  return "winter";
 }
 
-/**
- * Get season emoji
- */
 export function getSeasonEmoji(season: Season): string {
   const emojis = {
     spring: "🌸",
@@ -91,9 +91,6 @@ export function getSeasonEmoji(season: Season): string {
   return emojis[season];
 }
 
-/**
- * Get month name
- */
 export function getMonthName(month: number): string {
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -102,9 +99,7 @@ export function getMonthName(month: number): string {
   return months[month - 1] || "Unknown";
 }
 
-/**
- * Check if today is character's birthday
- */
+/** Legacy date-based birthday check retained for older callers. */
 export function isCharacterBirthday(
   characterBirthDate: Date | null,
   currentGameMonth: number,
@@ -114,27 +109,58 @@ export function isCharacterBirthday(
 
   const birthMonth = characterBirthDate.getMonth() + 1;
   const birthDay = characterBirthDate.getDate();
-
   return birthMonth === currentGameMonth && birthDay === currentGameDay;
 }
 
 /**
- * Calculate character's current in-game age
- * Uses initial age stored in profile + game years elapsed
+ * Legacy age calculation retained for older callers. New character surfaces
+ * should use the anchored age state on profiles via calculateCharacterAgeFromAnchor.
  */
 export function calculateInGameAge(
   initialAge: number,
   currentGameDate: InGameDate
 ): number {
-  if (!initialAge || initialAge < 16) return 16; // Default starting age
-  
-  const yearsElapsed = currentGameDate.gameYear - 1; // -1 because year 1 is first year
+  if (!initialAge || initialAge < 16) return 16;
+  const yearsElapsed = currentGameDate.gameYear - 1;
   return initialAge + yearsElapsed;
 }
 
-/**
- * Get season modifiers for a specific genre
- */
+export interface CharacterAgeAnchor {
+  age?: number | null;
+  birth_game_month?: number | null;
+  birth_game_day?: number | null;
+  age_anchor_age?: number | null;
+  age_anchor_game_year?: number | null;
+  age_anchor_game_month?: number | null;
+  age_anchor_game_day?: number | null;
+}
+
+/** Calculate age by counting birthdays crossed since the profile's age anchor. */
+export function calculateCharacterAgeFromAnchor(
+  profile: CharacterAgeAnchor,
+  currentGameDate: Pick<InGameDate, "gameYear" | "gameMonth" | "gameDay">
+): number {
+  const anchorAge = Math.max(16, Number(profile.age_anchor_age ?? profile.age ?? 16));
+  const anchorYear = Number(profile.age_anchor_game_year ?? 1);
+  const anchorMonth = Number(profile.age_anchor_game_month ?? 1);
+  const anchorDay = Number(profile.age_anchor_game_day ?? 1);
+  const birthMonth = Number(profile.birth_game_month ?? 1);
+  const birthDay = Number(profile.birth_game_day ?? 1);
+
+  const currentPassedBirthday =
+    currentGameDate.gameMonth > birthMonth ||
+    (currentGameDate.gameMonth === birthMonth && currentGameDate.gameDay >= birthDay);
+  const anchorPassedBirthday =
+    anchorMonth > birthMonth || (anchorMonth === birthMonth && anchorDay >= birthDay);
+
+  const birthdaysCrossed =
+    currentGameDate.gameYear - anchorYear +
+    (currentPassedBirthday ? 1 : 0) -
+    (anchorPassedBirthday ? 1 : 0);
+
+  return Math.max(16, anchorAge + birthdaysCrossed);
+}
+
 export async function getSeasonModifiers(
   season: Season,
   genre: string
@@ -162,9 +188,6 @@ export async function getSeasonModifiers(
   };
 }
 
-/**
- * Check for active travel disruptions on a route
- */
 export async function checkTravelDisruptions(
   routeId: string
 ): Promise<TravelDisruption | null> {
@@ -198,9 +221,6 @@ export async function checkTravelDisruptions(
   };
 }
 
-/**
- * Check if birthday reward has been claimed for current game year
- */
 export async function hasBirthdayRewardBeenClaimed(
   profileId: string,
   gameYear: number
@@ -216,70 +236,36 @@ export async function hasBirthdayRewardBeenClaimed(
 }
 
 /**
- * Claim birthday reward
+ * Claim the server-authoritative birthday reward. userId remains in the
+ * signature for backwards compatibility; ownership is enforced by the RPC.
  */
 export async function claimBirthdayReward(
-  userId: string,
+  _userId: string,
   profileId: string,
-  gameYear: number
-): Promise<{ success: boolean; error?: string }> {
+  gameYear: number,
+  inGameDate: Pick<InGameDate, "gameMonth" | "gameDay"> = calculateInGameDate()
+): Promise<{ success: boolean; error?: string; sxp?: number; ap?: number; age?: number }> {
   try {
-    // Check if already claimed
-    const alreadyClaimed = await hasBirthdayRewardBeenClaimed(profileId, gameYear);
-    if (alreadyClaimed) {
-      return { success: false, error: "Birthday reward already claimed for this year" };
-    }
-
-    // Award XP
-    const { error: xpError } = await supabase.from("experience_ledger").insert({
-      user_id: userId,
-      profile_id: profileId,
-      activity_type: "birthday_reward",
-      xp_amount: 250,
-      metadata: { game_year: gameYear },
+    const { data, error } = await supabase.rpc("claim_character_birthday_reward" as any, {
+      _profile_id: profileId,
+      _game_year: gameYear,
+      _game_month: inGameDate.gameMonth,
+      _game_day: inGameDate.gameDay,
     });
 
-    if (xpError) throw xpError;
-
-    // Award cash - Fetch current cash and update
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("cash")
-      .eq("user_id", userId)
-      .single();
-
-    if (profile) {
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: (profile.cash || 0) + 500 })
-        .eq("user_id", userId);
-
-      if (cashError) throw cashError;
-    }
-
-    // Record birthday reward claim
-    const { error: rewardError } = await supabase.from("player_birthday_rewards").insert({
-      user_id: userId,
-      profile_id: profileId,
-      game_year: gameYear,
-      xp_awarded: 250,
-      cash_awarded: 500,
-    });
-
-    if (rewardError) throw rewardError;
-
-    // Log to activity feed
-    await supabase.from("activity_feed").insert({
-      user_id: userId,
-      activity_type: "birthday_reward",
-      message: `Happy Birthday! Claimed 250 XP and 500 cash`,
-      earnings: 500,
-      metadata: { game_year: gameYear },
-    });
-
-    return { success: true };
+    if (error) throw error;
+    const result = (data ?? {}) as { success?: boolean; sxp?: number; ap?: number; age?: number };
+    return {
+      success: result.success === true,
+      sxp: result.sxp,
+      ap: result.ap,
+      age: result.age,
+    };
   } catch (error) {
     console.error("Error claiming birthday reward:", error);
-    return { success: false, error: "Failed to claim birthday reward" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to claim birthday reward",
+    };
   }
 }
