@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const from = vi.fn();
-const rpc = vi.fn();
+const { from, rpc } = vi.hoisted(() => ({
+  from: vi.fn(),
+  rpc: vi.fn(),
+}));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from, rpc },
