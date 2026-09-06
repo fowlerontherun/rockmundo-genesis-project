@@ -22,7 +22,11 @@ type University = {
   mayor_fee_modifier: number | string | null;
   course_cost_modifier: number | string | null;
   quality_investment_total: number | string | null;
+  last_quality_upgrade_at: string | null;
+  last_prestige_upgrade_at: string | null;
 };
+
+const UPGRADE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 const ERROR_MESSAGES: Record<string, string> = {
   university_management_auth_required: "You must be logged in to manage a university.",
@@ -31,6 +35,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   university_management_mayor_required: "Only the current mayor can manage universities in this city.",
   university_management_quality_max: "Teaching quality is already at the maximum rating.",
   university_management_prestige_max: "Prestige is already at the maximum rating.",
+  university_management_quality_cooldown: "Teaching quality can only be upgraded once every 7 days.",
+  university_management_prestige_cooldown: "Prestige can only be upgraded once every 7 days.",
   university_management_insufficient_treasury: "The city treasury does not have enough available funds.",
   university_management_fee_out_of_range: "Course-fee policy must be between 80% and 120%.",
   university_management_fee_step_invalid: "Course-fee policy must move in 5% steps.",
@@ -50,6 +56,25 @@ function prestigeUpgradeCost(prestige: number) {
   return Math.round(8000 + prestige ** 2 * 4);
 }
 
+function cooldownInfo(lastUpgradeAt: string | null) {
+  if (!lastUpgradeAt) return { active: false, nextAt: null as Date | null, label: null as string | null };
+
+  const nextAt = new Date(new Date(lastUpgradeAt).getTime() + UPGRADE_COOLDOWN_MS);
+  const remainingMs = nextAt.getTime() - Date.now();
+  if (remainingMs <= 0) return { active: false, nextAt, label: null as string | null };
+
+  const totalHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const remaining = days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+
+  return {
+    active: true,
+    nextAt,
+    label: `Available in ${remaining} (${nextAt.toLocaleString()})`,
+  };
+}
+
 export function MayorUniversitiesTab({ cityId }: Props) {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
@@ -59,7 +84,7 @@ export function MayorUniversitiesTab({ cityId }: Props) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("universities")
-        .select("id,name,city,prestige,quality_of_learning,academic_cost_modifier,mayor_fee_modifier,course_cost_modifier,quality_investment_total")
+        .select("id,name,city,prestige,quality_of_learning,academic_cost_modifier,mayor_fee_modifier,course_cost_modifier,quality_investment_total,last_quality_upgrade_at,last_prestige_upgrade_at")
         .eq("city_id", cityId)
         .order("name");
       if (error) throw error;
@@ -105,7 +130,7 @@ export function MayorUniversitiesTab({ cityId }: Props) {
     },
     onSuccess: () => {
       refresh();
-      toast.success("University teaching quality upgraded.");
+      toast.success("University teaching quality upgraded. This upgrade is now on a 7-day cooldown.");
     },
     onError: (error: Error) => toast.error(friendlyError(error)),
   });
@@ -122,7 +147,7 @@ export function MayorUniversitiesTab({ cityId }: Props) {
     },
     onSuccess: () => {
       refresh();
-      toast.success("University prestige upgraded.");
+      toast.success("University prestige upgraded. This upgrade is now on a 7-day cooldown.");
     },
     onError: (error: Error) => toast.error(friendlyError(error)),
   });
@@ -155,7 +180,7 @@ export function MayorUniversitiesTab({ cityId }: Props) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base"><GraduationCap className="h-5 w-5" /> University Investment</CardTitle>
           <CardDescription>
-            Use city funds to improve local university teaching quality and prestige. Higher quality improves learning outcomes; prestige reflects the institution's standing.
+            Use city funds to improve local university teaching quality and prestige. Each upgrade type has its own 7-day cooldown.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm">
@@ -172,6 +197,8 @@ export function MayorUniversitiesTab({ cityId }: Props) {
         const prestigeCost = prestigeUpgradeCost(prestige);
         const busy = upgradeQuality.isPending || upgradePrestige.isPending || setFee.isPending;
         const fee = Number(university.mayor_fee_modifier ?? 1);
+        const qualityCooldown = cooldownInfo(university.last_quality_upgrade_at);
+        const prestigeCooldown = cooldownInfo(university.last_prestige_upgrade_at);
 
         return (
           <Card key={university.id}>
@@ -191,27 +218,29 @@ export function MayorUniversitiesTab({ cityId }: Props) {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-lg border p-3">
                   <div className="mb-1 flex items-center gap-2 font-medium"><Sparkles className="h-4 w-4" /> Teaching quality</div>
-                  <p className="mb-3 text-xs text-muted-foreground">Invest directly in staff, facilities and teaching resources. Each investment adds +1 quality, up to 100.</p>
+                  <p className="mb-3 text-xs text-muted-foreground">Invest in staff, facilities and teaching resources. Each investment adds +1 quality, up to 100.</p>
+                  {qualityCooldown.active && <p className="mb-2 text-xs font-medium text-amber-600 dark:text-amber-400">{qualityCooldown.label}</p>}
                   <Button
                     size="sm"
                     className="w-full"
-                    disabled={busy || quality >= 100 || availableTreasury < qualityCost}
+                    disabled={busy || quality >= 100 || availableTreasury < qualityCost || qualityCooldown.active}
                     onClick={() => upgradeQuality.mutate(university.id)}
                   >
-                    {quality >= 100 ? "Maximum quality" : `Upgrade to ${quality + 1} — $${qualityCost.toLocaleString()}`}
+                    {quality >= 100 ? "Maximum quality" : qualityCooldown.active ? "Quality upgrade on cooldown" : `Upgrade to ${quality + 1} — $${qualityCost.toLocaleString()}`}
                   </Button>
                 </div>
 
                 <div className="rounded-lg border p-3">
                   <div className="mb-1 flex items-center gap-2 font-medium"><Star className="h-4 w-4" /> Prestige</div>
                   <p className="mb-3 text-xs text-muted-foreground">Fund showcases, partnerships and reputation-building. Each investment adds +1 prestige, up to 100.</p>
+                  {prestigeCooldown.active && <p className="mb-2 text-xs font-medium text-amber-600 dark:text-amber-400">{prestigeCooldown.label}</p>}
                   <Button
                     size="sm"
                     className="w-full"
-                    disabled={busy || prestige >= 100 || availableTreasury < prestigeCost}
+                    disabled={busy || prestige >= 100 || availableTreasury < prestigeCost || prestigeCooldown.active}
                     onClick={() => upgradePrestige.mutate(university.id)}
                   >
-                    {prestige >= 100 ? "Maximum prestige" : `Upgrade to ${prestige + 1} — $${prestigeCost.toLocaleString()}`}
+                    {prestige >= 100 ? "Maximum prestige" : prestigeCooldown.active ? "Prestige upgrade on cooldown" : `Upgrade to ${prestige + 1} — $${prestigeCost.toLocaleString()}`}
                   </Button>
                 </div>
               </div>
