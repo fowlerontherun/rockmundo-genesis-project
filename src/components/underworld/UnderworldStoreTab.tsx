@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUnderworldStore, type UnderworldProduct } from "@/hooks/useUnderworldStore";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ProductCard } from "./ProductCard";
 import { PurchaseDialog } from "./PurchaseDialog";
 import { ActiveBoostsIndicator } from "./ActiveBoostsIndicator";
 import { RecoveryPanel } from "@/features/underground/RecoveryPanel";
+import { SceneStoriesPanel } from "@/features/underground/SceneStoriesPanel";
 
 const categories = [
   { id: "all", label: "All Items", icon: Package },
@@ -19,6 +21,7 @@ const categories = [
 
 export const UnderworldStoreTab = () => {
   const { products, productsLoading, userBalance, activeBoosts } = useUnderworldStore();
+  const { profileId } = useActiveProfile();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<UnderworldProduct | null>(null);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
@@ -32,6 +35,7 @@ export const UnderworldStoreTab = () => {
 
   return (
     <div className="space-y-6">
+      <SceneStoriesPanel profileId={profileId ?? null} surface="underworld" />
       <RecoveryPanel />
 
       {activeBoosts.length > 0 && <ActiveBoostsIndicator boosts={activeBoosts} />}
