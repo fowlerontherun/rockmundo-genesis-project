@@ -54,18 +54,38 @@ export function CreatePromotionDialog({ open, onOpenChange, release }: CreatePro
       return;
     }
 
+    if (!Number.isFinite(budget) || budget <= 0) {
+      toast({
+        title: "Invalid promotion budget",
+        description: "Enter a campaign budget greater than zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (startDate && endDate && endDate < startDate) {
+      toast({
+        title: "Invalid campaign dates",
+        description: "The campaign end date cannot be before its start date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
-    const { error } = await supabase.from("label_promotion_campaigns").insert({
-      release_id: release.id,
-      campaign_type: campaignType.trim() || "Campaign",
-      budget,
-      start_date: startDate || null,
-      end_date: endDate || null,
-      channels: channels
-        .split(",")
-        .map((channel) => channel.trim())
-        .filter(Boolean),
-      notes: notes.trim() || null,
+    const channelList = channels
+      .split(",")
+      .map((channel) => channel.trim())
+      .filter(Boolean);
+
+    const { error } = await (supabase as any).rpc("create_label_promotion_campaign", {
+      p_release_id: release.id,
+      p_campaign_type: campaignType.trim() || "Campaign",
+      p_budget: Math.round(budget),
+      p_start_date: startDate || null,
+      p_end_date: endDate || null,
+      p_channels: channelList,
+      p_notes: notes.trim() || null,
     });
 
     if (error) {
@@ -79,11 +99,15 @@ export function CreatePromotionDialog({ open, onOpenChange, release }: CreatePro
     }
 
     toast({
-      title: "Promotion campaign added",
-      description: "Your release campaign has been scheduled.",
+      title: "Promotion campaign funded",
+      description: `$${Math.round(budget).toLocaleString()} has been charged to the label. The campaign will build release hype during its scheduled window.`,
     });
 
-    await queryClient.invalidateQueries({ queryKey: ["label-releases"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["label-releases"] }),
+      queryClient.invalidateQueries({ queryKey: ["label-management"] }),
+      queryClient.invalidateQueries({ queryKey: ["label-finances"] }),
+    ]);
 
     setIsSubmitting(false);
     resetState();
@@ -102,9 +126,9 @@ export function CreatePromotionDialog({ open, onOpenChange, release }: CreatePro
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Schedule a promotion campaign</DialogTitle>
+          <DialogTitle>Fund a promotion campaign</DialogTitle>
           <DialogDescription>
-            Allocate budget and set your marketing window to support {release?.title ?? "this release"}.
+            Campaign budget is charged to the label when you confirm it. Active campaign spend builds release hype, increasing sales and streaming demand. Marketing department upgrades improve the impact of the same budget.
           </DialogDescription>
         </DialogHeader>
 
@@ -120,14 +144,16 @@ export function CreatePromotionDialog({ open, onOpenChange, release }: CreatePro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="campaign-budget">Budget</Label>
+              <Label htmlFor="campaign-budget">Campaign budget</Label>
               <Input
                 id="campaign-budget"
                 type="number"
-                min={0}
+                min={1}
+                step={100}
                 value={budget}
                 onChange={(event) => setBudget(Number(event.target.value) || 0)}
               />
+              <p className="text-xs text-muted-foreground">Charged immediately when the campaign is funded.</p>
             </div>
           </div>
 
@@ -148,6 +174,7 @@ export function CreatePromotionDialog({ open, onOpenChange, release }: CreatePro
                 type="date"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
+                min={startDate || undefined}
               />
             </div>
           </div>
@@ -178,8 +205,8 @@ export function CreatePromotionDialog({ open, onOpenChange, release }: CreatePro
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Scheduling..." : "Schedule campaign"}
+          <Button onClick={handleSubmit} disabled={isSubmitting || budget <= 0}>
+            {isSubmitting ? "Funding..." : `Fund $${Math.max(0, Math.round(budget)).toLocaleString()} Campaign`}
           </Button>
         </DialogFooter>
       </DialogContent>
