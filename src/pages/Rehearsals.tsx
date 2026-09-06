@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useBandAvailableSongs } from "@/hooks/useBandAvailableSongs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -156,54 +157,7 @@ const Rehearsals = () => {
     },
   });
 
-  const { data: bandSongs = [] } = useQuery({
-    queryKey: ["band-songs", selectedBand?.id, profileId],
-    queryFn: async () => {
-      if (!selectedBand?.id) return [];
-      const allSongs: any[] = [];
-      const seen = new Set<string>();
-
-      const { data: bandOwnedSongs, error: bandError } = await supabase
-        .from("songs")
-        .select("*")
-        .eq("band_id", selectedBand.id)
-        .or("archived.is.null,archived.eq.false");
-
-      if (bandError) {
-        console.error("[Rehearsals] Error fetching band songs:", bandError);
-      } else {
-        for (const song of bandOwnedSongs ?? []) {
-          if (!seen.has(song.id)) {
-            seen.add(song.id);
-            allSongs.push(song);
-          }
-        }
-      }
-
-      if (profileId) {
-        const { data: ownSongs, error: ownError } = await supabase
-          .from("songs")
-          .select("*")
-          .eq("profile_id", profileId)
-          .is("band_id", null)
-          .or("archived.is.null,archived.eq.false");
-
-        if (ownError) {
-          console.error("[Rehearsals] Error fetching own songs:", ownError);
-        } else {
-          for (const song of ownSongs ?? []) {
-            if (!seen.has(song.id)) {
-              seen.add(song.id);
-              allSongs.push(song);
-            }
-          }
-        }
-      }
-
-      return allSongs;
-    },
-    enabled: !!selectedBand?.id,
-  });
+  const { data: bandSongs = [] } = useBandAvailableSongs(selectedBand?.id);
 
   const { data: myBookedRehearsalIds = [] } = useQuery({
     queryKey: ["my-rehearsal-schedule", profileId],
