@@ -60555,6 +60555,7 @@ export type Database = {
         Args: { target_band_id: string }
         Returns: boolean
       }
+      can_manage_band_setlists: { Args: { _band_id: string }; Returns: boolean }
       can_manage_festival_booking: {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
