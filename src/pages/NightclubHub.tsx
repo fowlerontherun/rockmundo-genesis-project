@@ -15,6 +15,7 @@ import { useOwnedNightclubs, usePurchaseNightclub, getPurchasePrice } from "@/ho
 import { useOptionalGameData } from "@/hooks/useGameData";
 import { UndergroundScenePanel } from "@/features/underground/UndergroundScenePanel";
 import { SubstancePanel } from "@/features/underground/SubstancePanel";
+import { SceneContactsPanel } from "@/features/underground/SceneContactsPanel";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -113,6 +114,7 @@ const NightclubHub = () => {
 
       <UndergroundScenePanel profileId={activeProfile?.id ?? null} age={Number(activeProfile?.age ?? 0)} />
       {activeProfile?.id && <SubstancePanel profileId={activeProfile.id} age={Number(activeProfile?.age ?? 0)} />}
+      {activeProfile?.id && <SceneContactsPanel profileId={activeProfile.id} age={Number(activeProfile?.age ?? 0)} />}
 
       <Card>
         <CardContent className="pt-4 space-y-3">
