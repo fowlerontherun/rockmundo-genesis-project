@@ -158,3 +158,61 @@ export interface SceneContactResolution {
   gossipLeaked?: boolean;
   existingRelationshipAffected?: boolean;
 }
+
+export type ScandalStage = "rumor" | "press" | "frenzy" | "fading" | "resolved";
+export type ScandalCategory =
+  | "relationship"
+  | "nightlife"
+  | "property_damage"
+  | "altercation"
+  | "substance"
+  | "promoter"
+  | "authority"
+  | "media"
+  | "other";
+export type ScandalResponse = "ignore" | "apologize" | "deny" | "lean_in" | "consultant" | "disappear" | "pay_fine";
+
+export interface PlayerScandal {
+  id: string;
+  profile_id: string;
+  source_type: string;
+  source_id: string | null;
+  category: ScandalCategory;
+  headline: string;
+  summary: string;
+  stage: ScandalStage;
+  severity: number;
+  credibility: number;
+  exposure: number;
+  response_choice: Exclude<ScandalResponse, "pay_fine"> | null;
+  response_outcome: string | null;
+  fine_amount: number;
+  fine_paid: boolean;
+  venue_restriction_until: string | null;
+  travel_scrutiny_until: string | null;
+  media_blackout_until: string | null;
+  next_escalation_at: string;
+  resolved_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScandalProcessResolution {
+  ok: boolean;
+  processed?: number;
+  heat?: number;
+  reason?: string;
+}
+
+export interface ScandalResponseResolution {
+  ok: boolean;
+  reason?: string;
+  response?: ScandalResponse;
+  success?: boolean;
+  message?: string;
+  cashSpent?: number;
+  heatChange?: number;
+  changes?: Record<string, number>;
+  required?: number;
+}
