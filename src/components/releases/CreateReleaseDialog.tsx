@@ -13,7 +13,7 @@ import { FormatSelectionStep } from "./FormatSelectionStep";
 import { TerritorySelectionStep, TerritorySelection } from "./TerritorySelectionStep";
 import { StreamingDistributionStep } from "./StreamingDistributionStep";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
-import { Loader2, AlertTriangle, Building2, BadgeCheck } from "lucide-react";
+import { Loader2, AlertTriangle, Building2, BadgeCheck, ImagePlus, X } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { addDays, isBefore } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,8 @@ const MANUFACTURING_DAYS: Record<string, number> = {
   streaming: 2,
 };
 
+const MAX_ARTWORK_SIZE_BYTES = 10 * 1024 * 1024;
+
 export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleaseDialogProps) {
   const [step, setStep] = useState(1);
   const [releaseType, setReleaseType] = useState<ReleaseType>("single");
@@ -45,9 +47,17 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [selectedStreamingPlatforms, setSelectedStreamingPlatforms] = useState<string[]>([]);
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
+  const [artworkFile, setArtworkFile] = useState<File | null>(null);
+  const [artworkPreviewUrl, setArtworkPreviewUrl] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const { profileId } = useActiveProfile();
+
+  useEffect(() => {
+    return () => {
+      if (artworkPreviewUrl) URL.revokeObjectURL(artworkPreviewUrl);
+    };
+  }, [artworkPreviewUrl]);
 
   // Auto-detect user's active band
   const { data: userBand } = useQuery({
@@ -123,6 +133,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     enabled: open,
   });
 
+  const hasPhysicalFormats = selectedFormats.some(f => 
+    f.format_type === "vinyl" || f.format_type === "cd" || f.format_type === "cassette"
+  );
+
   // Auto-select home country as territory when bandHomeInfo loads
   useEffect(() => {
     if (bandHomeInfo && selectedTerritories.length === 0) {
@@ -157,10 +171,6 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     }
   }, [userBand, artistName]);
 
-  const hasPhysicalFormats = selectedFormats.some(f => 
-    f.format_type === "vinyl" || f.format_type === "cd" || f.format_type === "cassette"
-  );
-
   // Calculate manufacturing completion date
   const getManufacturingCompleteDate = () => {
     if (selectedFormats.length === 0) return addDays(new Date(), 2);
@@ -178,6 +188,31 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const labelCoversManufacturing = activeContract?.manufacturing_covered === true;
   const labelName = (activeContract?.labels as any)?.name;
   const labelCutPct = activeContract ? (activeContract.royalty_label_pct ?? (100 - activeContract.royalty_artist_pct)) : 0;
+
+  const clearArtwork = () => {
+    setArtworkFile(null);
+    setArtworkPreviewUrl(null);
+  };
+
+  const handleArtworkChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid artwork", description: "Please choose an image file.", variant: "destructive" });
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_ARTWORK_SIZE_BYTES) {
+      toast({ title: "Artwork too large", description: "Cover art must be 10 MB or smaller.", variant: "destructive" });
+      event.target.value = "";
+      return;
+    }
+
+    setArtworkFile(file);
+    setArtworkPreviewUrl(URL.createObjectURL(file));
+  };
 
   const createRelease = useMutation({
     mutationFn: async () => {
@@ -219,15 +254,45 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         },
       });
       if (createError) throw createError;
+
+      let artworkWarning: string | null = null;
+      if (artworkFile) {
+        try {
+          const fileExt = artworkFile.name.split(".").pop() || "jpg";
+          const fileName = `${releaseId}-${Date.now()}.${fileExt}`;
+          const filePath = `release-artwork/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("music")
+            .upload(filePath, artworkFile, {
+              contentType: artworkFile.type,
+              upsert: false,
+            });
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("music")
+            .getPublicUrl(filePath);
+
+          const { error: artworkUpdateError } = await supabase
+            .from("releases")
+            .update({ artwork_url: publicUrl })
+            .eq("id", releaseId);
+          if (artworkUpdateError) throw artworkUpdateError;
+        } catch (error: any) {
+          artworkWarning = error?.message || "The artwork could not be uploaded.";
+        }
+      }
+
       const { data: release, error: fetchError } = await supabase.from("releases").select("*").eq("id", releaseId).single();
       if (fetchError) throw fetchError;
 
       logGameActivity({ userId, bandId: userBand?.id, activityType: "release_created", activityCategory: "release",
         description: `Created ${releaseType} release "${title}" - Manufacturing in progress`, amount: -minorToMajor(bandPaysMinor),
         metadata: { releaseId, manufacturingDays, territoryCostMinor, labelCoveredCostMinor: labelPaysMinor } });
-      return release;
+      return { release, artworkWarning };
     },
-    onSuccess: (release) => {
+    onSuccess: ({ release, artworkWarning }) => {
       queryClient.invalidateQueries({ queryKey: ["releases"] });
       if (userBand) {
         queryClient.invalidateQueries({ queryKey: ["band", userBand.id] });
@@ -252,6 +317,15 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             : ''
         }`
       });
+
+      if (artworkWarning) {
+        toast({
+          title: "Release created, artwork not added",
+          description: `${artworkWarning} You can still add cover art from the release details page.`,
+          variant: "destructive",
+        });
+      }
+
       onOpenChange(false);
       resetForm();
     },
@@ -275,6 +349,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setSelectedStreamingPlatforms([]);
     setScheduledReleaseDate(null);
     setRevenueShareEnabled(false);
+    clearArtwork();
   };
 
   const handleNext = () => {
@@ -365,6 +440,45 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
                   Releasing as {userBand.name}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cover Art <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <div className="flex flex-col gap-3 rounded-lg border border-dashed p-3 sm:flex-row sm:items-center">
+                {artworkPreviewUrl ? (
+                  <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-md border bg-muted">
+                    <img src={artworkPreviewUrl} alt="Selected release cover art" className="h-full w-full object-cover" />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="absolute right-1 top-1 h-7 w-7"
+                      onClick={clearArtwork}
+                      aria-label="Remove selected cover art"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-muted-foreground">
+                    <ImagePlus className="h-8 w-8" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleArtworkChange}
+                    disabled={createRelease.isPending}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Add the artwork now or skip it and add/change it later from the release details page. Maximum file size 10 MB.
+                  </p>
+                  {artworkFile && (
+                    <p className="truncate text-xs font-medium">Selected: {artworkFile.name}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <Button onClick={handleNext} disabled={createRelease.isPending} className="w-full">Next: Select Songs</Button>
