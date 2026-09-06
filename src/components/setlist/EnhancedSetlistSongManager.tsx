@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBandAvailableSongs } from "@/hooks/useBandAvailableSongs";
 import {
   useSetlistSongs,
   useAddSongToSetlist,
@@ -423,50 +424,7 @@ export const EnhancedSetlistSongManager = ({
 
   const [versionFilter, setVersionFilter] = useState<string>("all");
 
-  // Optimized single query for available songs
-  const { data: availableSongs, isLoading: songsLoading } = useQuery({
-    queryKey: ["band-songs-optimized", bandId],
-    queryFn: async () => {
-      // Single optimized query using RPC or parallel queries
-      const [bandSongsResult, bandMembersResult] = await Promise.all([
-        supabase
-          .from("songs")
-          .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id, version, parent_song_id")
-          .eq("band_id", bandId)
-          .eq("archived", false)
-          .order("title"),
-        supabase
-          .from("band_members")
-          .select("user_id")
-          .eq("band_id", bandId)
-      ]);
-
-      if (bandSongsResult.error) throw bandSongsResult.error;
-      
-      const bandSongs = bandSongsResult.data || [];
-      const bandMembers = bandMembersResult.data || [];
-      
-      if (bandMembers.length > 0) {
-        const memberUserIds = bandMembers.map(m => m.user_id).filter(Boolean);
-        
-        if (memberUserIds.length > 0) {
-          const { data: memberSongs } = await supabase
-            .from("songs")
-            .select("id, title, genre, quality_score, duration_seconds, duration_display, status, band_id, user_id, version, parent_song_id")
-            .in("user_id", memberUserIds)
-            .is("band_id", null)
-            .eq("archived", false)
-            .order("title");
-
-          return [...bandSongs, ...(memberSongs || [])];
-        }
-      }
-
-      return bandSongs;
-    },
-    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
-    gcTime: 5 * 60 * 1000,
-  });
+  const { data: availableSongs, isLoading: songsLoading } = useBandAvailableSongs(bandId);
 
   const filteredAvailableSongs = useMemo(() => {
     if (!availableSongs) return [];
