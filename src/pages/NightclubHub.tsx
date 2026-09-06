@@ -18,6 +18,7 @@ import { SubstancePanel } from "@/features/underground/SubstancePanel";
 import { SceneContactsPanel } from "@/features/underground/SceneContactsPanel";
 import { ScandalHeatPanel } from "@/features/underground/ScandalHeatPanel";
 import { RecoveryPanel } from "@/features/underground/RecoveryPanel";
+import { SceneStoriesPanel } from "@/features/underground/SceneStoriesPanel";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -114,6 +115,7 @@ const NightclubHub = () => {
         </Card>
       )}
 
+      <SceneStoriesPanel profileId={activeProfile?.id ?? null} surface="nightclub" />
       <UndergroundScenePanel profileId={activeProfile?.id ?? null} age={Number(activeProfile?.age ?? 0)} />
       {activeProfile?.id && <SubstancePanel profileId={activeProfile.id} age={Number(activeProfile?.age ?? 0)} />}
       {activeProfile?.id && <RecoveryPanel />}
