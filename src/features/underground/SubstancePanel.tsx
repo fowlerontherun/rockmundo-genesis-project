@@ -13,7 +13,7 @@ interface Props {
   age?: number | null;
 }
 
-const money = (value: number) => new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value / 100);
+const money = (value: number) => new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 const effectLabel = (key: string) => key.replaceAll("_", " ");
 
 function RiskPips({ value }: { value: number }) {
