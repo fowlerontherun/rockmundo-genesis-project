@@ -83,11 +83,11 @@ export async function createBandVacancy(bandId: string, _profileId: string, inpu
   const errors = validateVacancyDraft(input);
   if (Object.keys(errors).length) throw new Error(Object.values(errors)[0]);
 
-  const { data, error } = await supabase.rpc("create_band_vacancy", {
+  const { data, error } = await supabase.rpc("create_band_vacancy" as never, {
     target_band_id: bandId,
     vacancy_payload: buildVacancyPayload(input),
     publish,
-  });
+  } as never);
   if (error) throw new Error(error.message || "Could not save band advert.");
   if (!data) throw new Error("Band advert could not be saved.");
   return data as unknown as BandVacancy;
@@ -104,17 +104,17 @@ export async function listBandVacancies(bandId: string) {
 }
 
 export async function updateBandVacancyStatus(vacancyId: string, status: "open" | "paused" | "closed" | "cancelled") {
-  const { data, error } = await supabase.rpc("update_band_vacancy_status", {
+  const { data, error } = await supabase.rpc("update_band_vacancy_status" as never, {
     target_vacancy_id: vacancyId,
     next_status: status,
-  });
+  } as never);
   if (error) throw new Error(error.message || "Could not update band advert.");
   if (!data) throw new Error("Band advert status could not be updated.");
   return data as unknown as BandVacancy;
 }
 
 export async function deleteBandVacancy(vacancyId: string) {
-  const { data, error } = await supabase.rpc("delete_band_vacancy", { target_vacancy_id: vacancyId });
+  const { data, error } = await supabase.rpc("delete_band_vacancy" as never, { target_vacancy_id: vacancyId } as never);
   if (error) throw new Error(error.message || "Could not delete band advert.");
   return Boolean(data);
 }
@@ -146,13 +146,13 @@ export async function applyToVacancy(
     throw new Error("Answer all required application questions.");
   }
 
-  const { data, error } = await supabase.rpc("submit_band_vacancy_application", {
+  const { data, error } = await supabase.rpc("submit_band_vacancy_application" as never, {
     target_vacancy_id: vacancy.id,
     cover: sanitizeRecruitmentText(coverMessage).slice(0, 500),
     answers: Object.fromEntries(
       Object.entries(answers).map(([key, value]) => [sanitizeRecruitmentText(key), sanitizeRecruitmentText(value).slice(0, 1000)]),
     ),
-  });
+  } as never);
   if (error?.code === "23505") throw new Error("You already have a pending band application.");
   if (error) throw new Error(error.message || "Band application failed.");
   if (!data) throw new Error("Band application could not be submitted.");
