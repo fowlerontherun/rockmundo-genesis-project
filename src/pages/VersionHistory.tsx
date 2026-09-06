@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.735",
+    date: "2026-09-06",
+    changes: [
+      { type: "fix", description: "Fixed Band Finances crashing when live treasury transactions use the current category and source fields instead of the older contribution type field" },
+      { type: "improvement", description: "Band treasury transactions now show compatible contributor names, notes and refund labels across both response formats" },
+    ],
+  },
+  {
     version: "1.1.734",
     date: "2026-09-04",
     changes: [
