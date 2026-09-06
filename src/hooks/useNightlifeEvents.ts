@@ -4,11 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBehaviorSettings } from "@/hooks/useBehaviorSettings";
 import { toast } from "sonner";
-import {
-  rollForAddiction,
-  getAddictionTypeLabel,
-  type AddictionType,
-} from "@/utils/addictionSystem";
+import { getAddictionTypeLabel, type AddictionType } from "@/utils/addictionSystem";
 import {
   resolveNightlifeEvent,
   STANCE_CONFIGS,
@@ -29,21 +25,27 @@ interface NightlifeOutcome {
   energyCost: number;
   cashSpent: number;
   addictionTriggered: boolean;
+  addictionRelapsed?: boolean;
   addictionType?: AddictionType;
   addictionSeverityGain?: number;
   message: string;
   outcomeDetail?: NightlifeOutcomeDetail;
 }
 
-const ACTIVITY_PROFILES: Record<
-  Exclude<NightlifeActivityType, "stance_night">,
-  { baseFame: number; energyCost: number; baseCash: number }
-> = {
+const ACTIVITY_PROFILES: Record<Exclude<NightlifeActivityType, "stance_night">, { baseFame: number; energyCost: number; baseCash: number }> = {
   guest_visit: { baseFame: 2, energyCost: 10, baseCash: 20 },
   dj_slot: { baseFame: 8, energyCost: 25, baseCash: 0 },
   bar_crawl: { baseFame: 3, energyCost: 15, baseCash: 30 },
   vip_clubbing: { baseFame: 5, energyCost: 20, baseCash: 50 },
   afterparty: { baseFame: 6, energyCost: 20, baseCash: 40 },
+};
+
+const BASE_EXPOSURE: Record<Exclude<NightlifeActivityType, "stance_night">, number> = {
+  guest_visit: 2,
+  dj_slot: 4,
+  bar_crawl: 12,
+  vip_clubbing: 8,
+  afterparty: 10,
 };
 
 export function useNightlifeEvents() {
@@ -54,12 +56,7 @@ export function useNightlifeEvents() {
   const [lastAddictionWarning, setLastAddictionWarning] = useState<string | null>(null);
 
   const nightlifeEventMutation = useMutation({
-    mutationFn: async ({
-      activityType,
-      clubName,
-      stance,
-      venueQuality,
-    }: {
+    mutationFn: async ({ activityType, clubName, stance, venueQuality }: {
       activityType: NightlifeActivityType;
       clubName: string;
       stance?: NightlifeStance;
@@ -68,13 +65,11 @@ export function useNightlifeEvents() {
       if (!profileId) throw new Error("Not authenticated");
       if (!settings) throw new Error("Behavior settings not loaded");
 
-      // Fetch player profile
       const { data: playerProfile } = await supabase
         .from("profiles")
         .select("energy, cash, fame")
         .eq("id", profileId)
         .single();
-
       if (!playerProfile) throw new Error("Profile not found");
 
       let fameGain: number;
@@ -84,10 +79,8 @@ export function useNightlifeEvents() {
       let outcomeDetail: NightlifeOutcomeDetail | undefined;
 
       if (activityType === "stance_night" && stance) {
-        // Stance-based nightlife event
         const stanceConfig = STANCE_CONFIGS[stance];
         const quality = venueQuality ?? 3;
-
         const outcome = resolveNightlifeEvent({
           stance,
           venueQuality: quality,
@@ -95,14 +88,12 @@ export function useNightlifeEvents() {
           playerEnergy: playerProfile.energy ?? 100,
           playerCash: playerProfile.cash ?? 0,
         });
-
         fameGain = outcome.fameChange;
         energyCost = Math.abs(outcome.energyChange);
         cashSpent = Math.abs(outcome.cashChange);
         addictionRiskMultiplier = stanceConfig.addictionRiskMultiplier;
         outcomeDetail = outcome;
       } else {
-        // Legacy activity-based event
         const profile = ACTIVITY_PROFILES[activityType as Exclude<NightlifeActivityType, "stance_night">];
         const fameVariance = Math.floor(Math.random() * 3) - 1;
         fameGain = Math.max(0, profile.baseFame + fameVariance);
@@ -110,90 +101,61 @@ export function useNightlifeEvents() {
         cashSpent = profile.baseCash;
       }
 
-      // Check affordability
-      if ((playerProfile.energy ?? 100) < energyCost) {
-        throw new Error(`Need ${energyCost} energy for this activity`);
-      }
-      if ((playerProfile.cash ?? 0) < cashSpent) {
-        throw new Error(`Need $${cashSpent} to cover costs`);
-      }
+      if ((playerProfile.energy ?? 100) < energyCost) throw new Error(`Need ${energyCost} energy for this activity`);
+      if ((playerProfile.cash ?? 0) < cashSpent) throw new Error(`Need $${cashSpent} to cover costs`);
 
-      // Roll for addiction (influenced by stance multiplier)
       let addictionTriggered = false;
-      let addictionType: AddictionType = "alcohol";
+      let addictionRelapsed = false;
+      let addictionType: AddictionType = "partying";
       let addictionSeverityGain = 0;
 
-      if (addictionRiskMultiplier > 0) {
-        const modifiedSettings = {
-          ...settings,
-          // Boost partying intensity for addiction calc based on stance
-          partying_intensity: addictionRiskMultiplier >= 2 ? "legendary" as const :
-            addictionRiskMultiplier >= 1 ? (settings.partying_intensity || "moderate") :
-            "light" as const,
-        };
-        const roll = rollForAddiction(modifiedSettings);
-        if (roll.triggered) {
-          addictionTriggered = true;
-          addictionType = roll.type;
+      const behaviourIntensity = settings.partying_intensity === "legendary" ? 1.5
+        : settings.partying_intensity === "heavy" ? 1.25
+          : settings.partying_intensity === "light" ? 0.6
+            : 1;
+      const baseExposure = activityType === "stance_night"
+        ? Math.max(1, Math.round(6 * addictionRiskMultiplier))
+        : BASE_EXPOSURE[activityType as Exclude<NightlifeActivityType, "stance_night">];
+      const exposureIntensity = Math.max(1, Math.min(30, Math.round(baseExposure * behaviourIntensity)));
 
-          const { data: existing } = await (supabase as any)
-            .from("player_addictions")
-            .select("*")
-            .eq("profile_id", profileId)
-            .eq("addiction_type", addictionType)
-            .in("status", ["active", "recovering", "relapsed"])
-            .maybeSingle();
+      if (exposureIntensity > 1) {
+        const { data: exposureData, error: exposureError } = await (supabase as any).rpc("record_addiction_exposure", {
+          p_profile_id: profileId,
+          p_addiction_type: "partying",
+          p_intensity: exposureIntensity,
+          p_source: "nightclub",
+          p_source_id: `${activityType}:${clubName}`,
+        });
+        if (exposureError) throw exposureError;
 
-          if (existing) {
-            addictionSeverityGain = 5 + Math.floor(Math.random() * 6);
-            const newSev = Math.min(100, existing.severity + addictionSeverityGain);
-            await (supabase as any)
-              .from("player_addictions")
-              .update({ severity: newSev, updated_at: new Date().toISOString() })
-              .eq("id", existing.id);
-          } else {
-            addictionSeverityGain = 20;
-            await (supabase as any).from("player_addictions").insert({
-              user_id: profileId,
-              profile_id: profileId,
-              addiction_type: addictionType,
-              severity: 20,
-              status: "active",
-              triggered_at: new Date().toISOString(),
-              days_clean: 0,
-              relapse_count: 0,
-            });
-          }
-        }
+        addictionTriggered = Boolean(exposureData?.triggered);
+        addictionRelapsed = Boolean(exposureData?.relapsed);
+        addictionType = (exposureData?.addictionType || "partying") as AddictionType;
+        addictionSeverityGain = addictionTriggered ? Number(exposureData?.severity ?? 0) : 0;
       }
 
-      // Apply changes to profile
       const newFame = Math.max(0, (playerProfile.fame ?? 0) + fameGain);
       const newEnergy = Math.max(0, (playerProfile.energy ?? 100) - energyCost);
       const newCash = Math.max(0, (playerProfile.cash ?? 0) - cashSpent);
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("profiles")
-        .update({
-          energy: newEnergy,
-          cash: newCash,
-          fame: newFame,
-        })
+        .update({ energy: newEnergy, cash: newCash, fame: newFame })
         .eq("id", profileId);
+      if (updateError) throw updateError;
 
-      // Build message
       let message = `Night at ${clubName}: ${fameGain >= 0 ? "+" : ""}${fameGain} fame, -${energyCost} energy`;
       if (cashSpent > 0) message += `, -$${cashSpent}`;
-      if (addictionTriggered) {
-        message += `. ⚠️ ${getAddictionTypeLabel(addictionType)} addiction ${addictionSeverityGain === 20 ? "triggered" : `worsened (+${addictionSeverityGain})`}!`;
-      }
+      if (addictionRelapsed) message += `. ⚠️ ${getAddictionTypeLabel(addictionType)} relapse.`;
+      else if (addictionTriggered) message += `. ⚠️ Repeated nights out have developed into ${getAddictionTypeLabel(addictionType).toLowerCase()} addiction.`;
 
       return {
         fameGain,
         energyCost,
         cashSpent,
         addictionTriggered,
-        addictionType: addictionTriggered ? addictionType : undefined,
+        addictionRelapsed,
+        addictionType: addictionTriggered || addictionRelapsed ? addictionType : undefined,
         addictionSeverityGain: addictionTriggered ? addictionSeverityGain : undefined,
         message,
         outcomeDetail,
@@ -205,19 +167,17 @@ export function useNightlifeEvents() {
 
       if (outcome.outcomeDetail) {
         setLastOutcomeDetail(outcome.outcomeDetail);
-        if (outcome.addictionTriggered && outcome.addictionType) {
-          setLastAddictionWarning(
-            `${getAddictionTypeLabel(outcome.addictionType)} addiction ${outcome.addictionSeverityGain === 20 ? "triggered" : `worsened (+${outcome.addictionSeverityGain})`}!`
-          );
+        if ((outcome.addictionTriggered || outcome.addictionRelapsed) && outcome.addictionType) {
+          setLastAddictionWarning(outcome.addictionRelapsed
+            ? `${getAddictionTypeLabel(outcome.addictionType)} relapse.`
+            : `Repeated nightlife exposure has developed into ${getAddictionTypeLabel(outcome.addictionType).toLowerCase()} addiction.`);
         } else {
           setLastAddictionWarning(null);
         }
+      } else if (outcome.addictionTriggered || outcome.addictionRelapsed) {
+        toast.warning(outcome.message, { duration: 6000 });
       } else {
-        if (outcome.addictionTriggered) {
-          toast.warning(outcome.message, { duration: 6000 });
-        } else {
-          toast.success(outcome.message);
-        }
+        toast.success(outcome.message);
       }
     },
     onError: (err) => toast.error(err.message),
