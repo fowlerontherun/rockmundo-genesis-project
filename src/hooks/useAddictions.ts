@@ -1,19 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { AddictionRecord, RecoveryProgram } from "@/utils/addictionSystem";
-import { getRecoveryProgramDetails } from "@/utils/addictionSystem";
-import { checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
 
 export function useAddictions() {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  const { data: addictions, isLoading } = useQuery({
+  const addictionsQuery = useQuery({
     queryKey: ["addictions", profileId],
     queryFn: async () => {
       if (!profileId) return [];
+
+      const { error: processError } = await (supabase as any).rpc(
+        "process_addiction_recovery",
+        { p_profile_id: profileId },
+      );
+      if (processError) throw processError;
+
       const { data, error } = await (supabase as any)
         .from("player_addictions")
         .select("*")
@@ -27,139 +32,63 @@ export function useAddictions() {
     enabled: !!profileId,
   });
 
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["addictions", profileId] });
+    queryClient.invalidateQueries({ queryKey: ["substance-state", profileId] });
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    queryClient.invalidateQueries({ queryKey: ["game-data"] });
+  };
+
   const startRecoveryMutation = useMutation({
     mutationFn: async ({ addictionId, program }: { addictionId: string; program: RecoveryProgram }) => {
       if (!profileId) throw new Error("Not authenticated");
-
-      const details = getRecoveryProgramDetails(program);
-
-      if (program === "therapy") {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", profileId)
-          .single();
-        if ((profile?.cash ?? 0) < details.costPerSession) {
-          throw new Error(`Need $${details.costPerSession} for a therapy session`);
-        }
-      }
-
-      if (program === "rehab") {
-        const rehabDetails = details as { costRange: { min: number; max: number }; durationDays: { min: number; max: number } };
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", profileId)
-          .single();
-        const rehabCost = rehabDetails.costRange.min + Math.floor(Math.random() * (rehabDetails.costRange.max - rehabDetails.costRange.min));
-        if ((profile?.cash ?? 0) < rehabCost) {
-          throw new Error(`Need $${rehabCost} for rehab`);
-        }
-        await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - rehabCost }).eq("id", profileId);
-
-        const rehabDays = rehabDetails.durationDays.min + Math.floor(Math.random() * (rehabDetails.durationDays.max - rehabDetails.durationDays.min));
-        const endDate = new Date();
-        endDate.setDate(endDate.getDate() + rehabDays);
-
-        // Check for scheduling conflicts before booking rehab
-        const { available, conflictingActivity } = await checkTimeSlotAvailable(
-          profileId,
-          new Date(),
-          endDate
-        );
-        if (!available) {
-          throw new Error(
-            `Schedule conflict: You have "${conflictingActivity?.title}" during this period. Clear your schedule before entering rehab.`
-          );
-        }
-
-        await (supabase as any).from("player_scheduled_activities").insert({
-          user_id: profileId,
-          profile_id: profileId,
-          activity_type: "rehab",
-          scheduled_start: new Date().toISOString(),
-          scheduled_end: endDate.toISOString(),
-          title: "Rehabilitation Program",
-          description: `${rehabDays}-day residential rehab program`,
-          status: "in_progress",
-        });
-      }
-
-      const { error } = await supabase
-        .from("player_addictions")
-        .update({
-          status: "recovering",
-          recovery_program: program,
-          recovery_started_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", addictionId);
-
+      const { data, error } = await (supabase as any).rpc("start_addiction_recovery", {
+        p_profile_id: profileId,
+        p_addiction_id: addictionId,
+        p_program: program,
+      });
       if (error) throw error;
-      return { program };
+      if (!data?.ok) {
+        if (data?.reason === "insufficient_cash") throw new Error(`You need $${data.cost ?? 0} for this recovery programme.`);
+        if (data?.reason === "schedule_conflict") throw new Error("Clear conflicting activities before entering rehab.");
+        throw new Error("Unable to start recovery right now.");
+      }
+      return data;
     },
-    onSuccess: ({ program }) => {
-      queryClient.invalidateQueries({ queryKey: ["addictions"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast.success(`Started ${program} recovery program`);
+    onSuccess: (data) => {
+      refresh();
+      toast.success(data.program === "rehab" ? "Rehab booked. Your schedule is now blocked for recovery." : "Recovery programme started.");
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const therapySessionMutation = useMutation({
     mutationFn: async (addictionId: string) => {
       if (!profileId) throw new Error("Not authenticated");
-
-      const addiction = addictions?.find(a => a.id === addictionId);
-      if (!addiction) throw new Error("Addiction not found");
-      if (addiction.recovery_program !== "therapy") throw new Error("Not in therapy program");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-
-      if ((profile?.cash ?? 0) < 100) throw new Error("Need $100 for therapy session");
-
-      const reduction = 5 + Math.floor(Math.random() * 6);
-      const newSeverity = Math.max(0, addiction.severity - reduction);
-
-      await supabase.from("profiles").update({ cash: (profile?.cash ?? 0) - 100 }).eq("id", profileId);
-
-      const updates: any = {
-        severity: newSeverity,
-        days_clean: addiction.days_clean + 1,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (newSeverity === 0) {
-        updates.status = "recovered";
-        updates.recovered_at = new Date().toISOString();
+      const { data, error } = await (supabase as any).rpc("attend_addiction_therapy", {
+        p_profile_id: profileId,
+        p_addiction_id: addictionId,
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        if (data?.reason === "insufficient_cash") throw new Error("You need $100 for a therapy session.");
+        throw new Error("Therapy is not available for this addiction right now.");
       }
-
-      await supabase.from("player_addictions").update(updates).eq("id", addictionId);
-
-      return { reduction, newSeverity };
+      return data;
     },
-    onSuccess: ({ reduction, newSeverity }) => {
-      queryClient.invalidateQueries({ queryKey: ["addictions"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      if (newSeverity === 0) {
-        toast.success("You've recovered! Stay vigilant.");
-      } else {
-        toast.success(`Therapy session complete. Severity reduced by ${reduction} to ${newSeverity}`);
-      }
+    onSuccess: (data) => {
+      refresh();
+      toast.success(data.recovered ? "Recovery complete. Staying clean will protect the progress." : `Therapy complete. Severity reduced to ${data.severity}.`);
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  const hasActiveAddiction = (addictions?.length ?? 0) > 0;
+  const addictions = addictionsQuery.data || [];
 
   return {
-    addictions: addictions || [],
-    isLoading,
-    hasActiveAddiction,
+    addictions,
+    isLoading: addictionsQuery.isLoading,
+    hasActiveAddiction: addictions.length > 0,
     startRecovery: startRecoveryMutation.mutate,
     isStartingRecovery: startRecoveryMutation.isPending,
     attendTherapy: therapySessionMutation.mutate,
