@@ -17,6 +17,8 @@ import { UndergroundScenePanel } from "@/features/underground/UndergroundScenePa
 import { SubstancePanel } from "@/features/underground/SubstancePanel";
 import { SceneContactsPanel } from "@/features/underground/SceneContactsPanel";
 import { ScandalHeatPanel } from "@/features/underground/ScandalHeatPanel";
+import { RecoveryPanel } from "@/features/underground/RecoveryPanel";
+import { SceneStoriesPanel } from "@/features/underground/SceneStoriesPanel";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -94,7 +96,7 @@ const NightclubHub = () => {
   return (
     <FMPageScaffold
       title="Nightclubs"
-      subtitle={`${clubs.length} venues worldwide`}
+      subtitle={`${clubs.length} venues worldwide · nightlife, underground scene and recovery`}
       icon={Disc3}
       backTo="/hub/world-social"
       backLabel="Back to World"
@@ -113,8 +115,10 @@ const NightclubHub = () => {
         </Card>
       )}
 
+      <SceneStoriesPanel profileId={activeProfile?.id ?? null} surface="nightclub" />
       <UndergroundScenePanel profileId={activeProfile?.id ?? null} age={Number(activeProfile?.age ?? 0)} />
       {activeProfile?.id && <SubstancePanel profileId={activeProfile.id} age={Number(activeProfile?.age ?? 0)} />}
+      {activeProfile?.id && <RecoveryPanel />}
       {activeProfile?.id && <SceneContactsPanel profileId={activeProfile.id} age={Number(activeProfile?.age ?? 0)} />}
       {activeProfile?.id && <ScandalHeatPanel profileId={activeProfile.id} />}
 
@@ -122,50 +126,25 @@ const NightclubHub = () => {
         <CardContent className="pt-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search clubs or cities..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+            <Input placeholder="Search clubs or cities..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
           <div className="flex gap-2">
             <Select value={qualityFilter} onValueChange={setQualityFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Quality" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tiers</SelectItem>
-                {[1, 2, 3, 4, 5].map((q) => (
-                  <SelectItem key={q} value={String(q)}>{QUALITY_LABELS[q]}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Quality" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Tiers</SelectItem>{[1, 2, 3, 4, 5].map((q) => <SelectItem key={q} value={String(q)}>{QUALITY_LABELS[q]}</SelectItem>)}</SelectContent>
             </Select>
             <Select value={cityFilter} onValueChange={setCityFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="City" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cities</SelectItem>
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city}>{city}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="w-full"><SelectValue placeholder="City" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Cities</SelectItem>{cities.map((city) => <SelectItem key={city} value={city}>{city}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No nightclubs match your filters.
-          </CardContent>
-        </Card>
+        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">No nightclubs match your filters.</CardContent></Card>
       ) : (
         <div className="space-y-2">
           {filtered.map((club) => {
@@ -175,28 +154,15 @@ const NightclubHub = () => {
             const canBuy = !owned && club.cityId === playerCityId;
             const price = getPurchasePrice(club.qualityLevel);
             return (
-              <Card
-                key={club.id}
-                className="cursor-pointer transition-colors hover:border-primary/50"
-                onClick={() => navigate(`/nightclub/${club.id}`)}
-              >
+              <Card key={club.id} className="cursor-pointer transition-colors hover:border-primary/50" onClick={() => navigate(`/nightclub/${club.id}`)}>
                 <CardContent className="py-3 px-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm truncate">{club.name}</span>
                         <Badge variant="secondary" className="text-[10px]">{qualityLabel}</Badge>
-                        {owned && (
-                          <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
-                            <Building2 className="h-2.5 w-2.5 mr-0.5" /> Owned
-                          </Badge>
-                        )}
-                        {rep && (
-                          <Badge variant="outline" className={`text-[10px] ${getTierColor(rep.reputation_tier)}`}>
-                            <Crown className="h-2.5 w-2.5 mr-0.5" />
-                            {getTierLabel(rep.reputation_tier)}
-                          </Badge>
-                        )}
+                        {owned && <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30"><Building2 className="h-2.5 w-2.5 mr-0.5" /> Owned</Badge>}
+                        {rep && <Badge variant="outline" className={`text-[10px] ${getTierColor(rep.reputation_tier)}`}><Crown className="h-2.5 w-2.5 mr-0.5" />{getTierLabel(rep.reputation_tier)}</Badge>}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                         <MapPin className="h-3 w-3" />
@@ -208,16 +174,7 @@ const NightclubHub = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {canBuy && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs"
-                          disabled={purchaseClub.isPending}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            purchaseClub.mutate({ clubId: club.id, clubName: club.name, cityId: club.cityId!, qualityLevel: club.qualityLevel, capacity: club.capacity ?? 100, coverCharge: club.coverCharge ?? 10 });
-                          }}
-                        >
+                        <Button size="sm" variant="outline" className="text-xs" disabled={purchaseClub.isPending} onClick={(e) => { e.stopPropagation(); purchaseClub.mutate({ clubId: club.id, clubName: club.name, cityId: club.cityId!, qualityLevel: club.qualityLevel, capacity: club.capacity ?? 100, coverCharge: club.coverCharge ?? 10 }); }}>
                           <ShoppingCart className="h-3 w-3 mr-1" /> Buy {currencyFormatter.format(price)}
                         </Button>
                       )}
