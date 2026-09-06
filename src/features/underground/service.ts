@@ -1,6 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import type {
   PlayerSubstanceState,
+  SceneContact,
+  SceneContactDiscoveryResolution,
+  SceneContactResolution,
+  SceneInteraction,
   SubstanceCatalogItem,
   SubstanceUseResolution,
   UndergroundEvent,
@@ -78,4 +82,37 @@ export async function useSubstance(profileId: string, substanceSlug: string): Pr
   });
   if (error) throw error;
   return data as SubstanceUseResolution;
+}
+
+export async function getSceneContacts(profileId: string): Promise<SceneContact[]> {
+  const { data, error } = await (supabase as any)
+    .from("player_scene_contacts")
+    .select("id, profile_id, npc_name, npc_age, archetype_slug, chemistry, trust, attachment, tension, gossip_exposure, encounter_count, relationship_status, last_interaction_at, cooldown_until, discovered_at, archetype:scene_contact_archetypes(slug, name, description, romance_openness, discretion, social_energy, gossip_bias)")
+    .eq("profile_id", profileId)
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as SceneContact[];
+}
+
+export async function discoverSceneContacts(profileId: string): Promise<SceneContactDiscoveryResolution> {
+  const { data, error } = await (supabase as any).rpc("discover_scene_contacts", {
+    p_profile_id: profileId,
+    p_limit: 3,
+  });
+  if (error) throw error;
+  return data as SceneContactDiscoveryResolution;
+}
+
+export async function interactSceneContact(
+  profileId: string,
+  contactId: string,
+  interaction: SceneInteraction,
+): Promise<SceneContactResolution> {
+  const { data, error } = await (supabase as any).rpc("interact_scene_contact", {
+    p_profile_id: profileId,
+    p_contact_id: contactId,
+    p_interaction: interaction,
+  });
+  if (error) throw error;
+  return data as SceneContactResolution;
 }
