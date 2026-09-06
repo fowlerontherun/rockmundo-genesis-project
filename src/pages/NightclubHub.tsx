@@ -14,6 +14,9 @@ import { useAllClubReputations, getTierLabel, getTierColor, type ClubReputation 
 import { useOwnedNightclubs, usePurchaseNightclub, getPurchasePrice } from "@/hooks/useNightclubOwnership";
 import { useOptionalGameData } from "@/hooks/useGameData";
 import { UndergroundScenePanel } from "@/features/underground/UndergroundScenePanel";
+import { SubstancePanel } from "@/features/underground/SubstancePanel";
+import { SceneContactsPanel } from "@/features/underground/SceneContactsPanel";
+import { ScandalHeatPanel } from "@/features/underground/ScandalHeatPanel";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -111,6 +114,9 @@ const NightclubHub = () => {
       )}
 
       <UndergroundScenePanel profileId={activeProfile?.id ?? null} age={Number(activeProfile?.age ?? 0)} />
+      {activeProfile?.id && <SubstancePanel profileId={activeProfile.id} age={Number(activeProfile?.age ?? 0)} />}
+      {activeProfile?.id && <SceneContactsPanel profileId={activeProfile.id} age={Number(activeProfile?.age ?? 0)} />}
+      {activeProfile?.id && <ScandalHeatPanel profileId={activeProfile.id} />}
 
       <Card>
         <CardContent className="pt-4 space-y-3">
@@ -195,15 +201,9 @@ const NightclubHub = () => {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                         <MapPin className="h-3 w-3" />
                         <span>{club.cityName}</span>
-                        {club.coverCharge ? (
-                          <span>• Cover {currencyFormatter.format(club.coverCharge)}</span>
-                        ) : null}
-                        {club.capacity ? (
-                          <span>• Cap {club.capacity}</span>
-                        ) : null}
-                        {rep && (
-                          <span>• {rep.visit_count} visits</span>
-                        )}
+                        {club.coverCharge ? <span>• Cover {currencyFormatter.format(club.coverCharge)}</span> : null}
+                        {club.capacity ? <span>• Cap {club.capacity}</span> : null}
+                        {rep && <span>• {rep.visit_count} visits</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -215,18 +215,10 @@ const NightclubHub = () => {
                           disabled={purchaseClub.isPending}
                           onClick={(e) => {
                             e.stopPropagation();
-                            purchaseClub.mutate({
-                              clubId: club.id,
-                              clubName: club.name,
-                              cityId: club.cityId!,
-                              qualityLevel: club.qualityLevel,
-                              capacity: club.capacity ?? 100,
-                              coverCharge: club.coverCharge ?? 10,
-                            });
+                            purchaseClub.mutate({ clubId: club.id, clubName: club.name, cityId: club.cityId!, qualityLevel: club.qualityLevel, capacity: club.capacity ?? 100, coverCharge: club.coverCharge ?? 10 });
                           }}
                         >
-                          <ShoppingCart className="h-3 w-3 mr-1" />
-                          Buy {currencyFormatter.format(price)}
+                          <ShoppingCart className="h-3 w-3 mr-1" /> Buy {currencyFormatter.format(price)}
                         </Button>
                       )}
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
