@@ -90,3 +90,71 @@ export interface SubstanceUseResolution {
   crashUntil?: string | null;
   highRisk?: boolean;
 }
+
+export type SceneContactStatus =
+  | "stranger"
+  | "acquaintance"
+  | "flirting"
+  | "casual"
+  | "dating"
+  | "exclusive"
+  | "cooling_off"
+  | "ended";
+
+export type SceneInteraction = "talk" | "flirt" | "private_time" | "date" | "define_relationship" | "cool_off";
+
+export interface SceneContactArchetype {
+  slug: string;
+  name: string;
+  description: string;
+  romance_openness: number;
+  discretion: number;
+  social_energy: number;
+  gossip_bias: number;
+}
+
+export interface SceneContact {
+  id: string;
+  profile_id: string;
+  npc_name: string;
+  npc_age: number;
+  archetype_slug: string;
+  chemistry: number;
+  trust: number;
+  attachment: number;
+  tension: number;
+  gossip_exposure: number;
+  encounter_count: number;
+  relationship_status: SceneContactStatus;
+  last_interaction_at: string | null;
+  cooldown_until: string | null;
+  discovered_at: string;
+  archetype?: SceneContactArchetype | null;
+}
+
+export interface SceneContactDiscoveryResolution {
+  ok: boolean;
+  reason?: string;
+  minimumAge?: number;
+  created?: number;
+  limit?: number;
+}
+
+export interface SceneContactResolution {
+  ok: boolean;
+  reason?: string;
+  minimumAge?: number;
+  cooldownUntil?: string;
+  requiredChemistry?: number;
+  requiredTrust?: number;
+  requiredAttachment?: number;
+  outcome?: "positive" | "neutral" | "declined" | "ended";
+  mutualInterest?: boolean | null;
+  message?: string;
+  status?: SceneContactStatus;
+  changes?: Record<string, number>;
+  wellness?: Record<string, number>;
+  romanceId?: string | null;
+  gossipLeaked?: boolean;
+  existingRelationshipAffected?: boolean;
+}
