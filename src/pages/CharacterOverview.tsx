@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { HubLayout } from "@/components/hub/HubLayout";
 import { characterHubNavigation } from "@/config/hubNavigation";
-import { Activity, Backpack, Heart, Palette, Sparkles, Trophy, User, Users, Wallet, Zap } from "lucide-react";
+import { Activity, Backpack, Cake, Heart, Palette, Sparkles, Trophy, User, Users, Wallet, Zap } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { calculateCharacterAgeFromAnchor, getMonthName } from "@/utils/gameCalendar";
 
 const formatMoney = (value: number | null | undefined) =>
   new Intl.NumberFormat("en", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value ?? 0);
@@ -35,6 +37,7 @@ const quickLinks = [
 export default function CharacterOverview() {
   const { user, loading: authLoading } = useAuth();
   const { profile, skillProgress, activityStatus, activities, xpWallet, loading, error, refetch } = useGameData();
+  const { data: calendar } = useGameCalendar();
 
   const hubProps = {
     title: "Character",
@@ -99,6 +102,16 @@ export default function CharacterOverview() {
     );
   }
 
+  const ageProfile = profile as any;
+  const characterAge = calendar
+    ? calculateCharacterAgeFromAnchor(ageProfile, calendar)
+    : Math.max(16, Number(ageProfile.age_anchor_age ?? ageProfile.age ?? 16));
+  const birthdayMonth = Number(ageProfile.birth_game_month ?? 0);
+  const birthdayDay = Number(ageProfile.birth_game_day ?? 0);
+  const birthdayLabel = birthdayMonth > 0 && birthdayDay > 0
+    ? `${getMonthName(birthdayMonth)} ${birthdayDay}`
+    : "Not set";
+  const isBirthday = Boolean(calendar && birthdayMonth === calendar.gameMonth && birthdayDay === calendar.gameDay);
   const displayName = profile.display_name || profile.username || "Unknown Artist";
   const topSkills = [...(skillProgress ?? [])]
     .sort((a, b) => (b.current_level ?? 0) - (a.current_level ?? 0) || (b.current_xp ?? 0) - (a.current_xp ?? 0))
@@ -116,9 +129,13 @@ export default function CharacterOverview() {
               <AvatarFallback><User className="h-9 w-9" aria-hidden /></AvatarFallback>
             </Avatar>
             <div>
-              <Badge variant="outline" className="mb-2">Character</Badge>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge variant="outline">Character</Badge>
+                <Badge variant="secondary"><Cake className="mr-1 h-3 w-3" />Age {characterAge}</Badge>
+                {isBirthday && <Badge>🎂 Birthday today</Badge>}
+              </div>
               <h2 className="text-3xl font-bold tracking-tight">{displayName}</h2>
-              <p className="text-sm text-muted-foreground">Overview of your artist status, progression and next actions.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Age {characterAge} · Birthday {birthdayLabel}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -128,7 +145,8 @@ export default function CharacterOverview() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Character status">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Character status">
+        <StatCard label="Age" value={characterAge} icon={Cake} />
         <StatCard label="Health" value={`${profile.health ?? 100}%`} icon={Heart} />
         <StatCard label="Energy" value={`${profile.energy ?? 100}%`} icon={Zap} />
         <StatCard label="Money" value={formatMoney((profile as { money?: number | null }).money)} icon={Wallet} />
