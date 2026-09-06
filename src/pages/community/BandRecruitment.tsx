@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { BandVacancyCard } from "@/features/band-recruitment/components/BandVacancyCard";
 import {
   applyToVacancy,
@@ -9,6 +9,8 @@ import {
 import { BAND_PERFORMANCE_ROLES } from "@/data/bandPerformanceRoles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getUserBands } from "@/utils/bandStatus";
@@ -16,14 +18,22 @@ import { toast } from "sonner";
 
 export default function BandRecruitmentDiscovery() {
   const { profileId, userId } = useActiveProfile();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [vacancies, setVacancies] = useState<BandVacancy[]>([]);
   const roles = BAND_PERFORMANCE_ROLES;
   const [instrument, setInstrument] = useState<string>("");
   const [commitment, setCommitment] = useState<string>("");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
-  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [coverMessage, setCoverMessage] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [leaderBandId, setLeaderBandId] = useState<string | null>(null);
+
+  const selectedVacancy = useMemo(() => {
+    const vacancyId = searchParams.get("vacancy");
+    return vacancyId ? vacancies.find((vacancy) => vacancy.id === vacancyId) ?? null : null;
+  }, [searchParams, vacancies]);
 
   useEffect(() => {
     if (!profileId) {
@@ -33,18 +43,14 @@ export default function BandRecruitmentDiscovery() {
 
     getUserBands(profileId)
       .then((memberships) => {
-        const leaderMembership = memberships.find((membership: any) => {
+        const managementMembership = memberships.find((membership: any) => {
           const band = membership.bands;
           if (!band || band.status === "disbanded") return false;
-
-          return (
-            membership.role === "leader" ||
-            band.leader_id === profileId ||
-            (userId && band.leader_id === userId)
-          );
+          return ["leader", "founder", "co-leader", "co_leader", "manager", "recruiter"].includes(String(membership.role ?? "").toLowerCase())
+            || band.leader_id === profileId
+            || (userId && band.leader_id === userId);
         });
-
-        setLeaderBandId(leaderMembership?.band_id ?? leaderMembership?.bands?.id ?? null);
+        setLeaderBandId(managementMembership?.band_id ?? managementMembership?.bands?.id ?? null);
       })
       .catch(() => setLeaderBandId(null));
   }, [profileId, userId]);
@@ -57,19 +63,38 @@ export default function BandRecruitmentDiscovery() {
       .finally(() => setLoading(false));
   }, [instrument, commitment, q]);
 
-  const quickApply = async (vacancy: BandVacancy) => {
+  useEffect(() => {
+    setCoverMessage("");
+    setAnswers({});
+  }, [selectedVacancy?.id]);
+
+  const openVacancy = (vacancy: BandVacancy) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("vacancy", vacancy.id);
+    setSearchParams(next);
+  };
+
+  const closeVacancy = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("vacancy");
+    setSearchParams(next, { replace: true });
+  };
+
+  const submitApplication = async () => {
+    if (!selectedVacancy) return;
     if (!profileId) {
       toast.error("Select a character before applying to a band.");
       return;
     }
-    setApplyingId(vacancy.id);
+    setApplying(true);
     try {
-      await applyToVacancy(vacancy, profileId, `I'm interested in joining as ${vacancy.instrument}.`);
-      toast.success(`Application sent to ${vacancy.bands?.name ?? "the band"}`);
+      await applyToVacancy(selectedVacancy, profileId, coverMessage, answers);
+      toast.success(`Application sent to ${selectedVacancy.bands?.name ?? "the band"}`);
+      closeVacancy();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Application failed");
     } finally {
-      setApplyingId(null);
+      setApplying(false);
     }
   };
 
@@ -79,7 +104,7 @@ export default function BandRecruitmentDiscovery() {
         <div>
           <p className="text-sm text-muted-foreground">Community / Bands</p>
           <h1 id="band-recruitment-title" className="text-3xl font-bold">Band Recruitment</h1>
-          <p className="mt-2 text-muted-foreground">Browse roles bands are actively advertising and apply with your currently selected character.</p>
+          <p className="mt-2 text-muted-foreground">Browse active adverts, review the full requirements and apply with your currently selected character.</p>
         </div>
         {leaderBandId && (
           <Button asChild>
@@ -115,13 +140,48 @@ export default function BandRecruitmentDiscovery() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {vacancies.map((vacancy) => (
-            <div key={vacancy.id} className={applyingId === vacancy.id ? "pointer-events-none opacity-70" : ""}>
-              <BandVacancyCard vacancy={vacancy} onApply={quickApply} />
-            </div>
-          ))}
+          {vacancies.map((vacancy) => <BandVacancyCard key={vacancy.id} vacancy={vacancy} onApply={openVacancy} />)}
         </div>
       )}
+
+      <Dialog open={!!selectedVacancy} onOpenChange={(open) => { if (!open) closeVacancy(); }}>
+        {selectedVacancy && (
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedVacancy.title}</DialogTitle>
+              <DialogDescription>{selectedVacancy.bands?.name ?? "Band"} • {selectedVacancy.instrument} • {selectedVacancy.commitment_level}</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {selectedVacancy.description && <p className="whitespace-pre-wrap text-sm">{selectedVacancy.description}</p>}
+              <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm sm:grid-cols-4">
+                <div><span className="text-muted-foreground">Positions</span><div>{Math.max(0, selectedVacancy.positions_available - selectedVacancy.positions_filled)} remaining</div></div>
+                <div><span className="text-muted-foreground">Audition</span><div>{selectedVacancy.audition_required ? "Required" : "Not required"}</div></div>
+                <div><span className="text-muted-foreground">Travel</span><div>{selectedVacancy.remote_or_travel_allowed ? "Allowed" : "Local only"}</div></div>
+                <div><span className="text-muted-foreground">Deadline</span><div>{selectedVacancy.application_deadline ? new Date(selectedVacancy.application_deadline).toLocaleDateString() : "None"}</div></div>
+              </div>
+
+              <label className="block space-y-2">
+                <span className="font-medium">Application message</span>
+                <Textarea value={coverMessage} onChange={(e) => setCoverMessage(e.target.value)} maxLength={500} rows={5} placeholder="Tell the band why you'd be a good fit, your availability and relevant experience." />
+                <span className="text-xs text-muted-foreground">{coverMessage.length}/500</span>
+              </label>
+
+              {(selectedVacancy.application_questions ?? []).map((question) => question.prompt ? (
+                <label key={question.prompt} className="block space-y-2">
+                  <span className="font-medium">{question.prompt}{question.required !== false ? " *" : ""}</span>
+                  <Textarea value={answers[question.prompt] ?? ""} onChange={(e) => setAnswers((current) => ({ ...current, [question.prompt!]: e.target.value }))} maxLength={1000} rows={3} />
+                </label>
+              ) : null)}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={closeVacancy} disabled={applying}>Cancel</Button>
+                <Button onClick={submitApplication} disabled={applying || !selectedVacancy.direct_applications_allowed}>{applying ? "Sending…" : "Send application"}</Button>
+              </div>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </main>
   );
 }
