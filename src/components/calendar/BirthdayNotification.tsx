@@ -24,60 +24,55 @@ export function BirthdayNotification({
 }: BirthdayNotificationProps) {
   const [claiming, setClaiming] = useState(false);
   const queryClient = useQueryClient();
-
-  // Age is passed directly now
   const age = playerAge;
+  const expectedSxp = Math.min(1000, 500 + age * 5);
+  const expectedAp = Math.min(10, 5 + Math.floor(age / 20));
 
   const handleClaim = async () => {
     setClaiming(true);
-    const result = await claimBirthdayReward(userId, profileId, gameYear);
-    
+    const result = await claimBirthdayReward(userId, profileId, gameYear, inGameDate);
+
     if (result.success) {
       toast({
-        title: "🎂 Birthday Rewards Claimed!",
-        description: "You received 250 XP and 500 cash!",
+        title: "🎂 Birthday rewards claimed!",
+        description: `You received ${(result.sxp ?? expectedSxp).toLocaleString()} SXP and ${result.ap ?? expectedAp} AP.`,
       });
-      
-      // Invalidate relevant queries
+
       queryClient.invalidateQueries({ queryKey: ["birthday-check"] });
+      queryClient.invalidateQueries({ queryKey: ["birthday-state"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-xp-wallet"] });
       queryClient.invalidateQueries({ queryKey: ["experience-ledger"] });
     } else {
       toast({
-        title: "Failed to Claim",
+        title: "Failed to claim",
         description: result.error || "Something went wrong",
         variant: "destructive",
       });
     }
-    
+
     setClaiming(false);
   };
 
   return (
-    <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/50 animate-in slide-in-from-top">
+    <Card className="animate-in border-yellow-500/50 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 slide-in-from-top">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="text-3xl">🎂</div>
             <div className="space-y-1">
-              <h3 className="font-bold text-lg flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-lg font-bold">
                 Happy Birthday!
-                <Sparkles className="h-4 w-4 text-yellow-500 animate-pulse" />
+                <Sparkles className="h-4 w-4 animate-pulse text-yellow-500" />
               </h3>
-              <p className="text-sm text-muted-foreground">
-                You turned {age} today in-game!
-              </p>
-              <p className="text-sm font-medium flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">You turned {age} today in-game!</p>
+              <p className="flex items-center gap-2 text-sm font-medium">
                 <Gift className="h-4 w-4" />
-                Claim: 250 XP + 500 Cash
+                Claim: {expectedSxp.toLocaleString()} SXP + {expectedAp} AP
               </p>
             </div>
           </div>
-          <Button
-            onClick={handleClaim}
-            disabled={claiming}
-            className="whitespace-nowrap"
-          >
+          <Button onClick={handleClaim} disabled={claiming} className="whitespace-nowrap">
             {claiming ? "Claiming..." : "Claim Rewards"}
           </Button>
         </div>

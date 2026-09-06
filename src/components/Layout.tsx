@@ -20,6 +20,7 @@ import { useReachMilestoneReminders } from "@/hooks/useReachMilestoneReminders";
 import { InterviewModal } from "@/components/pr/InterviewModal";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
+import { BirthdayExperience } from "@/components/calendar/BirthdayExperience";
 import { FMShell } from "@/components/fm/FMShell";
 import { MobileShell } from "@/mobile/shell/MobileShell";
 import MobileHome from "@/mobile/pages/MobileHome";
@@ -198,6 +199,7 @@ const Layout = () => {
       <MobileShell>
         <NoActiveCharacterGate>
           <CharacterGate>
+            <BirthdayExperience />
             {dedicatedEntry ?? <Outlet />}
           </CharacterGate>
         </NoActiveCharacterGate>
@@ -218,6 +220,7 @@ const Layout = () => {
         <MaintenanceBanner />
         <NoActiveCharacterGate>
           <CharacterGate>
+            <BirthdayExperience />
             <Breadcrumbs />
             <Outlet />
           </CharacterGate>
