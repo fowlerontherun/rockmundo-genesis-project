@@ -587,6 +587,7 @@ export const FM_MODULES: FMModule[] = [
     rootPath: "/shop",
     matchPaths: [
       "/shop", "/premium-store", "/blind-boxes", "/vip-subscribe", "/vip-success",
+      "/subscription", "/subscription-status",
       "/donation-success", "/buy-character-slot", "/slot-purchase-success", "/checkout-receipt",
     ],
     subTabs: [
