@@ -1,19 +1,19 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Disc3, Search, MapPin, Star, Users, ArrowRight, Crown, Loader2, Building2, ShoppingCart } from "lucide-react";
+import { Disc3, Search, MapPin, ArrowRight, Crown, Loader2, Building2, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeNightClubRecord, type CityNightClub } from "@/utils/worldEnvironment";
 import { useAllClubReputations, getTierLabel, getTierColor, type ClubReputation } from "@/hooks/useClubReputation";
 import { useOwnedNightclubs, usePurchaseNightclub, getPurchasePrice } from "@/hooks/useNightclubOwnership";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useOptionalGameData } from "@/hooks/useGameData";
+import { UndergroundScenePanel } from "@/features/underground/UndergroundScenePanel";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -44,7 +44,8 @@ const NightclubHub = () => {
   const { data: ownedClubs = [] } = useOwnedNightclubs();
   const purchaseClub = usePurchaseNightclub();
   const gameData = useOptionalGameData();
-  const playerCityId = gameData?.profile?.current_city_id ?? null;
+  const activeProfile = gameData?.profile;
+  const playerCityId = activeProfile?.current_city_id ?? null;
 
   const ownedClubIds = useMemo(() => new Set(ownedClubs.map((c) => c.club_id)), [ownedClubs]);
   const repMap = useMemo(() => {
@@ -95,8 +96,6 @@ const NightclubHub = () => {
       backTo="/hub/world-social"
       backLabel="Back to World"
     >
-
-      {/* My Clubs Banner */}
       {ownedClubs.length > 0 && (
         <Card className="border-primary/30 bg-primary/5 cursor-pointer" onClick={() => navigate("/nightclub-management")}>
           <CardContent className="py-3 px-4">
@@ -111,7 +110,8 @@ const NightclubHub = () => {
         </Card>
       )}
 
-      {/* Filters */}
+      <UndergroundScenePanel profileId={activeProfile?.id ?? null} age={Number(activeProfile?.age ?? 0)} />
+
       <Card>
         <CardContent className="pt-4 space-y-3">
           <div className="relative">
@@ -150,7 +150,6 @@ const NightclubHub = () => {
         </CardContent>
       </Card>
 
-      {/* Results */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
