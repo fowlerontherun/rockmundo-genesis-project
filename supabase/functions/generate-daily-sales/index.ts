@@ -73,6 +73,7 @@ serve(async (req) => {
   let totalSales = 0;
   let releasesProcessed = 0;
   let errorCount = 0;
+  let labelsMarketingProcessed = 0;
 
   // Accumulate per-band revenue to credit once at the end
   const bandRevenueAccumulator = new Map<string, { netRevenue: number; grossRevenue: number; units: number; taxRate: number; formats: string[] }>();
@@ -151,6 +152,19 @@ serve(async (req) => {
     }
     console.log(`Game date: Month ${currentGameMonth}, Day ${currentGameDay}, Year ${currentGameYear} | Christmas multiplier: ${christmasMultiplier}x`);
 
+    // Apply label marketing before this run calculates sales so the label's spend
+    // has a visible same-day effect. The DB function also charges the label and
+    // applies funded per-release campaigns using the marketing department level.
+    try {
+      const { data: marketingSummary, error: marketingError } = await supabaseClient.rpc("process_label_marketing_daily");
+      if (marketingError) throw marketingError;
+      labelsMarketingProcessed = Number((marketingSummary as any)?.labels_processed ?? 0);
+      console.log("Label marketing applied before sales:", marketingSummary);
+    } catch (marketingError) {
+      console.error("Error processing label marketing before sales:", marketingError);
+      errorCount++;
+    }
+
     const { data: releases, error: releasesError } = await supabaseClient
       .from("releases")
       .select(`
@@ -167,7 +181,7 @@ serve(async (req) => {
         revenue_share_enabled,
         revenue_share_percentage,
         bands(id, fame, popularity, chemistry_level, home_city_id),
-        release_formats(id, format_type, retail_price, quantity, distribution_fee_percentage),
+        release_formats(id, format_type, retail_price, quantity, stockout_demand, distribution_fee_percentage),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
       .eq("release_status", "released");
@@ -365,7 +379,6 @@ serve(async (req) => {
           if (retailPrice <= 0) continue;
           
           const isDigital = format.format_type === "digital" || format.format_type === "streaming";
-          if (!isDigital && (!format.quantity || format.quantity <= 0)) continue;
 
           let baseSales = 0;
 
@@ -400,7 +413,7 @@ serve(async (req) => {
             : gameDaysSinceRelease <= 360 ? 0.2
             : 0.1;
 
-          // Label marketing support bonus: adds hype-like multiplier
+          // Contract marketing support remains a separate deal benefit.
           const labelMarketingBonus = contract ? 1 + (contract.marketing_support / 10000) : 1.0;
 
           const territoriesToProcess = hasTerritories 
@@ -428,7 +441,31 @@ serve(async (req) => {
               / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1)
             );
 
-            const actualSales = isDigital ? calculatedSales : Math.min(calculatedSales, format.quantity || 0);
+            let actualSales = calculatedSales;
+            let inventoryClaim: { actualSold: number; backlogSold: number; unmetAdded: number } | null = null;
+
+            if (!isDigital) {
+              // Organic demand is always evaluated, even while sold out. Unfulfilled
+              // demand becomes momentum. Once stock returns, at most 75% extra demand
+              // per territory can be pulled from that backlog so restocks get a boost
+              // without dumping the entire backlog in one sales tick.
+              const backlogRequest = Math.max(0, Math.ceil(calculatedSales * 0.75));
+              const { data: claimRows, error: claimError } = await supabaseClient.rpc("claim_release_inventory", {
+                p_format_id: format.id,
+                p_organic_demand: calculatedSales,
+                p_backlog_request: backlogRequest,
+                p_accumulate_unmet: true,
+              });
+              if (claimError) throw claimError;
+
+              const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+              actualSales = Number((claim as any)?.actual_sold ?? 0);
+              inventoryClaim = {
+                actualSold: actualSales,
+                backlogSold: Number((claim as any)?.backlog_sold ?? 0),
+                unmetAdded: Number((claim as any)?.unmet_demand_added ?? 0),
+              };
+            }
 
             if (actualSales > 0) {
               const retailPriceDollars = retailPrice / 100;
@@ -467,7 +504,7 @@ serve(async (req) => {
               const distributionFee = distributionFeeCents / 100;
               const netRevenue = netRevenueCents / 100;
 
-              await supabaseClient.from("release_sales").insert({
+              const { error: saleInsertError } = await supabaseClient.from("release_sales").insert({
                 release_format_id: format.id,
                 quantity_sold: actualSales,
                 unit_price: unitPriceCents,
@@ -486,6 +523,23 @@ serve(async (req) => {
                 country: territory.country || null,
               });
 
+              if (saleInsertError) {
+                // Inventory was claimed in its own DB transaction. Put it back if the
+                // corresponding sale row could not be recorded so stock cannot vanish.
+                if (!isDigital && inventoryClaim) {
+                  const { error: restoreError } = await supabaseClient.rpc("restore_release_inventory_claim", {
+                    p_format_id: format.id,
+                    p_actual_sold: inventoryClaim.actualSold,
+                    p_backlog_sold: inventoryClaim.backlogSold,
+                    p_unmet_demand_added: inventoryClaim.unmetAdded,
+                  });
+                  if (restoreError) {
+                    console.error(`Failed to restore inventory after sale insert error for ${format.id}:`, restoreError);
+                  }
+                }
+                throw saleInsertError;
+              }
+
               // Route sales tax to band's home city treasury
               if (homeCityId && salesTaxAmount > 0) {
                 try {
@@ -499,13 +553,6 @@ serve(async (req) => {
                 } catch (e) {
                   console.error("Failed to credit city treasury for sales tax", e);
                 }
-              }
-
-              if (!isDigital) {
-                await supabaseClient
-                  .from("release_formats")
-                  .update({ quantity: (format.quantity || 0) - actualSales })
-                  .eq("id", format.id);
               }
 
               await supabaseClient.rpc("increment_release_revenue", {
@@ -793,104 +840,7 @@ serve(async (req) => {
       }
     }
     console.log(`Credited ${labelsCredited} labels with royalty revenue`);
-
-    // ── Label Daily Marketing Budget → Hype Boost ──
-    // Labels with a weekly_marketing_budget automatically promote releases of signed artists
-    let labelsMarketingProcessed = 0;
-    try {
-      const { data: labelsWithBudget } = await supabaseClient
-        .from("labels")
-        .select("id, weekly_marketing_budget, balance")
-        .gt("weekly_marketing_budget", 0)
-        .eq("is_bankrupt", false);
-
-      if (labelsWithBudget && labelsWithBudget.length > 0) {
-        for (const lbl of labelsWithBudget) {
-          try {
-            const weeklyBudget = (lbl as any).weekly_marketing_budget || 0;
-            const dailySpend = Math.round(weeklyBudget / 7);
-            if (dailySpend <= 0) continue;
-
-            // Check if label can afford
-            if ((lbl.balance || 0) < dailySpend) {
-              console.log(`Label ${lbl.id} cannot afford daily marketing spend of $${dailySpend}`);
-              continue;
-            }
-
-            // Find active contracts for this label
-            const { data: activeContracts } = await supabaseClient
-              .from("artist_label_contracts")
-              .select("id, band_id, artist_profile_id")
-              .eq("label_id", lbl.id)
-              .eq("status", "active");
-
-            if (!activeContracts || activeContracts.length === 0) continue;
-
-            // Find releases from signed artists (released within last 60 days or upcoming)
-            const bandIds = activeContracts.map(c => c.band_id).filter(Boolean);
-            if (bandIds.length === 0) continue;
-
-            const { data: eligibleReleases } = await supabaseClient
-              .from("releases")
-              .select("id, hype_score, band_id, release_status, manufacturing_complete_at")
-              .in("band_id", bandIds)
-              .in("release_status", ["released", "manufacturing"]);
-
-            if (!eligibleReleases || eligibleReleases.length === 0) continue;
-
-            // Filter: only releases within 90 days of manufacturing completion (or still manufacturing)
-            const now = Date.now();
-            const recentReleases = eligibleReleases.filter(r => {
-              if (r.release_status === "manufacturing") return true;
-              if (r.manufacturing_complete_at) {
-                const daysSince = (now - new Date(r.manufacturing_complete_at).getTime()) / (1000 * 60 * 60 * 24);
-                return daysSince <= 90;
-              }
-              return false;
-            });
-
-            if (recentReleases.length === 0) continue;
-
-            // Distribute daily spend across eligible releases
-            const perReleaseSpend = dailySpend / recentReleases.length;
-            // Hype gained: $100 spend = ~1 hype point, diminishing returns
-            const hypePerRelease = Math.min(50, Math.round(Math.sqrt(perReleaseSpend / 10)));
-
-            for (const rel of recentReleases) {
-              const currentHype = (rel as any).hype_score || 0;
-              const newHype = Math.min(1000, currentHype + hypePerRelease);
-              await supabaseClient.from("releases")
-                .update({ hype_score: newHype } as any)
-                .eq("id", rel.id);
-            }
-
-            // Deduct from label balance
-            await supabaseClient
-              .from("labels")
-              .update({ balance: (lbl.balance || 0) - dailySpend })
-              .eq("id", lbl.id);
-
-            // Record transaction
-            await supabaseClient.from("label_financial_transactions").insert({
-              label_id: lbl.id,
-              transaction_type: "marketing",
-              amount: dailySpend,
-              description: `Daily marketing spend: ${recentReleases.length} releases boosted (+${hypePerRelease} hype each)`,
-            });
-
-            labelsMarketingProcessed++;
-            console.log(`Label ${lbl.id}: spent $${dailySpend} marketing ${recentReleases.length} releases (+${hypePerRelease} hype each)`);
-          } catch (labelMarketError) {
-            console.error(`Error processing marketing for label ${lbl.id}:`, labelMarketError);
-            errorCount++;
-          }
-        }
-      }
-    } catch (marketingError) {
-      console.error("Error processing label marketing budgets:", marketingError);
-      errorCount++;
-    }
-    console.log(`Processed marketing for ${labelsMarketingProcessed} labels`);
+    console.log(`Processed marketing for ${labelsMarketingProcessed} labels before sales`);
 
     await completeJobRun({
       jobName: "generate-daily-sales",
@@ -905,6 +855,7 @@ serve(async (req) => {
         errorCount,
         bandsCredited,
         labelsCredited,
+        labelsMarketingProcessed,
       },
     });
 
@@ -916,6 +867,7 @@ serve(async (req) => {
         errors: errorCount,
         bandsCredited,
         labelsCredited,
+        labelsMarketingProcessed,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
