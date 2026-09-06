@@ -139,6 +139,52 @@ Deno.serve(async (req) => {
         });
       }
 
+      const isPhysical = saleType !== "digital" && saleType !== "streaming";
+      let inventoryClaim: { actualSold: number; backlogSold: number; unmetAdded: number } | null = null;
+
+      if (isPhysical) {
+        // Admin pumps must obey the same hard inventory limit as normal sales, but
+        // artificial admin demand must never create organic stockout momentum.
+        const { data: claimRows, error: claimError } = await supabaseAdmin.rpc("claim_release_inventory", {
+          p_format_id: selectedFormat.id,
+          p_organic_demand: amount,
+          p_backlog_request: 0,
+          p_accumulate_unmet: false,
+        });
+
+        if (claimError) {
+          return new Response(JSON.stringify({ error: claimError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+        const actualSold = Number((claim as any)?.actual_sold ?? 0);
+        inventoryClaim = {
+          actualSold,
+          backlogSold: Number((claim as any)?.backlog_sold ?? 0),
+          unmetAdded: Number((claim as any)?.unmet_demand_added ?? 0),
+        };
+
+        if (actualSold !== amount) {
+          if (actualSold > 0) {
+            await supabaseAdmin.rpc("restore_release_inventory_claim", {
+              p_format_id: selectedFormat.id,
+              p_actual_sold: actualSold,
+              p_backlog_sold: inventoryClaim.backlogSold,
+              p_unmet_demand_added: inventoryClaim.unmetAdded,
+            });
+          }
+          return new Response(JSON.stringify({
+            error: `Insufficient ${saleType} stock. Requested ${amount}, available ${actualSold}. Restock before pumping more physical sales.`,
+          }), {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
       const retailPriceCents = selectedFormat.retail_price || 999;
       const retailPriceDollars = retailPriceCents / 100;
       const grossRevenue = Math.round(amount * retailPriceDollars * 100) / 100;
@@ -163,6 +209,21 @@ Deno.serve(async (req) => {
         net_revenue: Math.round(netRevenue * 100),
       });
 
+      if (saleInsertError) {
+        if (isPhysical && inventoryClaim) {
+          await supabaseAdmin.rpc("restore_release_inventory_claim", {
+            p_format_id: selectedFormat.id,
+            p_actual_sold: inventoryClaim.actualSold,
+            p_backlog_sold: inventoryClaim.backlogSold,
+            p_unmet_demand_added: inventoryClaim.unmetAdded,
+          });
+        }
+        return new Response(JSON.stringify({ error: saleInsertError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Route sales tax to band's home city treasury
       try {
         const { data: bandRow } = await supabaseAdmin
@@ -181,25 +242,6 @@ Deno.serve(async (req) => {
         }
       } catch (e) {
         console.error("Failed to credit city treasury for admin-boost sales tax", e);
-      }
-
-      if (saleInsertError) {
-        return new Response(JSON.stringify({ error: saleInsertError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Deduct physical inventory
-      if (saleType !== "digital" && saleType !== "streaming") {
-        const { error: inventoryError } = await supabaseAdmin
-          .from("release_formats")
-          .update({ quantity: Math.max(0, (selectedFormat.quantity || 0) - amount) })
-          .eq("id", selectedFormat.id);
-        
-        if (inventoryError) {
-          console.error(`Warning: Failed to deduct inventory: ${inventoryError.message}`);
-        }
       }
 
       const { data: currentRelease, error: currentReleaseError } = await supabaseAdmin
