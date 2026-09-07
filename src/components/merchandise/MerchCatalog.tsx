@@ -1,14 +1,23 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Package, Loader2 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Package, Search, Sparkles, Truck } from "lucide-react";
 import { MerchItemCard } from "./MerchItemCard";
-import { useMerchRequirements, MerchItemRequirement, QUALITY_TIERS, checkMerchUnlocked, calculateMerchQuality, getRecommendedPrice, getPricingImpact, MAX_MERCH_PRICE } from "@/hooks/useMerchRequirements";
+import {
+  MAX_MERCH_PRICE,
+  QUALITY_TIERS,
+  calculateMerchQuality,
+  checkMerchUnlocked,
+  getPricingImpact,
+  getRecommendedPrice,
+  type MerchItemRequirement,
+  useMerchRequirements,
+} from "@/hooks/useMerchRequirements";
 import { cn } from "@/lib/utils";
 
 interface MerchCatalogProps {
@@ -19,130 +28,84 @@ interface MerchCatalogProps {
   isAdding?: boolean;
 }
 
-const CATEGORIES = ["All", "Apparel", "Accessories", "Collectibles", "Experiences", "Digital", "Bundles"];
+const CATEGORIES = ["All", "Apparel", "Accessories", "Collectibles", "Digital", "Bundles", "Experiences"];
 
-export const MerchCatalog = ({
-  bandFame,
-  bandFans,
-  playerLevel,
-  onAddProduct,
-  isAdding,
-}: MerchCatalogProps) => {
+export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, isAdding }: MerchCatalogProps) => {
   const { data: requirements, isLoading } = useMerchRequirements();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MerchItemRequirement | null>(null);
   const [designName, setDesignName] = useState("");
   const [price, setPrice] = useState("");
-  const [stock, setStock] = useState("50");
+  const [stock, setStock] = useState("10");
 
-  const filteredItems = useMemo(() => {
-    if (!requirements) return [];
-    
-    return requirements.filter((item) => {
-      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
-      const matchesSearch = searchQuery === "" || 
-        item.item_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [requirements, selectedCategory, searchQuery]);
+  const filteredItems = useMemo(() => (requirements ?? []).filter((item) => {
+    const categoryMatch = selectedCategory === "All" || item.category === selectedCategory;
+    const query = searchQuery.trim().toLowerCase();
+    const queryMatch = !query || item.item_type.toLowerCase().includes(query) || item.description?.toLowerCase().includes(query) || item.base_material?.toLowerCase().includes(query);
+    return categoryMatch && queryMatch;
+  }), [requirements, searchQuery, selectedCategory]);
 
-  const unlockedCount = useMemo(() => {
-    if (!requirements) return 0;
-    return requirements.filter((item) => 
-      checkMerchUnlocked(item, bandFame, bandFans, playerLevel).unlocked
-    ).length;
-  }, [requirements, bandFame, bandFans, playerLevel]);
+  const normalProducts = (requirements ?? []).filter((item) => (item.product_kind ?? "physical") !== "experience");
+  const availableNormalProducts = normalProducts.filter((item) => checkMerchUnlocked(item, bandFame, bandFans, playerLevel).unlocked).length;
 
-  const handleSelectItem = (item: MerchItemRequirement) => {
+  const selectItem = (item: MerchItemRequirement) => {
+    if (!checkMerchUnlocked(item, bandFame, bandFans, playerLevel).unlocked) return;
     setSelectedItem(item);
     setDesignName("");
-    // Calculate suggested price based on quality and cost
     const quality = calculateMerchQuality(item.base_quality_tier, bandFame, false);
-    const suggestedPrice = getRecommendedPrice(item.base_cost, quality);
-    setPrice(suggestedPrice.toString());
+    setPrice(String(getRecommendedPrice(item.base_cost, quality)));
+    setStock(String(Math.max(1, item.min_order_qty ?? 1)));
   };
 
-  // Compute pricing impact for the current selection
-  const currentPricingImpact = useMemo(() => {
+  const pricing = useMemo(() => {
     if (!selectedItem || !price) return null;
     const quality = calculateMerchQuality(selectedItem.base_quality_tier, bandFame, false);
     const recommended = getRecommendedPrice(selectedItem.base_cost, quality);
-    return { impact: getPricingImpact(parseInt(price) || 0, recommended), recommended };
+    return { recommended, impact: getPricingImpact(Number(price) || 0, recommended) };
   }, [selectedItem, price, bandFame]);
 
-  const handleAddProduct = () => {
-    if (!selectedItem || !designName.trim()) return;
-    onAddProduct(selectedItem, designName.trim(), parseInt(price) || 0, parseInt(stock) || 0);
+  const quantity = Number(stock) || 0;
+  const minQty = Math.max(1, selectedItem?.min_order_qty ?? 1);
+  const unitCost = selectedItem?.base_cost ?? 0;
+
+  const submit = () => {
+    if (!selectedItem || !designName.trim() || quantity < minQty) return;
+    onAddProduct(selectedItem, designName.trim(), Number(price) || 0, quantity);
     setSelectedItem(null);
     setDesignName("");
     setPrice("");
-    setStock("50");
+    setStock("10");
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
+    return <Card><CardContent className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></CardContent></Card>;
   }
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      {/* Catalog Browser */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="space-y-4 lg:col-span-2">
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Merchandise Catalog
-                </CardTitle>
-                <CardDescription>
-                  {unlockedCount} of {requirements?.length || 0} items unlocked
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" /> Product catalogue</CardTitle>
+                <CardDescription>{availableNormalProducts} everyday products available now. Prestige gates are reserved for fan experiences.</CardDescription>
               </div>
-              <Badge variant="outline" className="text-xs">
-                Fame: {bandFame.toLocaleString()} | Fans: {bandFans.toLocaleString()}
-              </Badge>
+              <Badge variant="secondary">POD-style supplier data</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Search & Filter */}
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search merchandise..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Search tees, hoodies, mugs, materials..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
             </div>
-
-            {/* Category Tabs */}
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-              <TabsList className="w-full flex-wrap h-auto gap-1 bg-transparent p-0">
-                {CATEGORIES.map((cat) => (
-                  <TabsTrigger
-                    key={cat}
-                    value={cat}
-                    className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                  >
-                    {cat}
-                  </TabsTrigger>
-                ))}
+              <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+                {CATEGORIES.map((category) => <TabsTrigger key={category} value={category} className="text-xs">{category === "Experiences" ? "Fan Experiences" : category}</TabsTrigger>)}
               </TabsList>
             </Tabs>
-
-            {/* Items Grid */}
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[470px] pr-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 {filteredItems.map((item) => (
                   <MerchItemCard
@@ -151,218 +114,71 @@ export const MerchCatalog = ({
                     playerFame={bandFame}
                     playerFans={bandFans}
                     playerLevel={playerLevel}
-                    onSelect={handleSelectItem}
+                    onSelect={selectItem}
                     isSelected={selectedItem?.id === item.id}
                   />
                 ))}
-                {filteredItems.length === 0 && (
-                  <div className="col-span-2 text-center py-8 text-muted-foreground">
-                    No merchandise found matching your criteria.
-                  </div>
-                )}
+                {!filteredItems.length ? <div className="col-span-2 py-10 text-center text-sm text-muted-foreground">No products match this filter.</div> : null}
               </div>
             </ScrollArea>
           </CardContent>
         </Card>
       </div>
 
-      {/* Product Configuration */}
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Configure Product</CardTitle>
-            <CardDescription>
-              {selectedItem 
-                ? `Setting up: ${selectedItem.item_type}`
-                : "Select an item from the catalog"
-              }
-            </CardDescription>
+            <CardTitle className="text-lg">Create product</CardTitle>
+            <CardDescription>{selectedItem ? selectedItem.item_type : "Choose a product blank from the catalogue"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedItem ? (
               <>
-                {/* Selected Item Info */}
-                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{selectedItem.item_type}</span>
-                    <Badge variant="outline" className={cn("text-xs", QUALITY_TIERS[selectedItem.base_quality_tier].color)}>
-                      {QUALITY_TIERS[selectedItem.base_quality_tier].label} Quality
-                    </Badge>
+                <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{selectedItem.item_type}</span>
+                    <Badge variant="outline" className={cn("text-xs", QUALITY_TIERS[selectedItem.base_quality_tier].color)}>{QUALITY_TIERS[selectedItem.base_quality_tier].label}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">{selectedItem.description}</p>
-                  <div className="flex justify-between text-xs">
-                    <span>Production Cost: ${selectedItem.base_cost}</span>
-                    <span>Sales Boost: {QUALITY_TIERS[selectedItem.base_quality_tier].salesMultiplier}x</span>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-muted-foreground">Material</span><p className="font-medium">{selectedItem.base_material ?? "Standard stock"}</p></div>
+                    <div><span className="text-muted-foreground">Supplier</span><p className="font-medium capitalize">{selectedItem.supplier_tier ?? "standard"}</p></div>
+                    <div><span className="text-muted-foreground">Minimum run</span><p className="font-medium">{minQty} units</p></div>
+                    <div><span className="text-muted-foreground">Lead time</span><p className="font-medium">{selectedItem.lead_time_days ?? 0} days</p></div>
                   </div>
+                  {selectedItem.is_personalisable ? <Badge variant="secondary" className="gap-1"><Sparkles className="h-3 w-3" /> Personalise in Merch Studio</Badge> : null}
                 </div>
 
-                {/* Form Fields */}
-                <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Product / drop name</Label>
+                  <Input value={designName} onChange={(event) => setDesignName(event.target.value)} placeholder="e.g. Autumn Tour Heavyweight Tee" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="product-name">Product Name *</Label>
-                    <Input
-                      id="product-name"
-                      placeholder="e.g. Summer Tour 2024 Tee"
-                      value={designName}
-                      onChange={(e) => setDesignName(e.target.value)}
-                    />
+                    <Label>Sale price ($)</Label>
+                    <Input type="number" min={Math.max(1, unitCost)} max={MAX_MERCH_PRICE} value={price} onChange={(event) => setPrice(event.target.value)} />
+                    {pricing ? <p className="text-xs text-muted-foreground">Recommended ${pricing.recommended} · <span className={pricing.impact.color}>{pricing.impact.label}</span></p> : null}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="sale-price">Sale Price ($)</Label>
-                      <Input
-                        id="sale-price"
-                        type="number"
-                        min={Math.max(1, selectedItem.base_cost)}
-                        max={MAX_MERCH_PRICE}
-                        value={price}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (val > MAX_MERCH_PRICE) {
-                            setPrice(String(MAX_MERCH_PRICE));
-                          } else {
-                            setPrice(e.target.value);
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground">Max: ${MAX_MERCH_PRICE.toLocaleString()}</p>
-                      {currentPricingImpact && (
-                        <p className="text-xs text-muted-foreground">
-                          Recommended: <span className="font-medium text-foreground">${currentPricingImpact.recommended}</span>
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="initial-stock">Initial Stock</Label>
-                      <Input
-                        id="initial-stock"
-                        type="number"
-                        min={1}
-                        value={stock}
-                        onChange={(e) => setStock(e.target.value)}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Production run</Label>
+                    <Input type="number" min={minQty} value={stock} onChange={(event) => setStock(event.target.value)} />
+                    <p className="text-xs text-muted-foreground">Minimum {minQty}</p>
                   </div>
-
-                  {/* Cost & Profit Preview */}
-                  {stock && parseInt(stock) > 0 && (
-                    <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-1.5 border border-border">
-                      <div className="flex justify-between font-medium">
-                        <span>Production Cost:</span>
-                        <span className="text-destructive">
-                          -${selectedItem.base_cost * (parseInt(stock) || 0)}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground">
-                        {parseInt(stock)} units × ${selectedItem.base_cost}/unit
-                      </p>
-                      {price && parseInt(price) > selectedItem.base_cost && (
-                        <>
-                          <div className="border-t border-border pt-1.5 flex justify-between">
-                            <span>Gross profit/unit:</span>
-                            <span className="font-medium text-green-600">
-                              ${parseInt(price) - selectedItem.base_cost}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>- Logistics (5%):</span>
-                            <span>-${(parseInt(price) * 0.05).toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>- Tax (8%):</span>
-                            <span>-${(parseInt(price) * 0.08).toFixed(2)}</span>
-                          </div>
-                          <div className="border-t border-border pt-1.5 flex justify-between font-medium">
-                            <span>Net profit/unit:</span>
-                            <span className="text-green-600">
-                              ${(parseInt(price) - selectedItem.base_cost - parseInt(price) * 0.05 - parseInt(price) * 0.08).toFixed(2)}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Pricing Impact Indicator */}
-                  {currentPricingImpact && (
-                    <div className={cn(
-                      "p-3 rounded-lg border text-xs space-y-1.5",
-                      currentPricingImpact.impact.label === "Rip-off" ? "bg-destructive/10 border-destructive/30" :
-                      currentPricingImpact.impact.label === "Overpriced" ? "bg-amber-500/10 border-amber-500/30" :
-                      currentPricingImpact.impact.label === "Fair Price" ? "bg-green-500/10 border-green-500/30" :
-                      "bg-blue-500/10 border-blue-500/30"
-                    )}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">Pricing Assessment</span>
-                        <Badge variant="outline" className={cn("text-xs", currentPricingImpact.impact.color)}>
-                          {currentPricingImpact.impact.label}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Sales velocity:</span>
-                        <span className={cn("font-medium", currentPricingImpact.impact.salesMultiplier >= 1 ? "text-green-600" : "text-destructive")}>
-                          {currentPricingImpact.impact.salesMultiplier}x
-                        </span>
-                      </div>
-                      {currentPricingImpact.impact.fameEffect !== 0 && (
-                        <div className="flex justify-between">
-                          <span>Fame effect:</span>
-                          <span className={cn("font-medium", currentPricingImpact.impact.fameEffect > 0 ? "text-green-600" : "text-destructive")}>
-                            {currentPricingImpact.impact.fameEffect > 0 ? "+" : ""}{currentPricingImpact.impact.fameEffect}/day
-                          </span>
-                        </div>
-                      )}
-                      {currentPricingImpact.impact.fanEffect !== 0 && (
-                        <div className="flex justify-between">
-                          <span>Fan effect:</span>
-                          <span className={cn("font-medium", currentPricingImpact.impact.fanEffect > 0 ? "text-green-600" : "text-destructive")}>
-                            {currentPricingImpact.impact.fanEffect > 0 ? "+" : ""}{currentPricingImpact.impact.fanEffect}/day
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                <Button
-                  onClick={handleAddProduct}
-                  disabled={!designName.trim() || isAdding || parseInt(price) < Math.max(1, selectedItem.base_cost) || parseInt(price) > MAX_MERCH_PRICE}
-                  className="w-full"
-                >
-                  {isAdding ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    "Add to Inventory"
-                  )}
+                <div className="space-y-2 rounded-xl border p-3 text-sm">
+                  <div className="flex justify-between"><span>Unit production</span><span>${unitCost}</span></div>
+                  <div className="flex justify-between font-medium"><span>Production order</span><span>${(unitCost * quantity).toLocaleString()}</span></div>
+                  {(selectedItem.lead_time_days ?? 0) > 0 ? <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground"><Truck className="h-3.5 w-3.5" /> Estimated production: {selectedItem.lead_time_days} days</div> : null}
+                </div>
+
+                <Button className="w-full" onClick={submit} disabled={!designName.trim() || isAdding || quantity < minQty || Number(price) < Math.max(1, unitCost) || Number(price) > MAX_MERCH_PRICE}>
+                  {isAdding ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : "Create product run"}
                 </Button>
               </>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Select a merchandise item from the catalog to configure and add to your inventory.</p>
-              </div>
+              <div className="py-10 text-center text-sm text-muted-foreground"><Package className="mx-auto mb-3 h-12 w-12 opacity-40" />Select a product to see its supplier, material, minimum order and production cost.</div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Quality Legend */}
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm">Quality Tiers</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {Object.entries(QUALITY_TIERS).map(([tier, info]) => (
-              <div key={tier} className="flex items-center justify-between text-xs">
-                <span className={cn("font-medium", info.color)}>{info.label}</span>
-                <span className="text-muted-foreground">
-                  {info.salesMultiplier}x sales · {info.priceMultiplier}x price
-                </span>
-              </div>
-            ))}
           </CardContent>
         </Card>
       </div>
