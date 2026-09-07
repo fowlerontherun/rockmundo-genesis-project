@@ -14,6 +14,17 @@ export type FestivalOwnerNpcAct = {
   updatedAt: string;
 };
 
+type FestivalNpcRpcResult = {
+  data: unknown;
+  error: { message?: string } | null;
+};
+
+type FestivalNpcRpcClient = {
+  rpc: (functionName: string, args: Record<string, unknown>) => Promise<FestivalNpcRpcResult>;
+};
+
+const festivalNpcRpc = supabase as unknown as FestivalNpcRpcClient;
+
 const key = (festivalCompanyId: string, festivalEditionId: string) => [
   "festival-owner-npc-lineup",
   festivalCompanyId,
@@ -25,7 +36,7 @@ export const useFestivalOwnerNpcActs = (festivalCompanyId: string, festivalEditi
     queryKey: key(festivalCompanyId, festivalEditionId),
     enabled: Boolean(festivalCompanyId && festivalEditionId),
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("get_festival_owner_npc_lineup_acts", {
+      const { data, error } = await festivalNpcRpc.rpc("get_festival_owner_npc_lineup_acts", {
         p_festival_company_id: festivalCompanyId,
         p_festival_edition_id: festivalEditionId,
       });
@@ -49,7 +60,7 @@ export const useUpsertFestivalOwnerNpcAct = () => {
       stageId?: string | null;
       billingPosition: FestivalOwnerNpcAct["billingPosition"];
     }) => {
-      const { data, error } = await (supabase as any).rpc("upsert_festival_owner_npc_lineup_act", {
+      const { data, error } = await festivalNpcRpc.rpc("upsert_festival_owner_npc_lineup_act", {
         p_festival_company_id: input.festivalCompanyId,
         p_festival_edition_id: input.festivalEditionId,
         p_npc_act_id: input.npcActId ?? null,
@@ -78,7 +89,7 @@ export const useCancelFestivalOwnerNpcAct = () => {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (input: { festivalCompanyId: string; festivalEditionId: string; npcActId: string }) => {
-      const { data, error } = await (supabase as any).rpc("cancel_festival_owner_npc_lineup_act", {
+      const { data, error } = await festivalNpcRpc.rpc("cancel_festival_owner_npc_lineup_act", {
         p_festival_company_id: input.festivalCompanyId,
         p_festival_edition_id: input.festivalEditionId,
         p_npc_act_id: input.npcActId,
