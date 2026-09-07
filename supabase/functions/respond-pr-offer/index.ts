@@ -127,7 +127,6 @@ serve(async (req) => {
       title,
       scheduled_start: startTime.toISOString(),
       scheduled_end: endTime.toISOString(),
-      duration_minutes: durationMinutes,
       status: "scheduled",
       metadata: {
         offer_id: offerId,
@@ -142,6 +141,8 @@ serve(async (req) => {
       },
     }));
 
+    // duration_minutes is GENERATED ALWAYS from scheduled_start/scheduled_end.
+    // Never include it in this insert.
     const { error: scheduleError } = await supabase.from("player_scheduled_activities").insert(activityRows);
     if (scheduleError) {
       await supabase.from("pr_media_offers").update({ status: "pending", accepted_at: null }).eq("id", offerId).eq("status", "accepted");
