@@ -478,6 +478,7 @@ const PageTitle = () => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
       <AuthProvider>
         <GameDataProvider>
           <NotificationProvider>
@@ -489,7 +490,6 @@ function App() {
                     <TooltipProvider>
                       <Toaster />
                       <Sonner />
-                      <BrowserRouter>
                         <PageTitle />
               <ErrorBoundary>
                 <Suspense
