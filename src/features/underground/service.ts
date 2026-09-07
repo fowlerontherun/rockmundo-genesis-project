@@ -60,7 +60,7 @@ export async function useSubstance(profileId: string, substanceSlug: string): Pr
 }
 
 export async function getSceneContacts(profileId: string): Promise<SceneContact[]> {
-  const { data, error } = await (supabase as any).from("player_scene_contacts").select("id, profile_id, npc_name, npc_age, archetype_slug, chemistry, trust, attachment, tension, gossip_exposure, encounter_count, relationship_status, last_interaction_at, cooldown_until, discovered_at, archetype:scene_contact_archetypes(slug, name, description, romance_openness, discretion, social_energy, gossip_bias)").eq("profile_id", profileId).order("updated_at", { ascending: false });
+  const { data, error } = await (supabase as any).from("player_scene_contacts").select("id, profile_id, city_id, npc_name, npc_age, archetype_slug, chemistry, trust, attachment, tension, gossip_exposure, encounter_count, relationship_status, last_interaction_at, cooldown_until, discovered_at, city:cities(name), archetype:scene_contact_archetypes(slug, name, description, romance_openness, discretion, social_energy, gossip_bias)").eq("profile_id", profileId).order("updated_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as SceneContact[];
 }
