@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useFullCharacterIdentity } from "@/hooks/useCharacterIdentity";
@@ -7,8 +7,10 @@ import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const { hasCompletedOnboarding, isLoading } = useFullCharacterIdentity();
+  const targetProfileId = searchParams.get("profileId") || undefined;
+  const { hasCompletedOnboarding, isLoading } = useFullCharacterIdentity(targetProfileId);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -17,7 +19,9 @@ const Onboarding = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    // If onboarding already completed, redirect to dashboard
+    // Check the profile explicitly requested by character creation when present.
+    // This prevents a completed previous character from bouncing a new character
+    // out of the onboarding wizard while active-profile game data is refreshing.
     if (!isLoading && hasCompletedOnboarding) {
       navigate("/home");
     }

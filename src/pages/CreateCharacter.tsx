@@ -18,6 +18,11 @@ export default function CreateCharacter() {
     startedRef.current = true;
 
     createCharacter.mutate(undefined, {
+      onSuccess: (createdProfileId) => {
+        // Pin onboarding to the profile we just created so the onboarding route
+        // cannot accidentally resolve against the previously active character.
+        window.location.assign(`/onboarding?profileId=${encodeURIComponent(createdProfileId)}`);
+      },
       onError: (error: any) => {
         toast({
           title: "Unable to create character",
@@ -27,13 +32,6 @@ export default function CreateCharacter() {
       },
     });
   }, [createCharacter, toast]);
-
-  useEffect(() => {
-    if (createCharacter.isSuccess) {
-      // Full page reload to clear cached game data so onboarding sees the NEW profile
-      window.location.href = "/onboarding";
-    }
-  }, [createCharacter.isSuccess]);
 
   return (
     <PageLayout>
