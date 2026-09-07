@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useFestivalArtistProgramme } from "../application/useFestivalArtistProgramme";
 import type { ArtistIdentity, FestivalArtistBooking } from "../domain/festivalArtistProgramme";
+import { FestivalAdvancedArtistSearch } from "./FestivalAdvancedArtistSearch";
 import { FestivalOwnerLineupControls } from "./FestivalOwnerLineupControls";
 import { SimplifiedFestivalLineupManager } from "./SimplifiedFestivalLineupManager";
 
@@ -135,6 +136,14 @@ export function FestivalLineupWorkflowManager({
           </CardHeader>
         </Card>
       ) : null}
+
+      <FestivalAdvancedArtistSearch
+        festivalCompanyId={festivalCompanyId}
+        festivalEditionId={festivalEditionId}
+        festivalDates={data.festivalDates}
+        currencyCode={data.programme?.currencyCode ?? "GBP"}
+        preferredGenres={data.programme?.preferredGenres ?? []}
+      />
 
       <SimplifiedFestivalLineupManager
         festivalCompanyId={festivalCompanyId}
