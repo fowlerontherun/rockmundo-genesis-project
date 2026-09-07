@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.736",
+    date: "2026-09-07",
+    changes: [
+      { type: "fix", description: "Fixed the blank screen crash caused by page-tracking features running before the app's navigation was ready" },
+    ],
+  },
+  {
     version: "1.1.735",
     date: "2026-09-06",
     changes: [
