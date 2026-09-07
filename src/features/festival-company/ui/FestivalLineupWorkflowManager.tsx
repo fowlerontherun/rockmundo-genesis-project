@@ -1,4 +1,4 @@
-import { Music2, Star, Users } from "lucide-react";
+import { Music2, ShieldCheck, Star, Users } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
 import { useFestivalArtistProgramme } from "../application/useFestivalArtistProgramme";
 import type { ArtistIdentity, FestivalArtistBooking } from "../domain/festivalArtistProgramme";
 import { SimplifiedFestivalLineupManager } from "./SimplifiedFestivalLineupManager";
@@ -14,7 +15,7 @@ import { SimplifiedFestivalLineupManager } from "./SimplifiedFestivalLineupManag
 const artistLabel = (identity: ArtistIdentity) => {
   if (identity.type === "band") return "Confirmed band";
   if (identity.type === "solo") return "Confirmed solo artist";
-  return "Festival guest act";
+  return "NPC / guest act";
 };
 
 const billingLabel = (booking: FestivalArtistBooking) =>
@@ -64,11 +65,17 @@ export function FestivalLineupWorkflowManager({
   const headliners = confirmed.filter((booking) => booking.billingPosition === "headliner");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card className="overflow-hidden border-primary/30 bg-primary/5">
         <CardHeader className="text-center">
+          <div className="mb-2 flex justify-center">
+            <Badge variant={data.canWrite ? "secondary" : "outline"}>
+              <ShieldCheck className="mr-1 h-3 w-3" />
+              {data.canWrite ? "Festival management access" : "Read-only line-up"}
+            </Badge>
+          </div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-            Annual Festival bill
+            Live line-up poster
           </p>
           <CardTitle className="text-3xl">{data.festivalName}</CardTitle>
           <CardDescription>
@@ -110,6 +117,7 @@ export function FestivalLineupWorkflowManager({
           <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1"><Music2 className="h-4 w-4" /> {confirmed.length} confirmed</span>
             <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {data.playerArtistCount} player acts</span>
+            <span>{data.npcArtistCount} NPC acts</span>
             <span>{data.stages.length} stage{data.stages.length === 1 ? "" : "s"}</span>
           </div>
         </CardContent>
@@ -133,6 +141,19 @@ export function FestivalLineupWorkflowManager({
         festivalEditionId={festivalEditionId}
         data={data}
       />
+
+      {data.canWrite ? (
+        <section className="space-y-3" aria-label="Festival stage times and running order">
+          <div>
+            <h2 className="text-2xl font-bold">Stage times & running order</h2>
+            <p className="text-sm text-muted-foreground">
+              Set stage times, place accepted bands, move the running order, add NPC DJs,
+              resolve conflicts and publish the timetable from the same Festival owner page.
+            </p>
+          </div>
+          <FestivalScheduleWorkspace editionId={festivalEditionId} />
+        </section>
+      ) : null}
     </div>
   );
 }
