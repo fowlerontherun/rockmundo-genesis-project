@@ -26,7 +26,7 @@ const baseActivityOptions: Array<{ value: FestivalPlanActivityType; label: strin
   { value: "vendor", label: "Vendor / merch", defaultTitle: "Browse the stalls" },
   { value: "free_time", label: "Free time", defaultTitle: "Free time" },
 ];
-const executableTypes = new Set<FestivalExecutableActivityType>(["eat", "drink", "explore", "rest"]);
+const executableTypes = new Set<FestivalExecutableActivityType>(["eat", "drink", "explore", "rest", "watch_act"]);
 
 const formatFestivalDate = (value: string) =>
   new Date(`${value}T12:00:00`).toLocaleDateString("en-GB", {
@@ -196,8 +196,18 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
                 const startsAt = Date.parse(item.startsAt);
                 const endsAt = Date.parse(item.endsAt);
                 const executable = executableTypes.has(item.activityType as FestivalExecutableActivityType);
+                const isWatchAct = item.activityType === "watch_act" && item.source === "stage_schedule";
                 const active = item.status === "planned" && serverNow >= startsAt && serverNow < endsAt;
                 const removable = item.status === "planned" && serverNow < startsAt;
+                const resolvingThisItem = resolver.isPending && resolver.variables?.planItemId === item.id;
+
+                const actionLabel = resolvingThisItem
+                  ? isWatchAct ? "Watching…" : "Doing…"
+                  : active
+                    ? isWatchAct ? "Watch now" : "Do now"
+                    : serverNow < startsAt
+                      ? isWatchAct ? "Set not started" : "Not started"
+                      : isWatchAct ? "Set finished" : "Window passed";
 
                 return (
                   <article key={item.id} className="rounded-xl border p-3">
@@ -230,7 +240,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
                             disabled={!active || resolver.isPending}
                             onClick={() => resolver.mutate({ planItemId: item.id })}
                           >
-                            {resolver.isPending ? "Doing…" : active ? "Do now" : serverNow < startsAt ? "Not started" : "Window passed"}
+                            {actionLabel}
                           </Button>
                         )}
                         {removable && (
@@ -258,10 +268,18 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
               <p className="text-sm text-destructive" role="alert">{errorText(resolver.error)}</p>
             )}
             {resolver.data?.status === "completed" && (
-              <p className="text-sm text-emerald-600" role="status">Activity completed and your Festival condition was updated.</p>
+              <p className="text-sm text-emerald-600" role="status">
+                {resolver.data.activityType === "watch_act"
+                  ? "Set watched. Your Festival inspiration and rewards progress were updated."
+                  : "Activity completed and your Festival condition was updated."}
+              </p>
             )}
             {resolver.data?.status === "missed" && (
-              <p className="text-sm text-amber-600" role="status">That activity window passed before completion and is recorded as missed.</p>
+              <p className="text-sm text-amber-600" role="status">
+                {resolver.data.activityType === "watch_act"
+                  ? "That set finished before you watched it and is recorded as missed."
+                  : "That activity window passed before completion and is recorded as missed."}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -387,7 +405,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Eat, Drink, Explore and Rest still use the existing bounded Festival condition resolver. Campsite, VIP, vendor and free-time blocks reserve your timetable only until C6 adds their condition effects.
+        Planned stage performances can be watched while their real set is live. Eat, Drink, Explore and Rest use the bounded Festival condition resolver; Campsite, VIP, vendor and free-time blocks currently reserve timetable space only.
       </p>
     </div>
   );
