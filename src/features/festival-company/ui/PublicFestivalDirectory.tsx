@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, MapPin, Music2, Sparkles, Ticket, Wristband } from "lucide-react";
+import { BadgeCheck, CalendarDays, MapPin, Music2, Sparkles, Ticket } from "lucide-react";
 import { festivalRoutes } from "@/features/festivals/routes";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +79,7 @@ export default function PublicFestivalDirectory() {
         <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Wristband className="h-5 w-5" /> My Festivals
+              <BadgeCheck className="h-5 w-5" /> My Festivals
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
