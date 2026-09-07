@@ -115,17 +115,24 @@ export default function PublicFestivalPage() {
   return (
     <main>
       <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
-        <div className="mx-auto max-w-6xl">
-          <Badge>{f.launchStatus.replaceAll("_", " ")}</Badge>
-          <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
-          <p className="mt-3 max-w-3xl text-lg">{f.tagline}</p>
-          <p className="mt-5">
-            {f.city}, {f.country} · {new Date(f.startsAt).toLocaleDateString("en-GB")}–
-            {new Date(f.endsAt).toLocaleDateString("en-GB")}
-          </p>
-          <div className="mt-5">
-            <Countdown target={f.countdownTarget} />
-            <span className="text-xs">Festival local time: {f.timezone}</span>
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
+          {f.logoReference ? (
+            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
+              <img src={f.logoReference} alt={`${f.name} logo`} className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : null}
+          <div className="min-w-0">
+            <Badge>{f.launchStatus.replaceAll("_", " ")}</Badge>
+            <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
+            <p className="mt-3 max-w-3xl text-lg">{f.tagline}</p>
+            <p className="mt-5">
+              {f.city}, {f.country} · {new Date(f.startsAt).toLocaleDateString("en-GB")}–
+              {new Date(f.endsAt).toLocaleDateString("en-GB")}
+            </p>
+            <div className="mt-5">
+              <Countdown target={f.countdownTarget} />
+              <span className="text-xs">Festival local time: {f.timezone}</span>
+            </div>
           </div>
         </div>
       </header>
