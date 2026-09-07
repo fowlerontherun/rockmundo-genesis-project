@@ -478,6 +478,7 @@ const PageTitle = () => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
       <AuthProvider>
         <GameDataProvider>
           <NotificationProvider>
@@ -489,7 +490,6 @@ function App() {
                     <TooltipProvider>
                       <Toaster />
                       <Sonner />
-                      <BrowserRouter>
                         <PageTitle />
               <ErrorBoundary>
                 <Suspense
@@ -1005,7 +1005,6 @@ function App() {
                 </Routes>
                 </Suspense>
               </ErrorBoundary>
-                </BrowserRouter>
                     </TooltipProvider>
                   </BandCrewCatalogProvider>
                 </StageEquipmentCatalogProvider>
@@ -1015,6 +1014,7 @@ function App() {
           </NotificationProvider>
         </GameDataProvider>
       </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
