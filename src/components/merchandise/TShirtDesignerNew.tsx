@@ -1,32 +1,31 @@
-import { useRef, useState, useCallback } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Upload, Save, Type, Layers, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { ImagePlus, Loader2, RotateCcw, Save, Trash2, Type, Upload } from "lucide-react";
 
-interface DesignElement {
+type ViewSide = "front" | "back";
+type ElementKind = "image" | "text";
+
+type DesignElement = {
   id: string;
-  type: "image" | "text";
+  type: ElementKind;
   src?: string;
   text?: string;
   x: number;
   y: number;
-  width: number;
-  height: number;
-  rotation: number;
   scale: number;
-  fontSize?: number;
-  fontFamily?: string;
+  rotation: number;
   color?: string;
-  isLocked?: boolean; // For default elements like logo
-  zone?: "main" | "sleeve"; // Which zone the element belongs to
-}
+  fontSize?: number;
+};
 
 interface TShirtDesignerNewProps {
   bandId: string;
@@ -34,628 +33,364 @@ interface TShirtDesignerNewProps {
   existingDesignId?: string;
 }
 
-const TSHIRT_COLORS = [
-  { name: "White", value: "#ffffff" },
-  { name: "Black", value: "#1a1a1a" },
-  { name: "Navy", value: "#1e3a8a" },
-  { name: "Gray", value: "#6b7280" },
-  { name: "Red", value: "#dc2626" },
-  { name: "Forest Green", value: "#15803d" },
-  { name: "Royal Blue", value: "#2563eb" },
-  { name: "Purple", value: "#9333ea" },
+const PRODUCT_OPTIONS = [
+  { value: "Graphic Tee", label: "Graphic Tee", shape: "tee" },
+  { value: "Heavyweight Tee", label: "Heavyweight Tee", shape: "tee" },
+  { value: "Long Sleeve Tee", label: "Long Sleeve Tee", shape: "long" },
+  { value: "Premium Hoodie", label: "Premium Hoodie", shape: "hoodie" },
+  { value: "Zip Hoodie", label: "Zip Hoodie", shape: "hoodie" },
+  { value: "Tour Crewneck", label: "Tour Crewneck", shape: "crewneck" },
+  { value: "Football Shirt", label: "Football Shirt", shape: "tee" },
+  { value: "Tour Tote Bag", label: "Tote Bag", shape: "tote" },
+  { value: "Band Poster", label: "Poster", shape: "poster" },
+  { value: "Mug", label: "Mug", shape: "mug" },
+] as const;
+
+const COLORS = [
+  { label: "Black", value: "#171717" },
+  { label: "White", value: "#f8fafc" },
+  { label: "Washed Black", value: "#404040" },
+  { label: "Navy", value: "#172554" },
+  { label: "Cream", value: "#f5f0df" },
+  { label: "Red", value: "#991b1b" },
+  { label: "Forest", value: "#14532d" },
+  { label: "Royal Blue", value: "#1d4ed8" },
 ];
 
-const PRINT_AREA = {
-  front: { x: 85, y: 100, width: 130, height: 160 },
-  back: { x: 85, y: 90, width: 130, height: 180 },
-};
+const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/-+/g, "-");
+const makeId = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+function ProductSilhouette({ shape, color }: { shape: string; color: string }) {
+  if (shape === "poster") {
+    return <div className="absolute inset-[8%_18%] rounded-sm border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }} />;
+  }
+  if (shape === "tote") {
+    return (
+      <div className="absolute left-[20%] right-[20%] top-[24%] bottom-[13%] rounded-b-xl border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }}>
+        <div className="absolute left-[24%] right-[24%] -top-[24%] h-[28%] rounded-t-[999px] border-[10px] border-b-0 border-black/20" />
+      </div>
+    );
+  }
+  if (shape === "mug") {
+    return (
+      <div className="absolute left-[20%] right-[25%] top-[27%] bottom-[24%] rounded-b-3xl rounded-t-lg border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }}>
+        <div className="absolute -right-[30%] top-[18%] h-[55%] w-[34%] rounded-r-full border-8 border-l-0 border-black/20" />
+      </div>
+    );
+  }
+
+  const longSleeve = shape === "long" || shape === "hoodie" || shape === "crewneck";
+  return (
+    <div className="absolute inset-0">
+      <div className="absolute left-[27%] right-[27%] top-[18%] bottom-[10%] rounded-b-3xl border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }} />
+      <div className={`absolute top-[20%] h-[25%] ${longSleeve ? "left-[8%] w-[23%] rotate-[16deg]" : "left-[14%] w-[20%] rotate-[25deg]"} rounded-xl border-4 border-black/20`} style={{ backgroundColor: color }} />
+      <div className={`absolute top-[20%] h-[25%] ${longSleeve ? "right-[8%] w-[23%] -rotate-[16deg]" : "right-[14%] w-[20%] -rotate-[25deg]"} rounded-xl border-4 border-black/20`} style={{ backgroundColor: color }} />
+      {shape === "hoodie" ? <div className="absolute left-[37%] right-[37%] top-[10%] h-[18%] rounded-t-full border-4 border-black/20" style={{ backgroundColor: color }} /> : null}
+      <div className="absolute left-1/2 top-[17%] h-[7%] w-[13%] -translate-x-1/2 rounded-b-full border-b-4 border-black/20 bg-background/40" />
+    </div>
+  );
+}
+
+function DesignLayer({ element, selected, onSelect, onMove }: {
+  element: DesignElement;
+  selected: boolean;
+  onSelect: () => void;
+  onMove: (x: number, y: number) => void;
+}) {
+  const dragRef = useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
+  const style: React.CSSProperties = {
+    left: `${element.x}%`,
+    top: `${element.y}%`,
+    transform: `translate(-50%, -50%) scale(${element.scale}) rotate(${element.rotation}deg)`,
+    transformOrigin: "center",
+  };
+
+  return (
+    <div
+      className={`absolute cursor-move select-none rounded ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-transparent" : ""}`}
+      style={style}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect();
+        dragRef.current = { startX: event.clientX, startY: event.clientY, x: element.x, y: element.y };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        if (!dragRef.current) return;
+        const parent = event.currentTarget.parentElement?.getBoundingClientRect();
+        if (!parent) return;
+        const dx = ((event.clientX - dragRef.current.startX) / parent.width) * 100;
+        const dy = ((event.clientY - dragRef.current.startY) / parent.height) * 100;
+        onMove(Math.min(84, Math.max(16, dragRef.current.x + dx)), Math.min(78, Math.max(22, dragRef.current.y + dy)));
+      }}
+      onPointerUp={() => { dragRef.current = null; }}
+    >
+      {element.type === "image" && element.src ? (
+        <img src={element.src} alt="Uploaded artwork" className="pointer-events-none max-h-36 max-w-36 object-contain drop-shadow-md" draggable={false} />
+      ) : (
+        <div
+          className="pointer-events-none whitespace-nowrap px-2 py-1 text-center font-black uppercase tracking-wide drop-shadow"
+          style={{ color: element.color ?? "#ffffff", fontSize: element.fontSize ?? 24 }}
+        >
+          {element.text}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export const TShirtDesignerNew = ({ bandId, onSave, existingDesignId }: TShirtDesignerNewProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [tshirtColor, setTshirtColor] = useState<string>("#ffffff");
+  const { toast } = useToast();
+  const [productType, setProductType] = useState("Graphic Tee");
   const [designName, setDesignName] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [activeView, setActiveView] = useState<"front" | "back">("front");
+  const [garmentColor, setGarmentColor] = useState("#171717");
+  const [activeView, setActiveView] = useState<ViewSide>("front");
   const [frontElements, setFrontElements] = useState<DesignElement[]>([]);
   const [backElements, setBackElements] = useState<DesignElement[]>([]);
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeCorner, setResizeCorner] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
-  const [initialPos, setInitialPos] = useState({ x: 0, y: 0 });
-  const { toast } = useToast();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const currentElements = activeView === "front" ? frontElements : backElements;
   const setCurrentElements = activeView === "front" ? setFrontElements : setBackElements;
-  const printArea = PRINT_AREA[activeView];
+  const selected = currentElements.find((element) => element.id === selectedId) ?? null;
+  const product = PRODUCT_OPTIONS.find((item) => item.value === productType) ?? PRODUCT_OPTIONS[0];
+  const firstArtwork = useMemo(
+    () => [...frontElements, ...backElements].find((element) => element.type === "image")?.src ?? null,
+    [frontElements, backElements],
+  );
 
-  const generateId = () => `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const updateSelected = (patch: Partial<DesignElement>) => {
+    if (!selectedId) return;
+    setCurrentElements((elements) => elements.map((element) => element.id === selectedId ? { ...element, ...patch } : element));
+  };
 
+  const addText = () => {
+    const element: DesignElement = { id: makeId(), type: "text", text: "YOUR BAND", x: 50, y: 48, scale: 1, rotation: 0, color: garmentColor === "#f8fafc" ? "#111827" : "#ffffff", fontSize: 24 };
+    setCurrentElements((elements) => [...elements, element]);
+    setSelectedId(element.id);
+  };
 
-  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  const uploadArtwork = async (file: File) => {
+    if (!file.type.match(/^image\/(png|jpeg|webp|svg\+xml)$/)) throw new Error("Use PNG, JPG, WEBP or SVG artwork.");
+    if (file.size > 10 * 1024 * 1024) throw new Error("Artwork must be 10 MB or smaller.");
 
-    const remainingSlots = 5 - currentElements.filter(el => el.type === "image" && el.zone !== "sleeve").length;
-    if (files.length > remainingSlots) {
-      toast({
-        title: "Too many images",
-        description: `You can add ${remainingSlots} more image(s). Max 5 per side.`,
-        variant: "destructive",
-      });
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) throw new Error("You need to be signed in to upload artwork.");
+    const path = `${authData.user.id}/${bandId}/${makeId()}-${slugify(file.name)}`;
+    const { error } = await supabase.storage.from("merch-artwork").upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+    if (error) throw error;
+    return supabase.storage.from("merch-artwork").getPublicUrl(path).data.publicUrl;
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const remaining = Math.max(0, 5 - currentElements.filter((element) => element.type === "image").length);
+    if (remaining === 0) {
+      toast({ title: "Artwork limit reached", description: "You can place up to five artwork layers on each side.", variant: "destructive" });
       return;
     }
-
-    Array.from(files).slice(0, remainingSlots).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxSize = 80;
-          const scale = Math.min(maxSize / img.width, maxSize / img.height);
-          
-          const newElement: DesignElement = {
-            id: generateId(),
-            type: "image",
-            src: event.target?.result as string,
-            x: printArea.x + printArea.width / 2 - (img.width * scale) / 2,
-            y: printArea.y + printArea.height / 2 - (img.height * scale) / 2,
-            width: img.width * scale,
-            height: img.height * scale,
-            rotation: 0,
-            scale: 1,
-            zone: "main",
-          };
-          setCurrentElements(prev => [...prev, newElement]);
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [currentElements, printArea, setCurrentElements, toast]);
-
-  const addTextElement = useCallback(() => {
-    const newElement: DesignElement = {
-      id: generateId(),
-      type: "text",
-      text: "Your Text",
-      x: printArea.x + printArea.width / 2 - 40,
-      y: printArea.y + printArea.height / 2 - 10,
-      width: 80,
-      height: 24,
-      rotation: 0,
-      scale: 1,
-      fontSize: 16,
-      fontFamily: "Arial",
-      color: tshirtColor === "#ffffff" || tshirtColor === "#1a1a1a" ? 
-        (tshirtColor === "#ffffff" ? "#000000" : "#ffffff") : "#ffffff",
-      zone: "main",
-    };
-    setCurrentElements(prev => [...prev, newElement]);
-    setSelectedElementId(newElement.id);
-  }, [printArea, setCurrentElements, tshirtColor]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent, elementId: string) => {
-    e.stopPropagation();
-    const element = currentElements.find(el => el.id === elementId);
-    if (element?.isLocked) return;
-    
-    setSelectedElementId(elementId);
-    setIsDragging(true);
-    
-    if (element) {
-      const rect = (e.currentTarget as HTMLElement).closest('.design-canvas')?.getBoundingClientRect();
-      if (rect) {
-        const scaleX = 300 / rect.width;
-        const scaleY = 380 / rect.height;
-        setDragOffset({
-          x: (e.clientX - rect.left) * scaleX - element.x,
-          y: (e.clientY - rect.top) * scaleY - element.y,
-        });
-      }
+    setIsUploading(true);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files).slice(0, remaining)) urls.push(await uploadArtwork(file));
+      const additions = urls.map((src, index): DesignElement => ({ id: makeId(), type: "image", src, x: 50 + index * 3, y: 48 + index * 3, scale: 1, rotation: 0 }));
+      setCurrentElements((elements) => [...elements, ...additions]);
+      if (additions[0]) setSelectedId(additions[0].id);
+      toast({ title: "Artwork uploaded", description: `${additions.length} reusable artwork layer${additions.length === 1 ? "" : "s"} added.` });
+    } catch (error) {
+      toast({ title: "Artwork upload failed", description: error instanceof Error ? error.message : "Upload failed.", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, [currentElements]);
+  };
 
-  const handleResizeStart = useCallback((e: React.MouseEvent, elementId: string, corner: string) => {
-    e.stopPropagation();
-    const element = currentElements.find(el => el.id === elementId);
-    if (element?.isLocked) return;
+  const removeSelected = () => {
+    if (!selectedId) return;
+    setCurrentElements((elements) => elements.filter((element) => element.id !== selectedId));
+    setSelectedId(null);
+  };
 
-    setSelectedElementId(elementId);
-    setIsResizing(true);
-    setResizeCorner(corner);
-    
-    if (element) {
-      const rect = (e.currentTarget as HTMLElement).closest('.design-canvas')?.getBoundingClientRect();
-      if (rect) {
-        const scaleX = 300 / rect.width;
-        const scaleY = 380 / rect.height;
-        setInitialSize({ width: element.width, height: element.height });
-        setInitialPos({ 
-          x: (e.clientX - rect.left) * scaleX, 
-          y: (e.clientY - rect.top) * scaleY 
-        });
-      }
-    }
-  }, [currentElements]);
+  const resetSide = () => {
+    setCurrentElements([]);
+    setSelectedId(null);
+  };
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const scaleX = 300 / rect.width;
-    const scaleY = 380 / rect.height;
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
+  const buildPreview = () => {
+    const text = [...frontElements, ...backElements].find((element) => element.type === "text")?.text ?? designName;
+    const escaped = (text || productType).replace(/[<>&"]/g, "");
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#f3f4f6"/><rect x="150" y="90" width="300" height="420" rx="40" fill="${garmentColor}"/><text x="300" y="300" text-anchor="middle" font-family="Arial" font-size="40" font-weight="700" fill="${garmentColor === "#f8fafc" ? "#111827" : "#ffffff"}">${escaped}</text><text x="300" y="555" text-anchor="middle" font-family="Arial" font-size="22" fill="#374151">${productType}</text></svg>`)}`;
+  };
 
-    if (isResizing && selectedElementId && resizeCorner) {
-      const element = currentElements.find(el => el.id === selectedElementId);
-      if (!element) return;
-
-      const deltaX = mouseX - initialPos.x;
-      const deltaY = mouseY - initialPos.y;
-      
-      let newWidth = initialSize.width;
-      let newHeight = initialSize.height;
-      let newX = element.x;
-      let newY = element.y;
-
-      // Maintain aspect ratio
-      const aspectRatio = initialSize.width / initialSize.height;
-
-      if (resizeCorner.includes('e')) {
-        newWidth = Math.max(20, initialSize.width + deltaX);
-        newHeight = newWidth / aspectRatio;
-      }
-      if (resizeCorner.includes('w')) {
-        const widthChange = -deltaX;
-        newWidth = Math.max(20, initialSize.width + widthChange);
-        newHeight = newWidth / aspectRatio;
-        newX = element.x - (newWidth - element.width);
-      }
-      if (resizeCorner.includes('s')) {
-        newHeight = Math.max(20, initialSize.height + deltaY);
-        newWidth = newHeight * aspectRatio;
-      }
-      if (resizeCorner.includes('n')) {
-        const heightChange = -deltaY;
-        newHeight = Math.max(20, initialSize.height + heightChange);
-        newWidth = newHeight * aspectRatio;
-        newY = element.y - (newHeight - element.height);
-      }
-
-      setCurrentElements(prev => prev.map(el =>
-        el.id === selectedElementId
-          ? { ...el, width: newWidth, height: newHeight, x: newX, y: newY }
-          : el
-      ));
-      return;
-    }
-
-    if (!isDragging || !selectedElementId) return;
-
-    const newX = mouseX - dragOffset.x;
-    const newY = mouseY - dragOffset.y;
-
-    const element = currentElements.find(el => el.id === selectedElementId);
-    if (!element) return;
-
-    setCurrentElements(prev => prev.map(el =>
-      el.id === selectedElementId
-        ? { 
-            ...el, 
-            x: Math.max(0, Math.min(newX, 300 - el.width)), 
-            y: Math.max(0, Math.min(newY, 380 - el.height)) 
-          }
-        : el
-    ));
-  }, [isDragging, isResizing, selectedElementId, dragOffset, resizeCorner, initialPos, initialSize, printArea, setCurrentElements, currentElements, activeView]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setIsResizing(false);
-    setResizeCorner(null);
-  }, []);
-
-  const deleteSelectedElement = useCallback(() => {
-    if (selectedElementId) {
-      const element = currentElements.find(el => el.id === selectedElementId);
-      if (element?.isLocked) {
-        toast({ 
-          title: "Cannot delete", 
-          description: "This element is locked.",
-          variant: "destructive"
-        });
-        return;
-      }
-      setCurrentElements(prev => prev.filter(el => el.id !== selectedElementId));
-      setSelectedElementId(null);
-      toast({ title: "Element removed" });
-    }
-  }, [selectedElementId, setCurrentElements, toast, currentElements]);
-
-  const updateSelectedElement = useCallback((updates: Partial<DesignElement>) => {
-    if (selectedElementId) {
-      setCurrentElements(prev => prev.map(el =>
-        el.id === selectedElementId ? { ...el, ...updates } : el
-      ));
-    }
-  }, [selectedElementId, setCurrentElements]);
-
-  const handleSaveDesign = async () => {
+  const saveDesign = async () => {
     if (!designName.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please enter a design name.",
-        variant: "destructive",
-      });
+      toast({ title: "Name your design", description: "Add a product/design name before saving.", variant: "destructive" });
+      return;
+    }
+    if (frontElements.length + backElements.length === 0) {
+      toast({ title: "Add a design", description: "Upload artwork or add text before saving.", variant: "destructive" });
       return;
     }
 
     setIsSaving(true);
-
     try {
-      const designData = {
-        frontElements,
-        backElements,
-        tshirtColor,
+      const payload = {
+        band_id: bandId,
+        design_name: designName.trim(),
+        background_color: garmentColor,
+        product_type: productType,
+        artwork_url: firstArtwork,
+        preview_image_url: buildPreview(),
+        preview_data_url: buildPreview(),
+        design_data: { version: 2, productType, garmentColor, frontElements, backElements },
       };
 
-      const previewDataUrl = `data:text/plain,Design:${designName}`;
-
-      const { data, error } = await (supabase as any)
-        .from('tshirt_designs')
-        .insert({
-          band_id: bandId,
-          design_name: designName,
-          background_color: tshirtColor,
-          design_data: designData,
-          preview_image_url: previewDataUrl,
-        })
-        .select()
-        .single();
-
+      const query = (supabase as any).from("tshirt_designs");
+      const { data, error } = existingDesignId
+        ? await query.update(payload).eq("id", existingDesignId).select("id").single()
+        : await query.insert(payload).select("id").single();
       if (error) throw error;
-
-      toast({
-        title: "Design saved!",
-        description: `"${designName}" has been saved successfully.`,
-      });
-
-      if (onSave && data) {
-        onSave(data.id);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Save failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Merch design saved", description: `${designName.trim()} can now be reused for product drops.` });
+      onSave?.(data.id);
+    } catch (error) {
+      toast({ title: "Save failed", description: error instanceof Error ? error.message : "Unable to save design.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const selectedElement = currentElements.find(el => el.id === selectedElementId);
-
-  // Resize handle component
-  const ResizeHandles = ({ element }: { element: DesignElement }) => {
-    if (element.isLocked) return null;
-    
-    const handleSize = 8;
-    const handles = [
-      { corner: 'nw', x: -handleSize/2, y: -handleSize/2, cursor: 'nw-resize' },
-      { corner: 'ne', x: element.width - handleSize/2, y: -handleSize/2, cursor: 'ne-resize' },
-      { corner: 'sw', x: -handleSize/2, y: element.height - handleSize/2, cursor: 'sw-resize' },
-      { corner: 'se', x: element.width - handleSize/2, y: element.height - handleSize/2, cursor: 'se-resize' },
-    ];
-
-    return (
-      <>
-        {handles.map(({ corner, x, y, cursor }) => (
-          <div
-            key={corner}
-            className="absolute bg-primary border border-background rounded-sm"
-            style={{
-              left: x,
-              top: y,
-              width: handleSize,
-              height: handleSize,
-              cursor,
-            }}
-            onMouseDown={(e) => handleResizeStart(e, element.id, corner)}
-          />
-        ))}
-      </>
-    );
-  };
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          Custom T-Shirt Designer
-          <Badge variant="secondary">New</Badge>
-        </CardTitle>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle>Merch Studio</CardTitle>
+          <Badge variant="secondary">Artwork uploads</Badge>
+          <Badge variant="outline">Reusable designs</Badge>
+        </div>
         <CardDescription>
-          Create front and back designs. Drag elements to move, use corners to resize. Custom designs get a quality boost!
+          Build a real product mock-up: choose the blank, upload your own artwork, drag it into place, add text and save the design for future drops.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Design Canvas */}
-          <div className="space-y-4">
-            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "front" | "back")}>
-              <TabsList className="w-full">
-                <TabsTrigger value="front" className="flex-1">Front</TabsTrigger>
-                <TabsTrigger value="back" className="flex-1">Back</TabsTrigger>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,.8fr)]">
+          <div className="space-y-3">
+            <Tabs value={activeView} onValueChange={(value) => { setActiveView(value as ViewSide); setSelectedId(null); }}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="front">Front</TabsTrigger>
+                <TabsTrigger value="back">Back</TabsTrigger>
               </TabsList>
             </Tabs>
 
-            <div 
-              className="design-canvas relative border rounded-lg overflow-hidden bg-muted/30 mx-auto select-none"
-              style={{ width: 300, height: 380 }}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onClick={() => setSelectedElementId(null)}
+            <div
+              className="relative mx-auto aspect-[4/5] w-full max-w-[520px] overflow-hidden rounded-2xl border bg-gradient-to-b from-muted/50 to-muted shadow-inner"
+              onClick={() => setSelectedId(null)}
             >
-              {/* T-Shirt SVG */}
-              <svg viewBox="0 0 300 380" className="absolute inset-0 w-full h-full pointer-events-none">
-                {/* T-Shirt Shape */}
-                <path
-                  d={activeView === "front" 
-                    ? "M110 40 L95 38 L75 35 L40 55 L10 110 L15 115 L55 100 L65 85 L70 120 L70 350 L75 355 L225 355 L230 350 L230 120 L235 85 L245 100 L285 115 L290 110 L260 55 L225 35 L205 38 L190 40 C185 55 170 68 150 68 C130 68 115 55 110 40 Z"
-                    : "M110 40 L95 38 L75 35 L40 55 L10 110 L15 115 L55 100 L65 85 L70 120 L70 350 L75 355 L225 355 L230 350 L230 120 L235 85 L245 100 L285 115 L290 110 L260 55 L225 35 L205 38 L190 40 C185 48 170 55 150 55 C130 55 115 48 110 40 Z"
-                  }
-                  fill={tshirtColor}
-                  stroke="hsl(var(--border))"
-                  strokeWidth="2"
-                />
-                {/* Collar */}
-                {activeView === "front" && (
-                  <path
-                    d="M110 40 C115 55 130 68 150 68 C170 68 185 55 190 40"
-                    fill="none"
-                    stroke="hsl(var(--border))"
-                    strokeWidth="1.5"
-                  />
-                )}
-                {/* Main Print Area Guide */}
-                <rect
-                  x={printArea.x}
-                  y={printArea.y}
-                  width={printArea.width}
-                  height={printArea.height}
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="1"
-                  strokeDasharray="4 2"
-                  opacity="0.5"
-                />
-              </svg>
-
-              {/* Design Elements */}
+              <ProductSilhouette shape={product.shape} color={garmentColor} />
+              <div className="absolute left-[23%] right-[23%] top-[28%] bottom-[18%] rounded-xl border border-dashed border-white/35 bg-black/[0.03]">
+                <span className="absolute left-2 top-2 text-[10px] font-medium uppercase tracking-widest text-white/50">print area</span>
+              </div>
               {currentElements.map((element) => (
-                <div
+                <DesignLayer
                   key={element.id}
-                  className={cn(
-                    "absolute select-none",
-                    element.isLocked ? "cursor-not-allowed opacity-90" : "cursor-move",
-                    selectedElementId === element.id && !element.isLocked && "ring-2 ring-primary ring-offset-1"
-                  )}
-                  style={{
-                    left: element.x,
-                    top: element.y,
-                    width: element.width,
-                    height: element.height,
-                    transform: `rotate(${element.rotation}deg) scale(${element.scale})`,
-                    transformOrigin: 'center center',
+                  element={element}
+                  selected={selectedId === element.id}
+                  onSelect={() => setSelectedId(element.id)}
+                  onMove={(x, y) => {
+                    setCurrentElements((elements) => elements.map((entry) => entry.id === element.id ? { ...entry, x, y } : entry));
                   }}
-                  onMouseDown={(e) => handleMouseDown(e, element.id)}
-                >
-                  {element.type === "image" && element.src && (
-                    <img
-                      src={element.src}
-                      alt="Design"
-                      className="w-full h-full object-contain pointer-events-none"
-                      draggable={false}
-                    />
-                  )}
-                  {element.type === "text" && (
-                    <div
-                      className="w-full h-full flex items-center justify-center pointer-events-none whitespace-nowrap"
-                      style={{
-                        fontSize: element.fontSize,
-                        fontFamily: element.fontFamily,
-                        color: element.color,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {element.text}
-                    </div>
-                  )}
-                  {/* Resize handles for selected element */}
-                  {selectedElementId === element.id && <ResizeHandles element={element} />}
-                  {/* Drag indicator */}
-                  {selectedElementId === element.id && !element.isLocked && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
-                      <GripVertical className="h-3 w-3" />
-                      Drag
-                    </div>
-                  )}
-                </div>
+                />
               ))}
-            </div>
-
-            {/* Tools */}
-            <div className="flex gap-2 flex-wrap justify-center">
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                size="sm"
-                disabled={currentElements.filter(el => el.type === "image" && el.zone !== "sleeve").length >= 5}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Add Image ({currentElements.filter(el => el.type === "image" && el.zone !== "sleeve").length}/5)
-              </Button>
-              <Button onClick={addTextElement} variant="outline" size="sm">
-                <Type className="h-4 w-4 mr-2" />
-                Add Text
-              </Button>
-              <Button 
-                onClick={deleteSelectedElement} 
-                variant="outline" 
-                size="sm"
-                disabled={!selectedElementId || currentElements.find(el => el.id === selectedElementId)?.isLocked}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              {currentElements.length === 0 ? (
+                <div className="absolute inset-x-0 bottom-6 flex justify-center">
+                  <Badge variant="secondary" className="gap-1"><ImagePlus className="h-3 w-3" /> Upload artwork or add text</Badge>
+                </div>
+              ) : null}
             </div>
           </div>
 
-          {/* Controls Panel */}
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="design-name">Design Name</Label>
-              <Input
-                id="design-name"
-                value={designName}
-                onChange={(e) => setDesignName(e.target.value)}
-                placeholder="Enter design name..."
-              />
+              <Label>Product</Label>
+              <Select value={productType} onValueChange={setProductType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRODUCT_OPTIONS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Color Picker */}
-            <div className="space-y-3">
-              <Label>T-Shirt Color</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {TSHIRT_COLORS.map((color) => (
+            <div className="space-y-2">
+              <Label>Design / drop name</Label>
+              <Input value={designName} onChange={(event) => setDesignName(event.target.value)} placeholder="e.g. Shockmaster Autumn Tour Tee" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Product colour</Label>
+              <div className="flex flex-wrap gap-2">
+                {COLORS.map((colour) => (
                   <button
-                    key={color.value}
+                    key={colour.value}
                     type="button"
-                    onClick={() => setTshirtColor(color.value)}
-                    className={cn(
-                      "aspect-square rounded-lg border-2 transition-all hover:scale-105",
-                      tshirtColor === color.value
-                        ? "border-primary ring-2 ring-primary ring-offset-2"
-                        : "border-border hover:border-primary/50"
-                    )}
-                    title={color.name}
-                  >
-                    <div
-                      className="h-full w-full rounded-md"
-                      style={{ backgroundColor: color.value }}
-                    />
-                  </button>
+                    title={colour.label}
+                    onClick={() => setGarmentColor(colour.value)}
+                    className={`h-9 w-9 rounded-full border-2 shadow-sm ${garmentColor === colour.value ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+                    style={{ backgroundColor: colour.value }}
+                  />
                 ))}
               </div>
             </div>
 
-            {/* Element Controls */}
-            {selectedElement && (
-              <Card>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Layers className="h-4 w-4" />
-                    Element Settings
-                    {selectedElement.zone === "sleeve" && (
-                      <Badge variant="outline" className="text-[10px]">Sleeve Logo</Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {selectedElement.type === "text" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Text</Label>
-                        <Input
-                          value={selectedElement.text || ""}
-                          onChange={(e) => updateSelectedElement({ text: e.target.value })}
-                          placeholder="Enter text..."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Font Size: {selectedElement.fontSize}px</Label>
-                        <input
-                          type="range"
-                          min="10"
-                          max="48"
-                          value={selectedElement.fontSize || 16}
-                          onChange={(e) => updateSelectedElement({ fontSize: parseInt(e.target.value) })}
-                          className="w-full accent-primary"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Text Color</Label>
-                        <div className="flex gap-2">
-                          {["#000000", "#ffffff", "#dc2626", "#2563eb", "#15803d", "#9333ea"].map((color) => (
-                            <button
-                              key={color}
-                              type="button"
-                              onClick={() => updateSelectedElement({ color })}
-                              className={cn(
-                                "w-8 h-8 rounded border-2",
-                                selectedElement.color === color ? "border-primary" : "border-border"
-                              )}
-                              style={{ backgroundColor: color }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  <div className="space-y-2">
-                    <Label>Size: {Math.round(selectedElement.width)}×{Math.round(selectedElement.height)}px</Label>
-                    <p className="text-xs text-muted-foreground">Drag the corner handles to resize</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Rotation: {selectedElement.rotation}°</Label>
-                    <input
-                      type="range"
-                      min="-180"
-                      max="180"
-                      value={selectedElement.rotation}
-                      onChange={(e) => updateSelectedElement({ rotation: parseInt(e.target.value) })}
-                      className="w-full accent-primary"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Instructions */}
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p className="font-medium">Tips:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Click and drag elements to position</li>
-                <li>Drag corner handles to resize</li>
-                <li>Design both front and back</li>
-                <li>Stay within the dashed print area</li>
-              </ul>
+            <div className="grid grid-cols-2 gap-2">
+              <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple className="hidden" onChange={(event) => void handleFiles(event.target.files)} />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />} Upload artwork
+              </Button>
+              <Button type="button" variant="outline" onClick={addText}><Type className="mr-2 h-4 w-4" /> Add text</Button>
             </div>
 
-            <Button
-              onClick={handleSaveDesign}
-              disabled={isSaving || !designName.trim()}
-              className="w-full"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? "Saving..." : "Save Design"}
-            </Button>
+            {selected ? (
+              <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Selected {selected.type === "image" ? "artwork" : "text"}</p>
+                  <Button type="button" variant="ghost" size="sm" onClick={removeSelected}><Trash2 className="mr-1 h-4 w-4" /> Remove</Button>
+                </div>
+                {selected.type === "text" ? (
+                  <div className="space-y-2">
+                    <Label>Text</Label>
+                    <Input value={selected.text ?? ""} onChange={(event) => updateSelected({ text: event.target.value })} />
+                    <Label>Text colour</Label>
+                    <Input type="color" value={selected.color ?? "#ffffff"} onChange={(event) => updateSelected({ color: event.target.value })} className="h-10 p-1" />
+                  </div>
+                ) : null}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs"><Label>Scale</Label><span>{selected.scale.toFixed(1)}×</span></div>
+                  <Slider value={[selected.scale]} min={0.35} max={2.2} step={0.05} onValueChange={([value]) => updateSelected({ scale: value })} />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs"><Label>Rotation</Label><span>{selected.rotation}°</span></div>
+                  <Slider value={[selected.rotation]} min={-180} max={180} step={1} onValueChange={([value]) => updateSelected({ rotation: value })} />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Select artwork on the mock-up to resize or rotate it. Drag it directly on the product to reposition it.</div>
+            )}
+
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={resetSide}><RotateCcw className="mr-2 h-4 w-4" /> Clear {activeView}</Button>
+              <Button type="button" className="flex-1" onClick={() => void saveDesign()} disabled={isSaving || isUploading}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save design
+              </Button>
+            </div>
           </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Artwork</p><p className="font-medium">PNG · JPG · WEBP · SVG</p></div>
+          <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Maximum file</p><p className="font-medium">10 MB per image</p></div>
+          <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Saved asset</p><p className="font-medium">Reusable across future drops</p></div>
         </div>
       </CardContent>
     </Card>
