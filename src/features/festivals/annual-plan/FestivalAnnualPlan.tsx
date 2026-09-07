@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   CalendarDays,
-  CheckCircle2,
+  ChevronRight,
   MapPin,
   Megaphone,
   Sparkles,
+  Tent,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -44,21 +43,30 @@ import {
   saveFestivalAnnualPlan,
 } from "./repository";
 
-const months = new Intl.DateTimeFormat("en-GB", { month: "long" });
-const monthOptions = Array.from({ length: 12 }, (_, index) => ({
-  value: index + 1,
-  label: months.format(new Date(Date.UTC(2026, index, 1))),
-}));
+type PlanningSection = "when" | "festival" | "promotion" | "values";
 
-const money = (minor: number) =>
+const formatMoney = (minor: number, currencyCode: string) =>
   new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: "GBP",
+    currency: currencyCode,
     maximumFractionDigits: 0,
   }).format(minor / 100);
 
-const capacity = (value: number | null) =>
-  value === null ? "Save to calculate" : value.toLocaleString("en-GB");
+const formatDate = (value: string) => {
+  if (!value) return "Choose a date";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00.000Z`));
+};
+
+const daysUntil = (value: string) => {
+  if (!value) return null;
+  const target = new Date(`${value}T12:00:00.000Z`).getTime();
+  if (Number.isNaN(target)) return null;
+  return Math.ceil((target - Date.now()) / 86_400_000);
+};
 
 export function FestivalAnnualPlan({
   festivalCompanyId,
@@ -73,6 +81,7 @@ export function FestivalAnnualPlan({
     queryFn: () => getFestivalAnnualPlan(festivalCompanyId, editionId),
   });
   const [draft, setDraft] = useState<FestivalAnnualPlanDraft | null>(null);
+  const [section, setSection] = useState<PlanningSection | null>(null);
   const retry = useRef<{ hash: string; key: string } | null>(null);
 
   useEffect(() => {
@@ -100,57 +109,51 @@ export function FestivalAnnualPlan({
       await queryClient.invalidateQueries({
         queryKey: ["festival-company-editions", festivalCompanyId],
       });
-      toast.success("Annual Festival plan saved");
+      toast.success("Festival plan saved");
     },
+    onError: () => toast.error("Festival plan could not be saved"),
   });
 
-  if (query.isLoading) {
-    return <p role="status">Loading annual Festival choices…</p>;
-  }
-
-  if (query.error || !query.data || !draft) {
+  if (query.isLoading) return <p role="status">Loading Festival plan…</p>;
+  if (query.isError || !query.data || !draft) {
     return (
-      <Alert variant="destructive" role="alert">
+      <Alert variant="destructive">
         <AlertDescription>
-          The annual Festival plan could not be loaded. Check company access and
-          try again.
+          The annual Festival plan could not be loaded. Check company access and try again.
         </AlertDescription>
       </Alert>
     );
   }
 
   const data = query.data;
-  const selectedScale = data.scales.find(
-    (option) => option.key === draft.festivalScale,
-  );
+  const selectedCity = data.cities.find((city) => city.id === draft.cityId);
+  const selectedScale = data.scales.find((scale) => scale.key === draft.festivalScale);
+  const selectedSite = data.siteTypes.find((item) => item.key === draft.siteType);
+  const selectedVibe = data.vibes.find((item) => item.key === draft.vibe);
   const selectedMarketing = data.marketingEmphases.find(
-    (option) => option.key === draft.marketingEmphasis,
+    (item) => item.key === draft.marketingEmphasis,
   );
-  const selectedEnvironmentalPolicy = data.environmentalPolicies.find(
-    (option) => option.key === draft.environmentalPolicy,
+  const selectedEnvironment = data.environmentalPolicies.find(
+    (item) => item.key === draft.environmentalPolicy,
   );
-  const endDate = calculateAnnualPlanEndDate(
-    draft.startsOn,
-    draft.durationDays,
-  );
+  const endDate = calculateAnnualPlanEndDate(draft.startsOn, draft.durationDays);
+  const projection = getAnnualPlanCapacityProjection(data);
   const complete = annualPlanDraftIsComplete(draft);
   const dirty = JSON.stringify(draft) !== JSON.stringify(annualPlanToDraft(data));
-  const currentDate = new Date().toISOString().slice(0, 10);
-  const monthMismatch = Boolean(
-    draft.startsOn &&
-      new Date(`${draft.startsOn}T12:00:00.000Z`).getUTCMonth() + 1 !==
-        draft.preferredMonth,
-  );
+  const countdown = daysUntil(draft.startsOn);
+  const demandShift = selectedMarketing
+    ? Math.round((selectedMarketing.demandBasisPoints - 10000) / 100)
+    : 0;
 
-  const localPreview = selectedScale
-    ? {
-        capacityRange: `${selectedScale.minimumCapacity.toLocaleString("en-GB")}–${selectedScale.maximumCapacity.toLocaleString("en-GB")}`,
-        demandEffect: selectedMarketing
-          ? Math.round((selectedMarketing.demandBasisPoints - 10000) / 100)
-          : 0,
-      }
-    : null;
-  const capacityProjection = getAnnualPlanCapacityProjection(data);
+  const readinessLabel =
+    data.readinessScore >= 80
+      ? "Ready to launch"
+      : data.readinessScore >= 50
+        ? "Taking shape"
+        : "Early planning";
+
+  const patch = (values: Partial<FestivalAnnualPlanDraft>) =>
+    setDraft((current) => (current ? { ...current, ...values } : current));
 
   const persist = () => {
     if (!complete || !dirty || save.isPending || !data.canWrite) return;
@@ -165,485 +168,264 @@ export function FestivalAnnualPlan({
     });
   };
 
+  const currentDate = new Date().toISOString().slice(0, 10);
+
   return (
     <section className="space-y-5" aria-labelledby="annual-plan-heading">
-      <Card>
+      <Card className="overflow-hidden border-primary/20 bg-primary/5">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle id="annual-plan-heading" className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5" /> Annual Festival choices
+                <Sparkles className="h-5 w-5" /> {data.name}
               </CardTitle>
               <CardDescription>
-                Choose the place, dates, size, vibe and promotion. Company
-                upgrades automatically determine capacity, efficiency and event
-                quality.
+                Make the big decisions. The Festival company handles the operational detail.
               </CardDescription>
             </div>
-            <Badge
-              variant={data.planningStatus === "ready" ? "default" : "secondary"}
-              className="capitalize"
-            >
-              {data.planningStatus.replaceAll("_", " ")}
+            <Badge variant={data.readinessScore >= 80 ? "default" : "secondary"}>
+              {data.readinessScore}% · {readinessLabel}
             </Badge>
           </div>
         </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Summary label="Date" value={formatDate(draft.startsOn)} />
+          <Summary
+            label="Capacity"
+            value={(projection.licensedCapacity ?? data.expectedCapacity ?? 0).toLocaleString("en-GB")}
+          />
+          <Summary
+            label="Operating cost"
+            value={formatMoney(data.estimatedOperatingCostMinor, data.currencyCode)}
+          />
+          <Summary
+            label="Countdown"
+            value={countdown === null ? "Not scheduled" : countdown < 0 ? "Festival date passed" : `${countdown} day${countdown === 1 ? "" : "s"}`}
+          />
+        </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Plan {data.name}</CardTitle>
-            <CardDescription>
-              These choices belong only to game year {data.editionYear}. The
-              Festival company and its eleven upgrades carry forward every year.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
+        <ChoiceCard
+          icon={<CalendarDays className="h-5 w-5" />}
+          title="When & where"
+          summary={`${selectedCity?.name ?? "Choose city"} · ${formatDate(draft.startsOn)}${endDate && endDate !== draft.startsOn ? ` – ${formatDate(endDate)}` : ""}`}
+          open={section === "when"}
+          onClick={() => setSection(section === "when" ? null : "when")}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="festival-month">Festival month</Label>
-              <Select
-                value={String(draft.preferredMonth)}
-                disabled={!data.editable}
-                onValueChange={(value) =>
-                  setDraft((current) =>
-                    current
-                      ? { ...current, preferredMonth: Number(value) }
-                      : current,
-                  )
-                }
-              >
-                <SelectTrigger id="festival-month">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map((month) => (
-                    <SelectItem key={month.value} value={String(month.value)}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="festival-start-date">Start date</Label>
+              <Label htmlFor="festival-date">Start date</Label>
               <Input
-                id="festival-start-date"
+                id="festival-date"
                 type="date"
                 min={currentDate}
-                disabled={!data.editable}
                 value={draft.startsOn}
+                disabled={!data.editable}
                 onChange={(event) => {
-                  const value = event.target.value;
-                  const selected = value
-                    ? new Date(`${value}T12:00:00.000Z`).getUTCMonth() + 1
+                  const startsOn = event.target.value;
+                  const preferredMonth = startsOn
+                    ? new Date(`${startsOn}T12:00:00.000Z`).getUTCMonth() + 1
                     : draft.preferredMonth;
-                  setDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          startsOn: value,
-                          preferredMonth: selected,
-                        }
-                      : current,
-                  );
+                  patch({ startsOn, preferredMonth });
                 }}
               />
-              <p className="text-xs text-muted-foreground">
-                Ends {endDate ?? "after the selected duration"}.
-              </p>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="festival-city">City</Label>
-              <Select
-                value={draft.cityId}
-                disabled={!data.editable}
-                onValueChange={(cityId) =>
-                  setDraft((current) =>
-                    current ? { ...current, cityId } : current,
-                  )
-                }
-              >
-                <SelectTrigger id="festival-city">
-                  <SelectValue placeholder="Choose a city" />
-                </SelectTrigger>
+              <Label>City</Label>
+              <Select value={draft.cityId} disabled={!data.editable} onValueChange={(cityId) => patch({ cityId })}>
+                <SelectTrigger><SelectValue placeholder="Choose city" /></SelectTrigger>
                 <SelectContent>
                   {data.cities.map((city) => (
-                    <SelectItem key={city.id} value={city.id}>
-                      {city.name}, {city.country}
-                    </SelectItem>
+                    <SelectItem key={city.id} value={city.id}>{city.name}, {city.country}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </ChoiceCard>
 
+        <ChoiceCard
+          icon={<Tent className="h-5 w-5" />}
+          title="Festival"
+          summary={`${selectedScale?.displayName ?? "Choose size"} · ${draft.durationDays} day${draft.durationDays === 1 ? "" : "s"} · ${selectedVibe?.displayName ?? "Choose vibe"}`}
+          open={section === "festival"}
+          onClick={() => setSection(section === "festival" ? null : "festival")}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField label="Size" value={draft.festivalScale} disabled={!data.editable} options={data.scales} onChange={(festivalScale) => {
+              const next = data.scales.find((item) => item.key === festivalScale);
+              patch({ festivalScale, durationDays: Math.min(draft.durationDays, next?.maximumDurationDays ?? 1) });
+            }} />
+            <SelectField label="Site" value={draft.siteType} disabled={!data.editable} options={data.siteTypes} onChange={(siteType) => patch({ siteType })} />
+            <SelectField label="Vibe" value={draft.vibe} disabled={!data.editable} options={data.vibes} onChange={(vibe) => patch({ vibe })} />
             <div className="space-y-2">
-              <Label htmlFor="festival-site-style">Site style</Label>
-              <Select
-                value={draft.siteType}
-                disabled={!data.editable}
-                onValueChange={(siteType) =>
-                  setDraft((current) =>
-                    current ? { ...current, siteType } : current,
-                  )
-                }
-              >
-                <SelectTrigger id="festival-site-style">
-                  <SelectValue />
-                </SelectTrigger>
+              <Label>Duration</Label>
+              <Select value={String(draft.durationDays)} disabled={!data.editable} onValueChange={(value) => patch({ durationDays: Number(value) })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {data.siteTypes.map((site) => (
-                    <SelectItem key={site.key} value={site.key}>
-                      {site.displayName}
-                    </SelectItem>
+                  {Array.from({ length: selectedScale?.maximumDurationDays ?? 1 }, (_, index) => index + 1).map((days) => (
+                    <SelectItem key={days} value={String(days)}>{days} day{days === 1 ? "" : "s"}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </ChoiceCard>
 
-            <div className="space-y-2">
-              <Label htmlFor="festival-scale">Festival size</Label>
-              <Select
-                value={draft.festivalScale}
-                disabled={!data.editable}
-                onValueChange={(festivalScale) => {
-                  const nextScale = data.scales.find(
-                    (option) => option.key === festivalScale,
-                  );
-                  setDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          festivalScale,
-                          durationDays: Math.min(
-                            current.durationDays,
-                            nextScale?.maximumDurationDays ?? 1,
-                          ),
-                        }
-                      : current,
-                  );
-                }}
-              >
-                <SelectTrigger id="festival-scale">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.scales.map((scale) => (
-                    <SelectItem key={scale.key} value={scale.key}>
-                      {scale.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {localPreview ? (
-                <p className="text-xs text-muted-foreground">
-                  Base capacity range {localPreview.capacityRange}.
-                </p>
-              ) : null}
-            </div>
+        <ChoiceCard
+          icon={<Megaphone className="h-5 w-5" />}
+          title="Promotion"
+          summary={`${selectedMarketing?.displayName ?? "Choose campaign"}${demandShift === 0 ? "" : ` · ${demandShift > 0 ? "+" : ""}${demandShift}% demand effect`}`}
+          open={section === "promotion"}
+          onClick={() => setSection(section === "promotion" ? null : "promotion")}
+        >
+          <SelectField label="Marketing emphasis" value={draft.marketingEmphasis} disabled={!data.editable} options={data.marketingEmphases} onChange={(marketingEmphasis) => patch({ marketingEmphasis })} />
+          {selectedMarketing ? (
+            <p className="mt-3 text-sm text-muted-foreground">{selectedMarketing.description}</p>
+          ) : null}
+        </ChoiceCard>
 
-            <div className="space-y-2">
-              <Label htmlFor="festival-duration">Duration</Label>
-              <Select
-                value={String(draft.durationDays)}
-                disabled={!data.editable}
-                onValueChange={(value) =>
-                  setDraft((current) =>
-                    current
-                      ? { ...current, durationDays: Number(value) }
-                      : current,
-                  )
-                }
-              >
-                <SelectTrigger id="festival-duration">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from(
-                    { length: selectedScale?.maximumDurationDays ?? 1 },
-                    (_, index) => index + 1,
-                  ).map((days) => (
-                    <SelectItem key={days} value={String(days)}>
-                      {days} day{days === 1 ? "" : "s"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="festival-vibe">Festival vibe</Label>
-              <Select
-                value={draft.vibe}
-                disabled={!data.editable}
-                onValueChange={(vibe) =>
-                  setDraft((current) =>
-                    current ? { ...current, vibe } : current,
-                  )
-                }
-              >
-                <SelectTrigger id="festival-vibe">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.vibes.map((vibe) => (
-                    <SelectItem key={vibe.key} value={vibe.key}>
-                      {vibe.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="festival-environment">Environmental policy</Label>
-              <Select
-                value={draft.environmentalPolicy}
-                disabled={!data.editable}
-                onValueChange={(environmentalPolicy) =>
-                  setDraft((current) =>
-                    current ? { ...current, environmentalPolicy } : current,
-                  )
-                }
-              >
-                <SelectTrigger id="festival-environment">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.environmentalPolicies.map((policy) => (
-                    <SelectItem key={policy.key} value={policy.key}>
-                      {policy.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedEnvironmentalPolicy ? (
-                <p className="text-xs text-muted-foreground">
-                  {selectedEnvironmentalPolicy.description}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="festival-marketing">Marketing emphasis</Label>
-              <Select
-                value={draft.marketingEmphasis}
-                disabled={!data.editable}
-                onValueChange={(marketingEmphasis) =>
-                  setDraft((current) =>
-                    current ? { ...current, marketingEmphasis } : current,
-                  )
-                }
-              >
-                <SelectTrigger id="festival-marketing">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.marketingEmphases.map((marketing) => (
-                    <SelectItem key={marketing.key} value={marketing.key}>
-                      {marketing.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedMarketing ? (
-                <p className="text-xs text-muted-foreground">
-                  {selectedMarketing.description}
-                </p>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Capacity &amp; licence</CardTitle>
-              <CardDescription>
-                Permanent upgrades can build beyond the current licence. The
-                licence only caps what this annual Festival can use.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Projection
-                icon={<Users className="h-4 w-4" />}
-                label="Built capacity"
-                value={capacity(capacityProjection.potentialCapacity)}
-              />
-              <Projection
-                icon={<Users className="h-4 w-4" />}
-                label="Usable this Festival"
-                value={capacity(capacityProjection.licensedCapacity)}
-              />
-              <Projection
-                icon={<Users className="h-4 w-4" />}
-                label="Current licence ceiling"
-                value={capacity(capacityProjection.licenceCapacityLimit)}
-              />
-              {capacityProjection.capacityRestrictedByLicence ? (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Your infrastructure supports{" "}
-                    <strong>
-                      {capacityProjection.potentialCapacity?.toLocaleString("en-GB")}
-                    </strong>{" "}
-                    attendees, but the current licence permits{" "}
-                    <strong>
-                      {capacityProjection.licensedCapacity?.toLocaleString("en-GB")}
-                    </strong>{" "}
-                    for this Festival. The extra{" "}
-                    <strong>
-                      {capacityProjection.reservedUntilLicenceUpgrade.toLocaleString("en-GB")}
-                    </strong>{" "}
-                    capacity remains built and becomes usable after the licence is
-                    upgraded.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Server projection</CardTitle>
-              <CardDescription>
-                Recalculated after saving from the permanent company upgrades and
-                active licence.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Projection
-                icon={<WalletCards className="h-4 w-4" />}
-                label="Estimated operating cost"
-                value={
-                  data.estimatedOperatingCostMinor
-                    ? money(data.estimatedOperatingCostMinor)
-                    : "Save to calculate"
-                }
-              />
-              <Projection
-                icon={<MapPin className="h-4 w-4" />}
-                label="Current location"
-                value={
-                  data.city
-                    ? `${data.city.name}, ${data.city.country}`
-                    : "Not saved"
-                }
-              />
-              <Projection
-                icon={<Megaphone className="h-4 w-4" />}
-                label="Marketing demand effect"
-                value={
-                  localPreview
-                    ? `${localPreview.demandEffect >= 0 ? "+" : ""}${localPreview.demandEffect}%`
-                    : "—"
-                }
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5" /> Festival readiness
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span>Readiness</span>
-                <strong>{data.readinessScore}%</strong>
-              </div>
-              <Progress value={data.readinessScore} />
-              <p className="text-sm text-muted-foreground">
-                Upgrade levels influence capacity and reduce operating cost.
-                Licence limits cap what this annual Festival can use without
-                blocking permanent upgrades from being built ahead.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <ChoiceCard
+          icon={<Sparkles className="h-5 w-5" />}
+          title="Values"
+          summary={selectedEnvironment?.displayName ?? "Choose approach"}
+          open={section === "values"}
+          onClick={() => setSection(section === "values" ? null : "values")}
+        >
+          <SelectField label="Environmental approach" value={draft.environmentalPolicy} disabled={!data.editable} options={data.environmentalPolicies} onChange={(environmentalPolicy) => patch({ environmentalPolicy })} />
+          {selectedEnvironment ? (
+            <p className="mt-3 text-sm text-muted-foreground">{selectedEnvironment.description}</p>
+          ) : null}
+        </ChoiceCard>
       </div>
 
-      {monthMismatch ? (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            The start date must fall in the selected Festival month.
-          </AlertDescription>
-        </Alert>
+      <Card>
+        <CardHeader>
+          <CardTitle>What these choices mean</CardTitle>
+          <CardDescription>
+            The useful consequences stay visible without making you manage suppliers, staff or infrastructure manually.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Impact icon={<Users className="h-4 w-4" />} label="Usable capacity" value={(projection.licensedCapacity ?? data.expectedCapacity ?? 0).toLocaleString("en-GB")} />
+          <Impact icon={<WalletCards className="h-4 w-4" />} label="Estimated operating cost" value={formatMoney(data.estimatedOperatingCostMinor, data.currencyCode)} />
+          <Impact icon={<Megaphone className="h-4 w-4" />} label="Demand effect" value={`${demandShift > 0 ? "+" : ""}${demandShift}%`} />
+          <Impact icon={<MapPin className="h-4 w-4" />} label="Site style" value={selectedSite?.displayName ?? "—"} />
+        </CardContent>
+      </Card>
+
+      {countdown !== null && countdown >= 0 ? (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle>Festival countdown</CardTitle>
+            <CardDescription>
+              This is the event pulse players can return to as Festival day approaches.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3">
+            <Pulse title="Planning" body={`${data.readinessScore}% ready. ${data.blockers.length ? `${data.blockers.length} blocker${data.blockers.length === 1 ? "" : "s"} still need attention.` : "No planning blockers."}`} />
+            <Pulse title="Buzz" body={selectedMarketing ? `${selectedMarketing.displayName} promotion is shaping demand for the event.` : "Choose a marketing emphasis to start building buzz."} />
+            <Pulse title="Next move" body={data.readinessScore < 50 ? "Lock the core Festival choices, then move on to the line-up and tickets." : data.readinessScore < 80 ? "Build the line-up and ticket plan to move towards launch readiness." : "The Festival is close to launch readiness. Review the line-up, tickets and Run Festival screen."} />
+          </CardContent>
+        </Card>
       ) : null}
 
       {data.blockers.length ? (
         <Alert>
-          <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>{data.blockers.length} launch readiness item(s):</strong>
-            <ul className="mt-2 space-y-1">
-              {data.blockers.map((blocker) => (
-                <li key={blocker.code}>• {blocker.message}</li>
-              ))}
-            </ul>
+            <strong>Still needed:</strong> {data.blockers.map((blocker) => blocker.message).join(" · ")}
           </AlertDescription>
         </Alert>
-      ) : data.planningStatus === "ready" ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CheckCircle2 className="h-4 w-4" /> The high-level annual plan is
-          ready for line-up and ticket choices.
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Staffing, suppliers, stage requirements, security and operating detail are generated automatically.
         </p>
-      ) : null}
-
-      {save.error ? (
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>
-            The annual plan could not be saved. {save.error.message}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
-        <span role="status" className="text-sm text-muted-foreground">
-          {save.isPending
-            ? "Saving and recalculating…"
-            : dirty
-              ? "Unsaved annual Festival choices"
-              : "Annual Festival choices saved"}
-        </span>
-        <Button
-          disabled={
-            !complete ||
-            !dirty ||
-            save.isPending ||
-            !data.canWrite ||
-            monthMismatch
-          }
-          onClick={persist}
-        >
-          Save annual plan
+        <Button disabled={!complete || !dirty || save.isPending || !data.canWrite} onClick={persist}>
+          {save.isPending ? "Saving…" : dirty ? "Save Festival choices" : "Festival choices saved"}
         </Button>
       </div>
     </section>
   );
 }
 
-function Projection({
+function ChoiceCard({
   icon,
-  label,
-  value,
+  title,
+  summary,
+  open,
+  onClick,
+  children,
 }: {
   icon: React.ReactNode;
-  label: string;
-  value: string;
+  title: string;
+  summary: string;
+  open: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b pb-3 last:border-0 last:pb-0">
-      <span className="flex items-center gap-2 text-sm text-muted-foreground">
-        {icon}
-        {label}
-      </span>
-      <strong className="text-right text-sm">{value}</strong>
+    <Card className={open ? "border-primary/40" : ""}>
+      <button type="button" className="flex w-full items-center gap-3 p-5 text-left" onClick={onClick}>
+        <span className="rounded-md bg-muted p-2">{icon}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">{title}</span>
+          <span className="block truncate text-sm text-muted-foreground">{summary}</span>
+        </span>
+        <ChevronRight className={`h-5 w-5 transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open ? <CardContent className="border-t pt-5">{children}</CardContent> : null}
+    </Card>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  disabled,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  options: Array<{ key: string; displayName: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Select value={value} disabled={disabled} onValueChange={onChange}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.key} value={option.key}>{option.displayName}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
+
+const Summary = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+    <p className="font-semibold">{value}</p>
+  </div>
+);
+
+const Impact = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
+  <div className="rounded-md border p-3">
+    <p className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</p>
+    <p className="mt-1 font-semibold">{value}</p>
+  </div>
+);
+
+const Pulse = ({ title, body }: { title: string; body: string }) => (
+  <div className="rounded-md border bg-card p-4">
+    <p className="font-semibold">{title}</p>
+    <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+  </div>
+);
