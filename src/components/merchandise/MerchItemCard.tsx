@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Lock, Star, TrendingUp, Users, Award } from "lucide-react";
+import { Lock, Star, Users, Award, Clock3, Factory, Package, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MerchItemRequirement, QUALITY_TIERS, checkMerchUnlocked, getUnlockProgress } from "@/hooks/useMerchRequirements";
 
@@ -24,6 +24,11 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   Bundles: <span className="text-lg">📦</span>,
 };
 
+const humanize = (value?: string | null) => {
+  if (!value) return "Standard";
+  return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
 export const MerchItemCard = ({
   item,
   playerFame,
@@ -35,9 +40,11 @@ export const MerchItemCard = ({
   const { unlocked, reason } = checkMerchUnlocked(item, playerFame, playerFans, playerLevel);
   const progress = getUnlockProgress(item, playerFame, playerFans, playerLevel);
   const qualityInfo = QUALITY_TIERS[item.base_quality_tier];
+  const isExperience = (item.product_kind ?? (item.category === "Experiences" ? "experience" : "physical")) === "experience";
+  const isInstant = (item.lead_time_days ?? 0) <= 0;
 
   return (
-    <Card 
+    <Card
       className={cn(
         "relative transition-all hover:shadow-md cursor-pointer",
         !unlocked && "opacity-75",
@@ -72,34 +79,70 @@ export const MerchItemCard = ({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Star className="h-3 w-3" />
-            <span>{item.min_fame.toLocaleString()}</span>
+        {isExperience ? (
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Star className="h-3 w-3" />
+              <span>{item.min_fame.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Users className="h-3 w-3" />
+              <span>{item.min_fans.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Award className="h-3 w-3" />
+              <span>Lv {item.min_level}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Users className="h-3 w-3" />
-            <span>{item.min_fans.toLocaleString()}</span>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Factory className="h-3 w-3 shrink-0" />
+              <span className="truncate">{humanize(item.supplier_tier)} supplier</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock3 className="h-3 w-3 shrink-0" />
+              <span>{isInstant ? "Immediate" : `${item.lead_time_days} day lead`}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Package className="h-3 w-3 shrink-0" />
+              <span>MOQ {Math.max(1, item.min_order_qty ?? 1)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Palette className="h-3 w-3 shrink-0" />
+              <span>{item.is_personalisable ? "Customisable" : humanize(item.base_material)}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Award className="h-3 w-3" />
-            <span>Lv {item.min_level}</span>
-          </div>
-        </div>
+        )}
 
-        {/* Cost & Multipliers */}
+        {item.base_material && !isExperience ? (
+          <p className="text-xs text-muted-foreground line-clamp-1">
+            Material: <span className="text-foreground">{humanize(item.base_material)}</span>
+          </p>
+        ) : null}
+
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium">${item.base_cost} cost</span>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <TrendingUp className="h-3 w-3" />
-            <span>{qualityInfo.salesMultiplier}x sales</span>
-          </div>
+          <span className="font-medium">${item.base_cost} unit cost</span>
+          {!isExperience && (item.min_order_qty ?? 1) > 1 ? (
+            <span className="text-muted-foreground">
+              ${(item.base_cost * Math.max(1, item.min_order_qty ?? 1)).toLocaleString()} min run
+            </span>
+          ) : (
+            <span className="text-muted-foreground">{qualityInfo.salesMultiplier}x quality demand</span>
+          )}
         </div>
 
         {unlocked && (
-          <Button size="sm" variant="outline" className="w-full mt-2" onClick={() => onSelect?.(item)}>
-            Select
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full mt-2"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect?.(item);
+            }}
+          >
+            {isExperience ? "Select" : "Configure Product"}
           </Button>
         )}
       </CardContent>
