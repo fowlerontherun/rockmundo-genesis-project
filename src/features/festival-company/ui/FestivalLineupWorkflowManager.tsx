@@ -7,9 +7,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FestivalScheduleWorkspace } from "@/features/festivals/scheduling/components/FestivalScheduleWorkspace";
 import { useFestivalArtistProgramme } from "../application/useFestivalArtistProgramme";
 import type { ArtistIdentity, FestivalArtistBooking } from "../domain/festivalArtistProgramme";
+import { FestivalOwnerLineupControls } from "./FestivalOwnerLineupControls";
 import { SimplifiedFestivalLineupManager } from "./SimplifiedFestivalLineupManager";
 
 const artistLabel = (identity: ArtistIdentity) => {
@@ -143,16 +143,10 @@ export function FestivalLineupWorkflowManager({
       />
 
       {data.canWrite ? (
-        <section className="space-y-3" aria-label="Festival stage times and running order">
-          <div>
-            <h2 className="text-2xl font-bold">Stage times & running order</h2>
-            <p className="text-sm text-muted-foreground">
-              Set stage times, place accepted bands, move the running order, add NPC DJs,
-              resolve conflicts and publish the timetable from the same Festival owner page.
-            </p>
-          </div>
-          <FestivalScheduleWorkspace editionId={festivalEditionId} />
-        </section>
+        <FestivalOwnerLineupControls
+          festivalCompanyId={festivalCompanyId}
+          festivalEditionId={festivalEditionId}
+        />
       ) : null}
     </div>
   );
