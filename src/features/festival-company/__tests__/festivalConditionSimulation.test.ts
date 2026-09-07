@@ -6,8 +6,16 @@ const migration = readFileSync(
   "supabase/migrations/20260825123000_festival_c6_condition_simulation.sql",
   "utf8",
 );
+const remainingActivityRuntime = readFileSync(
+  "supabase/migrations/20260907084812_complete_remaining_festival_plan_activities.sql",
+  "utf8",
+);
 const panelSource = readFileSync(
   "src/features/festival-company/attendance/FestivalConditionPanel.tsx",
+  "utf8",
+);
+const myDaySource = readFileSync(
+  "src/features/festival-company/attendance/FestivalModeMyDay.tsx",
   "utf8",
 );
 
@@ -57,6 +65,27 @@ describe("Festival C6 condition simulation", () => {
     expect(migration).toContain("WHEN 'camping' THEN");
     expect(migration).toContain("WHEN 'vip' THEN");
     expect(migration).toContain("WHEN 'free_time' THEN");
+  });
+
+  it("lets every C6 manual block reach completed through the authoritative resolver", () => {
+    expect(remainingActivityRuntime).toContain("'camping', 'vip', 'vendor', 'free_time'");
+    expect(remainingActivityRuntime).toContain("WHEN 'camping' THEN NULL");
+    expect(remainingActivityRuntime).toContain("WHEN 'vip' THEN NULL");
+    expect(remainingActivityRuntime).toContain("WHEN 'vendor' THEN NULL");
+    expect(remainingActivityRuntime).toContain("WHEN 'free_time' THEN NULL");
+    expect(remainingActivityRuntime).toContain("v_attendance.status <> 'attending'");
+    expect(remainingActivityRuntime).toContain("now() < v_item.starts_at");
+    expect(remainingActivityRuntime).toContain("now() >= v_item.ends_at");
+  });
+
+  it("exposes those blocks as executable My Day actions without bypassing admission gating", () => {
+    expect(myDaySource).toContain('"camping"');
+    expect(myDaySource).toContain('"vip"');
+    expect(myDaySource).toContain('"vendor"');
+    expect(myDaySource).toContain('"free_time"');
+    expect(myDaySource).toContain("attendance.includesCamping");
+    expect(myDaySource).toContain("attendance.includesVipArea");
+    expect(myDaySource).toContain('active ? watchingAct ? "Watch now" : "Do now"');
   });
 
   it("keeps permanent Wellness feedback bounded on Festival exit", () => {
