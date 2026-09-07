@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, PackageCheck } from "lucide-react";
+import { Loader2, PackageCheck, Zap } from "lucide-react";
 
 interface ReleaseDesignDialogProps {
   open: boolean;
@@ -25,6 +26,18 @@ interface ReleaseDesignDialogProps {
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 const SIZED_PRODUCTS = new Set(["Basic Tee", "Graphic Tee", "Heavyweight Tee", "Long Sleeve Tee", "Premium Hoodie", "Zip Hoodie", "Tour Crewneck", "Football Shirt"]);
+
+const getBulkDiscount = (quantity: number) => {
+  if (quantity >= 1000) return 0.15;
+  if (quantity >= 500) return 0.1;
+  if (quantity >= 100) return 0.05;
+  return 0;
+};
+
+const getSupplierQuality = (tier: string | null, rush: boolean) => {
+  const quality = tier === "premium" ? 88 : tier === "standard" ? 74 : tier === "budget" ? 60 : 70;
+  return Math.max(1, quality - (rush ? 5 : 0));
+};
 
 export const ReleaseDesignDialog = ({
   open,
@@ -41,6 +54,7 @@ export const ReleaseDesignDialog = ({
   const [baseCost, setBaseCost] = useState(7);
   const [minOrder, setMinOrder] = useState(10);
   const [leadTime, setLeadTime] = useState(3);
+  const [supplierTier, setSupplierTier] = useState<string | null>(null);
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
   const [designData, setDesignData] = useState<Record<string, unknown> | null>(null);
   const [garmentColor, setGarmentColor] = useState<string | null>(null);
@@ -48,6 +62,7 @@ export const ReleaseDesignDialog = ({
   const [sellingPrice, setSellingPrice] = useState("35");
   const [stockQuantity, setStockQuantity] = useState("10");
   const [selectedSizes, setSelectedSizes] = useState<string[]>(["S", "M", "L", "XL"]);
+  const [rushOrder, setRushOrder] = useState(false);
 
   useEffect(() => {
     setProductName(`Custom ${designName}`);
@@ -70,7 +85,7 @@ export const ReleaseDesignDialog = ({
 
         const { data: requirement, error: requirementError } = await (supabase as any)
           .from("merch_item_requirements")
-          .select("base_cost, min_order_qty, lead_time_days, base_quality_tier")
+          .select("base_cost, min_order_qty, lead_time_days, base_quality_tier, supplier_tier")
           .eq("item_type", nextType)
           .maybeSingle();
         if (requirementError) throw requirementError;
@@ -82,11 +97,13 @@ export const ReleaseDesignDialog = ({
         setBaseCost(nextCost);
         setMinOrder(nextMinOrder);
         setLeadTime(Number(requirement?.lead_time_days ?? 0));
+        setSupplierTier(requirement?.supplier_tier ?? requirement?.base_quality_tier ?? null);
         setArtworkUrl(design?.artwork_url ?? null);
         setDesignData(design?.design_data ?? null);
         setGarmentColor(design?.background_color ?? null);
         setStockQuantity(String(nextMinOrder));
         setSellingPrice(String(Math.max(nextCost + 1, Math.round(nextCost * 2.5))));
+        setRushOrder(false);
       } catch (error) {
         toast({
           title: "Could not load product details",
@@ -104,9 +121,14 @@ export const ReleaseDesignDialog = ({
   const hasSizes = SIZED_PRODUCTS.has(productType);
   const quantity = Number(stockQuantity) || 0;
   const price = Number(sellingPrice) || 0;
-  const productionTotal = baseCost * quantity;
-  const profitPerUnit = Math.max(0, price - baseCost);
+  const discount = getBulkDiscount(quantity);
+  const rushMultiplier = rushOrder ? 1.25 : 1;
+  const effectiveUnitCost = baseCost * (1 - discount) * rushMultiplier;
+  const productionTotal = Math.round(effectiveUnitCost * quantity * 100) / 100;
+  const profitPerUnit = Math.max(0, price - effectiveUnitCost);
   const totalPotential = profitPerUnit * quantity;
+  const effectiveLeadTime = leadTime > 0 ? (rushOrder ? Math.max(1, Math.ceil(leadTime / 2)) : leadTime) : 0;
+  const qualityScore = getSupplierQuality(supplierTier, rushOrder);
   const sizeSummary = useMemo(() => selectedSizes.join(", "), [selectedSizes]);
 
   const toggleSize = (size: string) => {
@@ -123,8 +145,8 @@ export const ReleaseDesignDialog = ({
       toast({ title: "Production run too small", description: `${productType} has a minimum run of ${minOrder}.`, variant: "destructive" });
       return;
     }
-    if (price <= baseCost) {
-      toast({ title: "Price is below production cost", description: `Set a selling price above $${baseCost}.`, variant: "destructive" });
+    if (price <= effectiveUnitCost) {
+      toast({ title: "Price is below production cost", description: `Set a selling price above $${effectiveUnitCost.toFixed(2)}.`, variant: "destructive" });
       return;
     }
 
@@ -135,26 +157,40 @@ export const ReleaseDesignDialog = ({
         sourceDesignId: designId,
         sizes: hasSizes ? selectedSizes : [],
       };
+      const now = new Date();
+      const readyAt = effectiveLeadTime > 0
+        ? new Date(now.getTime() + effectiveLeadTime * 24 * 60 * 60 * 1000).toISOString()
+        : now.toISOString();
       const { error } = await (supabase as any).from("player_merchandise").insert({
         band_id: bandId,
         design_name: productName.trim(),
         item_type: productType,
-        cost_to_produce: baseCost,
+        cost_to_produce: Math.round(effectiveUnitCost * 100) / 100,
         selling_price: price,
-        stock_quantity: quantity,
+        stock_quantity: effectiveLeadTime > 0 ? 0 : quantity,
+        pending_quantity: effectiveLeadTime > 0 ? quantity : 0,
         custom_design_id: designId,
         sales_boost_pct: 1.0,
         design_data: inventoryDesignData,
         artwork_url: artworkUrl,
         garment_color: garmentColor,
-        lead_time_days: leadTime,
-        production_status: leadTime > 0 ? "ordered" : "ready",
+        supplier_tier: supplierTier,
+        lead_time_days: effectiveLeadTime,
+        production_status: effectiveLeadTime > 0 ? "ordered" : "ready",
+        production_ordered_at: now.toISOString(),
+        production_ready_at: readyAt,
+        is_rush_order: rushOrder,
+        production_discount_pct: discount,
+        production_total_cost: productionTotal,
+        production_quality: qualityScore,
       });
       if (error) throw error;
 
       toast({
-        title: "Product run created",
-        description: `${productName.trim()} has been ordered as ${productType}${leadTime > 0 ? ` with a ${leadTime}-day production lead time` : ""}.`,
+        title: effectiveLeadTime > 0 ? "Production order placed" : "Product ready",
+        description: effectiveLeadTime > 0
+          ? `${quantity} ${productType} units are being made and will enter stock in about ${effectiveLeadTime} day${effectiveLeadTime === 1 ? "" : "s"}.`
+          : `${quantity} ${productType} units are now available to sell.`,
       });
       onOpenChange(false);
       onSuccess?.();
@@ -171,7 +207,7 @@ export const ReleaseDesignDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><PackageCheck className="h-5 w-5" /> Release Designed Product</DialogTitle>
           <DialogDescription>
-            Turn this saved mock-up into a real inventory run using the catalogue supplier and production settings.
+            Order a real production run. Units only become sellable after manufacturing finishes.
           </DialogDescription>
         </DialogHeader>
 
@@ -181,9 +217,10 @@ export const ReleaseDesignDialog = ({
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="rounded-lg border bg-muted/30 p-3 text-sm">
               <div className="flex justify-between gap-3"><span className="text-muted-foreground">Product blank</span><span className="font-medium">{productType}</span></div>
-              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Unit cost</span><span className="font-medium">${baseCost}</span></div>
+              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Supplier</span><span className="font-medium capitalize">{supplierTier || "standard"}</span></div>
+              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Base unit cost</span><span className="font-medium">${baseCost}</span></div>
               <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Minimum run</span><span className="font-medium">{minOrder}</span></div>
-              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Production</span><span className="font-medium">{leadTime > 0 ? `${leadTime} days` : "Immediate"}</span></div>
+              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Production</span><span className="font-medium">{effectiveLeadTime > 0 ? `${effectiveLeadTime} days` : "Immediate"}</span></div>
             </div>
 
             <div className="space-y-2">
@@ -194,7 +231,7 @@ export const ReleaseDesignDialog = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="selling-price">Selling Price ($)</Label>
-                <Input id="selling-price" type="number" min={baseCost + 1} step={1} value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} required />
+                <Input id="selling-price" type="number" min={Math.ceil(effectiveUnitCost + 1)} step={1} value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stock-quantity">Production Run</Label>
@@ -217,16 +254,30 @@ export const ReleaseDesignDialog = ({
               </div>
             ) : null}
 
+            {leadTime > 1 ? (
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-2"><Zap className="h-4 w-4" /> Rush production</Label>
+                  <p className="text-xs text-muted-foreground">Cuts lead time roughly in half, adds 25% to production cost and slightly reduces quality consistency.</p>
+                </div>
+                <Switch checked={rushOrder} onCheckedChange={setRushOrder} />
+              </div>
+            ) : null}
+
             <div className="space-y-2 rounded-lg border bg-muted/30 p-4 text-sm">
+              {discount > 0 ? <div className="flex justify-between"><span>Bulk discount</span><span className="font-medium text-primary">-{Math.round(discount * 100)}%</span></div> : null}
+              {rushOrder ? <div className="flex justify-between"><span>Rush surcharge</span><span className="font-medium">+25%</span></div> : null}
+              <div className="flex justify-between"><span>Effective unit cost</span><span className="font-medium">${effectiveUnitCost.toFixed(2)}</span></div>
               <div className="flex justify-between"><span>Production order</span><span className="font-medium">${productionTotal.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>Profit per unit</span><span className="font-medium text-primary">${profitPerUnit.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>Potential gross profit</span><span className="font-medium">${totalPotential.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Expected quality</span><span className="font-medium">{qualityScore}/100</span></div>
+              <div className="flex justify-between"><span>Profit per unit</span><span className="font-medium text-primary">${profitPerUnit.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span>Potential gross profit</span><span className="font-medium">${Math.round(totalPotential).toLocaleString()}</span></div>
             </div>
 
             <div className="flex gap-3">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" className="flex-1" disabled={isSubmitting || !productName.trim()}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : "Create Product Run"}
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Ordering...</> : "Place Production Order"}
               </Button>
             </div>
           </form>
