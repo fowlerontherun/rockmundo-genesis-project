@@ -27,8 +27,6 @@ alter table public.tshirt_designs
   add column if not exists artwork_url text,
   add column if not exists preview_data_url text;
 
--- Ordinary products are purchasable by any band. Fame now drives demand rather than
--- magically unlocking the ability to manufacture a hoodie or poster.
 update public.merch_item_requirements
 set min_fame = 0, min_fans = 0, min_level = 1
 where category in ('Apparel','Accessories','Collectibles','Digital','Bundles');
@@ -105,3 +103,42 @@ drop policy if exists "Owners can delete merch artwork" on storage.objects;
 create policy "Owners can delete merch artwork"
 on storage.objects for delete to authenticated
 using (bucket_id='merch-artwork' and (storage.foldername(name))[1]=(select auth.uid())::text);
+
+-- Keep inventory rows tied to the canonical catalogue even when older UI code only sends item_type.
+create or replace function public.sync_merchandise_catalog_metadata()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  requirement public.merch_item_requirements%rowtype;
+begin
+  select * into requirement
+  from public.merch_item_requirements
+  where item_type = new.item_type
+  limit 1;
+
+  if found then
+    new.product_requirement_id := requirement.id;
+    new.supplier_tier := coalesce(requirement.supplier_tier, 'standard');
+    new.lead_time_days := coalesce(requirement.lead_time_days, 0);
+    if new.quality_tier is null then
+      new.quality_tier := requirement.base_quality_tier;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_sync_merchandise_catalog_metadata on public.player_merchandise;
+create trigger trg_sync_merchandise_catalog_metadata
+before insert or update of item_type on public.player_merchandise
+for each row execute function public.sync_merchandise_catalog_metadata();
+
+update public.player_merchandise pm
+set product_requirement_id = mir.id,
+    supplier_tier = coalesce(mir.supplier_tier, 'standard'),
+    lead_time_days = coalesce(mir.lead_time_days, 0)
+from public.merch_item_requirements mir
+where pm.item_type = mir.item_type;
