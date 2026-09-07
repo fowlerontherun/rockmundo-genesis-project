@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Disc3, Image as ImageIcon, Music, Users } from "lucide-react";
+import { Disc3, Image as ImageIcon, Music, RefreshCw, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,9 @@ export function FestivalOwnerLineupControls({
   const [genre, setGenre] = useState("");
   const [quality, setQuality] = useState("55");
 
+  const workspaceKey = ["festival-owner-lineup-workspace", festivalCompanyId, festivalEditionId] as const;
   const workspace = useQuery({
-    queryKey: ["festival-owner-lineup-workspace", festivalCompanyId, festivalEditionId],
+    queryKey: workspaceKey,
     queryFn: async () => {
       const { data, error } = await rpc("get_festival_owner_lineup_workspace", {
         p_festival_company_id: festivalCompanyId,
@@ -53,6 +54,22 @@ export function FestivalOwnerLineupControls({
     queryKey: ["festivals", "artist-schedule-queue", canonicalEditionId],
     queryFn: () => fetchFestivalArtistScheduleQueue(canonicalEditionId ?? ""),
     enabled: Boolean(canonicalEditionId),
+  });
+
+  const generatePoster = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("generate-festival-edition-poster", {
+        body: { festivalCompanyId, festivalEditionId },
+      });
+      if (error) throw error;
+      if (!data?.posterUrl) throw new Error(data?.error ?? "Festival poster was not generated");
+      return data as { posterUrl: string; posterVersion: number };
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: workspaceKey });
+      toast.success("Festival line-up poster generated");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Festival poster could not be generated"),
   });
 
   const systemAct = useMutation({
@@ -114,10 +131,18 @@ export function FestivalOwnerLineupControls({
     <div className="space-y-5">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ImageIcon className="h-5 w-5" /> Line-up poster</CardTitle>
-          <CardDescription>
-            The latest edition-scoped poster is shown here so the artwork is visible from the Festival owner workflow rather than being hidden in legacy Festival data.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2"><ImageIcon className="h-5 w-5" /> Line-up poster</CardTitle>
+              <CardDescription className="mt-1">
+                Generate an edition-scoped poster from the current stages and running order. The latest published poster stays visible here for Festival owners.
+              </CardDescription>
+            </div>
+            <Button variant={workspace.data.posterUrl ? "outline" : "default"} disabled={generatePoster.isPending} onClick={() => generatePoster.mutate()}>
+              {generatePoster.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : workspace.data.posterUrl ? <RefreshCw className="mr-2 h-4 w-4" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              {generatePoster.isPending ? "Generating…" : workspace.data.posterUrl ? "Refresh poster" : "Generate poster"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {workspace.data.posterUrl ? (
@@ -125,12 +150,12 @@ export function FestivalOwnerLineupControls({
               <img src={workspace.data.posterUrl} alt="Festival lineup poster" className="w-full rounded-lg border object-cover shadow-sm" />
               <div className="space-y-2 text-sm text-muted-foreground">
                 <Badge variant="secondary" className="capitalize">{workspace.data.posterStatus ?? "generated"}</Badge>
-                <p>Poster version {workspace.data.posterVersion ?? "—"}. This is the canonical edition poster.</p>
+                <p>Poster version {workspace.data.posterVersion ?? "—"}. Regenerate it whenever the confirmed running order changes.</p>
               </div>
             </div>
           ) : (
             <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-              No edition poster has been generated yet. The live bill above remains visible, and any generated canonical poster will appear here automatically.
+              No edition poster has been generated yet. Add or schedule acts, then generate the poster from the current line-up.
             </div>
           )}
         </CardContent>
@@ -144,10 +169,15 @@ export function FestivalOwnerLineupControls({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {emptySlots.length === 0 ? (
+            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+              Create stage slots in the timetable below first. Once a slot has a start and end time it can be filled by a player band, NPC band or DJ.
+            </p>
+          ) : null}
           <div className="grid gap-3 lg:grid-cols-[1.4fr_0.8fr_1fr_1fr_7rem_auto] lg:items-end">
             <div>
               <label className="mb-1 block text-sm font-medium">Empty stage slot</label>
-              <Select value={slotId} onValueChange={setSlotId} disabled={systemAct.isPending}>
+              <Select value={slotId} onValueChange={setSlotId} disabled={systemAct.isPending || emptySlots.length === 0}>
                 <SelectTrigger><SelectValue placeholder="Choose stage and time" /></SelectTrigger>
                 <SelectContent>
                   {emptySlots.map((slot) => (
