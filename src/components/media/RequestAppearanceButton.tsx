@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Megaphone, Loader2 } from "lucide-react";
+import { Megaphone, Loader2, Clock3, CheckCircle2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
@@ -27,6 +28,11 @@ interface RequestAppearanceButtonProps {
   className?: string;
   size?: "sm" | "default";
   variant?: "default" | "outline" | "secondary" | "ghost";
+}
+
+interface AppearanceRequestState {
+  openOffer: { id: string; status: string; proposed_date: string | null } | null;
+  cooldownExpiresAt: string | null;
 }
 
 /** Band leader's active band — needed because only leaders can request appearances. */
@@ -68,6 +74,51 @@ export function RequestAppearanceButton({
   const { data: band } = useLeaderBand();
   const [booking, setBooking] = useState(false);
 
+  const requestStateQueryKey = ["media-appearance-request-state", band?.id, mediaType, outletId, showId ?? null];
+  const { data: requestState } = useQuery<AppearanceRequestState>({
+    queryKey: requestStateQueryKey,
+    queryFn: async () => {
+      if (!band?.id) return { openOffer: null, cooldownExpiresAt: null };
+
+      let offerQuery = (supabase as any)
+        .from("pr_media_offers")
+        .select("id, status, proposed_date")
+        .eq("band_id", band.id)
+        .eq("media_type", mediaType)
+        .eq("media_outlet_id", outletId)
+        .in("status", ["pending", "accepted"])
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (showId) offerQuery = offerQuery.eq("show_id", showId);
+
+      const [offerResult, cooldownResult] = await Promise.all([
+        offerQuery.maybeSingle(),
+        (supabase as any)
+          .from("band_media_cooldowns")
+          .select("cooldown_expires_at")
+          .eq("band_id", band.id)
+          .eq("media_type", mediaType)
+          .eq("outlet_id", outletId)
+          .gt("cooldown_expires_at", new Date().toISOString())
+          .order("cooldown_expires_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      if (offerResult.error) throw offerResult.error;
+      if (cooldownResult.error) throw cooldownResult.error;
+
+      return {
+        openOffer: offerResult.data ?? null,
+        cooldownExpiresAt: cooldownResult.data?.cooldown_expires_at ?? null,
+      };
+    },
+    enabled: !!band?.id && !!outletId,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
   const requestMutation = useMutation({
     mutationFn: async () => {
       if (!band?.id) throw new Error("You must lead an active band to request media appearances.");
@@ -105,6 +156,7 @@ export function RequestAppearanceButton({
       queryClient.invalidateQueries({ queryKey: ["pr-offers"] });
       queryClient.invalidateQueries({ queryKey: ["pr-appearances"] });
       queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["media-appearance-request-state"] });
       toast.success("Appearance booked", {
         description: result?.scheduledFor
           ? `${outletName} — ${new Date(result.scheduledFor).toLocaleString()}`
@@ -112,13 +164,41 @@ export function RequestAppearanceButton({
       });
     },
     onError: (error: Error) => {
+      queryClient.invalidateQueries({ queryKey: ["media-appearance-request-state"] });
       toast.error("Request declined", { description: error.message });
     },
     onSettled: () => setBooking(false),
   });
 
   const fameShort = !!band && (band.fame ?? 0) < (minFameRequired ?? 0);
-  const disabled = !band || fameShort || booking || requestMutation.isPending;
+  const openOffer = requestState?.openOffer ?? null;
+  const cooldownExpiresAt = requestState?.cooldownExpiresAt
+    ? new Date(requestState.cooldownExpiresAt)
+    : null;
+  const onCooldown = !!cooldownExpiresAt && cooldownExpiresAt.getTime() > Date.now();
+  const disabled = !band || fameShort || !!openOffer || onCooldown || booking || requestMutation.isPending;
+
+  const buttonText = fameShort
+    ? "Fame too low"
+    : openOffer?.status === "accepted"
+      ? "Appearance booked"
+      : openOffer?.status === "pending"
+        ? "Request pending"
+        : onCooldown && cooldownExpiresAt
+          ? `Cooldown ${formatDistanceToNowStrict(cooldownExpiresAt)}`
+          : label;
+
+  const title = !band
+    ? "Only band leaders can request media appearances"
+    : fameShort
+      ? `Requires ${minFameRequired?.toLocaleString()} band fame`
+      : openOffer?.status === "accepted"
+        ? "You already have an appearance booked with this outlet"
+        : openOffer?.status === "pending"
+          ? "You already have a request pending with this outlet"
+          : onCooldown && cooldownExpiresAt
+            ? `You can request this outlet again ${formatDistanceToNowStrict(cooldownExpiresAt, { addSuffix: true })}`
+            : undefined;
 
   return (
     <Button
@@ -130,20 +210,18 @@ export function RequestAppearanceButton({
         setBooking(true);
         requestMutation.mutate();
       }}
-      title={
-        !band
-          ? "Only band leaders can request media appearances"
-          : fameShort
-            ? `Requires ${minFameRequired?.toLocaleString()} band fame`
-            : undefined
-      }
+      title={title}
     >
       {requestMutation.isPending ? (
         <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+      ) : openOffer?.status === "accepted" ? (
+        <CheckCircle2 className="mr-1 h-3 w-3" />
+      ) : onCooldown || openOffer?.status === "pending" ? (
+        <Clock3 className="mr-1 h-3 w-3" />
       ) : (
         <Megaphone className="mr-1 h-3 w-3" />
       )}
-      {fameShort ? "Fame too low" : label}
+      {buttonText}
     </Button>
   );
 }
