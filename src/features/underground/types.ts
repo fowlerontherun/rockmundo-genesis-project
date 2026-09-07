@@ -116,6 +116,7 @@ export interface SceneContactArchetype {
 export interface SceneContact {
   id: string;
   profile_id: string;
+  city_id?: string | null;
   npc_name: string;
   npc_age: number;
   archetype_slug: string;
@@ -129,6 +130,7 @@ export interface SceneContact {
   last_interaction_at: string | null;
   cooldown_until: string | null;
   discovered_at: string;
+  city?: { name: string } | null;
   archetype?: SceneContactArchetype | null;
 }
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 
-type Rival = { cityId: string; cityName: string; name: string; intensity: number; description: string };
+type Rival = { cityId: string; cityName: string; name: string; intensity: number; description: string; yourReputation?: number };
 type CitySceneResponse = {
   ok: boolean;
   reason?: string;
@@ -29,6 +29,7 @@ type CitySceneResponse = {
   successfulStories?: number;
   failedStories?: number;
   rivals?: Rival[];
+  rivalryPressure?: number;
 };
 
 export const CityScenePanel = ({ profileId }: { profileId: string | null }) => {
@@ -49,7 +50,7 @@ export const CityScenePanel = ({ profileId }: { profileId: string | null }) => {
   const data = query.data;
   const scene = data.scene;
   const rep = data.reputation ?? 0;
-  const repLabel = rep >= 80 ? "Local legend" : rep >= 60 ? "Scene fixture" : rep >= 40 ? "Known face" : rep >= 20 ? "Getting noticed" : "Outsider";
+  const repLabel = rep >= 90 ? "Scene Royalty" : rep >= 70 ? "Local Fixture" : rep >= 45 ? "Trusted Name" : rep >= 25 ? "Scene Regular" : rep >= 10 ? "Recognised" : "New Face";
 
   return (
     <Card className="border-primary/25 bg-primary/[0.025]">
@@ -85,12 +86,20 @@ export const CityScenePanel = ({ profileId }: { profileId: string | null }) => {
           <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
             <div className="flex items-center gap-2 text-xs font-medium"><Building2 className="h-3.5 w-3.5" /> Scene rivalries</div>
             <div className="mt-2 space-y-1.5">
-              {(data.rivals ?? []).map((rival) => <div key={rival.cityId} className="text-xs"><span className="font-medium">{rival.cityName}</span> · {rival.name} <span className="text-muted-foreground">({rival.intensity}/100)</span></div>)}
+              {(data.rivals ?? []).map((rival) => (
+                <div key={rival.cityId} className="text-xs">
+                  <span className="font-medium">{rival.cityName}</span> · {rival.name}
+                  <span className="text-muted-foreground"> ({rival.intensity}/100 rivalry · your rep {rival.yourReputation ?? 0})</span>
+                </div>
+              ))}
             </div>
+            {(data.rivalryPressure ?? 0) > 0 && (
+              <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">Rival-scene baggage: reputation gains here are slightly slower until you establish yourself locally.</p>
+            )}
           </div>
         )}
 
-        <div className="text-[11px] text-muted-foreground">Scene activity: {data.successfulStories ?? 0} successful stories · {data.failedStories ?? 0} messy outcomes</div>
+        <div className="text-[11px] text-muted-foreground">Scene activity: {data.visits ?? 0} arrivals · {data.successfulStories ?? 0} successful stories · {data.failedStories ?? 0} messy outcomes</div>
       </CardContent>
     </Card>
   );
