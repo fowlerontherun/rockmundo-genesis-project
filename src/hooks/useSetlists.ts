@@ -46,6 +46,8 @@ export const useSetlists = (bandId: string | null) => {
           setlist_songs (count)
         `)
         .eq("band_id", bandId)
+        .eq("is_active", true)
+        .neq("setlist_type", "gig_snapshot")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
