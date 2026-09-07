@@ -4,24 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, Users, Calendar, Wrench, DollarSign, MapPin, Star } from "lucide-react";
+import { Building2, Users, Calendar, Wrench, DollarSign, Star } from "lucide-react";
 import { useVenueStaff, useVenueBookings, useVenueUpgrades, useVenueFinancials } from "@/hooks/useVenueBusiness";
 import { VipGate } from "@/components/company/VipGate";
-import { VenueStaffManager, VenueBookingsManager, VenueUpgradesManager } from "@/components/venue-business";
+import { VenueStaffManager, VenueBookingsManager, VenueShowsHistory, VenueUpgradesManager } from "@/components/venue-business";
 import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function VenueBusinessManagement() {
   const { venueId } = useParams();
   const navigate = useNavigate();
-  
-  // Try to fetch venue by ID first, then by company_id if it's a company's venue
+
   const { data: venue, isLoading: venueLoading } = useQuery({
     queryKey: ['venue-business', venueId],
     queryFn: async () => {
       if (!venueId) return null;
-      
-      // First try to find by venue ID
+
       let { data, error } = await supabase
         .from('venues')
         .select(`
@@ -30,8 +28,7 @@ export default function VenueBusinessManagement() {
         `)
         .eq('id', venueId)
         .single();
-      
-      // If not found, try to find by company_id
+
       if (error || !data) {
         const { data: venueByCompany, error: companyError } = await supabase
           .from('venues')
@@ -41,28 +38,26 @@ export default function VenueBusinessManagement() {
           `)
           .eq('company_id', venueId)
           .single();
-        
+
         if (companyError) throw companyError;
         return venueByCompany;
       }
-      
+
       return data;
     },
     enabled: !!venueId,
   });
 
   const actualVenueId = venue?.id;
-  
+
   const { data: staff } = useVenueStaff(actualVenueId);
   const { data: bookings } = useVenueBookings(actualVenueId);
-  const { data: upgrades } = useVenueUpgrades(actualVenueId);
   const { data: financials } = useVenueFinancials(actualVenueId);
 
-  // Calculate financial stats
-  const totalRevenue = financials?.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0) || 0;
-  const totalExpenses = financials?.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
+  const totalRevenue = financials?.filter(t => t.amount > 0).reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+  const totalExpenses = financials?.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) || 0;
   const confirmedBookings = bookings?.filter(b => b.status === 'confirmed').length || 0;
-  
+
   if (venueLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -86,7 +81,7 @@ export default function VenueBusinessManagement() {
       </div>
     );
   }
-  
+
   return (
     <VipGate feature="Venue Business Management" description="Manage your venue, staff, bookings, and upgrades.">
       <FMPageScaffold
@@ -97,8 +92,6 @@ export default function VenueBusinessManagement() {
         backLabel="Back to Companies"
         headerActions={<Badge variant="outline" className="capitalize">{venue.venue_type}</Badge>}
       >
-
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-4">
@@ -137,20 +130,20 @@ export default function VenueBusinessManagement() {
               <p className={`text-xl font-bold ${totalRevenue - totalExpenses >= 0 ? 'text-primary' : 'text-destructive'}`}>
                 ${(totalRevenue - totalExpenses).toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">this period</p>
+              <p className="text-xs text-muted-foreground mt-1">recent ledger</p>
             </CardContent>
           </Card>
         </div>
-        
-        <Tabs defaultValue="staff" className="space-y-4">
+
+        <Tabs defaultValue="bookings" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="bookings" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden sm:inline">Shows & Bookings</span>
+            </TabsTrigger>
             <TabsTrigger value="staff" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Staff</span>
-            </TabsTrigger>
-            <TabsTrigger value="bookings" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Bookings</span>
             </TabsTrigger>
             <TabsTrigger value="upgrades" className="flex items-center gap-2">
               <Wrench className="h-4 w-4" />
@@ -161,49 +154,34 @@ export default function VenueBusinessManagement() {
               <span className="hidden sm:inline">Finances</span>
             </TabsTrigger>
           </TabsList>
-          
+
+          <TabsContent value="bookings" className="space-y-4">
+            {actualVenueId ? (
+              <>
+                <VenueShowsHistory venueId={actualVenueId} capacity={venue.capacity} />
+                <VenueBookingsManager venueId={actualVenueId} />
+              </>
+            ) : (
+              <Card><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">Venue not loaded</p></CardContent></Card>
+            )}
+          </TabsContent>
+
           <TabsContent value="staff">
             {actualVenueId ? (
               <VenueStaffManager venueId={actualVenueId} />
             ) : (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground py-8">
-                    Venue not loaded
-                  </p>
-                </CardContent>
-              </Card>
+              <Card><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">Venue not loaded</p></CardContent></Card>
             )}
           </TabsContent>
-          
-          <TabsContent value="bookings">
-            {actualVenueId ? (
-              <VenueBookingsManager venueId={actualVenueId} />
-            ) : (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground py-8">
-                    Venue not loaded
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
+
           <TabsContent value="upgrades">
             {actualVenueId ? (
               <VenueUpgradesManager venueId={actualVenueId} />
             ) : (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground py-8">
-                    Venue not loaded
-                  </p>
-                </CardContent>
-              </Card>
+              <Card><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">Venue not loaded</p></CardContent></Card>
             )}
           </TabsContent>
-          
+
           <TabsContent value="finances">
             <Card>
               <CardContent className="pt-6">
@@ -228,7 +206,7 @@ export default function VenueBusinessManagement() {
                             <p className="text-xs text-muted-foreground">{tx.description || 'No description'}</p>
                           </div>
                           <span className={tx.amount >= 0 ? 'text-primary' : 'text-destructive'}>
-                            {tx.amount >= 0 ? '+' : ''}${tx.amount.toLocaleString()}
+                            {tx.amount >= 0 ? '+' : ''}${Number(tx.amount).toLocaleString()}
                           </span>
                         </div>
                       ))}
