@@ -391,7 +391,7 @@ function SelectField({
   label: string;
   value: string;
   disabled: boolean;
-  options: Array<{ key: string; displayName: string }>;
+  options: Array<{ key?: string; displayName?: string }>;
   onChange: (value: string) => void;
 }) {
   return (
@@ -400,9 +400,15 @@ function SelectField({
       <Select value={value} disabled={disabled} onValueChange={onChange}>
         <SelectTrigger><SelectValue /></SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.key} value={option.key}>{option.displayName}</SelectItem>
-          ))}
+          {options.flatMap((option) =>
+            option.key && option.displayName
+              ? [
+                  <SelectItem key={option.key} value={option.key}>
+                    {option.displayName}
+                  </SelectItem>,
+                ]
+              : [],
+          )}
         </SelectContent>
       </Select>
     </div>
