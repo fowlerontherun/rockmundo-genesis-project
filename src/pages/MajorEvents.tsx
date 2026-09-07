@@ -98,7 +98,7 @@ export default function MajorEvents() {
   const getBlockReason = (instance: typeof events[number]) => {
     const event = instance.event;
     if (!event || !activeBand) return null;
-    if (event.genre && bandGenre && event.genre !== bandGenre) return `Genre mismatch — this event is for ${event.genre} bands`;
+    if (event.genre && event.genre !== bandGenre) return `Genre mismatch — this event is for ${event.genre} bands`;
     if ((yearCounts[instance.year] || 0) >= MAX_EVENTS_PER_YEAR) return `Your band already has ${MAX_EVENTS_PER_YEAR} major events in Year ${instance.year}`;
     const lastPerformed = cooldowns[event.id];
     const cooldownYears = event.cooldown_years || 3;
@@ -106,7 +106,6 @@ export default function MajorEvents() {
     return null;
   };
 
-  const completedPerformances = performances.filter((p) => p.status === 'completed');
   const eventsByYear = events.reduce((acc, instance) => {
     (acc[instance.year] ||= []).push(instance);
     return acc;
