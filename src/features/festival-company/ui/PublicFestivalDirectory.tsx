@@ -157,6 +157,11 @@ export default function PublicFestivalDirectory() {
             0,
             Math.ceil((Date.parse(festival.startsAt) - Date.now()) / 86_400_000),
           );
+          const announcedArtists = Array.from(
+            new Set(festival.timetable.map((entry) => entry.artistName).filter(Boolean)),
+          );
+          const lineupPreview = announcedArtists.slice(0, 3);
+          const remainingArtists = Math.max(0, announcedArtists.length - lineupPreview.length);
 
           return (
             <Link
@@ -205,6 +210,19 @@ export default function PublicFestivalDirectory() {
                     })}
                     {days > 0 ? ` · ${days} day${days === 1 ? "" : "s"} to go` : ""}
                   </p>
+                  {lineupPreview.length > 0 ? (
+                    <div className="rounded-lg border bg-muted/30 p-2.5">
+                      <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <Music2 size={14} /> Announced line-up
+                      </p>
+                      <p className="font-semibold">
+                        {lineupPreview.join(" · ")}
+                        {remainingArtists > 0 ? ` · +${remainingArtists} more` : ""}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Line-up announcements coming soon.</p>
+                  )}
                   <p className="flex items-center gap-2 font-semibold">
                     <Ticket size={16} />
                     {lowest
@@ -214,7 +232,7 @@ export default function PublicFestivalDirectory() {
                         : "Sales opening soon"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {festival.timetable.length} announced set{festival.timetable.length === 1 ? "" : "s"} · {festival.stages.length} stage{festival.stages.length === 1 ? "" : "s"}
+                    {announcedArtists.length} announced act{announcedArtists.length === 1 ? "" : "s"} · {festival.stages.length} stage{festival.stages.length === 1 ? "" : "s"}
                   </p>
                 </CardContent>
               </Card>
