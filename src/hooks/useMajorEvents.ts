@@ -300,6 +300,15 @@ export function useAcceptMajorEvent() {
       if (accessError) throw accessError;
       if (!allowed) throw new Error('Your band does not currently have an invitation or accepted application for this event.');
 
+      const { data: existing, error: existingError } = await (supabase as any)
+        .from('major_event_performances')
+        .select('id')
+        .eq('instance_id', instanceId)
+        .eq('band_id', bandId)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (existing) throw new Error('Your band has already confirmed this major event.');
+
       await createScheduledActivity({
         userId: profileId,
         bandId,
