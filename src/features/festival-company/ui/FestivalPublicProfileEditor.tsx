@@ -12,6 +12,7 @@ type ProfileDraft = {
   tagline: string;
   description: string;
   publicSlug: string;
+  logoReference: string;
   ageGuidance: string;
   transportSummary: string;
   campingSummary: string;
@@ -27,6 +28,7 @@ const emptyDraft: ProfileDraft = {
   tagline: "",
   description: "",
   publicSlug: "",
+  logoReference: "",
   ageGuidance: "",
   transportSummary: "",
   campingSummary: "",
@@ -64,6 +66,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
       tagline: asString(existing.tagline),
       description: asString(existing.description),
       publicSlug: asString(existing.publicSlug ?? existing.public_slug),
+      logoReference: asString(existing.logoReference ?? existing.logo_reference),
       ageGuidance: asString(existing.ageGuidance ?? existing.age_guidance),
       transportSummary: asString(existing.transportSummary ?? existing.transport_summary),
       campingSummary: asString(existing.campingSummary ?? existing.camping_summary),
@@ -100,8 +103,8 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
           tagline: draft.tagline.trim() || null,
           description: draft.description.trim(),
           publicSlug: slug,
-          heroImageReference: null,
-          logoReference: null,
+          heroImageReference: asString(existing?.heroImageReference ?? existing?.hero_image_reference) || null,
+          logoReference: draft.logoReference.trim() || null,
           ageGuidance: draft.ageGuidance.trim() || null,
           accessibilitySummary: draft.accessibilitySummary.trim() || null,
           transportSummary: draft.transportSummary.trim() || null,
@@ -143,6 +146,26 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
             <Input id="festival-public-slug" value={draft.publicSlug} onChange={set("publicSlug")} placeholder={slug || "victorious-festival"} />
             <p className="text-xs text-muted-foreground">/world/festivals/{slug || "your-festival"}</p>
           </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <div className="space-y-1.5">
+            <Label htmlFor="festival-logo-reference">Festival logo</Label>
+            <Input
+              id="festival-logo-reference"
+              value={draft.logoReference}
+              onChange={set("logoReference")}
+              placeholder="https://…/festival-logo.png"
+            />
+            <p className="text-xs text-muted-foreground">
+              Add a public image URL for the festival logo. It will appear prominently on the public festival page.
+            </p>
+          </div>
+          {draft.logoReference ? (
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border bg-muted/30 p-2">
+              <img src={draft.logoReference} alt="Festival logo preview" className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-1.5">
