@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createContext, useContext, ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { X, ChevronRight, ChevronLeft, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 
 interface TutorialStep {
   id: string;
   title: string;
   content: string;
-  target?: string; // CSS selector for highlighting
+  target?: string;
   position?: "top" | "bottom" | "left" | "right";
 }
 
@@ -36,9 +36,14 @@ export const useTutorial = () => {
 };
 
 export const TutorialProvider = ({ children }: { children: ReactNode }) => {
+  const location = useLocation();
   const [isActive, setIsActive] = useState(false);
   const [steps, setSteps] = useState<TutorialStep[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
+
+  const isCharacterCreationRoute =
+    location.pathname === "/onboarding" ||
+    location.pathname.startsWith("/characters/new");
 
   const startTutorial = (tutorialSteps: TutorialStep[]) => {
     setSteps(tutorialSteps);
@@ -87,7 +92,7 @@ export const TutorialProvider = ({ children }: { children: ReactNode }) => {
       }}
     >
       {children}
-      {isActive && steps[currentStep] && (
+      {!isCharacterCreationRoute && isActive && steps[currentStep] && (
         <TutorialOverlay
           step={steps[currentStep]}
           currentStep={currentStep}
@@ -159,7 +164,6 @@ const TutorialOverlay = ({
   );
 };
 
-// Predefined tutorials
 export const DASHBOARD_TUTORIAL: TutorialStep[] = [
   {
     id: "welcome",
