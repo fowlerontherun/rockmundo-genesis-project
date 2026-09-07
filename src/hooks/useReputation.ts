@@ -175,8 +175,8 @@ export const useReputationActions = () => {
 
     coverPopHit: (sourceId?: string) =>
       recordAction('cover_pop_hit', [
-        { axis: 'authenticity', change: -8, reason: 'Changed genre for commercial appeal' },
-        { axis: 'creativity', change: -8, reason: 'Changed genre for commercial appeal' },
+        { axis: 'authenticity', change: -5, reason: 'Covered pop hit' },
+        { axis: 'creativity', change: -5, reason: 'Covered pop hit' },
       ], sourceId),
 
     showUpEarlyToSoundcheck: (sourceId?: string) =>
