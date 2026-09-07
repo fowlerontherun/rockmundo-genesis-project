@@ -26,7 +26,17 @@ const baseActivityOptions: Array<{ value: FestivalPlanActivityType; label: strin
   { value: "vendor", label: "Vendor / merch", defaultTitle: "Browse the stalls" },
   { value: "free_time", label: "Free time", defaultTitle: "Free time" },
 ];
-const executableTypes = new Set<FestivalExecutableActivityType>(["eat", "drink", "explore", "rest", "watch_act"]);
+const executableTypes = new Set<FestivalExecutableActivityType>([
+  "eat",
+  "drink",
+  "explore",
+  "rest",
+  "watch_act",
+  "camping",
+  "vip",
+  "vendor",
+  "free_time",
+]);
 
 const formatFestivalDate = (value: string) =>
   new Date(`${value}T12:00:00`).toLocaleDateString("en-GB", {
@@ -402,7 +412,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Planned stage performances can be watched while the set is live and feed your Festival recap/reward settlement. Eat, Drink, Explore and Rest continue to use the bounded Festival condition resolver; Campsite, VIP, vendor and free-time blocks currently reserve timetable space only.
+        Every planned Festival block can now be completed inside its scheduled window. Stage performances feed your Festival recap and rewards; practical blocks update the temporary Festival condition simulation, with campsite and VIP options still gated by the admission you bought.
       </p>
     </div>
   );
