@@ -25,6 +25,7 @@ import {
   getFestivalCompanyEditions,
   type FestivalEditionPlanBindingKey,
 } from "@/features/festivals/editions/repository";
+import { FestivalPublicationCard } from "@/features/festivals/publication/FestivalPublicationCard";
 import { festivalRoutes } from "@/features/festivals/routes";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
 
@@ -198,6 +199,11 @@ export function FestivalEditionOverview({
           editionId={editionId}
         />
       </EditionScope>
+
+      <FestivalPublicationCard
+        festivalCompanyId={festivalCompanyId}
+        editionId={editionId}
+      />
 
       <Card>
         <CardHeader>
