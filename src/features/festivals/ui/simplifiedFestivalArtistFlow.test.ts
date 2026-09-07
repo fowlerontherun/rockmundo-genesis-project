@@ -24,6 +24,17 @@ describe("simplified Festival artist flow", () => {
     expect(page).not.toContain("/festival-contracts/");
   });
 
+  it("shows real managed band names when choosing who applies", () => {
+    const page = source(
+      "src/features/festival-company/ui/FestivalArtistOpportunitiesPage.tsx",
+    );
+
+    expect(page).toContain('.from("bands")');
+    expect(page).toContain('.select("id, name")');
+    expect(page).toContain("bandNames.get(bandId)");
+    expect(page).not.toContain("`Band ${index + 1}`");
+  });
+
   it("matches the authoritative artist response transitions", () => {
     const migration = source(
       "supabase/migrations/20291217151000_complete_festival_artist_workflows.sql",
