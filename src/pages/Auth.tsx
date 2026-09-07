@@ -29,8 +29,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 type AuthTab = "login" | "signup" | "forgot";
 
-
-
 interface StatusMessage {
   message: string;
   variant?: "info" | "success" | "error";
@@ -63,7 +61,7 @@ const Auth = () => {
     error: presenceError,
   } = usePlayerPresenceStats({
     refreshInterval: 45_000,
-    publicMode: true, // Use public presence since user isn't logged in yet
+    publicMode: true,
   });
 
   const formatPresenceValue = (value: number | null) => {
@@ -172,7 +170,7 @@ const Auth = () => {
           return;
         }
         if (data.session?.user && !isRecovery) {
-          navigate("/", { replace: true });
+          navigate("/onboarding", { replace: true });
         }
       } catch (sessionError) {
         console.error("Unexpected error fetching auth session:", sessionError);
@@ -241,7 +239,7 @@ const Auth = () => {
           title: t("auth.welcomeBack"),
           description: t("auth.loginSuccess"),
         });
-        navigate("/", { replace: true });
+        navigate("/onboarding", { replace: true });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : t("errors.generic");
@@ -469,11 +467,9 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-8 sm:px-6">
       <div className="w-full max-w-sm sm:max-w-md">
-        {/* Language selection available before sign-in (mobile friendly) */}
         <div className="flex justify-end mb-1">
           <LanguageSwitcher />
         </div>
-        {/* Logo and Branding */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="flex items-center justify-center mb-4">
             <img
@@ -764,7 +760,6 @@ const Auth = () => {
                         </div>
                       </div>
 
-
                       <Button
                         type="submit"
                         className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200"
@@ -799,6 +794,7 @@ const Auth = () => {
                               })
                             }
                             required
+                            minLength={1}
                           />
                         </div>
                       </div>
