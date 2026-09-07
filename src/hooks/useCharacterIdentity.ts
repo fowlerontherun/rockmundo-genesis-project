@@ -52,9 +52,9 @@ export const useTraitsByCategory = () => {
   return { traitsByCategory, allTraits, ...rest };
 };
 
-export const usePlayerCharacterIdentity = () => {
+export const usePlayerCharacterIdentity = (profileIdOverride?: string) => {
   const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const profileId = profileIdOverride ?? gameData?.profile?.id;
 
   return useQuery({
     queryKey: ["player-character-identity", profileId],
@@ -117,8 +117,8 @@ export const useCompleteOnboarding = () => {
 /**
  * Combined hook for full character identity with origin and traits resolved
  */
-export const useFullCharacterIdentity = () => {
-  const { data: identity, isLoading: identityLoading } = usePlayerCharacterIdentity();
+export const useFullCharacterIdentity = (profileIdOverride?: string) => {
+  const { data: identity, isLoading: identityLoading } = usePlayerCharacterIdentity(profileIdOverride);
   const { data: origins = [], isLoading: originsLoading } = useCharacterOrigins();
   const { data: traits = [], isLoading: traitsLoading } = usePersonalityTraits();
 
