@@ -1005,7 +1005,6 @@ function App() {
                 </Routes>
                 </Suspense>
               </ErrorBoundary>
-                </BrowserRouter>
                     </TooltipProvider>
                   </BandCrewCatalogProvider>
                 </StageEquipmentCatalogProvider>
@@ -1015,6 +1014,7 @@ function App() {
           </NotificationProvider>
         </GameDataProvider>
       </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
