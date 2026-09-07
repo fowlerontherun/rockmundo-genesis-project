@@ -45,6 +45,20 @@ const calculateTotalSkillLevels = (skills: PlayerSkills | null): number => {
 };
 
 /**
+ * Normalize the dual-currency wallet for overall-level calculations.
+ * The progression service now writes skill_xp_* as the canonical SXP fields while
+ * keeping xp_* in sync for legacy clients. Prefer the canonical fields so a stale
+ * compatibility column cannot freeze the displayed level.
+ */
+const normalizeLevelWallet = (xpWallet: PlayerXpWallet) => xpWallet ? {
+  lifetimeXp: xpWallet.skill_xp_lifetime ?? xpWallet.lifetime_xp ?? 0,
+  xpBalance: xpWallet.skill_xp_balance ?? xpWallet.xp_balance ?? 0,
+  xpSpent: xpWallet.skill_xp_spent ?? xpWallet.xp_spent ?? 0,
+  attributePointsEarned: xpWallet.attribute_points_lifetime ?? xpWallet.attribute_points_earned ?? 0,
+  skillPointsEarned: xpWallet.skill_points_earned ?? 0,
+} : null;
+
+/**
  * Hook to compute player level from combined progress sources.
  * Uses scaling XP curve and factors in:
  * - Lifetime XP from wallet
@@ -63,13 +77,7 @@ export const usePlayerLevel = (input: PlayerLevelInput): PlayerLevelData => {
       totalSkillLevels,
     };
 
-    const wallet = xpWallet ? {
-      lifetimeXp: xpWallet.lifetime_xp ?? 0,
-      xpBalance: xpWallet.xp_balance ?? 0,
-      xpSpent: xpWallet.xp_spent ?? 0,
-      attributePointsEarned: xpWallet.attribute_points_earned ?? 0,
-      skillPointsEarned: xpWallet.skill_points_earned ?? 0,
-    } : null;
+    const wallet = normalizeLevelWallet(xpWallet);
 
     const effectiveXp = getEffectiveXp(wallet, attributeStars, additionalProgress);
     const level = calculateLevel(wallet, attributeStars, additionalProgress);
@@ -102,13 +110,7 @@ export const computePlayerLevel = (input: PlayerLevelInput): PlayerLevelData => 
     totalSkillLevels,
   };
 
-  const wallet = xpWallet ? {
-    lifetimeXp: xpWallet.lifetime_xp ?? 0,
-    xpBalance: xpWallet.xp_balance ?? 0,
-    xpSpent: xpWallet.xp_spent ?? 0,
-    attributePointsEarned: xpWallet.attribute_points_earned ?? 0,
-    skillPointsEarned: xpWallet.skill_points_earned ?? 0,
-  } : null;
+  const wallet = normalizeLevelWallet(xpWallet);
 
   const effectiveXp = getEffectiveXp(wallet, attributeStars, additionalProgress);
   const level = calculateLevel(wallet, attributeStars, additionalProgress);
