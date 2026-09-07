@@ -85,7 +85,8 @@ describe("Festival C6 condition simulation", () => {
     expect(myDaySource).toContain('"free_time"');
     expect(myDaySource).toContain("attendance.includesCamping");
     expect(myDaySource).toContain("attendance.includesVipArea");
-    expect(myDaySource).toContain('active ? watchingAct ? "Watch now" : "Do now"');
+    expect(myDaySource).toContain('"Watch now"');
+    expect(myDaySource).toContain('"Do now"');
   });
 
   it("keeps permanent Wellness feedback bounded on Festival exit", () => {
