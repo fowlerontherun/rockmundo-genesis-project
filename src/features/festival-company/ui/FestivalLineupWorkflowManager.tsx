@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useFestivalArtistProgramme } from "../application/useFestivalArtistProgramme";
 import type { ArtistIdentity, FestivalArtistBooking } from "../domain/festivalArtistProgramme";
+import { FestivalOwnerNpcActsManager } from "./FestivalOwnerNpcActsManager";
 import { SimplifiedFestivalLineupManager } from "./SimplifiedFestivalLineupManager";
 
 const artistLabel = (identity: ArtistIdentity) => {
@@ -108,7 +109,7 @@ export function FestivalLineupWorkflowManager({
           </div>
 
           <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1"><Music2 className="h-4 w-4" /> {confirmed.length} confirmed</span>
+            <span className="flex items-center gap-1"><Music2 className="h-4 w-4" /> {confirmed.length} confirmed player acts</span>
             <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {data.playerArtistCount} player acts</span>
             <span>{data.stages.length} stage{data.stages.length === 1 ? "" : "s"}</span>
           </div>
@@ -118,15 +119,22 @@ export function FestivalLineupWorkflowManager({
       {requiresConfirmedAct ? (
         <Card className="border-amber-500/40 bg-amber-500/5">
           <CardHeader>
-            <CardTitle>Confirm at least one act</CardTitle>
+            <CardTitle>Confirm at least one player act</CardTitle>
             <CardDescription>
               Invite an act or review an application, send a performance offer
-              and wait for it to be accepted. Once one act is confirmed, the
-              game can fill remaining Festival slots with suitable NPC acts.
+              and wait for it to be accepted. NPC acts can be curated separately
+              below and automatic fallback can still fill unused spaces.
             </CardDescription>
           </CardHeader>
         </Card>
       ) : null}
+
+      <FestivalOwnerNpcActsManager
+        festivalCompanyId={festivalCompanyId}
+        festivalEditionId={festivalEditionId}
+        festivalDates={data.festivalDates}
+        stages={data.stages}
+      />
 
       <SimplifiedFestivalLineupManager
         festivalCompanyId={festivalCompanyId}
