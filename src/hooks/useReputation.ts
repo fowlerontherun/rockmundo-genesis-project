@@ -1,7 +1,6 @@
 // Reputation Hook - Manages player's reputation across 4 axes
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useOptionalGameData } from "@/hooks/useGameData";
 import {
   fetchPlayerReputation,
@@ -28,10 +27,10 @@ export const usePlayerReputation = () => {
   });
 };
 
-export const useCreateReputation = () => {
+export const useCreateReputation = (profileIdOverride?: string) => {
   const queryClient = useQueryClient();
   const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const profileId = profileIdOverride ?? gameData?.profile?.id;
 
   return useMutation({
     mutationFn: (initialModifiers?: {
@@ -91,9 +90,6 @@ export const useReputationEvents = (limit = 20) => {
   });
 };
 
-/**
- * Get reputation label based on score
- */
 export const getReputationLabel = (
   axis: ReputationAxis,
   score: number
@@ -107,7 +103,7 @@ export const getReputationLabel = (
 
   const absScore = Math.abs(score);
   let intensity: 'extreme' | 'strong' | 'moderate' | 'slight' | 'neutral';
-  
+
   if (absScore >= 75) intensity = 'extreme';
   else if (absScore >= 50) intensity = 'strong';
   else if (absScore >= 25) intensity = 'moderate';
@@ -119,9 +115,6 @@ export const getReputationLabel = (
   return { label, intensity };
 };
 
-/**
- * Get color for reputation score
- */
 export const getReputationColor = (score: number): string => {
   if (score >= 50) return 'text-green-500';
   if (score >= 25) return 'text-green-400';
@@ -131,17 +124,11 @@ export const getReputationColor = (score: number): string => {
   return 'text-red-500';
 };
 
-/**
- * Format reputation score for display
- */
 export const formatReputationScore = (score: number): string => {
   if (score > 0) return `+${score}`;
   return score.toString();
 };
 
-/**
- * Hook to easily update reputation with common actions
- */
 export const useReputationActions = () => {
   const updateReputation = useUpdateReputation();
 
@@ -158,7 +145,6 @@ export const useReputationActions = () => {
     });
   };
 
-  // Pre-defined common reputation actions
   const actions = {
     acceptCorporateSponsorship: (sourceId?: string) =>
       recordAction('corporate_sponsorship', [
