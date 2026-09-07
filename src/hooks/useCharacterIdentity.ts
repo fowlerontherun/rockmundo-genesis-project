@@ -1,7 +1,6 @@
 // Character Identity Hook - Manages player's RP identity (origin, traits, backstory)
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// useAuth removed — profileId sourced from useOptionalGameData
 import { useOptionalGameData } from "@/hooks/useGameData";
 import {
   fetchCharacterOrigins,
@@ -23,7 +22,7 @@ export const useCharacterOrigins = () => {
   return useQuery({
     queryKey: ["character-origins"],
     queryFn: fetchCharacterOrigins,
-    staleTime: 1000 * 60 * 30, // 30 minutes - rarely changes
+    staleTime: 1000 * 60 * 30,
   });
 };
 
@@ -37,7 +36,7 @@ export const usePersonalityTraits = () => {
 
 export const useTraitsByCategory = () => {
   const { data: allTraits = [], ...rest } = usePersonalityTraits();
-  
+
   const traitsByCategory = allTraits.reduce<Record<TraitCategory, PersonalityTrait[]>>(
     (acc, trait) => {
       if (!acc[trait.category]) {
@@ -64,10 +63,10 @@ export const usePlayerCharacterIdentity = (profileIdOverride?: string) => {
   });
 };
 
-export const useCreateCharacterIdentity = () => {
+export const useCreateCharacterIdentity = (profileIdOverride?: string) => {
   const queryClient = useQueryClient();
   const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const profileId = profileIdOverride ?? gameData?.profile?.id;
 
   return useMutation({
     mutationFn: () => {
@@ -80,10 +79,10 @@ export const useCreateCharacterIdentity = () => {
   });
 };
 
-export const useUpdateCharacterIdentity = () => {
+export const useUpdateCharacterIdentity = (profileIdOverride?: string) => {
   const queryClient = useQueryClient();
   const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const profileId = profileIdOverride ?? gameData?.profile?.id;
 
   return useMutation({
     mutationFn: (updates: UpdateCharacterIdentityInput) => {
@@ -96,10 +95,10 @@ export const useUpdateCharacterIdentity = () => {
   });
 };
 
-export const useCompleteOnboarding = () => {
+export const useCompleteOnboarding = (profileIdOverride?: string) => {
   const queryClient = useQueryClient();
   const gameData = useOptionalGameData();
-  const profileId = gameData?.profile?.id;
+  const profileId = profileIdOverride ?? gameData?.profile?.id;
 
   return useMutation({
     mutationFn: () => {
@@ -108,8 +107,8 @@ export const useCompleteOnboarding = () => {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["player-character-identity", profileId], data);
-      // Invalidate other queries that might depend on onboarding status
       queryClient.invalidateQueries({ queryKey: ["player-reputation"] });
+      queryClient.invalidateQueries({ queryKey: ["active-profile"] });
     },
   });
 };
@@ -155,7 +154,7 @@ export const useTraitCompatibility = () => {
 
   const areTraitsCompatible = (traitIds: string[]): boolean => {
     const selectedTraits = allTraits.filter((t) => traitIds.includes(t.id));
-    
+
     for (const trait of selectedTraits) {
       for (const incompatibleKey of trait.incompatible_with) {
         if (selectedTraits.some((t) => t.key === incompatibleKey)) {
@@ -163,7 +162,7 @@ export const useTraitCompatibility = () => {
         }
       }
     }
-    
+
     return true;
   };
 
