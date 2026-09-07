@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Heart, HeartHandshake, LockKeyhole, MessageCircle, Sparkles, UserRoundPlus, Users, Zap } from "lucide-react";
+import { Heart, HeartHandshake, LockKeyhole, MapPin, MessageCircle, Sparkles, UserRoundPlus, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,9 @@ function ContactCard({
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{archetype?.description}</p>
+          {contact.city?.name && (
+            <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground"><MapPin className="h-3 w-3" /> Met in {contact.city.name}</div>
+          )}
         </div>
         <div className="text-right text-[10px] text-muted-foreground">
           <div>{contact.encounter_count} encounters</div>
@@ -173,7 +176,7 @@ export function SceneContactsPanel({ profileId, age }: Props) {
             <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
               <div>
                 <div className="text-sm font-medium">Work the room</div>
-                <p className="text-xs text-muted-foreground">Meet up to three new people at a time, with a maximum of eight active scene contacts. New contacts are always adults.</p>
+                <p className="text-xs text-muted-foreground">Meet up to three new people at a time, with a maximum of eight active scene contacts. New contacts are always adults and remember the city where you met.</p>
               </div>
               <Button size="sm" disabled={discover.isPending} onClick={() => discover.mutate()}>
                 <UserRoundPlus className="mr-1 h-4 w-4" /> Meet people
