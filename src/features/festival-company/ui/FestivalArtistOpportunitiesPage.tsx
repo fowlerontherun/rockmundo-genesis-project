@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,6 +94,23 @@ const friendly = (error: unknown) => {
 
 export default function FestivalArtistOpportunitiesPage() {
   const query = useFestivalArtistOpportunities();
+  const managedBandIds = query.data?.permissions.managedBandIds ?? [];
+  const managedBands = useQuery({
+    queryKey: ["festival-managed-band-names", managedBandIds],
+    enabled: managedBandIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bands")
+        .select("id, name")
+        .in("id", managedBandIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const bandNames = useMemo(
+    () => new Map((managedBands.data ?? []).map((band) => [band.id, band.name])),
+    [managedBands.data],
+  );
   const submit = useFestivalArtistAction("submitApplication");
   const withdraw = useFestivalArtistAction("withdrawApplication");
   const respondInvitation = useFestivalArtistAction("respondInvitation");
@@ -146,8 +165,8 @@ export default function FestivalArtistOpportunitiesPage() {
           },
         ]
       : []),
-    ...data.permissions.managedBandIds.map((bandId, index) => ({
-      label: `Band ${index + 1}`,
+    ...data.permissions.managedBandIds.map((bandId) => ({
+      label: bandNames.get(bandId) ?? `Band ${bandId.slice(0, 8)}`,
       type: "band",
       profile: null,
       band: bandId,
