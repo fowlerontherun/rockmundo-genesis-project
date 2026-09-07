@@ -1,6 +1,9 @@
 import type { FestivalPlanActivityType } from "./festivalDayPlanner";
 
-export type FestivalExecutableActivityType = Exclude<FestivalPlanActivityType, "watch_act">;
+export type FestivalExecutableActivityType = Extract<
+  FestivalPlanActivityType,
+  "eat" | "drink" | "explore" | "rest" | "watch_act"
+>;
 
 export interface FestivalActivityConditionValues {
   energy: number;
@@ -28,7 +31,7 @@ export interface FestivalCompletedActivityResolution {
   planItemId: string;
   attendanceId: string;
   activityType: FestivalExecutableActivityType;
-  durationMinutes: 30 | 60 | 90;
+  durationMinutes: number;
   status: "completed";
   before: FestivalActivityConditionValues;
   effect: FestivalActivityConditionValues;
@@ -41,7 +44,7 @@ export interface FestivalMissedActivityResolution {
   planItemId: string;
   attendanceId: string;
   activityType: FestivalExecutableActivityType;
-  durationMinutes: 30 | 60 | 90;
+  durationMinutes: number;
   status: "missed";
   reason: "activity_window_missed";
   resolvedAt: string | null;
@@ -53,15 +56,21 @@ export type FestivalActivityResolution =
   | FestivalMissedActivityResolution;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const EXECUTABLE_TYPES = new Set<FestivalExecutableActivityType>(["eat", "drink", "explore", "rest"]);
-const DURATIONS = new Set([30, 60, 90]);
+const EXECUTABLE_TYPES = new Set<FestivalExecutableActivityType>([
+  "eat",
+  "drink",
+  "explore",
+  "rest",
+  "watch_act",
+]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const isUuid = (value: unknown): value is string => typeof value === "string" && UUID_RE.test(value);
 const isString = (value: unknown): value is string => typeof value === "string";
 const isNullableString = (value: unknown): value is string | null => value === null || typeof value === "string";
-const isDuration = (value: unknown): value is 30 | 60 | 90 => typeof value === "number" && DURATIONS.has(value);
+const isDuration = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 5 && value <= 360;
 const isExecutableType = (value: unknown): value is FestivalExecutableActivityType =>
   typeof value === "string" && EXECUTABLE_TYPES.has(value as FestivalExecutableActivityType);
 const isConditionValue = (value: unknown): value is number =>
