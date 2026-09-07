@@ -10,38 +10,39 @@ describe("simplified Festival company setup experience", () => {
     "src/features/festival-company/ui/FestivalConfigurationWizard.tsx",
   );
 
-  it("presents four owner-facing setup steps instead of the old six-screen flow", () => {
+  it("reduces founding to four high-impact choices", () => {
     for (const label of [
-      "Festival identity",
-      "Festival defaults",
-      "First annual Festival",
-      "Review & create",
+      "Festival name",
+      "Home city",
+      "Starting size",
+      "First Festival date",
     ]) {
-      expect(wizard).toContain(`title: "${label}"`);
+      expect(wizard).toContain(label);
     }
 
-    expect(wizard).toContain("Plan → Line-up → Tickets & budget → Run Festival → Results");
-    expect(wizard).not.toContain("FestivalWizardProgress");
+    expect(wizard).toContain("Start the Festival company with four decisions");
+    expect(wizard).not.toContain("compactSteps");
+    expect(wizard).not.toContain("Festival defaults");
   });
 
-  it("makes the permanent-company versus annual-event boundary explicit", () => {
-    expect(wizard).toContain("permanent Festival company brand");
-    expect(wizard).toContain("starting preferences for future annual Festivals");
-    expect(wizard).toContain("This step only seeds your first annual Festival");
-    expect(wizard).toContain("you will not return to this company setup wizard for yearly planning");
+  it("derives technical defaults instead of asking the player twice", () => {
+    expect(wizard).toContain('configuration.vibe ?? "community"');
+    expect(wizard).toContain('configuration.siteType ?? "outdoor"');
+    expect(wizard).toContain('"standard"');
+    expect(wizard).toContain("annualMonth");
+    expect(wizard).toContain("plannedEndDate: addDays");
   });
 
   it("hands successful setup directly to the exact first annual Plan", () => {
-    expect(wizard).toContain("Finish setup & open Plan");
+    expect(wizard).toContain("Create Festival & start planning");
     expect(wizard).toMatch(
-      /complete && canonical\.festivalEditionId[\s\S]*festivalRoutes\.edition\([\s\S]*festivalCompanyId,[\s\S]*canonical\.festivalEditionId/,
+      /canonical\.festivalEditionId[\s\S]*festivalRoutes\.edition\([\s\S]*festivalCompanyId,[\s\S]*canonical\.festivalEditionId/,
     );
   });
 
-  it("keeps authoritative load errors, retry and stale-write conflict handling", () => {
+  it("keeps authoritative load errors and retry handling", () => {
     expect(wizard).toContain("festivalConfigurationErrorMessage(query.error)");
     expect(wizard).toContain("query.refetch()");
-    expect(wizard).toContain('error.code === "festival_configuration_stale"');
-    expect(wizard).toContain("FestivalConflictAlert");
+    expect(wizard).toContain("festivalConfigurationErrorMessage(save.error)");
   });
 });
