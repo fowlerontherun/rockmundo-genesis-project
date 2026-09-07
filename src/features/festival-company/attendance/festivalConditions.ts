@@ -2,7 +2,7 @@ import type { FestivalPlanActivityType } from "./festivalDayPlanner";
 
 export type FestivalExecutableActivityType = Extract<
   FestivalPlanActivityType,
-  "eat" | "drink" | "explore" | "rest" | "watch_act"
+  "eat" | "drink" | "explore" | "rest" | "watch_act" | "camping" | "vip" | "vendor" | "free_time"
 >;
 
 export interface FestivalActivityConditionValues {
@@ -62,6 +62,10 @@ const EXECUTABLE_TYPES = new Set<FestivalExecutableActivityType>([
   "explore",
   "rest",
   "watch_act",
+  "camping",
+  "vip",
+  "vendor",
+  "free_time",
 ]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
