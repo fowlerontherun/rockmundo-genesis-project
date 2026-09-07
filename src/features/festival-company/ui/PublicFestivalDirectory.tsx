@@ -1,10 +1,12 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, MapPin, Music2, Ticket, Wristband } from "lucide-react";
+import { CalendarDays, MapPin, Music2, Sparkles, Ticket, Wristband } from "lucide-react";
 import { festivalRoutes } from "@/features/festivals/routes";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FestivalModeRewards } from "../attendance/FestivalModeRewards";
 import { useMyFestivalAttendance } from "../attendance/useFestivalAttendance";
 import { usePublicFestivalDirectory } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
@@ -26,14 +28,32 @@ const attendanceLabel = (status: string) => {
   }
 };
 
+const hasFestivalStory = (status: string) => ["completed", "left_early"].includes(status);
+
 export default function PublicFestivalDirectory() {
   const { user } = useAuth();
   const { data = [], isLoading, isError } = usePublicFestivalDirectory();
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
+  const [storyAttendanceId, setStoryAttendanceId] = useState<string | null>(null);
 
-  const activeAttendance = attendance.filter(
-    (item) => !["cancelled", "refunded"].includes(item.status),
+  const activeAttendance = useMemo(
+    () =>
+      attendance
+        .filter((item) => !["cancelled", "refunded"].includes(item.status))
+        .sort((left, right) => {
+          const priority = (status: string) => {
+            if (status === "attending") return 0;
+            if (["ready_to_check_in", "ticketed"].includes(status)) return 1;
+            if (status === "completed") return 2;
+            if (status === "left_early") return 3;
+            return 4;
+          };
+          return priority(left.status) - priority(right.status);
+        }),
+    [attendance],
   );
+
+  const storyAttendance = activeAttendance.find((item) => item.id === storyAttendanceId) ?? null;
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
@@ -62,21 +82,57 @@ export default function PublicFestivalDirectory() {
               <Wristband className="h-5 w-5" /> My Festivals
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {activeAttendance.map((item) => (
-              <Link
-                key={item.id}
-                to={festivalRoutes.publicCompany(item.festivalSlug)}
-                className="rounded-lg border bg-background px-3 py-2 text-sm transition hover:border-primary"
-              >
-                <span className="font-medium">{item.festivalName}</span>
-                <Badge variant="secondary" className="ml-2 capitalize">
-                  {attendanceLabel(item.status)}
-                </Badge>
-              </Link>
-            ))}
+          <CardContent className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {activeAttendance.map((item) => {
+                const storyAvailable = hasFestivalStory(item.status);
+                const storyOpen = storyAttendanceId === item.id;
+                return (
+                  <div key={item.id} className="rounded-lg border bg-background p-3 text-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <span className="font-medium">{item.festivalName}</span>
+                        <Badge variant="secondary" className="ml-2 capitalize">
+                          {attendanceLabel(item.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={festivalRoutes.publicCompany(item.festivalSlug)}>
+                          {item.status === "attending" ? "Return to Festival" : "Festival details"}
+                        </Link>
+                      </Button>
+                      {storyAvailable ? (
+                        <Button
+                          size="sm"
+                          variant={storyOpen ? "secondary" : "default"}
+                          onClick={() => setStoryAttendanceId(storyOpen ? null : item.id)}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          {storyOpen ? "Hide story" : "View my Festival story"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
+      ) : null}
+
+      {storyAttendance ? (
+        <section aria-label={`Festival story for ${storyAttendance.festivalName}`} className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Permanent attendee recap</p>
+              <h2 className="text-2xl font-bold">{storyAttendance.festivalName}</h2>
+            </div>
+            <Button variant="ghost" onClick={() => setStoryAttendanceId(null)}>Close story</Button>
+          </div>
+          <FestivalModeRewards attendance={storyAttendance} />
+        </section>
       ) : null}
 
       {isLoading && <p role="status">Loading launched Festivals…</p>}
@@ -131,7 +187,9 @@ export default function PublicFestivalDirectory() {
                     <div className="mb-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2">
                       <span className="font-medium">{attendanceLabel(myAttendance.status)}</span>
                       <span className="block text-xs text-muted-foreground">
-                        Open the Festival for tickets, check-in and your attendee experience.
+                        {hasFestivalStory(myAttendance.status)
+                          ? "Your permanent Festival story is available in My Festivals above."
+                          : "Open the Festival for tickets, check-in and your attendee experience."}
                       </span>
                     </div>
                   ) : null}
