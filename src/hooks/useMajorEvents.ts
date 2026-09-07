@@ -22,6 +22,9 @@ export interface MajorEvent {
   genre: string | null;
   duration_hours: number;
   cooldown_years: number;
+  max_band_slots: number;
+  direct_invite_slots: number;
+  application_fame_ratio: number;
 }
 
 export interface MajorEventInstance {
@@ -34,6 +37,17 @@ export interface MajorEventInstance {
   status: string;
   invited_band_ids: string[];
   event?: MajorEvent;
+}
+
+export interface MajorEventApplication {
+  id: string;
+  instance_id: string;
+  band_id: string;
+  profile_id: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
+  decision_reason: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MajorEventPerformance {
@@ -74,13 +88,9 @@ export function useMajorEvents() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('major_event_instances')
-        .select(`
-          *,
-          event:major_events(*)
-        `)
+        .select('*, event:major_events(*)')
         .eq('status', 'upcoming')
         .order('event_date');
-
       if (error) throw error;
       return data as MajorEventInstance[];
     },
@@ -93,16 +103,61 @@ export function useMajorEventHistory() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('major_event_instances')
-        .select(`
-          *,
-          event:major_events(*)
-        `)
+        .select('*, event:major_events(*)')
         .in('status', ['completed', 'past'])
         .order('event_date', { ascending: false });
-
       if (error) throw error;
       return data as MajorEventInstance[];
     },
+  });
+}
+
+export function useMajorEventApplications(bandId?: string) {
+  return useQuery({
+    queryKey: ['major-event-applications', bandId],
+    queryFn: async () => {
+      if (!bandId) return [];
+      const { data, error } = await (supabase as any)
+        .from('major_event_applications')
+        .select('*')
+        .eq('band_id', bandId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as MajorEventApplication[];
+    },
+    enabled: !!bandId,
+  });
+}
+
+export function useApplyToMajorEvent() {
+  const { profileId } = useActiveProfile();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ instanceId, bandId }: { instanceId: string; bandId: string }) => {
+      if (!profileId) throw new Error('Must be logged in');
+      const { data, error } = await (supabase as any).rpc('submit_major_event_application', {
+        p_instance_id: instanceId,
+        p_band_id: bandId,
+        p_profile_id: profileId,
+      });
+      if (error) throw error;
+      return data as MajorEventApplication;
+    },
+    onSuccess: (application) => {
+      toast({
+        title: application.status === 'accepted' ? 'Application accepted!' : 'Application submitted',
+        description: application.decision_reason || 'Your application has been recorded.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['major-event-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['major-events'] });
+    },
+    onError: (error: Error) => toast({
+      title: 'Could not apply',
+      description: error.message,
+      variant: 'destructive',
+    }),
   });
 }
 
@@ -121,7 +176,6 @@ export function useMajorEventPerformances(userId?: string) {
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       return data as MajorEventPerformance[];
     },
@@ -134,7 +188,6 @@ export function useMajorEventPerformance(performanceId: string | null) {
     queryKey: ['major-event-performance', performanceId],
     queryFn: async () => {
       if (!performanceId) return null;
-
       const { data, error } = await (supabase as any)
         .from('major_event_performances')
         .select(`
@@ -146,7 +199,6 @@ export function useMajorEventPerformance(performanceId: string | null) {
         `)
         .eq('id', performanceId)
         .single();
-
       if (error) throw error;
       return data as MajorEventPerformance;
     },
@@ -159,13 +211,11 @@ export function useMajorEventSongPerformances(performanceId: string | null) {
     queryKey: ['major-event-song-performances', performanceId],
     queryFn: async () => {
       if (!performanceId) return [];
-
       const { data, error } = await (supabase as any)
         .from('major_event_song_performances')
         .select('*')
         .eq('performance_id', performanceId)
         .order('position');
-
       if (error) throw error;
       return data as MajorEventSongPerformance[];
     },
@@ -173,32 +223,22 @@ export function useMajorEventSongPerformances(performanceId: string | null) {
   });
 }
 
-/**
- * Check if band is on cooldown for a specific event (performed in last 3 game years)
- */
 export function useBandEventCooldowns(bandId?: string) {
   return useQuery({
     queryKey: ['band-event-cooldowns', bandId],
     queryFn: async () => {
       if (!bandId) return {};
-      
-      // Get all completed performances for this band
       const { data, error } = await (supabase as any)
         .from('major_event_performances')
         .select('instance_id, instance:major_event_instances(event_id, year)')
         .eq('band_id', bandId)
         .eq('status', 'completed');
-      
       if (error) throw error;
-      
-      // Build a map of event_id -> last year performed
       const cooldowns: Record<string, number> = {};
-      for (const perf of (data || [])) {
+      for (const perf of data || []) {
         const eventId = perf.instance?.event_id;
         const year = perf.instance?.year;
-        if (eventId && year) {
-          cooldowns[eventId] = Math.max(cooldowns[eventId] || 0, year);
-        }
+        if (eventId && year) cooldowns[eventId] = Math.max(cooldowns[eventId] || 0, year);
       }
       return cooldowns;
     },
@@ -206,29 +246,21 @@ export function useBandEventCooldowns(bandId?: string) {
   });
 }
 
-/**
- * Count how many events the band has accepted/completed in a given year
- */
 export function useBandYearEventCount(bandId?: string) {
   return useQuery({
     queryKey: ['band-year-event-count', bandId],
     queryFn: async () => {
       if (!bandId) return {};
-      
       const { data, error } = await (supabase as any)
         .from('major_event_performances')
         .select('instance_id, instance:major_event_instances(year)')
         .eq('band_id', bandId)
         .in('status', ['accepted', 'in_progress', 'completed']);
-      
       if (error) throw error;
-      
       const counts: Record<number, number> = {};
-      for (const perf of (data || [])) {
+      for (const perf of data || []) {
         const year = perf.instance?.year;
-        if (year) {
-          counts[year] = (counts[year] || 0) + 1;
-        }
+        if (year) counts[year] = (counts[year] || 0) + 1;
       }
       return counts;
     },
@@ -242,16 +274,7 @@ export function useAcceptMajorEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      instanceId,
-      bandId,
-      song1Id,
-      song2Id,
-      song3Id,
-      eventStart,
-      eventEnd,
-      eventName,
-    }: {
+    mutationFn: async ({ instanceId, bandId, song1Id, song2Id, song3Id, eventStart, eventEnd, eventName }: {
       instanceId: string;
       bandId: string;
       song1Id: string;
@@ -262,14 +285,36 @@ export function useAcceptMajorEvent() {
       eventName: string;
     }) => {
       if (!profileId) throw new Error('Must be logged in');
+      if (!eventStart || !eventEnd) throw new Error('This event does not have a valid scheduled time.');
+      const start = new Date(eventStart);
+      const end = new Date(eventEnd);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+        throw new Error('This event has an invalid scheduled time.');
+      }
+      if (start <= new Date()) throw new Error('This event has already started.');
 
-      // Create scheduled activity to block the time slot
+      const { data: allowed, error: accessError } = await (supabase as any).rpc('can_accept_major_event', {
+        p_instance_id: instanceId,
+        p_band_id: bandId,
+      });
+      if (accessError) throw accessError;
+      if (!allowed) throw new Error('Your band does not currently have an invitation or accepted application for this event.');
+
+      const { data: existing, error: existingError } = await (supabase as any)
+        .from('major_event_performances')
+        .select('id')
+        .eq('instance_id', instanceId)
+        .eq('band_id', bandId)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (existing) throw new Error('Your band has already confirmed this major event.');
+
       await createScheduledActivity({
         userId: profileId,
         bandId,
         activityType: 'major_event' as any,
-        scheduledStart: new Date(eventStart),
-        scheduledEnd: new Date(eventEnd),
+        scheduledStart: start,
+        scheduledEnd: end,
         title: `🏟️ ${eventName}`,
         description: `Performing at ${eventName}`,
         metadata: { major_event_instance_id: instanceId },
@@ -277,56 +322,33 @@ export function useAcceptMajorEvent() {
 
       const { data, error } = await (supabase as any)
         .from('major_event_performances')
-        .insert({
-          instance_id: instanceId,
-          user_id: profileId,
-          band_id: bandId,
-          song_1_id: song1Id,
-          song_2_id: song2Id,
-          song_3_id: song3Id,
-          status: 'accepted',
-        })
+        .insert({ instance_id: instanceId, user_id: profileId, band_id: bandId, song_1_id: song1Id, song_2_id: song2Id, song_3_id: song3Id, status: 'accepted' })
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      toast({
-        title: "Invitation Accepted!",
-        description: "You've accepted the major event invitation. It's been added to your schedule!",
-      });
+      toast({ title: 'Major event confirmed!', description: 'Your place is confirmed and the performance has been added to your schedule.' });
       queryClient.invalidateQueries({ queryKey: ['major-event-performances'] });
+      queryClient.invalidateQueries({ queryKey: ['major-event-applications'] });
       queryClient.invalidateQueries({ queryKey: ['band-year-event-count'] });
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to accept",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    onError: (error: Error) => toast({ title: 'Could not confirm event', description: error.message, variant: 'destructive' }),
   });
 }
 
 export function useStartMajorEventPerformance() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (performanceId: string) => {
       const { data, error } = await (supabase as any)
         .from('major_event_performances')
-        .update({
-          status: 'in_progress',
-          started_at: new Date().toISOString(),
-          current_song_position: 1,
-        })
+        .update({ status: 'in_progress', started_at: new Date().toISOString(), current_song_position: 1 })
         .eq('id', performanceId)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
