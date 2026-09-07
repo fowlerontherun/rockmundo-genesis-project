@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchBandAvailableSongs } from "@/hooks/useBandAvailableSongs";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,20 @@ interface OpenMicSongSelectorProps {
   onConfirm: (song1Id: string, song2Id: string) => void;
 }
 
+const normalizeSong = (song: {
+  id: string;
+  title: string | null;
+  duration_seconds: number | null;
+  quality_score: number | null;
+  genre: string | null;
+}): Song => ({
+  id: song.id,
+  title: song.title || "Untitled song",
+  duration_seconds: song.duration_seconds || 0,
+  quality_score: song.quality_score || 0,
+  genre: song.genre || "Unknown",
+});
+
 export function OpenMicSongSelector({
   open,
   onOpenChange,
@@ -44,26 +59,32 @@ export function OpenMicSongSelector({
   const { data: songs = [], isLoading } = useQuery({
     queryKey: ['songs-for-open-mic', bandId ?? null, profileId ?? null],
     queryFn: async () => {
-      // Any song that exists in the songs table (i.e. has been written) is
-      // eligible for open mic — it does NOT need to be recorded. Some legacy
-      // rows have completed_at=NULL or status='draft' even though the
-      // songwriting project is fully complete, so we no longer filter on those.
-      let query = supabase
-        .from('songs')
-        .select('id, title, duration_seconds, quality_score, genre, band_id, profile_id, completed_at, status')
-        .neq('archived', true);
-
+      // Open mic should use the same repertoire source as rehearsals and
+      // setlists. A band's available songs can include songs owned by active
+      // members even when songs.band_id is null, which is common for songs that
+      // were written before being rehearsed with the band.
       if (bandId) {
-        query = query.eq('band_id', bandId);
-      } else if (profileId) {
-        query = query.eq('profile_id', profileId).is('band_id', null);
-      } else {
-        return [] as Song[];
+        const availableSongs = await fetchBandAvailableSongs(bandId);
+        return availableSongs
+          .map(normalizeSong)
+          .sort((a, b) => b.quality_score - a.quality_score);
       }
 
-      const { data, error } = await query.order('quality_score', { ascending: false });
+      if (!profileId) return [] as Song[];
+
+      // Solo performers can use their own unarchived songs without requiring a
+      // recording. Keep this character-scoped so songs from another character
+      // on the same auth account are never mixed in.
+      const { data, error } = await supabase
+        .from('songs')
+        .select('id, title, duration_seconds, quality_score, genre')
+        .eq('profile_id', profileId)
+        .is('band_id', null)
+        .or('archived.is.null,archived.eq.false')
+        .order('quality_score', { ascending: false });
+
       if (error) throw error;
-      return (data || []) as Song[];
+      return (data || []).map(normalizeSong);
     },
     enabled: open && (!!bandId || !!profileId),
   });
@@ -74,7 +95,7 @@ export function OpenMicSongSelector({
         return prev.filter((id) => id !== songId);
       }
       if (prev.length >= 2) {
-        return prev; // Don't add more than 2
+        return prev;
       }
       return [...prev, songId];
     });
@@ -116,17 +137,17 @@ export function OpenMicSongSelector({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              You need at least one completed song to perform. Finish a song in the Songwriting section — it doesn't need to be recorded.
+              No eligible songs were found. Band entries can use songs available to the active band, including songs written by active band members; solo entries use your own songs.
             </AlertDescription>
           </Alert>
         ) : (
           <>
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-2">
-                {songs.map((song, index) => {
+                {songs.map((song) => {
                   const isSelected = selectedSongs.includes(song.id);
                   const selectionIndex = selectedSongs.indexOf(song.id);
-                  
+
                   return (
                     <div
                       key={song.id}
