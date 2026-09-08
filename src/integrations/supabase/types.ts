@@ -5436,6 +5436,7 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          responder_type: string
           responder_user_id: string | null
           status_at_response: string | null
           updated_at: string
@@ -5445,6 +5446,7 @@ export type Database = {
           created_at?: string
           id?: string
           message: string
+          responder_type?: string
           responder_user_id?: string | null
           status_at_response?: string | null
           updated_at?: string
@@ -5454,6 +5456,7 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+          responder_type?: string
           responder_user_id?: string | null
           status_at_response?: string | null
           updated_at?: string
@@ -20260,6 +20263,69 @@ export type Database = {
             columns: ["settlement_id"]
             isOneToOne: false
             referencedRelation: "festival_edition_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_merch_assignments: {
+        Row: {
+          band_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          festival_id: string
+          id: string
+          merchandise_id: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          festival_id: string
+          id?: string
+          merchandise_id: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          festival_id?: string
+          id?: string
+          merchandise_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_merch_assignments_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_merch_assignments_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_merch_assignments_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_merch_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_merch_assignments_merchandise_id_fkey"
+            columns: ["merchandise_id"]
+            isOneToOne: false
+            referencedRelation: "player_merchandise"
             referencedColumns: ["id"]
           },
         ]
@@ -36191,8 +36257,10 @@ export type Database = {
           min_fans: number | null
           min_level: number | null
           min_order_qty: number
+          minimum_retail_price: number
           print_areas: Json
           product_kind: string
+          recommended_retail_price: number
           supplier_tier: string
         }
         Insert: {
@@ -36213,8 +36281,10 @@ export type Database = {
           min_fans?: number | null
           min_level?: number | null
           min_order_qty?: number
+          minimum_retail_price: number
           print_areas?: Json
           product_kind?: string
+          recommended_retail_price: number
           supplier_tier?: string
         }
         Update: {
@@ -36235,8 +36305,10 @@ export type Database = {
           min_fans?: number | null
           min_level?: number | null
           min_order_qty?: number
+          minimum_retail_price?: number
           print_areas?: Json
           product_kind?: string
+          recommended_retail_price?: number
           supplier_tier?: string
         }
         Relationships: []
@@ -43941,6 +44013,45 @@ export type Database = {
             foreignKeyName: "player_social_transfers_sender_profile_id_fkey"
             columns: ["sender_profile_id"]
             isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_stage_appearances: {
+        Row: {
+          appearance: Json
+          created_at: string
+          profile_id: string
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          appearance: Json
+          created_at?: string
+          profile_id: string
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          appearance?: Json
+          created_at?: string
+          profile_id?: string
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_stage_appearances_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_stage_appearances_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
@@ -61749,6 +61860,10 @@ export type Database = {
         Args: { p_days?: number; p_job_id: string }
         Returns: Json
       }
+      allocate_merch_variant_stock: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: Json
+      }
       amend_festival_contract: {
         Args: {
           p_contract_id: string
@@ -63873,6 +63988,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      credit_label_merch_revenue_atomic: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_label_id: string
+          p_related_band_id: string
+          p_related_contract_id: string
+        }
+        Returns: Json
+      }
       current_profile_id: { Args: never; Returns: string }
       current_profile_id_safe: { Args: never; Returns: string }
       current_user_is_platform_admin: { Args: never; Returns: boolean }
@@ -65176,6 +65301,27 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      get_festival_merch_storefront: {
+        Args: { p_festival_id: string }
+        Returns: {
+          artwork_url: string
+          assignment_id: string
+          available_until: string
+          band_id: string
+          band_name: string
+          design_data: Json
+          design_name: string
+          design_preview_url: string
+          garment_color: string
+          is_limited_edition: boolean
+          item_type: string
+          limited_quantity: number
+          merchandise_id: string
+          selling_price: number
+          stock_quantity: number
+          variants: Json
+        }[]
+      }
       get_festival_operations_plan: {
         Args: { p_festival_company_id: string }
         Returns: Json
@@ -65457,6 +65603,25 @@ export type Database = {
         Returns: number
       }
       get_profile_id_for_user: { Args: { user_uuid: string }; Returns: string }
+      get_public_band_merch_storefront: {
+        Args: { p_band_id: string }
+        Returns: {
+          artwork_url: string
+          available_until: string
+          band_id: string
+          design_data: Json
+          design_name: string
+          design_preview_url: string
+          garment_color: string
+          id: string
+          is_limited_edition: boolean
+          item_type: string
+          limited_quantity: number
+          selling_price: number
+          stock_quantity: number
+          variants: Json
+        }[]
+      }
       get_public_family_announcements: {
         Args: { p_limit?: number }
         Returns: Json
@@ -66028,6 +66193,10 @@ export type Database = {
       is_storefront_open: { Args: { _company_id: string }; Returns: boolean }
       is_user_imprisoned: { Args: { p_user_id: string }; Returns: boolean }
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
+      is_valid_player_stage_appearance: {
+        Args: { value: Json }
+        Returns: boolean
+      }
       join_jam_session: {
         Args: { p_access_code?: string; p_session_id: string }
         Returns: Json
@@ -67027,6 +67196,24 @@ export type Database = {
         }
         Returns: Json
       }
+      record_merch_sale_atomic: {
+        Args: {
+          p_band_id: string
+          p_country: string
+          p_customer_type: string
+          p_discount_pct?: number
+          p_merchandise_id: string
+          p_net_revenue: number
+          p_order_type: string
+          p_quantity: number
+          p_sales_tax: number
+          p_total_price: number
+          p_unit_price: number
+          p_variant_id: string
+          p_vat: number
+        }
+        Returns: Json
+      }
       record_release_cost: {
         Args: {
           p_amount_minor: number
@@ -67071,6 +67258,10 @@ export type Database = {
         Args: { p_crew_member_id: string }
         Returns: undefined
       }
+      release_merch_variant_stock: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: Json
+      }
       remove_social_community_member: {
         Args: {
           p_community_id: string
@@ -67101,6 +67292,29 @@ export type Database = {
       repair_festival_data_health_issue: {
         Args: { p_action: string; p_issue_id: string; p_reason?: string }
         Returns: Json
+      }
+      reply_to_bug_report: {
+        Args: {
+          p_confirm_fixed?: boolean
+          p_message: string
+          p_report_id: string
+        }
+        Returns: {
+          bug_report_id: string
+          created_at: string
+          id: string
+          message: string
+          responder_type: string
+          responder_user_id: string | null
+          status_at_response: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bug_report_responses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       report_social_target: {
         Args: {
@@ -67555,6 +67769,7 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          responder_type: string
           responder_user_id: string | null
           status_at_response: string | null
           updated_at: string
