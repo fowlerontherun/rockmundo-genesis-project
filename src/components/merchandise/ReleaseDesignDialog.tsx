@@ -65,11 +65,13 @@ export const ReleaseDesignDialog = ({
   const [minOrder, setMinOrder] = useState(10);
   const [leadTime, setLeadTime] = useState(3);
   const [supplierTier, setSupplierTier] = useState<string | null>(null);
+  const [recommendedRetailPrice, setRecommendedRetailPrice] = useState(25);
+  const [minimumRetailPrice, setMinimumRetailPrice] = useState(10);
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
   const [designData, setDesignData] = useState<Record<string, unknown> | null>(null);
   const [garmentColor, setGarmentColor] = useState<string | null>(null);
   const [productName, setProductName] = useState(`Custom ${designName}`);
-  const [sellingPrice, setSellingPrice] = useState("35");
+  const [sellingPrice, setSellingPrice] = useState("25");
   const [stockQuantity, setStockQuantity] = useState("10");
   const [selectedSizes, setSelectedSizes] = useState<string[]>(["S", "M", "L", "XL"]);
   const [rushOrder, setRushOrder] = useState(false);
@@ -96,7 +98,7 @@ export const ReleaseDesignDialog = ({
         const nextType = design?.product_type || "Graphic Tee";
         const { data: requirement, error: requirementError } = await (supabase as any)
           .from("merch_item_requirements")
-          .select("id, base_cost, min_order_qty, lead_time_days, base_quality_tier, supplier_tier")
+          .select("id, base_cost, min_order_qty, lead_time_days, base_quality_tier, supplier_tier, recommended_retail_price, minimum_retail_price")
           .eq("item_type", nextType)
           .maybeSingle();
         if (requirementError) throw requirementError;
@@ -104,17 +106,21 @@ export const ReleaseDesignDialog = ({
 
         const nextCost = Number(requirement?.base_cost ?? 7);
         const nextMinOrder = Math.max(1, Number(requirement?.min_order_qty ?? 10));
+        const nextRecommended = Math.max(nextCost + 1, Number(requirement?.recommended_retail_price ?? Math.round(nextCost * 2.5)));
+        const nextMinimumRetail = Math.max(nextCost + 1, Number(requirement?.minimum_retail_price ?? Math.ceil(nextCost * 1.35)));
         setRequirementId(requirement?.id ?? null);
         setProductType(nextType);
         setBaseCost(nextCost);
         setMinOrder(nextMinOrder);
         setLeadTime(Number(requirement?.lead_time_days ?? 0));
         setSupplierTier(requirement?.supplier_tier ?? requirement?.base_quality_tier ?? null);
+        setRecommendedRetailPrice(nextRecommended);
+        setMinimumRetailPrice(nextMinimumRetail);
         setArtworkUrl(design?.artwork_url ?? null);
         setDesignData(design?.design_data ?? null);
         setGarmentColor(design?.background_color ?? null);
         setStockQuantity(String(nextMinOrder));
-        setSellingPrice(String(Math.max(nextCost + 1, Math.round(nextCost * 2.5))));
+        setSellingPrice(String(nextRecommended));
         setRushOrder(false);
       } catch (error) {
         toast({
@@ -143,6 +149,7 @@ export const ReleaseDesignDialog = ({
   const estimatedRushMultiplier = rushOrder ? 1.25 : 1;
   const estimatedUnitCost = baseCost * (1 - estimatedDiscount) * estimatedRushMultiplier;
   const estimatedProductionTotal = Math.round(estimatedUnitCost * quantity * 100) / 100;
+  const effectiveMinimumSellingPrice = Math.max(minimumRetailPrice, Math.ceil(estimatedUnitCost + 1));
   const estimatedProfitPerUnit = Math.max(0, price - estimatedUnitCost);
   const estimatedTotalPotential = estimatedProfitPerUnit * quantity;
   const estimatedLeadTime = leadTime > 0
@@ -178,10 +185,10 @@ export const ReleaseDesignDialog = ({
       });
       return;
     }
-    if (price <= estimatedUnitCost) {
+    if (price < effectiveMinimumSellingPrice) {
       toast({
-        title: "Price is below production cost",
-        description: `Set a selling price above the estimated $${estimatedUnitCost.toFixed(2)} unit cost.`,
+        title: "Selling price is too low",
+        description: `Set a selling price of at least $${effectiveMinimumSellingPrice}. The catalogue recommendation is $${recommendedRetailPrice}.`,
         variant: "destructive",
       });
       return;
@@ -195,9 +202,6 @@ export const ReleaseDesignDialog = ({
         sizes: hasSizes ? selectedSizes : [],
       };
 
-      // Submit only player intent. prepare_merch_production_insert() is authoritative for
-      // stock/pending allocation, MOQ, bulk discount, rush surcharge, lead time and quality.
-      // charge_merch_production_order() then debits the canonical band finance ledger.
       const { data: created, error } = await (supabase as any)
         .from("player_merchandise")
         .insert({
@@ -280,6 +284,14 @@ export const ReleaseDesignDialog = ({
                 <span className="font-medium">${baseCost}</span>
               </div>
               <div className="mt-1 flex justify-between gap-3">
+                <span className="text-muted-foreground">Recommended retail</span>
+                <span className="font-medium">${recommendedRetailPrice}</span>
+              </div>
+              <div className="mt-1 flex justify-between gap-3">
+                <span className="text-muted-foreground">Minimum retail</span>
+                <span className="font-medium">${minimumRetailPrice}</span>
+              </div>
+              <div className="mt-1 flex justify-between gap-3">
                 <span className="text-muted-foreground">Minimum run</span>
                 <span className="font-medium">{minOrder}</span>
               </div>
@@ -305,12 +317,13 @@ export const ReleaseDesignDialog = ({
                 <Input
                   id="selling-price"
                   type="number"
-                  min={Math.ceil(estimatedUnitCost + 1)}
+                  min={effectiveMinimumSellingPrice}
                   step={1}
                   value={sellingPrice}
                   onChange={(event) => setSellingPrice(event.target.value)}
                   required
                 />
+                <p className="text-xs text-muted-foreground">Recommended ${recommendedRetailPrice}</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stock-quantity">Production Run</Label>
@@ -382,6 +395,10 @@ export const ReleaseDesignDialog = ({
                 <span className="font-medium">${estimatedUnitCost.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
+                <span>Retail recommendation</span>
+                <span className="font-medium">${recommendedRetailPrice}</span>
+              </div>
+              <div className="flex justify-between">
                 <span>Estimated production order</span>
                 <span className="font-medium">${estimatedProductionTotal.toLocaleString()}</span>
               </div>
@@ -416,7 +433,7 @@ export const ReleaseDesignDialog = ({
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={isSubmitting || !productName.trim()}
+                disabled={isSubmitting || !productName.trim() || price < effectiveMinimumSellingPrice}
               >
                 {isSubmitting ? (
                   <>

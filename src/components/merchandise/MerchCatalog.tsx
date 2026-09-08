@@ -13,6 +13,7 @@ import {
   QUALITY_TIERS,
   calculateMerchQuality,
   checkMerchUnlocked,
+  getMinimumRetailPrice,
   getPricingImpact,
   getRecommendedPrice,
   type MerchItemRequirement,
@@ -61,20 +62,22 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
     setSelectedItem(item);
     setDesignName("");
     const quality = calculateMerchQuality(item.base_quality_tier, bandFame, false);
-    setPrice(String(getRecommendedPrice(item.base_cost, quality)));
+    setPrice(String(getRecommendedPrice(item.base_cost, quality, item.recommended_retail_price)));
     setStock(String(Math.max(1, item.min_order_qty ?? 1)));
   };
 
   const pricing = useMemo(() => {
     if (!selectedItem || !price) return null;
     const quality = calculateMerchQuality(selectedItem.base_quality_tier, bandFame, false);
-    const recommended = getRecommendedPrice(selectedItem.base_cost, quality);
-    return { recommended, impact: getPricingImpact(Number(price) || 0, recommended) };
+    const recommended = getRecommendedPrice(selectedItem.base_cost, quality, selectedItem.recommended_retail_price);
+    const minimum = getMinimumRetailPrice(selectedItem.base_cost, selectedItem.minimum_retail_price);
+    return { recommended, minimum, impact: getPricingImpact(Number(price) || 0, recommended) };
   }, [selectedItem, price, bandFame]);
 
   const quantity = Number(stock) || 0;
   const minQty = Math.max(1, selectedItem?.min_order_qty ?? 1);
   const unitCost = selectedItem?.base_cost ?? 0;
+  const minimumRetail = getMinimumRetailPrice(unitCost, selectedItem?.minimum_retail_price);
   const bulkDiscount = getBulkDiscount(quantity);
   const effectiveUnitCost = unitCost * (1 - bulkDiscount);
   const productionTotal = Math.round(effectiveUnitCost * quantity * 100) / 100;
@@ -82,7 +85,7 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
   const isImmediate = !hasLeadTime;
 
   const submit = () => {
-    if (!selectedItem || !designName.trim() || quantity < minQty) return;
+    if (!selectedItem || !designName.trim() || quantity < minQty || Number(price) < minimumRetail) return;
     onAddProduct(selectedItem, designName.trim(), Number(price) || 0, quantity);
     setSelectedItem(null);
     setDesignName("");
@@ -168,8 +171,8 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Sale price ($)</Label>
-                    <Input type="number" min={Math.max(1, effectiveUnitCost)} max={MAX_MERCH_PRICE} value={price} onChange={(event) => setPrice(event.target.value)} />
-                    {pricing ? <p className="text-xs text-muted-foreground">Recommended ${pricing.recommended} · <span className={pricing.impact.color}>{pricing.impact.label}</span></p> : null}
+                    <Input type="number" min={minimumRetail} max={MAX_MERCH_PRICE} value={price} onChange={(event) => setPrice(event.target.value)} />
+                    {pricing ? <p className="text-xs text-muted-foreground">Recommended ${pricing.recommended} · Minimum ${pricing.minimum} · <span className={pricing.impact.color}>{pricing.impact.label}</span></p> : null}
                   </div>
                   <div className="space-y-2">
                     <Label>Production run</Label>
@@ -182,6 +185,7 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
                   <div className="flex justify-between"><span>Base unit cost</span><span>${unitCost.toFixed(2)}</span></div>
                   {bulkDiscount > 0 ? <div className="flex justify-between text-primary"><span>Bulk discount</span><span>-{Math.round(bulkDiscount * 100)}%</span></div> : null}
                   <div className="flex justify-between"><span>Effective unit cost</span><span>${effectiveUnitCost.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Recommended retail</span><span>${selectedItem.recommended_retail_price ?? pricing?.recommended ?? "—"}</span></div>
                   <div className="flex justify-between font-medium"><span>Production order</span><span>${productionTotal.toLocaleString()}</span></div>
                   {hasLeadTime ? (
                     <div className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
@@ -197,15 +201,15 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
                 </div>
 
                 <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-                  The production cost is charged to the band when you place the order. If the band cannot afford it, the order will not be created.
+                  Production cost is charged when you place the order. The retail recommendation is a gameplay guide, while the minimum protects against accidentally selling physical stock below a viable margin.
                 </div>
 
-                <Button className="w-full" onClick={submit} disabled={!designName.trim() || isAdding || quantity < minQty || Number(price) < Math.max(1, effectiveUnitCost) || Number(price) > MAX_MERCH_PRICE}>
+                <Button className="w-full" onClick={submit} disabled={!designName.trim() || isAdding || quantity < minQty || Number(price) < minimumRetail || Number(price) > MAX_MERCH_PRICE}>
                   {isAdding ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Placing order...</> : isImmediate ? "Create product" : "Place production order"}
                 </Button>
               </>
             ) : (
-              <div className="py-10 text-center text-sm text-muted-foreground"><Package className="mx-auto mb-3 h-12 w-12 opacity-40" />Select a product to see its supplier, material, minimum order, lead time and production cost.</div>
+              <div className="py-10 text-center text-sm text-muted-foreground"><Package className="mx-auto mb-3 h-12 w-12 opacity-40" />Select a product to see its supplier, material, minimum order, lead time, manufacturing cost and recommended retail price.</div>
             )}
           </CardContent>
         </Card>
