@@ -174,7 +174,9 @@ Deno.serve(async (req) => {
         const salesTax = Math.round(subtotal * selectedCountry.salesTaxRate * 100) / 100;
         const vat = Math.round(subtotal * selectedCountry.vatRate * 100) / 100;
         const totalPrice = Math.round(subtotal + salesTax + vat);
-        const netRevenue = Math.max(0, subtotal - totalCost);
+        // Manufacturing was already charged when the stock was ordered. Sale proceeds
+        // must therefore not deduct the same production cost a second time.
+        const netRevenue = subtotal;
         const orderType = ORDER_TYPES[Math.floor(Math.random() * ORDER_TYPES.length)];
 
         const { data: saleResult, error: saleError } = await supabase.rpc("record_merch_sale_atomic", {
@@ -313,11 +315,12 @@ Deno.serve(async (req) => {
           band_id: (band as any).id,
           amount: Math.round(finalBandRevenue),
           source: "merchandise",
-          description: `Daily merch sales: ${successfulOrders.length} orders (production costs: $${bandTotalCosts.toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})${labelMerchCut > 0 ? ` [360 deal: $${labelMerchCut} to label]` : ""}`,
+          description: `Daily merch sales: ${successfulOrders.length} orders (inventory production cost already paid: $${bandTotalCosts.toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})${labelMerchCut > 0 ? ` [360 deal: $${labelMerchCut} to label]` : ""}`,
           metadata: {
             orders_count: successfulOrders.length,
             gross_revenue: bandGrossRevenue,
-            production_costs: bandTotalCosts,
+            production_cost_basis: bandTotalCosts,
+            production_cost_paid_at_manufacture: true,
             sales_tax_collected: successfulOrders.reduce((sum, o) => sum + o.sales_tax, 0),
             vat_collected: successfulOrders.reduce((sum, o) => sum + o.vat, 0),
             net_revenue: finalBandRevenue,
