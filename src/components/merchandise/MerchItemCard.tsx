@@ -121,16 +121,29 @@ export const MerchItemCard = ({
           </p>
         ) : null}
 
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-medium">${item.base_cost} unit cost</span>
-          {!isExperience && (item.min_order_qty ?? 1) > 1 ? (
-            <span className="text-muted-foreground">
-              ${(item.base_cost * Math.max(1, item.min_order_qty ?? 1)).toLocaleString()} min run
-            </span>
-          ) : (
-            <span className="text-muted-foreground">{qualityInfo.salesMultiplier}x quality demand</span>
-          )}
+        <div className="rounded-md bg-muted/30 p-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Unit cost</span>
+            <span className="font-medium">${item.base_cost}</span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-muted-foreground">Recommended retail</span>
+            <span className="font-semibold text-primary">${item.recommended_retail_price ?? "—"}</span>
+          </div>
+          {item.minimum_retail_price ? (
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-muted-foreground">Minimum retail</span>
+              <span>${item.minimum_retail_price}</span>
+            </div>
+          ) : null}
         </div>
+
+        {!isExperience && (item.min_order_qty ?? 1) > 1 ? (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Minimum production run</span>
+            <span>${(item.base_cost * Math.max(1, item.min_order_qty ?? 1)).toLocaleString()}</span>
+          </div>
+        ) : null}
 
         {unlocked && (
           <Button
