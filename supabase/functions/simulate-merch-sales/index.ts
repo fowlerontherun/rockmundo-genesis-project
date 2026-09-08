@@ -13,23 +13,22 @@ const corsHeaders = {
 
 const JOB_NAME = "simulate-merch-sales";
 
-// Countries weighted by music market size, with VAT rates
 const COUNTRIES: { name: string; weight: number; vatRate: number; salesTaxRate: number }[] = [
-  { name: "United States", weight: 30, vatRate: 0, salesTaxRate: 0.08 }, // Average US sales tax ~8%
-  { name: "United Kingdom", weight: 15, vatRate: 0.20, salesTaxRate: 0 }, // UK VAT 20%
-  { name: "Germany", weight: 10, vatRate: 0.19, salesTaxRate: 0 }, // German VAT 19%
-  { name: "Japan", weight: 8, vatRate: 0.10, salesTaxRate: 0 }, // Japan consumption tax 10%
-  { name: "France", weight: 6, vatRate: 0.20, salesTaxRate: 0 }, // French VAT 20%
-  { name: "Canada", weight: 5, vatRate: 0, salesTaxRate: 0.13 }, // Average Canadian HST ~13%
-  { name: "Australia", weight: 5, vatRate: 0.10, salesTaxRate: 0 }, // Australian GST 10%
-  { name: "Brazil", weight: 4, vatRate: 0.17, salesTaxRate: 0 }, // Brazilian ICMS ~17%
-  { name: "Mexico", weight: 3, vatRate: 0.16, salesTaxRate: 0 }, // Mexican VAT 16%
-  { name: "Spain", weight: 3, vatRate: 0.21, salesTaxRate: 0 }, // Spanish VAT 21%
-  { name: "Italy", weight: 3, vatRate: 0.22, salesTaxRate: 0 }, // Italian VAT 22%
-  { name: "Netherlands", weight: 2, vatRate: 0.21, salesTaxRate: 0 }, // Dutch VAT 21%
-  { name: "Sweden", weight: 2, vatRate: 0.25, salesTaxRate: 0 }, // Swedish VAT 25%
-  { name: "South Korea", weight: 2, vatRate: 0.10, salesTaxRate: 0 }, // Korean VAT 10%
-  { name: "Other", weight: 2, vatRate: 0.15, salesTaxRate: 0 }, // Average global VAT
+  { name: "United States", weight: 30, vatRate: 0, salesTaxRate: 0.08 },
+  { name: "United Kingdom", weight: 15, vatRate: 0.20, salesTaxRate: 0 },
+  { name: "Germany", weight: 10, vatRate: 0.19, salesTaxRate: 0 },
+  { name: "Japan", weight: 8, vatRate: 0.10, salesTaxRate: 0 },
+  { name: "France", weight: 6, vatRate: 0.20, salesTaxRate: 0 },
+  { name: "Canada", weight: 5, vatRate: 0, salesTaxRate: 0.13 },
+  { name: "Australia", weight: 5, vatRate: 0.10, salesTaxRate: 0 },
+  { name: "Brazil", weight: 4, vatRate: 0.17, salesTaxRate: 0 },
+  { name: "Mexico", weight: 3, vatRate: 0.16, salesTaxRate: 0 },
+  { name: "Spain", weight: 3, vatRate: 0.21, salesTaxRate: 0 },
+  { name: "Italy", weight: 3, vatRate: 0.22, salesTaxRate: 0 },
+  { name: "Netherlands", weight: 2, vatRate: 0.21, salesTaxRate: 0 },
+  { name: "Sweden", weight: 2, vatRate: 0.25, salesTaxRate: 0 },
+  { name: "South Korea", weight: 2, vatRate: 0.10, salesTaxRate: 0 },
+  { name: "Other", weight: 2, vatRate: 0.15, salesTaxRate: 0 },
 ];
 
 const ORDER_TYPES = ["online", "gig", "store"];
@@ -37,7 +36,6 @@ const ORDER_TYPES = ["online", "gig", "store"];
 function weightedRandomSelect<T extends { weight: number }>(items: T[]): T {
   const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
   let random = Math.random() * totalWeight;
-  
   for (const item of items) {
     random -= item.weight;
     if (random <= 0) return item;
@@ -46,9 +44,7 @@ function weightedRandomSelect<T extends { weight: number }>(items: T[]): T {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -64,397 +60,277 @@ Deno.serve(async (req) => {
   });
 
   try {
-    console.log(`[${JOB_NAME}] Starting merchandise sales simulation...`);
-
-    // Get all bands with merchandise and fans
     const { data: bandsWithMerch, error: bandsError } = await supabase
       .from("bands")
       .select(`
         id, name, fame, total_fans, casual_fans, dedicated_fans, superfans, home_city_id,
+        fan_sentiment_score, reputation_score,
         player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce, superfan_only, drop_starts_at, available_until, is_limited_edition, limited_quantity, tour_exclusive_tour_id)
       `)
       .gt("total_fans", 0);
-
     if (bandsError) throw bandsError;
 
-    // Preload all variants for these bands' merch in one query
-    const variantMap = new Map<string, Array<{ id: string; merchandise_id: string; stock_quantity: number; selling_price_override: number | null; cost_to_produce_override: number | null; size: string | null; color: string | null; is_active: boolean; }>>();
-    try {
-      const merchIds = (bandsWithMerch || []).flatMap((b: any) => (b.player_merchandise || []).map((m: any) => m.id));
-      if (merchIds.length > 0) {
-        const { data: variants } = await supabase
-          .from("merch_variants")
-          .select("id, merchandise_id, stock_quantity, selling_price_override, cost_to_produce_override, size, color, is_active")
-          .in("merchandise_id", merchIds)
-          .eq("is_active", true);
-        for (const v of variants || []) {
-          const arr = variantMap.get((v as any).merchandise_id) || [];
-          arr.push(v as any);
-          variantMap.set((v as any).merchandise_id, arr);
-        }
+    const variantMap = new Map<string, Array<{ id: string; merchandise_id: string; stock_quantity: number; selling_price_override: number | null; cost_to_produce_override: number | null; is_active: boolean }>>();
+    const merchIds = (bandsWithMerch || []).flatMap((b: any) => (b.player_merchandise || []).map((m: any) => m.id));
+    if (merchIds.length > 0) {
+      const { data: variants, error: variantError } = await supabase
+        .from("merch_variants")
+        .select("id, merchandise_id, stock_quantity, selling_price_override, cost_to_produce_override, is_active")
+        .in("merchandise_id", merchIds)
+        .eq("is_active", true);
+      if (variantError) throw variantError;
+      for (const variant of variants || []) {
+        const list = variantMap.get((variant as any).merchandise_id) || [];
+        list.push(variant as any);
+        variantMap.set((variant as any).merchandise_id, list);
       }
-    } catch (vErr) {
-      console.error(`[${JOB_NAME}] Variant preload error:`, vErr);
     }
-
-    // === FETCH BAND SENTIMENT & REPUTATION FOR MERCH DEMAND (v1.0.947 / v1.0.988) ===
-    const bandSentimentMap = new Map<string, number>();
-    const bandReputationMap = new Map<string, number>();
-    try {
-      const bandIds = (bandsWithMerch || []).map(b => b.id);
-      if (bandIds.length > 0) {
-        const { data: bandExtras } = await supabase
-          .from('bands')
-          .select('id, fan_sentiment_score, reputation_score')
-          .in('id', bandIds);
-        for (const b of bandExtras || []) {
-          bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
-          bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
-        }
-      }
-    } catch (sentErr) {
-      console.error(`[${JOB_NAME}] Error fetching sentiment/reputation:`, sentErr);
-    }
-
-    console.log(`[${JOB_NAME}] Found ${bandsWithMerch?.length || 0} bands with fans`);
 
     let totalOrders = 0;
     let totalRevenue = 0;
     let totalTaxes = 0;
     let totalNetRevenue = 0;
     let totalStockReduced = 0;
+    let rejectedForStock = 0;
 
     for (const band of bandsWithMerch || []) {
-      const merchandise = band.player_merchandise || [];
+      const merchandise = (band as any).player_merchandise || [];
       if (merchandise.length === 0) continue;
 
-      // Track stock changes for this band
-      const stockUpdates: Map<string, number> = new Map();
-
-      // Calculate daily sales based on fan count and fame
-      // Base: 0.1% of fans buy merch per day, scaled by fame
-      const baseSalesChance = 0.001;
-      const fameMultiplier = 1 + Math.min((band.fame || 0) / 5000, 2); // Max 3x
-
-      // === SENTIMENT MERCH DEMAND MODIFIER (v1.0.947) ===
-      const sentimentScore = bandSentimentMap.get(band.id) ?? 0;
-      const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200; // 0 to 1
-      const merchDemandMod = parseFloat((0.5 + sentimentT * 1.0).toFixed(2)); // 0.5x to 1.5x
-
-      // === REPUTATION → ONLINE MERCH SALES (v1.0.988) ===
-      // Reputable bands have stronger brand appeal; toxic bands struggle to move product online
-      const repScore = bandReputationMap.get(band.id) ?? 0;
-      const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200;
-      const merchRepMod = parseFloat((0.8 + repT * 0.4).toFixed(2)); // 0.8x–1.2x
-
-      const dailySalesTarget = Math.max(1, Math.floor(
-        (band.total_fans || 0) * baseSalesChance * fameMultiplier * merchDemandMod * merchRepMod
-      ));
-
-      // Random variation: 50% to 150% of target
+      const sentimentT = (Math.max(-100, Math.min(100, (band as any).fan_sentiment_score ?? 0)) + 100) / 200;
+      const merchDemandMod = 0.5 + sentimentT;
+      const repT = (Math.max(-100, Math.min(100, (band as any).reputation_score ?? 0)) + 100) / 200;
+      const merchRepMod = 0.8 + repT * 0.4;
+      const fameMultiplier = 1 + Math.min(((band as any).fame || 0) / 5000, 2);
+      const dailySalesTarget = Math.max(1, Math.floor(((band as any).total_fans || 0) * 0.001 * fameMultiplier * merchDemandMod * merchRepMod));
       const actualSales = Math.floor(dailySalesTarget * (0.5 + Math.random()));
 
-      console.log(`[${JOB_NAME}] Band ${band.name}: targeting ${actualSales} sales from ${band.total_fans} fans`);
-
-      const ordersToInsert = [];
-
-      // Track per-merch and per-variant stock decrements
       const variantStateMap = new Map<string, Array<{ id: string; stock: number; price: number | null; cost: number | null }>>();
-      const merchWithCurrentStock = (merchandise as any[]).map((m: any) => {
+      const merchState = merchandise.map((m: any) => {
         const variants = (variantMap.get(m.id) || []).map(v => ({
           id: v.id,
-          stock: v.stock_quantity,
+          stock: v.stock_quantity || 0,
           price: v.selling_price_override,
           cost: v.cost_to_produce_override,
         }));
         if (variants.length > 0) variantStateMap.set(m.id, variants);
-        const variantStock = variants.reduce((s, v) => s + v.stock, 0);
         return {
           ...m,
           hasVariants: variants.length > 0,
-          currentStock: variants.length > 0 ? variantStock : m.stock_quantity,
+          currentStock: variants.length > 0 ? variants.reduce((sum, v) => sum + v.stock, 0) : (m.stock_quantity || 0),
         };
       });
 
-      const variantStockUpdates: Map<string, number> = new Map();
-      const superfanRatio = (band.superfans || 0) / Math.max(1, band.total_fans || 1);
-      const dedicatedRatio = (band.dedicated_fans || 0) / Math.max(1, band.total_fans || 1);
+      const successfulOrders: any[] = [];
+      const superfanRatio = ((band as any).superfans || 0) / Math.max(1, (band as any).total_fans || 1);
+      const dedicatedRatio = ((band as any).dedicated_fans || 0) / Math.max(1, (band as any).total_fans || 1);
 
       for (let i = 0; i < actualSales; i++) {
-        const qualityWeights: Record<string, number> = {
-          exclusive: 5, premium: 4, standard: 3, basic: 2, poor: 1,
-        };
-
-        // Customer type first so we can gate superfan-only items
         let customerType = "fan";
-        const rand = Math.random();
-        if (rand < superfanRatio * 2) customerType = "superfan";
-        else if (rand < (superfanRatio * 2 + dedicatedRatio)) customerType = "collector";
+        const fanRoll = Math.random();
+        if (fanRoll < superfanRatio * 2) customerType = "superfan";
+        else if (fanRoll < superfanRatio * 2 + dedicatedRatio) customerType = "collector";
 
         const nowMs = Date.now();
-        const availableMerch = merchWithCurrentStock.filter((m: any) => {
+        const available = merchState.filter((m: any) => {
           if (m.currentStock <= 0) return false;
           if (m.drop_starts_at && new Date(m.drop_starts_at).getTime() > nowMs) return false;
           if (m.available_until && new Date(m.available_until).getTime() < nowMs) return false;
           if (m.superfan_only && customerType !== "superfan") return false;
           return true;
         });
-        if (availableMerch.length === 0) continue;
+        if (available.length === 0) break;
 
-        const weightedMerch = availableMerch.map((m: any) => ({
-          ...m,
-          weight: qualityWeights[m.quality_tier || 'basic'] || 2,
-        }));
-        const selectedMerch: any = weightedRandomSelect(weightedMerch);
-        if (!selectedMerch) continue;
+        const qualityWeights: Record<string, number> = { exclusive: 5, premium: 4, standard: 3, basic: 2, poor: 1 };
+        const selected: any = weightedRandomSelect(available.map((m: any) => ({ ...m, weight: qualityWeights[m.quality_tier || "basic"] || 2 })));
 
-        // Pick variant if any
-        let selectedVariantId: string | null = null;
+        let variantId: string | null = null;
         let variantPrice: number | null = null;
         let variantCost: number | null = null;
-        if (selectedMerch.hasVariants) {
-          const variants = variantStateMap.get(selectedMerch.id) || [];
-          const stocked = variants.filter(v => v.stock > 0);
-          if (stocked.length === 0) continue;
-          const picked = stocked[Math.floor(Math.random() * stocked.length)];
-          selectedVariantId = picked.id;
-          variantPrice = picked.price;
-          variantCost = picked.cost;
+        let localVariant: { id: string; stock: number; price: number | null; cost: number | null } | undefined;
+        if (selected.hasVariants) {
+          const stocked = (variantStateMap.get(selected.id) || []).filter(v => v.stock > 0);
+          if (stocked.length === 0) {
+            selected.currentStock = 0;
+            continue;
+          }
+          localVariant = stocked[Math.floor(Math.random() * stocked.length)];
+          variantId = localVariant.id;
+          variantPrice = localVariant.price;
+          variantCost = localVariant.cost;
         }
 
         let quantity = Math.random() > 0.85 ? (Math.random() > 0.7 ? 3 : 2) : 1;
-        if (selectedVariantId) {
-          const v = (variantStateMap.get(selectedMerch.id) || []).find(x => x.id === selectedVariantId);
-          quantity = Math.min(quantity, v?.stock ?? 0);
-        } else {
-          quantity = Math.min(quantity, selectedMerch.currentStock);
-        }
+        quantity = Math.min(quantity, variantId ? (localVariant?.stock || 0) : selected.currentStock);
         if (quantity <= 0) continue;
 
-        const merchIndex = merchWithCurrentStock.findIndex((m: any) => m.id === selectedMerch.id);
-        if (merchIndex >= 0) merchWithCurrentStock[merchIndex].currentStock -= quantity;
-        if (selectedVariantId) {
-          const v = (variantStateMap.get(selectedMerch.id) || []).find(x => x.id === selectedVariantId);
-          if (v) v.stock -= quantity;
-          variantStockUpdates.set(selectedVariantId, (variantStockUpdates.get(selectedVariantId) || 0) + quantity);
-        } else {
-          stockUpdates.set(selectedMerch.id, (stockUpdates.get(selectedMerch.id) || 0) + quantity);
-        }
-        totalStockReduced += quantity;
-
-        const orderType = ORDER_TYPES[Math.floor(Math.random() * ORDER_TYPES.length)];
-
-        // Fan-tier loyalty discount
-        let discountPct = 0;
-        if (customerType === "superfan") discountPct = 10;
-        else if (customerType === "collector") discountPct = 5;
-
+        const discountPct = customerType === "superfan" ? 10 : customerType === "collector" ? 5 : 0;
         const selectedCountry = weightedRandomSelect(COUNTRIES);
-        const country = selectedCountry.name;
-
-        const baseUnitPrice = variantPrice ?? selectedMerch.selling_price ?? 20;
-        const productionCost = variantCost ?? selectedMerch.cost_to_produce ?? 0;
+        const baseUnitPrice = variantPrice ?? selected.selling_price ?? 20;
+        const productionCost = variantCost ?? selected.cost_to_produce ?? 0;
         const unitPrice = Math.min(Math.max(1, Math.round(baseUnitPrice * (1 - discountPct / 100))), 9999);
         const subtotal = unitPrice * quantity;
         const totalCost = productionCost * quantity;
-
         const salesTax = Math.round(subtotal * selectedCountry.salesTaxRate * 100) / 100;
         const vat = Math.round(subtotal * selectedCountry.vatRate * 100) / 100;
         const totalPrice = Math.round(subtotal + salesTax + vat);
-        const netRevenue = Math.max(0, subtotal - totalCost);
+        // Manufacturing was already charged when the stock was ordered. Sale proceeds
+        // must therefore not deduct the same production cost a second time.
+        const netRevenue = subtotal;
+        const orderType = ORDER_TYPES[Math.floor(Math.random() * ORDER_TYPES.length)];
 
-        ordersToInsert.push({
-          band_id: band.id,
-          merchandise_id: selectedMerch.id,
-          variant_id: selectedVariantId,
-          quantity,
-          unit_price: Math.round(unitPrice),
-          total_price: totalPrice,
-          sales_tax: salesTax,
-          vat: vat,
-          net_revenue: netRevenue,
-          order_type: orderType,
-          customer_type: customerType,
-          country,
-          discount_pct: discountPct,
+        const { data: saleResult, error: saleError } = await supabase.rpc("record_merch_sale_atomic", {
+          p_band_id: (band as any).id,
+          p_merchandise_id: selected.id,
+          p_variant_id: variantId,
+          p_quantity: quantity,
+          p_unit_price: unitPrice,
+          p_total_price: totalPrice,
+          p_sales_tax: salesTax,
+          p_vat: vat,
+          p_net_revenue: netRevenue,
+          p_order_type: orderType,
+          p_customer_type: customerType,
+          p_country: selectedCountry.name,
+          p_discount_pct: discountPct,
         });
 
-        totalRevenue += totalPrice;
-        totalTaxes += salesTax + vat;
-        totalNetRevenue += netRevenue;
-      }
-
-      // Apply variant stock decrements
-      for (const [variantId, reduction] of variantStockUpdates) {
-        try {
-          const { data: cur } = await supabase
-            .from("merch_variants").select("stock_quantity").eq("id", variantId).single();
-          if (cur) {
-            const newStock = Math.max(0, (cur.stock_quantity || 0) - reduction);
-            await supabase.from("merch_variants").update({ stock_quantity: newStock }).eq("id", variantId);
-            if (newStock === 0) {
-              await supabase.from("merch_stockout_events").insert({
-                band_id: band.id, variant_id: variantId, channel: "online",
-              });
-            }
-          }
-        } catch (e) {
-          console.error(`[${JOB_NAME}] Failed to update variant ${variantId}:`, e);
-        }
-      }
-
-      if (ordersToInsert.length > 0) {
-        // Insert orders
-        const { error: insertError } = await supabase
-          .from("merch_orders")
-          .insert(ordersToInsert);
-
-        if (insertError) {
-          console.error(`[${JOB_NAME}] Failed to insert orders for band ${band.id}:`, insertError);
+        if (saleError) {
+          console.error(`[${JOB_NAME}] Atomic sale failed for ${selected.id}:`, saleError);
           continue;
         }
 
-        totalOrders += ordersToInsert.length;
-        console.log(`[${JOB_NAME}] Inserted ${ordersToInsert.length} orders for ${band.name}`);
-
-        // Update stock levels for each merchandise item
-        for (const [merchId, reduction] of stockUpdates) {
-          // Use the decrement_merch_stock RPC function
-          const { error: stockUpdateError } = await supabase.rpc(
-            "decrement_merch_stock",
-            { merch_id: merchId, amount: reduction }
-          );
-
-          if (stockUpdateError) {
-            console.error(`[${JOB_NAME}] Failed to update stock for merch ${merchId}:`, stockUpdateError);
-            // Fallback: direct update
-            const { data: currentMerch } = await supabase
-              .from("player_merchandise")
-              .select("stock_quantity")
-              .eq("id", merchId)
-              .single();
-            
-            if (currentMerch) {
-              const newStock = Math.max(0, (currentMerch.stock_quantity || 0) - reduction);
-              await supabase
-                .from("player_merchandise")
-                .update({ stock_quantity: newStock })
-                .eq("id", merchId);
-            }
+        const result = saleResult as any;
+        if (!result?.sold) {
+          rejectedForStock++;
+          const remaining = Number(result?.remaining_stock ?? 0);
+          if (variantId && localVariant) {
+            localVariant.stock = remaining;
+            selected.currentStock = (variantStateMap.get(selected.id) || []).reduce((sum, v) => sum + v.stock, 0);
+          } else {
+            selected.currentStock = remaining;
           }
+          continue;
         }
 
-        // Add NET revenue (after taxes) to band earnings
-        const bandGrossRevenue = ordersToInsert.reduce((sum, o) => sum + o.total_price, 0);
-        const bandNetRevenue = ordersToInsert.reduce((sum, o) => sum + o.net_revenue, 0);
-        const bandTotalTaxes = ordersToInsert.reduce((sum, o) => sum + o.sales_tax + o.vat, 0);
-        const bandTotalCosts = ordersToInsert.reduce((sum, o) => sum + (o.unit_price * o.quantity) - o.net_revenue - o.sales_tax - o.vat, 0);
+        const remaining = Number(result.remaining_stock ?? 0);
+        if (variantId && localVariant) {
+          localVariant.stock = remaining;
+          selected.currentStock = (variantStateMap.get(selected.id) || []).reduce((sum, v) => sum + v.stock, 0);
+        } else {
+          selected.currentStock = remaining;
+        }
 
-        // Route merch sales tax (sales_tax + vat) to band's home city treasury
+        const order = {
+          merchandise_id: selected.id,
+          variant_id: variantId,
+          quantity,
+          unit_price: unitPrice,
+          total_price: totalPrice,
+          sales_tax: salesTax,
+          vat,
+          net_revenue: netRevenue,
+          production_cost: totalCost,
+          order_type: orderType,
+          customer_type: customerType,
+        };
+        successfulOrders.push(order);
+        totalOrders++;
+        totalRevenue += totalPrice;
+        totalTaxes += salesTax + vat;
+        totalNetRevenue += netRevenue;
+        totalStockReduced += quantity;
+      }
+
+      if (successfulOrders.length === 0) continue;
+
+      const bandGrossRevenue = successfulOrders.reduce((sum, o) => sum + o.total_price, 0);
+      const bandNetRevenue = successfulOrders.reduce((sum, o) => sum + o.net_revenue, 0);
+      const bandTotalTaxes = successfulOrders.reduce((sum, o) => sum + o.sales_tax + o.vat, 0);
+      const bandTotalCosts = successfulOrders.reduce((sum, o) => sum + o.production_cost, 0);
+
+      if ((band as any).home_city_id && bandTotalTaxes > 0) {
+        const { error: treasuryError } = await supabase.rpc("credit_city_treasury", {
+          p_city_id: (band as any).home_city_id,
+          p_amount: bandTotalTaxes,
+          p_type: "merch_sales_tax",
+          p_description: `Merch sales tax for ${(band as any).name} (${successfulOrders.length} orders)`,
+          p_reference_id: (band as any).id,
+        });
+        if (treasuryError) console.error(`[${JOB_NAME}] Failed to credit merch tax:`, treasuryError);
+      }
+
+      let labelMerchCut = 0;
+      let finalBandRevenue = bandNetRevenue;
+      const { data: active360, error: contractError } = await supabase
+        .from("artist_label_contracts")
+        .select("id, label_id, royalty_label_pct, deal_type_id, label_deal_types:deal_type_id(name)")
+        .eq("band_id", (band as any).id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      if (contractError) console.error(`[${JOB_NAME}] 360 contract lookup failed:`, contractError);
+
+      if (active360 && (active360 as any).label_deal_types?.name === "360 Deal" && bandNetRevenue > 0) {
+        const labelPct = (((active360 as any).royalty_label_pct ?? 20) as number) / 100;
+        const proposedCut = Math.round(bandNetRevenue * labelPct);
+        if (proposedCut > 0) {
+          const { error: labelCreditError } = await supabase.rpc("credit_label_merch_revenue_atomic", {
+            p_label_id: (active360 as any).label_id,
+            p_amount: proposedCut,
+            p_description: `360 Deal merch cut: ${successfulOrders.length} orders from ${(band as any).name}`,
+            p_related_contract_id: (active360 as any).id,
+            p_related_band_id: (band as any).id,
+          });
+          if (labelCreditError) {
+            console.error(`[${JOB_NAME}] 360 label credit failed; retaining revenue with band:`, labelCreditError);
+          } else {
+            labelMerchCut = proposedCut;
+            finalBandRevenue -= labelMerchCut;
+          }
+        }
+      }
+
+      if (finalBandRevenue > 0) {
         try {
-          if ((band as any).home_city_id && bandTotalTaxes > 0) {
-            await supabase.rpc("credit_city_treasury", {
-              p_city_id: (band as any).home_city_id,
-              p_amount: bandTotalTaxes,
-              p_type: "merch_sales_tax",
-              p_description: `Merch sales tax for ${band.name} (${ordersToInsert.length} orders)`,
-              p_reference_id: band.id,
+          const { data: bandHealth } = await supabase.from("bands").select("morale").eq("id", (band as any).id).single();
+          if (bandHealth) {
+            const moraleBoost = finalBandRevenue >= 5000 ? 4 : finalBandRevenue >= 1000 ? 3 : finalBandRevenue >= 200 ? 2 : 1;
+            const newMorale = Math.min(100, ((bandHealth as any).morale ?? 50) + moraleBoost);
+            await supabase.from("bands").update({ morale: newMorale }).eq("id", (band as any).id);
+            await supabase.from("band_health_events").insert({
+              band_id: (band as any).id,
+              event_type: "morale",
+              delta: moraleBoost,
+              new_value: newMorale,
+              source: "merch_sales",
+              description: `Merch sales: $${Math.round(finalBandRevenue).toLocaleString()} revenue (${successfulOrders.length} orders)`,
             });
           }
-        } catch (e) {
-          console.error(`[${JOB_NAME}] Failed to credit city treasury for merch tax:`, e);
-        }
-        
-        // ── 360 Deal: Check if band has a label contract that takes merch cut ──
-        let labelMerchCut = 0;
-        let finalBandRevenue = bandNetRevenue;
-        
-        try {
-          const { data: active360 } = await supabase
-            .from('artist_label_contracts')
-            .select('id, label_id, royalty_label_pct, deal_type_id, label_deal_types:deal_type_id(name)')
-            .eq('band_id', band.id)
-            .eq('status', 'active')
-            .limit(1)
-            .maybeSingle();
-          
-          if (active360 && bandNetRevenue > 0) {
-            const dealName = (active360 as any).label_deal_types?.name || '';
-            if (dealName === '360 Deal') {
-              const labelPct = (active360.royalty_label_pct || 20) / 100;
-              labelMerchCut = Math.round(bandNetRevenue * labelPct);
-              finalBandRevenue = bandNetRevenue - labelMerchCut;
-              
-              // Credit label
-              const { data: label } = await supabase
-                .from('labels')
-                .select('balance')
-                .eq('id', active360.label_id)
-                .single();
-              
-              if (label) {
-                await supabase
-                  .from('labels')
-                  .update({ balance: (label.balance || 0) + labelMerchCut })
-                  .eq('id', active360.label_id);
-              }
-              
-              await supabase.from('label_financial_transactions').insert({
-                label_id: active360.label_id,
-                transaction_type: 'revenue',
-                amount: labelMerchCut,
-                description: `360 Deal merch cut: ${ordersToInsert.length} orders from ${band.name}`,
-                related_contract_id: active360.id,
-                related_band_id: band.id,
-              });
-              
-              console.log(`[${JOB_NAME}] 360 Deal: label takes $${labelMerchCut} from merch (${(labelPct * 100).toFixed(0)}%)`);
-            }
-          }
-        } catch (e) {
-          console.log(`[${JOB_NAME}] Error checking 360 deal for merch:`, e);
-        }
-        
-        // === MORALE BOOST: Merch sales feel rewarding (v1.0.967) ===
-        if (finalBandRevenue > 0) {
-          try {
-            const { data: bd } = await supabase.from('bands').select('morale').eq('id', band.id).single();
-            if (bd) {
-              const moraleBoost = finalBandRevenue >= 5000 ? 4 : finalBandRevenue >= 1000 ? 3 : finalBandRevenue >= 200 ? 2 : 1;
-              const newMorale = Math.min(100, (bd.morale ?? 50) + moraleBoost);
-              await supabase.from('bands').update({ morale: newMorale }).eq('id', band.id);
-              console.log(`[${JOB_NAME}] Merch revenue $${finalBandRevenue.toFixed(0)} → morale +${moraleBoost}`);
-              // Health event log (v1.0.998)
-              try { await supabase.from('band_health_events').insert({ band_id: band.id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'merch_sales', description: `Merch sales: $${Math.round(finalBandRevenue).toLocaleString()} revenue (${ordersToInsert.length} orders)` }); } catch (_) {}
-            }
-          } catch (e) { console.log(`[${JOB_NAME}] Morale boost error:`, e); }
+        } catch (moraleError) {
+          console.error(`[${JOB_NAME}] Morale update failed:`, moraleError);
         }
 
-        // Only credit positive earnings
-        if (finalBandRevenue > 0) {
-          await supabase.from("band_earnings").insert({
-            band_id: band.id,
-            amount: Math.round(finalBandRevenue),
-            source: "merchandise",
-            description: `Daily merch sales: ${ordersToInsert.length} orders (costs: $${Math.abs(bandTotalCosts).toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})${labelMerchCut > 0 ? ` [360 deal: $${labelMerchCut} to label]` : ''}`,
-            metadata: {
-              orders_count: ordersToInsert.length,
-              gross_revenue: bandGrossRevenue,
-              production_costs: bandTotalCosts,
-              sales_tax_collected: ordersToInsert.reduce((sum, o) => sum + o.sales_tax, 0),
-              vat_collected: ordersToInsert.reduce((sum, o) => sum + o.vat, 0),
-              net_revenue: finalBandRevenue,
-              label_merch_cut: labelMerchCut,
-              stock_reduced: Array.from(stockUpdates.entries()).reduce((sum, [_, qty]) => sum + qty, 0),
-            },
-          });
-        }
-
-        console.log(`[${JOB_NAME}] Added $${finalBandRevenue.toFixed(2)} to band earnings (after $${bandTotalTaxes.toFixed(2)} taxes${labelMerchCut > 0 ? `, $${labelMerchCut} to label` : ''})`);
+        const { error: earningsError } = await supabase.from("band_earnings").insert({
+          band_id: (band as any).id,
+          amount: Math.round(finalBandRevenue),
+          source: "merchandise",
+          description: `Daily merch sales: ${successfulOrders.length} orders (inventory production cost already paid: $${bandTotalCosts.toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})${labelMerchCut > 0 ? ` [360 deal: $${labelMerchCut} to label]` : ""}`,
+          metadata: {
+            orders_count: successfulOrders.length,
+            gross_revenue: bandGrossRevenue,
+            production_cost_basis: bandTotalCosts,
+            production_cost_paid_at_manufacture: true,
+            sales_tax_collected: successfulOrders.reduce((sum, o) => sum + o.sales_tax, 0),
+            vat_collected: successfulOrders.reduce((sum, o) => sum + o.vat, 0),
+            net_revenue: finalBandRevenue,
+            label_merch_cut: labelMerchCut,
+            stock_reduced: successfulOrders.reduce((sum, o) => sum + o.quantity, 0),
+          },
+        });
+        if (earningsError) console.error(`[${JOB_NAME}] Failed to record band merch earnings:`, earningsError);
       }
     }
-
-    console.log(`[${JOB_NAME}] Complete. Total orders: ${totalOrders}, Gross: $${totalRevenue.toFixed(2)}, Taxes: $${totalTaxes.toFixed(2)}, Net: $${totalNetRevenue.toFixed(2)}, Stock reduced: ${totalStockReduced}`);
 
     await completeJobRun({
       jobName: JOB_NAME,
@@ -462,28 +338,27 @@ Deno.serve(async (req) => {
       supabaseClient: supabase,
       durationMs: Date.now() - startTime,
       processedCount: totalOrders,
-      resultSummary: { 
-        totalOrders, 
+      errorCount: rejectedForStock,
+      resultSummary: {
+        totalOrders,
         grossRevenue: totalRevenue,
         totalTaxes,
         netRevenue: totalNetRevenue,
         stockReduced: totalStockReduced,
-        bandsProcessed: bandsWithMerch?.length || 0 
+        rejectedForStock,
+        bandsProcessed: bandsWithMerch?.length || 0,
       },
     });
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        totalOrders, 
-        grossRevenue: totalRevenue,
-        totalTaxes,
-        netRevenue: totalNetRevenue,
-        stockReduced: totalStockReduced,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify({
+      success: true,
+      totalOrders,
+      grossRevenue: totalRevenue,
+      totalTaxes,
+      netRevenue: totalNetRevenue,
+      stockReduced: totalStockReduced,
+      rejectedForStock,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error(`[${JOB_NAME}] Error:`, error);
     await failJobRun({
@@ -493,9 +368,9 @@ Deno.serve(async (req) => {
       durationMs: Date.now() - startTime,
       error,
     });
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
