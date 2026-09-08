@@ -73,6 +73,101 @@ function DesignLayer({ element, selected, onSelect, onMove }: { element: DesignE
   </div>;
 }
 
+const loadPreviewImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error("Unable to load artwork for preview"));
+  image.src = src;
+});
+
+const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: string, stroke = "rgba(0,0,0,.18)") => {
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, radius);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+};
+
+const drawPreviewSilhouette = (ctx: CanvasRenderingContext2D, shape: string, color: string) => {
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,.18)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 8;
+
+  if (shape === "poster") {
+    drawRoundedRect(ctx, 108, 48, 384, 504, 4, color);
+  } else if (shape === "tote") {
+    drawRoundedRect(ctx, 120, 150, 360, 360, 20, color);
+    ctx.shadowColor = "transparent";
+    ctx.beginPath();
+    ctx.arc(300, 155, 85, Math.PI, 0);
+    ctx.strokeStyle = "rgba(0,0,0,.22)";
+    ctx.lineWidth = 18;
+    ctx.stroke();
+  } else if (shape === "mug") {
+    drawRoundedRect(ctx, 115, 170, 330, 270, 28, color);
+    ctx.shadowColor = "transparent";
+    ctx.beginPath();
+    ctx.arc(455, 305, 72, -Math.PI / 2, Math.PI / 2);
+    ctx.strokeStyle = "rgba(0,0,0,.22)";
+    ctx.lineWidth = 18;
+    ctx.stroke();
+  } else if (shape === "cap") {
+    ctx.beginPath();
+    ctx.ellipse(300, 260, 175, 105, 0, Math.PI, 0);
+    ctx.lineTo(475, 315);
+    ctx.lineTo(125, 315);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.18)";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(420, 320, 105, 32, 0.1, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    const longSleeve = shape === "long" || shape === "hoodie" || shape === "crewneck";
+    drawRoundedRect(ctx, 190, 120, 220, 390, 25, color);
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(0,0,0,.18)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(200, 145);
+    ctx.lineTo(longSleeve ? 70 : 115, longSleeve ? 260 : 230);
+    ctx.lineTo(longSleeve ? 125 : 170, longSleeve ? 320 : 275);
+    ctx.lineTo(225, 215);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(400, 145);
+    ctx.lineTo(longSleeve ? 530 : 485, longSleeve ? 260 : 230);
+    ctx.lineTo(longSleeve ? 475 : 430, longSleeve ? 320 : 275);
+    ctx.lineTo(375, 215);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    if (shape === "hoodie") {
+      ctx.beginPath();
+      ctx.arc(300, 128, 75, Math.PI, 0);
+      ctx.lineTo(370, 175);
+      ctx.lineTo(230, 175);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+};
+
 export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }: MerchStudioProps) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,10 +246,62 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
     finally { setIsUploading(false); if (fileInputRef.current) fileInputRef.current.value = ""; }
   };
 
-  const buildPreview = () => {
-    const text = [...frontElements, ...backElements].find((element) => element.type === "text")?.text ?? designName;
-    const escaped = (text || productType).replace(/[<>&"]/g, "");
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="600" height="600" fill="#f3f4f6"/><rect x="150" y="90" width="300" height="420" rx="40" fill="${baseColor}"/><text x="300" y="300" text-anchor="middle" font-family="Arial" font-size="40" font-weight="700" fill="${baseColor === "#f8fafc" ? "#111827" : "#ffffff"}">${escaped}</text><text x="300" y="555" text-anchor="middle" font-family="Arial" font-size="22" fill="#374151">${productType}</text></svg>`)}`;
+  const buildPreview = async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 600;
+    canvas.height = 600;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Preview renderer is unavailable");
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 600);
+    gradient.addColorStop(0, "#f8fafc");
+    gradient.addColorStop(1, "#e5e7eb");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 600, 600);
+
+    drawPreviewSilhouette(ctx, shapeForProduct(productType), baseColor);
+
+    const previewSide: ViewSide = frontElements.length ? "front" : "back";
+    const elements = previewSide === "front" ? frontElements : backElements;
+
+    for (const element of elements) {
+      ctx.save();
+      ctx.translate((element.x / 100) * 600, (element.y / 100) * 600);
+      ctx.rotate((element.rotation * Math.PI) / 180);
+      ctx.scale(element.scale, element.scale);
+
+      if (element.type === "image" && element.src) {
+        try {
+          const image = await loadPreviewImage(element.src);
+          const maxSize = 180;
+          const naturalWidth = image.naturalWidth || image.width || 1;
+          const naturalHeight = image.naturalHeight || image.height || 1;
+          const ratio = Math.min(maxSize / naturalWidth, maxSize / naturalHeight);
+          const width = naturalWidth * ratio;
+          const height = naturalHeight * ratio;
+          ctx.drawImage(image, -width / 2, -height / 2, width, height);
+        } catch {
+          ctx.fillStyle = "rgba(255,255,255,.12)";
+          ctx.fillRect(-60, -60, 120, 120);
+        }
+      } else if (element.type === "text") {
+        ctx.fillStyle = element.color ?? "#ffffff";
+        ctx.font = `900 ${element.fontSize ?? 24}px Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0,0,0,.25)";
+        ctx.shadowBlur = 3;
+        ctx.fillText(element.text ?? "", 0, 0, 240);
+      }
+      ctx.restore();
+    }
+
+    ctx.fillStyle = "rgba(17,24,39,.82)";
+    ctx.font = "600 20px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(`${productType} · ${previewSide}`, 300, 570);
+
+    return canvas.toDataURL("image/png", 0.9);
   };
 
   const saveDesign = async () => {
@@ -163,7 +310,8 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
     setIsSaving(true);
     try {
       const firstArtwork = [...frontElements, ...backElements].find((element) => element.type === "image")?.src ?? null;
-      const payload = { band_id: bandId, design_name: designName.trim(), background_color: baseColor, product_type: productType, artwork_url: firstArtwork, preview_image_url: buildPreview(), preview_data_url: buildPreview(), design_data: { version: 3, productType, garmentColor: baseColor, frontElements, backElements } };
+      const preview = await buildPreview();
+      const payload = { band_id: bandId, design_name: designName.trim(), background_color: baseColor, product_type: productType, artwork_url: firstArtwork, preview_image_url: preview, preview_data_url: preview, design_data: { version: 4, productType, garmentColor: baseColor, frontElements, backElements } };
       const query = (supabase as any).from("tshirt_designs");
       const { data, error } = existingDesignId ? await query.update(payload).eq("id", existingDesignId).eq("band_id", bandId).select("id").single() : await query.insert(payload).select("id").single();
       if (error) throw error;
@@ -191,7 +339,7 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
 
       <div className="space-y-3"><div className="flex items-center justify-between"><Tabs value={activeView} onValueChange={(value) => { setActiveView(value as ViewSide); setSelectedId(null); }}><TabsList><TabsTrigger value="front">Front</TabsTrigger>{printableSides.has("back") ? <TabsTrigger value="back">Back</TabsTrigger> : null}</TabsList></Tabs><Badge variant="outline">{productType}</Badge></div><div className="relative mx-auto aspect-square w-full max-w-[620px] overflow-hidden rounded-2xl border bg-gradient-to-b from-muted/20 to-muted" onPointerDown={() => setSelectedId(null)}><ProductSilhouette shape={shapeForProduct(productType)} color={baseColor} />{currentElements.map((element) => <DesignLayer key={element.id} element={element} selected={selectedId === element.id} onSelect={() => setSelectedId(element.id)} onMove={(x, y) => { if (!selectedId) return; setCurrentElements((elements) => elements.map((item) => item.id === element.id ? { ...item, x, y } : item)); }} />)}{!currentElements.length ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-sm text-muted-foreground"><div><ImagePlus className="mx-auto mb-2 h-8 w-8" />Upload artwork or add text</div></div> : null}</div></div>
 
-      <div className="space-y-4"><div className="rounded-lg border p-3"><p className="text-sm font-medium">Selected layer</p>{selected ? <div className="mt-3 space-y-4"><div><Label className="text-xs">Scale</Label><Slider value={[selected.scale]} min={0.25} max={2.5} step={0.05} onValueChange={([value]) => updateSelected({ scale: value })} /></div><div><Label className="text-xs">Rotation</Label><Slider value={[selected.rotation]} min={-180} max={180} step={1} onValueChange={([value]) => updateSelected({ rotation: value })} /></div>{selected.type === "text" ? <><div><Label className="text-xs">Text</Label><Input value={selected.text ?? ""} onChange={(e) => updateSelected({ text: e.target.value })} /></div><div><Label className="text-xs">Text colour</Label><Input type="color" value={selected.color ?? "#ffffff"} onChange={(e) => updateSelected({ color: e.target.value })} /></div></> : null}<Button variant="destructive" size="sm" className="w-full" onClick={() => { setCurrentElements((elements) => elements.filter((item) => item.id !== selected.id)); setSelectedId(null); }}><Trash2 className="mr-2 h-4 w-4" />Remove layer</Button></div> : <p className="mt-2 text-xs text-muted-foreground">Select an artwork or text layer to resize, rotate or edit it.</p>}</div><Button variant="outline" className="w-full" onClick={() => { setCurrentElements([]); setSelectedId(null); }}><RotateCcw className="mr-2 h-4 w-4" />Clear {activeView}</Button><Button className="w-full" onClick={saveDesign} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? "Saving..." : existingDesignId ? "Update design" : "Save design"}</Button></div>
+      <div className="space-y-4"><div className="rounded-lg border p-3"><p className="text-sm font-medium">Selected layer</p>{selected ? <div className="mt-3 space-y-4"><div><Label className="text-xs">Scale</Label><Slider value={[selected.scale]} min={0.25} max={2.5} step={0.05} onValueChange={([value]) => updateSelected({ scale: value })} /></div><div><Label className="text-xs">Rotation</Label><Slider value={[selected.rotation]} min={-180} max={180} step={1} onValueChange={([value]) => updateSelected({ rotation: value })} /></div>{selected.type === "text" ? <><div><Label className="text-xs">Text</Label><Input value={selected.text ?? ""} onChange={(e) => updateSelected({ text: e.target.value })} /></div><div><Label className="text-xs">Text colour</Label><Input type="color" value={selected.color ?? "#ffffff"} onChange={(e) => updateSelected({ color: e.target.value })} /></div></> : null}<Button variant="destructive" size="sm" className="w-full" onClick={() => { setCurrentElements((elements) => elements.filter((item) => item.id !== selected.id)); setSelectedId(null); }}><Trash2 className="mr-2 h-4 w-4" />Remove layer</Button></div> : <p className="mt-2 text-xs text-muted-foreground">Select an artwork or text layer to resize, rotate or edit it.</p>}</div><Button variant="outline" className="w-full" onClick={() => { setCurrentElements([]); setSelectedId(null); }}><RotateCcw className="mr-2 h-4 w-4" />Clear {activeView}</Button><Button className="w-full" onClick={saveDesign} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? "Rendering preview..." : existingDesignId ? "Update design" : "Save design"}</Button></div>
     </CardContent>
   </Card>;
 };
