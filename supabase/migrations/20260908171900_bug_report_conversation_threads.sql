@@ -156,3 +156,25 @@ $$;
 REVOKE ALL ON FUNCTION public.reply_to_bug_report(UUID, TEXT, BOOLEAN) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.reply_to_bug_report(UUID, TEXT, BOOLEAN) FROM anon;
 GRANT EXECUTE ON FUNCTION public.reply_to_bug_report(UUID, TEXT, BOOLEAN) TO authenticated;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'bug_reports'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.bug_reports';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'bug_report_responses'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.bug_report_responses';
+  END IF;
+END
+$$;
