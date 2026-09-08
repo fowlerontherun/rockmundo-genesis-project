@@ -118,10 +118,6 @@ function DesignLayer({ element, selected, onSelect, onMove }: { element: DesignE
   </div>;
 }
 
-const loadPreviewImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-  const image = new Image(); image.crossOrigin = "anonymous"; image.onload = () => resolve(image); image.onerror = () => reject(new Error("Unable to load artwork for preview")); image.src = src;
-});
-
 export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }: MerchStudioProps) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -290,51 +286,23 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
     window.addEventListener("keydown", onKeyDown); return () => window.removeEventListener("keydown", onKeyDown);
   }, [selected, activeArea, constrainToPrintArea, zone.left, zone.top, zone.width, zone.height]);
 
-  const buildPreview = async () => {
-    const canvas = document.createElement("canvas"); canvas.width = 600; canvas.height = 600;
-    const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("Preview rendering is unavailable");
-    ctx.fillStyle = "#f3f4f6"; ctx.fillRect(0, 0, 600, 600);
-    const previewArea = printAreas.find((area) => (areaElements[area] ?? []).length) ?? printAreas[0] ?? "front";
-    const elements = areaElements[previewArea] ?? [];
-    const previewZone = zoneForSurface(shape, previewArea);
-    ctx.fillStyle = baseColor;
-    if (shape === "poster" || shape === "flat") ctx.fillRect(110, 55, 380, 490);
-    else if (shape === "mug") { ctx.beginPath(); ctx.roundRect(120, 170, 330, 270, 28); ctx.fill(); }
-    else if (shape === "glass") { ctx.beginPath(); ctx.roundRect(210, 110, 180, 380, 45); ctx.fill(); }
-    else if (shape === "bottle") { ctx.beginPath(); ctx.roundRect(225, 110, 150, 390, 38); ctx.fill(); }
-    else if (shape === "cap") { ctx.beginPath(); ctx.ellipse(300, 285, 175, 105, 0, Math.PI, 0); ctx.lineTo(475, 335); ctx.lineTo(125, 335); ctx.closePath(); ctx.fill(); }
-    else if (shape === "tote") { ctx.beginPath(); ctx.roundRect(120, 145, 360, 370, 20); ctx.fill(); }
-    else { ctx.beginPath(); ctx.roundRect(190, 120, 220, 390, 26); ctx.fill(); }
-
-    for (const element of elements) {
-      ctx.save(); ctx.translate((element.x / 100) * 600, (element.y / 100) * 600); ctx.rotate((element.rotation * Math.PI) / 180); ctx.scale(element.scale, element.scale);
-      if (element.type === "image" && element.src) {
-        try { const image = await loadPreviewImage(element.src); const max = Math.max(80, Math.min(previewZone.width, previewZone.height) * 6); const ratio = Math.min(max / image.width, max / image.height, 1); const w = image.width * ratio; const h = image.height * ratio; ctx.drawImage(image, -w / 2, -h / 2, w, h); } catch { /* keep save resilient */ }
-      } else {
-        ctx.fillStyle = element.color ?? "#fff"; ctx.font = `800 ${element.fontSize ?? 24}px Arial, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(element.text ?? "", 0, 0);
-      }
-      ctx.restore();
-    }
-    ctx.fillStyle = "#374151"; ctx.font = "600 20px Arial, sans-serif"; ctx.textAlign = "center"; ctx.fillText(`${productType} · ${prettyArea(previewArea)}`, 300, 575);
-    return canvas.toDataURL("image/png", 0.9);
-  };
-
   const saveDesign = async () => {
+    if (!bandId) return toast({ title: "No band selected", description: "Select or join a band before saving merchandise.", variant: "destructive" });
+    if (!productType) return toast({ title: "Choose a product", description: "Select a merchandise product before saving.", variant: "destructive" });
     if (!designName.trim()) return toast({ title: "Name your design", description: "Add a name before saving.", variant: "destructive" });
     const allElements = Object.values(areaElements).flat();
     if (!allElements.length) return toast({ title: "Add a design", description: "Upload artwork or add text before saving.", variant: "destructive" });
     setIsSaving(true);
     try {
       const firstArtwork = allElements.find((element) => element.type === "image")?.src ?? null;
-      const preview = await buildPreview();
       const payload = {
         band_id: bandId,
         design_name: designName.trim(),
         background_color: baseColor,
         product_type: productType,
         artwork_url: firstArtwork,
-        preview_image_url: preview,
-        preview_data_url: preview,
+        preview_image_url: null,
+        preview_data_url: null,
         design_data: {
           version: 6,
           productType,
@@ -349,8 +317,10 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
       if (error) throw error;
       toast({ title: existingDesignId ? "Design updated" : "Merch design saved", description: `${designName.trim()} now includes ${Object.keys(areaElements).filter((area) => areaElements[area]?.length).length} designed print surface(s).` });
       onSave?.(data.id);
-    } catch (error) { toast({ title: "Save failed", description: error instanceof Error ? error.message : "Unable to save design", variant: "destructive" }); }
-    finally { setIsSaving(false); }
+    } catch (error: any) {
+      const message = error?.message || error?.details || error?.hint || "Unable to save design";
+      toast({ title: "Save failed", description: message, variant: "destructive" });
+    } finally { setIsSaving(false); }
   };
 
   if (loadingCatalogue || loadingExisting) return <Card><CardContent className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>;
@@ -393,7 +363,7 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
           </TabsContent>
         </Tabs>
         <Button variant="outline" className="w-full" onClick={() => { setCurrentElements(() => []); setSelectedId(null); }}><RotateCcw className="mr-2 h-4 w-4" />Clear {prettyArea(activeArea)}</Button>
-        <Button className="w-full" onClick={saveDesign} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? "Rendering preview..." : existingDesignId ? "Update design" : "Save design"}</Button>
+        <Button className="w-full" onClick={saveDesign} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? "Saving design..." : existingDesignId ? "Update design" : "Save design"}</Button>
       </div>
     </CardContent>
   </Card>;
