@@ -45,29 +45,51 @@ export const useMerchVariants = (merchandiseId: string | null) => {
     enabled: !!merchandiseId,
   });
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["merch-variants", merchandiseId] });
+  const invalidate = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["merch-variants", merchandiseId] }),
+      queryClient.invalidateQueries({ queryKey: ["player-merchandise"] }),
+    ]);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (input: VariantInput) => {
       if (!merchandiseId) throw new Error("No merchandise selected");
-      const { error } = await (supabase as any)
+      const requestedAllocation = Math.max(0, input.stock_quantity ?? 0);
+      const { data, error } = await (supabase as any)
         .from("merch_variants")
         .insert({
           merchandise_id: merchandiseId,
           size: input.size ?? null,
           color: input.color ?? null,
           sku: input.sku ?? null,
-          stock_quantity: input.stock_quantity ?? 0,
+          stock_quantity: 0,
           cost_to_produce_override: input.cost_to_produce_override ?? null,
           selling_price_override: input.selling_price_override ?? null,
           is_active: input.is_active ?? true,
-        });
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+
+      if (requestedAllocation > 0) {
+        const { error: allocationError } = await (supabase as any).rpc("allocate_merch_variant_stock", {
+          p_variant_id: data.id,
+          p_quantity: requestedAllocation,
+        });
+        if (allocationError) {
+          await (supabase as any).from("merch_variants").delete().eq("id", data.id);
+          throw allocationError;
+        }
+      }
+      return requestedAllocation;
     },
-    onSuccess: () => {
-      invalidate();
-      toast({ title: "Variant created" });
+    onSuccess: async (allocated) => {
+      await invalidate();
+      toast({
+        title: "Variant created",
+        description: allocated > 0 ? `${allocated} manufactured units were allocated from parent stock.` : "Variant created with no stock allocated yet.",
+      });
     },
     onError: (e: Error) =>
       toast({ title: "Failed to create variant", description: e.message, variant: "destructive" }),
@@ -75,9 +97,11 @@ export const useMerchVariants = (merchandiseId: string | null) => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<MerchVariant> }) => {
+      const safePatch = { ...patch };
+      delete safePatch.stock_quantity;
       const { error } = await (supabase as any)
         .from("merch_variants")
-        .update(patch)
+        .update(safePatch)
         .eq("id", id);
       if (error) throw error;
     },
@@ -94,26 +118,44 @@ export const useMerchVariants = (merchandiseId: string | null) => {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      invalidate();
-      toast({ title: "Variant removed" });
+    onSuccess: async () => {
+      await invalidate();
+      toast({ title: "Variant removed", description: "Any unsold units were returned to the parent product." });
     },
   });
 
-  const restockMutation = useMutation({
+  const allocateMutation = useMutation({
     mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
-      const variant = variants.find((v) => v.id === id);
-      if (!variant) throw new Error("Variant not found");
-      const { error } = await (supabase as any)
-        .from("merch_variants")
-        .update({ stock_quantity: variant.stock_quantity + amount })
-        .eq("id", id);
+      if (amount <= 0) throw new Error("Allocation must be greater than zero");
+      const { error } = await (supabase as any).rpc("allocate_merch_variant_stock", {
+        p_variant_id: id,
+        p_quantity: amount,
+      });
       if (error) throw error;
+      return amount;
     },
-    onSuccess: () => {
-      invalidate();
-      toast({ title: "Variant restocked" });
+    onSuccess: async (amount) => {
+      await invalidate();
+      toast({ title: "Stock allocated", description: `${amount} units moved from parent inventory into this variant.` });
     },
+    onError: (e: Error) => toast({ title: "Allocation failed", description: e.message, variant: "destructive" }),
+  });
+
+  const releaseMutation = useMutation({
+    mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
+      if (amount <= 0) throw new Error("Release amount must be greater than zero");
+      const { error } = await (supabase as any).rpc("release_merch_variant_stock", {
+        p_variant_id: id,
+        p_quantity: amount,
+      });
+      if (error) throw error;
+      return amount;
+    },
+    onSuccess: async (amount) => {
+      await invalidate();
+      toast({ title: "Stock returned", description: `${amount} units moved back to unallocated parent inventory.` });
+    },
+    onError: (e: Error) => toast({ title: "Release failed", description: e.message, variant: "destructive" }),
   });
 
   return {
@@ -122,7 +164,9 @@ export const useMerchVariants = (merchandiseId: string | null) => {
     createVariant: createMutation.mutate,
     updateVariant: updateMutation.mutate,
     deleteVariant: deleteMutation.mutate,
-    restockVariant: restockMutation.mutate,
+    allocateStock: allocateMutation.mutate,
+    releaseStock: releaseMutation.mutate,
     isCreating: createMutation.isPending,
+    isAllocating: allocateMutation.isPending || releaseMutation.isPending,
   };
 };
