@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "strict": true,
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "node"
+    ]
+  },
+  "include": [
+    "src/features/gig-demo-3d",
+    "src/vite-env.d.ts"
+  ]
+}

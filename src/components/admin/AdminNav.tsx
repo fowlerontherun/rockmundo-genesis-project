@@ -67,6 +67,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/fame-fans-gifting", label: "Fame & Fans Gifting", description: "Gift fame and fans" },
       { path: "/admin/gigs", label: "Gigs", description: "Gig system configuration" },
       { path: "/admin/gig-viewer-demo", label: "Gig Viewer Demo", description: "Fixture viewer and replay inspector" },
+      { path: "/admin/gig-viewer-demo?view=3d", label: "3D Concert Demo", description: "Immersive club, animated band and camera views" },
       { path: "/admin/gig-viewer-replays", label: "Gig Viewer Replay Audit", description: "Replay status, validation and regeneration" },
       
       { path: "/admin/venues", label: "Venues", description: "Venue management" },
