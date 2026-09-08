@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Package, Search, Sparkles, Truck } from "lucide-react";
 import { MerchItemCard } from "./MerchItemCard";
+import { MerchProductMockup } from "./MerchProductMockup";
+import { shapeForMerchProduct } from "./merchProductShape";
 import {
   MAX_MERCH_PRICE,
   QUALITY_TIERS,
@@ -36,6 +38,11 @@ const getBulkDiscount = (quantity: number) => {
   if (quantity >= 500) return 0.1;
   if (quantity >= 100) return 0.05;
   return 0;
+};
+
+const previewColor = (item: MerchItemRequirement | null) => {
+  const first = item?.colour_options?.find((value) => /^#[0-9a-f]{6}$/i.test(value));
+  return first ?? "#171717";
 };
 
 export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, isAdding }: MerchCatalogProps) => {
@@ -83,6 +90,7 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
   const productionTotal = Math.round(effectiveUnitCost * quantity * 100) / 100;
   const hasLeadTime = (selectedItem?.lead_time_days ?? 0) > 0;
   const isImmediate = !hasLeadTime;
+  const selectedKind = selectedItem?.product_kind ?? (selectedItem?.category === "Experiences" ? "experience" : "physical");
 
   const submit = () => {
     if (!selectedItem || !designName.trim() || quantity < minQty || Number(price) < minimumRetail) return;
@@ -113,14 +121,14 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
           <CardContent className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Search tees, hoodies, mugs, materials..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+              <Input className="pl-9" placeholder="Search tees, hoodies, mugs, keyrings, picks, vinyl..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
             </div>
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
               <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
                 {CATEGORIES.map((category) => <TabsTrigger key={category} value={category} className="text-xs">{category === "Experiences" ? "Fan Experiences" : category}</TabsTrigger>)}
               </TabsList>
             </Tabs>
-            <ScrollArea className="h-[470px] pr-4">
+            <ScrollArea className="h-[620px] pr-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 {filteredItems.map((item) => (
                   <MerchItemCard
@@ -149,6 +157,16 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
           <CardContent className="space-y-4">
             {selectedItem ? (
               <>
+                {selectedKind === "physical" ? (
+                  <div className="relative aspect-square overflow-hidden rounded-xl border bg-gradient-to-b from-muted/10 to-muted/50">
+                    <MerchProductMockup shape={shapeForMerchProduct(selectedItem.item_type)} color={previewColor(selectedItem)} area={selectedItem.print_areas?.[0] ?? "front"} />
+                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2">
+                      <Badge variant="secondary" className="bg-background/85 backdrop-blur-sm">{selectedItem.item_type}</Badge>
+                      {selectedItem.is_personalisable ? <Badge variant="secondary" className="gap-1 bg-background/85 backdrop-blur-sm"><Sparkles className="h-3 w-3" /> Merch Studio ready</Badge> : null}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold">{selectedItem.item_type}</span>
@@ -188,21 +206,13 @@ export const MerchCatalog = ({ bandFame, bandFans, playerLevel, onAddProduct, is
                   <div className="flex justify-between"><span>Recommended retail</span><span>${selectedItem.recommended_retail_price ?? pricing?.recommended ?? "—"}</span></div>
                   <div className="flex justify-between font-medium"><span>Production order</span><span>${productionTotal.toLocaleString()}</span></div>
                   {hasLeadTime ? (
-                    <div className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
-                      <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <span>Estimated manufacturing time: {selectedItem.lead_time_days} days. Units will stay in production and cannot be sold until the run completes.</span>
-                    </div>
+                    <div className="flex items-start gap-2 pt-1 text-xs text-muted-foreground"><Truck className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Estimated manufacturing time: {selectedItem.lead_time_days} days. Units will stay in production and cannot be sold until the run completes.</span></div>
                   ) : (
-                    <div className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
-                      <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      <span>This product has no supplier lead time and becomes available immediately.</span>
-                    </div>
+                    <div className="flex items-start gap-2 pt-1 text-xs text-muted-foreground"><Truck className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>This product has no supplier lead time and becomes available immediately.</span></div>
                   )}
                 </div>
 
-                <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-                  Production cost is charged when you place the order. The retail recommendation is a gameplay guide, while the minimum protects against accidentally selling physical stock below a viable margin.
-                </div>
+                <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">Production cost is charged when you place the order. The retail recommendation is a gameplay guide, while the minimum protects against accidentally selling physical stock below a viable margin.</div>
 
                 <Button className="w-full" onClick={submit} disabled={!designName.trim() || isAdding || quantity < minQty || Number(price) < minimumRetail || Number(price) > MAX_MERCH_PRICE}>
                   {isAdding ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Placing order...</> : isImmediate ? "Create product" : "Place production order"}
