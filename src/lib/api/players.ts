@@ -41,14 +41,30 @@ const normalizeUsername = (input: string): string => {
     .slice(0, 60);
 };
 
+const readPublicMetadataName = (user: User): string => {
+  const preferredUsername =
+    typeof user.user_metadata?.preferred_username === "string"
+      ? user.user_metadata.preferred_username.trim()
+      : "";
+  const fullName =
+    typeof user.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name.trim()
+      : "";
+
+  return preferredUsername || fullName;
+};
+
 const deriveFallbackNames = (user: User): { username: string; displayName: string } => {
-  const metadataName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "";
-  const rawName = metadataName || user.email || user.phone || `player-${user.id.slice(0, 8)}`;
-  const trimmed = rawName.trim();
-  const fallbackUsername = normalizeUsername(trimmed.length > 0 ? trimmed : `player-${user.id.slice(0, 8)}`);
-  const displayName = trimmed.length > 0 ? trimmed : `Player ${user.id.slice(0, 4).toUpperCase()}`;
+  // Never derive a public identity from private authentication contact fields
+  // such as email or phone. If public metadata is unavailable, use an opaque
+  // player identifier until the character creator supplies the real name.
+  const metadataName = readPublicMetadataName(user);
+  const opaqueUsername = `player-${user.id.slice(0, 8)}`;
+  const fallbackUsername = normalizeUsername(metadataName || opaqueUsername);
+  const displayName = metadataName || `Player ${user.id.slice(0, 4).toUpperCase()}`;
+
   return {
-    username: fallbackUsername.length > 0 ? fallbackUsername : `player-${user.id.slice(0, 8)}`,
+    username: fallbackUsername.length > 0 ? fallbackUsername : opaqueUsername,
     displayName,
   };
 };
