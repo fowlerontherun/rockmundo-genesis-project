@@ -36175,39 +36175,69 @@ export type Database = {
       merch_item_requirements: {
         Row: {
           base_cost: number | null
+          base_material: string | null
           base_quality_tier: string | null
+          catalog_source: string
+          catalog_source_ref: string | null
           category: string
+          colour_options: Json
           created_at: string | null
           description: string | null
           id: string
+          is_personalisable: boolean
           item_type: string
+          lead_time_days: number
           min_fame: number | null
           min_fans: number | null
           min_level: number | null
+          min_order_qty: number
+          print_areas: Json
+          product_kind: string
+          supplier_tier: string
         }
         Insert: {
           base_cost?: number | null
+          base_material?: string | null
           base_quality_tier?: string | null
+          catalog_source?: string
+          catalog_source_ref?: string | null
           category: string
+          colour_options?: Json
           created_at?: string | null
           description?: string | null
           id?: string
+          is_personalisable?: boolean
           item_type: string
+          lead_time_days?: number
           min_fame?: number | null
           min_fans?: number | null
           min_level?: number | null
+          min_order_qty?: number
+          print_areas?: Json
+          product_kind?: string
+          supplier_tier?: string
         }
         Update: {
           base_cost?: number | null
+          base_material?: string | null
           base_quality_tier?: string | null
+          catalog_source?: string
+          catalog_source_ref?: string | null
           category?: string
+          colour_options?: Json
           created_at?: string | null
           description?: string | null
           id?: string
+          is_personalisable?: boolean
           item_type?: string
+          lead_time_days?: number
           min_fame?: number | null
           min_fans?: number | null
           min_level?: number | null
+          min_order_qty?: number
+          print_areas?: Json
+          product_kind?: string
+          supplier_tier?: string
         }
         Relationships: []
       }
@@ -42070,6 +42100,7 @@ export type Database = {
       }
       player_merchandise: {
         Row: {
+          artwork_url: string | null
           available_until: string | null
           band_id: string
           channel_split: Json
@@ -42077,14 +42108,26 @@ export type Database = {
           cost_to_produce: number
           created_at: string
           custom_design_id: string | null
+          design_data: Json | null
           design_name: string
           design_preview_url: string | null
           drop_starts_at: string | null
+          garment_color: string | null
           id: string
           is_limited_edition: boolean | null
+          is_rush_order: boolean
           item_type: string
+          lead_time_days: number
           limited_quantity: number | null
           logistics_pct: number
+          pending_quantity: number
+          product_requirement_id: string | null
+          production_discount_pct: number
+          production_ordered_at: string | null
+          production_quality: number | null
+          production_ready_at: string | null
+          production_status: string
+          production_total_cost: number
           quality_tier: string | null
           release_id: string | null
           sales_boost_pct: number | null
@@ -42092,11 +42135,13 @@ export type Database = {
           stock_quantity: number
           storage_cost_daily: number
           superfan_only: boolean
+          supplier_tier: string
           tax_pct: number
           tour_exclusive_tour_id: string | null
           updated_at: string
         }
         Insert: {
+          artwork_url?: string | null
           available_until?: string | null
           band_id: string
           channel_split?: Json
@@ -42104,14 +42149,26 @@ export type Database = {
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
+          design_data?: Json | null
           design_name: string
           design_preview_url?: string | null
           drop_starts_at?: string | null
+          garment_color?: string | null
           id?: string
           is_limited_edition?: boolean | null
+          is_rush_order?: boolean
           item_type: string
+          lead_time_days?: number
           limited_quantity?: number | null
           logistics_pct?: number
+          pending_quantity?: number
+          product_requirement_id?: string | null
+          production_discount_pct?: number
+          production_ordered_at?: string | null
+          production_quality?: number | null
+          production_ready_at?: string | null
+          production_status?: string
+          production_total_cost?: number
           quality_tier?: string | null
           release_id?: string | null
           sales_boost_pct?: number | null
@@ -42119,11 +42176,13 @@ export type Database = {
           stock_quantity?: number
           storage_cost_daily?: number
           superfan_only?: boolean
+          supplier_tier?: string
           tax_pct?: number
           tour_exclusive_tour_id?: string | null
           updated_at?: string
         }
         Update: {
+          artwork_url?: string | null
           available_until?: string | null
           band_id?: string
           channel_split?: Json
@@ -42131,14 +42190,26 @@ export type Database = {
           cost_to_produce?: number
           created_at?: string
           custom_design_id?: string | null
+          design_data?: Json | null
           design_name?: string
           design_preview_url?: string | null
           drop_starts_at?: string | null
+          garment_color?: string | null
           id?: string
           is_limited_edition?: boolean | null
+          is_rush_order?: boolean
           item_type?: string
+          lead_time_days?: number
           limited_quantity?: number | null
           logistics_pct?: number
+          pending_quantity?: number
+          product_requirement_id?: string | null
+          production_discount_pct?: number
+          production_ordered_at?: string | null
+          production_quality?: number | null
+          production_ready_at?: string | null
+          production_status?: string
+          production_total_cost?: number
           quality_tier?: string | null
           release_id?: string | null
           sales_boost_pct?: number | null
@@ -42146,6 +42217,7 @@ export type Database = {
           stock_quantity?: number
           storage_cost_daily?: number
           superfan_only?: boolean
+          supplier_tier?: string
           tax_pct?: number
           tour_exclusive_tour_id?: string | null
           updated_at?: string
@@ -42170,6 +42242,13 @@ export type Database = {
             columns: ["custom_design_id"]
             isOneToOne: false
             referencedRelation: "tshirt_designs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_merchandise_product_requirement_id_fkey"
+            columns: ["product_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "merch_item_requirements"
             referencedColumns: ["id"]
           },
           {
@@ -56811,33 +56890,42 @@ export type Database = {
       }
       tshirt_designs: {
         Row: {
+          artwork_url: string | null
           background_color: string
           band_id: string | null
           created_at: string | null
           design_data: Json
           design_name: string
           id: string
+          preview_data_url: string | null
           preview_image_url: string | null
+          product_type: string
           updated_at: string | null
         }
         Insert: {
+          artwork_url?: string | null
           background_color: string
           band_id?: string | null
           created_at?: string | null
           design_data: Json
           design_name: string
           id?: string
+          preview_data_url?: string | null
           preview_image_url?: string | null
+          product_type?: string
           updated_at?: string | null
         }
         Update: {
+          artwork_url?: string | null
           background_color?: string
           band_id?: string | null
           created_at?: string | null
           design_data?: Json
           design_name?: string
           id?: string
+          preview_data_url?: string | null
           preview_image_url?: string | null
+          product_type?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -62927,6 +63015,7 @@ export type Database = {
       }
       complete_company_shift: { Args: { p_claim_id: string }; Returns: Json }
       complete_due_city_projects: { Args: never; Returns: number }
+      complete_due_merch_production: { Args: never; Returns: number }
       complete_expired_festival_attendance: { Args: never; Returns: Json }
       complete_festival_performance: {
         Args: { p_idempotency_key?: string; p_session_id: string }
@@ -67768,6 +67857,7 @@ export type Database = {
       roll_social_seasons: { Args: never; Returns: Json }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
       run_botb_cycle: { Args: never; Returns: Json }
+      run_merch_manager_auto_restock: { Args: never; Returns: number }
       run_simplified_festival_edition: {
         Args: {
           p_expected_edition_version: number
