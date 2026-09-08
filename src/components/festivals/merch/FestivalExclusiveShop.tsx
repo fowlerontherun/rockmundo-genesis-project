@@ -1,12 +1,9 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Check } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ShoppingCart } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { toast } from "sonner";
+import { MerchDesignPreview } from "@/components/merchandise/MerchDesignPreview";
 
 interface FestivalExclusiveShopProps {
   festivalId: string;
@@ -14,92 +11,100 @@ interface FestivalExclusiveShopProps {
   location: string | null;
 }
 
-const COLLECTIBLES = [
-  { id: "wristband", name: "Festival Wristband", emoji: "🎗️", price: 10, description: "Commemorative woven wristband" },
-  { id: "poster", name: "Commemorative Poster", emoji: "🖼️", price: 25, description: "Limited edition art print" },
-  { id: "tshirt", name: "Festival T-Shirt", emoji: "👕", price: 35, description: "Exclusive event tee" },
-  { id: "pin", name: "Enamel Pin", emoji: "📌", price: 8, description: "Collector's enamel pin badge" },
-];
+type FestivalShopAssignment = {
+  id: string;
+  band_id: string;
+  merchandise_id: string;
+  band?: { name?: string | null } | null;
+  merchandise?: Record<string, any> | null;
+};
 
 export function FestivalExclusiveShop({ festivalId, festivalTitle, location }: FestivalExclusiveShopProps) {
-  const { profileId } = useActiveProfile();
-  const queryClient = useQueryClient();
-  const [purchased, setPurchased] = useState<Set<string>>(new Set());
-
-  const { data: profile } = useQuery({
-    queryKey: ["profile-cash", profileId],
+  const { data: assignments = [], isLoading } = useQuery<FestivalShopAssignment[]>({
+    queryKey: ["festival-shop", festivalId],
     queryFn: async () => {
-      if (!profileId) return null;
-      const { data } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
-      return data;
+      const { data, error } = await (supabase as any)
+        .from("festival_merch_assignments")
+        .select(`
+          id,
+          band_id,
+          merchandise_id,
+          band:bands(name),
+          merchandise:player_merchandise(
+            id,
+            band_id,
+            design_name,
+            item_type,
+            selling_price,
+            stock_quantity,
+            design_data,
+            artwork_url,
+            garment_color,
+            design_preview_url,
+            is_limited_edition,
+            limited_quantity,
+            available_until
+          )
+        `)
+        .eq("festival_id", festivalId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).filter((row: FestivalShopAssignment) => row.merchandise);
     },
-    enabled: !!profileId,
+    enabled: Boolean(festivalId),
   });
-
-  const buyItem = useMutation({
-    mutationFn: async (item: typeof COLLECTIBLES[0]) => {
-      if (!profileId) throw new Error("Not authenticated");
-      if (!profile || profile.cash < item.price) throw new Error("Not enough cash");
-
-      await supabase.from("profiles").update({ cash: profile.cash - item.price }).eq("id", profileId);
-
-      // Log as activity
-      await (supabase as any).from("activity_feed").insert({
-        user_id: profileId,
-        profile_id: profileId,
-        activity_type: "festival_purchase",
-        message: `Bought ${item.name} at ${festivalTitle}`,
-        earnings: -item.price,
-        metadata: { festival_id: festivalId, item_id: item.id, item_name: item.name },
-      });
-
-      return item.id;
-    },
-    onSuccess: (itemId) => {
-      setPurchased(prev => new Set([...prev, itemId]));
-      queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Item purchased!");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const cash = profile?.cash ?? 0;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <ShoppingCart className="h-4 w-4" />
-          Festival Shop
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ShoppingCart className="h-4 w-4" />
+            Festival Merch Shop
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Real merchandise brought by bands appearing at {festivalTitle}{location ? ` in ${location}` : ""}.
+          </p>
         </div>
-        <Badge variant="outline" className="text-xs">Balance: ${cash.toLocaleString()}</Badge>
+        <Badge variant="outline" className="text-xs">Live inventory</Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        {COLLECTIBLES.map(item => {
-          const owned = purchased.has(item.id);
-          return (
-            <Card key={item.id} className={`border-dashed ${owned ? "opacity-60" : ""}`}>
-              <CardContent className="p-3 text-center space-y-1.5">
-                <span className="text-2xl">{item.emoji}</span>
-                <p className="text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
-                <p className="font-bold text-sm">${item.price}</p>
-                <Button
-                  size="sm"
-                  variant={owned ? "secondary" : "default"}
-                  className="w-full text-xs"
-                  disabled={owned || cash < item.price || buyItem.isPending}
-                  onClick={() => buyItem.mutate(item)}
-                >
-                  {owned ? <><Check className="h-3 w-3 mr-1" /> Owned</> : "Buy"}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {isLoading ? (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Loading festival merchandise...</div>
+      ) : assignments.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No bands have assigned merchandise to this festival stand yet.
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {assignments.map((assignment) => {
+            const item = assignment.merchandise!;
+            return (
+              <Card key={assignment.id} className="overflow-hidden">
+                <div className="aspect-square bg-muted/20 p-2">
+                  <MerchDesignPreview design={item} className="rounded-md" />
+                </div>
+                <CardContent className="space-y-2 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{item.design_name}</p>
+                      <p className="text-xs text-muted-foreground">{assignment.band?.name ?? "Band"} · {item.item_type}</p>
+                    </div>
+                    <span className="shrink-0 text-sm font-bold">${Number(item.selling_price ?? 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="outline">{Number(item.stock_quantity ?? 0)} in stock</Badge>
+                    {item.is_limited_edition ? <Badge variant="secondary">Limited edition</Badge> : null}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Purchases continue through RockMundo's authoritative merch sales system; this storefront never creates or edits stock directly.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
