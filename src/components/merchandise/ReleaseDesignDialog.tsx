@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, PackageCheck, Zap } from "lucide-react";
+import { Loader2, PackageCheck, ShieldCheck, Zap } from "lucide-react";
 
 interface ReleaseDesignDialogProps {
   open: boolean;
@@ -25,7 +25,16 @@ interface ReleaseDesignDialogProps {
 }
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
-const SIZED_PRODUCTS = new Set(["Basic Tee", "Graphic Tee", "Heavyweight Tee", "Long Sleeve Tee", "Premium Hoodie", "Zip Hoodie", "Tour Crewneck", "Football Shirt"]);
+const SIZED_PRODUCTS = new Set([
+  "Basic Tee",
+  "Graphic Tee",
+  "Heavyweight Tee",
+  "Long Sleeve Tee",
+  "Premium Hoodie",
+  "Zip Hoodie",
+  "Tour Crewneck",
+  "Football Shirt",
+]);
 
 const getBulkDiscount = (quantity: number) => {
   if (quantity >= 1000) return 0.15;
@@ -50,6 +59,7 @@ export const ReleaseDesignDialog = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  const [requirementId, setRequirementId] = useState<string | null>(null);
   const [productType, setProductType] = useState("Graphic Tee");
   const [baseCost, setBaseCost] = useState(7);
   const [minOrder, setMinOrder] = useState(10);
@@ -71,6 +81,7 @@ export const ReleaseDesignDialog = ({
   useEffect(() => {
     if (!open || !designId) return;
     let cancelled = false;
+
     const load = async () => {
       setIsLoadingProduct(true);
       try {
@@ -81,11 +92,11 @@ export const ReleaseDesignDialog = ({
           .eq("band_id", bandId)
           .single();
         if (designError) throw designError;
-        const nextType = design?.product_type || "Graphic Tee";
 
+        const nextType = design?.product_type || "Graphic Tee";
         const { data: requirement, error: requirementError } = await (supabase as any)
           .from("merch_item_requirements")
-          .select("base_cost, min_order_qty, lead_time_days, base_quality_tier, supplier_tier")
+          .select("id, base_cost, min_order_qty, lead_time_days, base_quality_tier, supplier_tier")
           .eq("item_type", nextType)
           .maybeSingle();
         if (requirementError) throw requirementError;
@@ -93,6 +104,7 @@ export const ReleaseDesignDialog = ({
 
         const nextCost = Number(requirement?.base_cost ?? 7);
         const nextMinOrder = Math.max(1, Number(requirement?.min_order_qty ?? 10));
+        setRequirementId(requirement?.id ?? null);
         setProductType(nextType);
         setBaseCost(nextCost);
         setMinOrder(nextMinOrder);
@@ -114,39 +126,64 @@ export const ReleaseDesignDialog = ({
         if (!cancelled) setIsLoadingProduct(false);
       }
     };
+
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [bandId, designId, open, toast]);
 
   const hasSizes = SIZED_PRODUCTS.has(productType);
   const quantity = Number(stockQuantity) || 0;
   const price = Number(sellingPrice) || 0;
-  const discount = getBulkDiscount(quantity);
-  const rushMultiplier = rushOrder ? 1.25 : 1;
-  const effectiveUnitCost = baseCost * (1 - discount) * rushMultiplier;
-  const productionTotal = Math.round(effectiveUnitCost * quantity * 100) / 100;
-  const profitPerUnit = Math.max(0, price - effectiveUnitCost);
-  const totalPotential = profitPerUnit * quantity;
-  const effectiveLeadTime = leadTime > 0 ? (rushOrder ? Math.max(1, Math.ceil(leadTime / 2)) : leadTime) : 0;
-  const qualityScore = getSupplierQuality(supplierTier, rushOrder);
+
+  // These figures are an estimate for the player. The database trigger recalculates
+  // the canonical discount, unit cost, lead time, quality and charge at insertion time.
+  const estimatedDiscount = getBulkDiscount(quantity);
+  const estimatedRushMultiplier = rushOrder ? 1.25 : 1;
+  const estimatedUnitCost = baseCost * (1 - estimatedDiscount) * estimatedRushMultiplier;
+  const estimatedProductionTotal = Math.round(estimatedUnitCost * quantity * 100) / 100;
+  const estimatedProfitPerUnit = Math.max(0, price - estimatedUnitCost);
+  const estimatedTotalPotential = estimatedProfitPerUnit * quantity;
+  const estimatedLeadTime = leadTime > 0
+    ? rushOrder
+      ? Math.max(1, Math.ceil(leadTime / 2))
+      : leadTime
+    : 0;
+  const estimatedQuality = getSupplierQuality(supplierTier, rushOrder);
   const sizeSummary = useMemo(() => selectedSizes.join(", "), [selectedSizes]);
 
   const toggleSize = (size: string) => {
-    setSelectedSizes((prev) => prev.includes(size) ? prev.filter((item) => item !== size) : [...prev, size]);
+    setSelectedSizes((prev) =>
+      prev.includes(size) ? prev.filter((item) => item !== size) : [...prev, size],
+    );
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
     if (hasSizes && selectedSizes.length === 0) {
-      toast({ title: "Select at least one size", description: "Apparel needs at least one offered size.", variant: "destructive" });
+      toast({
+        title: "Select at least one size",
+        description: "Apparel needs at least one offered size.",
+        variant: "destructive",
+      });
       return;
     }
     if (quantity < minOrder) {
-      toast({ title: "Production run too small", description: `${productType} has a minimum run of ${minOrder}.`, variant: "destructive" });
+      toast({
+        title: "Production run too small",
+        description: `${productType} has a minimum run of ${minOrder}.`,
+        variant: "destructive",
+      });
       return;
     }
-    if (price <= effectiveUnitCost) {
-      toast({ title: "Price is below production cost", description: `Set a selling price above $${effectiveUnitCost.toFixed(2)}.`, variant: "destructive" });
+    if (price <= estimatedUnitCost) {
+      toast({
+        title: "Price is below production cost",
+        description: `Set a selling price above the estimated $${estimatedUnitCost.toFixed(2)} unit cost.`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -157,45 +194,55 @@ export const ReleaseDesignDialog = ({
         sourceDesignId: designId,
         sizes: hasSizes ? selectedSizes : [],
       };
-      const now = new Date();
-      const readyAt = effectiveLeadTime > 0
-        ? new Date(now.getTime() + effectiveLeadTime * 24 * 60 * 60 * 1000).toISOString()
-        : now.toISOString();
-      const { error } = await (supabase as any).from("player_merchandise").insert({
-        band_id: bandId,
-        design_name: productName.trim(),
-        item_type: productType,
-        cost_to_produce: Math.round(effectiveUnitCost * 100) / 100,
-        selling_price: price,
-        stock_quantity: effectiveLeadTime > 0 ? 0 : quantity,
-        pending_quantity: effectiveLeadTime > 0 ? quantity : 0,
-        custom_design_id: designId,
-        sales_boost_pct: 1.0,
-        design_data: inventoryDesignData,
-        artwork_url: artworkUrl,
-        garment_color: garmentColor,
-        supplier_tier: supplierTier,
-        lead_time_days: effectiveLeadTime,
-        production_status: effectiveLeadTime > 0 ? "ordered" : "ready",
-        production_ordered_at: now.toISOString(),
-        production_ready_at: readyAt,
-        is_rush_order: rushOrder,
-        production_discount_pct: discount,
-        production_total_cost: productionTotal,
-        production_quality: qualityScore,
-      });
+
+      // Submit only player intent. prepare_merch_production_insert() is authoritative for
+      // stock/pending allocation, MOQ, bulk discount, rush surcharge, lead time and quality.
+      // charge_merch_production_order() then debits the canonical band finance ledger.
+      const { data: created, error } = await (supabase as any)
+        .from("player_merchandise")
+        .insert({
+          band_id: bandId,
+          product_requirement_id: requirementId,
+          design_name: productName.trim(),
+          item_type: productType,
+          cost_to_produce: baseCost,
+          selling_price: price,
+          stock_quantity: quantity,
+          custom_design_id: designId,
+          sales_boost_pct: 1.0,
+          design_data: inventoryDesignData,
+          artwork_url: artworkUrl,
+          garment_color: garmentColor,
+          is_rush_order: rushOrder,
+        })
+        .select(
+          "stock_quantity, pending_quantity, lead_time_days, production_status, production_total_cost, production_discount_pct, cost_to_produce, production_quality",
+        )
+        .single();
       if (error) throw error;
 
+      const pending = Number(created?.pending_quantity ?? 0);
+      const sellable = Number(created?.stock_quantity ?? 0);
+      const canonicalLeadTime = Number(created?.lead_time_days ?? 0);
+      const canonicalTotal = Number(created?.production_total_cost ?? 0);
+      const canonicalDiscount = Number(created?.production_discount_pct ?? 0);
+
       toast({
-        title: effectiveLeadTime > 0 ? "Production order placed" : "Product ready",
-        description: effectiveLeadTime > 0
-          ? `${quantity} ${productType} units are being made and will enter stock in about ${effectiveLeadTime} day${effectiveLeadTime === 1 ? "" : "s"}.`
-          : `${quantity} ${productType} units are now available to sell.`,
+        title: pending > 0 ? "Production order placed" : "Product ready",
+        description:
+          pending > 0
+            ? `${pending} ${productType} units are being made${canonicalLeadTime > 0 ? ` (${canonicalLeadTime} day${canonicalLeadTime === 1 ? "" : "s"})` : ""}. ${canonicalDiscount > 0 ? `${Math.round(canonicalDiscount * 100)}% bulk discount applied. ` : ""}$${canonicalTotal.toLocaleString()} charged to the band.`
+            : `${sellable} ${productType} units are available to sell.`,
       });
+
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      toast({ title: "Failed to release merchandise", description: error instanceof Error ? error.message : "Unable to create the product run.", variant: "destructive" });
+      toast({
+        title: "Failed to release merchandise",
+        description: error instanceof Error ? error.message : "Unable to create the product run.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -205,37 +252,77 @@ export const ReleaseDesignDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><PackageCheck className="h-5 w-5" /> Release Designed Product</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <PackageCheck className="h-5 w-5" /> Release Designed Product
+          </DialogTitle>
           <DialogDescription>
-            Order a real production run. Units only become sellable after manufacturing finishes.
+            Place a supplier production order from this saved design. Manufacturing and payment are validated by the database before the product is created.
           </DialogDescription>
         </DialogHeader>
 
         {isLoadingProduct ? (
-          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          <div className="flex justify-center py-10">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Product blank</span><span className="font-medium">{productType}</span></div>
-              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Supplier</span><span className="font-medium capitalize">{supplierTier || "standard"}</span></div>
-              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Base unit cost</span><span className="font-medium">${baseCost}</span></div>
-              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Minimum run</span><span className="font-medium">{minOrder}</span></div>
-              <div className="mt-1 flex justify-between gap-3"><span className="text-muted-foreground">Production</span><span className="font-medium">{effectiveLeadTime > 0 ? `${effectiveLeadTime} days` : "Immediate"}</span></div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Product blank</span>
+                <span className="font-medium">{productType}</span>
+              </div>
+              <div className="mt-1 flex justify-between gap-3">
+                <span className="text-muted-foreground">Supplier</span>
+                <span className="font-medium capitalize">{supplierTier || "standard"}</span>
+              </div>
+              <div className="mt-1 flex justify-between gap-3">
+                <span className="text-muted-foreground">Base unit cost</span>
+                <span className="font-medium">${baseCost}</span>
+              </div>
+              <div className="mt-1 flex justify-between gap-3">
+                <span className="text-muted-foreground">Minimum run</span>
+                <span className="font-medium">{minOrder}</span>
+              </div>
+              <div className="mt-1 flex justify-between gap-3">
+                <span className="text-muted-foreground">Standard lead time</span>
+                <span className="font-medium">{leadTime > 0 ? `${leadTime} days` : "Immediate"}</span>
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="product-name">Product Name</Label>
-              <Input id="product-name" value={productName} onChange={(e) => setProductName(e.target.value)} required />
+              <Input
+                id="product-name"
+                value={productName}
+                onChange={(event) => setProductName(event.target.value)}
+                required
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="selling-price">Selling Price ($)</Label>
-                <Input id="selling-price" type="number" min={Math.ceil(effectiveUnitCost + 1)} step={1} value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} required />
+                <Input
+                  id="selling-price"
+                  type="number"
+                  min={Math.ceil(estimatedUnitCost + 1)}
+                  step={1}
+                  value={sellingPrice}
+                  onChange={(event) => setSellingPrice(event.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stock-quantity">Production Run</Label>
-                <Input id="stock-quantity" type="number" min={minOrder} step={1} value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} required />
+                <Input
+                  id="stock-quantity"
+                  type="number"
+                  min={minOrder}
+                  step={1}
+                  value={stockQuantity}
+                  onChange={(event) => setStockQuantity(event.target.value)}
+                  required
+                />
               </div>
             </div>
 
@@ -245,8 +332,14 @@ export const ReleaseDesignDialog = ({
                 <div className="grid grid-cols-3 gap-3">
                   {SIZES.map((size) => (
                     <div key={size} className="flex items-center space-x-2 rounded-lg border p-3">
-                      <Checkbox id={`size-${size}`} checked={selectedSizes.includes(size)} onCheckedChange={() => toggleSize(size)} />
-                      <label htmlFor={`size-${size}`} className="flex-1 cursor-pointer text-sm font-medium">{size}</label>
+                      <Checkbox
+                        id={`size-${size}`}
+                        checked={selectedSizes.includes(size)}
+                        onCheckedChange={() => toggleSize(size)}
+                      />
+                      <label htmlFor={`size-${size}`} className="flex-1 cursor-pointer text-sm font-medium">
+                        {size}
+                      </label>
                     </div>
                   ))}
                 </div>
@@ -257,27 +350,81 @@ export const ReleaseDesignDialog = ({
             {leadTime > 1 ? (
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-1">
-                  <Label className="flex items-center gap-2"><Zap className="h-4 w-4" /> Rush production</Label>
-                  <p className="text-xs text-muted-foreground">Cuts lead time roughly in half, adds 25% to production cost and slightly reduces quality consistency.</p>
+                  <Label className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" /> Rush production
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Approximately halves lead time, adds 25% to production cost and slightly reduces quality consistency.
+                  </p>
                 </div>
                 <Switch checked={rushOrder} onCheckedChange={setRushOrder} />
               </div>
             ) : null}
 
             <div className="space-y-2 rounded-lg border bg-muted/30 p-4 text-sm">
-              {discount > 0 ? <div className="flex justify-between"><span>Bulk discount</span><span className="font-medium text-primary">-{Math.round(discount * 100)}%</span></div> : null}
-              {rushOrder ? <div className="flex justify-between"><span>Rush surcharge</span><span className="font-medium">+25%</span></div> : null}
-              <div className="flex justify-between"><span>Effective unit cost</span><span className="font-medium">${effectiveUnitCost.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Production order</span><span className="font-medium">${productionTotal.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>Expected quality</span><span className="font-medium">{qualityScore}/100</span></div>
-              <div className="flex justify-between"><span>Profit per unit</span><span className="font-medium text-primary">${profitPerUnit.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>Potential gross profit</span><span className="font-medium">${Math.round(totalPotential).toLocaleString()}</span></div>
+              <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <ShieldCheck className="h-4 w-4" /> Estimate only — final manufacturing values are calculated atomically when the order is placed.
+              </div>
+              {estimatedDiscount > 0 ? (
+                <div className="flex justify-between">
+                  <span>Estimated bulk discount</span>
+                  <span className="font-medium text-primary">-{Math.round(estimatedDiscount * 100)}%</span>
+                </div>
+              ) : null}
+              {rushOrder ? (
+                <div className="flex justify-between">
+                  <span>Rush surcharge</span>
+                  <span className="font-medium">+25%</span>
+                </div>
+              ) : null}
+              <div className="flex justify-between">
+                <span>Estimated unit cost</span>
+                <span className="font-medium">${estimatedUnitCost.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Estimated production order</span>
+                <span className="font-medium">${estimatedProductionTotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Estimated lead time</span>
+                <span className="font-medium">{estimatedLeadTime > 0 ? `${estimatedLeadTime} days` : "Immediate"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Expected quality</span>
+                <span className="font-medium">{estimatedQuality}/100</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Profit per unit</span>
+                <span className="font-medium text-primary">${estimatedProfitPerUnit.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Potential gross profit</span>
+                <span className="font-medium">${Math.round(estimatedTotalPotential).toLocaleString()}</span>
+              </div>
             </div>
 
             <div className="flex gap-3">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" className="flex-1" disabled={isSubmitting || !productName.trim()}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Ordering...</> : "Place Production Order"}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={isSubmitting || !productName.trim()}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Ordering...
+                  </>
+                ) : (
+                  "Place Production Order"
+                )}
               </Button>
             </div>
           </form>
