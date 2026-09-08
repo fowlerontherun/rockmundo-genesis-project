@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Clock3, Factory, PackageCheck, RefreshCw, Truck } from "lucide-react";
+import { MerchDesignPreview } from "./MerchDesignPreview";
 
 type InventoryProduct = {
   id: string;
@@ -17,6 +18,7 @@ type InventoryProduct = {
   stock_quantity: number | null;
   pending_quantity?: number | null;
   cost_to_produce: number | null;
+  selling_price?: number | null;
   production_status?: string | null;
   production_ready_at?: string | null;
   production_ordered_at?: string | null;
@@ -25,6 +27,9 @@ type InventoryProduct = {
   is_rush_order?: boolean | null;
   lead_time_days?: number | null;
   supplier_tier?: string | null;
+  design_data?: unknown;
+  artwork_url?: string | null;
+  garment_color?: string | null;
 };
 
 interface MerchInventoryProductionPanelProps {
@@ -101,21 +106,38 @@ export const MerchInventoryProductionPanel = ({ product, bandId }: MerchInventor
         <CardDescription>Sellable stock is read-only. New units must be ordered from the supplier and remain unavailable until manufacturing completes.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <p className="text-xs text-muted-foreground">Sellable now</p>
-            <p className="text-2xl font-semibold">{available.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">units</p>
+        <div className="grid gap-4 lg:grid-cols-[220px_1fr] lg:items-stretch">
+          <div className="aspect-square overflow-hidden rounded-xl border bg-muted/20">
+            <MerchDesignPreview design={product} />
           </div>
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <p className="text-xs text-muted-foreground">In production</p>
-            <p className="text-2xl font-semibold">{pending.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">units</p>
-          </div>
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <p className="text-xs text-muted-foreground">Supplier</p>
-            <p className="text-lg font-semibold capitalize">{product.supplier_tier ?? "standard"}</p>
-            <p className="text-xs text-muted-foreground">{product.lead_time_days ?? 0} day lead time</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Sellable now</p>
+              <p className="text-2xl font-semibold">{available.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">units</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">In production</p>
+              <p className="text-2xl font-semibold">{pending.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">units</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Supplier</p>
+              <p className="text-lg font-semibold capitalize">{product.supplier_tier ?? "standard"}</p>
+              <p className="text-xs text-muted-foreground">{product.lead_time_days ?? 0} day lead time</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3 sm:col-span-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Product</p>
+                  <p className="font-semibold">{product.design_name || product.item_type || "Merchandise"}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {product.item_type ? <Badge variant="outline">{product.item_type}</Badge> : null}
+                  {product.artwork_url ? <Badge variant="secondary">Custom artwork</Badge> : <Badge variant="outline">Catalogue blank</Badge>}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
