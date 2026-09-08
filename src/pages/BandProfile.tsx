@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Users, TrendingUp, Music, User } from "lucide-react";
 import { format } from "date-fns";
 import { BandSongsSection } from "@/components/band/BandSongsSection";
+import { BandMerchStore } from "@/components/band/BandMerchStore";
 import { BandApplicationDialog } from "@/components/band/BandApplicationDialog";
 import { withdrawBandApplication } from "@/services/bandApplications";
 import { getRecruitmentStatusMeta } from "@/lib/recruitmentStatus";
@@ -74,12 +75,10 @@ export default function BandProfile() {
     enabled: !!bandId,
   });
 
-  // Check if user is already a member
   const isMember = band?.band_members?.some(
     (m: any) => m.profile_id === profileId
   );
 
-  // Check if user already applied
   const { data: applicationHistory, isLoading: isApplicationHistoryLoading, isError: isApplicationHistoryError } = useQuery({
     queryKey: ["band-application-history", profileId],
     queryFn: async () => {
@@ -162,7 +161,6 @@ export default function BandProfile() {
     && (!activeApplication || activeApplication.status === "withdrawn" || activeApplication.status === "rejected")
     && profileId;
 
-
   return (
     <FMPageScaffold title={band.name} subtitle={band.genre || undefined} icon={Users} backTo="/hub/band">
       <Card>
@@ -214,7 +212,6 @@ export default function BandProfile() {
                 <p className="text-xs text-muted-foreground">
                   {band.created_at && `Formed ${format(new Date(band.created_at), "MMMM yyyy")}`}
                 </p>
-                {/* Apply button */}
                 {canApply && (
                   <BandApplicationDialog
                     bandId={band.id}
@@ -322,6 +319,7 @@ export default function BandProfile() {
         </CardContent>
       </Card>
 
+      <BandMerchStore bandId={band.id} bandName={band.name} />
 
       {profileId && (
         <Card>
@@ -376,7 +374,6 @@ export default function BandProfile() {
         </Card>
       )}
 
-      {/* Songs Section */}
       <BandSongsSection bandId={band.id} bandName={band.name} />
     </FMPageScaffold>
   );

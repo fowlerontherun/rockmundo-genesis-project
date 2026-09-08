@@ -8,6 +8,7 @@ import { ShoppingBag, Store, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MerchDesignPreview } from "@/components/merchandise/MerchDesignPreview";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 interface FestivalMerchStandProps {
@@ -23,22 +24,21 @@ type MerchRow = Record<string, any> & {
   selling_price?: number | null;
   stock_quantity?: number | null;
   pending_quantity?: number | null;
-  festival_exclusive?: boolean | null;
-  metadata?: Record<string, any> | null;
+  drop_starts_at?: string | null;
+  available_until?: string | null;
 };
 
-const festivalIdsFor = (item: MerchRow) => {
-  const metadata = item.metadata ?? {};
-  const ids = Array.isArray(metadata.festival_ids) ? metadata.festival_ids.filter(Boolean) : [];
-  if (metadata.festival_id) ids.push(metadata.festival_id);
-  return Array.from(new Set(ids.map(String)));
+type Assignment = {
+  id: string;
+  merchandise_id: string;
 };
 
 export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: FestivalMerchStandProps) {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const [selectedMerchId, setSelectedMerchId] = useState("");
 
-  const { data: bandMerch = [], isLoading } = useQuery<MerchRow[]>({
+  const { data: bandMerch = [], isLoading: merchLoading } = useQuery<MerchRow[]>({
     queryKey: ["festival-merch-inventory", bandId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -52,46 +52,56 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
     enabled: Boolean(bandId),
   });
 
-  const festivalMerch = useMemo(
-    () => bandMerch.filter((item) => festivalIdsFor(item).includes(festivalId)),
-    [bandMerch, festivalId],
-  );
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<Assignment[]>({
+    queryKey: ["festival-merch-assignments", festivalId, bandId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("festival_merch_assignments")
+        .select("id, merchandise_id")
+        .eq("festival_id", festivalId)
+        .eq("band_id", bandId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: Boolean(festivalId && bandId),
+  });
+
+  const assignedIds = useMemo(() => new Set(assignments.map((assignment) => assignment.merchandise_id)), [assignments]);
+  const festivalMerch = useMemo(() => bandMerch.filter((item) => assignedIds.has(item.id)), [bandMerch, assignedIds]);
 
   const availableMerch = useMemo(() => {
     const now = Date.now();
     return bandMerch.filter((item) => {
-      if (festivalIdsFor(item).includes(festivalId)) return false;
-      if (item.sale_end_date && new Date(item.sale_end_date).getTime() < now) return false;
+      if (assignedIds.has(item.id)) return false;
+      if (item.drop_starts_at && new Date(item.drop_starts_at).getTime() > now) return false;
+      if (item.available_until && new Date(item.available_until).getTime() < now) return false;
       return Number(item.stock_quantity ?? 0) > 0 || Number(item.pending_quantity ?? 0) > 0;
     });
-  }, [bandMerch, festivalId]);
+  }, [bandMerch, assignedIds]);
 
   const selected = availableMerch.find((item) => item.id === selectedMerchId) ?? null;
+  const isLoading = merchLoading || assignmentsLoading;
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["festival-merch-inventory", bandId] });
-    queryClient.invalidateQueries({ queryKey: ["player-merchandise", bandId] });
+    queryClient.invalidateQueries({ queryKey: ["festival-merch-assignments", festivalId, bandId] });
+    queryClient.invalidateQueries({ queryKey: ["festival-shop", festivalId] });
   };
 
   const addToFestival = useMutation({
     mutationFn: async () => {
       if (!selected) throw new Error("Choose a manufactured merchandise item first.");
-      const metadata = { ...(selected.metadata ?? {}) };
-      const festivalIds = Array.from(new Set([...festivalIdsFor(selected), festivalId]));
-      delete metadata.festival_id;
-      delete metadata.festival_title;
-      metadata.festival_ids = festivalIds;
-      metadata.festival_titles = { ...(metadata.festival_titles ?? {}), [festivalId]: festivalTitle };
-
       const { error } = await (supabase as any)
-        .from("player_merchandise")
-        .update({ festival_exclusive: true, metadata })
-        .eq("id", selected.id)
-        .eq("band_id", bandId);
+        .from("festival_merch_assignments")
+        .insert({
+          festival_id: festivalId,
+          band_id: bandId,
+          merchandise_id: selected.id,
+          created_by_profile_id: profileId ?? null,
+        });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Merchandise added to the festival stand");
+      toast.success(`${selected?.design_name ?? "Merchandise"} added to ${festivalTitle}`);
       setSelectedMerchId("");
       invalidate();
     },
@@ -100,22 +110,12 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
 
   const removeFromFestival = useMutation({
     mutationFn: async (item: MerchRow) => {
-      const metadata = { ...(item.metadata ?? {}) };
-      const remainingIds = festivalIdsFor(item).filter((id) => id !== festivalId);
-      const titles = { ...(metadata.festival_titles ?? {}) };
-      delete titles[festivalId];
-      delete metadata.festival_id;
-      delete metadata.festival_title;
-      if (remainingIds.length) metadata.festival_ids = remainingIds;
-      else delete metadata.festival_ids;
-      if (Object.keys(titles).length) metadata.festival_titles = titles;
-      else delete metadata.festival_titles;
-
+      const assignment = assignments.find((entry) => entry.merchandise_id === item.id);
+      if (!assignment) throw new Error("Festival merchandise assignment not found.");
       const { error } = await (supabase as any)
-        .from("player_merchandise")
-        .update({ festival_exclusive: remainingIds.length > 0, metadata })
-        .eq("id", item.id)
-        .eq("band_id", bandId);
+        .from("festival_merch_assignments")
+        .delete()
+        .eq("id", assignment.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -133,7 +133,7 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Festival stands now use your real band merchandise. Design products in Merch Studio and manufacture stock before assigning them here.
+        Festival stands use your real manufactured band merchandise. Assigning a product here does not create or duplicate stock.
       </p>
 
       {festivalMerch.length > 0 ? (
@@ -178,7 +178,7 @@ export function FestivalMerchStand({ festivalId, festivalTitle, bandId }: Festiv
         <CardContent className="space-y-3 p-4">
           <div>
             <p className="text-sm font-medium">Add existing merchandise</p>
-            <p className="text-xs text-muted-foreground">Only real inventory or an active production run can be assigned. This does not create free stock.</p>
+            <p className="text-xs text-muted-foreground">Choose real inventory or an active production run. The same stock remains authoritative everywhere.</p>
           </div>
 
           <div className="space-y-2">
