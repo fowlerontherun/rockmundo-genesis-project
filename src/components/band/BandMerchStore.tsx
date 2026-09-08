@@ -37,33 +37,7 @@ export function BandMerchStore({ bandId, bandName }: BandMerchStoreProps) {
   const { data: merchandise = [], isLoading, isError } = useQuery<StoreMerchRow[]>({
     queryKey: ["band-public-merch", bandId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("player_merchandise")
-        .select(`
-          id,
-          band_id,
-          design_name,
-          item_type,
-          selling_price,
-          stock_quantity,
-          design_data,
-          artwork_url,
-          garment_color,
-          design_preview_url,
-          is_limited_edition,
-          limited_quantity,
-          available_until,
-          variants:merch_variants(
-            id,
-            size,
-            color,
-            stock_quantity,
-            selling_price_override,
-            is_active
-          )
-        `)
-        .eq("band_id", bandId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await (supabase as any).rpc("get_public_band_merch_storefront", { p_band_id: bandId });
       if (error) throw error;
       return data ?? [];
     },
@@ -72,7 +46,7 @@ export function BandMerchStore({ bandId, bandName }: BandMerchStoreProps) {
   });
 
   const products = useMemo(() => merchandise.map((item) => {
-    const variants = (item.variants ?? []).filter((variant) => Number(variant.stock_quantity ?? 0) > 0);
+    const variants = Array.isArray(item.variants) ? item.variants.filter((variant) => Number(variant.stock_quantity ?? 0) > 0) : [];
     const variantStock = variants.reduce((sum, variant) => sum + Number(variant.stock_quantity ?? 0), 0);
     const totalStock = Number(item.stock_quantity ?? 0) + variantStock;
     return { ...item, variants, totalStock };
