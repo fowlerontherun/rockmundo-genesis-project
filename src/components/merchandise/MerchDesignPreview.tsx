@@ -44,13 +44,17 @@ const shapeForProduct = (itemType: string) => {
 
 export const MerchDesignPreview = ({ design, className = "" }: MerchDesignPreviewProps) => {
   const data = (design?.design_data ?? {}) as DesignData;
-  const productType = data.productType ?? design?.product_type ?? "Graphic Tee";
-  const color = data.garmentColor ?? design?.background_color ?? "#171717";
+  const productType = data.productType ?? design?.product_type ?? design?.item_type ?? "Graphic Tee";
+  const color = data.garmentColor ?? design?.background_color ?? design?.garment_color ?? "#171717";
   const areaMap = data.areaElements && typeof data.areaElements === "object"
     ? data.areaElements
     : { front: data.frontElements ?? [], back: data.backElements ?? [] };
   const area = Object.keys(areaMap).find((key) => (areaMap[key] ?? []).length) ?? "front";
-  const elements = areaMap[area] ?? [];
+  let elements = areaMap[area] ?? [];
+
+  if (!elements.length && design?.artwork_url) {
+    elements = [{ type: "image", src: design.artwork_url, x: 50, y: 48, scale: 1, rotation: 0 }];
+  }
 
   if (!elements.length && design?.preview_image_url) {
     return <img src={design.preview_image_url} alt={design.design_name ?? "Merch design"} className={`h-full w-full object-contain ${className}`} />;
