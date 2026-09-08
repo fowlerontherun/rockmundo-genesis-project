@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "file": "brick_wall_001_ao_1k.jpg",
+      "author": "Dimitrios Savva and Rob Tuytel",
+      "source": "https://polyhaven.com/a/brick_wall_001",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "2f3135384946565118afd5b17a36c9535a4946445e6b005b406097c6c719828f",
+      "bytes": 269071
+    },
+    {
+      "file": "brick_wall_001_diffuse_1k.jpg",
+      "author": "Dimitrios Savva and Rob Tuytel",
+      "source": "https://polyhaven.com/a/brick_wall_001",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "6a1233ec0186703de830354d89f122991e61e67fb67e0846c7eaf6c5aefea902",
+      "bytes": 574381
+    },
+    {
+      "file": "brick_wall_001_nor_gl_1k.jpg",
+      "author": "Dimitrios Savva and Rob Tuytel",
+      "source": "https://polyhaven.com/a/brick_wall_001",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "8afbe3919308b168a6b7235fe7b930f670cfffa1a34de39ee790d55c9d7bda09",
+      "bytes": 295279
+    },
+    {
+      "file": "brick_wall_001_rough_1k.jpg",
+      "author": "Dimitrios Savva and Rob Tuytel",
+      "source": "https://polyhaven.com/a/brick_wall_001",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "a23342b02e6c5af106aaece16130aa9153a801cb1a84d5f3e0d06ce248677f38",
+      "bytes": 211093
+    },
+    {
+      "file": "casual.glb",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/ultimatemodularcharacters.html",
+      "exportSource": "https://github.com/yerdaulet-damir/liminal/blob/main/client/public/models/figure_Casual.glb",
+      "notes": "GLB export of the modular character, with four skinned parts and no embedded clips. Original file is unchanged; runtime materials and poses are authored for this demo.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "dc2d86e50075e372df870bb60cee46c56033cc2ecb28722523caab93ab1d0111",
+      "bytes": 785308
+    },
+    {
+      "file": "punk.glb",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/ultimatemodularcharacters.html",
+      "exportSource": "https://github.com/yerdaulet-damir/liminal/blob/main/client/public/models/figure_Punk.glb",
+      "notes": "GLB export of the modular character, with four skinned parts and no embedded clips. Original file is unchanged; runtime materials and poses are authored for this demo.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "cb517f839278c2f2fcaf94eed45bf6e2dce69c7433091527ab6efc834ebe6a5a",
+      "bytes": 702512
+    },
+    {
+      "file": "suit.glb",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/ultimatemodularcharacters.html",
+      "exportSource": "https://github.com/yerdaulet-damir/liminal/blob/main/client/public/models/figure_Suit.glb",
+      "notes": "GLB export of the modular character, with four skinned parts and no embedded clips. Original file is unchanged; runtime materials and poses are authored for this demo.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "a9896c1468fadbd24a89a2f86eecd8d47ae5ec6b3ef267b2194dc3b8bb9fb3d0",
+      "bytes": 857732
+    },
+    {
+      "file": "wood_floor_worn_ao_1k.jpg",
+      "author": "Dimitrios Savva",
+      "source": "https://polyhaven.com/a/wood_floor_worn",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "749042f43d34c0f41f6955d21d5623e6727b3cee7ae02c6852db45627bb44c20",
+      "bytes": 729315
+    },
+    {
+      "file": "wood_floor_worn_diff_1k.jpg",
+      "author": "Dimitrios Savva",
+      "source": "https://polyhaven.com/a/wood_floor_worn",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "db386853009b92b9edd7255b35c9f7b0d4b7de16837a7a9da8422148754bc758",
+      "bytes": 629271
+    },
+    {
+      "file": "wood_floor_worn_nor_gl_1k.jpg",
+      "author": "Dimitrios Savva",
+      "source": "https://polyhaven.com/a/wood_floor_worn",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "f428496e5d6c726d17d9ecea29c0acd8660348630acf791cea7bdd7f3c6e262b",
+      "bytes": 636603
+    },
+    {
+      "file": "wood_floor_worn_rough_1k.jpg",
+      "author": "Dimitrios Savva",
+      "source": "https://polyhaven.com/a/wood_floor_worn",
+      "notes": "Original 1K JPEG texture map.",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sha256": "9d7492db1197f1386466dfd7dd43f692446166c1433ddeebf66c10e8b226a6d0",
+      "bytes": 290570
+    }
+  ]
+}
