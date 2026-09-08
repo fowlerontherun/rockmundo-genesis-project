@@ -1,4 +1,5 @@
 import { MerchProductMockup } from "./MerchProductMockup";
+import { shapeForMerchProduct } from "./merchProductShape";
 
 type DesignElement = {
   id?: string;
@@ -26,22 +27,6 @@ interface MerchDesignPreviewProps {
   className?: string;
 }
 
-const shapeForProduct = (itemType: string) => {
-  const name = itemType.toLowerCase();
-  if (name.includes("poster") || name.includes("print") || name.includes("setlist") || name.includes("programme")) return "poster";
-  if (name.includes("sticker") || name.includes("patch") || name.includes("badge")) return "flat";
-  if (name.includes("tote")) return "tote";
-  if (name.includes("bottle")) return "bottle";
-  if (name.includes("pint") || name.includes("glass")) return "glass";
-  if (name.includes("mug")) return "mug";
-  if (name.includes("football") || name.includes("jersey")) return "football";
-  if (name.includes("hoodie")) return "hoodie";
-  if (name.includes("crewneck") || name.includes("sweatshirt")) return "crewneck";
-  if (name.includes("long sleeve")) return "long";
-  if (name.includes("cap") || name.includes("beanie")) return "cap";
-  return "tee";
-};
-
 export const MerchDesignPreview = ({ design, className = "" }: MerchDesignPreviewProps) => {
   const data = (design?.design_data ?? {}) as DesignData;
   const productType = data.productType ?? design?.product_type ?? design?.item_type ?? "Graphic Tee";
@@ -62,7 +47,7 @@ export const MerchDesignPreview = ({ design, className = "" }: MerchDesignPrevie
 
   return (
     <div className={`relative h-full w-full overflow-hidden bg-gradient-to-b from-muted/20 to-muted ${className}`}>
-      <MerchProductMockup shape={shapeForProduct(productType)} color={color} area={area} />
+      <MerchProductMockup shape={shapeForMerchProduct(productType)} color={color} area={area} />
       {elements.map((element, index) => (
         <div
           key={element.id ?? `${element.type}-${index}`}
