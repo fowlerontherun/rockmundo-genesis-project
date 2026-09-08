@@ -88,6 +88,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.respond_to_bug_report(UUID, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.respond_to_bug_report(UUID, TEXT, TEXT) FROM anon;
 GRANT EXECUTE ON FUNCTION public.respond_to_bug_report(UUID, TEXT, TEXT) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.reply_to_bug_report(
@@ -153,4 +154,5 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.reply_to_bug_report(UUID, TEXT, BOOLEAN) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.reply_to_bug_report(UUID, TEXT, BOOLEAN) FROM anon;
 GRANT EXECUTE ON FUNCTION public.reply_to_bug_report(UUID, TEXT, BOOLEAN) TO authenticated;
