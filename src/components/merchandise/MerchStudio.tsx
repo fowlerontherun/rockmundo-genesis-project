@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMerchRequirements } from "@/hooks/useMerchRequirements";
 import { supabase } from "@/integrations/supabase/client";
 import { MerchProductMockup } from "@/components/merchandise/MerchProductMockup";
+import { shapeForMerchProduct } from "@/components/merchandise/merchProductShape";
 import {
   AlignCenter,
   ArrowDown,
@@ -67,22 +68,6 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9._-]+/g,
 const normaliseArea = (value: string) => value.trim().toLowerCase().replace(/[\s-]+/g, "_");
 const prettyArea = (value: string) => value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-const shapeForProduct = (itemType: string) => {
-  const name = itemType.toLowerCase();
-  if (name.includes("poster") || name.includes("print") || name.includes("setlist") || name.includes("programme")) return "poster";
-  if (name.includes("sticker") || name.includes("patch") || name.includes("badge")) return "flat";
-  if (name.includes("tote")) return "tote";
-  if (name.includes("bottle")) return "bottle";
-  if (name.includes("pint") || name.includes("glass")) return "glass";
-  if (name.includes("mug")) return "mug";
-  if (name.includes("football") || name.includes("jersey")) return "football";
-  if (name.includes("hoodie")) return "hoodie";
-  if (name.includes("crewneck") || name.includes("sweatshirt")) return "crewneck";
-  if (name.includes("long sleeve")) return "long";
-  if (name.includes("cap") || name.includes("beanie")) return "cap";
-  return "tee";
-};
-
 const zoneForSurface = (shape: string, area: string): PrintZone => {
   const surface = normaliseArea(area);
   if (surface.includes("sleeve")) {
@@ -96,10 +81,21 @@ const zoneForSurface = (shape: string, area: string): PrintZone => {
     return { left: 20, top: 25, width: 60, height: 50 };
   }
   if (shape === "poster" || shape === "flat") return { left: 22, top: 14, width: 56, height: 72 };
+  if (shape === "booklet") return { left: 28, top: 20, width: 44, height: 60 };
+  if (shape === "vinyl") return { left: 27, top: 27, width: 46, height: 46 };
+  if (shape === "keyring") return { left: 36, top: 37, width: 28, height: 28 };
+  if (shape === "pick") return { left: 38, top: 35, width: 24, height: 30 };
+  if (shape === "pin") return { left: 37, top: 36, width: 26, height: 26 };
+  if (shape === "pin-set") return { left: 27, top: 28, width: 46, height: 44 };
+  if (shape === "sticker") return { left: 33, top: 32, width: 34, height: 34 };
+  if (shape === "patch") return { left: 32, top: 33, width: 36, height: 34 };
+  if (shape === "lanyard") return { left: 39, top: 35, width: 22, height: 32 };
+  if (shape === "bundle") return { left: 28, top: 28, width: 44, height: 44 };
   if (shape === "mug") return { left: 27, top: 36, width: 42, height: 28 };
   if (shape === "glass") return { left: 34, top: 34, width: 32, height: 33 };
   if (shape === "bottle") return { left: 38, top: 36, width: 24, height: 34 };
   if (shape === "cap") return { left: 33, top: 39, width: 34, height: 21 };
+  if (shape === "beanie") return { left: 35, top: 42, width: 30, height: 22 };
   if (shape === "tote") return { left: 28, top: 34, width: 44, height: 42 };
   if (shape === "football") return { left: 34, top: 29, width: 32, height: 45 };
   return { left: 34, top: 29, width: 32, height: 45 };
@@ -176,7 +172,7 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
   }, [existingDesign, personalisable]);
 
   const product = personalisable.find((item) => item.item_type === productType) ?? personalisable[0];
-  const shape = shapeForProduct(productType);
+  const shape = shapeForMerchProduct(productType);
   const printAreas = useMemo(() => {
     const configured = (product?.print_areas?.length ? product.print_areas : ["front", "back"]).map(normaliseArea);
     return Array.from(new Set(configured.length ? configured : ["front"]));
