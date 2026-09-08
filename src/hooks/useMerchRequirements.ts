@@ -25,6 +25,8 @@ export interface MerchItemRequirement {
   colour_options?: string[];
   catalog_source?: string;
   catalog_source_ref?: string | null;
+  recommended_retail_price?: number;
+  minimum_retail_price?: number;
 }
 
 export const QUALITY_TIERS: Record<QualityTier, {
@@ -96,10 +98,7 @@ export const getUnlockProgress = (
   return (fameProgress + fansProgress + levelProgress) / 3;
 };
 
-/**
- * Manufacturing quality comes from the selected product/supplier. Fame and artwork no
- * longer upgrade the physical garment behind the scenes.
- */
+/** Manufacturing quality comes from the selected product/supplier. */
 export const calculateMerchQuality = (
   baseQuality: QualityTier,
   _bandFame: number,
@@ -108,8 +107,11 @@ export const calculateMerchQuality = (
 
 export const getRecommendedPrice = (
   baseCost: number,
-  qualityTier: QualityTier
+  qualityTier: QualityTier,
+  catalogRecommendedPrice?: number | null
 ): number => {
+  if (catalogRecommendedPrice && catalogRecommendedPrice > 0) return catalogRecommendedPrice;
+
   const qualityMultiplier = QUALITY_TIERS[qualityTier].priceMultiplier;
   const digitalFloorPrices: Record<QualityTier, number> = {
     poor: 2,
@@ -123,6 +125,14 @@ export const getRecommendedPrice = (
     return Math.round(digitalFloorPrices[qualityTier] * qualityMultiplier);
   }
   return Math.round(baseCost * 2.5 * qualityMultiplier);
+};
+
+export const getMinimumRetailPrice = (
+  baseCost: number,
+  catalogMinimumPrice?: number | null
+): number => {
+  if (catalogMinimumPrice && catalogMinimumPrice > 0) return catalogMinimumPrice;
+  return Math.max(1, Math.ceil(baseCost * 1.35));
 };
 
 export const MAX_MERCH_PRICE = 9999;
