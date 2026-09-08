@@ -7,11 +7,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useMerchRequirements } from "@/hooks/useMerchRequirements";
 import { supabase } from "@/integrations/supabase/client";
-import { ImagePlus, Loader2, RotateCcw, Save, Trash2, Type, Upload } from "lucide-react";
+import {
+  AlignCenter,
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  ImagePlus,
+  Layers3,
+  Loader2,
+  Move,
+  RotateCcw,
+  Save,
+  Trash2,
+  Type,
+  Upload,
+} from "lucide-react";
 
 type ViewSide = "front" | "back";
 type DesignElement = {
@@ -35,6 +49,8 @@ type DesignData = {
   backElements?: DesignElement[];
 };
 
+type ArtworkAsset = { id: string; name: string; url: string };
+
 interface MerchStudioProps {
   bandId: string;
   existingDesignId?: string | null;
@@ -57,6 +73,14 @@ const shapeForProduct = (itemType: string) => {
   return "tee";
 };
 
+const safeZoneForShape = (shape: string) => {
+  if (shape === "poster") return { left: 22, top: 14, width: 56, height: 72 };
+  if (shape === "mug") return { left: 28, top: 34, width: 42, height: 32 };
+  if (shape === "cap") return { left: 30, top: 38, width: 40, height: 24 };
+  if (shape === "tote") return { left: 27, top: 32, width: 46, height: 45 };
+  return { left: 34, top: 28, width: 32, height: 46 };
+};
+
 function ProductSilhouette({ shape, color }: { shape: string; color: string }) {
   if (shape === "poster") return <div className="absolute inset-[8%_18%] rounded-sm border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }} />;
   if (shape === "tote") return <div className="absolute left-[20%] right-[20%] top-[24%] bottom-[13%] rounded-b-xl border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }}><div className="absolute left-[24%] right-[24%] -top-[24%] h-[28%] rounded-t-[999px] border-[10px] border-b-0 border-black/20" /></div>;
@@ -68,7 +92,7 @@ function ProductSilhouette({ shape, color }: { shape: string; color: string }) {
 
 function DesignLayer({ element, selected, onSelect, onMove }: { element: DesignElement; selected: boolean; onSelect: () => void; onMove: (x: number, y: number) => void }) {
   const dragRef = useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
-  return <div className={`absolute cursor-move select-none rounded ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-transparent" : ""}`} style={{ left: `${element.x}%`, top: `${element.y}%`, transform: `translate(-50%, -50%) scale(${element.scale}) rotate(${element.rotation}deg)`, transformOrigin: "center" }} onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); onSelect(); dragRef.current = { startX: event.clientX, startY: event.clientY, x: element.x, y: element.y }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!dragRef.current) return; const parent = event.currentTarget.parentElement?.getBoundingClientRect(); if (!parent) return; const dx = ((event.clientX - dragRef.current.startX) / parent.width) * 100; const dy = ((event.clientY - dragRef.current.startY) / parent.height) * 100; onMove(Math.min(84, Math.max(16, dragRef.current.x + dx)), Math.min(78, Math.max(22, dragRef.current.y + dy))); }} onPointerUp={() => { dragRef.current = null; }}>
+  return <div className={`absolute cursor-move select-none rounded ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-transparent" : ""}`} style={{ left: `${element.x}%`, top: `${element.y}%`, transform: `translate(-50%, -50%) scale(${element.scale}) rotate(${element.rotation}deg)`, transformOrigin: "center" }} onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); onSelect(); dragRef.current = { startX: event.clientX, startY: event.clientY, x: element.x, y: element.y }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!dragRef.current) return; const parent = event.currentTarget.parentElement?.getBoundingClientRect(); if (!parent) return; const dx = ((event.clientX - dragRef.current.startX) / parent.width) * 100; const dy = ((event.clientY - dragRef.current.startY) / parent.height) * 100; onMove(Math.min(86, Math.max(14, dragRef.current.x + dx)), Math.min(82, Math.max(18, dragRef.current.y + dy))); }} onPointerUp={() => { dragRef.current = null; }}>
     {element.type === "image" && element.src ? <img src={element.src} alt="Uploaded artwork" className="pointer-events-none max-h-40 max-w-40 object-contain drop-shadow-md" draggable={false} /> : <div className="pointer-events-none whitespace-nowrap px-2 py-1 text-center font-black uppercase tracking-wide drop-shadow" style={{ color: element.color ?? "#fff", fontSize: element.fontSize ?? 24 }}>{element.text}</div>}
   </div>;
 }
@@ -80,93 +104,6 @@ const loadPreviewImage = (src: string) => new Promise<HTMLImageElement>((resolve
   image.onerror = () => reject(new Error("Unable to load artwork for preview"));
   image.src = src;
 });
-
-const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: string, stroke = "rgba(0,0,0,.18)") => {
-  ctx.beginPath();
-  ctx.roundRect(x, y, width, height, radius);
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = 5;
-  ctx.stroke();
-};
-
-const drawPreviewSilhouette = (ctx: CanvasRenderingContext2D, shape: string, color: string) => {
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,.18)";
-  ctx.shadowBlur = 18;
-  ctx.shadowOffsetY = 8;
-
-  if (shape === "poster") {
-    drawRoundedRect(ctx, 108, 48, 384, 504, 4, color);
-  } else if (shape === "tote") {
-    drawRoundedRect(ctx, 120, 150, 360, 360, 20, color);
-    ctx.shadowColor = "transparent";
-    ctx.beginPath();
-    ctx.arc(300, 155, 85, Math.PI, 0);
-    ctx.strokeStyle = "rgba(0,0,0,.22)";
-    ctx.lineWidth = 18;
-    ctx.stroke();
-  } else if (shape === "mug") {
-    drawRoundedRect(ctx, 115, 170, 330, 270, 28, color);
-    ctx.shadowColor = "transparent";
-    ctx.beginPath();
-    ctx.arc(455, 305, 72, -Math.PI / 2, Math.PI / 2);
-    ctx.strokeStyle = "rgba(0,0,0,.22)";
-    ctx.lineWidth = 18;
-    ctx.stroke();
-  } else if (shape === "cap") {
-    ctx.beginPath();
-    ctx.ellipse(300, 260, 175, 105, 0, Math.PI, 0);
-    ctx.lineTo(475, 315);
-    ctx.lineTo(125, 315);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,.18)";
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(420, 320, 105, 32, 0.1, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.stroke();
-  } else {
-    const longSleeve = shape === "long" || shape === "hoodie" || shape === "crewneck";
-    drawRoundedRect(ctx, 190, 120, 220, 390, 25, color);
-    ctx.shadowColor = "transparent";
-    ctx.fillStyle = color;
-    ctx.strokeStyle = "rgba(0,0,0,.18)";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(200, 145);
-    ctx.lineTo(longSleeve ? 70 : 115, longSleeve ? 260 : 230);
-    ctx.lineTo(longSleeve ? 125 : 170, longSleeve ? 320 : 275);
-    ctx.lineTo(225, 215);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(400, 145);
-    ctx.lineTo(longSleeve ? 530 : 485, longSleeve ? 260 : 230);
-    ctx.lineTo(longSleeve ? 475 : 430, longSleeve ? 320 : 275);
-    ctx.lineTo(375, 215);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    if (shape === "hoodie") {
-      ctx.beginPath();
-      ctx.arc(300, 128, 75, Math.PI, 0);
-      ctx.lineTo(370, 175);
-      ctx.lineTo(230, 175);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.stroke();
-    }
-  }
-  ctx.restore();
-};
 
 export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }: MerchStudioProps) => {
   const { toast } = useToast();
@@ -182,6 +119,7 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSafeZone, setShowSafeZone] = useState(true);
 
   useEffect(() => { if (!productType && personalisable[0]) setProductType(personalisable[0].item_type); }, [personalisable, productType]);
 
@@ -194,6 +132,22 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
       return data;
     },
     enabled: Boolean(existingDesignId && bandId),
+  });
+
+  const { data: artworkLibrary = [] } = useQuery({
+    queryKey: ["merch-artwork-library", bandId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("tshirt_designs").select("id, design_name, artwork_url").eq("band_id", bandId).not("artwork_url", "is", null).order("updated_at", { ascending: false }).limit(24);
+      if (error) throw error;
+      const seen = new Set<string>();
+      return (data ?? []).reduce((assets: ArtworkAsset[], row: any) => {
+        if (!row.artwork_url || seen.has(row.artwork_url)) return assets;
+        seen.add(row.artwork_url);
+        assets.push({ id: row.id, name: row.design_name ?? "Saved artwork", url: row.artwork_url });
+        return assets;
+      }, []);
+    },
+    enabled: Boolean(bandId),
   });
 
   useEffect(() => {
@@ -209,16 +163,58 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
   }, [existingDesign, personalisable]);
 
   const product = personalisable.find((item) => item.item_type === productType) ?? personalisable[0];
+  const shape = shapeForProduct(productType);
+  const safeZone = safeZoneForShape(shape);
   const colors = product?.colour_options?.length ? product.colour_options : ["#171717", "#f8fafc", "#404040", "#172554", "#991b1b", "#14532d"];
   const currentElements = activeView === "front" ? frontElements : backElements;
   const setCurrentElements = activeView === "front" ? setFrontElements : setBackElements;
-  const selected = currentElements.find((element) => element.id === selectedId) ?? null;
+  const selectedIndex = currentElements.findIndex((element) => element.id === selectedId);
+  const selected = selectedIndex >= 0 ? currentElements[selectedIndex] : null;
   const printableSides = new Set((product?.print_areas ?? ["front", "back"]).map((v) => v.toLowerCase()));
+  const recommended = Number(product?.recommended_retail_price ?? 0);
+  const minimumRetail = Number(product?.minimum_retail_price ?? 0);
 
   useEffect(() => { if (activeView === "back" && !printableSides.has("back")) setActiveView("front"); }, [activeView, printableSides]);
 
-  const updateSelected = (patch: Partial<DesignElement>) => { if (!selectedId) return; setCurrentElements((elements) => elements.map((element) => element.id === selectedId ? { ...element, ...patch } : element)); };
-  const addText = () => { const element: DesignElement = { id: makeId(), type: "text", text: "YOUR BAND", x: 50, y: 48, scale: 1, rotation: 0, color: baseColor === "#f8fafc" ? "#111827" : "#ffffff", fontSize: 24 }; setCurrentElements((elements) => [...elements, element]); setSelectedId(element.id); };
+  const updateSelected = (patch: Partial<DesignElement>) => {
+    if (!selectedId) return;
+    setCurrentElements((elements) => elements.map((element) => element.id === selectedId ? { ...element, ...patch } : element));
+  };
+
+  const addText = () => {
+    const element: DesignElement = { id: makeId(), type: "text", text: "YOUR BAND", x: 50, y: 48, scale: 1, rotation: 0, color: baseColor === "#f8fafc" ? "#111827" : "#ffffff", fontSize: 24 };
+    setCurrentElements((elements) => [...elements, element]);
+    setSelectedId(element.id);
+  };
+
+  const addArtwork = (src: string) => {
+    const element: DesignElement = { id: makeId(), type: "image", src, x: 50, y: 48, scale: 1, rotation: 0 };
+    setCurrentElements((elements) => [...elements, element]);
+    setSelectedId(element.id);
+  };
+
+  const duplicateSelected = () => {
+    if (!selected) return;
+    const duplicate = { ...selected, id: makeId(), x: Math.min(82, selected.x + 4), y: Math.min(78, selected.y + 4) };
+    setCurrentElements((elements) => [...elements, duplicate]);
+    setSelectedId(duplicate.id);
+  };
+
+  const reorderSelected = (direction: -1 | 1) => {
+    if (selectedIndex < 0) return;
+    const target = Math.max(0, Math.min(currentElements.length - 1, selectedIndex + direction));
+    if (target === selectedIndex) return;
+    const next = [...currentElements];
+    const [item] = next.splice(selectedIndex, 1);
+    next.splice(target, 0, item);
+    setCurrentElements(next);
+  };
+
+  const copySide = () => {
+    const cloned = currentElements.map((element) => ({ ...element, id: makeId() }));
+    if (activeView === "front") setBackElements(cloned); else setFrontElements(cloned);
+    toast({ title: "Design copied", description: `Copied ${activeView} layout to the ${activeView === "front" ? "back" : "front"}.` });
+  };
 
   const uploadArtwork = async (file: File) => {
     if (!file.type.match(/^image\/(png|jpeg|webp|svg\+xml)$/)) throw new Error("Use PNG, JPG, WEBP or SVG artwork.");
@@ -233,74 +229,71 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
 
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return;
-    const remaining = Math.max(0, 5 - currentElements.filter((element) => element.type === "image").length);
-    if (!remaining) return toast({ title: "Artwork limit reached", description: "You can place up to five image layers on each side.", variant: "destructive" });
+    const remaining = Math.max(0, 8 - currentElements.filter((element) => element.type === "image").length);
+    if (!remaining) return toast({ title: "Artwork limit reached", description: "You can place up to eight image layers on each side.", variant: "destructive" });
     setIsUploading(true);
     try {
-      const additions: DesignElement[] = [];
-      for (const file of Array.from(files).slice(0, remaining)) additions.push({ id: makeId(), type: "image", src: await uploadArtwork(file), x: 50, y: 48, scale: 1, rotation: 0 });
-      setCurrentElements((elements) => [...elements, ...additions]);
-      if (additions[0]) setSelectedId(additions[0].id);
-      toast({ title: "Artwork uploaded", description: "Artwork is now reusable in this saved design." });
+      for (const file of Array.from(files).slice(0, remaining)) addArtwork(await uploadArtwork(file));
+      toast({ title: "Artwork uploaded", description: "Artwork is now available in this design and reusable from saved designs." });
     } catch (error) { toast({ title: "Artwork upload failed", description: error instanceof Error ? error.message : "Upload failed", variant: "destructive" }); }
     finally { setIsUploading(false); if (fileInputRef.current) fileInputRef.current.value = ""; }
   };
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!selected || ["INPUT", "TEXTAREA"].includes((event.target as HTMLElement)?.tagName)) return;
+      const step = event.shiftKey ? 5 : 1;
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) event.preventDefault();
+      if (event.key === "ArrowLeft") updateSelected({ x: Math.max(14, selected.x - step) });
+      if (event.key === "ArrowRight") updateSelected({ x: Math.min(86, selected.x + step) });
+      if (event.key === "ArrowUp") updateSelected({ y: Math.max(18, selected.y - step) });
+      if (event.key === "ArrowDown") updateSelected({ y: Math.min(82, selected.y + step) });
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d") { event.preventDefault(); duplicateSelected(); }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        setCurrentElements((elements) => elements.filter((item) => item.id !== selected.id));
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selected, selectedId, currentElements]);
+
   const buildPreview = async () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 600;
-    canvas.height = 600;
+    canvas.width = 600; canvas.height = 600;
     const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Preview renderer is unavailable");
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, 600);
-    gradient.addColorStop(0, "#f8fafc");
-    gradient.addColorStop(1, "#e5e7eb");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 600, 600);
-
-    drawPreviewSilhouette(ctx, shapeForProduct(productType), baseColor);
-
-    const previewSide: ViewSide = frontElements.length ? "front" : "back";
+    if (!ctx) throw new Error("Preview rendering is unavailable");
+    ctx.fillStyle = "#f3f4f6"; ctx.fillRect(0, 0, 600, 600);
+    const previewSide = frontElements.length ? "front" : "back";
     const elements = previewSide === "front" ? frontElements : backElements;
-
+    ctx.fillStyle = baseColor;
+    if (shape === "poster") ctx.fillRect(110, 55, 380, 490);
+    else if (shape === "mug") { ctx.beginPath(); ctx.roundRect(120, 170, 330, 270, 28); ctx.fill(); }
+    else if (shape === "cap") { ctx.beginPath(); ctx.ellipse(300, 285, 175, 105, 0, Math.PI, 0); ctx.lineTo(475, 335); ctx.lineTo(125, 335); ctx.closePath(); ctx.fill(); }
+    else if (shape === "tote") { ctx.beginPath(); ctx.roundRect(120, 145, 360, 370, 20); ctx.fill(); }
+    else { ctx.beginPath(); ctx.roundRect(190, 120, 220, 390, 26); ctx.fill(); }
     for (const element of elements) {
       ctx.save();
       ctx.translate((element.x / 100) * 600, (element.y / 100) * 600);
       ctx.rotate((element.rotation * Math.PI) / 180);
       ctx.scale(element.scale, element.scale);
-
       if (element.type === "image" && element.src) {
         try {
           const image = await loadPreviewImage(element.src);
-          const maxSize = 180;
-          const naturalWidth = image.naturalWidth || image.width || 1;
-          const naturalHeight = image.naturalHeight || image.height || 1;
-          const ratio = Math.min(maxSize / naturalWidth, maxSize / naturalHeight);
-          const width = naturalWidth * ratio;
-          const height = naturalHeight * ratio;
-          ctx.drawImage(image, -width / 2, -height / 2, width, height);
-        } catch {
-          ctx.fillStyle = "rgba(255,255,255,.12)";
-          ctx.fillRect(-60, -60, 120, 120);
-        }
-      } else if (element.type === "text") {
-        ctx.fillStyle = element.color ?? "#ffffff";
-        ctx.font = `900 ${element.fontSize ?? 24}px Arial, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowColor = "rgba(0,0,0,.25)";
-        ctx.shadowBlur = 3;
-        ctx.fillText(element.text ?? "", 0, 0, 240);
+          const max = 150; const ratio = Math.min(max / image.width, max / image.height, 1);
+          const w = image.width * ratio; const h = image.height * ratio;
+          ctx.drawImage(image, -w / 2, -h / 2, w, h);
+        } catch { /* keep save resilient */ }
+      } else {
+        ctx.fillStyle = element.color ?? "#fff";
+        ctx.font = `800 ${element.fontSize ?? 24}px Arial, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(element.text ?? "", 0, 0);
       }
       ctx.restore();
     }
-
-    ctx.fillStyle = "rgba(17,24,39,.82)";
-    ctx.font = "600 20px Arial, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(`${productType} · ${previewSide}`, 300, 570);
-
+    ctx.fillStyle = "#374151"; ctx.font = "600 20px Arial, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(`${productType} · ${previewSide}`, 300, 575);
     return canvas.toDataURL("image/png", 0.9);
   };
 
@@ -311,7 +304,7 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
     try {
       const firstArtwork = [...frontElements, ...backElements].find((element) => element.type === "image")?.src ?? null;
       const preview = await buildPreview();
-      const payload = { band_id: bandId, design_name: designName.trim(), background_color: baseColor, product_type: productType, artwork_url: firstArtwork, preview_image_url: preview, preview_data_url: preview, design_data: { version: 4, productType, garmentColor: baseColor, frontElements, backElements } };
+      const payload = { band_id: bandId, design_name: designName.trim(), background_color: baseColor, product_type: productType, artwork_url: firstArtwork, preview_image_url: preview, preview_data_url: preview, design_data: { version: 5, productType, garmentColor: baseColor, frontElements, backElements } };
       const query = (supabase as any).from("tshirt_designs");
       const { data, error } = existingDesignId ? await query.update(payload).eq("id", existingDesignId).eq("band_id", bandId).select("id").single() : await query.insert(payload).select("id").single();
       if (error) throw error;
@@ -325,21 +318,44 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
   if (!personalisable.length) return <Card><CardHeader><CardTitle>Merch Studio</CardTitle><CardDescription>No personalisable physical products are configured in the catalogue.</CardDescription></CardHeader></Card>;
 
   return <Card>
-    <CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>Merch Studio</CardTitle><CardDescription>Upload artwork, place it on real catalogue products, and save reusable designs.</CardDescription></div><div className="flex gap-2"><Badge variant="secondary">{personalisable.length} personalisable products</Badge>{existingDesignId ? <Button size="sm" variant="outline" onClick={onClearEditing}>New design</Button> : null}</div></div></CardHeader>
-    <CardContent className="grid gap-6 xl:grid-cols-[300px_1fr_300px]">
+    <CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>Merch Studio</CardTitle><CardDescription>Build reusable merch artwork with product-aware print zones, layers and saved assets.</CardDescription></div><div className="flex gap-2"><Badge variant="secondary">{personalisable.length} products</Badge>{existingDesignId ? <Button size="sm" variant="outline" onClick={onClearEditing}>New design</Button> : null}</div></div></CardHeader>
+    <CardContent className="grid gap-6 xl:grid-cols-[310px_1fr_320px]">
       <div className="space-y-4">
         <div className="space-y-2"><Label>Product</Label><Select value={productType} onValueChange={(value) => { setProductType(value); setSelectedId(null); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{personalisable.map((item) => <SelectItem key={item.id} value={item.item_type}>{item.item_type}</SelectItem>)}</SelectContent></Select></div>
-        <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1"><p><span className="text-muted-foreground">Material:</span> {product?.base_material ?? "Standard"}</p><p><span className="text-muted-foreground">Supplier:</span> {product?.supplier_tier ?? "standard"}</p><p><span className="text-muted-foreground">Print areas:</span> {(product?.print_areas ?? ["front", "back"]).join(", ")}</p></div>
+        <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1"><p><span className="text-muted-foreground">Material:</span> {product?.base_material ?? "Standard"}</p><p><span className="text-muted-foreground">Supplier:</span> {product?.supplier_tier ?? "standard"}</p><p><span className="text-muted-foreground">Print areas:</span> {(product?.print_areas ?? ["front", "back"]).join(", ")}</p>{recommended > 0 ? <p><span className="text-muted-foreground">Retail guide:</span> ${minimumRetail} minimum · ${recommended} recommended</p> : null}</div>
         <div className="space-y-2"><Label>Design name</Label><Input value={designName} onChange={(e) => setDesignName(e.target.value)} placeholder="Tour Skull Tee" /></div>
         <div className="space-y-2"><Label>Base colour</Label><div className="flex flex-wrap gap-2">{colors.map((color) => <button key={color} type="button" title={color} onClick={() => setBaseColor(color)} className={`h-8 w-8 rounded-full border-2 ${baseColor === color ? "ring-2 ring-primary ring-offset-2" : ""}`} style={{ backgroundColor: color }} />)}</div></div>
         <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
         <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isUploading}><Upload className="mr-2 h-4 w-4" />{isUploading ? "Uploading..." : "Upload artwork"}</Button>
         <Button variant="outline" className="w-full" onClick={addText}><Type className="mr-2 h-4 w-4" />Add text</Button>
+        <div className="flex items-center justify-between rounded-lg border p-3 text-sm"><span>Show safe print zone</span><Button size="sm" variant={showSafeZone ? "secondary" : "ghost"} onClick={() => setShowSafeZone((v) => !v)}>{showSafeZone ? "On" : "Off"}</Button></div>
+        {artworkLibrary.length ? <div className="space-y-2"><Label>Artwork library</Label><div className="grid grid-cols-3 gap-2">{artworkLibrary.slice(0, 9).map((asset) => <button type="button" key={asset.id} title={asset.name} onClick={() => addArtwork(asset.url)} className="aspect-square overflow-hidden rounded-md border bg-muted/30 p-1 hover:ring-2 hover:ring-primary"><img src={asset.url} alt={asset.name} className="h-full w-full object-contain" /></button>)}</div></div> : null}
       </div>
 
-      <div className="space-y-3"><div className="flex items-center justify-between"><Tabs value={activeView} onValueChange={(value) => { setActiveView(value as ViewSide); setSelectedId(null); }}><TabsList><TabsTrigger value="front">Front</TabsTrigger>{printableSides.has("back") ? <TabsTrigger value="back">Back</TabsTrigger> : null}</TabsList></Tabs><Badge variant="outline">{productType}</Badge></div><div className="relative mx-auto aspect-square w-full max-w-[620px] overflow-hidden rounded-2xl border bg-gradient-to-b from-muted/20 to-muted" onPointerDown={() => setSelectedId(null)}><ProductSilhouette shape={shapeForProduct(productType)} color={baseColor} />{currentElements.map((element) => <DesignLayer key={element.id} element={element} selected={selectedId === element.id} onSelect={() => setSelectedId(element.id)} onMove={(x, y) => { if (!selectedId) return; setCurrentElements((elements) => elements.map((item) => item.id === element.id ? { ...item, x, y } : item)); }} />)}{!currentElements.length ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-sm text-muted-foreground"><div><ImagePlus className="mx-auto mb-2 h-8 w-8" />Upload artwork or add text</div></div> : null}</div></div>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2"><Tabs value={activeView} onValueChange={(value) => { setActiveView(value as ViewSide); setSelectedId(null); }}><TabsList><TabsTrigger value="front">Front</TabsTrigger>{printableSides.has("back") ? <TabsTrigger value="back">Back</TabsTrigger> : null}</TabsList></Tabs><div className="flex gap-2">{printableSides.has("back") ? <Button size="sm" variant="outline" onClick={copySide}><Copy className="mr-2 h-3.5 w-3.5" />Copy side</Button> : null}<Badge variant="outline">{productType}</Badge></div></div>
+        <div className="relative mx-auto aspect-square w-full max-w-[680px] overflow-hidden rounded-2xl border bg-gradient-to-b from-muted/20 to-muted" onPointerDown={() => setSelectedId(null)}>
+          <ProductSilhouette shape={shape} color={baseColor} />
+          {showSafeZone ? <div className="pointer-events-none absolute border-2 border-dashed border-primary/50 bg-primary/5" style={{ left: `${safeZone.left}%`, top: `${safeZone.top}%`, width: `${safeZone.width}%`, height: `${safeZone.height}%` }}><span className="absolute left-1 top-1 rounded bg-background/80 px-1 text-[10px] text-muted-foreground">safe print area</span></div> : null}
+          {currentElements.map((element) => <DesignLayer key={element.id} element={element} selected={selectedId === element.id} onSelect={() => setSelectedId(element.id)} onMove={(x, y) => setCurrentElements((elements) => elements.map((item) => item.id === element.id ? { ...item, x, y } : item))} />)}
+          {!currentElements.length ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-sm text-muted-foreground"><div><ImagePlus className="mx-auto mb-2 h-8 w-8" />Upload artwork, reuse saved artwork or add text</div></div> : null}
+        </div>
+        <p className="text-center text-xs text-muted-foreground">Drag layers freely. Arrow keys nudge 1%; Shift + arrows nudges 5%. Ctrl/Cmd + D duplicates.</p>
+      </div>
 
-      <div className="space-y-4"><div className="rounded-lg border p-3"><p className="text-sm font-medium">Selected layer</p>{selected ? <div className="mt-3 space-y-4"><div><Label className="text-xs">Scale</Label><Slider value={[selected.scale]} min={0.25} max={2.5} step={0.05} onValueChange={([value]) => updateSelected({ scale: value })} /></div><div><Label className="text-xs">Rotation</Label><Slider value={[selected.rotation]} min={-180} max={180} step={1} onValueChange={([value]) => updateSelected({ rotation: value })} /></div>{selected.type === "text" ? <><div><Label className="text-xs">Text</Label><Input value={selected.text ?? ""} onChange={(e) => updateSelected({ text: e.target.value })} /></div><div><Label className="text-xs">Text colour</Label><Input type="color" value={selected.color ?? "#ffffff"} onChange={(e) => updateSelected({ color: e.target.value })} /></div></> : null}<Button variant="destructive" size="sm" className="w-full" onClick={() => { setCurrentElements((elements) => elements.filter((item) => item.id !== selected.id)); setSelectedId(null); }}><Trash2 className="mr-2 h-4 w-4" />Remove layer</Button></div> : <p className="mt-2 text-xs text-muted-foreground">Select an artwork or text layer to resize, rotate or edit it.</p>}</div><Button variant="outline" className="w-full" onClick={() => { setCurrentElements([]); setSelectedId(null); }}><RotateCcw className="mr-2 h-4 w-4" />Clear {activeView}</Button><Button className="w-full" onClick={saveDesign} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? "Rendering preview..." : existingDesignId ? "Update design" : "Save design"}</Button></div>
+      <div className="space-y-4">
+        <Tabs defaultValue="edit">
+          <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="edit">Edit</TabsTrigger><TabsTrigger value="layers">Layers</TabsTrigger></TabsList>
+          <TabsContent value="edit" className="space-y-4 pt-2">
+            <div className="rounded-lg border p-3"><p className="text-sm font-medium">Selected layer</p>{selected ? <div className="mt-3 space-y-4"><div className="grid grid-cols-2 gap-2"><Button size="sm" variant="outline" onClick={() => updateSelected({ x: 50 })}><AlignCenter className="mr-2 h-3.5 w-3.5" />Centre X</Button><Button size="sm" variant="outline" onClick={() => updateSelected({ y: 50 })}><Move className="mr-2 h-3.5 w-3.5" />Centre Y</Button></div><div><Label className="text-xs">Scale</Label><Slider value={[selected.scale]} min={0.2} max={3} step={0.05} onValueChange={([value]) => updateSelected({ scale: value })} /></div><div><Label className="text-xs">Rotation</Label><Slider value={[selected.rotation]} min={-180} max={180} step={1} onValueChange={([value]) => updateSelected({ rotation: value })} /></div>{selected.type === "text" ? <><div><Label className="text-xs">Text</Label><Input value={selected.text ?? ""} onChange={(e) => updateSelected({ text: e.target.value })} /></div><div><Label className="text-xs">Text colour</Label><Input type="color" value={selected.color ?? "#ffffff"} onChange={(e) => updateSelected({ color: e.target.value })} /></div><div><Label className="text-xs">Text size</Label><Slider value={[selected.fontSize ?? 24]} min={10} max={72} step={1} onValueChange={([value]) => updateSelected({ fontSize: value })} /></div></> : null}<div className="grid grid-cols-2 gap-2"><Button variant="outline" size="sm" onClick={duplicateSelected}><Copy className="mr-2 h-3.5 w-3.5" />Duplicate</Button><Button variant="destructive" size="sm" onClick={() => { setCurrentElements((elements) => elements.filter((item) => item.id !== selected.id)); setSelectedId(null); }}><Trash2 className="mr-2 h-3.5 w-3.5" />Remove</Button></div></div> : <p className="mt-2 text-xs text-muted-foreground">Select artwork or text to position, resize, rotate, duplicate or edit it.</p>}</div>
+          </TabsContent>
+          <TabsContent value="layers" className="space-y-2 pt-2">
+            {currentElements.length ? currentElements.map((element, index) => <div key={element.id} className={`flex items-center gap-2 rounded-lg border p-2 ${selectedId === element.id ? "border-primary bg-primary/5" : ""}`}><button type="button" onClick={() => setSelectedId(element.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left"><Layers3 className="h-4 w-4 shrink-0" /><span className="truncate text-sm">{element.type === "text" ? element.text || "Text" : `Artwork ${index + 1}`}</span></button><Button size="icon" variant="ghost" disabled={index === currentElements.length - 1} onClick={() => { setSelectedId(element.id); setTimeout(() => reorderSelected(1), 0); }}><ArrowUp className="h-4 w-4" /></Button><Button size="icon" variant="ghost" disabled={index === 0} onClick={() => { setSelectedId(element.id); setTimeout(() => reorderSelected(-1), 0); }}><ArrowDown className="h-4 w-4" /></Button></div>) : <p className="text-xs text-muted-foreground">No layers on this side yet.</p>}
+          </TabsContent>
+        </Tabs>
+        <Button variant="outline" className="w-full" onClick={() => { setCurrentElements([]); setSelectedId(null); }}><RotateCcw className="mr-2 h-4 w-4" />Clear {activeView}</Button>
+        <Button className="w-full" onClick={saveDesign} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? "Rendering preview..." : existingDesignId ? "Update design" : "Save design"}</Button>
+      </div>
     </CardContent>
   </Card>;
 };
