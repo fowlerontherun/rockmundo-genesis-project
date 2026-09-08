@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useMerchRequirements } from "@/hooks/useMerchRequirements";
 import { supabase } from "@/integrations/supabase/client";
+import { MerchProductMockup } from "@/components/merchandise/MerchProductMockup";
 import {
   AlignCenter,
   ArrowDown,
@@ -103,26 +104,6 @@ const zoneForSurface = (shape: string, area: string): PrintZone => {
   if (shape === "football") return { left: 34, top: 29, width: 32, height: 45 };
   return { left: 34, top: 29, width: 32, height: 45 };
 };
-
-function ProductSilhouette({ shape, color, area }: { shape: string; color: string; area: string }) {
-  const back = normaliseArea(area) === "back";
-  if (shape === "poster" || shape === "flat") return <div className="absolute inset-[8%_18%] rounded-md border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }} />;
-  if (shape === "tote") return <div className="absolute left-[20%] right-[20%] top-[24%] bottom-[13%] rounded-b-xl border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }}><div className="absolute left-[24%] right-[24%] -top-[24%] h-[28%] rounded-t-[999px] border-[10px] border-b-0 border-black/20" /></div>;
-  if (shape === "mug") return <div className="absolute left-[20%] right-[25%] top-[27%] bottom-[24%] rounded-b-3xl rounded-t-lg border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }}><div className="absolute -right-[30%] top-[18%] h-[55%] w-[34%] rounded-r-full border-8 border-l-0 border-black/20" /></div>;
-  if (shape === "glass") return <div className="absolute left-[35%] right-[35%] top-[20%] bottom-[16%] rounded-b-[32%] border-4 border-black/20 shadow-xl" style={{ background: `linear-gradient(90deg, rgba(255,255,255,.28), ${color}, rgba(255,255,255,.18))` }} />;
-  if (shape === "bottle") return <div className="absolute left-[38%] right-[38%] top-[13%] bottom-[12%] rounded-b-[28%] rounded-t-[12%] border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }}><div className="absolute left-[28%] right-[28%] -top-[12%] h-[16%] rounded-t-lg border-4 border-black/20" style={{ backgroundColor: color }} /></div>;
-  if (shape === "cap") return <div className="absolute left-[20%] right-[20%] top-[33%] h-[28%] rounded-t-full rounded-b-xl border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }}><div className="absolute left-[55%] top-[55%] h-[20%] w-[45%] rounded-r-full border-4 border-black/20" style={{ backgroundColor: color }} /></div>;
-
-  const longSleeve = shape === "long" || shape === "hoodie" || shape === "crewneck" || shape === "football";
-  return <div className="absolute inset-0">
-    <div className="absolute left-[27%] right-[27%] top-[18%] bottom-[10%] rounded-b-3xl border-4 border-black/20 shadow-xl" style={{ backgroundColor: color }} />
-    <div className={`absolute top-[20%] h-[25%] ${longSleeve ? "left-[8%] w-[23%] rotate-[16deg]" : "left-[14%] w-[20%] rotate-[25deg]"} rounded-xl border-4 border-black/20`} style={{ backgroundColor: color }} />
-    <div className={`absolute top-[20%] h-[25%] ${longSleeve ? "right-[8%] w-[23%] -rotate-[16deg]" : "right-[14%] w-[20%] -rotate-[25deg]"} rounded-xl border-4 border-black/20`} style={{ backgroundColor: color }} />
-    {shape === "hoodie" ? <div className="absolute left-[37%] right-[37%] top-[10%] h-[18%] rounded-t-full border-4 border-black/20" style={{ backgroundColor: color }} /> : null}
-    {shape === "football" ? <><div className="absolute left-[27%] right-[27%] top-[18%] h-[5%] bg-white/20" /><div className="absolute left-[27%] right-[27%] bottom-[18%] h-[3%] bg-white/15" /></> : null}
-    {back ? <div className="absolute left-[44%] right-[44%] top-[19%] h-[5%] rounded-b-full bg-black/10" /> : <div className="absolute left-[44%] right-[44%] top-[17%] h-[7%] rounded-b-full bg-black/10" />}
-  </div>;
-}
 
 function DesignLayer({ element, selected, onSelect, onMove }: { element: DesignElement; selected: boolean; onSelect: () => void; onMove: (x: number, y: number) => void }) {
   const dragRef = useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
@@ -393,7 +374,7 @@ export const MerchStudio = ({ bandId, existingDesignId, onSave, onClearEditing }
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><Tabs value={activeArea} onValueChange={(value) => { setActiveArea(value); setSelectedId(null); }}><TabsList className="h-auto flex-wrap">{printAreas.map((area) => <TabsTrigger key={area} value={area} className="text-xs">{prettyArea(area)}{(areaElements[area] ?? []).length ? ` (${areaElements[area].length})` : ""}</TabsTrigger>)}</TabsList></Tabs><div className="flex gap-2">{printAreas.length > 1 ? <Button size="sm" variant="outline" onClick={copyToNextArea}><Copy className="mr-2 h-3.5 w-3.5" />Copy to next</Button> : null}<Badge variant="outline">{productType}</Badge></div></div>
         <div className="relative mx-auto aspect-square w-full max-w-[680px] overflow-hidden rounded-2xl border bg-gradient-to-b from-muted/20 to-muted" onPointerDown={() => setSelectedId(null)}>
-          <ProductSilhouette shape={shape} color={baseColor} area={activeArea} />
+          <MerchProductMockup shape={shape} color={baseColor} area={activeArea} />
           {showSafeZone ? <div className="pointer-events-none absolute border-2 border-dashed border-primary/55 bg-primary/5" style={{ left: `${zone.left}%`, top: `${zone.top}%`, width: `${zone.width}%`, height: `${zone.height}%` }}><span className="absolute left-1 top-1 rounded bg-background/85 px-1 text-[10px] text-muted-foreground">{prettyArea(activeArea)} print zone</span></div> : null}
           {currentElements.map((element) => <DesignLayer key={element.id} element={element} selected={selectedId === element.id} onSelect={() => setSelectedId(element.id)} onMove={(x, y) => { const point = clampPoint(x, y); setCurrentElements((elements) => elements.map((item) => item.id === element.id ? { ...item, ...point } : item)); }} />)}
           {!currentElements.length ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-sm text-muted-foreground"><div><ImagePlus className="mx-auto mb-2 h-8 w-8" />Design the {prettyArea(activeArea)} surface</div></div> : null}
