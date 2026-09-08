@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, Loader2, PackageCheck, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ReleaseDesignDialog } from "./ReleaseDesignDialog";
+import { MerchDesignPreview } from "./MerchDesignPreview";
 
 interface SavedDesignsProps {
   bandId: string;
@@ -71,33 +72,38 @@ export const SavedDesigns = ({ bandId, onLoadDesign }: SavedDesignsProps) => {
       <Card>
         <CardHeader>
           <CardTitle>Saved Designs</CardTitle>
-          <CardDescription>Reusable product artwork and mock-ups for future merchandise drops</CardDescription>
+          <CardDescription>Live product mock-ups rendered from your saved artwork and print-surface data</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {designs.map((design: any) => (
-              <Card key={design.id} className="overflow-hidden">
-                <div className="relative aspect-square bg-muted">
-                  {design.preview_image_url ? <img src={design.preview_image_url} alt={design.design_name} className="h-full w-full object-contain" /> : <div className="flex h-full items-center justify-center text-muted-foreground">No preview</div>}
-                </div>
-                <CardContent className="space-y-3 p-4">
-                  <div>
-                    <h3 className="truncate font-semibold">{design.design_name}</h3>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      <Badge variant="outline" className="text-xs">{design.product_type || "Graphic Tee"}</Badge>
-                      {design.artwork_url ? <Badge variant="secondary" className="text-xs">Uploaded artwork</Badge> : null}
+            {designs.map((design: any) => {
+              const areaElements = design.design_data?.areaElements as Record<string, unknown[]> | undefined;
+              const designedSurfaces = areaElements ? Object.values(areaElements).filter((layers) => Array.isArray(layers) && layers.length > 0).length : 0;
+              return (
+                <Card key={design.id} className="overflow-hidden">
+                  <div className="relative aspect-square bg-muted">
+                    <MerchDesignPreview design={design} />
+                  </div>
+                  <CardContent className="space-y-3 p-4">
+                    <div>
+                      <h3 className="truncate font-semibold">{design.design_name}</h3>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <Badge variant="outline" className="text-xs">{design.product_type || "Graphic Tee"}</Badge>
+                        {design.artwork_url ? <Badge variant="secondary" className="text-xs">Uploaded artwork</Badge> : null}
+                        {designedSurfaces > 1 ? <Badge variant="secondary" className="text-xs">{designedSurfaces} print surfaces</Badge> : null}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {onLoadDesign ? (
-                      <Button onClick={() => onLoadDesign(design.id)} variant="outline" size="sm" className="flex-1"><Eye className="mr-1 h-3 w-3" /> Edit</Button>
-                    ) : null}
-                    <Button onClick={() => handleReleaseClick(design.id, design.design_name)} size="sm" className="flex-1"><PackageCheck className="mr-1 h-3 w-3" /> Produce</Button>
-                    <Button onClick={() => deleteMutation.mutate(design.id)} variant="destructive" size="sm"><Trash2 className="h-3 w-3" /></Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex gap-2">
+                      {onLoadDesign ? (
+                        <Button onClick={() => onLoadDesign(design.id)} variant="outline" size="sm" className="flex-1"><Eye className="mr-1 h-3 w-3" /> Edit</Button>
+                      ) : null}
+                      <Button onClick={() => handleReleaseClick(design.id, design.design_name)} size="sm" className="flex-1"><PackageCheck className="mr-1 h-3 w-3" /> Produce</Button>
+                      <Button onClick={() => deleteMutation.mutate(design.id)} variant="destructive" size="sm"><Trash2 className="h-3 w-3" /></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
