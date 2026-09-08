@@ -91,7 +91,7 @@ const seededRandom = (seed: string) => {
   };
 };
 
-const defaultInventoryStub: MerchInventoryItem = {
+const defaultInventoryStub = {
   id: "stub",
   band_id: "stub",
   design_name: "Limited Drop",
