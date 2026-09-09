@@ -6,6 +6,8 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildVenue, buildDrums, microphone, cylinder, matte } from './stage';
 import { loadBand, type Musician, type DemoCrowd } from './performers';
+import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
+import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
 
 const CAMERAS = {
@@ -46,14 +48,20 @@ export class ConcertScene {
   private lookAt = new T.Vector3(0, 2.2, -1.9);
   private cameraPos = new T.Vector3();
   private targetPos = new T.Vector3();
+  private crowdTuning: Partial<CrowdTuningOptions> = {};
+  private renderedAt = 0;
+  private playback: ConcertFrame | null = null;
+  private effectsEnabled = true;
+  private effectsIntensity = 1;
+  private confetti: T.Points | null = null;
   private sceneKey: CameraShot = 'front';
   private onStats: (stats: DemoStats) => void;
-  constructor(private canvas: HTMLCanvasElement, initial: DemoSettings, onStats: (stats: DemoStats) => void, private onState: (state: 'loading' | 'ready' | 'error', message?: string) => void) {
+  constructor(private canvas: HTMLCanvasElement, initial: DemoSettings, onStats: (stats: DemoStats) => void, private onState: (state: 'loading' | 'ready' | 'error', message?: string) => void, private options?: ConcertOptions) {
     this.settings = { ...initial }; this.onStats = onStats;
     try {
     this.renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = T.SRGBColorSpace; this.renderer.toneMapping = T.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.3;
-    this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = T.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled = initial.quality !== 'low'; this.renderer.shadowMap.type = T.PCFSoftShadowMap;
     this.renderer.info.autoReset = false;
     this.assetsReady = new Promise(resolve => { this.assetManager.onLoad = () => resolve(); });
     this.assetManager.onError = () => { this.assetsFailed = true; };
@@ -63,7 +71,7 @@ export class ConcertScene {
     this.scene.add(new T.HemisphereLight('#a5c9e8', '#29212b', 1.15));
     const key = new T.DirectionalLight('#f4d5b3', 1.3); key.position.set(0, 5, 6); this.scene.add(key);
     const backFill = new T.DirectionalLight('#759cc7', 0.6); backFill.position.set(0, 5, -7); this.scene.add(backFill);
-    buildVenue(this.scene, this.assetManager); this.cymbals = buildDrums(this.scene); microphone(this.scene, [0, 0.9, -0.43]);
+    buildVenue(this.scene, this.assetManager, options?.venue); if (!options) { this.cymbals = buildDrums(this.scene); microphone(this.scene, [0, .9, -.43]); }
     this.buildLighting(); this.particles = this.buildParticles();
     this.composer = new EffectComposer(this.renderer); this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.28, 0.45, 1.12); this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());
@@ -77,13 +85,14 @@ export class ConcertScene {
   }
   private async load() {
     try {
-      const [band] = await Promise.all([loadBand(this.scene, this.assetManager), this.assetsReady]);
+      const [band] = await Promise.all([loadBand(this.scene, this.assetManager, this.options?.performers, this.options?.venue.seed), this.assetsReady]);
       if (this.disposed) { this.disposeScene(); return; }
       if (this.assetsFailed) throw new Error('Missing demo material');
-      this.actors = band.actors; this.crowd = band.crowd; this.loaded = true;
+      this.actors = band.actors; this.crowd = band.crowd; this.cymbals.push(...band.cymbals); this.loaded = true;
       if (this.hasContext) this.onState('ready');
     } catch (error) {
-      if (!this.disposed) this.onState('error', 'A band model or stage material could not load. Retry the demo to reload its local assets.');
+      cancelAnimationFrame(this.raf); this.raf = 0; this.assetsFailed = true;
+      if (!this.disposed) this.onState('error', 'A band model or stage material could not load. Retry to reload the stage assets.');
     }
   }
   private buildLighting() {
@@ -127,14 +136,19 @@ export class ConcertScene {
     this.beams.forEach((beam, i) => { const mat = beam.material as T.ShaderMaterial; mat.uniforms.color.value.set(i % 2 === 0 ? look.left : look.right); beam.visible = next.haze; });
     this.particles.visible = next.haze && !next.reducedMotion;
     this.bloom.strength = next.quality === 'high' ? 0.4 : 0.25;
+    this.renderer.shadowMap.enabled = next.quality !== 'low';
+    this.bloom.enabled = next.quality !== 'low';
     if (qualityChanged) this.resize();
     if (next.reducedMotion && this.sceneKey !== 'front') this.sceneKey = 'front';
   }
+  setCrowdTuning(tuning: Partial<CrowdTuningOptions>) { this.crowdTuning = tuning; }
+  setFrame(frame: ConcertFrame) { this.playback = frame; this.seconds = Math.max(0, frame.positionMs / 1000); }
+  setEffects(enabled: boolean, intensity = 1) { this.effectsEnabled = enabled; this.effectsIntensity = T.MathUtils.clamp(intensity, 0, 1); }
   restart() { this.seconds = 0; this.last = 0; }
   private resize() {
     if (this.disposed) return;
     const rect = this.canvas.getBoundingClientRect(), width = Math.max(1, rect.width), height = Math.max(1, rect.height);
-    const ratio = Math.min(window.devicePixelRatio || 1, this.settings.quality === 'high' ? 1.75 : 1.15);
+    const ratio = Math.min(window.devicePixelRatio || 1, this.settings.quality === 'high' ? 1.75 : this.settings.quality === 'low' ? .9 : 1.15);
     this.renderer.setPixelRatio(ratio); this.renderer.setSize(width, height, false); this.composer?.setPixelRatio(ratio); this.composer?.setSize(width, height);
     this.camera.aspect = width / height; this.camera.updateProjectionMatrix();
   }
@@ -144,21 +158,44 @@ export class ConcertScene {
     const selected = camera === 'director' ? reducedMotion ? 'front' : sequence[Math.floor(this.seconds / 16) % sequence.length] : camera;
     const shot = CAMERAS[selected];
     this.cameraPos.fromArray(shot.position); this.targetPos.fromArray(shot.target);
+    if (this.options && (selected === 'guitar' || selected === 'drums')) {
+      const actor = selected === 'drums' ? this.actors.find(p => p.role === 'drums' && p.root.visible) : this.actors.find(p => p.id === this.playback?.focusId && p.root.visible) ?? this.actors.find(p => p.role === 'guitar' && p.root.visible);
+      if (actor) { this.targetPos.copy(actor.root.position).add(new T.Vector3(0, 1.2, .1)); this.cameraPos.copy(this.targetPos).add(selected === 'drums' ? new T.Vector3(2.4, 1.6, -1.5) : new T.Vector3(-1.8, .45, 3.1)); }
+      else { this.cameraPos.fromArray(CAMERAS.front.position); this.targetPos.fromArray(CAMERAS.front.target); }
+    }
     if (!reducedMotion) { this.cameraPos.x += Math.sin(this.seconds * 0.15) * 0.16; this.cameraPos.y += Math.sin(this.seconds * 0.13) * 0.035; }
     // Keep the complete band in frame when the viewport narrows.
-    if (this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
-    const lerp = reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
+    if (this.options && selected === 'front') this.cameraPos.z = Math.max(this.cameraPos.z, this.targetPos.z + 5.6 / (Math.tan(shot.fov * Math.PI / 360) * this.camera.aspect));
+    if (!this.options && this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
+    // An external replay uses analytic cuts/dollies: seeking to a timestamp must
+    // produce the same camera, including while paused and after a backwards seek.
+    const lerp = this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
     this.camera.position.lerp(this.cameraPos, lerp); this.lookAt.lerp(this.targetPos, lerp);
     this.camera.fov = T.MathUtils.lerp(this.camera.fov, shot.fov, lerp); this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;
   }
   private frame = (now: number) => {
     if (this.disposed || !this.hasContext || document.hidden) { this.raf = 0; return; }
+    if (this.settings.quality === 'low' && now - this.renderedAt < 1000 / 30) { this.raf = requestAnimationFrame(this.frame); return; }
+    this.renderedAt = now;
     const dt = this.last ? Math.min((now - this.last) / 1000, 0.05) : 0; this.last = now;
-    if (this.settings.playing && this.loaded) this.seconds += dt;
+    if (!this.options?.externalClock && this.settings.playing && this.loaded) this.seconds += dt;
     const t = this.settings.reducedMotion ? 0 : this.seconds;
-    this.actors.forEach(actor => actor.update(t, this.settings.energy, this.settings.reducedMotion));
-    this.crowd?.update(t, this.settings.crowd, this.settings.energy, this.settings.reducedMotion);
-    this.lights.forEach((light, i) => { if (i < 4) { light.target.position.x = (i - 1.5) * 1.4 + Math.sin(t * 0.35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4); const beam = this.beams[i]; beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), light.target.position.clone().sub(light.position).normalize()); } });
+    const energy = this.playback?.energy ?? this.settings.energy;
+    this.actors.forEach(actor => {
+      const state = this.playback?.performers.find(p => p.id === actor.id);
+      if (state) {
+        actor.root.visible = state.visible; actor.root.position.set(...state.position); actor.walking = state.walking; actor.action = state.action;
+        actor.root.rotation.set(0, 0, 0);
+        if (!this.settings.reducedMotion && state.action === 'dance') { actor.root.rotation.y = Math.sin(t * 2) * .24; actor.root.position.y += Math.abs(Math.sin(t * 5)) * .06; }
+        if (!this.settings.reducedMotion && /stage_dive|crowd_surf/.test(state.action ?? '')) { const arc = Math.sin(state.actionProgress * Math.PI); actor.root.position.z += arc * 2.3; actor.root.position.y += arc * .55; actor.root.rotation.x = -arc * Math.PI / 2; }
+      }
+      actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
+    });
+    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction);
+    this.updateEffects();
+    this.lights.forEach((light, i) => {
+      light.intensity = (i < 4 ? 85 : 65) * (this.playback?.lightLevel ?? 1);
+      if (i < 4) { light.target.position.x = (i - 1.5) * 1.4 + Math.sin(t * 0.35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4); const beam = this.beams[i]; beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), light.target.position.clone().sub(light.position).normalize()); } });
     this.cymbals.forEach((object, i) => { object.rotation.z = this.settings.reducedMotion ? 0 : Math.sin(t * 12.56 + i) * 0.012 * this.settings.energy; });
     this.particles.rotation.y = t * 0.008; this.moveCamera(dt);
     this.renderer.info.reset(); this.composer.render();
@@ -166,11 +203,27 @@ export class ConcertScene {
     if (now - this.sampleAt >= 1000) { this.onStats({ fps: this.sampleAt ? Math.round(this.frames * 1000 / (now - this.sampleAt)) : 0, drawCalls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, seconds: this.seconds }); this.sampleAt = now; this.frames = 0; }
     this.raf = requestAnimationFrame(this.frame);
   };
-  private start() { if (!this.raf && !this.disposed && this.hasContext && !document.hidden) { this.last = 0; this.raf = requestAnimationFrame(this.frame); } }
+  private updateEffects() {
+    const effect = this.playback?.effect;
+    const visible = !!effect && this.effectsEnabled && !this.settings.reducedMotion;
+    if (visible && !this.confetti) {
+      const random = seededRandom(this.options?.venue.seed ?? 712), positions = new Float32Array(180 * 3), colors = new Float32Array(180 * 3);
+      for (let i = 0; i < 180; i++) { positions.set([(random() - .5) * 11, random() * 5, -4 + random() * 4], i * 3); colors.set(new T.Color().setHSL(random(), .8, .6).toArray(), i * 3); }
+      const geometry = new T.BufferGeometry(); geometry.setAttribute('position', new T.BufferAttribute(positions, 3)); geometry.setAttribute('color', new T.BufferAttribute(colors, 3));
+      this.confetti = new T.Points(geometry, new T.PointsMaterial({ vertexColors: true, size: .045, transparent: true, depthWrite: false })); this.scene.add(this.confetti);
+    }
+    if (this.confetti) {
+      this.confetti.visible = visible && /confetti|special_effect/.test(effect?.type ?? '');
+      if (effect) { this.confetti.position.y = 5 - effect.progress * 6; this.confetti.rotation.y = effect.progress * .4; (this.confetti.material as T.PointsMaterial).opacity = Math.sin(effect.progress * Math.PI) * effect.intensity * this.effectsIntensity; }
+    }
+    this.bloom.strength = (this.settings.quality === 'high' ? .4 : .25) + (visible && effect ? Math.sin(effect.progress * Math.PI) * effect.intensity * this.effectsIntensity * .35 : 0);
+  }
+  private start() { if (!this.raf && !this.disposed && !this.assetsFailed && this.hasContext && !document.hidden) { this.last = 0; this.raf = requestAnimationFrame(this.frame); } }
   private visibilityChanged = () => { if (document.hidden) { cancelAnimationFrame(this.raf); this.raf = 0; } else this.start(); };
-  private contextLost = (event: Event) => { event.preventDefault(); this.hasContext = false; cancelAnimationFrame(this.raf); this.raf = 0; this.onState('error', 'The graphics connection was interrupted. Retry the demo to restore the scene.'); };
+  private contextLost = (event: Event) => { event.preventDefault(); this.hasContext = false; cancelAnimationFrame(this.raf); this.raf = 0; this.onState('error', 'The graphics connection was interrupted. Retry to restore the scene.'); };
   private contextRestored = () => { this.onState('error', 'The graphics connection is restored. Retry to rebuild the stage lighting and materials.'); };
   private disposeScene() {
+    this.crowd?.dispose();
     const geometries = new Set<T.BufferGeometry>(), materials = new Set<T.Material>(), textures = new Set<T.Texture>();
     this.scene.traverse(object => {
       const mesh = object as T.Mesh; if (mesh.geometry) geometries.add(mesh.geometry);

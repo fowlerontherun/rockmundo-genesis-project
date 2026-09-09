@@ -1,4 +1,5 @@
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -9,6 +10,12 @@ import type { GigViewerReplayResult } from "../../../services/GigViewerReplaySer
 import type { GigViewerReplay } from "../../../events/types";
 import type { GigExperienceDTO } from "../../../types";
 import { LiveGigStageView } from "../../LiveGigStageView";
+
+vi.mock("@/features/gig-demo-3d/ConcertScene", () => ({ ConcertScene: class {
+  constructor(_canvas: unknown, _settings: unknown, _stats: unknown, state: (value: string) => void) { state("ready"); }
+  setSettings() {} setFrame() {} setEffects() {} setCrowdTuning() {} destroy() {}
+} }));
+vi.mock("@/features/player-model/usePlayerModel", () => ({ useGigPlayerModels: () => ({ data: undefined, isFetching: false, isError: false }) }));
 
 let replayResult: GigViewerReplayResult = { state: "ready", replay: null };
 const refetch = vi.fn();
@@ -73,9 +80,9 @@ function renderViewer(props: Partial<React.ComponentProps<typeof GigViewerShell>
   localStorage.clear();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={queryClient}>
+    <MemoryRouter><QueryClientProvider client={queryClient}>
       <GigViewerShell gigId="gig-release" experience={experience} open mode="analysis" onViewResult={vi.fn()} onClose={vi.fn()} {...props} />
-    </QueryClientProvider>,
+    </QueryClientProvider></MemoryRouter>,
   );
 }
 
@@ -97,9 +104,9 @@ describe("Phase 5 browser release gate surrogate", () => {
     const before = JSON.stringify(liveExperience);
     const liveQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
-      <QueryClientProvider client={liveQueryClient}>
+      <MemoryRouter><QueryClientProvider client={liveQueryClient}>
         <LiveGigStageView gigId="gig-live" experience={liveExperience} onViewResult={onResult} onClose={onClose} />
-      </QueryClientProvider>,
+      </QueryClientProvider></MemoryRouter>,
     );
     await waitFor(() => expect(screen.getByRole("region", { name: /player gig stage view/i })).toBeInTheDocument());
     expect(screen.queryByText("Stage view unavailable")).not.toBeInTheDocument();
@@ -118,7 +125,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.queryByText(/PRESENTATION-UNKNOWN/)).not.toBeInTheDocument();
   });
 
-  it("keeps the player stage focused on the animated song performance", () => {
+  it("keeps the player stage focused on the animated song performance", async () => {
     replayResult = { state: "ready", replay: readyReplay };
     const onClose = vi.fn();
 
@@ -130,7 +137,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(stage).toHaveAttribute("data-fullscreen", "false");
     expect(stage.querySelector("[data-player-stage-viewport]")).toBeInTheDocument();
     expect(document.body.style.overflow).not.toBe("hidden");
-    expect(screen.getByRole("img", { name: /song performance stage showing the band and crowd/i })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /3D performance at/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/replay controls/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^play$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^restart$/i })).toBeInTheDocument();
@@ -143,9 +150,9 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("group", { name: /playback speed/i })).toBeInTheDocument();
     const camera = screen.getByRole("group", { name: /camera mode/i });
     expect(within(camera).getByRole("button", { name: /venue wide/i })).toHaveAttribute("aria-pressed", "true");
-    expect(within(camera).getByRole("button", { name: /stage focus/i })).toBeInTheDocument();
-    expect(within(camera).getByRole("button", { name: /^auto$/i })).toBeInTheDocument();
-    fireEvent.click(within(camera).getByRole("button", { name: /stage focus/i }));
+    expect(within(camera).getByRole("button", { name: /performer/i })).toBeInTheDocument();
+    expect(within(camera).getByRole("button", { name: /^director$/i })).toBeInTheDocument();
+    fireEvent.click(within(camera).getByRole("button", { name: /performer/i }));
     expect(localStorage.getItem("gig-viewer-camera-mode")).toBe("stage_focus");
     const diagnostic = stage.querySelector("[data-seed-fingerprint]");
     expect(diagnostic).toHaveAttribute("data-viewer-camera", "stage_focus");
@@ -154,7 +161,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.getByRole("switch", { name: /pyrotechnics/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /pop out full screen stage view/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /view result/i })).toBeInTheDocument();
-    expect(screen.queryByRole("list", { name: /setlist timeline/i })).not.toBeInTheDocument();
+    expect(screen.getByText("Performance timeline & commentary")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /performers/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /crowd mood/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/setlist audio controls/i)).not.toBeInTheDocument();
@@ -166,11 +173,11 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it("loads a completed replay lazily and exposes canvas, panels, timeline, graph, controls, and result access", () => {
+  it("loads a completed replay lazily and exposes canvas, panels, timeline, graph, controls, and result access", async () => {
     replayResult = { state: "ready", replay: readyReplay };
     renderViewer();
     expect(screen.getByRole("heading", { name: /gig replay/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /top-down replay canvas/i })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /3D performance at/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^play$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /skip to next song/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /skip to next highlight/i })).toBeInTheDocument();
@@ -229,17 +236,17 @@ describe("Phase 5 browser release gate surrogate", () => {
     }
   });
 
-  it("exposes semantic timeline state and graph seek targets for automated accessibility checks", () => {
+  it("exposes semantic timeline state and graph seek targets for automated accessibility checks", async () => {
     replayResult = { state: "ready", replay: readyReplay };
     renderViewer();
     const timeline = screen.getByRole("list", { name: /setlist timeline/i });
     expect(within(timeline).getByRole("button", { name: /1\. beta anthem/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /playback speed/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1×" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("img", { name: /top-down replay canvas/i })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /3D performance at/i })).toBeInTheDocument();
   });
 
-  it("renders live presentation playback without result events or result controls", () => {
+  it("renders live presentation playback without result events or result controls", async () => {
     const events = readyReplay.events
       .filter((event) => event.eventType !== "result_revealed")
       .map((event, sequence) => ({ ...event, sequence, id: `live-${sequence}` }));
@@ -260,7 +267,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     renderViewer({ experience: liveExperience, replayOverride: presentationReplay });
 
     expect(screen.getByRole("heading", { name: /gig viewer/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /top-down replay canvas/i })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /3D performance at/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /result/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/result revealed/i)).not.toBeInTheDocument();
   });

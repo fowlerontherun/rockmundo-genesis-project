@@ -550,6 +550,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
           <PlayerGigStageSurface
             canvas={playerCanvas}
             controls={playerControls}
+            timeline={<GigViewerTimeline events={playback.events} activeId={state.activeEvent?.id} completedIds={state.completedEventIds} onSelect={playback.seekToEvent} story={story} />}
             snapshot={snapshot}
             songCount={story.songs.length}
             fullscreen={fullscreen}

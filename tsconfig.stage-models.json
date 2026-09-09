@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "strict": true,
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "node"
+    ]
+  },
+  "include": [
+    "src/features/gig-demo-3d",
+    "src/vite-env.d.ts",
+    "src/features/player-model",
+    "src/features/gig-experience/viewer/three",
+    "src/features/gig-experience/viewer/GigCanvas.tsx",
+    "src/pages/AvatarDesigner.tsx",
+    "src/features/gig-experience/viewer/PlayerGigStageSurface.tsx",
+    "src/features/gig-experience/viewer/GigViewerControls.tsx",
+    "src/features/gig-experience/viewer/GigViewerTimeline.tsx"
+  ]
+}

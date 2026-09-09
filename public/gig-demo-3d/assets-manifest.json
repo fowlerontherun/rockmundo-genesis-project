@@ -44,7 +44,7 @@
     {
       "file": "casual.glb",
       "author": "Quaternius",
-      "source": "https://quaternius.com/packs/ultimatemodularcharacters.html",
+      "source": "https://quaternius.com/packs/ultimatemodularwomen.html",
       "exportSource": "https://github.com/yerdaulet-damir/liminal/blob/main/client/public/models/figure_Casual.glb",
       "notes": "GLB export of the modular character, with four skinned parts and no embedded clips. Original file is unchanged; runtime materials and poses are authored for this demo.",
       "license": "CC0-1.0",
@@ -55,7 +55,7 @@
     {
       "file": "punk.glb",
       "author": "Quaternius",
-      "source": "https://quaternius.com/packs/ultimatemodularcharacters.html",
+      "source": "https://quaternius.com/packs/ultimatemodularwomen.html",
       "exportSource": "https://github.com/yerdaulet-damir/liminal/blob/main/client/public/models/figure_Punk.glb",
       "notes": "GLB export of the modular character, with four skinned parts and no embedded clips. Original file is unchanged; runtime materials and poses are authored for this demo.",
       "license": "CC0-1.0",
@@ -66,7 +66,7 @@
     {
       "file": "suit.glb",
       "author": "Quaternius",
-      "source": "https://quaternius.com/packs/ultimatemodularcharacters.html",
+      "source": "https://quaternius.com/packs/ultimatemodularwomen.html",
       "exportSource": "https://github.com/yerdaulet-damir/liminal/blob/main/client/public/models/figure_Suit.glb",
       "notes": "GLB export of the modular character, with four skinned parts and no embedded clips. Original file is unchanged; runtime materials and poses are authored for this demo.",
       "license": "CC0-1.0",
@@ -113,6 +113,39 @@
       "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "sha256": "9d7492db1197f1386466dfd7dd43f692446166c1433ddeebf66c10e8b226a6d0",
       "bytes": 290570
+    },
+    {
+      "file": "female-casual.glb",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/ultimatemodularwomen.html",
+      "downloadSource": "https://drive.google.com/file/d/18b3WwlrwrFYWAM7BcnjWeIxKJyxAQiGh/view",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "notes": "Ultimate Modular Women. Original embedded glTF repacked as binary GLB; original geometry, materials, 62-joint skeleton and animation clips retained. Parts stay within the feminine rig family. Stage performance uses the shared procedural IK.",
+      "bytes": 1668348,
+      "sha256": "5ca77eac451a73665616455a75e6d9a4980b9f839ba3d049f877d8855aef45d2"
+    },
+    {
+      "file": "female-punk.glb",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/ultimatemodularwomen.html",
+      "downloadSource": "https://drive.google.com/file/d/1ITb_iFiroAsmjQI38z_p6nNXinwliVLA/view",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "notes": "Ultimate Modular Women. Original embedded glTF repacked as binary GLB; original geometry, materials, 62-joint skeleton and animation clips retained. Parts stay within the feminine rig family. Stage performance uses the shared procedural IK.",
+      "bytes": 1615396,
+      "sha256": "2b426d74fa88612ecdc5548e53b052ca863e7a411ee32c044b0494d34938e279"
+    },
+    {
+      "file": "female-suit.glb",
+      "author": "Quaternius",
+      "source": "https://quaternius.com/packs/ultimatemodularwomen.html",
+      "downloadSource": "https://drive.google.com/file/d/1GjWtofxjmPku25cXJxHrzLLeUbXw7A_s/view",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "notes": "Ultimate Modular Women. Original embedded glTF repacked as binary GLB; original geometry, materials, 62-joint skeleton and animation clips retained. Parts stay within the feminine rig family. Stage performance uses the shared procedural IK.",
+      "bytes": 1675560,
+      "sha256": "7a706f6ecae94166403e649509306f5a2dd5040a60e09f02bb94ade2d6515944"
     }
   ]
 }

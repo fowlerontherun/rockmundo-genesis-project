@@ -52,7 +52,7 @@ describe("gig viewer controls accessibility", () => {
     expect(screen.getByRole("group", { name: "Playback speed" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Camera mode" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Graphics quality" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Auto" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Director" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Graphics quality automatic" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("switch", { name: "Reduced motion" })).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Pyrotechnics and fireworks" })).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("gig viewer controls accessibility", () => {
     await user.keyboard("{Enter}");
     expect(handlers.onPerformancePreference).toHaveBeenCalledWith("low");
 
-    screen.getByRole("button", { name: "Stage Focus" }).focus();
+    screen.getByRole("button", { name: "Performer" }).focus();
     await user.keyboard("{Enter}");
     expect(handlers.onCameraMode).toHaveBeenCalledWith("stage_focus");
 

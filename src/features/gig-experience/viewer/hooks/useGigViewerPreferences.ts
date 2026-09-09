@@ -8,7 +8,7 @@ export type PerformancePreference = "auto" | PerformanceTier;
 const PERFORMANCE_PREFERENCES: readonly PerformancePreference[] = ["auto", "low", "standard", "high"];
 
 export const CAMERA_MODE_STORAGE_KEY = "gig-viewer-camera-mode";
-const CAMERA_MODES: readonly GigViewerCameraMode[] = ["venue_wide", "stage_focus", "auto"];
+const CAMERA_MODES: readonly GigViewerCameraMode[] = ["venue_wide", "stage_focus", "auto", "drums", "band_pov"];
 
 function storedCameraMode(): GigViewerCameraMode {
   try {

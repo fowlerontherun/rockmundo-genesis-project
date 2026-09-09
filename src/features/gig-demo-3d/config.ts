@@ -1,7 +1,7 @@
 /** Local art-direction fixture. Nothing here is a live gig or a game calculation. */
 export type CameraShot = 'director' | 'front' | 'guitar' | 'drums' | 'stage';
 export type LightingLook = 'electric' | 'amber' | 'encore';
-export type DemoQuality = 'balanced' | 'high';
+export type DemoQuality = 'balanced' | 'high' | 'low';
 export interface DemoSettings {
   playing: boolean;
   camera: CameraShot;

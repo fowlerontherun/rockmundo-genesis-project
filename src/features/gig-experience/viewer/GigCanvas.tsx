@@ -1,13 +1,13 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useRef } from "react";
+const GigStage3D = lazy(() => import("./three/GigStage3D"));
 import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
 import type { ReportMetric } from "../types";
 import { CrowdTuningPanel, useDemoCrowdTuning } from "./CrowdTuningPanel";
 import { GlobalCrowdDefaultsControls } from "./GlobalCrowdDefaultsControls";
 import type { DerivedPlaybackState } from "./engine/PlaybackController";
-import { CanvasRenderer } from "./engine/CanvasRenderer";
+import { normalizeCrowdTuning } from "./engine/CrowdTuning";
 import type { CrowdTuningOptions } from "./engine/CrowdTuning";
-import { crowdTuningSignature } from "./engine/CrowdTuning";
 import { resolveCrowdTuning } from "./engine/CrowdTuningResolution";
 import { useCanvasSize } from "./hooks/useCanvasSize";
 import { useGlobalCrowdTuning } from "./hooks/useGlobalCrowdTuning";
@@ -48,8 +48,6 @@ export function GigCanvas({
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rendererRef = useRef<CanvasRenderer | null>(null);
   const { container, fit, logical } = useCanvasSize(wrapRef, { fill });
   const demoTuning = useDemoCrowdTuning();
   const replayTuning = replay.crowdTuning ?? null;
@@ -62,7 +60,6 @@ export function GigCanvas({
     replay: replayTuning,
     global: globalTuning.data?.settings,
   });
-  const tuningKey = crowdTuningSignature(resolved.tuning);
   const capabilities = resolveViewerCapabilities({
     audience: capability?.audience ?? "player",
     subjectId: capability?.subjectId ?? replay.gigId ?? replay.id,
@@ -79,26 +76,6 @@ export function GigCanvas({
     devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio,
   });
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const renderer = new CanvasRenderer(canvas, replay, experience, reducedMotion, {
-      pyrotechnics,
-      pyroIntensity,
-      crowdTuning: resolved.tuning,
-      cameraMode,
-      performanceTier: diagnostics.performanceTier,
-      livingVenue: capabilities.livingVenueEnabled,
-    });
-    rendererRef.current = renderer;
-    renderer.resize(logical);
-    return () => { renderer.destroy(); rendererRef.current = null; };
-  }, [replay.id, reducedMotion, pyrotechnics, pyroIntensity, tuningKey, cameraMode, diagnostics.performanceTier, capabilities.livingVenueEnabled]);
-
-  // Preference changes recreate the renderer; include them here so a paused
-  // replay paints its new camera/effects immediately rather than waiting for a tick.
-  useEffect(() => { rendererRef.current?.render(playbackState); }, [playbackState, cameraMode, reducedMotion, pyrotechnics, pyroIntensity, tuningKey]);
-
   const attendance = metricNumber(experience?.headline?.attendance);
   const capacity = experience?.gig?.venue?.capacity ?? 0;
 
@@ -110,9 +87,9 @@ export function GigCanvas({
       data-seed-fingerprint={diagnostics.seedFingerprint} data-representative-crowd-count={diagnostics.representativeCrowdCount}
       data-attendance-state={diagnostics.attendanceState} data-attendance-source={diagnostics.attendanceSource}
       data-activity-evidence-mode={diagnostics.activityEvidenceMode} data-performance-tier={diagnostics.performanceTier}
-      data-render-dpr-cap={renderBudget.dprCap} data-crowd-detail={renderBudget.crowdDetail}
+      data-render-dpr-cap={diagnostics.performanceTier === "high" ? 1.75 : diagnostics.performanceTier === "low" ? .9 : 1.15} data-crowd-detail={renderBudget.crowdDetail}
       data-degradations={renderBudget.appliedDegradations.join(",")}
-      data-living-venue={capabilities.livingVenueEnabled ? "enabled" : "fallback"}
+      data-living-venue="3d"
       data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
       data-viewer-rollout-bucket={capabilities.bucket}
       data-legacy-fallback-available={capabilities.legacyFallbackAvailable ? "true" : "false"}>
@@ -134,15 +111,12 @@ export function GigCanvas({
         data-scene-viewport
         data-scene-scale={fit.scale.toFixed(4)}
       >
-        <canvas
-          ref={canvasRef}
-          role="img"
-          aria-label={immersive ? "Song performance stage showing the band and crowd." : "Top-down replay canvas. Use the text timeline for a full accessible description."}
-          className={immersive ? "block bg-slate-950" : "block rounded-xl border bg-slate-950"}
-          style={{ width: fit.width, height: fit.height, maxWidth: "100%", maxHeight: "100%" }}
-          data-logical-width={logical.width}
-          data-logical-height={logical.height}
-        />
+        <Suspense fallback={<div role="status" className="p-8 text-slate-200">Loading 3D stage…</div>}>
+          <GigStage3D replay={replay} experience={experience} playbackState={playbackState}
+            reducedMotion={reducedMotion} cameraMode={cameraMode} tier={diagnostics.performanceTier}
+            archetype={diagnostics.venueArchetype} tuning={normalizeCrowdTuning(resolved.tuning)}
+            pyrotechnics={pyrotechnics} pyroIntensity={pyroIntensity} />
+        </Suspense>
       </div>
     </div>
   );

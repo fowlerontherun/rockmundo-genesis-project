@@ -6,6 +6,7 @@ import { formatTime } from "./GigViewerTimeline";
 interface PlayerGigStageSurfaceProps {
   canvas: ReactNode;
   controls: ReactNode;
+  timeline?: ReactNode;
   snapshot: StorySnapshot;
   songCount: number;
   fullscreen: boolean;
@@ -14,6 +15,7 @@ interface PlayerGigStageSurfaceProps {
 export function PlayerGigStageSurface({
   canvas,
   controls,
+  timeline,
   snapshot,
   songCount,
   fullscreen,
@@ -60,9 +62,11 @@ export function PlayerGigStageSurface({
             />
           </div>
 
+          {snapshot.activeCommentary.length > 0 && <p className="mt-2 text-sm text-white/80" role="status">{snapshot.activeCommentary.at(-1)?.text}</p>}
           <div className="mt-3 overflow-x-auto rounded-lg bg-background text-foreground">
             {controls}
           </div>
+          {timeline && <details className="mt-3 rounded-lg bg-background p-3 text-foreground"><summary className="cursor-pointer text-sm font-medium">Performance timeline & commentary</summary><div className="mt-3">{timeline}</div></details>}
         </div>
       </div>
     </div>

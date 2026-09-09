@@ -3,7 +3,7 @@ import { cameraForPlayback, clampCamera, wideVenueCamera, type SceneCamera } fro
 import type { Point, Rect, Size } from "./Viewport";
 
 export type CameraShot = "wide" | "performer" | "crowd" | "highlight" | "performance_item";
-export type GigViewerCameraMode = "venue_wide" | "stage_focus" | "auto";
+export type GigViewerCameraMode = "venue_wide" | "stage_focus" | "auto" | "drums" | "band_pov";
 
 export interface CameraPerformer {
   id: string;
