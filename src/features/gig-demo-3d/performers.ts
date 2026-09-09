@@ -6,6 +6,7 @@ import { seededRandom } from './config';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
+import type { VenueProfile } from './venueProfile';
 import type { ConcertPerformer, StageRole } from './liveTypes';
 
 type Role = StageRole;
@@ -167,7 +168,7 @@ export class DemoCrowd {
   private batches: { mesh: T.InstancedMesh; calm: T.BufferGeometry; fans: { x: number; z: number; scale: number; phase: number; yaw: number }[]; raised: boolean }[] = [];
   private transform = new T.Object3D();
   private phones: T.InstancedMesh;
-  constructor(sources: T.Object3D[], scene: T.Scene, seed = 85043) {
+  constructor(sources: T.Object3D[], scene: T.Scene, seed = 85043, private venue?: VenueProfile) {
     const random = seededRandom(seed), material = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
     this.phones = new T.InstancedMesh(new T.BoxGeometry(.075, .13, .012), new T.MeshBasicMaterial({ color: '#b5e6ff', toneMapped: false }), 160); this.phones.name = 'crowd-phone-screens'; this.phones.count = 0; this.phones.frustumCulled = false; scene.add(this.phones);
     const places = Array.from({ length: 160 }, (_, i) => i);
@@ -198,7 +199,8 @@ export class DemoCrowd {
       for (let i = 0; i < mesh.count; i++) {
         const fan = fans[i];
         const t = reduced ? 0 : seconds, bounce = reduced || reaction === 'still' ? 0 : Math.max(0, Math.sin(t * 6.28 + fan.phase)) * energy * (reaction === 'jump' ? .18 : raised ? .07 : .026);
-        this.transform.position.set(T.MathUtils.clamp(fan.x * (tuning.lateralSpread ?? 1) + Math.sin(fan.phase) * (tuning.randomness ?? 0) * .2, -7.5, 7.5), bounce, 2.15 + (fan.z - 2.15) * (tuning.depthSpread ?? 1) * (1 - (tuning.stagePull ?? 0) * .3)); this.transform.rotation.set(0, fan.yaw + Math.sin(t * 1.4 + fan.phase) * (reduced ? 0 : 0.035), Math.sin(t * 2 + fan.phase) * (reduced ? 0 : 0.02 * energy)); this.transform.scale.setScalar(fan.scale * Math.min(1.15, tuning.fanScale ?? 1)); this.transform.updateMatrix(); mesh.setMatrixAt(i, this.transform.matrix);
+        const width = this.venue ? this.venue.crowdWidth / 13 : 1, depth = this.venue ? this.venue.crowdDepth / 13 : 1;
+        this.transform.position.set(T.MathUtils.clamp(fan.x * (tuning.lateralSpread ?? 1) + Math.sin(fan.phase) * (tuning.randomness ?? 0) * .2, -7.5, 7.5) * width, bounce, 2.15 + (fan.z - 2.15) * depth * (tuning.depthSpread ?? 1) * (1 - (tuning.stagePull ?? 0) * .3)); this.transform.rotation.set(0, fan.yaw + Math.sin(t * 1.4 + fan.phase) * (reduced ? 0 : 0.035), Math.sin(t * 2 + fan.phase) * (reduced ? 0 : 0.02 * energy)); this.transform.scale.setScalar(fan.scale * Math.min(1.15, tuning.fanScale ?? 1)); this.transform.updateMatrix(); mesh.setMatrixAt(i, this.transform.matrix);
         if (reaction === 'phone_lights' && raised) { const scale = this.transform.scale.x; this.transform.position.x -= mesh.userData.phoneSide * .25 * scale; this.transform.position.y += 1.92 * scale; this.transform.position.z -= .15 * scale; this.transform.rotation.z = 0; this.transform.updateMatrix(); this.phones.setMatrixAt(phoneCount++, this.transform.matrix); }
       } mesh.instanceMatrix.needsUpdate = true;
     }
@@ -207,7 +209,7 @@ export class DemoCrowd {
   dispose() { for (const { mesh, calm } of this.batches) { calm.dispose(); (mesh.userData.raisedGeometry as T.BufferGeometry).dispose(); } }
 }
 
-export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup?: ConcertPerformer[], seed?: number) {
+export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup?: ConcertPerformer[], seed?: number, venue?: VenueProfile) {
   const library = await loadModelLibrary(['casual.glb', 'punk.glb', 'suit.glb', ...requiredModelFiles(lineup?.map(p => p.appearance) ?? [])], manager);
   const casual = library.get('casual.glb')!, punk = library.get('punk.glb')!, suit = library.get('suit.glb')!;
   const cymbals: T.Object3D[] = [];
@@ -223,7 +225,7 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
       return actor;
     }) : [new Musician(punk, 'vocals', [0, .9, -.97], 0, '#5f354a'), new Musician(casual, 'guitar', [-2.65, .9, -1.35], 1.2, '#577386'), new Musician(suit, 'bass', [2.7, .9, -1.65], 2.6, '#254c47'), new Musician(casual, 'drums', [.8, 1.16, -3.58], .8, '#874a47')];
     actors.forEach(actor => scene.add(actor.root));
-    const crowd = new DemoCrowd([casual, library.get('female-casual.glb') ?? suit, punk], scene, seed);
+    const crowd = new DemoCrowd([casual, library.get('female-casual.glb') ?? suit, punk], scene, seed, venue);
     return { actors, crowd, cymbals };
   } finally { library.forEach(disposeModel); }
 }

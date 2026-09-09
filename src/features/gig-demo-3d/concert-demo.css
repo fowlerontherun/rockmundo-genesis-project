@@ -63,3 +63,8 @@
 @media (max-width: 1100px) { .concert-demo__silent, .concert-demo__fixture { display: none; } .concert-demo__controls { gap: 18px; } .concert-demo__transport { flex-wrap: wrap; } .concert-demo__cameras { order: 3; width: 100%; justify-content: center; } }
 @media (max-width: 720px) { .concert-demo { padding: 18px 12px; } .concert-demo__header { margin-bottom: 16px; } .concert-demo__badge { display: none; } .concert-demo__viewport { height: 420px; } .concert-demo__controls { grid-template-columns: 1fr 1fr; gap: 22px; padding: 20px; } .concert-demo__cameras button { padding: 8px; font-size: 10px; } .concert-demo__cameras > svg { display: none; } .concert-demo__footer { flex-direction: column; gap: 12px; } }
 @media (prefers-reduced-motion: reduce) { .concert-demo button { transition: none; } .concert-demo__spinner { animation: none; } }
+
+.concert-demo__venue-picker { display: flex; align-items: end; flex-wrap: wrap; gap: 18px; padding: 18px 0 22px; }
+.concert-demo__venue-picker label { display: grid; gap: 8px; color: #b9c9db; font-size: 12px; flex: 1 1 200px; }
+.concert-demo__venue-picker select { padding: 11px; border: 1px solid #425166; background: #142131; color: #edf3f9; border-radius: 7px; min-height: 44px; }
+.concert-demo__venue-picker p { flex: 2 1 260px; font-size: 12px; line-height: 1.6; color: #96a8bc; margin: 0; }

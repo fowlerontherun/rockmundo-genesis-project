@@ -24,7 +24,7 @@ Entrance and exit paths use the existing performer lifecycle model; fixed
 instruments stay at their stage slots during performances. Selected performance
 items drive gestures, dancing, stage dives, crowd surfing, phone lights, crowd
 reactions and confetti/light accents. Audience numbers are representative and
-bounded to 160 instances; an authoritative attendance of zero remains empty.
+bounded to 160 detailed characters plus up to 1,800 lightweight distant instances; an authoritative attendance of zero remains empty.
 The surface retains the existing audio, results and replay permissions. A
 collapsible, accessible commentary/timeline is available in player mode too.
 

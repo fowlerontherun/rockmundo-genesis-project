@@ -2,12 +2,14 @@ import * as T from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import grilleUrl from '@/assets/textures/equipment/speaker-grille.png';
 import { demoAssetUrl } from './assets';
+import { resolveVenueProfile } from './venueProfile';
+import { buildVenueEnvironment } from './venueEnvironment';
 import type { ConcertVenue } from './liveTypes';
 
 export const metal = (color = '#6e7581', roughness = 0.3) => new T.MeshStandardMaterial({ color, metalness: 0.78, roughness });
 export const matte = (color: string, roughness = 0.8) => new T.MeshStandardMaterial({ color, roughness });
 /** Static detail shares a draw call per material; named/animated parts stay addressable. */
-function batchStaticMeshes(root: T.Group) {
+export function batchStaticMeshes(root: T.Group) {
   root.updateWorldMatrix(true, true);
   const inverse = root.matrixWorld.clone().invert(), groups = new Map<string, T.Mesh[]>();
   root.traverse(object => {
@@ -63,14 +65,13 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
     color, roughness: 0.85, aoMapIntensity: 0.7, normalScale: new T.Vector2(0.7, 0.7),
   });
   const root = new T.Group(); root.name = 'venue'; scene.add(root);
+  const profile = venue ? resolveVenueProfile(venue) : null;
   const archetype = venue?.archetype ?? 'club', outdoor = ['festival', 'beach', 'stadium'].includes(archetype), large = ['arena', 'stadium'].includes(archetype);
   const black = matte('#0d1119'), steel = metal('#4c535e'), chrome = metal('#b7c1cd');
   const oak = surface('wood_floor_worn', 'diff', [5.8, 3], '#b8ad9f');
   const brick = surface('brick_wall_001', 'diffuse', [6.6, 2.65], '#998382');
+  if (!venue) {
   box(root, [large ? 48 : 24, .12, large ? 60 : 36], [0, -.09, 10], matte(archetype === 'beach' ? '#89765a' : outdoor ? '#27302b' : '#232327'));
-  box(root, [11.6, 0.82, 5.9], [0, 0.4, -2.3], black);
-  box(root, [11.6, 0.07, 5.9], [0, 0.855, -2.3], oak);
-  box(root, [11.65, 0.06, 0.1], [0, 0.9, 0.66], chrome);
   if (!outdoor && !large) {
   box(root, [19.8, 8, 0.25], [0, 3.9, -5.5], brick);
   box(root, [0.25, 8, 25], [-8.8, 3.9, 6.8], brick); box(root, [0.25, 8, 25], [8.8, 3.9, 6.8], brick);
@@ -96,6 +97,10 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
     }
     if (!outdoor) box(root, [40, .3, 48], [0, 13, 13], black);
   }
+  }
+  box(root, [11.6, 0.82, 5.9], [0, 0.4, -2.3], black);
+  box(root, [11.6, 0.07, 5.9], [0, 0.855, -2.3], oak);
+  box(root, [11.65, 0.06, 0.1], [0, 0.9, 0.66], chrome);
   // Actual draped geometry catches changing side light, rather than a flat backdrop image.
   const drapeGeo = new T.PlaneGeometry(10, 5.9, 160, 1); const vertices = drapeGeo.attributes.position;
   for (let i = 0; i < vertices.count; i++) vertices.setZ(i, Math.sin(vertices.getX(i) * 10.5) * 0.105);
@@ -105,6 +110,7 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
   const backdrop = label(venue?.bandName || 'ROCKMUNDO', 6.2, 1.55); backdrop.position.set(0, 4.85, -5.03); root.add(backdrop);
   const subtitle = label(venue?.name || 'THE LIVE ROOM', 3.05, 0.76, '#9b8c80'); subtitle.position.set(0, 3.92, -5.01); root.add(subtitle);
   // Structural trusses, braces and cabling.
+  if (profile?.production !== 'portable') {
   for (const z of [-4.65, -0.5]) {
     rod(root, [-6, 5.85, z], [6, 5.85, z], 0.055, steel); rod(root, [-6, 6.2, z], [6, 6.2, z], 0.055, steel);
     for (let x = -6; x < 6; x += 0.6) rod(root, [x, 5.85, z], [x + 0.6, 6.2, z], 0.022, steel);
@@ -116,6 +122,7 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
     }
     // Suspended line arrays.
     for (let row = 0; row < 4; row++) { const speaker = box(root, [0.58, 0.37, 0.58], [x, 4.65 - row * 0.38, 0.1], black); speaker.rotation.x = -0.04 * row; }
+  }
   }
   const grille = new T.MeshStandardMaterial({ map: texture(loader, grilleUrl, [2, 2]), color: '#616774', roughness: 0.65, metalness: 0.45 });
   for (const x of [-4.3, 4.3]) {
@@ -137,7 +144,7 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
   if (!venue) { box(root, [2.85, 0.25, 2.4], [0.8, 1, -3.05], black); box(root, [2.9, 0.035, 2.45], [0.8, 1.145, -3.05], oak);
   }
   // Side wall lamps, balcony rail and warm practicals give the room depth.
-  if (!outdoor && !large) for (const x of [-8.5, 8.5]) {
+  if (!venue && !outdoor && !large) for (const x of [-8.5, 8.5]) {
     for (const z of [0, 5, 10, 15]) {
       box(root, [0.13, 1.0, 0.36], [x, 3, z], black);
       const practical = new T.MeshStandardMaterial({ color: '#f4bb78', emissive: '#ff9b44', emissiveIntensity: 1.8 });
@@ -147,9 +154,17 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
     rod(root, [x, 4.25, 1], [x, 4.25, 16], 0.045, chrome);
     for (let z = 1; z <= 16; z += 0.8) rod(root, [x, 3.35, z], [x, 4.25, z], 0.025, steel);
   }
+  if (!venue) {
   const exit = label('EXIT', 0.7, 0.2, '#b2f2d2', '#174432'); exit.position.set(-6.9, 2.9, -5.28); root.add(exit);
   box(root, [1.1, 2.3, 0.12], [-6.9, 1.13, -5.32], matte('#19252d'));
+  }
   batchStaticMeshes(root);
+  if (profile && venue) {
+    root.scale.set(profile.stageWidth / 11.6, (profile.rigHeight - profile.stageHeight) / 5.3, profile.stageDepth / 5.9);
+    root.position.set(0, profile.stageHeight - .9 * root.scale.y, .65 * (1 - root.scale.z));
+    root.userData.profile = profile;
+    buildVenueEnvironment(scene, profile, venue.seed, oak, brick);
+  }
   return root;
 }
 
