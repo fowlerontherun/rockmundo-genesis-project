@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.737",
+    date: "2026-09-08",
+    changes: [
+      { type: "fix", description: "Connected the live payment provider's notifications to the app so new subscriptions, renewals and cancellations now update VIP status automatically" },
+      { type: "improvement", description: "Payment notifications are accepted without a login and are verified with the signing secret before anything is updated" },
+    ],
+  },
+  {
     version: "1.1.736",
     date: "2026-09-07",
     changes: [
