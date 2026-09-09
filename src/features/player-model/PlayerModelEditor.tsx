@@ -3,6 +3,7 @@ import { PlayerModelPreview } from './PlayerModelPreview';
 import { usePlayerModel } from './usePlayerModel';
 import { defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
 import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
+import { HeadStyling } from './HeadStyling';
 import { StarterWardrobe } from './StarterWardrobe';
 import './player-model.css';
 
@@ -46,7 +47,7 @@ function EditorSession({ profileId, initial, model }: { profileId: string; initi
           <label className="player-model-editor__range">Height <output>{Math.round(draft.body.height * 178)} cm</output><input type="range" min="0.9" max="1.1" step="0.01" value={draft.body.height} onChange={event => setBody({ height: Number(event.target.value) })} /></label>
           <label className="player-model-editor__range">Build <output>{Math.round(draft.body.build * 100)}%</output><input type="range" min="0.85" max="1.15" step="0.01" value={draft.body.build} onChange={event => setBody({ build: Number(event.target.value) })} /></label>
           <div className="player-model-editor__skin"><span>Skin tone</span><div role="group" aria-label="Skin tones">{SKIN_COLORS.map((color, index) => <button key={color} type="button" aria-label={`Skin tone ${index + 1}`} aria-pressed={draft.body.skin === color} style={{ backgroundColor: color }} onClick={() => setBody({ skin: color })} />)}<input type="color" aria-label="Custom skin tone" value={draft.body.skin} onChange={event => setBody({ skin: event.target.value })} /></div></div>
-          <div className="player-model-editor__item"><label htmlFor="head-style">Hair & head</label><select id="head-style" value={draft.head.style} onChange={event => change({ ...draft, head: { ...draft.head, style: event.target.value as Style } })}>{STYLES.map(style => <option key={style} value={style}>{STYLE_LABELS[style]}</option>)}</select><input type="color" aria-label="Hair colour" value={draft.head.hair} onChange={event => change({ ...draft, head: { ...draft.head, hair: event.target.value } })} /></div>
+          <HeadStyling appearance={draft} onChange={change} />
         </fieldset>
         <fieldset disabled={model.save.isPending}>
           <legend>02 <span>Wardrobe</span></legend>

@@ -8,7 +8,7 @@ import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
 import { STYLES, modelFile, type PlayerAppearance } from './appearance';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary } from './model';
 
-interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void }
+interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
 export function PlayerModelPreview({ appearance, role = 'other' }: { appearance: PlayerAppearance; role?: StageRole }) {
   const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role }); latest.current = { appearance, role };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [attempt, setAttempt] = useState(0);
@@ -55,8 +55,9 @@ export function PlayerModelPreview({ appearance, role = 'other' }: { appearance:
             if (nextRole === 'keyboard' || nextRole === 'dj') { equipment.add(buildKeyboard(nextRole === 'dj')); equipment.scale.copy(actor.root.scale); }
           },
           rotate: angle => { camera.position.sub(controls!.target).applyAxisAngle(new T.Vector3(0, 1, 0), angle).add(controls!.target); controls!.update(); },
-          zoom: factor => { const offset = camera.position.clone().sub(controls!.target); offset.setLength(T.MathUtils.clamp(offset.length() * factor, 2.4, 7)); camera.position.copy(controls!.target).add(offset); controls!.update(); },
-          reset: () => controls!.reset(),
+          zoom: factor => { const offset = camera.position.clone().sub(controls!.target); offset.setLength(T.MathUtils.clamp(offset.length() * factor, controls!.minDistance, 7)); camera.position.copy(controls!.target).add(offset); controls!.update(); },
+          reset: () => { controls!.minDistance = 2.4; controls!.reset(); },
+          focusHead: () => { controls!.minDistance = .65; controls!.target.set(0, 1.56 * latest.current.appearance.body.height, 0); camera.position.copy(controls!.target).add(new T.Vector3(.1, .06, 1.05)); controls!.update(); },
         };
         api.current.replace(latest.current.appearance, latest.current.role); setStatus('ready');
       }).catch(() => { if (alive) setStatus('error'); });
@@ -73,6 +74,6 @@ export function PlayerModelPreview({ appearance, role = 'other' }: { appearance:
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
     <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>BACKSTAGE / FITTING ROOM</span></div>
     {status !== 'ready' && <div className="player-model-preview__overlay" role={status === 'error' ? 'alert' : 'status'}><strong>{status === 'error' ? 'The model could not load' : 'Preparing your fitting room…'}</strong>{status === 'error' && <><p>Check your connection and try again.</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Retry preview</button></>}</div>}
-    <div className="player-model-preview__controls" aria-label="Model camera"><button type="button" onClick={() => api.current?.rotate(-Math.PI / 4)} aria-label="Rotate model left">↶</button><button type="button" onClick={() => api.current?.rotate(Math.PI / 4)} aria-label="Rotate model right">↷</button><button type="button" onClick={() => api.current?.zoom(.85)} aria-label="Zoom in">＋</button><button type="button" onClick={() => api.current?.zoom(1.15)} aria-label="Zoom out">−</button><button type="button" onClick={() => api.current?.reset()}>Reset view</button></div>
+    <div className="player-model-preview__controls" aria-label="Model camera"><button type="button" onClick={() => api.current?.rotate(-Math.PI / 4)} aria-label="Rotate model left">↶</button><button type="button" onClick={() => api.current?.rotate(Math.PI / 4)} aria-label="Rotate model right">↷</button><button type="button" onClick={() => api.current?.zoom(.85)} aria-label="Zoom in">＋</button><button type="button" onClick={() => api.current?.zoom(1.15)} aria-label="Zoom out">−</button><button type="button" onClick={() => api.current?.focusHead()}>Face close-up</button><button type="button" onClick={() => api.current?.reset()}>Full body</button></div>
   </div>;
 }

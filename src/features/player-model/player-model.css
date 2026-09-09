@@ -66,3 +66,10 @@
 .player-model-wardrobe__colours > button { width: 30px; height: 30px; border: 2px solid #617083; border-radius: 50%; }
 .player-model-wardrobe__colours > button[aria-pressed=true] { border-color: white; outline: 2px solid #81d9d1; outline-offset: 2px; }
 .player-model-wardrobe__colours label { display: flex; align-items: center; gap: 7px; font-size: 10px; color: #c3ccda; }
+
+.player-model-head { display: grid; gap: 12px; padding-top: 7px; }
+.player-model-head > label { font-size: 12px; color: #d9e3ef; }
+.player-model-head > select { margin-bottom: 4px; }
+.player-model-head__match { display: flex; align-items: center; gap: 8px; }
+.player-model-head input[type=checkbox] { accent-color: #8adbd7; width: 17px; height: 17px; }
+.player-model-preview__controls { flex-wrap: wrap; padding: 0 12px; }
