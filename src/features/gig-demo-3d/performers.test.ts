@@ -57,10 +57,10 @@ describe('performance poses using the shipped rigs', () => {
     expect(matrices(b)).toEqual(untouched);
   });
 
-  it('bakes correctly sized humans into three crowd batches and changes density independently of energy', () => {
+  it('bakes correctly sized humans into sixteen crowd batches and changes density independently of energy', () => {
     const scene = new T.Scene(), crowd = new DemoCrowd(models, scene);
     const meshes = scene.children.filter((object): object is T.InstancedMesh => object instanceof T.InstancedMesh && object.name !== 'crowd-phone-screens');
-    expect(meshes).toHaveLength(3);
+    expect(meshes).toHaveLength(16);
     for (const mesh of meshes) {
       mesh.geometry.computeBoundingBox(); const size = mesh.geometry.boundingBox!.getSize(new T.Vector3());
       expect(size.y).toBeGreaterThan(1.6); expect(size.y).toBeLessThan(2.3);

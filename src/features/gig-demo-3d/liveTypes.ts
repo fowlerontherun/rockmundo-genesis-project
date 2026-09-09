@@ -1,10 +1,13 @@
+import type { InstrumentId, VocalRole } from './instrumentCatalog';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 
-export type StageRole = 'vocals' | 'guitar' | 'bass' | 'drums' | 'keyboard' | 'dj' | 'strings' | 'brass' | 'percussion' | 'other' | 'fan';
+export type StageRole = 'vocals' | 'guitar' | 'bass' | 'drums' | 'keyboard' | 'dj' | 'strings' | 'brass' | 'woodwind' | 'percussion' | 'other' | 'fan';
 export interface ConcertPerformer {
   id: string;
   displayName: string;
   role: StageRole;
+  instrument?: InstrumentId | null;
+  vocal?: VocalRole;
   position: [number, number, number];
   appearance: PlayerAppearance;
   phase: number;

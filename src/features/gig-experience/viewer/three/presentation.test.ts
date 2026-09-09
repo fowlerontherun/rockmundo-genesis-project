@@ -52,3 +52,14 @@ describe('canonical replay to 3D stage', () => {
   });
 
 });
+
+it('keeps recorded instruments and vocal duties when current profile roles differ',async()=>{
+  const replay=await makeStageReplay(['Acoustic Guitar / Backup Singer','Harp','Flute','Rapping']);
+  const experience={gig:{venue:{capacity:700}},headline:{},performers:[{id:performerId(0),profileId:performerId(0),displayName:'Current member',roleOrInstrument:'Drums',lineupStatus:'performed'}]} as GigExperienceDTO;
+  const plan=buildStagePlan(replay,experience),options=concertOptions(plan,{},replay,experience,'club');
+  expect(options.performers[0]).toMatchObject({instrument:'acoustic_guitar',vocal:'backing',role:'guitar'});
+  expect(options.performers[1]).toMatchObject({instrument:'harp',role:'strings'});expect(options.performers[2]).toMatchObject({instrument:'flute',role:'woodwind'});expect(options.performers[3]).toMatchObject({instrument:'rapping',role:'vocals'});
+  const time=replay.events.find(e=>e.phase==='song_performance')!.scheduledOffsetMs;
+  const frame=(t:number)=>concertFrame(plan,replay,experience,derivePlaybackState(replay,t),false,DEFAULT_CROWD_TUNING);
+  expect(frame(time+100).performers[1].position).toEqual(frame(time+900).performers[1].position);
+});

@@ -3,14 +3,14 @@ import * as T from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Musician } from '@/features/gig-demo-3d/performers';
-import { buildDrummerKit, buildKeyboard } from '@/features/gig-demo-3d/stage';
+import type { InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
 import { STYLES, modelFile, type PlayerAppearance } from './appearance';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary } from './model';
 
-interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
-export function PlayerModelPreview({ appearance, role = 'other' }: { appearance: PlayerAppearance; role?: StageRole }) {
-  const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role }); latest.current = { appearance, role };
+interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
+export function PlayerModelPreview({ appearance, role = 'other', instrument }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId }) {
+  const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument }); latest.current = { appearance, role, instrument };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!canvas.current) return;
@@ -46,20 +46,18 @@ export function PlayerModelPreview({ appearance, role = 'other' }: { appearance:
         if (!alive) { loaded.forEach(disposeModel); return; }
         library = loaded;
         api.current = {
-          replace: (value, nextRole) => {
+          replace: (value, nextRole, nextInstrument) => {
             if (actor) disposeModel(actor.root); if (equipment) disposeModel(equipment);
             const assembled = assemblePlayerModel(library!, value);
-            actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value); disposeModel(assembled); scene.add(actor.root);
-            equipment = new T.Group(); scene.add(equipment);
-            if (nextRole === 'drums') { equipment.scale.copy(actor.root.scale); buildDrummerKit(equipment); }
-            if (nextRole === 'keyboard' || nextRole === 'dj') { equipment.add(buildKeyboard(nextRole === 'dj')); equipment.scale.copy(actor.root.scale); }
+            actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument); disposeModel(assembled); scene.add(actor.root);
+            equipment = actor.equipment; if(equipment)scene.add(equipment);
           },
           rotate: angle => { camera.position.sub(controls!.target).applyAxisAngle(new T.Vector3(0, 1, 0), angle).add(controls!.target); controls!.update(); },
           zoom: factor => { const offset = camera.position.clone().sub(controls!.target); offset.setLength(T.MathUtils.clamp(offset.length() * factor, controls!.minDistance, 7)); camera.position.copy(controls!.target).add(offset); controls!.update(); },
           reset: () => { controls!.minDistance = 2.4; controls!.reset(); },
           focusHead: () => { controls!.minDistance = .65; controls!.target.set(0, 1.56 * latest.current.appearance.body.height, 0); camera.position.copy(controls!.target).add(new T.Vector3(.1, .06, 1.05)); controls!.update(); },
         };
-        api.current.replace(latest.current.appearance, latest.current.role); setStatus('ready');
+        api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument); setStatus('ready');
       }).catch(() => { if (alive) setStatus('error'); });
     } catch { setStatus('error'); }
     return () => {
@@ -69,7 +67,7 @@ export function PlayerModelPreview({ appearance, role = 'other' }: { appearance:
       disposeModel(scene); library?.forEach(disposeModel); environment?.dispose(); renderer?.dispose();
     };
   }, [attempt]);
-  useEffect(() => { try { api.current?.replace(appearance, role); } catch { setStatus('error'); } }, [appearance, role]);
+  useEffect(() => { try { api.current?.replace(appearance, role, instrument); } catch { setStatus('error'); } }, [appearance, role, instrument]);
   return <div className="player-model-preview">
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
     <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>BACKSTAGE / FITTING ROOM</span></div>

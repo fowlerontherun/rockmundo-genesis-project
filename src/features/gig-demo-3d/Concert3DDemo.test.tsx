@@ -6,7 +6,7 @@ import Concert3DDemo from './Concert3DDemo';
 import { ConcertScene } from './ConcertScene';
 
 vi.mock('./ConcertScene', () => ({ ConcertScene: vi.fn() }));
-const engine = { setSettings: vi.fn(), restart: vi.fn(), destroy: vi.fn() };
+const engine = { setPreviewCrowdReaction: vi.fn(), setSettings: vi.fn(), restart: vi.fn(), destroy: vi.fn() };
 let onState: (state: 'loading' | 'ready' | 'error', message?: string) => void;
 const mount = () => render(<MemoryRouter><Concert3DDemo /></MemoryRouter>);
 beforeEach(() => {
@@ -72,4 +72,11 @@ describe('admin concert demo controls', () => {
     expect(vi.mocked(ConcertScene).mock.calls.at(-1)?.[4]).toBeUndefined();
   });
 
+});
+
+it('auditions the full skill-tree equipment and changes crowd reactions without reloading',()=>{
+  mount();fireEvent.change(screen.getByLabelText('Featured instrument'),{target:{value:'theremin'}});
+  const options=vi.mocked(ConcertScene).mock.calls.at(-1)?.[4];expect(options?.performers[1]).toMatchObject({instrument:'theremin',role:'dj'});
+  const count=vi.mocked(ConcertScene).mock.calls.length;
+  fireEvent.change(screen.getByLabelText('Crowd reaction'),{target:{value:'phone_lights'}});expect(engine.setPreviewCrowdReaction).toHaveBeenLastCalledWith('phone_lights');expect(ConcertScene).toHaveBeenCalledTimes(count);
 });

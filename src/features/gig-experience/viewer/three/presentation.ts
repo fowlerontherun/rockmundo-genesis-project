@@ -1,3 +1,4 @@
+import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { GigViewerReplay } from '../../events/types';
 import type { GigExperienceDTO } from '../../types';
 import { buildPerformerPlan, reconstructPerformerState, type PerformerPlan, type PresentationRole } from '../engine/PerformerLifecycle';
@@ -9,7 +10,7 @@ import { defaultAppearance, type PlayerAppearance } from '@/features/player-mode
 import type { CrowdTuningOptions } from '../engine/CrowdTuning';
 
 const clamp = (n: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
-const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backing_vocals: 'vocals', lead_guitar: 'guitar', rhythm_guitar: 'guitar', guitar: 'guitar', bass: 'bass', drums: 'drums', keyboard: 'keyboard', piano: 'keyboard', dj: 'dj', electronic: 'dj', percussion: 'percussion', strings: 'strings', brass: 'brass', other: 'other', unknown: 'other' };
+const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backing_vocals: 'vocals', lead_guitar: 'guitar', rhythm_guitar: 'guitar', guitar: 'guitar', bass: 'bass', drums: 'drums', keyboard: 'keyboard', piano: 'keyboard', dj: 'dj', electronic: 'dj', percussion: 'percussion', strings: 'strings', brass: 'brass', woodwind: 'woodwind', other: 'other', unknown: 'other' };
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
   const entrances = new Set(replay.events.flatMap(e => e.visualPayload.type === 'performer_enter' ? [e.visualPayload.performerId] : []));
   const candidates = experience?.performers ?? [], performed = candidates.filter(p => p.lineupStatus === 'performed');
@@ -26,7 +27,7 @@ export function concertOptions(plan: PerformerPlan, appearances: Record<string, 
   return {
     externalClock: true,
     venue,
-    performers: plan.entities.map(p => ({ id: p.id, displayName: p.displayName, role: roleMap[p.role], phase: p.idlePhase, position: stagePoint(plan, p.stageSlot, profile), appearance: appearances[p.profileId ?? p.id] ?? defaultAppearance(p.profileId ?? p.id) })),
+    performers: plan.entities.map(p => ({ id: p.id, displayName: p.displayName, ...stageAssignment(p.instrument, roleMap[p.role]), phase: p.idlePhase, position: stagePoint(plan, p.stageSlot, profile), appearance: appearances[p.profileId ?? p.id] ?? defaultAppearance(p.profileId ?? p.id) })),
   };
 }
 
@@ -65,7 +66,7 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
     focusId,
     effect: fxPayload && fx ? { type: fxPayload.effect, intensity: clamp(fxPayload.intensity), progress: progress(fx) } : itemPayload?.action === 'special_effect' && item ? { type: 'special_effect', intensity: clamp(itemPayload.intensity), progress: progress(item) } : null,
     performers: reconstructPerformerState(plan, replay, positionMs, { reducedMotion }).map(p => {
-      const fixed = /drums|keyboard|piano|dj|electronic/.test(p.role) && p.lifecycleState === 'performing';
+      const fixed = stageAssignment(p.instrument, roleMap[p.role]).stationary && p.lifecycleState === 'performing';
       return {
         id: p.id,
         position: stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile),

@@ -35,7 +35,7 @@ type SetlistSongRow = {
 };
 type GigSetlistRow = { gig_setlist_items?: SetlistSongRow[] | null };
 type PerformerRow = { id: string; profile_id: string; role_or_instrument: string | null; lineup_status: string | null; profiles?: { display_name?: string | null; username?: string | null } | null };
-type BandMemberRow = { id: string; profile_id: string; instrument_role?: string | null; role?: string | null; member_status?: string | null; profiles?: { display_name?: string | null; username?: string | null } | null };
+type BandMemberRow = { id: string; profile_id: string; instrument_role?: string | null; vocal_role?: string | null; role?: string | null; member_status?: string | null; profiles?: { display_name?: string | null; username?: string | null } | null };
 type ConsequenceRow = {
   consequence_key: string;
   category: string;
@@ -241,7 +241,7 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
   if (performers.length === 0 && gig?.band_id) {
     const membersResult = await queryClient
       .from("band_members")
-      .select("id,profile_id,instrument_role,role,member_status,profiles:profiles!band_members_profile_id_fkey(display_name,username)")
+      .select("id,profile_id,instrument_role,vocal_role,role,member_status,profiles:profiles!band_members_profile_id_fkey(display_name,username)")
       .eq("band_id", gig.band_id);
     const members = optionalData(
       "band_members",
@@ -255,7 +255,7 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
       .map((row) => ({
         id: row.id,
         profile_id: row.profile_id,
-        role_or_instrument: row.instrument_role ?? row.role ?? null,
+        role_or_instrument: [row.instrument_role ?? row.role, row.vocal_role && !/^(none|no vocals)$/i.test(row.vocal_role.trim()) && !/vocal/i.test(row.instrument_role ?? row.role ?? '') ? row.vocal_role : null].filter(Boolean).join(' / ') || null,
         lineup_status: "confirmed",
         profiles: row.profiles ?? null,
       }));

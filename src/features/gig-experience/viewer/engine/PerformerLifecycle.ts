@@ -1,10 +1,11 @@
+import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { GigViewerEvent, GigViewerReplay, StagePosition } from "../../events/types";
 import type { GigExperienceDTO } from "../../types";
 import type { Point, Rect, Size } from "./Viewport";
 import { selectVenuePreset, scaleVenuePreset } from "./VenueLayout";
 import { deterministicRandom } from "./EntityLayout";
 
-export type PresentationRole = "vocalist" | "lead_guitar" | "rhythm_guitar" | "guitar" | "bass" | "drums" | "keyboard" | "piano" | "dj" | "electronic" | "backing_vocals" | "strings" | "brass" | "percussion" | "other" | "unknown";
+export type PresentationRole = "vocalist" | "lead_guitar" | "rhythm_guitar" | "guitar" | "bass" | "drums" | "keyboard" | "piano" | "dj" | "electronic" | "backing_vocals" | "strings" | "brass" | "woodwind" | "percussion" | "other" | "unknown";
 export type PerformerLifecycleState = "waiting_backstage" | "entering" | "taking_position" | "performing" | "exiting" | "hidden";
 export type PerformerMoveStyle = "walk" | "step_forward" | "return_to_position" | "rush" | "hold";
 export interface PerformerInput { id: string; profileId: string | null; displayName: string; roleOrInstrument: string | null; performerType: string }
@@ -12,8 +13,8 @@ export interface MovementZone { x: number; y: number; width: number; height: num
 export interface PerformerPresentationEntity { id: string; profileId: string | null; displayName: string; initials: string; role: PresentationRole; roleLabel: string; instrument: string | null; performerType: string; currentPosition: Point; targetPosition: Point; backstagePosition: Point; entrancePoint: Point; stageSlot: Point; stageZone: StagePosition["zone"]; stageDescription: string; counterRadius: number; movementZone: MovementZone; movementSpeed: number; idlePhase: number; visible: boolean; lifecycleState: PerformerLifecycleState; activeMoveEventId: string | null; label: string; }
 export interface PerformerPlan { performers: PerformerInput[]; entities: Omit<PerformerPresentationEntity, "currentPosition" | "targetPosition" | "visible" | "lifecycleState" | "activeMoveEventId">[]; stage: Rect; audience: Rect; entranceStartMs: number; exitStartMs: number | null; entranceOrder: string[]; exitOrder: string[]; }
 
-const labels: Record<PresentationRole, string> = { vocalist: "Vocals", lead_guitar: "Lead guitar", rhythm_guitar: "Rhythm guitar", guitar: "Guitar", bass: "Bass", drums: "Drums", keyboard: "Keyboard", piano: "Piano", dj: "DJ", electronic: "Electronic", backing_vocals: "Backing vocals", strings: "Strings", brass: "Brass", percussion: "Percussion", other: "Other", unknown: "Unknown role" };
-const priority: Record<PresentationRole, number> = { drums: 0, percussion: 1, keyboard: 2, piano: 2, dj: 3, electronic: 3, bass: 4, rhythm_guitar: 5, guitar: 6, lead_guitar: 7, backing_vocals: 8, brass: 9, strings: 9, vocalist: 10, other: 6, unknown: 6 };
+const labels: Record<PresentationRole, string> = { vocalist: "Vocals", lead_guitar: "Lead guitar", rhythm_guitar: "Rhythm guitar", guitar: "Guitar", bass: "Bass", drums: "Drums", keyboard: "Keyboard", piano: "Piano", dj: "DJ", electronic: "Electronic", backing_vocals: "Backing vocals", strings: "Strings", brass: "Brass", woodwind: "Woodwind", percussion: "Percussion", other: "Other", unknown: "Unknown role" };
+const priority: Record<PresentationRole, number> = { drums: 0, percussion: 1, keyboard: 2, piano: 2, dj: 3, electronic: 3, bass: 4, rhythm_guitar: 5, guitar: 6, lead_guitar: 7, backing_vocals: 8, brass: 9, woodwind: 9, strings: 9, vocalist: 10, other: 6, unknown: 6 };
 
 export function normalizePerformerRole(value?: string | null): PresentationRole {
   if (value == null) return "unknown";
@@ -22,6 +23,8 @@ export function normalizePerformerRole(value?: string | null): PresentationRole 
   if (!s) return "unknown";
   if (/(lead.*guitar|guitar.*lead|lead guitarist)/.test(s)) return "lead_guitar";
   if (/(rhythm.*guitar|guitar.*rhythm)/.test(s)) return "rhythm_guitar";
+  const assignment = stageAssignment(raw);
+  if (assignment.instrument && assignment.instrument !== 'vocal_performance') return assignment.role === 'vocals' ? (assignment.vocal === 'backing' ? 'backing_vocals' : 'vocalist') : assignment.role === 'fan' ? 'other' : assignment.role;
   if (/(backing|background|backup).*(vocal|singer)|harmony/.test(s)) return "backing_vocals";
   if (/vocal|singer|frontperson|front man|front woman/.test(s)) return "vocalist";
   if (/bass/.test(s)) return "bass";
@@ -78,13 +81,19 @@ export function reconstructPerformerState(plan: PerformerPlan, replay: GigViewer
   });
 }
 
-function performerInputs(replay: GigViewerReplay, experience?: GigExperienceDTO | null): PerformerInput[] { const seen = new Map<string, PerformerInput>(); experience?.performers?.forEach((p, i) => { const id = p.profileId || p.id || `member-${i}`; if (!seen.has(id)) seen.set(id, { id, profileId: p.profileId ?? null, displayName: p.displayName || `Performer ${i + 1}`, roleOrInstrument: p.roleOrInstrument ?? null, performerType: p.lineupStatus ?? "performer" }); }); replay.events.forEach((e, i) => { if (e.visualPayload.type === "performer_enter" && !seen.has(e.visualPayload.performerId)) seen.set(e.visualPayload.performerId, { id: e.visualPayload.performerId, profileId: e.visualPayload.performerId, displayName: e.visualPayload.displayName || `Performer ${i + 1}`, roleOrInstrument: e.visualPayload.roleOrInstrument, performerType: "replay_performer" }); }); return [...seen.values()]; }
-function stageSlotFor(role: PresentationRole, occurrence: number, total: number, stage: Rect, index: number): Point & { zone: StagePosition["zone"] } { if (total === 1) return { x: stage.x + stage.width * .5, y: stage.y + stage.height * .68, zone: "front_center" }; const x = (n: number) => stage.x + stage.width * n, y = (n: number) => stage.y + stage.height * n; const table: Partial<Record<PresentationRole, [number, number, StagePosition["zone"]][]>> = { vocalist: [[.5,.76,"front_center"],[.42,.72,"front_left"],[.58,.72,"front_right"]], lead_guitar: [[.32,.66,"front_left"],[.68,.66,"front_right"]], rhythm_guitar: [[.68,.66,"front_right"],[.32,.66,"front_left"]], guitar: [[.32,.66,"front_left"],[.68,.66,"front_right"],[.5,.62,"mid_center"]], bass: [[.72,.58,"mid_right"],[.28,.58,"mid_left"]], drums: [[.5,.28,"back_center"]], keyboard: [[.78,.34,"back_right"],[.22,.34,"back_left"]], piano: [[.78,.34,"back_right"]], dj: [[.58,.30,"back_center"],[.42,.30,"back_center"]], electronic: [[.58,.32,"back_center"],[.42,.32,"back_center"]], backing_vocals: [[.22,.54,"mid_left"],[.78,.54,"mid_right"]], brass: [[.18,.38,"back_left"],[.82,.38,"back_right"]], strings: [[.18,.44,"mid_left"],[.82,.44,"mid_right"]], percussion: [[.34,.30,"back_left"],[.66,.30,"back_right"]] }; const choices = table[role]; if (choices) { const c = choices[occurrence % choices.length]; const row = Math.floor(occurrence / choices.length); return { x: clamp(x(c[0] + (row % 2 ? .04 : -.04) * row), stage.x + 16, stage.x + stage.width - 16), y: clamp(y(c[1] + row * .08), stage.y + 16, stage.y + stage.height - 16), zone: c[2] }; } const cols = Math.ceil(Math.sqrt(total)); const row = Math.floor(index / cols); const col = index % cols; return { x: x((col + 1) / (cols + 1)), y: y(.35 + row * .16), zone: "mid_center" }; }
+function performerInputs(replay: GigViewerReplay, experience?: GigExperienceDTO | null): PerformerInput[] {
+  const seen = new Map<string, PerformerInput>();
+  experience?.performers?.forEach((p,i) => { const id=p.profileId||p.id||`member-${i}`; if(!seen.has(id))seen.set(id,{id,profileId:p.profileId??null,displayName:p.displayName||`Performer ${i+1}`,roleOrInstrument:p.roleOrInstrument??null,performerType:p.lineupStatus??'performer'}); });
+  replay.events.forEach((e,i) => { if(e.visualPayload.type!=='performer_enter')return; const p=e.visualPayload, previous=seen.get(p.performerId); seen.set(p.performerId,{id:p.performerId,profileId:previous?.profileId??p.performerId,displayName:p.displayName||previous?.displayName||`Performer ${i+1}`,roleOrInstrument:p.roleOrInstrument||previous?.roleOrInstrument||null,performerType:'replay_performer'}); });
+  return [...seen.values()];
+}
+
+function stageSlotFor(role: PresentationRole, occurrence: number, total: number, stage: Rect, index: number): Point & { zone: StagePosition["zone"] } { if (total === 1) return { x: stage.x + stage.width * .5, y: stage.y + stage.height * .68, zone: "front_center" }; const x = (n: number) => stage.x + stage.width * n, y = (n: number) => stage.y + stage.height * n; const table: Partial<Record<PresentationRole, [number, number, StagePosition["zone"]][]>> = { vocalist: [[.5,.76,"front_center"],[.42,.72,"front_left"],[.58,.72,"front_right"]], lead_guitar: [[.32,.66,"front_left"],[.68,.66,"front_right"]], rhythm_guitar: [[.68,.66,"front_right"],[.32,.66,"front_left"]], guitar: [[.32,.66,"front_left"],[.68,.66,"front_right"],[.5,.62,"mid_center"]], bass: [[.72,.58,"mid_right"],[.28,.58,"mid_left"]], drums: [[.5,.28,"back_center"]], keyboard: [[.78,.34,"back_right"],[.22,.34,"back_left"]], piano: [[.78,.34,"back_right"]], dj: [[.58,.30,"back_center"],[.42,.30,"back_center"]], electronic: [[.58,.32,"back_center"],[.42,.32,"back_center"]], backing_vocals: [[.22,.54,"mid_left"],[.78,.54,"mid_right"]], brass: [[.18,.38,"back_left"],[.82,.38,"back_right"]], woodwind: [[.18,.42,"mid_left"],[.82,.42,"mid_right"]], strings: [[.18,.44,"mid_left"],[.82,.44,"mid_right"]], percussion: [[.34,.30,"back_left"],[.66,.30,"back_right"]] }; const choices = table[role]; if (choices) { const c = choices[occurrence % choices.length]; const row = Math.floor(occurrence / choices.length); return { x: clamp(x(c[0] + (row % 2 ? .04 : -.04) * row), stage.x + 16, stage.x + stage.width - 16), y: clamp(y(c[1] + row * .08), stage.y + 16, stage.y + stage.height - 16), zone: c[2] }; } const cols = Math.ceil(Math.sqrt(total)); const row = Math.floor(index / cols); const col = index % cols; return { x: x((col + 1) / (cols + 1)), y: y(.35 + row * .16), zone: "mid_center" }; }
 
 const MAX_COUNTER_RADIUS = 19;
 const COUNTER_GAP = 5;
 const STAGE_EDGE_GAP = 4;
-const placementPriority: Record<PresentationRole, number> = { drums: 0, percussion: 1, keyboard: 2, piano: 2, dj: 3, electronic: 3, vocalist: 4, backing_vocals: 5, lead_guitar: 6, rhythm_guitar: 7, guitar: 8, bass: 9, brass: 10, strings: 10, other: 11, unknown: 12 };
+const placementPriority: Record<PresentationRole, number> = { drums: 0, percussion: 1, keyboard: 2, piano: 2, dj: 3, electronic: 3, vocalist: 4, backing_vocals: 5, lead_guitar: 6, rhythm_guitar: 7, guitar: 8, bass: 9, brass: 10, woodwind: 10, strings: 10, other: 11, unknown: 12 };
 
 function fitPerformerStageLayout(preferred: Array<Point & { role: PresentationRole }>, stage: Rect): { counterRadius: number; slots: Point[] } {
   if (!preferred.length) return { counterRadius: MAX_COUNTER_RADIUS, slots: [] };

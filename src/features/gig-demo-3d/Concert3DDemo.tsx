@@ -1,3 +1,4 @@
+import { STAGE_INSTRUMENTS, type InstrumentId } from './instrumentCatalog';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Camera, Expand, Loader2, Pause, Play, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
@@ -19,6 +20,8 @@ export default function Concert3DDemo() {
   const [attempt, setAttempt] = useState(0);
   const [venueType, setVenueType] = useState<VenueKind | 'original'>('original');
   const [capacity, setCapacity] = useState(700);
+  const [instrument, setInstrument] = useState<InstrumentId | ''>('');
+  const [reaction, setReaction] = useState('auto');
   const venueLabel = venueType === 'original' ? 'The Live Room' : VENUE_TYPES[venueType][0];
   const [stats, setStats] = useState<DemoStats>({ fps: 0, drawCalls: 0, triangles: 0, seconds: 0 });
   const [showStats, setShowStats] = useState(false);
@@ -29,12 +32,13 @@ export default function Concert3DDemo() {
     let active = true;
     setState('loading'); setMessage('');
     try {
-      engine.current = new ConcertScene(canvas.current!, latestSettings.current, value => { if (active) setStats(value); }, (value, detail = '') => { if (active) { setState(value); setMessage(detail); } }, venueType === 'original' ? undefined : venuePreviewOptions(venueType, capacity));
+      engine.current = new ConcertScene(canvas.current!, latestSettings.current, value => { if (active) setStats(value); }, (value, detail = '') => { if (active) { setState(value); setMessage(detail); } }, venueType === 'original' && !instrument ? undefined : venuePreviewOptions(venueType === 'original' ? 'rock_club' : venueType, capacity, instrument || undefined));
     } catch {
       setState('error'); setMessage('This browser could not start the 3D scene. Enable hardware acceleration or try another browser, then retry.');
     }
     return () => { active = false; engine.current?.destroy(); engine.current = null; };
-  }, [attempt, venueType, capacity]);
+  }, [attempt, venueType, capacity, instrument]);
+  useEffect(() => { engine.current?.setPreviewCrowdReaction(reaction); }, [reaction, attempt, venueType, capacity, instrument]);
   useEffect(() => { engine.current?.setSettings(settings); }, [settings]);
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -66,14 +70,16 @@ export default function Concert3DDemo() {
     <div className="concert-demo__venue-picker">
       <label htmlFor="demo-venue-type">Venue setting<select id="demo-venue-type" value={venueType} onChange={event => { const type = event.target.value as VenueKind | 'original'; setVenueType(type); if (type !== 'original') setCapacity(VENUE_TYPES[type][1]); }}><option value="original">Original approved club</option>{Object.entries(VENUE_TYPES).map(([type, [label]]) => <option key={type} value={type}>{label}</option>)}</select></label>
       <label htmlFor="demo-venue-capacity">Venue capacity<select id="demo-venue-capacity" disabled={venueType === 'original'} value={capacity} onChange={event => setCapacity(Number(event.target.value))}>{[...new Set([40,150,500,2000,10000,50000,100000,capacity])].sort((a,b)=>a-b).map(value => <option key={value} value={value}>{value.toLocaleString()} people</option>)}</select></label>
-      <p>Compare stage size, architecture and audience space. Preview changes do not edit game venues.</p>
+      <label htmlFor="demo-instrument">Featured instrument<select id="demo-instrument" value={instrument} onChange={event => setInstrument(event.target.value as InstrumentId | '')}><option value="">Standard band</option>{Object.entries(STAGE_INSTRUMENTS).map(([id,spec]) => <option key={id} value={id}>{spec.label}</option>)}</select></label>
+      <label htmlFor="demo-crowd-reaction">Crowd reaction<select id="demo-crowd-reaction" value={reaction} onChange={event => setReaction(event.target.value)}>{[['auto','Follow energy'],['sway','Sway'],['applause','Clap'],['cheer','Cheer'],['jump','Jump and headbang'],['wave','Crowd wave'],['phone_lights','Phone lights'],['still','Watch quietly']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <p>Compare stage size, instruments and crowd reactions. Preview changes do not edit game venues.</p>
     </div>
     <section className="concert-demo__experience" ref={stage} aria-label="Interactive concert preview">
       <div className="concert-demo__viewport">
         <canvas ref={canvas} className="concert-demo__canvas" aria-label={`3D ${venueLabel} with a four-piece band, stage lighting and an animated audience`} aria-describedby="concert-scene-description" />
         <div className="concert-demo__topline" aria-hidden="true"><span><i /> {venueLabel.toUpperCase()}</span><span>{venueType === 'original' ? 'CLUB SESSION / 001' : `${capacity.toLocaleString()} CAPACITY`}</span></div>
         <div className="concert-demo__scene-caption" aria-hidden="true"><span>NEON HOURS</span><strong>{songSection(stats.seconds)}</strong></div>
-        <p id="concert-scene-description" className="sr-only">A {venueLabel} scene with a vocalist, guitarist, bassist and drummer. Camera buttons change your viewpoint. Lighting, audience and motion controls are below the preview. This is a silent visual demo using fictional performers.</p>
+        <p id="concert-scene-description" className="sr-only">A {venueLabel} scene with a vocalist, {instrument ? STAGE_INSTRUMENTS[instrument].label : 'guitar'} player, bassist and drummer. Camera buttons change your viewpoint. Lighting, audience and motion controls are below the preview. This is a silent visual demo using fictional performers.</p>
 
         {state !== 'ready' && <div className="concert-demo__overlay" role={state === 'error' ? 'alert' : 'status'}>
           {state === 'loading' ? <><Loader2 size={28} className="concert-demo__spinner" /><h2>Setting the stage</h2><p>Loading the band, materials and lights…</p></> : <><h2>The scene needs a restart</h2><p>{message}</p><button className="concert-demo__primary" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={16} /> Retry 3D demo</button></>}
