@@ -59,7 +59,7 @@ describe('performance poses using the shipped rigs', () => {
 
   it('bakes correctly sized humans into three crowd batches and changes density independently of energy', () => {
     const scene = new T.Scene(), crowd = new DemoCrowd(models, scene);
-    const meshes = scene.children.filter((object): object is T.InstancedMesh => object instanceof T.InstancedMesh);
+    const meshes = scene.children.filter((object): object is T.InstancedMesh => object instanceof T.InstancedMesh && object.name !== 'crowd-phone-screens');
     expect(meshes).toHaveLength(3);
     for (const mesh of meshes) {
       mesh.geometry.computeBoundingBox(); const size = mesh.geometry.boundingBox!.getSize(new T.Vector3());

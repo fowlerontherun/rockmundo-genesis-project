@@ -2,6 +2,7 @@ import * as T from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import grilleUrl from '@/assets/textures/equipment/speaker-grille.png';
 import { demoAssetUrl } from './assets';
+import type { ConcertVenue } from './liveTypes';
 
 export const metal = (color = '#6e7581', roughness = 0.3) => new T.MeshStandardMaterial({ color, metalness: 0.78, roughness });
 export const matte = (color: string, roughness = 0.8) => new T.MeshStandardMaterial({ color, roughness });
@@ -52,7 +53,7 @@ function label(text: string, width: number, height: number, color = '#e4d7bd', b
   return new T.Mesh(new T.PlaneGeometry(width, height), new T.MeshStandardMaterial({ map, transparent: true, roughness: 0.8, side: T.DoubleSide, emissive: color, emissiveMap: map, emissiveIntensity: 0.08 }));
 }
 
-export function buildVenue(scene: T.Scene, manager: T.LoadingManager) {
+export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: ConcertVenue) {
   const loader = new T.TextureLoader(manager);
   const surface = (name: string, diffuse: string, repeat: [number, number], color: string) => new T.MeshStandardMaterial({
     map: texture(loader, demoAssetUrl(`${name}_${diffuse}_1k.jpg`), repeat),
@@ -61,25 +62,48 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager) {
     aoMap: texture(loader, demoAssetUrl(`${name}_ao_1k.jpg`), repeat, false),
     color, roughness: 0.85, aoMapIntensity: 0.7, normalScale: new T.Vector2(0.7, 0.7),
   });
-  const root = new T.Group(); scene.add(root);
+  const root = new T.Group(); root.name = 'venue'; scene.add(root);
+  const archetype = venue?.archetype ?? 'club', outdoor = ['festival', 'beach', 'stadium'].includes(archetype), large = ['arena', 'stadium'].includes(archetype);
   const black = matte('#0d1119'), steel = metal('#4c535e'), chrome = metal('#b7c1cd');
   const oak = surface('wood_floor_worn', 'diff', [5.8, 3], '#b8ad9f');
   const brick = surface('brick_wall_001', 'diffuse', [6.6, 2.65], '#998382');
-  box(root, [20, 0.12, 27], [0, -0.09, 5], matte('#232327'));
+  box(root, [large ? 48 : 24, .12, large ? 60 : 36], [0, -.09, 10], matte(archetype === 'beach' ? '#89765a' : outdoor ? '#27302b' : '#232327'));
   box(root, [11.6, 0.82, 5.9], [0, 0.4, -2.3], black);
   box(root, [11.6, 0.07, 5.9], [0, 0.855, -2.3], oak);
   box(root, [11.65, 0.06, 0.1], [0, 0.9, 0.66], chrome);
+  if (!outdoor && !large) {
   box(root, [19.8, 8, 0.25], [0, 3.9, -5.5], brick);
   box(root, [0.25, 8, 25], [-8.8, 3.9, 6.8], brick); box(root, [0.25, 8, 25], [8.8, 3.9, 6.8], brick);
   box(root, [20, 0.25, 26], [0, 7.9, 6], matte('#080b11'));
+  }
+  if (outdoor) {
+    const sky = new T.Mesh(new T.SphereGeometry(58, 32, 16), new T.MeshBasicMaterial({ color: archetype === 'beach' ? '#253f59' : '#111c32', side: T.BackSide })); sky.position.y = 8; root.add(sky);
+    // Festival stage roof and side scrims leave the audience beneath an open sky.
+    box(root, [13, .2, 7], [0, 6.5, -2.5], black);
+    for (const x of [-6.1, 6.1]) box(root, [.1, 5.6, 5.6], [x, 3.5, -2.5], black);
+    if (archetype === 'beach') {
+      box(root, [100, .05, 32], [0, -.03, 39], new T.MeshStandardMaterial({ color: '#244857', metalness: .6, roughness: .2 }));
+      for (const x of [-11, 11]) { rod(root, [x, 0, 11], [x + .9, 7, 11], .18, matte('#645745')); for (let n = 0; n < 6; n++) { const leaf = new T.Mesh(new T.SphereGeometry(1, 12, 6), matte('#294738')); leaf.scale.set(2.3, .07, .5); leaf.rotation.y = n * Math.PI / 3; leaf.position.set(x + .9 + Math.cos(n * Math.PI / 3), 6.9, 11 + Math.sin(n * Math.PI / 3)); root.add(leaf); } }
+    }
+  }
+  if (large || archetype === 'theatre') {
+    const rows = large ? 8 : 3, seat = matte(archetype === 'theatre' ? '#6f2535' : '#273a50');
+    for (const side of [-1, 1]) for (let row = 0; row < rows; row++) {
+      const x = side * (8.5 + row * .85), y = .5 + row * .55;
+      box(root, [.85, .4, 29], [x, y, 12], matte('#343b43'));
+      for (let z = 1; z < 27; z += 1.1) { box(root, [.65, .12, .65], [x, y + .3, z], seat); box(root, [.1, .55, .65], [x + side * .3, y + .57, z], seat); }
+      rod(root, [x, y + 1.3, -.5], [x, y + 1.3, 27], .025, chrome);
+    }
+    if (!outdoor) box(root, [40, .3, 48], [0, 13, 13], black);
+  }
   // Actual draped geometry catches changing side light, rather than a flat backdrop image.
   const drapeGeo = new T.PlaneGeometry(10, 5.9, 160, 1); const vertices = drapeGeo.attributes.position;
   for (let i = 0; i < vertices.count; i++) vertices.setZ(i, Math.sin(vertices.getX(i) * 10.5) * 0.105);
   drapeGeo.computeVertexNormals();
-  const drape = new T.Mesh(drapeGeo, new T.MeshStandardMaterial({ color: '#3b1826', roughness: 0.93, side: T.DoubleSide }));
+  const drape = new T.Mesh(drapeGeo, new T.MeshStandardMaterial({ color: archetype === 'pub' ? '#2c3535' : archetype === 'theatre' ? '#551b2c' : '#3b1826', roughness: 0.93, side: T.DoubleSide }));
   drape.position.set(0, 3.65, -5.24); root.add(drape);
-  const backdrop = label('ROCKMUNDO', 6.2, 1.55); backdrop.position.set(0, 4.85, -5.03); root.add(backdrop);
-  const subtitle = label('THE LIVE ROOM', 3.05, 0.76, '#9b8c80'); subtitle.position.set(0, 3.92, -5.01); root.add(subtitle);
+  const backdrop = label(venue?.bandName || 'ROCKMUNDO', 6.2, 1.55); backdrop.position.set(0, 4.85, -5.03); root.add(backdrop);
+  const subtitle = label(venue?.name || 'THE LIVE ROOM', 3.05, 0.76, '#9b8c80'); subtitle.position.set(0, 3.92, -5.01); root.add(subtitle);
   // Structural trusses, braces and cabling.
   for (const z of [-4.65, -0.5]) {
     rod(root, [-6, 5.85, z], [6, 5.85, z], 0.055, steel); rod(root, [-6, 6.2, z], [6, 6.2, z], 0.055, steel);
@@ -110,9 +134,10 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager) {
     const curve = new T.CatmullRomCurve3([new T.Vector3(x, 0.905, -2), new T.Vector3(x + 0.7, 0.905, -0.8), new T.Vector3(x - 0.6, 0.905, -0.4), new T.Vector3(-5.4, 0.905, -0.2)]);
     root.add(new T.Mesh(new T.TubeGeometry(curve, 28, 0.012, 5, false), black));
   }
-  box(root, [2.85, 0.25, 2.4], [0.8, 1, -3.05], black); box(root, [2.9, 0.035, 2.45], [0.8, 1.145, -3.05], oak);
+  if (!venue) { box(root, [2.85, 0.25, 2.4], [0.8, 1, -3.05], black); box(root, [2.9, 0.035, 2.45], [0.8, 1.145, -3.05], oak);
+  }
   // Side wall lamps, balcony rail and warm practicals give the room depth.
-  for (const x of [-8.5, 8.5]) {
+  if (!outdoor && !large) for (const x of [-8.5, 8.5]) {
     for (const z of [0, 5, 10, 15]) {
       box(root, [0.13, 1.0, 0.36], [x, 3, z], black);
       const practical = new T.MeshStandardMaterial({ color: '#f4bb78', emissive: '#ff9b44', emissiveIntensity: 1.8 });
@@ -136,7 +161,7 @@ export function buildGuitar(bass = false) {
   outline.bezierCurveTo(-0.3, 0.28, -0.16, 0.12, -0.28, 0.01); outline.bezierCurveTo(-0.43, -0.18, -0.27, -0.42, 0, -0.39);
   outline.bezierCurveTo(0.3, -0.42, 0.43, -0.17, 0.28, 0.01); outline.bezierCurveTo(0.16, 0.12, 0.22, 0.24, 0.12, 0.32); outline.bezierCurveTo(0.04, 0.23, 0.07, 0.27, 0, 0.36);
   const body = new T.Mesh(new T.ExtrudeGeometry(outline, { depth: 0.095, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.025, bevelThickness: 0.025, curveSegments: 16 }), new T.MeshPhysicalMaterial({ color: bass ? '#602322' : '#d09a45', metalness: 0.23, roughness: 0.24, clearcoat: 0.7 }));
-  root.add(body);
+  body.name = 'instrument-body'; root.add(body);
   const guard = new T.Mesh(new T.CircleGeometry(0.175, 24), matte(bass ? '#101113' : '#e0d2aa', 0.28)); guard.scale.set(0.75, 1.4, 1); guard.position.set(0.075, -0.005, 0.125); root.add(guard);
   const length = bass ? 0.81 : 0.68;
   box(root, [0.09, length, 0.045], [0, 0.3 + length / 2, 0.09], neck);
@@ -189,4 +214,43 @@ export function microphone(parent: T.Object3D, position: [number, number, number
   const mic = cylinder(root, 0.024, 0.022, 0.16, [0, 1.52, -0.31], black); mic.rotation.x = Math.PI / 2;
   const head = new T.Mesh(new T.SphereGeometry(0.034, 12, 8), metal('#434956', 0.7)); head.position.set(0, 1.52, -0.39); root.add(head);
   return root;
+}
+
+
+export function buildKeyboard(dj = false) {
+  const root = new T.Group(), black = matte('#171c27'), chrome = metal();
+  box(root, [1.35, .13, .45], [0, .94, .53], black);
+  for (const side of [-1, 1]) { rod(root, [side * .48, 0, .43], [-side * .48, .88, .43], .022, chrome); }
+  if (dj) {
+    for (const x of [-.37, .37]) { cylinder(root, .16, .16, .025, [x, 1.02, .53], metal('#60707d')); for (let i = 0; i < 4; i++) box(root, [.055, .012, .055], [x -.1 + i * .066, 1.025, .7], matte(['#366f78','#c66c81'][i % 2])); }
+  } else {
+    for (let i = 0; i < 28; i++) { const x = -.61 + i * .044; box(root, [.04, .025, .24], [x, 1.02, .43], matte('#e7e3d5')); if (![2, 6].includes(i % 7)) box(root, [.025, .035, .13], [x + .023, 1.048, .49], black); }
+  }
+  batchStaticMeshes(root); return root;
+}
+
+export function buildHandInstrument(role: 'vocals' | 'strings' | 'brass' | 'percussion', color = '#a26b36') {
+  const root = new T.Group(), chrome = metal('#a6b2be'), shell = new T.MeshPhysicalMaterial({ color, roughness: .3, clearcoat: .7 });
+  if (role === 'vocals') {
+    rod(root, [0, 0, -.08], [0, 0, .1], .023, matte('#16191f'));
+    const grille = new T.Mesh(new T.SphereGeometry(.033, 16, 10), chrome); grille.position.z = -.09; root.add(grille);
+  } else if (role === 'brass') {
+    rod(root, [0, 0, 0], [0, -.08, .39], .035, metal('#c4a25a'));
+    const bell = cylinder(root, .12, .035, .18, [0, -.08, .47], metal('#c4a25a'), 24); bell.rotation.x = Math.PI / 2;
+    for (let i = 0; i < 3; i++) cylinder(root, .017, .017, .12, [.055, -.03, .12 + i * .06], chrome);
+  } else if (role === 'strings') {
+    const body = new T.Mesh(new T.SphereGeometry(1, 24, 12), shell); body.scale.set(.105, .05, .19); root.add(body);
+    box(root, [.035, .025, .3], [0, 0, .24], matte('#322820')); rod(root, [-.3, .08, -.02], [.3, .08, .12], .006, matte('#987b55'));
+    for (let i = 0; i < 4; i++) rod(root, [-.012 + i * .008, .052, -.12], [-.012 + i * .008, .022, .39], .001, chrome);
+  } else {
+    const hoop = new T.Mesh(new T.TorusGeometry(.15, .018, 8, 32), shell); root.add(hoop);
+    for (let i = 0; i < 8; i++) { const disc = cylinder(root, .035, .035, .01, [Math.cos(i * Math.PI / 4) * .15, Math.sin(i * Math.PI / 4) * .15, 0], chrome, 12); disc.rotation.x = Math.PI / 2; }
+  }
+  batchStaticMeshes(root); return root;
+}
+
+/** Instrument kit positioned relative to the seated performer's feet. */
+export function buildDrummerKit(parent: T.Object3D) {
+  const offset = new T.Group(); offset.position.set(-.8, -1.16, 3.58); parent.add(offset);
+  return buildDrums(offset);
 }

@@ -1,28 +1,11 @@
-import { Sparkles, ImageIcon } from "lucide-react";
-import { AiAvatarCreator } from "@/components/avatar-system/AiAvatarCreator";
+import { lazy, Suspense } from "react";
+const PlayerModelEditor = lazy(() => import("@/features/player-model/PlayerModelEditor"));
 
-export const AppearanceStep = () => {
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Sparkles className="h-6 w-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-bold text-foreground">Create Your Look</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Upload a photo to generate your AI avatar. Tap{" "}
-          <span className="font-medium text-foreground">Save as Profile Avatar</span> to lock it in —
-          it will appear on your profile, dashboard and band pages.
-        </p>
-        <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <ImageIcon className="h-3 w-3" />
-          Optional — you can skip and add an avatar later from the Avatar Designer.
-        </p>
-      </div>
-
-      <div className="mx-auto max-w-4xl">
-        <AiAvatarCreator />
-      </div>
-    </div>
-  );
-};
+export const AppearanceStep = () => <div className="space-y-6">
+  <div className="text-center">
+    <h2 className="text-xl font-bold text-foreground">Create Your Look</h2>
+    <p className="mt-2 text-sm text-muted-foreground">Create your full-body avatar with 18 free starter clothing pieces and your own colours. Choose Save avatar to use this look in gigs.</p>
+    <p className="mt-2 text-xs text-muted-foreground">Optional — you can keep your starter look and customise it later in the Avatar Creator.</p>
+  </div>
+  <Suspense fallback={<p role="status">Loading avatar creator…</p>}><PlayerModelEditor /></Suspense>
+</div>;

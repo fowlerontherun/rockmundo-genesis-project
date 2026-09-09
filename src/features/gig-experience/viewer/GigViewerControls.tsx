@@ -14,8 +14,10 @@ const QUALITY_LABELS: Record<PerformancePreference, string> = {
 
 const CAMERA_LABELS: Record<GigViewerCameraMode, string> = {
   venue_wide: "Venue Wide",
-  stage_focus: "Stage Focus",
-  auto: "Auto",
+  stage_focus: "Performer",
+  auto: "Director",
+  drums: "Drums",
+  band_pov: "From stage",
 };
 
 export function GigViewerControls({ performancePreference = "auto", onPerformancePreference, playing, complete, speed, reducedMotion, pyrotechnics, cameraMode, fullscreen, compact = false, canPreviousSong, canNextSong, canNextHighlight, canResult, onPlay, onPause, onRestart, onSpeed, onPrevious, onNext, onPreviousSong, onNextSong, onNextHighlight, onSkipResult, onResult, onClose, onReducedMotion, onPyrotechnics, onCameraMode, onFullscreen }: { playing: boolean; complete: boolean; speed: PlaybackSpeed; reducedMotion: boolean; pyrotechnics?: boolean; cameraMode: GigViewerCameraMode; fullscreen?: boolean; canPreviousSong?: boolean; canNextSong?: boolean; canNextHighlight?: boolean; canResult?: boolean; onPlay: () => void; onPause: () => void; onRestart: () => void; onSpeed: (speed: PlaybackSpeed) => void; onPrevious: () => void; onNext: () => void; onPreviousSong?: () => void; onNextSong?: () => void; onNextHighlight?: () => void; onSkipResult?: () => void; onResult?: () => void; onClose: () => void; onReducedMotion: (v: boolean) => void; onPyrotechnics?: (v: boolean) => void; onCameraMode: (mode: GigViewerCameraMode) => void; onFullscreen?: () => void; compact?: boolean; performancePreference?: PerformancePreference; onPerformancePreference?: (value: PerformancePreference) => void }) {

@@ -1,0 +1,68 @@
+.player-model-editor { color: #e4eaf3; background: #111924; border: 1px solid #2a3748; border-radius: 18px; overflow: hidden; }
+.player-model-editor__intro { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 26px 30px; border-bottom: 1px solid #2a3748; }
+.player-model-editor__eyebrow { color: #6ed3d9; font-size: 10px; letter-spacing: .18em; font-weight: 700; }
+.player-model-editor h2 { font-size: clamp(20px, 2.6vw, 30px); font-weight: 650; letter-spacing: -.025em; margin: 7px 0; }
+.player-model-editor__intro p, .player-model-editor__hint, .player-model-editor__preview-role p { color: #a6b2c4; font-size: 12px; line-height: 1.7; }
+.player-model-editor__badge { white-space: nowrap; border: 1px solid #315052; padding: 8px 11px; border-radius: 6px; color: #8bdbcf; font-size: 9px; letter-spacing: .08em; }
+.player-model-editor__layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(310px, .9fr); }
+.player-model-editor__showcase { min-width: 0; background: #101823; }
+.player-model-preview { position: sticky; top: 12px; width: 100%; height: clamp(430px, 58vw, 660px); min-height: 400px; }
+.player-model-preview canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.player-model-preview__label { pointer-events: none; position: absolute; top: 22px; left: 25px; font-size: 12px; letter-spacing: .18em; font-weight: 700; }
+.player-model-preview__label span { display: block; color: #8695ac; font-weight: 400; font-size: 8px; margin-top: 6px; }
+.player-model-preview__controls { position: absolute; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; gap: 6px; }
+.player-model-preview__controls button { border-radius: 7px; background: #0b121ed9; border: 1px solid #3d4c60; padding: 8px 13px; font-size: 13px; min-height: 40px; }
+.player-model-preview__overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; background: #101823ed; padding: 30px; text-align: center; }
+.player-model-preview__overlay button { border: 1px solid #67cbd3; border-radius: 7px; padding: 10px 18px; }
+.player-model-editor__preview-role { padding: 18px 25px 24px; display: grid; grid-template-columns: 1fr 140px; gap: 12px; align-items: center; border-top: 1px solid #283548; font-size: 12px; }
+.player-model-editor__preview-role p { grid-column: 1 / -1; }
+.player-model-editor__form { padding: 28px; border-left: 1px solid #2a3748; background: #151f2d; }
+.player-model-editor fieldset { min-width: 0; margin: 0 0 27px; }
+.player-model-editor legend { font-size: 11px; letter-spacing: .08em; color: #6dc8d0; width: 100%; padding-bottom: 15px; }
+.player-model-editor legend span { color: #edf1f6; margin-left: 10px; font-size: 15px; letter-spacing: 0; font-weight: 600; }
+.player-model-editor__choices { display: flex; gap: 8px; margin-bottom: 17px; }
+.player-model-editor__choices button { flex: 1; min-height: 39px; padding: 8px; border: 1px solid #3b4a5e; border-radius: 7px; font-size: 12px; }
+.player-model-editor button:hover { background-color: #2b3b50; }
+.player-model-editor__choices button[aria-pressed=true] { color: #adf0e8; border-color: #5babae; background: #213e46; }
+.player-model-editor__range { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; font-size: 12px; gap: 10px; margin: 14px 0 19px; }
+.player-model-editor__range output { color: #a9b9cc; font-size: 11px; }
+.player-model-editor input[type=range] { width: 100%; accent-color: #71d4d7; }
+.player-model-editor__skin { font-size: 12px; margin-bottom: 20px; }
+.player-model-editor__skin > div { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 11px; }
+.player-model-editor__skin button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; box-shadow: 0 0 0 1px #4d5a6b; }
+.player-model-editor__skin button[aria-pressed=true] { border-color: white; }
+.player-model-editor input[type=color] { padding: 0; border: 1px solid #69778a; border-radius: 6px; width: 34px; height: 32px; cursor: pointer; background: transparent; }
+.player-model-editor__item { display: grid; grid-template-columns: 1fr minmax(90px, 125px) 34px; align-items: center; gap: 10px; margin-bottom: 13px; font-size: 12px; }
+.player-model-editor select { width: 100%; border: 1px solid #3b4b61; border-radius: 6px; background: #1c2a3c; color: #e7edf6; padding: 8px 7px; font-size: 12px; min-height: 36px; }
+.player-model-editor__item span { color: #a3b1c3; }
+.player-model-editor__save { border-top: 1px solid #344155; padding-top: 18px; }
+.player-model-editor__save-state { font-size: 11px; color: #b3c2d2; margin-bottom: 10px; }
+.player-model-editor__primary { width: 100%; min-height: 43px; border-radius: 8px; color: #10202a; background: #8adbd7; font-size: 13px; font-weight: 700; }
+.player-model-editor__primary:hover { background: #b1efea !important; }
+.player-model-editor__secondary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 13px; }
+.player-model-editor__secondary button { font-size: 11px; padding: 5px 0; text-decoration: underline; color: #b9c7d9; }
+.player-model-editor button:disabled, .player-model-editor fieldset:disabled { opacity: .5; }
+.player-model-editor__success, .player-model-editor__error { font-size: 12px; line-height: 1.6; margin-top: 15px; }
+.player-model-editor__success { color: #95e0c4; }.player-model-editor__error { color: #ffb1b1; }
+.player-model-editor :focus-visible { outline: 2px solid #91e8e4; outline-offset: 4px; }
+@media (max-width: 760px) { .player-model-editor__layout { grid-template-columns: 1fr; }.player-model-editor__intro { padding: 20px; align-items: flex-start; flex-direction: column; gap: 12px; }.player-model-editor__form { padding: 23px; border-left: 0; border-top: 1px solid #2a3748; }.player-model-preview { height: 440px; position: relative; top: 0; }.player-model-editor__preview-role { padding: 16px 20px; } }
+
+.player-model-wardrobe { padding: 20px 0; border-top: 1px solid #344155; }
+.player-model-wardrobe__heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.player-model-wardrobe__heading h3 { font-size: 14px; font-weight: 600; }.player-model-wardrobe__heading > span { font-size: 10px; color: #93d9ca; }
+.player-model-wardrobe__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.player-model-wardrobe__grid button { border: 1px solid #3b4a5e; border-radius: 9px; background: #1b2839; padding: 9px 5px; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 11px; line-height: 1.4; }
+.player-model-wardrobe__grid button[aria-pressed=true] { border-color: #8adbd7; box-shadow: inset 0 0 0 1px #8adbd7; background: #25414a; }
+.player-model-wardrobe__tile { display: grid; place-items: center; border-radius: 5px; width: 100%; height: 54px; background: #738092; }
+.player-model-wardrobe__tile svg { filter: drop-shadow(0 1px 1px #ffffff66); }
+.fabric-stripe { background: repeating-linear-gradient(0deg, #8e9caf 0 7px, #354659 7px 11px); }
+.fabric-plaid { background: repeating-linear-gradient(90deg, #ffffff22 0 10px, #00000033 10px 16px), repeating-linear-gradient(0deg, #8999ad 0 10px, #384b62 10px 16px); }
+.fabric-pinstripe { background: repeating-linear-gradient(90deg, #3b4b60 0 10px, #879aaf 10px 11px); }
+.fabric-denim { background: repeating-linear-gradient(135deg, #758ca8 0 2px, #465c76 2px 4px); }
+.fabric-canvas { background: repeating-linear-gradient(0deg, #ffffff22 0 2px, transparent 2px 4px), repeating-linear-gradient(90deg, #8c9aa7 0 2px, #6d7988 2px 4px); }
+.fabric-two-tone { background: linear-gradient(0deg, #33455b 50%, #a8b5c5 50%); }.fabric-patent { background: linear-gradient(135deg, #283748 20%, #bac8d7 40%, #374a60 55%); }
+.player-model-wardrobe__equipped { font-size: 11px; color: #aebfd2; margin: 12px 0; }
+.player-model-wardrobe__colours { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.player-model-wardrobe__colours > button { width: 30px; height: 30px; border: 2px solid #617083; border-radius: 50%; }
+.player-model-wardrobe__colours > button[aria-pressed=true] { border-color: white; outline: 2px solid #81d9d1; outline-offset: 2px; }
+.player-model-wardrobe__colours label { display: flex; align-items: center; gap: 7px; font-size: 10px; color: #c3ccda; }

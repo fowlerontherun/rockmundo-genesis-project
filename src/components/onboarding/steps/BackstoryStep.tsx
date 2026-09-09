@@ -143,7 +143,7 @@ The road ahead is uncertain, but one thing is clear: this is just the beginning 
             <p className="text-xs text-muted-foreground">
               {avatarProfile?.avatar_url
                 ? "Avatar saved to your profile"
-                : "No avatar set — you can add one any time from the Avatar Designer"}
+                : "Your full-body look is managed in the Avatar Creator"}
             </p>
           </div>
         </CardContent>

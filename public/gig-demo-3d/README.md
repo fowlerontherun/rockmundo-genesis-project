@@ -22,3 +22,12 @@ Texture maps are original 1024×1024 JPEGs, using the OpenGL normal convention.
 redistribution under CC0. The application also reuses the repository's existing
 speaker grille image. Stage geometry, instruments, labels and animation code
 were authored for this demo.
+
+## Player model extension
+
+The shared gig viewer and player designer additionally use `female-casual.glb`,
+`female-punk.glb` and `female-suit.glb` from Quaternius's CC0 Ultimate Modular Women
+pack: https://quaternius.com/packs/ultimatemodularwomen.html . Original public source
+links, converted asset hashes and sizes are recorded in `assets-manifest.json`.
+The original embedded glTF data was repacked as GLB; geometry/materials and clips
+were retained. Runtime stage motions use the same deterministic IK as the demo.
