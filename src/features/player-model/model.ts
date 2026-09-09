@@ -2,13 +2,14 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { demoAssetUrl } from '@/features/gig-demo-3d/assets';
-import { equipmentItem, equipmentStyle, modelFile, type PlayerAppearance } from './appearance';
+import { headModelStyle, equipmentItem, equipmentStyle, modelFile, type PlayerAppearance } from './appearance';
 
+import { addHair, isScalpHair } from './hair';
 import { fabricTexture, fabricUVs } from './fabrics';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
-  return [...new Set(appearances.flatMap(a => [a.head.style, ...(['top', 'bottom', 'footwear'] as const).map(slot => equipmentStyle(a, slot))].map(style => modelFile(a.body.frame, style))))];
+  return [...new Set(appearances.flatMap(a => [headModelStyle(a), ...(['top', 'bottom', 'footwear'] as const).map(slot => equipmentStyle(a, slot))].map(style => modelFile(a.body.frame, style))))];
 }
 export async function loadModelLibrary(files: string[], manager?: T.LoadingManager): Promise<ModelLibrary> {
   const loader = new GLTFLoader(manager), library: ModelLibrary = new Map();
@@ -27,7 +28,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
     if (!model) throw new Error('The selected character model could not load.');
     return model;
   };
-  const result = clone(source(appearance.head.style));
+  const result = clone(source(headModelStyle(appearance)));
   const bones = new Map<string, T.Bone>(), remove: T.Object3D[] = [];
   result.traverse(node => { if (node instanceof T.Bone) bones.set(node.name, node); if (node instanceof T.SkinnedMesh) remove.push(node); });
   remove.forEach(node => { const parent = node.parent; node.removeFromParent(); if (parent && parent.children.length === 0 && /_(body|head|legs|feet)$/i.test(parent.name)) parent.removeFromParent(); });
@@ -43,7 +44,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
     }
   }
   const choices = [
-    { part: 'head', style: appearance.head.style, dye: appearance.head.hair, fabric: 'plain' as const },
+    { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     { part: 'body', style: equipmentStyle(appearance, 'top'), dye: appearance.equipment.top.color, fabric: equipmentItem(appearance, 'top').fabric },
     { part: 'legs', style: equipmentStyle(appearance, 'bottom'), dye: appearance.equipment.bottom.color, fabric: equipmentItem(appearance, 'bottom').fabric },
     { part: 'feet', style: equipmentStyle(appearance, 'footwear'), dye: appearance.equipment.footwear.color, fabric: equipmentItem(appearance, 'footwear').fabric },
@@ -54,7 +55,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
     source(choice.style).traverse(node => { if (matches(node) && (!node.parent || !matches(node.parent))) containers.push(node); });
     if (!containers.length) throw new Error(`Missing character part: ${choice.part}`);
     for (const container of containers) {
-      const part = container.clone(true);
+      const part = container.clone(true), removeHair: T.Object3D[] = [];
       part.traverse(clonedNode => {
         if (!(clonedNode instanceof T.SkinnedMesh)) return;
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
@@ -81,12 +82,14 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
           }
           return material;
         };
+        if (choice.part === 'head' && appearance.head.hairStyle && appearance.head.hairStyle !== 'original' && !Array.isArray(original.material) && isScalpHair(original.material, appearance.body.frame)) removeHair.push(clonedNode);
         clonedNode.material = Array.isArray(original.material) ? original.material.map(dyeMaterial) : dyeMaterial(original.material);
         const boundBones = original.skeleton.bones.map(bone => {
           const match = bones.get(bone.name); if (!match) throw new Error(`Incompatible character part: ${bone.name}`); return match;
         });
         clonedNode.bind(new T.Skeleton(boundBones, original.skeleton.boneInverses.map(matrix => matrix.clone())), original.bindMatrix.clone());
       });
+      removeHair.forEach(disposeModel);
       const parent = container.parent?.name ? result.getObjectByName(container.parent.name) : result;
       (parent ?? result).add(part);
     }
@@ -110,6 +113,8 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       result.add(calf); calf.bind(new T.Skeleton([lower], [lower.matrixWorld.clone().invert()]), new T.Matrix4());
     }
   }
+  const headBone = bones.get('Head');
+  if (headBone) addHair(result, appearance, headBone);
   result.updateMatrixWorld(true);
   return result;
 }

@@ -47,3 +47,15 @@ it('gives every character six free choices per clothing type and persists new de
   await waitFor(() => expect(save).toHaveBeenCalled());
   for (const slot of SLOTS) expect(save.mock.calls[0][0].appearance.equipment[slot]).toEqual({ itemId: STARTER_ITEMS[slot][5].id, color: '#338b8d' });
 });
+it('saves hairstyle and independent facial hair, with matching colour available', async () => {
+  render(<PlayerModelEditor />);
+  fireEvent.change(screen.getByLabelText('Hairstyle'), { target: { value: 'quiff' } });
+  fireEvent.change(screen.getByLabelText('Facial hair'), { target: { value: 'goatee' } });
+  expect(screen.getByLabelText('Match hair colour')).toBeChecked();
+  fireEvent.click(screen.getByLabelText('Match hair colour'));
+  fireEvent.click(screen.getByRole('button', { name: 'Facial hair colour: Ginger' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Hair colour: Blue' }));
+  expect(save).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
+  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ appearance: expect.objectContaining({ head: expect.objectContaining({ hairStyle: 'quiff', facialHair: 'goatee', hair: '#426baa', facialHairColor: '#b75e32' }) }) })));
+});

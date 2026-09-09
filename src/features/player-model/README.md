@@ -81,3 +81,33 @@ The six-starter-clothing migration extends only the validated item allow-list.
 `supabase/tests/starter_wardrobe.sql` tests all 18 IDs on both frames and rejects
 invalid IDs/colours without writing player data. Run the offline frontend suite
 with `./node_modules/.bin/vitest run --config vitest.stage-models.config.ts --maxWorkers=1`.
+
+
+## Hair and facial hair
+
+The creator offers the original three imported cuts plus nine new selections:
+bald, buzz cut, quiff, mohawk, bob, ponytail, bun, curls and long hair. Facial hair
+has clean shaven, stubble, moustache, goatee, short/full/long beard and sideburns.
+All are free and available on either body frame, with ten named colours and a
+custom picker. Facial hair can follow hair colour or use an independent dye.
+Face close-up and Full body buttons switch preview framing.
+
+Optional `head.hairStyle`, `head.facialHair` and `head.facialHairColor` fields
+extend appearance version 1. Absent fields preserve the imported haircut, clean
+shaven face and matching dye; existing rows are not rewritten. The original
+haircut selector remains available when Original haircut is selected. New cuts
+use the complete casual scalp from the appropriate rig family. Only scalp-hair
+primitives are replaced; skin, eyes and brows remain intact.
+
+Hair shells follow the authored scalp. Facial hair follows the actual face
+surface, with frame-specific jaw anchors. Geometry is batched by hair/beard
+material and attached to the existing Head bone, so it follows performance
+animation in the fitting room and shared viewer. There are no extra downloads.
+These are stylised solid hair meshes, not strand-level hair simulation.
+
+The additive `avatar_hair_styles` migration is applied directly to the connected
+project. `supabase/tests/avatar_hair_styles.sql` checks 160 hair/beard/frame
+combinations, matching colour, old saved data and invalid-input rejection using
+read-only validation calls. Offline tests exercise actual rig assembly, bone
+attachment, animation and independent colour persistence. Posed face geometry
+was inspected locally; browser visual review remains before release.
