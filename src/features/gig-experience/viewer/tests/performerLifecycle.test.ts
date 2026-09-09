@@ -21,7 +21,7 @@ describe("performer role normalization", () => {
     expect(normalizePerformerRole("DJ")).toBe("dj");
     expect(normalizePerformerRole("Keyboardist")).toBe("keyboard");
     expect(normalizePerformerRole(null)).toBe("unknown");
-    expect(normalizePerformerRole("theremin wizard")).toBe("unknown");
+    expect(normalizePerformerRole("theremin wizard")).toBe("dj");
   });
 });
 

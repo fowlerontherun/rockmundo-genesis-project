@@ -4,7 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { buildVenue, buildDrums, microphone, cylinder, rod, matte } from './stage';
+import { buildVenue, cylinder, rod, matte } from './stage';
 import { loadBand, type Musician, type DemoCrowd } from './performers';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stageTransform, type VenueProfile } from './venueProfile';
@@ -49,6 +49,8 @@ export class ConcertScene {
   private lookAt = new T.Vector3(0, 2.2, -1.9);
   private cameraPos = new T.Vector3();
   private targetPos = new T.Vector3();
+  private previewCrowdReaction = 'auto';
+  setPreviewCrowdReaction(reaction: string) { this.previewCrowdReaction = reaction; }
   private crowdTuning: Partial<CrowdTuningOptions> = {};
   private renderedAt = 0;
   private playback: ConcertFrame | null = null;
@@ -76,7 +78,7 @@ export class ConcertScene {
     this.scene.add(new T.HemisphereLight('#a5c9e8', '#29212b', 1.15));
     const key = new T.DirectionalLight('#f4d5b3', 1.3); key.position.set(0, 5, 6); this.scene.add(key);
     const backFill = new T.DirectionalLight('#759cc7', 0.6); backFill.position.set(0, 5, -7); this.scene.add(backFill);
-    buildVenue(this.scene, this.assetManager, options?.venue); if (!options) { this.cymbals = buildDrums(this.scene); microphone(this.scene, [0, .9, -.43]); }
+    buildVenue(this.scene, this.assetManager, options?.venue);
     this.distantAudience = this.scene.getObjectByName('venue-distant-audience') as T.InstancedMesh ?? null;
     this.buildLighting(); this.particles = this.buildParticles();
     this.composer = new EffectComposer(this.renderer); this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -172,7 +174,7 @@ export class ConcertScene {
     const shot = CAMERAS[selected];
     this.cameraPos.fromArray(shot.position); this.targetPos.fromArray(shot.target);
     if (this.options && (selected === 'guitar' || selected === 'drums')) {
-      const actor = selected === 'drums' ? this.actors.find(p => p.role === 'drums' && p.root.visible) : this.actors.find(p => p.id === this.playback?.focusId && p.root.visible) ?? this.actors.find(p => p.role === 'guitar' && p.root.visible);
+      const actor = selected === 'drums' ? this.actors.find(p => p.role === 'drums' && p.root.visible) : this.actors.find(p => p.id === this.playback?.focusId && p.root.visible) ?? this.actors.find(p => p.role === 'guitar' && p.root.visible) ?? this.actors.find(p => p.id === 'preview-1' && p.root.visible);
       if (actor) { this.targetPos.copy(actor.root.position).add(new T.Vector3(0, 1.2, .1)); this.cameraPos.copy(this.targetPos).add(selected === 'drums' ? new T.Vector3(2.4, 1.6, -1.5) : new T.Vector3(-1.8, .45, 3.1)); }
       else { selected = 'front'; this.cameraPos.fromArray(CAMERAS.front.position); this.targetPos.fromArray(CAMERAS.front.target); }
     }
@@ -216,7 +218,7 @@ export class ConcertScene {
       }
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
     });
-    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction);
+    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction));
     if (this.distantAudience) {
       const occupancy = this.playback?.occupancy ?? this.settings.crowd;
       const budget = this.settings.quality === 'low' ? 500 : this.distantAudience.userData.maxCount as number;

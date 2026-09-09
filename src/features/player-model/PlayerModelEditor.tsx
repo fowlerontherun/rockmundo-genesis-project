@@ -1,8 +1,8 @@
+import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 import { useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
 import { usePlayerModel } from './usePlayerModel';
 import { defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
-import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
 import { HeadStyling } from './HeadStyling';
 import { StarterWardrobe } from './StarterWardrobe';
 import './player-model.css';
@@ -17,7 +17,7 @@ export default function PlayerModelEditor() {
 }
 
 function EditorSession({ profileId, initial, model }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel> }) {
-  const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState<StageRole>('other');
+  const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
   const change = (next: PlayerAppearance) => { setDraft(next); setFeedback(''); setError(''); };
@@ -37,8 +37,8 @@ function EditorSession({ profileId, initial, model }: { profileId: string; initi
     <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your character, dress them head to toe, and take the same look on stage.</p></div><span className="player-model-editor__badge">18 STARTER PIECES · ALL FREE</span></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
-        <PlayerModelPreview appearance={draft} role={role} />
-        <div className="player-model-editor__preview-role"><label htmlFor="preview-instrument">Try a performance pose</label><select id="preview-instrument" value={role} onChange={event => setRole(event.target.value as StageRole)}><option value="other">Backstage</option><option value="vocals">Vocals</option><option value="guitar">Guitar</option><option value="bass">Bass</option><option value="drums">Drums</option><option value="keyboard">Keyboard</option><option value="dj">DJ</option><option value="strings">Strings</option><option value="brass">Brass</option><option value="percussion">Percussion</option></select><p>Your band role decides which instrument you play at gigs.</p></div>
+        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} />
+        <div className="player-model-editor__preview-role"><label htmlFor="preview-instrument">Try a performance pose</label><select id="preview-instrument" value={role} onChange={event => setRole(event.target.value)}><option value="other">Backstage</option>{Object.entries(STAGE_INSTRUMENTS).map(([id, spec]) => <option key={id} value={id}>{spec.label}</option>)}</select><p>Your band role decides which instrument you play at gigs.</p></div>
       </div>
       <form className="player-model-editor__form" onSubmit={event => { event.preventDefault(); void save(); }}>
         <fieldset disabled={model.save.isPending}>
