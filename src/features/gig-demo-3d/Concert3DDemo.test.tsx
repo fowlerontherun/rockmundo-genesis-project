@@ -61,4 +61,15 @@ describe('admin concert demo controls', () => {
     act(() => onState('error', 'Late response after unmount'));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+  it('compares real venue settings and capacities using the production scene', () => {
+    mount();
+    fireEvent.change(screen.getByLabelText('Venue setting'), { target: { value: 'cafe_stage' } });
+    expect(engine.destroy).toHaveBeenCalledOnce();
+    expect(vi.mocked(ConcertScene).mock.calls.at(-1)?.[4]).toMatchObject({ externalClock: false, venue: { type: 'cafe_stage', capacity: 70 }, performers: expect.any(Array) });
+    fireEvent.change(screen.getByLabelText('Venue capacity'), { target: { value: '2000' } });
+    expect(vi.mocked(ConcertScene).mock.calls.at(-1)?.[4]?.venue.capacity).toBe(2000);
+    fireEvent.change(screen.getByLabelText('Venue setting'), { target: { value: 'original' } });
+    expect(vi.mocked(ConcertScene).mock.calls.at(-1)?.[4]).toBeUndefined();
+  });
+
 });

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Camera, Expand, Loader2, Pause, Play, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { ConcertScene } from './ConcertScene';
 import { DEFAULT_SETTINGS, DEMO_DURATION, LOOKS, SHOTS, songSection, type DemoSettings, type DemoStats, type LightingLook } from './config';
+import { VENUE_TYPES, type VenueKind } from './venueProfile';
+import { venuePreviewOptions } from './venuePreview';
 import './concert-demo.css';
 
 export default function Concert3DDemo() {
@@ -15,6 +17,9 @@ export default function Concert3DDemo() {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [attempt, setAttempt] = useState(0);
+  const [venueType, setVenueType] = useState<VenueKind | 'original'>('original');
+  const [capacity, setCapacity] = useState(700);
+  const venueLabel = venueType === 'original' ? 'The Live Room' : VENUE_TYPES[venueType][0];
   const [stats, setStats] = useState<DemoStats>({ fps: 0, drawCalls: 0, triangles: 0, seconds: 0 });
   const [showStats, setShowStats] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -24,12 +29,12 @@ export default function Concert3DDemo() {
     let active = true;
     setState('loading'); setMessage('');
     try {
-      engine.current = new ConcertScene(canvas.current!, latestSettings.current, value => { if (active) setStats(value); }, (value, detail = '') => { if (active) { setState(value); setMessage(detail); } });
+      engine.current = new ConcertScene(canvas.current!, latestSettings.current, value => { if (active) setStats(value); }, (value, detail = '') => { if (active) { setState(value); setMessage(detail); } }, venueType === 'original' ? undefined : venuePreviewOptions(venueType, capacity));
     } catch {
       setState('error'); setMessage('This browser could not start the 3D scene. Enable hardware acceleration or try another browser, then retry.');
     }
     return () => { active = false; engine.current?.destroy(); engine.current = null; };
-  }, [attempt]);
+  }, [attempt, venueType, capacity]);
   useEffect(() => { engine.current?.setSettings(settings); }, [settings]);
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -53,17 +58,22 @@ export default function Concert3DDemo() {
       <div>
         <Link className="concert-demo__back" to="/admin/gig-viewer-demo"><ArrowLeft size={14} /> Gig viewer</Link>
         <div className="concert-demo__title"><h1>3D Concert Demo</h1><span className="concert-demo__badge">ADMIN PREVIEW</span></div>
-        <p>A late-night set at The Live Room. Take a seat, or step on stage.</p>
+        <p>Explore the game’s venue types and compare intimate gigs with landmark shows.</p>
       </div>
       <span className="concert-demo__fixture">Local demo · fictional band</span>
     </header>
 
+    <div className="concert-demo__venue-picker">
+      <label htmlFor="demo-venue-type">Venue setting<select id="demo-venue-type" value={venueType} onChange={event => { const type = event.target.value as VenueKind | 'original'; setVenueType(type); if (type !== 'original') setCapacity(VENUE_TYPES[type][1]); }}><option value="original">Original approved club</option>{Object.entries(VENUE_TYPES).map(([type, [label]]) => <option key={type} value={type}>{label}</option>)}</select></label>
+      <label htmlFor="demo-venue-capacity">Venue capacity<select id="demo-venue-capacity" disabled={venueType === 'original'} value={capacity} onChange={event => setCapacity(Number(event.target.value))}>{[...new Set([40,150,500,2000,10000,50000,100000,capacity])].sort((a,b)=>a-b).map(value => <option key={value} value={value}>{value.toLocaleString()} people</option>)}</select></label>
+      <p>Compare stage size, architecture and audience space. Preview changes do not edit game venues.</p>
+    </div>
     <section className="concert-demo__experience" ref={stage} aria-label="Interactive concert preview">
       <div className="concert-demo__viewport">
-        <canvas ref={canvas} className="concert-demo__canvas" aria-label="3D club with a four-piece band, stage lighting and an animated audience" aria-describedby="concert-scene-description" />
-        <div className="concert-demo__topline" aria-hidden="true"><span><i /> THE LIVE ROOM</span><span>CLUB SESSION / 001</span></div>
+        <canvas ref={canvas} className="concert-demo__canvas" aria-label={`3D ${venueLabel} with a four-piece band, stage lighting and an animated audience`} aria-describedby="concert-scene-description" />
+        <div className="concert-demo__topline" aria-hidden="true"><span><i /> {venueLabel.toUpperCase()}</span><span>{venueType === 'original' ? 'CLUB SESSION / 001' : `${capacity.toLocaleString()} CAPACITY`}</span></div>
         <div className="concert-demo__scene-caption" aria-hidden="true"><span>NEON HOURS</span><strong>{songSection(stats.seconds)}</strong></div>
-        <p id="concert-scene-description" className="sr-only">An original club scene with a vocalist, guitarist, bassist and drummer. Camera buttons change your viewpoint. Lighting, audience and motion controls are below the preview. This is a silent visual demo using fictional performers.</p>
+        <p id="concert-scene-description" className="sr-only">A {venueLabel} scene with a vocalist, guitarist, bassist and drummer. Camera buttons change your viewpoint. Lighting, audience and motion controls are below the preview. This is a silent visual demo using fictional performers.</p>
 
         {state !== 'ready' && <div className="concert-demo__overlay" role={state === 'error' ? 'alert' : 'status'}>
           {state === 'loading' ? <><Loader2 size={28} className="concert-demo__spinner" /><h2>Setting the stage</h2><p>Loading the band, materials and lights…</p></> : <><h2>The scene needs a restart</h2><p>{message}</p><button className="concert-demo__primary" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={16} /> Retry 3D demo</button></>}
@@ -92,7 +102,7 @@ export default function Concert3DDemo() {
       </div>
     </section>
 
-    <footer className="concert-demo__footer"><p>Four-piece band · textured club · five camera views <span>Local preview. No game records are changed.</span></p><button aria-pressed={showStats} onClick={() => setShowStats(value => !value)}><SlidersHorizontal size={14} /> Performance stats</button></footer>
+    <footer className="concert-demo__footer"><p>Four-piece band · 21 venue settings · five camera views <span>Local preview. No game records are changed.</span></p><button aria-pressed={showStats} onClick={() => setShowStats(value => !value)}><SlidersHorizontal size={14} /> Performance stats</button></footer>
     {message && state !== 'error' && <p className="concert-demo__notice" role="status">{message}</p>}
   </main>;
 }

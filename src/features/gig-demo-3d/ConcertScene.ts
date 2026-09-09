@@ -4,9 +4,10 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { buildVenue, buildDrums, microphone, cylinder, matte } from './stage';
+import { buildVenue, buildDrums, microphone, cylinder, rod, matte } from './stage';
 import { loadBand, type Musician, type DemoCrowd } from './performers';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
+import { resolveVenueProfile, stageTransform, type VenueProfile } from './venueProfile';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
 
@@ -54,10 +55,14 @@ export class ConcertScene {
   private effectsEnabled = true;
   private effectsIntensity = 1;
   private confetti: T.Points | null = null;
+  private venueProfile: VenueProfile | null = null;
+  private distantAudience: T.InstancedMesh | null = null;
   private sceneKey: CameraShot = 'front';
   private onStats: (stats: DemoStats) => void;
   constructor(private canvas: HTMLCanvasElement, initial: DemoSettings, onStats: (stats: DemoStats) => void, private onState: (state: 'loading' | 'ready' | 'error', message?: string) => void, private options?: ConcertOptions) {
     this.settings = { ...initial }; this.onStats = onStats;
+    this.venueProfile = options ? resolveVenueProfile(options.venue) : null;
+    if (this.venueProfile) { this.camera.far = Math.max(220, this.venueProfile.roomDepth * 3); this.fog.density = .7 / this.venueProfile.roomDepth; }
     try {
     this.renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = T.SRGBColorSpace; this.renderer.toneMapping = T.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.3;
@@ -72,6 +77,7 @@ export class ConcertScene {
     const key = new T.DirectionalLight('#f4d5b3', 1.3); key.position.set(0, 5, 6); this.scene.add(key);
     const backFill = new T.DirectionalLight('#759cc7', 0.6); backFill.position.set(0, 5, -7); this.scene.add(backFill);
     buildVenue(this.scene, this.assetManager, options?.venue); if (!options) { this.cymbals = buildDrums(this.scene); microphone(this.scene, [0, .9, -.43]); }
+    this.distantAudience = this.scene.getObjectByName('venue-distant-audience') as T.InstancedMesh ?? null;
     this.buildLighting(); this.particles = this.buildParticles();
     this.composer = new EffectComposer(this.renderer); this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.28, 0.45, 1.12); this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());
@@ -85,10 +91,10 @@ export class ConcertScene {
   }
   private async load() {
     try {
-      const [band] = await Promise.all([loadBand(this.scene, this.assetManager, this.options?.performers, this.options?.venue.seed), this.assetsReady]);
+      const [band] = await Promise.all([loadBand(this.scene, this.assetManager, this.options?.performers, this.options?.venue.seed, this.venueProfile ?? undefined), this.assetsReady]);
       if (this.disposed) { this.disposeScene(); return; }
       if (this.assetsFailed) throw new Error('Missing demo material');
-      this.actors = band.actors; this.crowd = band.crowd; this.cymbals.push(...band.cymbals); this.loaded = true;
+      this.actors = band.actors; if (this.options && !this.options.externalClock) this.actors.forEach(actor => { actor.root.visible = true; }); this.crowd = band.crowd; this.cymbals.push(...band.cymbals); this.loaded = true;
       if (this.hasContext) this.onState('ready');
     } catch (error) {
       cancelAnimationFrame(this.raf); this.raf = 0; this.assetsFailed = true;
@@ -96,10 +102,16 @@ export class ConcertScene {
     }
   }
   private buildLighting() {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < (this.venueProfile?.production === 'portable' ? 4 : 8); i++) {
       const back = i < 4, x = -4.4 + (i % 4) * 2.95, z = back ? -4.3 : 0.6;
       const light = new T.SpotLight('#ffe0b8', back ? 85 : 65, 20, back ? 0.27 : 0.43, 0.62, 1.3);
       light.position.set(x, 5.7, z); light.target.position.set(x * 0.5, 1, back ? 1.0 : -2.4);
+      if (this.venueProfile) {
+        light.position.set(...stageTransform(this.venueProfile, light.position.toArray()));
+        light.target.position.set(...stageTransform(this.venueProfile, light.target.position.toArray()));
+        light.distance = this.venueProfile.stageWidth * 2.2;
+        if (this.venueProfile.production === 'portable') rod(this.scene, [light.position.x, 0, light.position.z], light.position.toArray(), .025, matte('#343b43'));
+      }
       if (i === 4 || i === 7) { light.castShadow = true; light.shadow.mapSize.set(1024, 1024); light.shadow.bias = -0.0005; light.shadow.normalBias = 0.035; }
       this.scene.add(light, light.target); this.lights.push(light);
       const fixture = new T.Group(); fixture.position.copy(light.position); fixture.lookAt(light.target.position); this.scene.add(fixture);
@@ -118,7 +130,8 @@ export class ConcertScene {
     // Small warm footlights outline the stage without rapid flashing.
     for (let i = 0; i < 8; i++) {
       const mat = new T.MeshStandardMaterial({ color: '#ffd09c', emissive: '#ff8844', emissiveIntensity: 3 });
-      cylinder(this.scene, 0.075, 0.075, 0.05, [-5 + i * 1.42, 0.93, 0.4], mat, 16);
+      const point = [-5 + i * 1.42, 0.93, 0.4];
+      cylinder(this.scene, 0.075, 0.075, 0.05, this.venueProfile ? stageTransform(this.venueProfile, point) : point, mat, 16);
     }
   }
   private buildParticles() {
@@ -133,8 +146,8 @@ export class ConcertScene {
     const look = LOOKS[next.look];
     this.fog.color.set(look.ambient); this.scene.fog = next.haze ? this.fog : null;
     this.lights.forEach((light, i) => { const color = i >= 4 ? look.key : i % 2 === 0 ? look.left : look.right; light.color.set(color); this.lenses[i].emissive.set(color); });
-    this.beams.forEach((beam, i) => { const mat = beam.material as T.ShaderMaterial; mat.uniforms.color.value.set(i % 2 === 0 ? look.left : look.right); beam.visible = next.haze; });
-    this.particles.visible = next.haze && !next.reducedMotion;
+    this.beams.forEach((beam, i) => { const mat = beam.material as T.ShaderMaterial; mat.uniforms.color.value.set(i % 2 === 0 ? look.left : look.right); beam.visible = next.haze && this.venueProfile?.production !== 'portable'; });
+    this.particles.visible = next.haze && !next.reducedMotion && this.venueProfile?.production !== 'portable';
     this.bloom.strength = next.quality === 'high' ? 0.4 : 0.25;
     this.renderer.shadowMap.enabled = next.quality !== 'low';
     this.bloom.enabled = next.quality !== 'low';
@@ -155,17 +168,29 @@ export class ConcertScene {
   private moveCamera(dt: number) {
     const { camera, reducedMotion } = this.settings;
     const sequence: Exclude<CameraShot, 'director'>[] = ['front', 'guitar', 'front', 'drums', 'guitar', 'stage'];
-    const selected = camera === 'director' ? reducedMotion ? 'front' : sequence[Math.floor(this.seconds / 16) % sequence.length] : camera;
+    let selected = camera === 'director' ? reducedMotion ? 'front' : sequence[Math.floor(this.seconds / 16) % sequence.length] : camera;
     const shot = CAMERAS[selected];
     this.cameraPos.fromArray(shot.position); this.targetPos.fromArray(shot.target);
     if (this.options && (selected === 'guitar' || selected === 'drums')) {
       const actor = selected === 'drums' ? this.actors.find(p => p.role === 'drums' && p.root.visible) : this.actors.find(p => p.id === this.playback?.focusId && p.root.visible) ?? this.actors.find(p => p.role === 'guitar' && p.root.visible);
       if (actor) { this.targetPos.copy(actor.root.position).add(new T.Vector3(0, 1.2, .1)); this.cameraPos.copy(this.targetPos).add(selected === 'drums' ? new T.Vector3(2.4, 1.6, -1.5) : new T.Vector3(-1.8, .45, 3.1)); }
-      else { this.cameraPos.fromArray(CAMERAS.front.position); this.targetPos.fromArray(CAMERAS.front.target); }
+      else { selected = 'front'; this.cameraPos.fromArray(CAMERAS.front.position); this.targetPos.fromArray(CAMERAS.front.target); }
     }
     if (!reducedMotion) { this.cameraPos.x += Math.sin(this.seconds * 0.15) * 0.16; this.cameraPos.y += Math.sin(this.seconds * 0.13) * 0.035; }
     // Keep the complete band in frame when the viewport narrows.
-    if (this.options && selected === 'front') this.cameraPos.z = Math.max(this.cameraPos.z, this.targetPos.z + 5.6 / (Math.tan(shot.fov * Math.PI / 360) * this.camera.aspect));
+    if (this.venueProfile) {
+      const p = this.venueProfile;
+      if (selected === 'front') {
+        this.targetPos.set(0, p.stageHeight + 1.5, .65 - p.stageDepth * .42);
+        const distance = Math.max(p.stageDepth + 4, p.stageWidth * .62 / (Math.tan(shot.fov * Math.PI / 360) * this.camera.aspect));
+        this.cameraPos.set(.4, Math.max(p.stageHeight + Math.min(5, 1.8 + p.stageWidth * .045), p.seating && distance > p.crowdDepth ? p.seatRows * .48 + 3.2 : 0), this.targetPos.z + distance);
+      }
+      if (selected === 'drums') { this.cameraPos.z = Math.max(this.cameraPos.z, .65 - p.stageDepth + .4); this.cameraPos.x = T.MathUtils.clamp(this.cameraPos.x, -p.stageWidth / 2 + .3, p.stageWidth / 2 - .3); }
+      if (selected === 'stage') {
+        this.cameraPos.set(-p.stageWidth * .32, p.stageHeight + 1.9, .65 - p.stageDepth * .85);
+        this.targetPos.set(0, 1.5, Math.min(p.crowdDepth * .55, 20));
+      }
+    }
     if (!this.options && this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
     // An external replay uses analytic cuts/dollies: seeking to a timestamp must
     // produce the same camera, including while paused and after a backwards seek.
@@ -192,10 +217,15 @@ export class ConcertScene {
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
     });
     this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction);
+    if (this.distantAudience) {
+      const occupancy = this.playback?.occupancy ?? this.settings.crowd;
+      const budget = this.settings.quality === 'low' ? 500 : this.distantAudience.userData.maxCount as number;
+      this.distantAudience.count = Math.round(Math.min(budget, this.distantAudience.userData.maxCount) * T.MathUtils.clamp(occupancy, 0, 1));
+    }
     this.updateEffects();
     this.lights.forEach((light, i) => {
-      light.intensity = (i < 4 ? 85 : 65) * (this.playback?.lightLevel ?? 1);
-      if (i < 4) { light.target.position.x = (i - 1.5) * 1.4 + Math.sin(t * 0.35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4); const beam = this.beams[i]; beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), light.target.position.clone().sub(light.position).normalize()); } });
+      light.intensity = (i < 4 ? 85 : 65) * (this.venueProfile?.production === 'portable' ? .4 : 1) * (this.playback?.lightLevel ?? 1);
+      if (i < 4) { light.target.position.x = ((i - 1.5) * 1.4 + Math.sin(t * 0.35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4)) * (this.venueProfile ? this.venueProfile.stageWidth / 11.6 : 1); const beam = this.beams[i]; beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), light.target.position.clone().sub(light.position).normalize()); } });
     this.cymbals.forEach((object, i) => { object.rotation.z = this.settings.reducedMotion ? 0 : Math.sin(t * 12.56 + i) * 0.012 * this.settings.energy; });
     this.particles.rotation.y = t * 0.008; this.moveCamera(dt);
     this.renderer.info.reset(); this.composer.render();

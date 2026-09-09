@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { resolveVenueProfile } from '@/features/gig-demo-3d/venueProfile';
 import { ConcertScene } from '@/features/gig-demo-3d/ConcertScene';
 import { DEFAULT_SETTINGS, type CameraShot, type DemoSettings } from '@/features/gig-demo-3d/config';
 import { useGigPlayerModels } from '@/features/player-model/usePlayerModel';
@@ -28,7 +29,8 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   // Structural updates rebuild once; playback, camera and accessibility controls
   // update the existing WebGL context instead of downloading the band again.
   const optionsKey = JSON.stringify(options);
-  const frame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning);
+  const venueProfile = resolveVenueProfile(options.venue);
+  const frame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue);
   const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: CAMERAS[cameraMode], reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: frame.look, energy: frame.energy, crowd: frame.crowd, haze: tier !== 'low' };
   const latest = useRef({ settings, frame, pyrotechnics, pyroIntensity, tuning }); latest.current = { settings, frame, pyrotechnics, pyroIntensity, tuning };
   const waiting = appearances.isFetching && !appearances.data && !appearances.isError;
@@ -52,7 +54,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
 
   return <div className="relative h-full min-h-0 w-full bg-slate-950" data-renderer="three" data-renderer-status={status}>
     <canvas ref={canvas} className="block h-full min-h-0 w-full" role="img" aria-label={`3D performance at ${experience?.gig.venue.name ?? 'the venue'}. ${plan.entities.map(p => `${p.displayName}, ${p.roleLabel}`).join('; ')}. Use the timeline for commentary.`} />
-    <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3 text-xs text-white/80" aria-hidden="true"><span className="rounded bg-black/40 px-3 py-2 backdrop-blur">{experience?.gig.venue.name ?? 'Live performance'}</span><span className="rounded bg-black/40 px-3 py-2">3D STAGE</span></div>
+    <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3 text-xs text-white/80" aria-hidden="true"><span className="rounded bg-black/40 px-3 py-2 backdrop-blur">{experience?.gig.venue.name ?? 'Live performance'}</span><span className="rounded bg-black/40 px-3 py-2">{venueProfile.label}{options.venue.capacity && options.venue.capacity > 0 ? ` · ${options.venue.capacity.toLocaleString()} capacity` : ''}</span></div>
     {(status !== 'ready' || waiting) && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-8 text-center text-slate-100" role={status === 'error' ? 'alert' : 'status'}>
       <strong className="text-lg">{status === 'error' ? 'The stage could not load' : 'Setting the stage'}</strong>
       <p className="max-w-md text-sm text-slate-300">{status === 'error' ? message : 'Loading the performers, outfits, lighting and venue materials…'}</p>

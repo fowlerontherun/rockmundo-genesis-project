@@ -38,4 +38,17 @@ describe('canonical replay to 3D stage', () => {
     const density = (time: number) => concertFrame(buildStagePlan(replay, null), replay, null, derivePlaybackState(replay, time), false, DEFAULT_CROWD_TUNING).crowd;
     expect(density(fill.scheduledOffsetMs)).toBe(0); expect(density(fill.scheduledOffsetMs + fill.durationMs / 2)).toBeGreaterThan(0); expect(density(fill.scheduledOffsetMs + fill.durationMs)).toBeGreaterThan(density(fill.scheduledOffsetMs + fill.durationMs / 2));
   });
+  it('keeps initial and replay positions aligned on capacity-scaled stages and binds distant occupancy to attendance', async () => {
+    const replay = await makeStageReplay(undefined, 40);
+    const song = replay.events.find(e => e.phase === 'song_performance')!;
+    for (const capacity of [70, 2000, 65000]) {
+      const experience = { gig: { venue: { capacity, type: 'concert_hall', id: 'same-venue', name: 'Actual Hall' } }, headline: { attendance: { status: 'available', value: 40 } } } as GigExperienceDTO;
+      const plan = buildStagePlan(replay, experience), options = concertOptions(plan, {}, replay, experience, 'theatre');
+      const state = concertFrame(plan, replay, experience, derivePlaybackState(replay, song.scheduledOffsetMs + 100), false, DEFAULT_CROWD_TUNING, options.venue);
+      expect(state.performers[3].position).toEqual(options.performers[3].position);
+      expect(state.occupancy).toBeCloseTo(40 / capacity);
+      expect(options.venue).toMatchObject({ type: 'concert_hall', capacity });
+    }
+  });
+
 });
