@@ -137,7 +137,7 @@ const generateSyntheticOrders = (
   bandId: string,
   inventory: MerchInventoryItem[],
 ): MerchOrder[] => {
-  const items = inventory.length ? inventory : [defaultInventoryStub];
+  const items = inventory.length ? inventory : [defaultInventoryStub as unknown as MerchInventoryItem];
   const random = seededRandom(`${bandId}:${items.length}`);
   const orderCount = Math.max(12, items.length * 6);
   const now = Date.now();
@@ -145,7 +145,7 @@ const generateSyntheticOrders = (
   const orders: MerchOrder[] = [];
 
   for (let index = 0; index < orderCount; index += 1) {
-    const item = items[Math.floor(random() * items.length)] ?? defaultInventoryStub;
+    const item = items[Math.floor(random() * items.length)] ?? (defaultInventoryStub as unknown as MerchInventoryItem);
     const quantity = Math.max(1, Math.round(random() * 5));
     const unitPrice = deriveUnitPrice(item);
     const channel = ORDER_CHANNELS[Math.floor(random() * ORDER_CHANNELS.length)];
