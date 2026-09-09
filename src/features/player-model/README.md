@@ -1,14 +1,20 @@
 # Player stage models
 
-`/avatar-designer` opens the 3D stage model editor; the existing profile portrait
-creator remains in its own tab. The editor and gig viewers use the same rig,
+`/avatar-designer` and the onboarding appearance step open the full-body Avatar
+Creator, replacing the photo-generator designer. Existing profile images remain
+stored separately. The editor and gig viewers use the same rig,
 modular assembly, skin/clothing dyes and performance poses.
 
 ## Shipped behaviour
 
 - Masculine and feminine rig families; height/build, skin tone and hair colour.
-- Three heads and three choices each for top, trousers and footwear. There are
-  81 combinations per frame, plus dyes and body proportions.
+- Three heads and six free choices each for tops, bottoms and footwear: 18 starter
+  pieces, 12 named colour swatches per slot and a custom colour picker. Every new
+  and existing character can equip them immediately; no purchase or grant is needed.
+- Three base silhouettes per slot plus fabric/finish variants: striped and plaid
+  tops, denim/check/pinstripe bottoms, canvas/two-tone/patent footwear. Local 128px
+  textile maps use rest-space UVs so patterns follow the animated rig. These are
+  garment designs built from the existing meshes, not 18 new mesh silhouettes.
 - Free starter clothing and standard instrument finishes. Saving costs nothing
   and does not affect skill, cash, equipment ownership or gig outcomes.
 - Camera rotation/zoom, keyboard controls and ten performance preview poses.
@@ -50,7 +56,8 @@ Only mesh containers count as wardrobe parts: bones named `Body` or `Head` must
 never be cloned as clothing. The women's independent foot controls are reparented
 to the lower legs while preserving their rest world transforms for the shared IK
 solver. A skinned calf fills the gap between cropped punk trousers and low shoes.
-Tests check all combinations, unique bones, visible mesh deformation and hand
+Tests check base mesh combinations, all 18 items on both frames, round-trip saves,
+owned texture lifetimes, unique bones, visible mesh deformation and hand
 contact with instruments. Loaded source geometry, preview swaps, inactive crowd
 poses and WebGL resources have explicit cleanup.
 
@@ -69,3 +76,8 @@ poses and WebGL resources have explicit cleanup.
 
 Purchases, accessories and a full face sculpting system are follow-up features;
 the shipped editor only exposes controls that affect the actual stage model.
+
+The six-starter-clothing migration extends only the validated item allow-list.
+`supabase/tests/starter_wardrobe.sql` tests all 18 IDs on both frames and rejects
+invalid IDs/colours without writing player data. Run the offline frontend suite
+with `./node_modules/.bin/vitest run --config vitest.stage-models.config.ts --maxWorkers=1`.

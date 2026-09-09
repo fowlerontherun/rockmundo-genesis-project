@@ -46,3 +46,23 @@
 .player-model-editor__success { color: #95e0c4; }.player-model-editor__error { color: #ffb1b1; }
 .player-model-editor :focus-visible { outline: 2px solid #91e8e4; outline-offset: 4px; }
 @media (max-width: 760px) { .player-model-editor__layout { grid-template-columns: 1fr; }.player-model-editor__intro { padding: 20px; align-items: flex-start; flex-direction: column; gap: 12px; }.player-model-editor__form { padding: 23px; border-left: 0; border-top: 1px solid #2a3748; }.player-model-preview { height: 440px; position: relative; top: 0; }.player-model-editor__preview-role { padding: 16px 20px; } }
+
+.player-model-wardrobe { padding: 20px 0; border-top: 1px solid #344155; }
+.player-model-wardrobe__heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.player-model-wardrobe__heading h3 { font-size: 14px; font-weight: 600; }.player-model-wardrobe__heading > span { font-size: 10px; color: #93d9ca; }
+.player-model-wardrobe__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.player-model-wardrobe__grid button { border: 1px solid #3b4a5e; border-radius: 9px; background: #1b2839; padding: 9px 5px; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 11px; line-height: 1.4; }
+.player-model-wardrobe__grid button[aria-pressed=true] { border-color: #8adbd7; box-shadow: inset 0 0 0 1px #8adbd7; background: #25414a; }
+.player-model-wardrobe__tile { display: grid; place-items: center; border-radius: 5px; width: 100%; height: 54px; background: #738092; }
+.player-model-wardrobe__tile svg { filter: drop-shadow(0 1px 1px #ffffff66); }
+.fabric-stripe { background: repeating-linear-gradient(0deg, #8e9caf 0 7px, #354659 7px 11px); }
+.fabric-plaid { background: repeating-linear-gradient(90deg, #ffffff22 0 10px, #00000033 10px 16px), repeating-linear-gradient(0deg, #8999ad 0 10px, #384b62 10px 16px); }
+.fabric-pinstripe { background: repeating-linear-gradient(90deg, #3b4b60 0 10px, #879aaf 10px 11px); }
+.fabric-denim { background: repeating-linear-gradient(135deg, #758ca8 0 2px, #465c76 2px 4px); }
+.fabric-canvas { background: repeating-linear-gradient(0deg, #ffffff22 0 2px, transparent 2px 4px), repeating-linear-gradient(90deg, #8c9aa7 0 2px, #6d7988 2px 4px); }
+.fabric-two-tone { background: linear-gradient(0deg, #33455b 50%, #a8b5c5 50%); }.fabric-patent { background: linear-gradient(135deg, #283748 20%, #bac8d7 40%, #374a60 55%); }
+.player-model-wardrobe__equipped { font-size: 11px; color: #aebfd2; margin: 12px 0; }
+.player-model-wardrobe__colours { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.player-model-wardrobe__colours > button { width: 30px; height: 30px; border: 2px solid #617083; border-radius: 50%; }
+.player-model-wardrobe__colours > button[aria-pressed=true] { border-color: white; outline: 2px solid #81d9d1; outline-offset: 2px; }
+.player-model-wardrobe__colours label { display: flex; align-items: center; gap: 7px; font-size: 10px; color: #c3ccda; }

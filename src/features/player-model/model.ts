@@ -2,7 +2,9 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { demoAssetUrl } from '@/features/gig-demo-3d/assets';
-import { equipmentStyle, modelFile, type PlayerAppearance } from './appearance';
+import { equipmentItem, equipmentStyle, modelFile, type PlayerAppearance } from './appearance';
+
+import { fabricTexture, fabricUVs } from './fabrics';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -41,10 +43,10 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
     }
   }
   const choices = [
-    { part: 'head', style: appearance.head.style, dye: appearance.head.hair },
-    { part: 'body', style: equipmentStyle(appearance, 'top'), dye: appearance.equipment.top.color },
-    { part: 'legs', style: equipmentStyle(appearance, 'bottom'), dye: appearance.equipment.bottom.color },
-    { part: 'feet', style: equipmentStyle(appearance, 'footwear'), dye: appearance.equipment.footwear.color },
+    { part: 'head', style: appearance.head.style, dye: appearance.head.hair, fabric: 'plain' as const },
+    { part: 'body', style: equipmentStyle(appearance, 'top'), dye: appearance.equipment.top.color, fabric: equipmentItem(appearance, 'top').fabric },
+    { part: 'legs', style: equipmentStyle(appearance, 'bottom'), dye: appearance.equipment.bottom.color, fabric: equipmentItem(appearance, 'bottom').fabric },
+    { part: 'feet', style: equipmentStyle(appearance, 'footwear'), dye: appearance.equipment.footwear.color, fabric: equipmentItem(appearance, 'footwear').fabric },
   ];
   for (const choice of choices) {
     const matches = (node: T.Object3D) => !(node instanceof T.Bone) && new RegExp(`_${choice.part}(?:_|$)`, 'i').test(node.name);
@@ -58,6 +60,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
         if (!original?.isSkinnedMesh) throw new Error('Incompatible character geometry');
         clonedNode.geometry = original.geometry.clone();
+        if (choice.fabric !== 'plain') fabricUVs(clonedNode.geometry, choice.part === 'feet');
         const dyeMaterial = (originalMaterial: T.Material) => {
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
@@ -69,7 +72,13 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
             // Women's Brown is the iris; Hair_Brown is brows. White on a body
             // is dyeable fabric, but eye whites and metal details keep contrast.
             if (/hair|eyebrow|pink|red/.test(name)) material.color.set(appearance.head.hair);
-          } else if (!/earring|metal/.test(name) && !(name === 'white' && (choice.style !== 'casual' || choice.part === 'feet'))) material.color.set(choice.dye);
+          } else if (!/earring|metal/.test(name) && !(name === 'white' && (choice.style !== 'casual' || choice.part === 'feet'))) {
+            material.color.set(choice.dye);
+            if (choice.fabric !== 'plain') {
+              material.map = fabricTexture(choice.fabric);
+              material.roughness = choice.fabric === 'patent' ? .2 : choice.fabric === 'canvas' || choice.fabric === 'denim' ? .95 : .84;
+            }
+          }
           return material;
         };
         clonedNode.material = Array.isArray(original.material) ? original.material.map(dyeMaterial) : dyeMaterial(original.material);

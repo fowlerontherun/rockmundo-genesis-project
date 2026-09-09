@@ -7,9 +7,32 @@ export const SLOTS = ['top', 'bottom', 'footwear'] as const;
 export type Style = typeof STYLES[number];
 export type EquipmentSlot = typeof SLOTS[number];
 export const STYLE_LABELS: Record<Style, string> = { casual: 'Casual', punk: 'Punk', suit: 'Tailored' };
-export const STARTER_ITEMS = Object.fromEntries(SLOTS.map(slot => [slot,
-  STYLES.map(style => ({ id: `starter.${slot}.${style}`, style, label: STYLE_LABELS[style] })),
-])) as Record<EquipmentSlot, { id: string; style: Style; label: string }[]>;
+export type Fabric = 'plain' | 'stripe' | 'plaid' | 'pinstripe' | 'denim' | 'canvas' | 'two-tone' | 'patent';
+export interface StarterItem { id: string; style: Style; label: string; fabric: Fabric }
+const wardrobe = (slot: EquipmentSlot, rows: [string, Style, string, Fabric][]): StarterItem[] => rows.map(([key, style, label, fabric]) => ({ id: `starter.${slot}.${key}`, style, label, fabric }));
+export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
+  top: wardrobe('top', [
+    ['casual', 'casual', 'Everyday top', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
+    ['stripe', 'casual', 'Striped top', 'stripe'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
+  ]),
+  bottom: wardrobe('bottom', [
+    ['casual', 'casual', 'Everyday trousers', 'plain'], ['punk', 'punk', 'Punk trousers', 'plain'], ['suit', 'suit', 'Tailored trousers', 'plain'],
+    ['denim', 'casual', 'Denim trousers', 'denim'], ['plaid', 'suit', 'Checked trousers', 'plaid'], ['pinstripe', 'suit', 'Pinstripe trousers', 'pinstripe'],
+  ]),
+  footwear: wardrobe('footwear', [
+    ['casual', 'casual', 'Everyday shoes', 'plain'], ['punk', 'punk', 'Punk boots', 'plain'], ['suit', 'suit', 'Formal shoes', 'plain'],
+    ['canvas', 'casual', 'Canvas shoes', 'canvas'], ['two-tone', 'suit', 'Two-tone shoes', 'two-tone'], ['patent', 'suit', 'Patent shoes', 'patent'],
+  ]),
+};
+export const SLOT_LABELS: Record<EquipmentSlot, string> = { top: 'Tops', bottom: 'Bottoms', footwear: 'Footwear' };
+export const CLOTHING_COLORS = [
+  ['Black', '#20232b'], ['Chalk', '#eee8db'], ['Slate', '#657386'], ['Red', '#bd3548'],
+  ['Rust', '#ad6241'], ['Gold', '#d8ad49'], ['Green', '#3d795b'], ['Teal', '#338b8d'],
+  ['Blue', '#426baa'], ['Navy', '#283954'], ['Purple', '#8055a2'], ['Pink', '#d376a1'],
+] as const;
+export function equipmentItem(appearance: PlayerAppearance, slot: EquipmentSlot): StarterItem {
+  return STARTER_ITEMS[slot].find(item => item.id === appearance.equipment[slot].itemId) ?? STARTER_ITEMS[slot][0];
+}
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/).transform(value => value.toLowerCase());
 const item = (slot: EquipmentSlot) => z.string().refine(value => STARTER_ITEMS[slot].some(entry => entry.id === value), 'Choose an available starter item');
 export const appearanceSchema = z.object({
@@ -45,7 +68,7 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   return parsed.success ? parsed.data : defaultAppearance(seed);
 }
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
-  return STARTER_ITEMS[slot].find(item => item.id === appearance.equipment[slot].itemId)?.style ?? 'casual';
+  return equipmentItem(appearance, slot).style;
 }
 export function modelFile(frame: PlayerAppearance['body']['frame'], style: Style) {
   return `${frame === 'feminine' ? 'female-' : ''}${style}.glb`;

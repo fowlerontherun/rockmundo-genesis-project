@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
 import { usePlayerModel } from './usePlayerModel';
-import { defaultAppearance, SLOTS, STARTER_ITEMS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
+import { defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
 import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
+import { StarterWardrobe } from './StarterWardrobe';
 import './player-model.css';
 
 const SKIN_COLORS = ['#f3d3b7', '#dfb18c', '#c58c63', '#a96f46', '#805132', '#593a2d', '#382a24'];
@@ -23,7 +24,7 @@ function EditorSession({ profileId, initial, model }: { profileId: string; initi
   const outfit = (style: Style) => change({ ...draft, equipment: { ...draft.equipment, ...Object.fromEntries(SLOTS.map(slot => [slot, { ...draft.equipment[slot], itemId: `starter.${slot}.${style}` }])) } });
   async function save() {
     setError(''); setFeedback('');
-    try { const saved = await model.save.mutateAsync({ profileId, appearance: draft, revision: baseline.revision }); setBaseline(saved); setDraft(saved.appearance); setFeedback('Stage model saved. Your character will wear this look in gig viewers.'); }
+    try { const saved = await model.save.mutateAsync({ profileId, appearance: draft, revision: baseline.revision }); setBaseline(saved); setDraft(saved.appearance); setFeedback('Avatar saved. Your character will wear this look in gig viewers.'); }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'Your model could not be saved. Please try again.'); }
   }
   async function reload() {
@@ -31,8 +32,8 @@ function EditorSession({ profileId, initial, model }: { profileId: string; initi
     if (result.data && !result.error) { setBaseline(result.data); setDraft(result.data.appearance); setError(''); setFeedback('Saved model reloaded.'); }
     else setError('Your saved model could not be reloaded. Your edits are still here.');
   }
-  return <section className="player-model-editor" aria-label="Stage model designer">
-    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your stage identity</h2><p>Build a look for this character and see it on stage with your band.</p></div><span className="player-model-editor__badge">STARTER WARDROBE · FREE</span></div>
+  return <section className="player-model-editor" aria-label="Full-body avatar creator">
+    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your character, dress them head to toe, and take the same look on stage.</p></div><span className="player-model-editor__badge">18 STARTER PIECES · ALL FREE</span></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
         <PlayerModelPreview appearance={draft} role={role} />
@@ -50,13 +51,14 @@ function EditorSession({ profileId, initial, model }: { profileId: string; initi
         <fieldset disabled={model.save.isPending}>
           <legend>02 <span>Wardrobe</span></legend>
           <div className="player-model-editor__choices" role="group" aria-label="Outfit presets">{STYLES.map(style => <button key={style} type="button" onClick={() => outfit(style)}>{STYLE_LABELS[style]}</button>)}</div>
-          {SLOTS.map(slot => <div className="player-model-editor__item" key={slot}><label htmlFor={`model-${slot}`}>{({ top: 'Top', bottom: 'Trousers', footwear: 'Footwear' })[slot]}</label><select id={`model-${slot}`} value={draft.equipment[slot].itemId} onChange={event => change({ ...draft, equipment: { ...draft.equipment, [slot]: { ...draft.equipment[slot], itemId: event.target.value } } })}>{STARTER_ITEMS[slot].map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select><input type="color" aria-label={`${slot} colour`} value={draft.equipment[slot].color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, [slot]: { ...draft.equipment[slot], color: event.target.value } } })} /></div>)}
+          <p className="player-model-editor__hint">18 free starter pieces. Six tops, six bottoms and six footwear designs, all ready to wear.</p>
+          {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} />)}
           <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} /></div>
           <p className="player-model-editor__hint">Mix individual pieces and colours. Clothing and instrument finishes are cosmetic.</p>
         </fieldset>
         <div className="player-model-editor__save">
           <div className="player-model-editor__save-state" aria-live="polite">{baseline.revision == null ? 'Create your first saved stage model' : dirty ? 'You have unsaved changes' : 'Your stage model is saved'}</div>
-          <button type="submit" className="player-model-editor__primary" disabled={model.save.isPending || (!dirty && baseline.revision != null)}>{model.save.isPending ? 'Saving…' : 'Save stage model'}</button>
+          <button type="submit" className="player-model-editor__primary" disabled={model.save.isPending || (!dirty && baseline.revision != null)}>{model.save.isPending ? 'Saving…' : 'Save avatar'}</button>
           <div className="player-model-editor__secondary"><button type="button" disabled={model.save.isPending || !dirty} onClick={() => change(baseline.appearance)}>Discard edits</button><button type="button" disabled={model.save.isPending} onClick={() => change(defaultAppearance(profileId))}>Starter look</button><button type="button" disabled={model.save.isPending || model.query.isFetching} onClick={() => void reload()}>Reload saved</button></div>
           {feedback && <p role="status" className="player-model-editor__success">{feedback}</p>}{error && <p role="alert" className="player-model-editor__error">{error}</p>}
         </div>

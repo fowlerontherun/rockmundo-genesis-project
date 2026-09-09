@@ -4,7 +4,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assemblePlayerModel, disposeModel, type ModelLibrary } from './model';
-import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile } from './appearance';
+import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, resolveAppearance as roundTrip } from './appearance';
 import { Musician } from '@/features/gig-demo-3d/performers';
 
 const library: ModelLibrary = new Map();
@@ -85,5 +85,31 @@ describe('appearance boundaries', () => {
       (a: ReturnType<typeof defaultAppearance>) => { a.head.hair = 'red'; },
     ]) { const value = defaultAppearance(); edit(value); expect(appearanceSchema.safeParse(value).success).toBe(false); expect(resolveAppearance(value, 'safe')).toEqual(defaultAppearance('safe')); }
     expect(appearanceSchema.safeParse({ ...defaultAppearance(), bonus: 100 }).success).toBe(false);
+  });
+});
+
+describe('expanded starter wardrobe', () => {
+  it.each(['masculine', 'feminine'] as const)('renders and preserves all 18 starter pieces on the %s gig rig', frame => {
+    for (const slot of SLOTS) {
+      expect(STARTER_ITEMS[slot]).toHaveLength(6);
+      expect(new Set(STARTER_ITEMS[slot].map(item => item.id)).size).toBe(6);
+      for (const item of STARTER_ITEMS[slot]) {
+        const appearance = defaultAppearance(); appearance.body.frame = frame;
+        appearance.equipment[slot] = { itemId: item.id, color: '#338b8d' };
+        expect(roundTrip(JSON.parse(JSON.stringify(appearance)))).toEqual(appearance);
+        const assembled = assemblePlayerModel(library, appearance);
+        const actor = new Musician(assembled, 'guitar', [0, 0, 0], 0, undefined, appearance);
+        if (item.fabric !== 'plain') {
+          const maps: T.Texture[] = [], sourceMaps: T.Texture[] = [];
+          assembled.traverse(node => { if (node instanceof T.Mesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) if ((material as T.MeshStandardMaterial).map) sourceMaps.push((material as T.MeshStandardMaterial).map!); });
+          actor.model.traverse(node => { if (node instanceof T.Mesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) { const mat = material as T.MeshStandardMaterial; if (mat.map?.name === `starter-fabric-${item.fabric}`) { maps.push(mat.map); expect(mat.color.getHexString()).toBe('338b8d'); if (item.fabric === 'patent') expect(mat.roughness).toBe(.2); } } });
+          expect(maps.length).toBeGreaterThan(0);
+          for (const map of maps) expect(sourceMaps).not.toContain(map);
+        }
+        disposeModel(assembled); actor.update(3, .8, false);
+        const bounds = new T.Box3().setFromObject(actor.root); expect(bounds.max.y).toBeLessThan(2.8); expect(bounds.min.y).toBeGreaterThan(-.25);
+        disposeModel(actor.root);
+      }
+    }
   });
 });

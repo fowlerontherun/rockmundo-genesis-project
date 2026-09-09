@@ -59,7 +59,8 @@ export class Musician {
         const configure = (sourceMat: T.Material) => {
           const mat = sourceMat.clone() as T.MeshStandardMaterial;
           if (mat.isMeshStandardMaterial) {
-            const skin = /skin|eye|hair/i.test(mat.name); mat.metalness = /earring/i.test(mat.name) ? 0.6 : 0; mat.roughness = skin ? 0.69 : 0.82;
+            if (mat.map) mat.map = mat.map.clone();
+            const skin = /skin|eye|hair/i.test(mat.name); if (!appearance) { mat.metalness = /earring/i.test(mat.name) ? 0.6 : 0; mat.roughness = skin ? 0.69 : 0.82; }
             if (!appearance && /lightblue|blue|green|red_dark/i.test(mat.name)) mat.color.set(tint);
             if (!appearance && /black/i.test(mat.name)) { mat.color.set('#222630'); mat.roughness = 0.55; }
           }
