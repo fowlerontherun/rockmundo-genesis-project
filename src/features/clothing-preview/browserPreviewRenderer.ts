@@ -135,6 +135,7 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
     }
     return result;
   } finally {
+    scene.remove(garment);
     disposeProceduralGarment(garment);
     scene.traverse(object => {
       if (!(object instanceof T.Mesh)) return;
