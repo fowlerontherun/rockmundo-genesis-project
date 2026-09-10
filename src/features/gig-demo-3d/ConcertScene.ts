@@ -281,7 +281,7 @@ export class ConcertScene {
       if (object instanceof T.SkinnedMesh) object.skeleton.dispose();
       if (object instanceof T.SpotLight) object.shadow.dispose();
     });
-    geometries.forEach(g => g.dispose()); textures.forEach(t => t.dispose()); materials.forEach(m => m.dispose();); this.scene.clear();
+    geometries.forEach(g => g.dispose()); textures.forEach(t => t.dispose()); materials.forEach(m => m.dispose()); this.scene.clear();
   }
   destroy() {
     this.disposed = true; cancelAnimationFrame(this.raf); this.resizeObserver?.disconnect(); document.removeEventListener('visibilitychange', this.visibilityChanged);
