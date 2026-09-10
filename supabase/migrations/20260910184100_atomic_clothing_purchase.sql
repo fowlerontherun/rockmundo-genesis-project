@@ -24,6 +24,36 @@ CREATE POLICY "Players can view their clothing purchases"
 ON public.clothing_skin_purchases FOR SELECT TO authenticated
 USING (user_id = auth.uid());
 
+-- Legacy avatar ownership allowed players to insert/update arbitrary player_owned_skins
+-- rows. Keep that path for non-clothing cosmetics, but clothing ownership and equip
+-- state must now go through the server functions below. The item-id check prevents a
+-- client from disguising a clothing item as item_type='shirt' or another legacy value.
+DROP POLICY IF EXISTS "Players can insert their own skins" ON public.player_owned_skins;
+CREATE POLICY "Players can insert their own skins"
+ON public.player_owned_skins FOR INSERT TO authenticated
+WITH CHECK (
+  profile_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
+  AND NOT EXISTS (
+    SELECT 1 FROM public.avatar_clothing_items aci WHERE aci.id = item_id
+  )
+);
+
+DROP POLICY IF EXISTS "Players can update their own skins" ON public.player_owned_skins;
+CREATE POLICY "Players can update their own skins"
+ON public.player_owned_skins FOR UPDATE TO authenticated
+USING (
+  profile_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
+  AND NOT EXISTS (
+    SELECT 1 FROM public.avatar_clothing_items aci WHERE aci.id = item_id
+  )
+)
+WITH CHECK (
+  profile_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
+  AND NOT EXISTS (
+    SELECT 1 FROM public.avatar_clothing_items aci WHERE aci.id = item_id
+  )
+);
+
 CREATE OR REPLACE FUNCTION public.purchase_clothing_item_atomic(
   p_profile_id uuid,
   p_item_id uuid,
