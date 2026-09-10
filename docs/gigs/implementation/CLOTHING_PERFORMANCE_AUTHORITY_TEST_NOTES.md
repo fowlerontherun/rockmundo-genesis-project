@@ -1,0 +1,1 @@
+Integration guards verify that `complete-gig` calls `get_band_equipped_clothing_performance_bonus` before `settle_gig_commerce`, retains the 25-point rating ceiling, and persists pre/post clothing performance audit values on the gig outcome.

@@ -39,7 +39,7 @@ serve(async (req) => {
 
     const { data: outcome, error: outcomeError } = await supabaseClient
       .from('gig_outcomes')
-      .select('id, actual_attendance, ticket_revenue, overall_rating, net_profit, fame_gained, completed_at')
+      .select('id, actual_attendance, ticket_revenue, overall_rating, net_profit, fame_gained, completed_at, xp_breakdown')
       .eq('gig_id', gigId)
       .single();
 
@@ -239,6 +239,46 @@ serve(async (req) => {
       console.log(`[complete-gig] Absence penalty applied: ${(absencePenalty * 100).toFixed(0)}% (${(gig as any).absent_member_count || 0} missing member(s))`);
     }
 
+    // === EQUIPPED CLOTHING PERFORMANCE BONUS ===
+    // Apply once after all technical/attendance penalties but before commerce and
+    // every downstream reward. The database resolver averages active core members
+    // so larger bands cannot stack the modifier simply by adding more members.
+    const ratingBeforeClothingBonus = avgRating;
+    let clothingPerformancePct = 0;
+    let clothingPerformanceMemberCount = 0;
+    try {
+      const { data: clothingPerformance, error: clothingPerformanceError } = await supabaseClient.rpc(
+        'get_band_equipped_clothing_performance_bonus',
+        { p_band_id: gig.band_id },
+      );
+      if (clothingPerformanceError) throw clothingPerformanceError;
+
+      const clothingRow = Array.isArray(clothingPerformance)
+        ? clothingPerformance[0]
+        : clothingPerformance;
+      clothingPerformancePct = Math.max(0, Math.min(20, Number((clothingRow as any)?.performance_pct ?? 0)));
+      clothingPerformanceMemberCount = Math.max(0, Number((clothingRow as any)?.member_count ?? 0));
+
+      if (clothingPerformancePct > 0) {
+        avgRating = Math.max(0, Math.min(25, avgRating * (1 + clothingPerformancePct / 100)));
+        console.log(
+          `[complete-gig] Equipped clothing performance: +${clothingPerformancePct.toFixed(2)}% across ${clothingPerformanceMemberCount} active member(s), rating ${ratingBeforeClothingBonus.toFixed(2)} → ${avgRating.toFixed(2)}`,
+        );
+      }
+    } catch (clothingPerformanceError) {
+      console.warn('[complete-gig] Equipped clothing performance bonus unavailable; continuing without it:', clothingPerformanceError);
+    }
+
+    const clothingPerformanceAudit = {
+      applied: clothingPerformancePct > 0,
+      performance_pct: clothingPerformancePct,
+      member_count: clothingPerformanceMemberCount,
+      rating_before: Math.round(ratingBeforeClothingBonus * 100) / 100,
+      rating_after: Math.round(avgRating * 100) / 100,
+      cap: 25,
+      resolver: 'get_band_equipped_clothing_performance_bonus',
+    };
+
     // Commerce is a single transactional authority. The RPC serializes on the
     // gig, returns the immutable existing settlement on retry, locks inventory,
     // and writes orders, stock, venue finance and outcome aggregates together.
@@ -427,6 +467,10 @@ serve(async (req) => {
         production_breakdown: { score: Math.round(productionScore), setup_minutes: productionSetupMinutes, setup_access_minutes: venueSetupAccess, cost: productionCost, audience_modifier: audienceProductionBonus, complexity: productionComplexity },
         soundcheck_breakdown: { type: soundcheckType, cost: soundcheckCost, sound_modifier: soundcheckBonus, fatigue_penalty: fatiguePenalty },
         production_incidents: productionIncidents,
+        xp_breakdown: {
+          ...(((outcome as any).xp_breakdown && typeof (outcome as any).xp_breakdown === 'object') ? (outcome as any).xp_breakdown : {}),
+          clothing_performance: clothingPerformanceAudit,
+        },
         completed_at: new Date().toISOString()
       })
       .eq('id', outcome.id);
@@ -905,6 +949,7 @@ serve(async (req) => {
               attendance: outcome.actual_attendance,
               personal_fame_gained: personalFamePerCore,
               personal_fans_gained: personalFansPerCore,
+              clothing_performance_pct: clothingPerformancePct,
             }
           });
 
@@ -1011,6 +1056,7 @@ serve(async (req) => {
             fans: newFansTotal,
             attendance: outcome.actual_attendance,
             merch_sold: merchItemsSold,
+            clothing_performance_pct: clothingPerformancePct,
           },
           action_type: "navigate",
           action_data: { route: "/gigs" },
@@ -1053,6 +1099,7 @@ serve(async (req) => {
                 attendance: outcome.actual_attendance,
                 rating: avgRating.toFixed(1),
                 gig_id: gigId,
+                clothing_performance_pct: clothingPerformancePct,
               },
               related_entity_type: 'gig',
               related_entity_id: gigId,
@@ -1076,7 +1123,8 @@ serve(async (req) => {
           chemistry_change: chemistryChange,
           new_fans: newFansTotal,
           merch_items_sold: merchItemsSold,
-          merch_revenue: merchRevenue
+          merch_revenue: merchRevenue,
+          clothing_performance_pct: clothingPerformancePct,
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
