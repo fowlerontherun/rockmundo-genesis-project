@@ -7,6 +7,7 @@ import {
   renderClothingTurntable,
 } from '@/features/clothing-preview/browserPreviewRenderer';
 import {
+  CLOTHING_PREVIEW_RENDERER_VERSION,
   CLOTHING_TURNTABLE_VIEWS,
   createClothingPreviewManifest,
   type ClothingPreviewViewKey,
@@ -38,6 +39,21 @@ function requestedViewDefinitions(jobType: string, requestedViews: unknown) {
   return filtered.length ? filtered : [...CLOTHING_TURNTABLE_VIEWS];
 }
 
+function previousPreviewPaths(item: ClothingItem, replacementJobId: string) {
+  const manifest = item.preview_manifest as any;
+  const previousJobId = String(manifest?.storage?.jobId || '');
+  const rendererVersion = String(manifest?.rendererVersion || '');
+  const bucket = String(manifest?.storage?.bucket || '');
+  if (!previousJobId || previousJobId === replacementJobId || bucket !== CLOTHING_PREVIEW_BUCKET || rendererVersion !== CLOTHING_PREVIEW_RENDERER_VERSION) return [];
+  return CLOTHING_TURNTABLE_VIEWS.map(view => `${item.id}/${rendererVersion}/${previousJobId}/${view.key}.webp`);
+}
+
+async function removePreviewPaths(paths: string[]) {
+  if (!paths.length) return;
+  const { error } = await supabase.storage.from(CLOTHING_PREVIEW_BUCKET).remove(paths);
+  if (error) console.warn('[clothing-preview-worker] preview cleanup failed', error);
+}
+
 export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChange, onJobCompleted }: Props) {
   const stopRef = useRef(false);
   const callbacksRef = useRef({ onStatusChange, onJobCompleted });
@@ -62,6 +78,7 @@ export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChan
     const run = async () => {
       while (mounted && !stopRef.current) {
         let claimedJobId: string | null = null;
+        let uploadedPaths: string[] = [];
         try {
           publish({ state: 'claiming' });
           const { data: claimData, error: claimError } = await supabase.rpc(
@@ -101,6 +118,7 @@ export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChan
                 upsert: true,
               });
             if (uploadError) throw uploadError;
+            uploadedPaths.push(path);
             const { data: publicData } = supabase.storage.from(CLOTHING_PREVIEW_BUCKET).getPublicUrl(path);
             urls[frame.key] = publicData.publicUrl;
             publish({ state: 'uploading', itemName: item.name, completedViews: index + 1, totalViews: frames.length });
@@ -119,10 +137,15 @@ export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChan
             { p_job_id: claimedJobId, p_manifest: manifest } as any,
           );
           if (completeError) throw completeError;
+
+          const supersededPaths = previousPreviewPaths(item, claimedJobId);
+          if (supersededPaths.length) void removePreviewPaths(supersededPaths);
+          uploadedPaths = [];
           callbacksRef.current.onJobCompleted?.();
         } catch (error: any) {
           const message = error?.message || 'Clothing preview generation failed.';
           publish({ state: 'error', message });
+          if (uploadedPaths.length) await removePreviewPaths(uploadedPaths);
           if (claimedJobId) {
             try {
               await supabase.rpc('fail_clothing_preview_job' as any, {
