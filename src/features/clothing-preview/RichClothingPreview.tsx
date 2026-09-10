@@ -44,6 +44,11 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     const scene = new T.Scene();
     const camera = new T.PerspectiveCamera(35, 1, .05, 30);
     const element = canvas.current;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      cancelAnimationFrame(raf);
+      if (alive) setStatus('error');
+    };
 
     setStatus('loading');
     try {
@@ -52,6 +57,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       renderer.toneMapping = T.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.3;
       renderer.shadowMap.enabled = true;
+      element.addEventListener('webglcontextlost', onContextLost);
 
       scene.background = new T.Color('#101823');
       const pmrem = new T.PMREMGenerator(renderer);
@@ -139,7 +145,11 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       cancelAnimationFrame(raf);
       observer?.disconnect();
       controls?.dispose();
-      disposeProceduralGarment(garment);
+      element.removeEventListener('webglcontextlost', onContextLost);
+      if (garment) {
+        scene.remove(garment);
+        disposeProceduralGarment(garment);
+      }
       disposeModel(scene);
       library?.forEach(disposeModel);
       environment?.dispose();
