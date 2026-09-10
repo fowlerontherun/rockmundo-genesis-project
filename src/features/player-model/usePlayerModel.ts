@@ -6,10 +6,36 @@ import { resolveEquippedClothingVisual, type ResolvedEquippedClothing } from '@/
 import { appearanceFromLegacy, appearanceSchema, resolveAppearance, type PlayerAppearance } from './appearance';
 
 export const playerModelKey = (profileId: string | null) => ['player-stage-appearance', profileId] as const;
+export const equippedRichClothingKey = (profileId: string | null) => ['equipped-rich-clothing', profileId] as const;
 
 export interface GigPlayerModelsData {
   appearances: Record<string, PlayerAppearance>;
   richClothing: Record<string, ResolvedEquippedClothing[]>;
+}
+
+interface EquippedClothingRow {
+  profile_id: string;
+  item_id: string;
+  selected_variant_key?: string | null;
+  customization_config?: Record<string, string> | null;
+}
+
+async function resolveRichClothingRows(rows: EquippedClothingRow[]) {
+  const itemIds = [...new Set(rows.map(row => row.item_id).filter(Boolean))];
+  if (!itemIds.length) return {} as Record<string, ResolvedEquippedClothing[]>;
+  const { data, error } = await (supabase.from('avatar_clothing_items') as any).select('*').in('id', itemIds);
+  if (error) throw error;
+  const items = (data || []) as ClothingItem[];
+  const itemById = new Map(items.map(item => [item.id, item]));
+  const result: Record<string, ResolvedEquippedClothing[]> = {};
+  for (const row of rows) {
+    const item = itemById.get(row.item_id);
+    if (!item) continue;
+    (result[row.profile_id] ??= []).push(
+      resolveEquippedClothingVisual(item, row.selected_variant_key, row.customization_config),
+    );
+  }
+  return result;
 }
 
 export function usePlayerModel() {
@@ -43,6 +69,20 @@ export function usePlayerModel() {
   return { ...active, query, save };
 }
 
+export function useEquippedRichClothing(profileId: string | null | undefined) {
+  return useQuery({
+    queryKey: equippedRichClothingKey(profileId ?? null),
+    enabled: !!profileId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_equipped_stage_clothing' as any, { p_profile_ids: [profileId] } as any);
+      if (error) throw error;
+      const map = await resolveRichClothingRows((data || []) as EquippedClothingRow[]);
+      return map[profileId!] ?? [];
+    },
+  });
+}
+
 /** Cosmetic data only; lineup appearance and equipped rich clothing are loaded in
  * batches when the stage is built, never during animation frames. */
 export function useGigPlayerModels(profileIds: string[]) {
@@ -64,28 +104,13 @@ export function useGigPlayerModels(profileIds: string[]) {
         (appearanceResult.data || []).map(row => [row.profile_id, resolveAppearance(row.appearance, row.profile_id)]),
       ) as Record<string, PlayerAppearance>;
 
-      const ownershipRows = clothingResult.error ? [] : (clothingResult.data || []) as Array<{
-        profile_id: string;
-        item_id: string;
-        selected_variant_key?: string | null;
-        customization_config?: Record<string, string> | null;
-      }>;
-      const itemIds = [...new Set(ownershipRows.map(row => row.item_id).filter(Boolean))];
-      let items: ClothingItem[] = [];
-      if (itemIds.length) {
-        const { data, error } = await (supabase.from('avatar_clothing_items') as any).select('*').in('id', itemIds);
-        if (error) console.warn('[gig-player-models] rich clothing catalogue could not load', error);
-        else items = (data || []) as ClothingItem[];
-      }
-
-      const itemById = new Map(items.map(item => [item.id, item]));
-      const richClothing: Record<string, ResolvedEquippedClothing[]> = {};
-      for (const row of ownershipRows) {
-        const item = itemById.get(row.item_id);
-        if (!item) continue;
-        (richClothing[row.profile_id] ??= []).push(
-          resolveEquippedClothingVisual(item, row.selected_variant_key, row.customization_config),
-        );
+      let richClothing: Record<string, ResolvedEquippedClothing[]> = {};
+      if (!clothingResult.error) {
+        try {
+          richClothing = await resolveRichClothingRows((clothingResult.data || []) as EquippedClothingRow[]);
+        } catch (error) {
+          console.warn('[gig-player-models] rich clothing catalogue could not load', error);
+        }
       }
 
       return { appearances, richClothing };
