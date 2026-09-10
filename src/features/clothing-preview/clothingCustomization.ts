@@ -30,6 +30,22 @@ export function clothingVariantByKey(item: ClothingItem, key?: string | null): C
   return clothingPreviewVariants(item).find(variant => variant.id === key || variant.label === key);
 }
 
+export function clothingVariantPersistenceKey(item: ClothingItem, variant?: ClothingPreviewVariant | null): string | null {
+  if (!variant) return null;
+  const matrix = Array.isArray(item.variant_matrix) ? item.variant_matrix as Array<Record<string, unknown>> : [];
+  if (matrix.length > 0) {
+    const previewVariants = clothingPreviewVariants(item);
+    const index = previewVariants.findIndex(candidate => candidate.id === variant.id);
+    const source = index >= 0 ? matrix[index] : undefined;
+    const raw = source?.id || source?.key || source?.name || source?.label;
+    return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+  }
+
+  const colours = Array.isArray(item.color_variants) ? item.color_variants : [];
+  if (colours.length > 0 && /^color-[0-9]+$/.test(variant.id)) return variant.id;
+  return null;
+}
+
 export function defaultClothingZoneColours(item: ClothingItem): ClothingZoneColours {
   return Object.fromEntries(
     playerEditableClothingZones(item)
