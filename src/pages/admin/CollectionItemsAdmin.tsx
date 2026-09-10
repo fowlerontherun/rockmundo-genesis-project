@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Download, Edit, Layers3, Plus, Shirt, Sparkles, Trash2, Zap } from "lucide-react";
 import { ClothingDesignStudio, DEFAULT_CLOTHING_DESIGN, type ClothingDesignConfig } from "@/components/admin/ClothingDesignStudio";
 import { ClothingTransferPanel } from "@/components/admin/clothing/ClothingTransferPanel";
+import { ClothingPreviewManager } from "@/components/admin/clothing/ClothingPreviewManager";
 import { browserDownloadJson, slugifyExternalKey, toPortableClothingItem } from "@/features/clothing-transfer/clothingTransfer";
 
 const CATEGORIES = ["shirt", "t-shirt", "tank-top", "hoodie", "sweater", "pants", "jeans", "shorts", "skirt", "dress", "jacket", "coat", "vest", "shoes", "boots", "trainers", "accessory", "hat", "glasses"];
@@ -48,7 +49,6 @@ interface ClothingForm {
 }
 
 const EMPTY_BONUSES: BonusConfig = { daily_xp: 0, daily_ap: 0, performance_pct: 0, recording_pct: 0, songwriting_pct: 0 };
-
 const cloneDefaultDesign = (): ClothingDesignConfig => JSON.parse(JSON.stringify(DEFAULT_CLOTHING_DESIGN));
 
 const emptyForm = (): ClothingForm => ({
@@ -150,7 +150,7 @@ const CollectionItemsAdmin = () => {
     customization_zones: data.design.zones,
     render_config: data.design.render,
     variant_matrix: data.design.variants,
-    preview_status: "ready",
+    preview_status: "pending",
     shape_config: {
       ...(data.design.garment || {}),
       material: data.design.material.fabric,
@@ -173,7 +173,7 @@ const CollectionItemsAdmin = () => {
       const { error } = await supabase.from("avatar_clothing_items").insert({ ...toPayload(data), collection_id: collectionId, external_key: slugifyExternalKey(data.name), schema_version: 1 } as any);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast.success("Detailed clothing item created"); resetForm(); setIsDialogOpen(false); },
+    onSuccess: () => { invalidate(); toast.success("Detailed clothing item created; preview generation required"); resetForm(); setIsDialogOpen(false); },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -182,13 +182,13 @@ const CollectionItemsAdmin = () => {
       const { error } = await supabase.from("avatar_clothing_items").update(toPayload(data) as any).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast.success("Clothing design updated"); resetForm(); setIsDialogOpen(false); },
+    onSuccess: () => { invalidate(); toast.success("Clothing design updated; generated previews invalidated"); resetForm(); setIsDialogOpen(false); },
     onError: (error: Error) => toast.error(error.message),
   });
 
   const assignMutation = useMutation({
-    mutationFn: async (itemId: string) => { const { error } = await supabase.from("avatar_clothing_items").update({ collection_id: collectionId, preview_status: "ready" } as any).eq("id", itemId); if (error) throw error; },
-    onSuccess: () => { invalidate(); toast.success("Item added to skin pack and made preview-ready"); },
+    mutationFn: async (itemId: string) => { const { error } = await supabase.from("avatar_clothing_items").update({ collection_id: collectionId, preview_status: "pending" } as any).eq("id", itemId); if (error) throw error; },
+    onSuccess: () => { invalidate(); toast.success("Item added to skin pack; preview generation required"); },
   });
 
   const unassignMutation = useMutation({
@@ -246,6 +246,7 @@ const CollectionItemsAdmin = () => {
     </CardContent></Card>
 
     {collectionId && <ClothingTransferPanel collectionId={collectionId} collection={collection as any} items={(items || []) as any[]} onChanged={invalidate} />}
+    {collectionId && <ClothingPreviewManager collectionId={collectionId} items={(items || []) as any[]} onChanged={invalidate} />}
 
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <Card className="xl:col-span-2"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="flex items-center gap-2"><Shirt className="h-5 w-5" />Pack Items ({items?.length || 0})</CardTitle>
@@ -277,7 +278,7 @@ const CollectionItemsAdmin = () => {
           </DialogContent>
         </Dialog>
       </CardHeader><CardContent>
-        {isLoading ? <p className="text-sm text-muted-foreground">Loading clothing…</p> : <Table><TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Construction</TableHead><TableHead>Customisation</TableHead><TableHead>Bonuses</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{(items||[]).map((item:any)=><TableRow key={item.id}><TableCell><div className="font-medium">{item.name}</div><div className="text-xs text-muted-foreground capitalize">{item.category} · {item.rarity}</div></TableCell><TableCell><div className="text-sm capitalize">{item.material_config?.fabric || "default"}</div><div className="text-xs text-muted-foreground">{item.garment_config?.silhouette || "classic"} · {item.pattern_config?.type || "solid"}</div></TableCell><TableCell><div className="flex gap-1 flex-wrap"><Badge variant="outline"><Layers3 className="h-3 w-3 mr-1"/>{Array.isArray(item.detail_layers)?item.detail_layers.length:0} details</Badge><Badge variant="outline">{Array.isArray(item.variant_matrix)?item.variant_matrix.length:0} variants</Badge><Badge variant={item.preview_status === "failed" ? "destructive" : "outline"}>{item.preview_status || "ready"} preview</Badge></div></TableCell><TableCell><div className="flex flex-wrap gap-1">{bonusSummary(item).length?bonusSummary(item).map(v=><Badge key={v} variant="secondary">{v}</Badge>):<span className="text-xs text-muted-foreground">Cosmetic only</span>}</div></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" title="Export item" onClick={()=>exportItem(item)}><Download className="h-4 w-4"/></Button><Button variant="ghost" size="icon" onClick={()=>handleEdit(item)}><Edit className="h-4 w-4"/></Button><Button variant="ghost" size="icon" onClick={()=>unassignMutation.mutate(item.id)}><Trash2 className="h-4 w-4"/></Button></TableCell></TableRow>)}</TableBody></Table>}
+        {isLoading ? <p className="text-sm text-muted-foreground">Loading clothing…</p> : <Table><TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Construction</TableHead><TableHead>Customisation</TableHead><TableHead>Bonuses</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{(items||[]).map((item:any)=><TableRow key={item.id}><TableCell><div className="font-medium">{item.name}</div><div className="text-xs text-muted-foreground capitalize">{item.category} · {item.rarity}</div></TableCell><TableCell><div className="text-sm capitalize">{item.material_config?.fabric || "default"}</div><div className="text-xs text-muted-foreground">{item.garment_config?.silhouette || "classic"} · {item.pattern_config?.type || "solid"}</div></TableCell><TableCell><div className="flex gap-1 flex-wrap"><Badge variant="outline"><Layers3 className="h-3 w-3 mr-1"/>{Array.isArray(item.detail_layers)?item.detail_layers.length:0} details</Badge><Badge variant="outline">{Array.isArray(item.variant_matrix)?item.variant_matrix.length:0} variants</Badge><Badge variant={item.preview_status === "failed" ? "destructive" : "outline"}>{item.preview_status || "pending"} preview</Badge></div></TableCell><TableCell><div className="flex flex-wrap gap-1">{bonusSummary(item).length?bonusSummary(item).map(v=><Badge key={v} variant="secondary">{v}</Badge>):<span className="text-xs text-muted-foreground">Cosmetic only</span>}</div></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" title="Export item" onClick={()=>exportItem(item)}><Download className="h-4 w-4"/></Button><Button variant="ghost" size="icon" onClick={()=>handleEdit(item)}><Edit className="h-4 w-4"/></Button><Button variant="ghost" size="icon" onClick={()=>unassignMutation.mutate(item.id)}><Trash2 className="h-4 w-4"/></Button></TableCell></TableRow>)}</TableBody></Table>}
       </CardContent></Card>
 
       <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4"/>Unassigned Clothing</CardTitle></CardHeader><CardContent className="space-y-2">{(unassignedItems||[]).length===0?<p className="text-sm text-muted-foreground">No unassigned clothing.</p>:(unassignedItems||[]).map((item:any)=><div key={item.id} className="border rounded-lg p-3 flex items-center justify-between gap-2"><div><div className="font-medium text-sm">{item.name}</div><div className="text-xs text-muted-foreground capitalize">{item.category}</div></div><Button size="sm" variant="outline" onClick={()=>assignMutation.mutate(item.id)}>Add</Button></div>)}</CardContent></Card>
