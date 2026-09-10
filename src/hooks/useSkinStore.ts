@@ -16,11 +16,20 @@ export interface SkinCollection {
   created_at: string;
 }
 
+export interface ClothingBonusConfig {
+  daily_xp?: number;
+  daily_ap?: number;
+  performance_pct?: number;
+  recording_pct?: number;
+  songwriting_pct?: number;
+}
+
 export interface ClothingItem {
   id: string;
   name: string;
   description: string | null;
   category: string;
+  wearable_slot?: string | null;
   price: number | null;
   is_premium: boolean | null;
   rarity: string | null;
@@ -31,6 +40,8 @@ export interface ClothingItem {
   is_limited_edition: boolean | null;
   featured: boolean | null;
   rpm_asset_id: string | null;
+  bonus_enabled?: boolean | null;
+  bonus_config?: ClothingBonusConfig | null;
 }
 
 export const useSkinCollections = () => {
@@ -118,7 +129,7 @@ export const useOwnedSkins = () => {
 
       const { data, error } = await supabase
         .from("player_owned_skins")
-        .select("item_id, item_type")
+        .select("item_id, item_type, is_equipped")
         .eq("profile_id", profileId);
 
       if (error) throw error;
@@ -144,7 +155,6 @@ export const usePurchaseSkin = () => {
     }) => {
       if (!profileId) throw new Error("Not authenticated");
 
-      // Check if already owned
       const { data: existing } = await supabase
         .from("player_owned_skins")
         .select("id")
@@ -154,7 +164,6 @@ export const usePurchaseSkin = () => {
 
       if (existing) throw new Error("You already own this item");
 
-      // Add skin to owned
       const { error: insertError } = await supabase
         .from("player_owned_skins")
         .insert({
