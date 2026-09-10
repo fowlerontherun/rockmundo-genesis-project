@@ -64,7 +64,5 @@ export function buildClothingPreviewAppearance(avatar: AvatarConfig | null | und
 }
 
 export function previewFidelity(item: ClothingItem) {
-  const slot = proxySlot(item);
-  if (!slot) return 'avatar-only' as const;
-  return item.rpm_asset_id ? 'asset' as const : 'procedural-proxy' as const;
+  return proxySlot(item) ? 'procedural-proxy' as const : 'avatar-only' as const;
 }
