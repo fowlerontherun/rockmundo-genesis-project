@@ -40,14 +40,16 @@ function requestedViewDefinitions(jobType: string, requestedViews: unknown) {
 
 export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChange, onJobCompleted }: Props) {
   const stopRef = useRef(false);
+  const callbacksRef = useRef({ onStatusChange, onJobCompleted });
+  callbacksRef.current = { onStatusChange, onJobCompleted };
   const [status, setStatus] = useState<ClothingPreviewWorkerStatus>({ state: 'stopped' });
 
-  const publish = (next: ClothingPreviewWorkerStatus) => {
-    setStatus(next);
-    onStatusChange?.(next);
-  };
-
   useEffect(() => {
+    const publish = (next: ClothingPreviewWorkerStatus) => {
+      setStatus(next);
+      callbacksRef.current.onStatusChange?.(next);
+    };
+
     stopRef.current = !active;
     if (!active) {
       publish({ state: 'stopped' });
@@ -85,7 +87,6 @@ export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChan
 
           publish({ state: 'rendering', itemName: item.name, completedViews: 0, totalViews: views.length });
           const frames = await renderClothingTurntable(item, { views });
-          if (stopRef.current) throw new Error('Preview rendering stopped by admin.');
 
           const urls: Partial<Record<ClothingPreviewViewKey, string>> = {};
           publish({ state: 'uploading', itemName: item.name, completedViews: 0, totalViews: frames.length });
@@ -118,7 +119,7 @@ export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChan
             { p_job_id: claimedJobId, p_manifest: manifest } as any,
           );
           if (completeError) throw completeError;
-          onJobCompleted?.();
+          callbacksRef.current.onJobCompleted?.();
         } catch (error: any) {
           const message = error?.message || 'Clothing preview generation failed.';
           publish({ state: 'error', message });
@@ -127,9 +128,9 @@ export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChan
               await supabase.rpc('fail_clothing_preview_job' as any, {
                 p_job_id: claimedJobId,
                 p_error: message,
-                p_retry: !stopRef.current,
+                p_retry: true,
               } as any);
-              onJobCompleted?.();
+              callbacksRef.current.onJobCompleted?.();
             } catch (failError) {
               console.error('[clothing-preview-worker] could not mark job failed', failError);
             }
@@ -144,7 +145,7 @@ export function ClothingPreviewRenderWorker({ collectionId, active, onStatusChan
       mounted = false;
       stopRef.current = true;
     };
-  }, [active, collectionId]); // callbacks deliberately excluded; worker lifecycle follows collection + active state only
+  }, [active, collectionId]);
 
   return <span className="sr-only" aria-live="polite">
     {status.state === 'rendering' || status.state === 'uploading'
