@@ -24,4 +24,11 @@ describe('clothing preview manifest', () => {
       { key: 'left', yaw: 270, url: 'javascript:alert(1)' },
     ] })).toHaveLength(1);
   });
+
+  it('does not expose retained stale frames while a garment is pending regeneration', () => {
+    expect(usablePreviewFrames({
+      stale: true,
+      frames: [{ key: 'front', yaw: 0, url: 'https://cdn.example/old-front.webp' }],
+    })).toEqual([]);
+  });
 });
