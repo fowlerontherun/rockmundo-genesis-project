@@ -1,4 +1,5 @@
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
 import { useEquippedRichClothing, usePlayerModel } from './usePlayerModel';
@@ -17,7 +18,7 @@ export default function PlayerModelEditor() {
   return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} />;
 }
 
-function EditorSession({ profileId, initial, model, richClothing, richClothingError }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ReturnType<typeof useEquippedRichClothing>['data'] extends infer T ? NonNullable<T> : never; richClothingError: boolean }) {
+function EditorSession({ profileId, initial, model, richClothing, richClothingError }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean }) {
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
