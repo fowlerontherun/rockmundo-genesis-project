@@ -8,11 +8,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Lock, ShoppingCart, Check, Rotate3D, UserRound, Shirt } from "lucide-react";
+import { Sparkles, Lock, ShoppingCart, Check, Rotate3D, UserRound, Shirt, Layers3 } from "lucide-react";
 import { ClothingItem } from "@/hooks/useSkinStore";
 import { usePlayerAvatar } from "@/hooks/usePlayerAvatar";
-import { PlayerModelPreview } from "@/features/player-model/PlayerModelPreview";
-import { buildClothingPreviewAppearance, clothingPreviewVariants, previewFidelity } from "@/features/clothing-preview/clothingPreview";
+import { buildClothingPreviewAppearance, clothingPreviewVariants } from "@/features/clothing-preview/clothingPreview";
+import { RichClothingPreview } from "@/features/clothing-preview/RichClothingPreview";
 
 interface ItemPreviewDialogProps {
   item: ClothingItem | null;
@@ -40,12 +40,12 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
   if (!item) return null;
 
   const colorVariants = item.color_variants as string[] | null;
-  const fidelity = previewFidelity(item);
   const material = (item.material_config || {}) as Record<string, any>;
   const garment = (item.garment_config || {}) as Record<string, any>;
   const pattern = (item.pattern_config || {}) as Record<string, any>;
   const fit = (item.fit_config || {}) as Record<string, any>;
   const wear = (item.wear_config || {}) as Record<string, any>;
+  const detailCount = Array.isArray(item.detail_layers) ? item.detail_layers.length : 0;
 
   return (
     <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
@@ -61,7 +61,7 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
           <div className="space-y-3">
             <div className="rounded-xl overflow-hidden border bg-[#101823] min-h-[520px] relative">
               {appearance && !avatarLoading ? (
-                <PlayerModelPreview appearance={appearance} />
+                <RichClothingPreview appearance={appearance} item={item} variant={selectedVariant} />
               ) : (
                 <div className="min-h-[520px] flex items-center justify-center text-sm text-muted-foreground">Preparing your avatar fitting room…</div>
               )}
@@ -70,11 +70,9 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
               <span className="inline-flex items-center gap-1"><Rotate3D className="h-3.5 w-3.5" />Drag to rotate 360°, scroll/pinch to zoom, or use the viewer controls.</span>
               <Badge variant="outline" className="gap-1"><UserRound className="h-3 w-3" />Your avatar</Badge>
             </div>
-            {fidelity !== 'asset' && (
-              <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-muted-foreground">
-                <strong className="text-foreground">Preview fidelity:</strong> this item is using the procedural wardrobe proxy while the dedicated garment asset pipeline is completed. Colour, outfit context and 360° avatar fit are live; exact mesh details will automatically improve when an item-specific asset is available.
-              </div>
-            )}
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+              <strong className="text-foreground">Rich garment preview:</strong> this view now renders the item's stored cut/fit, fabric response, colours, pattern, sleeve treatment, wear/distress and supported detail layers directly in 3D on top of your character. Dedicated authored GLB assets can still override this procedural garment later for maximum fidelity.
+            </div>
           </div>
 
           <div className="space-y-5">
@@ -108,8 +106,9 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
                 <span className="text-muted-foreground">Fit</span><span className="capitalize">{fit.fit || 'regular'}</span>
                 <span className="text-muted-foreground">Pattern</span><span className="capitalize">{selectedVariant?.pattern || pattern.type || 'solid'}</span>
                 <span className="text-muted-foreground">Condition</span><span className="capitalize">{wear.condition || 'new'}</span>
-                <span className="text-muted-foreground">Details</span><span>{Array.isArray(item.detail_layers) ? item.detail_layers.length : 0} layers</span>
+                <span className="text-muted-foreground">Details</span><span>{detailCount} layers</span>
               </div>
+              {detailCount > 0 && <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground"><Layers3 className="h-3.5 w-3.5" />Patches, trims, studs, zips, badges and other supported layers appear directly on the garment.</div>}
             </div>
 
             {item.bonus_enabled && item.bonus_config && (
