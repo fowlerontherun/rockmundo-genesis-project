@@ -177,12 +177,12 @@ export const useSaveClothingCustomization = () => {
       itemId,
       variantKey,
       zoneColours,
-      equip = false,
+      equipped = null,
     }: {
       itemId: string;
       variantKey?: string | null;
       zoneColours?: Record<string, string>;
-      equip?: boolean;
+      equipped?: boolean | null;
     }) => {
       if (!profileId) throw new Error('No active character');
       const { data, error } = await supabase.rpc('set_owned_clothing_customization' as any, {
@@ -190,7 +190,7 @@ export const useSaveClothingCustomization = () => {
         p_item_id: itemId,
         p_variant_key: variantKey || null,
         p_zone_colors: zoneColours || {},
-        p_equip: equip,
+        p_equipped: equipped,
       } as any);
       if (error) throw error;
       return Array.isArray(data) ? data[0] : data;
@@ -199,7 +199,13 @@ export const useSaveClothingCustomization = () => {
       queryClient.invalidateQueries({ queryKey: ['owned-skins', profileId] });
       queryClient.invalidateQueries({ queryKey: ['player-owned-skins', profileId] });
       queryClient.invalidateQueries({ queryKey: ['equipped-clothing', profileId] });
-      toast.success(variables.equip ? 'Clothing saved and equipped' : 'Clothing customisation saved');
+      toast.success(
+        variables.equipped === true
+          ? 'Clothing saved and equipped'
+          : variables.equipped === false
+            ? 'Clothing saved and unequipped'
+            : 'Clothing customisation saved',
+      );
     },
     onError: (error: Error) => toast.error(error.message || 'Could not save clothing customisation'),
   });
