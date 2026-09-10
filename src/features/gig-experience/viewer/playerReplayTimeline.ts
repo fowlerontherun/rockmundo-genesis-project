@@ -2,13 +2,15 @@ import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
 
 const AFTER_SET_PHASES = new Set(["encore_decision", "finale", "band_exit", "result_reveal", "completed"]);
-export const PLAYER_SONG_EXCERPT_DURATION_MS = 20_000;
+export const PLAYER_SONG_EXCERPT_DURATION_MS = 45_000;
+export const PLAYER_SONG_TRANSITION_DURATION_MS = 4_000;
 
 /**
  * Stored replays can contain shorter or variable song segments. Player stage
- * mode presents a consistent 20-second excerpt of each song, capped only when
- * a playable track is known to be shorter. This in-memory copy never changes
- * or writes back the canonical replay.
+ * mode presents up to 45 seconds of each playable song, followed by a short
+ * crowd-reaction window before the next song. Known shorter tracks are capped
+ * to their real duration. This in-memory copy never changes or writes back the
+ * canonical replay.
  */
 export function fitReplayToPlayerSongExcerpts(
   replay: GigViewerReplay,
@@ -46,10 +48,11 @@ export function fitReplayToPlayerSongExcerpts(
 
     const songId = startEvent.visualPayload.songId ?? startEvent.songId;
     const knownTrackDurationMs = songId ? maximumDurationBySongId.get(songId) : undefined;
-    const targetDurationMs = Math.min(
+    const playableDurationMs = Math.min(
       PLAYER_SONG_EXCERPT_DURATION_MS,
       knownTrackDurationMs ?? PLAYER_SONG_EXCERPT_DURATION_MS,
     );
+    const targetDurationMs = playableDurationMs + PLAYER_SONG_TRANSITION_DURATION_MS;
 
     const nextSongStart = songStartIndexes[songIndex + 1];
     const afterSetIndex = events.findIndex(
@@ -83,7 +86,7 @@ export function fitReplayToPlayerSongExcerpts(
 
   return {
     ...replay,
-    id: `${replay.id}:player-20-second-excerpts`,
+    id: `${replay.id}:player-45-second-excerpts-with-transitions`,
     durationMs: offsetMs,
     checksum: null,
     events,
