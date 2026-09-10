@@ -1,203 +1,217 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // ============ AUTHENTICATION CHECK ============
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.error('No authorization header provided');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized: No authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized: No authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Verify the JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+    const token = authHeader.replace("Bearer ", "");
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+
     if (authError || !user) {
-      console.error('Invalid token:', authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized: Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // ============ ADMIN ROLE CHECK ============
-    const { data: role, error: roleError } = await supabase.rpc('get_user_role', { _user_id: user.id });
-    
-    if (roleError || role !== 'admin') {
-      console.error('Admin access denied for user:', user.id, 'Role:', role);
-      return new Response(
-        JSON.stringify({ error: 'Forbidden: Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const { data: role, error: roleError } = await supabase.rpc("get_user_role", {
+      _user_id: user.id,
+    });
+
+    if (roleError || role !== "admin") {
+      return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log('Admin action authorized for user:', user.id);
-
-    // ============ INPUT VALIDATION ============
     const { gigIds } = await req.json();
-
     if (!Array.isArray(gigIds) || gigIds.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'gigIds must be a non-empty array' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: "gigIds must be a non-empty array" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Validate UUID format for all IDs
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (gigIds.length > 50) {
+      return new Response(JSON.stringify({ error: "Maximum 50 gigs can be processed at once" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     for (const id of gigIds) {
-      if (typeof id !== 'string' || !uuidRegex.test(id)) {
-        return new Response(
-          JSON.stringify({ error: `Invalid UUID format: ${id}` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (typeof id !== "string" || !uuidRegex.test(id)) {
+        return new Response(JSON.stringify({ error: `Invalid UUID format: ${id}` }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
-    // Limit batch size to prevent abuse
-    if (gigIds.length > 50) {
-      return new Response(
-        JSON.stringify({ error: 'Maximum 50 gigs can be processed at once' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // ============ EXECUTE ADMIN ACTION ============
-    const results = [];
+    const results: Array<Record<string, unknown>> = [];
 
     for (const gigId of gigIds) {
       try {
-        // Get gig details with band info
         const { data: gig, error: gigError } = await supabase
-          .from('gigs')
-          .select('id, setlist_id, band_id, status, venue_id, ticket_price, venues!gigs_venue_id_fkey(capacity, name)')
-          .eq('id', gigId)
+          .from("gigs")
+          .select("id,status,setlist_id,result_ready_at,completed_at,completion_claimed_at")
+          .eq("id", gigId)
           .single();
 
         if (gigError || !gig) {
-          results.push({ gigId, success: false, error: gigError?.message || 'Gig not found' });
+          results.push({ gigId, success: false, error: gigError?.message || "Gig not found" });
           continue;
         }
 
-        // Determine new status based on setlist existence
-        let newStatus = 'completed';
         if (!gig.setlist_id) {
-          newStatus = 'cancelled';
+          const { error: cancelError } = await supabase
+            .from("gigs")
+            .update({ status: "cancelled", completed_at: null, result_ready_at: null })
+            .eq("id", gigId);
+
+          results.push(
+            cancelError
+              ? { gigId, success: false, error: cancelError.message }
+              : { gigId, success: true, newStatus: "cancelled", reason: "Gig has no setlist" },
+          );
+          continue;
         }
 
-        // If completing, ensure outcome exists and update band stats
-        if (newStatus === 'completed') {
-          // Check if outcome exists
-          const { data: existingOutcome } = await supabase
-            .from('gig_outcomes')
-            .select('id')
-            .eq('gig_id', gigId)
-            .single();
+        const { data: outcome, error: outcomeError } = await supabase
+          .from("gig_outcomes")
+          .select("id,completed_at")
+          .eq("gig_id", gigId)
+          .maybeSingle();
 
-          if (!existingOutcome) {
-            // Create a basic outcome
-            const venueCapacity = (gig.venues as any)?.capacity || 500;
-            const actualAttendance = Math.floor(venueCapacity * (0.4 + Math.random() * 0.4));
-            const ticketRevenue = actualAttendance * (gig.ticket_price || 20);
+        if (outcomeError || !outcome) {
+          results.push({
+            gigId,
+            success: false,
+            error: outcomeError?.message || "Gig outcome is missing; cannot safely reconstruct results",
+          });
+          continue;
+        }
 
-            await supabase
-              .from('gig_outcomes')
-              .insert({
-                gig_id: gigId,
-                actual_attendance: actualAttendance,
-                attendance_percentage: (actualAttendance / venueCapacity) * 100,
-                ticket_revenue: ticketRevenue,
-                merch_revenue: 0,
-                total_revenue: ticketRevenue,
-                venue_cost: 0,
-                crew_cost: 0,
-                equipment_cost: 0,
-                total_costs: 0,
-                net_profit: ticketRevenue,
-                overall_rating: 15 + Math.random() * 5,
-                performance_grade: 'B',
-                venue_name: (gig.venues as any)?.name || 'Unknown Venue',
-                venue_capacity: venueCapacity,
-                fame_gained: Math.floor(actualAttendance * 0.1),
-                new_fans_gained: Math.floor(actualAttendance * 0.05),
-                completed_at: new Date().toISOString()
-              });
+        if (gig.status === "completed" && gig.result_ready_at) {
+          results.push({ gigId, success: true, newStatus: "completed", alreadyCompleted: true });
+          continue;
+        }
+
+        // Older versions of this recovery tool could mark a gig completed without
+        // running the canonical result engine. Put only those incomplete result
+        // rows back into a repairable state; never rewrite a valid completed gig.
+        if (gig.status === "completed" && !gig.result_ready_at && !outcome.completed_at) {
+          const { error: resetError } = await supabase
+            .from("gigs")
+            .update({
+              status: "in_progress",
+              completed_at: null,
+              result_ready_at: null,
+              completion_claimed_at: null,
+              completion_attempt_count: 0,
+              completion_last_error: null,
+              completion_next_retry_at: null,
+              completion_needs_attention: false,
+            })
+            .eq("id", gigId);
+
+          if (resetError) {
+            results.push({ gigId, success: false, error: resetError.message });
+            continue;
           }
-
-          // Get band and update stats
-          const { data: band } = await supabase
-            .from('bands')
-            .select('fame, total_fans, band_balance')
-            .eq('id', gig.band_id)
-            .single();
-
-          if (band) {
-            const fameGain = 50 + Math.floor(Math.random() * 50);
-            const newFans = 10 + Math.floor(Math.random() * 40);
-            
-            await supabase
-              .from('bands')
-              .update({
-                fame: (band.fame || 0) + fameGain,
-                total_fans: (band.total_fans || 0) + newFans,
-                performance_count: supabase.rpc('increment_performance_count', { band_id: gig.band_id })
-              })
-              .eq('id', gig.band_id);
-          }
+        } else if (!["in_progress", "ready_for_completion", "processing_outcome"].includes(gig.status)) {
+          results.push({
+            gigId,
+            success: false,
+            error: `Gig status ${gig.status} is not eligible for completion repair`,
+          });
+          continue;
         }
 
-        // Update the gig
-        const { error: updateError } = await supabase
-          .from('gigs')
-          .update({ 
-            status: newStatus,
-            completed_at: newStatus === 'completed' ? new Date().toISOString() : null
-          })
-          .eq('id', gigId);
+        // Clear a stale claim so the canonical completion function can take a new
+        // transactional claim. complete-gig itself still enforces elapsed setlist
+        // duration and idempotency, so this cannot fast-forward a live show.
+        await supabase
+          .from("gigs")
+          .update({ completion_claimed_at: null })
+          .eq("id", gigId)
+          .is("result_ready_at", null);
 
-        if (updateError) {
-          results.push({ gigId, success: false, error: updateError.message });
-        } else {
-          results.push({ gigId, success: true, newStatus });
+        const idempotencyKey = `admin-stuck-gig-repair:${gigId}:${Date.now()}`;
+        const { data: completion, error: completionError } = await supabase.functions.invoke("complete-gig", {
+          body: { gigId, idempotencyKey },
+        });
+
+        if (completionError || completion?.error) {
+          results.push({
+            gigId,
+            success: false,
+            error: completion?.error || completionError?.message || "Canonical gig completion failed",
+          });
+          continue;
         }
-      } catch (error: any) {
-        console.error('Error fixing gig:', gigId, error);
-        results.push({ gigId, success: false, error: error.message });
+
+        const { data: repairedGig } = await supabase
+          .from("gigs")
+          .select("status,result_ready_at,completed_at")
+          .eq("id", gigId)
+          .single();
+
+        results.push({
+          gigId,
+          success: repairedGig?.status === "completed" && Boolean(repairedGig?.result_ready_at),
+          newStatus: repairedGig?.status,
+          resultReadyAt: repairedGig?.result_ready_at,
+          completion,
+        });
+      } catch (error) {
+        results.push({
+          gigId,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
-    console.log('Fix stuck gigs completed by admin:', user.id, 'Results:', results.length);
+    console.log("Fix stuck gigs completed by admin:", user.id, "Results:", results);
 
+    return new Response(JSON.stringify({ success: results.every((r) => r.success), results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: results.some((r) => r.success) ? 200 : 500,
+    });
+  } catch (error) {
     return new Response(
-      JSON.stringify({ success: true, results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error: any) {
-    console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+      {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });
