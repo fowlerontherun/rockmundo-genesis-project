@@ -1,6 +1,6 @@
 -- Keep the previous manifest while an edited garment is pending regeneration so the
 -- renderer can remove its old immutable storage objects after a replacement succeeds.
--- Player-facing code must only consume generated frames while preview_status='ready'.
+-- The manifest is explicitly marked stale so player-facing helpers will not expose it.
 
 CREATE OR REPLACE FUNCTION public.invalidate_clothing_preview_on_design_change()
 RETURNS trigger
@@ -20,8 +20,12 @@ BEGIN
     NEW.preview_status := 'pending';
     NEW.preview_generated_at := NULL;
     NEW.last_preview_error := NULL;
-    -- Intentionally retain OLD preview_manifest as a cleanup pointer. It is stale
-    -- while preview_status is pending and is never shown to players in that state.
+    NEW.preview_manifest := jsonb_set(
+      COALESCE(OLD.preview_manifest, '{}'::jsonb),
+      '{stale}',
+      'true'::jsonb,
+      true
+    );
   END IF;
   RETURN NEW;
 END;
