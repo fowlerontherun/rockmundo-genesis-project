@@ -3,6 +3,7 @@ import { buildStagePlan, concertFrame, concertOptions } from './presentation';
 import { derivePlaybackState } from '../engine/PlaybackController';
 import { DEFAULT_CROWD_TUNING } from '../engine/CrowdTuning';
 import { defaultAppearance } from '@/features/player-model/appearance';
+import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { GigExperienceDTO } from '../../types';
 import { makeStageReplay, performerId } from './test-fixtures';
 
@@ -17,6 +18,19 @@ describe('canonical replay to 3D stage', () => {
     expect(options.performers.some(p => p.id === 'absent')).toBe(false);
     const empty = await makeStageReplay([]); expect(concertOptions(buildStagePlan(empty, null), {}, empty, null, 'pub').performers).toEqual([]);
   });
+
+  it('propagates equipped rich clothing to the matching performer only', async () => {
+    const replay = await makeStageReplay(['Vocals', 'Guitar']);
+    const plan = buildStagePlan(replay, null);
+    const clothing = {
+      id: 'item-1', name: 'Stage Jacket', category: 'jacket', wearable_slot: 'outerwear', color_variants: [],
+    } as ClothingItem;
+    const rich = { [performerId(0)]: [{ item: clothing, variant: { id: 'black', label: 'Black', color: '#111111' } }] };
+    const options = concertOptions(plan, {}, replay, null, 'club', rich);
+    expect(options.performers[0].richClothing).toEqual(rich[performerId(0)]);
+    expect(options.performers[1].richClothing).toEqual([]);
+  });
+
   it('reconstructs entrances, stationary instruments, backwards seeks and exits from the replay clock', async () => {
     const replay = await makeStageReplay(), plan = buildStagePlan(replay, null);
     const frame = (time: number, reduced = false) => concertFrame(plan, replay, null, derivePlaybackState(replay, time), reduced, DEFAULT_CROWD_TUNING);
