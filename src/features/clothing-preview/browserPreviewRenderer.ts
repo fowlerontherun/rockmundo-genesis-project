@@ -69,8 +69,15 @@ function addMannequin(scene: T.Scene) {
 function canvasToWebp(canvas: HTMLCanvasElement, quality: number) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(blob => {
-      if (!blob) reject(new Error('This browser could not encode the clothing preview as WebP.'));
-      else resolve(blob);
+      if (!blob) {
+        reject(new Error('This browser could not encode the clothing preview as WebP.'));
+        return;
+      }
+      if (blob.type !== 'image/webp') {
+        reject(new Error('This browser does not support WebP clothing preview generation. Use a current Chrome, Edge, Firefox or Safari browser.'));
+        return;
+      }
+      resolve(blob);
     }, 'image/webp', quality);
   });
 }
