@@ -66,7 +66,16 @@ export interface ClothingItem {
   wear_config?: Record<string, any> | null;
   customization_zones?: Array<{ id: string; name: string; color?: string; playerEditable?: boolean }> | null;
   render_config?: Record<string, any> | null;
-  variant_matrix?: Array<{ name: string; primaryColor?: string; secondaryColor?: string; pattern?: string; material?: string }> | null;
+  variant_matrix?: Array<{ id?: string; key?: string; name: string; label?: string; primaryColor?: string; secondaryColor?: string; pattern?: string; material?: string }> | null;
+  external_key?: string | null;
+  schema_version?: number | null;
+  import_source?: string | null;
+  import_batch_id?: string | null;
+  preview_status?: 'pending' | 'ready' | 'failed' | null;
+  preview_manifest?: Record<string, any> | null;
+  preview_generated_at?: string | null;
+  last_preview_error?: string | null;
+  shape_config?: Record<string, any> | null;
 }
 
 export const useSkinCollections = () => useQuery({
