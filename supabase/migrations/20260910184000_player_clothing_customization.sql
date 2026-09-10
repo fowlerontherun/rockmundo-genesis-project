@@ -55,6 +55,18 @@ AS $$
   END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.clothing_slots_conflict(p_first text, p_second text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = public
+AS $$
+  SELECT p_first = p_second
+    OR (p_first = 'dress' AND p_second IN ('top','bottom','dress'))
+    OR (p_second = 'dress' AND p_first IN ('top','bottom','dress'));
+$$;
+
 CREATE OR REPLACE FUNCTION public.validate_owned_clothing_customization()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -138,7 +150,7 @@ CREATE OR REPLACE FUNCTION public.set_owned_clothing_customization(
   p_item_id uuid,
   p_variant_key text DEFAULT NULL,
   p_zone_colors jsonb DEFAULT '{}'::jsonb,
-  p_equip boolean DEFAULT false
+  p_equipped boolean DEFAULT NULL
 )
 RETURNS TABLE(
   ownership_id uuid,
@@ -177,7 +189,7 @@ BEGIN
     RAISE EXCEPTION 'You do not own this clothing item';
   END IF;
 
-  IF p_equip THEN
+  IF p_equipped IS TRUE THEN
     SELECT public.clothing_equip_slot(aci.wearable_slot, aci.category)
     INTO v_slot
     FROM public.avatar_clothing_items aci
@@ -191,13 +203,16 @@ BEGIN
       AND other.is_equipped = true
       AND other.item_id <> p_item_id
       AND other_item.id = other.item_id
-      AND public.clothing_equip_slot(other_item.wearable_slot, other_item.category) = v_slot;
+      AND public.clothing_slots_conflict(
+        public.clothing_equip_slot(other_item.wearable_slot, other_item.category),
+        v_slot
+      );
   END IF;
 
   UPDATE public.player_owned_skins pos
   SET selected_variant_key = NULLIF(trim(p_variant_key), ''),
       customization_config = COALESCE(p_zone_colors, '{}'::jsonb),
-      is_equipped = CASE WHEN p_equip THEN true ELSE pos.is_equipped END
+      is_equipped = COALESCE(p_equipped, pos.is_equipped)
   WHERE pos.id = v_ownership_id;
 
   RETURN QUERY
@@ -210,4 +225,4 @@ $$;
 GRANT EXECUTE ON FUNCTION public.set_owned_clothing_customization(uuid,uuid,text,jsonb,boolean) TO authenticated;
 
 COMMENT ON FUNCTION public.set_owned_clothing_customization(uuid,uuid,text,jsonb,boolean) IS
-  'Validates and saves an owned clothing variant/zone colours. When p_equip=true, unequips other clothing in the same wearable slot.';
+  'Validates and saves an owned clothing variant/zone colours. p_equipped null preserves equip state, true equips with slot conflicts resolved, false unequips.';
