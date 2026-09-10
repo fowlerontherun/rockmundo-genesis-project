@@ -40,7 +40,6 @@ ON public.avatar_item_preview_jobs FOR UPDATE
 USING (public.has_role(auth.uid(), 'admin'))
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
--- Queue one item. Existing queued/processing work is reused to avoid duplicate renders.
 CREATE OR REPLACE FUNCTION public.queue_clothing_preview_job(
   p_clothing_item_id uuid,
   p_job_type text DEFAULT 'full_set'
@@ -54,45 +53,29 @@ DECLARE
   v_job_id uuid;
   v_collection_id uuid;
 BEGIN
-  IF NOT public.has_role(auth.uid(), 'admin') THEN
-    RAISE EXCEPTION 'Admin access required';
-  END IF;
+  IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Admin access required'; END IF;
+  IF p_job_type NOT IN ('thumbnail','turntable','full_set') THEN RAISE EXCEPTION 'Unsupported preview job type'; END IF;
 
-  IF p_job_type NOT IN ('thumbnail','turntable','full_set') THEN
-    RAISE EXCEPTION 'Unsupported preview job type';
-  END IF;
-
-  SELECT collection_id INTO v_collection_id
-  FROM public.avatar_clothing_items
-  WHERE id = p_clothing_item_id;
-
+  SELECT collection_id INTO v_collection_id FROM public.avatar_clothing_items WHERE id = p_clothing_item_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Clothing item not found'; END IF;
 
   SELECT id INTO v_job_id
   FROM public.avatar_item_preview_jobs
-  WHERE clothing_item_id = p_clothing_item_id
-    AND status IN ('queued','processing')
-  ORDER BY created_at DESC
-  LIMIT 1;
-
+  WHERE clothing_item_id = p_clothing_item_id AND status IN ('queued','processing')
+  ORDER BY created_at DESC LIMIT 1;
   IF v_job_id IS NOT NULL THEN RETURN v_job_id; END IF;
 
   UPDATE public.avatar_clothing_items
-  SET preview_status = 'pending',
-      last_preview_error = NULL
+  SET preview_status = 'pending', last_preview_error = NULL
   WHERE id = p_clothing_item_id;
 
-  INSERT INTO public.avatar_item_preview_jobs(
-    clothing_item_id, collection_id, requested_by, job_type
-  ) VALUES (
-    p_clothing_item_id, v_collection_id, auth.uid(), p_job_type
-  ) RETURNING id INTO v_job_id;
-
+  INSERT INTO public.avatar_item_preview_jobs(clothing_item_id, collection_id, requested_by, job_type)
+  VALUES (p_clothing_item_id, v_collection_id, auth.uid(), p_job_type)
+  RETURNING id INTO v_job_id;
   RETURN v_job_id;
 END;
 $$;
 
--- Queue every item in a collection, returning the number queued/reused.
 CREATE OR REPLACE FUNCTION public.queue_skin_collection_previews(
   p_collection_id uuid,
   p_job_type text DEFAULT 'full_set'
@@ -106,10 +89,7 @@ DECLARE
   v_item record;
   v_count integer := 0;
 BEGIN
-  IF NOT public.has_role(auth.uid(), 'admin') THEN
-    RAISE EXCEPTION 'Admin access required';
-  END IF;
-
+  IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Admin access required'; END IF;
   FOR v_item IN SELECT id FROM public.avatar_clothing_items WHERE collection_id = p_collection_id LOOP
     PERFORM public.queue_clothing_preview_job(v_item.id, p_job_type);
     v_count := v_count + 1;
@@ -118,11 +98,114 @@ BEGIN
 END;
 $$;
 
+-- Worker/admin claim. SKIP LOCKED permits multiple render workers safely.
+CREATE OR REPLACE FUNCTION public.claim_next_clothing_preview_job()
+RETURNS TABLE(
+  job_id uuid,
+  clothing_item_id uuid,
+  job_type text,
+  requested_views jsonb,
+  attempt_count integer
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_job public.avatar_item_preview_jobs%ROWTYPE;
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Admin access required'; END IF;
+
+  SELECT * INTO v_job
+  FROM public.avatar_item_preview_jobs
+  WHERE status = 'queued' AND attempt_count < 10
+  ORDER BY created_at
+  FOR UPDATE SKIP LOCKED
+  LIMIT 1;
+
+  IF NOT FOUND THEN RETURN; END IF;
+
+  UPDATE public.avatar_item_preview_jobs
+  SET status = 'processing', started_at = now(), updated_at = now(),
+      attempt_count = attempt_count + 1, error_message = NULL
+  WHERE id = v_job.id;
+
+  RETURN QUERY SELECT v_job.id, v_job.clothing_item_id, v_job.job_type, v_job.requested_views, v_job.attempt_count + 1;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.complete_clothing_preview_job(
+  p_job_id uuid,
+  p_manifest jsonb
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_item_id uuid;
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Admin access required'; END IF;
+  IF jsonb_typeof(COALESCE(p_manifest, '{}'::jsonb)) <> 'object' THEN RAISE EXCEPTION 'Preview manifest must be an object'; END IF;
+
+  UPDATE public.avatar_item_preview_jobs
+  SET status = 'completed', output_manifest = COALESCE(p_manifest, '{}'::jsonb),
+      completed_at = now(), updated_at = now(), error_message = NULL
+  WHERE id = p_job_id AND status = 'processing'
+  RETURNING clothing_item_id INTO v_item_id;
+
+  IF v_item_id IS NULL THEN RAISE EXCEPTION 'Preview job is not processing or does not exist'; END IF;
+
+  UPDATE public.avatar_clothing_items
+  SET preview_status = 'ready', preview_manifest = p_manifest,
+      preview_generated_at = now(), last_preview_error = NULL
+  WHERE id = v_item_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fail_clothing_preview_job(
+  p_job_id uuid,
+  p_error text,
+  p_retry boolean DEFAULT true
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_item_id uuid;
+  v_attempts integer;
+  v_next_status text;
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Admin access required'; END IF;
+
+  SELECT clothing_item_id, attempt_count INTO v_item_id, v_attempts
+  FROM public.avatar_item_preview_jobs WHERE id = p_job_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Preview job not found'; END IF;
+
+  v_next_status := CASE WHEN p_retry AND v_attempts < 3 THEN 'queued' ELSE 'failed' END;
+
+  UPDATE public.avatar_item_preview_jobs
+  SET status = v_next_status, error_message = left(COALESCE(p_error, 'Unknown preview error'), 1000),
+      completed_at = CASE WHEN v_next_status = 'failed' THEN now() ELSE NULL END,
+      updated_at = now()
+  WHERE id = p_job_id;
+
+  UPDATE public.avatar_clothing_items
+  SET preview_status = CASE WHEN v_next_status = 'failed' THEN 'failed' ELSE 'pending' END,
+      last_preview_error = left(COALESCE(p_error, 'Unknown preview error'), 1000)
+  WHERE id = v_item_id;
+END;
+$$;
+
 GRANT EXECUTE ON FUNCTION public.queue_clothing_preview_job(uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.queue_skin_collection_previews(uuid,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_next_clothing_preview_job() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_clothing_preview_job(uuid,jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.fail_clothing_preview_job(uuid,text,boolean) TO authenticated;
 
--- Any design-relevant change invalidates generated assets. This prevents stale turntables
--- being labelled ready after an admin edits the garment.
 CREATE OR REPLACE FUNCTION public.invalidate_clothing_preview_on_design_change()
 RETURNS trigger
 LANGUAGE plpgsql
