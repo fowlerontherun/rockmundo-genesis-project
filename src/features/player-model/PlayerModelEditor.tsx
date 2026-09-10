@@ -1,7 +1,7 @@
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 import { useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
-import { usePlayerModel } from './usePlayerModel';
+import { useEquippedRichClothing, usePlayerModel } from './usePlayerModel';
 import { defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
 import { HeadStyling } from './HeadStyling';
 import { StarterWardrobe } from './StarterWardrobe';
@@ -10,13 +10,14 @@ import './player-model.css';
 const SKIN_COLORS = ['#f3d3b7', '#dfb18c', '#c58c63', '#a96f46', '#805132', '#593a2d', '#382a24'];
 export default function PlayerModelEditor() {
   const model = usePlayerModel();
+  const richClothing = useEquippedRichClothing(model.profileId);
   if (model.isLoading || (model.profileId && model.query.isPending)) return <p role="status" className="p-8">Loading your character’s stage model…</p>;
   if (model.error || model.query.isError) return <div role="alert" className="p-8"><p>Your saved model could not load.</p><button type="button" className="underline" onClick={() => void model.query.refetch()}>Try again</button></div>;
   if (!model.profileId || !model.query.data) return <p className="p-8">Select a character to create a stage model.</p>;
-  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} />;
+  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} />;
 }
 
-function EditorSession({ profileId, initial, model }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel> }) {
+function EditorSession({ profileId, initial, model, richClothing, richClothingError }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ReturnType<typeof useEquippedRichClothing>['data'] extends infer T ? NonNullable<T> : never; richClothingError: boolean }) {
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
@@ -34,10 +35,12 @@ function EditorSession({ profileId, initial, model }: { profileId: string; initi
     else setError('Your saved model could not be reloaded. Your edits are still here.');
   }
   return <section className="player-model-editor" aria-label="Full-body avatar creator">
-    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your character, dress them head to toe, and take the same look on stage.</p></div><span className="player-model-editor__badge">18 STARTER PIECES · ALL FREE</span></div>
+    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your character, dress them head to toe, and take the same look on stage.</p></div><span className="player-model-editor__badge">18 STARTER PIECES · SKIN STORE LAYERS</span></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
-        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} />
+        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} />
+        {richClothing.length > 0 && <p className="player-model-editor__hint">Your currently equipped Skin Store clothing is layered over the starter base model and will also appear in 3D gigs.</p>}
+        {richClothingError && <p role="status" className="player-model-editor__hint">Your equipped Skin Store clothing could not be loaded; the starter base outfit is shown.</p>}
         <div className="player-model-editor__preview-role"><label htmlFor="preview-instrument">Try a performance pose</label><select id="preview-instrument" value={role} onChange={event => setRole(event.target.value)}><option value="other">Backstage</option>{Object.entries(STAGE_INSTRUMENTS).map(([id, spec]) => <option key={id} value={id}>{spec.label}</option>)}</select><p>Your band role decides which instrument you play at gigs.</p></div>
       </div>
       <form className="player-model-editor__form" onSubmit={event => { event.preventDefault(); void save(); }}>
@@ -52,10 +55,10 @@ function EditorSession({ profileId, initial, model }: { profileId: string; initi
         <fieldset disabled={model.save.isPending}>
           <legend>02 <span>Wardrobe</span></legend>
           <div className="player-model-editor__choices" role="group" aria-label="Outfit presets">{STYLES.map(style => <button key={style} type="button" onClick={() => outfit(style)}>{STYLE_LABELS[style]}</button>)}</div>
-          <p className="player-model-editor__hint">18 free starter pieces. Six tops, six bottoms and six footwear designs, all ready to wear.</p>
+          <p className="player-model-editor__hint">These starter pieces form your base outfit. Equipped Skin Store items are layered over matching areas and are managed from the Skin Store.</p>
           {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} />)}
           <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} /></div>
-          <p className="player-model-editor__hint">Mix individual pieces and colours. Clothing and instrument finishes are cosmetic.</p>
+          <p className="player-model-editor__hint">Mix starter pieces and colours here. Rich purchased clothing, variants and editable colour zones are managed in the Skin Store.</p>
         </fieldset>
         <div className="player-model-editor__save">
           <div className="player-model-editor__save-state" aria-live="polite">{baseline.revision == null ? 'Create your first saved stage model' : dirty ? 'You have unsaved changes' : 'Your stage model is saved'}</div>
