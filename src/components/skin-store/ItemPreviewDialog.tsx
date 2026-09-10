@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,11 +8,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Lock, ShoppingCart, Check, Rotate3D, UserRound, Shirt, Layers3 } from "lucide-react";
+import { Sparkles, Lock, ShoppingCart, Check, Rotate3D, UserRound, Shirt, Layers3, Images } from "lucide-react";
 import { ClothingItem } from "@/hooks/useSkinStore";
 import { usePlayerAvatar } from "@/hooks/usePlayerAvatar";
 import { buildClothingPreviewAppearance, clothingPreviewVariants } from "@/features/clothing-preview/clothingPreview";
-import { RichClothingPreview } from "@/features/clothing-preview/RichClothingPreview";
+import { RichClothingPreview, type RichClothingPreviewStatus } from "@/features/clothing-preview/RichClothingPreview";
+import { usablePreviewFrames } from "@/features/clothing-preview/previewManifest";
+import { GeneratedTurntablePreview } from "./GeneratedTurntablePreview";
 
 interface ItemPreviewDialogProps {
   item: ClothingItem | null;
@@ -32,10 +34,18 @@ const rarityColors: Record<string, string> = {
 export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPreviewDialogProps) => {
   const { avatarConfig, isLoading: avatarLoading } = usePlayerAvatar();
   const [variantId, setVariantId] = useState<string>("default");
+  const [previewMode, setPreviewMode] = useState<'live' | 'turntable'>('live');
 
   const variants = useMemo(() => item ? clothingPreviewVariants(item) : [], [item]);
   const selectedVariant = variants.find(variant => variant.id === variantId) || variants[0];
   const appearance = useMemo(() => item ? buildClothingPreviewAppearance(avatarConfig, item, selectedVariant) : null, [avatarConfig, item, selectedVariant]);
+  const generatedFrames = useMemo(() => item ? usablePreviewFrames(item.preview_manifest) : [], [item]);
+  const hasGeneratedTurntable = generatedFrames.length > 0;
+
+  useEffect(() => {
+    setVariantId('default');
+    setPreviewMode('live');
+  }, [item?.id]);
 
   if (!item) return null;
 
@@ -46,6 +56,10 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
   const fit = (item.fit_config || {}) as Record<string, any>;
   const wear = (item.wear_config || {}) as Record<string, any>;
   const detailCount = Array.isArray(item.detail_layers) ? item.detail_layers.length : 0;
+
+  const handleLiveStatus = (status: RichClothingPreviewStatus) => {
+    if (status === 'error' && hasGeneratedTurntable) setPreviewMode('turntable');
+  };
 
   return (
     <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
@@ -59,19 +73,40 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
 
         <div className="grid lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)] gap-6">
           <div className="space-y-3">
+            {hasGeneratedTurntable && <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant={previewMode === 'live' ? 'default' : 'outline'} onClick={() => setPreviewMode('live')} className="gap-1.5">
+                <Rotate3D className="h-4 w-4" />Live 3D on my avatar
+              </Button>
+              <Button size="sm" variant={previewMode === 'turntable' ? 'default' : 'outline'} onClick={() => setPreviewMode('turntable')} className="gap-1.5">
+                <Images className="h-4 w-4" />Generated 360° item view
+              </Button>
+            </div>}
+
             <div className="rounded-xl overflow-hidden border bg-[#101823] min-h-[520px] relative">
-              {appearance && !avatarLoading ? (
-                <RichClothingPreview appearance={appearance} item={item} variant={selectedVariant} />
+              {previewMode === 'turntable' && hasGeneratedTurntable ? (
+                <GeneratedTurntablePreview itemName={item.name} manifest={item.preview_manifest} />
+              ) : appearance && !avatarLoading ? (
+                <RichClothingPreview appearance={appearance} item={item} variant={selectedVariant} onStatusChange={handleLiveStatus} />
               ) : (
                 <div className="min-h-[520px] flex items-center justify-center text-sm text-muted-foreground">Preparing your avatar fitting room…</div>
               )}
             </div>
+
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1"><Rotate3D className="h-3.5 w-3.5" />Drag to rotate 360°, scroll/pinch to zoom, or use the viewer controls.</span>
-              <Badge variant="outline" className="gap-1"><UserRound className="h-3 w-3" />Your avatar</Badge>
+              {previewMode === 'turntable' ? (
+                <span className="inline-flex items-center gap-1"><Images className="h-3.5 w-3.5" />Drag/swipe across the item or use the controls to rotate through generated angles.</span>
+              ) : (
+                <span className="inline-flex items-center gap-1"><Rotate3D className="h-3.5 w-3.5" />Drag to rotate 360°, scroll/pinch to zoom, or use the viewer controls.</span>
+              )}
+              <Badge variant="outline" className="gap-1">{previewMode === 'turntable' ? <Images className="h-3 w-3" /> : <UserRound className="h-3 w-3" />}{previewMode === 'turntable' ? 'Item turntable' : 'Your avatar'}</Badge>
             </div>
+
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
-              <strong className="text-foreground">Rich garment preview:</strong> this view now renders the item's stored cut/fit, fabric response, colours, pattern, sleeve treatment, wear/distress and supported detail layers directly in 3D on top of your character. Dedicated authored GLB assets can still override this procedural garment later for maximum fidelity.
+              {previewMode === 'turntable' ? <>
+                <strong className="text-foreground">Generated fallback:</strong> these WebP frames are rendered from the same rich garment metadata and remain available on devices where live WebGL cannot initialise. Named variant switching remains most accurate in the live fitting room.
+              </> : <>
+                <strong className="text-foreground">Rich garment preview:</strong> this view renders the item's stored cut/fit, fabric response, colours, pattern, sleeve treatment, wear/distress and supported detail layers directly in 3D on top of your character. If live 3D fails and generated frames exist, RockMundo automatically switches to the turntable.
+              </>}
             </div>
           </div>
 
@@ -91,6 +126,7 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
                   <SelectContent>{variants.map(variant => <SelectItem key={variant.id} value={variant.id}>{variant.label}</SelectItem>)}</SelectContent>
                 </Select>
                 {selectedVariant && <div className="flex items-center gap-2 text-xs text-muted-foreground"><span className="w-5 h-5 rounded-full border" style={{ backgroundColor: selectedVariant.color }} />{selectedVariant.material || material.fabric || 'Default material'}{selectedVariant.pattern && selectedVariant.pattern !== 'solid' ? ` · ${selectedVariant.pattern}` : ''}</div>}
+                {previewMode === 'turntable' && variants.length > 1 && <p className="text-xs text-muted-foreground">Generated turntable frames currently show the item's default published variant. Switch to Live 3D to inspect this selected variant accurately.</p>}
               </div>
             )}
 
