@@ -5,7 +5,7 @@ ALTER TABLE public.player_owned_skins
   ADD COLUMN IF NOT EXISTS customization_config jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 COMMENT ON COLUMN public.player_owned_skins.selected_variant_key IS
-  'Stable variant id/key/name or color-N key selected for an owned clothing item. Null uses the item default.';
+  'Stable variant id/key/name/label or color-N key selected for an owned clothing item. Null uses the item default.';
 COMMENT ON COLUMN public.player_owned_skins.customization_config IS
   'Player-selected colours for admin-authorised customization zones, stored as {zone_id: "#RRGGBB"}.';
 
@@ -101,7 +101,12 @@ BEGIN
     v_variant_valid := EXISTS (
       SELECT 1
       FROM jsonb_array_elements(v_variants) variant
-      WHERE COALESCE(NULLIF(variant->>'id',''), NULLIF(variant->>'key',''), NULLIF(variant->>'name','')) = NEW.selected_variant_key
+      WHERE COALESCE(
+        NULLIF(variant->>'id',''),
+        NULLIF(variant->>'key',''),
+        NULLIF(variant->>'name',''),
+        NULLIF(variant->>'label','')
+      ) = NEW.selected_variant_key
     );
 
     IF NOT v_variant_valid AND NEW.selected_variant_key ~ '^color-[0-9]+$' THEN
@@ -222,6 +227,8 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.set_owned_clothing_customization(uuid,uuid,text,jsonb,boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.set_owned_clothing_customization(uuid,uuid,text,jsonb,boolean) FROM anon;
 GRANT EXECUTE ON FUNCTION public.set_owned_clothing_customization(uuid,uuid,text,jsonb,boolean) TO authenticated;
 
 COMMENT ON FUNCTION public.set_owned_clothing_customization(uuid,uuid,text,jsonb,boolean) IS
