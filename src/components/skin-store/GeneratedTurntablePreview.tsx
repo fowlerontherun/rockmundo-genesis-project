@@ -10,7 +10,7 @@ interface Props {
   className?: string;
 }
 
-const labelForView = (key: string) => key.replaceAll('_', ' ').replace(/\b\w/g, char => char.toUpperCase());
+const labelForView = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 
 export function GeneratedTurntablePreview({ itemName, manifest, className = '' }: Props) {
   const frames = useMemo(() => usablePreviewFrames(manifest), [manifest]);
