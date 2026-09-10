@@ -36,6 +36,20 @@ describe('hairstyles and facial hair', () => {
       disposeModel(actor.root);
     }
   });
+  it('keeps every procedural feminine hairstyle closed across the crown', () => {
+    for(const hairStyle of HAIR_STYLES.filter(style => !['original','bald'].includes(style))) {
+      const a=defaultAppearance();a.body.frame='feminine';a.head={...a.head,hairStyle,facialHair:'none'};
+      const assembled=assemblePlayerModel(library,a);
+      const anchor=assembled.getObjectByName('avatar-head-details')!;
+      const hair=assembled.getObjectByName('avatar-hairstyle') as T.Mesh;
+      const faceBounds=anchor.userData.faceBounds as { min:number[]; max:number[] };
+      const hairBounds=new T.Box3().setFromObject(hair);
+      const faceWidth=faceBounds.max[0]-faceBounds.min[0];
+      expect(hairBounds.max.y).toBeGreaterThanOrEqual(faceBounds.max[1]-.005);
+      expect(hairBounds.max.x-hairBounds.min.x).toBeGreaterThan(faceWidth*.8);
+      disposeModel(assembled);
+    }
+  });
   it('preserves legacy appearances and rejects unknown or malformed new fields', () => {
     const legacy=defaultAppearance();expect(resolveAppearance(legacy)).toEqual(legacy);
     for(const [key,value] of [['hairStyle','premium'],['facialHair','https://invalid'],['facialHairColor','red'],['hairStyle',null],['other',true]] as const) expect(appearanceSchema.safeParse({...legacy,head:{...legacy.head,[key]:value}}).success).toBe(false);

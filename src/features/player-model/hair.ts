@@ -44,24 +44,62 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
     return Number.isFinite(z)?z:null;
   };
   const cap = () => {
+    // Keep the face-conforming hairline where usable.
     const hairline=top-h*.23, points: number[]=[];
     for(const face of skinFaces) {
       const polygon: T.Vector3[]=[];
       for(let i=0;i<3;i++) { const a=face[i],b=face[(i+1)%3]; if(a.y>=hairline) polygon.push(a.clone()); if((a.y>=hairline)!==(b.y>=hairline)) polygon.push(a.clone().lerp(b,(hairline-a.y)/(b.y-a.y))); }
-      for(let i=1;i<polygon.length-1;i++) for(const v of [polygon[0],polygon[i],polygon[i+1]]) points.push(center.x+(v.x-center.x)*1.022,v.y+.0025,center.z+(v.z-center.z)*1.022);
+      for(let i=1;i<polygon.length-1;i++) for(const v of [polygon[0],polygon[i],polygon[i+1]]) points.push(center.x+(v.x-center.x)*1.025,v.y+.003,center.z+(v.z-center.z)*1.025);
     }
-    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(points,3));g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(points.length/3*2),2));g.computeVertexNormals();strands.push(g);
+    if(points.length) {
+      const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(points,3));g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(points.length/3*2),2));g.computeVertexNormals();strands.push(g);
+    }
+    // Some feminine head exports do not expose enough crown skin triangles for
+    // the clipped cap above. This shallow shell guarantees a closed crown while
+    // retaining the face-conforming hairline and stays outside the skin surface.
+    const crown=new T.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI*.64).toNonIndexed();
+    crown.scale(rx*1.045,h*.19,rz*1.045); crown.translate(center.x,top-h*.185,center.z-rz*.015); strands.push(crown);
   };
   if(cut !== 'original' && cut !== 'bald') cap();
   if(cut === 'quiff') for(let i=0;i<5;i++) ellipsoid(strands,center.x+(i-2)*rx*.26,top+h*(.045+i*.008),center.z+rz*.34,rx*.27,h*.09,rz*.43,-.16);
   if(cut === 'mohawk') for(let i=0;i<8;i++) ellipsoid(strands,center.x,top+h*(.07+Math.sin(i/7*Math.PI)*.045),center.z-rz*.72+i*rz*1.44/7,rx*.105,h*.14,rz*.14);
-  if(['bob','long'].includes(cut)) {
-    const length = cut==='long'?h*.72:h*.38;
-    for(let i=0;i<13;i++) { const angle=i*Math.PI/12; ellipsoid(strands,center.x+Math.cos(angle)*rx*.86,top-length*.56,center.z-Math.sin(angle)*rz*.84,rx*.16,length*.5,rz*.17); }
+  if(['bob','long','shoulder','layered_long'].includes(cut)) {
+    const length = cut==='long'?h*.72:cut==='layered_long'?h*.8:cut==='shoulder'?h*.5:h*.38;
+    const count = cut==='layered_long'?15:13;
+    for(let i=0;i<count;i++) {
+      const angle=i*Math.PI/(count-1), layer=cut==='layered_long' ? .88+.12*Math.sin(i*.9) : 1;
+      ellipsoid(strands,center.x+Math.cos(angle)*rx*.86,top-length*.56*layer,center.z-Math.sin(angle)*rz*.84,rx*.16,length*.5*layer,rz*.17,cut==='layered_long'?Math.sin(i*.7)*.07:0);
+    }
     // Side panels frame the face; the front is deliberately open.
-    for(const side of [-1,1]) ellipsoid(strands,center.x+side*rx*.88,top-length*.58,center.z+rz*.2,rx*.16,length*.48,rz*.2);
+    for(const side of [-1,1]) ellipsoid(strands,center.x+side*rx*.88,top-length*.58,center.z+rz*.2,rx*.16,length*.48,rz*.2,side*(cut==='layered_long'?.06:0));
+  }
+  if(cut === 'long_waves') {
+    for(let i=0;i<13;i++) {
+      const angle=i*Math.PI/12, x=center.x+Math.cos(angle)*rx*.86, z=center.z-Math.sin(angle)*rz*.84;
+      for(let segment=0;segment<3;segment++) {
+        const phase=i*.8+segment*1.7;
+        ellipsoid(strands,x+Math.sin(phase)*rx*.07,top-h*(.27+segment*.18),z-segment*rz*.025,rx*.14,h*.205,rz*.16,Math.sin(phase)*.14);
+      }
+    }
+    for(const side of [-1,1]) for(let segment=0;segment<3;segment++) {
+      const phase=segment*1.8+side;
+      ellipsoid(strands,center.x+side*rx*(.88+.04*Math.sin(phase)),top-h*(.28+segment*.18),center.z+rz*.18-segment*rz*.03,rx*.15,h*.2,rz*.18,side*Math.sin(phase)*.12);
+    }
   }
   if(cut === 'ponytail') { ellipsoid(strands,center.x,top-h*.1,center.z-rz*.96,rx*.31,h*.105,rz*.27); for(let i=0;i<4;i++) ellipsoid(strands,center.x+Math.sin(i*.8)*rx*.08,top-h*.15-i*h*.12,center.z-rz*(1.12+i*.045),rx*(.26-i*.02),h*.115,rz*.22); }
+  if(cut === 'high_ponytail') {
+    ellipsoid(strands,center.x,top+h*.005,center.z-rz*.82,rx*.3,h*.105,rz*.28);
+    for(let i=0;i<5;i++) ellipsoid(strands,center.x+Math.sin(i*.9)*rx*.1,top-h*(.06+i*.13),center.z-rz*(1.02+i*.045),rx*(.26-i*.018),h*.13,rz*.21,Math.sin(i*.9)*.08);
+  }
+  if(cut === 'side_braid') {
+    const side=1;
+    ellipsoid(strands,center.x+side*rx*.72,top-h*.12,center.z-rz*.72,rx*.24,h*.1,rz*.22,side*.2);
+    for(let i=0;i<7;i++) ellipsoid(strands,center.x+side*rx*(.88+.05*Math.sin(i*.9)),top-h*(.22+i*.105),center.z-rz*(.72+i*.015),rx*(.18-i*.009),h*.085,rz*.16,side*(i%2?.13:-.13));
+  }
+  if(cut === 'twin_ponytails') for(const side of [-1,1]) {
+    ellipsoid(strands,center.x+side*rx*.78,top-h*.08,center.z-rz*.62,rx*.22,h*.09,rz*.2,side*.12);
+    for(let i=0;i<4;i++) ellipsoid(strands,center.x+side*rx*(.96+.03*Math.sin(i)),top-h*(.17+i*.14),center.z-rz*(.68+i*.025),rx*(.2-i*.015),h*.13,rz*.17,side*(.08+Math.sin(i)*.05));
+  }
   if(cut === 'bun') ellipsoid(strands,center.x,top+h*.015,center.z-rz*.3,rx*.39,h*.12,rz*.39);
   if(cut === 'curls') for(let row=0;row<3;row++) for(let i=0;i<10;i++) { const a=i*Math.PI/5+row*.17,r=Math.sin((row+1)*Math.PI/7);ellipsoid(strands,center.x+Math.cos(a)*rx*r*.9,top+h*.005+Math.cos((row+1)*Math.PI/7)*h*.08,center.z+Math.sin(a)*rz*r*.9,rx*.21,h*.085,rz*.2); }
   const chin=appearance.body.frame==='masculine'?.27:.14, lipY=base+h*.34, lipZ=(surfaceZ(center.x,lipY)??front)+.002;

@@ -5,7 +5,7 @@ frame text; hair text; beard text; candidate jsonb; n integer := 0; field text;
 begin
   if public.is_valid_player_stage_appearance(a) is distinct from true then raise exception 'Legacy appearance rejected'; end if;
   foreach frame in array array['masculine','feminine'] loop
-    foreach hair in array array['original','bald','buzz','quiff','mohawk','bob','ponytail','bun','curls','long'] loop
+    foreach hair in array array['original','bald','buzz','quiff','mohawk','bob','shoulder','layered_long','long_waves','ponytail','high_ponytail','side_braid','twin_ponytails','bun','curls','long'] loop
       foreach beard in array array['none','stubble','moustache','goatee','short_beard','full_beard','long_beard','sideburns'] loop
         candidate := jsonb_set(jsonb_set(a,'{body,frame}',to_jsonb(frame)),'{head}',a->'head' || jsonb_build_object('hairStyle',hair,'facialHair',beard,'facialHairColor','#b75e32'));
         if public.is_valid_player_stage_appearance(candidate) is distinct from true then raise exception 'Valid hair rejected: % % %',frame,hair,beard; end if;
@@ -23,6 +23,6 @@ begin
   end loop;
   candidate := jsonb_set(a,'{head,unlocked}','true');
   if public.is_valid_player_stage_appearance(candidate) is distinct from false then raise exception 'Extra head property accepted'; end if;
-  if n <> 160 then raise exception 'Incomplete style coverage'; end if;
+  if n <> 256 then raise exception 'Incomplete style coverage'; end if;
 end $$;
-select 'PASS: 160 hair/beard/frame combinations, matching colour, legacy data and invalid-input rejection' as result;
+select 'PASS: 256 hair/beard/frame combinations, matching colour, legacy data and invalid-input rejection' as result;

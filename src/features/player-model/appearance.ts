@@ -33,9 +33,16 @@ export const CLOTHING_COLORS = [
 export function equipmentItem(appearance: PlayerAppearance, slot: EquipmentSlot): StarterItem {
   return STARTER_ITEMS[slot].find(item => item.id === appearance.equipment[slot].itemId) ?? STARTER_ITEMS[slot][0];
 }
-export const HAIR_STYLES = ['original', 'bald', 'buzz', 'quiff', 'mohawk', 'bob', 'ponytail', 'bun', 'curls', 'long'] as const;
+export const HAIR_STYLES = [
+  'original', 'bald', 'buzz', 'quiff', 'mohawk', 'bob', 'shoulder', 'layered_long', 'long_waves',
+  'ponytail', 'high_ponytail', 'side_braid', 'twin_ponytails', 'bun', 'curls', 'long',
+] as const;
 export const FACIAL_HAIR_STYLES = ['none', 'stubble', 'moustache', 'goatee', 'short_beard', 'full_beard', 'long_beard', 'sideburns'] as const;
-export const HAIR_LABELS: Record<typeof HAIR_STYLES[number], string> = { original: 'Original haircut', bald: 'Bald', buzz: 'Buzz cut', quiff: 'Quiff', mohawk: 'Mohawk', bob: 'Bob', ponytail: 'Ponytail', bun: 'Bun', curls: 'Curls', long: 'Long hair' };
+export const HAIR_LABELS: Record<typeof HAIR_STYLES[number], string> = {
+  original: 'Original haircut', bald: 'Bald', buzz: 'Buzz cut', quiff: 'Quiff', mohawk: 'Mohawk', bob: 'Bob',
+  shoulder: 'Shoulder length', layered_long: 'Layered long hair', long_waves: 'Long waves', ponytail: 'Ponytail',
+  high_ponytail: 'High ponytail', side_braid: 'Side braid', twin_ponytails: 'Twin ponytails', bun: 'Bun', curls: 'Curls', long: 'Long hair',
+};
 export const FACIAL_HAIR_LABELS: Record<typeof FACIAL_HAIR_STYLES[number], string> = { none: 'Clean shaven', stubble: 'Stubble', moustache: 'Moustache', goatee: 'Goatee', short_beard: 'Short beard', full_beard: 'Full beard', long_beard: 'Long beard', sideburns: 'Sideburns' };
 export const HAIR_COLORS = [['Black', '#221f24'], ['Brown', '#54372a'], ['Chestnut', '#854b32'], ['Ginger', '#b75e32'], ['Blond', '#d5b474'], ['Silver', '#aeb5bd'], ['White', '#eee8db'], ['Pink', '#d376a1'], ['Blue', '#426baa'], ['Purple', '#8055a2']] as const;
 export function headModelStyle(appearance: PlayerAppearance): Style { return appearance.head.hairStyle && appearance.head.hairStyle !== 'original' ? 'casual' : appearance.head.style; }

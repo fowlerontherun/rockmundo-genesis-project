@@ -85,11 +85,12 @@ with `./node_modules/.bin/vitest run --config vitest.stage-models.config.ts --ma
 
 ## Hair and facial hair
 
-The creator offers the original three imported cuts plus nine new selections:
-bald, buzz cut, quiff, mohawk, bob, ponytail, bun, curls and long hair. Facial hair
-has clean shaven, stubble, moustache, goatee, short/full/long beard and sideburns.
-All are free and available on either body frame, with ten named colours and a
-custom picker. Facial hair can follow hair colour or use an independent dye.
+The creator offers the imported original haircut plus 15 procedural choices:
+bald, buzz cut, quiff, mohawk, bob, shoulder length, layered long hair, long waves,
+ponytail, high ponytail, side braid, twin ponytails, bun, curls and long hair.
+Facial hair has clean shaven, stubble, moustache, goatee, short/full/long beard and
+sideburns. All are free and available on either body frame, with ten named colours
+and a custom picker. Facial hair can follow hair colour or use an independent dye.
 Face close-up and Full body buttons switch preview framing.
 
 Optional `head.hairStyle`, `head.facialHair` and `head.facialHairColor` fields
@@ -99,15 +100,19 @@ haircut selector remains available when Original haircut is selected. New cuts
 use the complete casual scalp from the appropriate rig family. Only scalp-hair
 primitives are replaced; skin, eyes and brows remain intact.
 
-Hair shells follow the authored scalp. Facial hair follows the actual face
-surface, with frame-specific jaw anchors. Geometry is batched by hair/beard
-material and attached to the existing Head bone, so it follows performance
-animation in the fitting room and shared viewer. There are no extra downloads.
-These are stylised solid hair meshes, not strand-level hair simulation.
+Hair shells follow the authored scalp and every procedural non-bald cut also has
+a shallow crown shell. The latter closes gaps on feminine head exports where the
+skin mesh does not provide enough crown triangles for the clipped scalp alone.
+Longer feminine crowd styles are sampled from the same catalogue, reducing repeat
+silhouettes in gigs. Facial hair follows the actual face surface, with frame-specific
+jaw anchors. Geometry is batched by hair/beard material and attached to the existing
+Head bone, so it follows performance animation in the fitting room and shared viewer.
+There are no extra downloads. These are stylised solid hair meshes, not strand-level
+hair simulation.
 
-The additive `avatar_hair_styles` migration is applied directly to the connected
-project. `supabase/tests/avatar_hair_styles.sql` checks 160 hair/beard/frame
-combinations, matching colour, old saved data and invalid-input rejection using
-read-only validation calls. Offline tests exercise actual rig assembly, bone
-attachment, animation and independent colour persistence. Posed face geometry
-was inspected locally; browser visual review remains before release.
+The additive `avatar_hair_styles` and `expand_avatar_hair_styles` migrations are
+applied directly to the connected project. `supabase/tests/avatar_hair_styles.sql`
+checks 256 hair/beard/frame combinations, matching colour, old saved data and
+invalid-input rejection using read-only validation calls. Offline tests exercise
+actual rig assembly, crown coverage, bone attachment, animation and independent
+colour persistence. Browser visual review remains before release.
