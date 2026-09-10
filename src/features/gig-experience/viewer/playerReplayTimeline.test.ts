@@ -52,33 +52,33 @@ function experience(durationSeconds = 180) {
   } as GigExperienceDTO;
 }
 
-describe("player 20-second song replay timeline", () => {
-  it("fits every song to 20 seconds while leaving the finale intact", () => {
+describe("player song replay timeline", () => {
+  it("plays up to 45 seconds of each song and leaves four seconds for the crowd", () => {
     const expanded = fitReplayToPlayerSongExcerpts(replay, experience());
 
     expect(expanded).not.toBe(replay);
-    expect(expanded.events[0].durationMs).toBe(20_000);
-    expect(expanded.events[1].scheduledOffsetMs).toBe(20_000);
-    expect(expanded.events[1].durationMs).toBe(20_000);
-    expect(expanded.events[2].scheduledOffsetMs).toBe(40_000);
+    expect(expanded.events[0].durationMs).toBe(49_000);
+    expect(expanded.events[1].scheduledOffsetMs).toBe(49_000);
+    expect(expanded.events[1].durationMs).toBe(49_000);
+    expect(expanded.events[2].scheduledOffsetMs).toBe(98_000);
     expect(expanded.events[2].durationMs).toBe(20_000);
-    expect(expanded.durationMs).toBe(60_000);
+    expect(expanded.durationMs).toBe(118_000);
     expect(expanded.checksum).toBeNull();
   });
 
-  it("caps an excerpt when the known track is shorter than 20 seconds", () => {
+  it("caps music at a known shorter track duration but keeps the crowd transition", () => {
     const expanded = fitReplayToPlayerSongExcerpts(replay, experience(12));
 
-    expect(expanded.events[0].durationMs).toBe(12_000);
-    expect(expanded.events[1].scheduledOffsetMs).toBe(12_000);
-    expect(expanded.events[1].durationMs).toBe(20_000);
+    expect(expanded.events[0].durationMs).toBe(16_000);
+    expect(expanded.events[1].scheduledOffsetMs).toBe(16_000);
+    expect(expanded.events[1].durationMs).toBe(49_000);
   });
 
-  it("uses 20-second visual excerpts when audio metadata is unavailable", () => {
+  it("uses a 45-second music window plus crowd transition when audio metadata is unavailable", () => {
     const expanded = fitReplayToPlayerSongExcerpts(replay, null);
 
-    expect(expanded.events[0].durationMs).toBe(20_000);
-    expect(expanded.events[1].durationMs).toBe(20_000);
+    expect(expanded.events[0].durationMs).toBe(49_000);
+    expect(expanded.events[1].durationMs).toBe(49_000);
   });
 
   it("preserves recorded performance-item choreography duration", () => {
@@ -105,10 +105,10 @@ describe("player 20-second song replay timeline", () => {
 
     const expanded = fitReplayToPlayerSongExcerpts(withItem, experience());
     expect(expanded.events.map(({ scheduledOffsetMs, durationMs }) => ({ scheduledOffsetMs, durationMs }))).toEqual([
-      { scheduledOffsetMs: 0, durationMs: 20_000 },
-      { scheduledOffsetMs: 20_000, durationMs: 2_000 },
-      { scheduledOffsetMs: 22_000, durationMs: 4_000 },
-      { scheduledOffsetMs: 26_000, durationMs: 20_000 },
+      { scheduledOffsetMs: 0, durationMs: 49_000 },
+      { scheduledOffsetMs: 49_000, durationMs: 2_000 },
+      { scheduledOffsetMs: 51_000, durationMs: 4_000 },
+      { scheduledOffsetMs: 55_000, durationMs: 20_000 },
     ]);
   });
 });
