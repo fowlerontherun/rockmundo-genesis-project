@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buildGigViewerReplay } from "../events/generator";
 import type { GigExperienceDTO } from "../types";
 import type { GigViewerReplay } from "../events/types";
@@ -27,6 +27,8 @@ export function LiveGigStageView({
   const [replay, setReplay] = useState<GigViewerReplay | null>(null);
   const [failure, setFailure] = useState<unknown>(null);
   const [attempt, setAttempt] = useState(0);
+  const fullscreenHostRef = useRef<HTMLDivElement>(null);
+  const ownsNativeFullscreenRef = useRef(false);
   const resultAvailable = experience.viewer.ready && !!experience.viewer.resultReadyAt;
 
   useEffect(() => {
@@ -46,6 +48,45 @@ export function LiveGigStageView({
       alive = false;
     };
   }, [attempt, gigId, experience, resultAvailable]);
+
+  // Live player viewing is always presented as a viewport-filling experience.
+  // Native browser fullscreen is requested too when the browser permits an
+  // automatic request from the user action that opened the live viewer. Browsers
+  // that require another explicit gesture still receive the full-window overlay.
+  useEffect(() => {
+    if (!replay) return;
+    const host = fullscreenHostRef.current;
+    if (!host) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    if (!document.fullscreenElement && host.requestFullscreen) {
+      try {
+        void host.requestFullscreen()
+          .then(() => {
+            ownsNativeFullscreenRef.current = document.fullscreenElement === host;
+          })
+          .catch(() => {
+            ownsNativeFullscreenRef.current = false;
+          });
+      } catch {
+        ownsNativeFullscreenRef.current = false;
+      }
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (ownsNativeFullscreenRef.current && document.fullscreenElement === host) {
+        try {
+          void document.exitFullscreen?.().catch(() => undefined);
+        } catch {
+          // The live viewer still closes normally if the browser rejects exit.
+        }
+      }
+      ownsNativeFullscreenRef.current = false;
+    };
+  }, [replay]);
 
   if (failure) {
     const diagnostic = getGigExperienceErrorDisplay(failure, gigId);
@@ -72,14 +113,16 @@ export function LiveGigStageView({
   }
 
   return (
-    <GigViewerShell
-      gigId={gigId}
-      experience={experience}
-      open
-      mode="player"
-      replayOverride={replay}
-      onViewResult={onViewResult}
-      onClose={onClose}
-    />
+    <div ref={fullscreenHostRef} className="fixed inset-0 z-[100] h-dvh w-screen overflow-hidden bg-black">
+      <GigViewerShell
+        gigId={gigId}
+        experience={experience}
+        open
+        mode="player"
+        replayOverride={replay}
+        onViewResult={onViewResult}
+        onClose={onClose}
+      />
+    </div>
   );
 }
