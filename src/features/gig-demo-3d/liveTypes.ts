@@ -1,5 +1,6 @@
 import type { InstrumentId, VocalRole } from './instrumentCatalog';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 
 export type StageRole = 'vocals' | 'guitar' | 'bass' | 'drums' | 'keyboard' | 'dj' | 'strings' | 'brass' | 'woodwind' | 'percussion' | 'other' | 'fan';
 export interface ConcertPerformer {
@@ -10,6 +11,7 @@ export interface ConcertPerformer {
   vocal?: VocalRole;
   position: [number, number, number];
   appearance: PlayerAppearance;
+  richClothing?: ResolvedEquippedClothing[];
   phase: number;
 }
 export interface ConcertVenue { name: string; bandName: string; archetype: string; seed: number; type?: string | null; capacity?: number | null; id?: string | null; }
