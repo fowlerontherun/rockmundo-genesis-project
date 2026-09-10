@@ -5,7 +5,7 @@ ALTER TABLE public.player_owned_skins
   ADD COLUMN IF NOT EXISTS customization_config jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 COMMENT ON COLUMN public.player_owned_skins.selected_variant_key IS
-  'Stable variant id/key/name selected for an owned clothing item. Null uses the item default.';
+  'Stable variant id/key/name or color-N key selected for an owned clothing item. Null uses the item default.';
 COMMENT ON COLUMN public.player_owned_skins.customization_config IS
   'Player-selected colours for admin-authorised customization zones, stored as {zone_id: "#RRGGBB"}.';
 
@@ -62,9 +62,12 @@ SET search_path = public
 AS $$
 DECLARE
   v_variants jsonb;
+  v_colours jsonb;
   v_zones jsonb;
   v_key text;
   v_color text;
+  v_colour_index integer;
+  v_variant_valid boolean := false;
 BEGIN
   IF NEW.item_type <> 'clothing' THEN
     IF NEW.selected_variant_key IS NOT NULL OR COALESCE(NEW.customization_config, '{}'::jsonb) <> '{}'::jsonb THEN
@@ -73,8 +76,8 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  SELECT COALESCE(variant_matrix, '[]'::jsonb), COALESCE(customization_zones, '[]'::jsonb)
-  INTO v_variants, v_zones
+  SELECT COALESCE(variant_matrix, '[]'::jsonb), COALESCE(color_variants, '[]'::jsonb), COALESCE(customization_zones, '[]'::jsonb)
+  INTO v_variants, v_colours, v_zones
   FROM public.avatar_clothing_items
   WHERE id = NEW.item_id;
 
@@ -82,12 +85,21 @@ BEGIN
     RAISE EXCEPTION 'Owned clothing item does not exist';
   END IF;
 
-  IF NEW.selected_variant_key IS NOT NULL AND NOT EXISTS (
-    SELECT 1
-    FROM jsonb_array_elements(v_variants) variant
-    WHERE COALESCE(NULLIF(variant->>'id',''), NULLIF(variant->>'key',''), NULLIF(variant->>'name','')) = NEW.selected_variant_key
-  ) THEN
-    RAISE EXCEPTION 'Selected clothing variant is not available for this item';
+  IF NEW.selected_variant_key IS NOT NULL THEN
+    v_variant_valid := EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(v_variants) variant
+      WHERE COALESCE(NULLIF(variant->>'id',''), NULLIF(variant->>'key',''), NULLIF(variant->>'name','')) = NEW.selected_variant_key
+    );
+
+    IF NOT v_variant_valid AND NEW.selected_variant_key ~ '^color-[0-9]+$' THEN
+      v_colour_index := substring(NEW.selected_variant_key from 'color-([0-9]+)')::integer;
+      v_variant_valid := v_colour_index >= 0 AND v_colour_index < jsonb_array_length(v_colours);
+    END IF;
+
+    IF NOT v_variant_valid THEN
+      RAISE EXCEPTION 'Selected clothing variant is not available for this item';
+    END IF;
   END IF;
 
   NEW.customization_config := COALESCE(NEW.customization_config, '{}'::jsonb);
