@@ -89,7 +89,10 @@ export function ClothingTransferPanel({ collectionId, collection, items, onChang
             import_source: bundle.collection?.name || 'file import',
             import_batch_id: batchId,
             external_key: strategy === 'copy' && row.duplicateId ? `${row.entry.externalKey}.copy.${crypto.randomUUID().slice(0, 8)}` : row.entry.externalKey,
-            preview_status: 'ready',
+            preview_status: 'pending',
+            preview_manifest: {},
+            preview_generated_at: null,
+            last_preview_error: null,
           };
           delete (payload as any).id;
           if (row.duplicateId && strategy === 'update') {
@@ -108,9 +111,9 @@ export function ClothingTransferPanel({ collectionId, collection, items, onChang
       }
       await (supabase.from('admin_clothing_transfer_audit' as any) as any).insert({
         action_type: 'import', batch_id: batchId, collection_id: collectionId, item_count: rows.length,
-        result_summary: { created, updated, skipped, failed, strategy, schema_version: bundle.schemaVersion },
+        result_summary: { created, updated, skipped, failed, strategy, schema_version: bundle.schemaVersion, previews: 'pending' },
       });
-      toast.success(`Import complete: ${created} created, ${updated} updated, ${skipped} skipped${failed ? `, ${failed} failed` : ''}`);
+      toast.success(`Import complete: ${created} created, ${updated} updated, ${skipped} skipped${failed ? `, ${failed} failed` : ''}. Generate previews before publishing.`);
       setBundle(null); setRows([]); onChanged?.();
     } finally {
       setImporting(false);
@@ -125,7 +128,7 @@ export function ClothingTransferPanel({ collectionId, collection, items, onChang
       <CardTitle className="text-base flex items-center gap-2"><FileJson className="h-4 w-4" />Import / Export</CardTitle>
     </CardHeader>
     <CardContent className="space-y-4">
-      <p className="text-sm text-muted-foreground">Move detailed garments between RockMundo environments using a versioned JSON file. Rich materials, layers, variants, render metadata and gameplay bonuses are preserved.</p>
+      <p className="text-sm text-muted-foreground">Move detailed garments between RockMundo environments using a versioned JSON file. Rich materials, layers, variants, render metadata and gameplay bonuses are preserved. Imported designs are marked preview-pending until their fallback assets are regenerated.</p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={exportCollection} disabled={!items.length}><Download className="h-4 w-4 mr-2" />Export collection</Button>
         <Button type="button" variant="outline" onClick={() => fileInput.current?.click()}><Upload className="h-4 w-4 mr-2" />Import file</Button>
