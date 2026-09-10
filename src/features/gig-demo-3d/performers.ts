@@ -1,3 +1,4 @@
+import { detailedCrowdArea } from './venueAudience';
 import * as T from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -319,7 +320,7 @@ export class DemoCrowd {
         const t = reduced ? 0 : seconds, target = Math.round(CROWD_LIMIT * T.MathUtils.clamp(density, 0, 1));
         this.time.value = t;
         let phoneCount = 0;
-        const width = this.venue ? this.venue.crowdWidth / 13 : 1, depth = this.venue ? this.venue.crowdDepth / 13 : 1;
+        const area = detailedCrowdArea(this.venue), width = area.width / 13, depth = area.depth / 13;
         for (const { mesh, motion, fans, phone } of this.batches) {
             mesh.count = 0;
             for (const fan of fans) {
@@ -327,7 +328,8 @@ export class DemoCrowd {
                     continue;
                 const mode = crowdMotion(reaction, energy, fan.personality, t), phase = t * fan.pace + fan.phase, active = !reduced && mode !== 0;
                 const bounce = active ? Math.max(0, Math.sin(phase * (mode === 6 ? 5.4 : 6.28))) * energy * (mode === 6 ? .15 : mode === 2 ? .035 : .012) : 0;
-                this.transform.position.set(T.MathUtils.clamp(fan.x * (tuning.lateralSpread ?? 1) + Math.sin(fan.phase) * (tuning.randomness ?? 0) * .2, -7.5, 7.5) * width, bounce, 2.15 + (fan.z - 2.15) * depth * (tuning.depthSpread ?? 1) * (1 - (tuning.stagePull ?? 0) * .3));
+                this.transform.position.set(T.MathUtils.clamp(fan.x * Math.min(1.1, tuning.lateralSpread ?? 1) + Math.sin(fan.phase) * (tuning.randomness ?? 0) * .2, -7.5, 7.5) * width, bounce, 2.15 + (fan.z - 2.15) * depth * Math.min(1.1, tuning.depthSpread ?? 1) * (1 - (tuning.stagePull ?? 0) * .3));
+                if(area.runway && this.transform.position.z < 10) this.transform.position.x += this.transform.position.x < 0 ? -3.8 : 3.8;
                 this.transform.rotation.set(active && mode === 7 ? Math.max(0, Math.sin(phase * 4)) * .1 : 0, fan.yaw + (active ? Math.sin(phase * 1.4) * .04 : 0), active ? Math.sin(phase * 1.7) * (mode === 1 ? .055 : .016) * energy : 0);
                 this.transform.scale.setScalar(fan.scale * Math.min(1.15, tuning.fanScale ?? 1));
                 this.transform.updateMatrix();

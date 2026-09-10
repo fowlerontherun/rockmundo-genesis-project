@@ -17,11 +17,11 @@ describe('built venue architecture', () => {
       const position = node.geometry.attributes.position;
       for (let i = 0; i < position.count; i += 17) expect([position.getX(i), position.getY(i), position.getZ(i)].every(Number.isFinite)).toBe(true);
       if (node instanceof T.InstancedMesh) {
-        expect(node.count).toBe(0); expect(node.userData.maxCount).toBeGreaterThan(0); expect(node.userData.maxCount).toBeLessThanOrEqual(1800);
+        expect(node.count).toBe(0); expect(node.userData.maxCount).toBeGreaterThan(0); expect(node.userData.maxCount).toBeLessThanOrEqual(12000);
         const matrix = new T.Matrix4(); node.getMatrixAt(0, matrix); expect(matrix.elements.every(Number.isFinite)).toBe(true);
       }
     });
-    expect(draws).toBeLessThan(35);
+    expect(draws).toBeLessThan(45);
     if (p.seating || p.capacity > 3000) expect(root.getObjectByName('venue-distant-audience')).toBeDefined();
     expect(new T.Box3().setFromObject(root).max.y).toBeLessThanOrEqual(201);
     disposeModel(scene);

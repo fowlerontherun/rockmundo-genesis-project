@@ -1,3 +1,4 @@
+import { buildVenueProduction } from './venueProduction';
 import * as T from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import grilleUrl from '@/assets/textures/equipment/speaker-grille.png';
@@ -70,6 +71,13 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
   const black = matte('#0d1119'), steel = metal('#4c535e'), chrome = metal('#b7c1cd');
   const oak = surface('wood_floor_worn', 'diff', [5.8, 3], '#b8ad9f');
   const brick = surface('brick_wall_001', 'diffuse', [6.6, 2.65], '#998382');
+  if (profile && venue) {
+    root.removeFromParent();
+    const grille = new T.MeshStandardMaterial({ map: texture(loader, grilleUrl, [2, 2]), color: '#616774', roughness: .65, metalness: .45 });
+    const production = buildVenueProduction(scene, profile, oak, grille, label, venue.bandName || 'ROCKMUNDO');
+    buildVenueEnvironment(scene, profile, venue.seed, oak, brick);
+    return production;
+  }
   if (!venue) {
   box(root, [large ? 48 : 24, .12, large ? 60 : 36], [0, -.09, 10], matte(archetype === 'beach' ? '#89765a' : outdoor ? '#27302b' : '#232327'));
   if (!outdoor && !large) {
@@ -159,12 +167,6 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
   box(root, [1.1, 2.3, 0.12], [-6.9, 1.13, -5.32], matte('#19252d'));
   }
   batchStaticMeshes(root);
-  if (profile && venue) {
-    root.scale.set(profile.stageWidth / 11.6, (profile.rigHeight - profile.stageHeight) / 5.3, profile.stageDepth / 5.9);
-    root.position.set(0, profile.stageHeight - .9 * root.scale.y, .65 * (1 - root.scale.z));
-    root.userData.profile = profile;
-    buildVenueEnvironment(scene, profile, venue.seed, oak, brick);
-  }
   return root;
 }
 

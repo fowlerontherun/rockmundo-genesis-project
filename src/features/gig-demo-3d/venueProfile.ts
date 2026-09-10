@@ -30,13 +30,13 @@ export function resolveVenueProfile(venue: Partial<ConcertVenue> = {}): VenuePro
   const capacity = Number.isFinite(rawCapacity) && rawCapacity! > 0 ? Math.max(1, Math.min(150000, Math.round(rawCapacity!))) : kind ? VENUE_TYPES[kind][1] : 500;
   kind ??= fallback(capacity);
   const level = capacity <= 100 ? 0 : capacity <= 500 ? 1 : capacity <= 3000 ? 2 : capacity <= 15000 ? 3 : 4;
-  const stageWidth = [6.4, 8.2, 11.6, 17, 24][level], stageDepth = [3.8, 4.6, 5.9, 8, 10][level], stageHeight = [.25, .5, .9, 1.3, 1.8][level];
+  const stageWidth = [6.4, 8.6, 14, 26, 42][level], stageDepth = [3.8, 5, 8, 14, 20][level], stageHeight = [.25, .5, .9, 1.5, 2.2][level];
   const outdoor = ['street_corner','amphitheatre','park_bandstand','city_square','rooftop_terrace','beach_stage','festival_stage','stadium'].includes(kind);
   const seating = ['concert_hall','theatre','indoor_arena','ice_arena','stadium','amphitheatre'].includes(kind);
   const production = level === 0 || kind === 'street_corner' || kind === 'cafe_stage' ? 'portable' : level >= 3 ? 'touring' : 'house';
   return { kind, label: VENUE_TYPES[kind][0], capacity, outdoor, size: ['intimate','small','medium','large','landmark'][level] as VenueProfile['size'], stageWidth, stageDepth, stageHeight,
-    rigHeight: stageHeight + [3.1, 4, 5.3, 7, 9][level], roomWidth: stageWidth + [5, 8, 14, 26, 42][level], roomDepth: [15, 22, 34, 50, 76][level], roofHeight: [4.5, 5.8, 8.5, 14, 22][level],
-    crowdWidth: ['cafe_stage','jazz_lounge'].includes(kind) ? stageWidth : stageWidth + [0, 1, 2, 5, 8][level], crowdDepth: [6, 10, 16, 26, 40][level], seating, seatRows: seating ? [2, 3, 5, 8, 12][level] : 0, production,
+    rigHeight: stageHeight + [3.1, 4.2, 6.5, 10, 16][level], roomWidth: stageWidth + [5, 8, 16, 30, 52][level], roomDepth: [15, 22, 36, 64, 100][level], roofHeight: [4.5, 6, 10, 16, 26][level],
+    crowdWidth: ['cafe_stage','jazz_lounge'].includes(kind) ? stageWidth : stageWidth + [0, 1, 4, 12, 24][level], crowdDepth: [6, 10, 20, 38, 68][level], seating, seatRows: seating ? [2, 3, 5, 8, 12][level] : 0, production,
     accent: ['jazz_lounge','theatre','concert_hall'].includes(kind) ? '#9c3f52' : ['park_bandstand','church_hall'].includes(kind) ? '#537c62' : kind === 'warehouse' ? '#ba7c37' : '#3b8ba5' };
 }
 /** Coordinates shared by deck, rig, fixed instruments and replay performers. */

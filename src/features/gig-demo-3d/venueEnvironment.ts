@@ -1,11 +1,12 @@
+import { venueArchitecture } from './venueArchitecture';
 import * as T from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { buildVenueAudience } from './venueAudience';
 import { box, cylinder, rod, matte, metal, batchStaticMeshes } from './stage';
 import { seededRandom } from './config';
 import type { VenueProfile } from './venueProfile';
 
 /** Architecture surrounds the human-scale performance area. Detail is batched
- * by material; distant spectators use one bounded, inexpensive instance batch. */
+ * by material; distant spectators use bounded instance batches for standing and seated people. */
 export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: number, wood: T.Material, brick: T.Material) {
   const root = new T.Group(); root.name = `environment-${p.kind}`; root.userData.profile = p; scene.add(root);
   const random = seededRandom(seed), half = p.roomWidth / 2, back = .65 - p.stageDepth - 1.4;
@@ -21,7 +22,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
     for (const side of [-1, 1]) box(root, [.25, p.roofHeight, p.roomDepth - back], [side * half, p.roofHeight / 2, (p.roomDepth + back) / 2], wallMat);
     if (p.kind !== 'church_hall') box(root, [p.roomWidth, .2, p.roomDepth - back], [0, p.roofHeight, (p.roomDepth + back) / 2], dark);
   } else {
-    const sky = new T.Mesh(new T.SphereGeometry(180, 24, 12), new T.MeshBasicMaterial({ color: p.kind === 'beach_stage' ? '#283e56' : '#142238', side: T.BackSide })); sky.position.y = 20; root.add(sky);
+    const sky = new T.Mesh(new T.SphereGeometry(180, 24, 12), new T.MeshBasicMaterial({ color: p.kind === 'beach_stage' ? '#1a2c3e' : '#090e18', side: T.BackSide })); sky.position.y = 20; root.add(sky);
   }
   const lamp = (x: number, z: number, h = 4) => { rod(root, [x,0,z],[x,h,z],.045,steel); box(root,[.32,.12,.32],[x,h,z],glow); };
   const tree = (x: number, z: number, palm = false) => {
@@ -61,10 +62,6 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
     }
     box(root,[p.stageWidth+1.8,.55,.6],[0,p.rigHeight+.55,.8],p.kind==='theatre'?brass:wood);
   }
-  if (p.kind === 'festival_tent') {
-    const roof=new T.Mesh(new T.ConeGeometry(p.roomWidth*.73,p.roofHeight*.6,8,1,true),new T.MeshStandardMaterial({color:'#bdb6a5',roughness:.9,side:T.DoubleSide})); roof.scale.z=(p.roomDepth-back)/p.roomWidth; roof.position.set(0,p.roofHeight,(p.roomDepth+back)/2); root.add(roof);
-    for(const side of [-1,1]) for(let z=back;z<=p.roomDepth;z+=5) { rod(root,[side*half,0,z],[side*half,p.roofHeight*.72,z],.06,steel); box(root,[.08,p.roofHeight*.55,2],[side*half,p.roofHeight*.28,z],accent); }
-  }
   if (p.kind === 'park_bandstand') {
     const roof=new T.Mesh(new T.ConeGeometry(p.stageWidth*.72,2,8),accent); roof.scale.z=p.stageDepth/p.stageWidth; roof.position.set(0,p.rigHeight+.5,.65-p.stageDepth/2); root.add(roof);
     for(const side of [-1,1]) for(const z of [.5,.9-p.stageDepth]) rod(root,[side*p.stageWidth*.49,0,z],[side*p.stageWidth*.49,p.rigHeight,z],.09,pale);
@@ -80,7 +77,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   }
   if (p.kind === 'ice_arena') { for(const side of [-1,1]) { box(root,[.16,1.1,p.crowdDepth+3],[side*(p.crowdWidth/2+.7),.55,p.crowdDepth/2+2],pale); box(root,[.08,.09,p.crowdDepth+3],[side*(p.crowdWidth/2+.7),1.14,p.crowdDepth/2+2],accent); } }
   if (p.production === 'touring') {
-    for(const side of [-1,1]) { screen(side*(p.stageWidth/2+3),p.stageHeight+4.2,back+.7,4,3); rod(root,[side*(p.stageWidth/2+3),0,back],[side*(p.stageWidth/2+3),p.rigHeight+1,back],.14,steel); }
+
     box(root,[4,2,3],[0,1,p.crowdDepth+4],dark); box(root,[4.4,.15,3.5],[0,2.1,p.crowdDepth+4],accent);
     for(const side of [-1,1]) for(let z=2;z<p.crowdDepth;z+=2.5) { rod(root,[side*(p.crowdWidth/2+1),.1,z],[side*(p.crowdWidth/2+1),1.1,z],.035,steel); rod(root,[side*(p.crowdWidth/2+1),1.1,z],[side*(p.crowdWidth/2+1),1.1,z+2.5],.035,steel); }
   }
@@ -97,17 +94,9 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
     }
     if(p.kind!=='amphitheatre') for(let row=0;row<p.seatRows;row++) { const z=p.crowdDepth+6+row*.9,y=.3+row*.48; box(root,[p.crowdWidth+3,.4,.9],[0,y,z],concrete); for(let x=-p.crowdWidth/2;x<=p.crowdWidth/2;x+=.85) { box(root,[.65,.55,.12],[x,y+.6,z+.3],seat); places.push([x,y+.4,z,Math.PI]); } }
     if(p.kind==='stadium') { for(const side of [-1,1]) for(let z=0;z<p.roomDepth;z+=8) { rod(root,[side*half,4,z],[side*half,9,z],.055,steel); box(root,[1.4,.8,.03],[side*half+.7,8.5,z],accent); } screen(0,11,p.crowdDepth+10,8,3); }
-  } else if(p.capacity>3000) for(let row=0;row<22;row++) for(let col=0;col<50;col++) places.push([(col-24.5)*p.crowdWidth/50,.02,4+p.crowdDepth*.4+row*p.crowdDepth*.6/22,Math.PI]);
-  batchStaticMeshes(root);
-  if(places.length) {
-    const body=new T.CylinderGeometry(.19,.24,.85,5); body.translate(0,.6,0); const head=new T.IcosahedronGeometry(.15,0); head.translate(0,1.17,0);
-    const bodyFaces = body.toNonIndexed();
-    const geometry=mergeGeometries([bodyFaces,head],false)!; bodyFaces.dispose(); body.dispose();head.dispose();
-    const mesh=new T.InstancedMesh(geometry,matte('#aab5c2'),Math.min(1800,places.length));mesh.name='venue-distant-audience';mesh.userData.maxCount=mesh.count; mesh.frustumCulled=false;
-    // Shuffle places deterministically so partial occupancy fills all sections.
-    for(let i=places.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[places[i],places[j]]=[places[j],places[i]];}
-    const transform=new T.Object3D(); for(let i=0;i<mesh.count;i++){const [x,y,z,yaw]=places[i]; transform.position.set(x,y,z);transform.rotation.y=yaw;transform.scale.setScalar(.9+random()*.2);transform.updateMatrix();mesh.setMatrixAt(i,transform.matrix);mesh.setColorAt(i,new T.Color().setHSL(random(),.2,.35+random()*.3));}
-    mesh.count=0;root.add(mesh);
   }
+  venueArchitecture(root,p,wood);
+  batchStaticMeshes(root);
+  buildVenueAudience(root,p,seed,places);
   return root;
 }
