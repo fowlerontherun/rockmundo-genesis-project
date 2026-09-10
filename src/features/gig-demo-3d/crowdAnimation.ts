@@ -1,8 +1,10 @@
 import * as T from 'three';
-import { defaultAppearance, STARTER_ITEMS, HAIR_STYLES, HAIR_COLORS, CLOTHING_COLORS, type PlayerAppearance } from '@/features/player-model/appearance';
+import { defaultAppearance, STARTER_ITEMS, HAIR_COLORS, CLOTHING_COLORS, type PlayerAppearance } from '@/features/player-model/appearance';
 import { seededRandom } from './config';
 export const CROWD_VARIANTS = 16;
 export const CROWD_LIMIT = 160;
+const CROWD_HAIR_STYLES = ['original', 'original', 'buzz', 'quiff', 'bob', 'ponytail', 'bun', 'curls', 'long', 'bald'] as const;
+const CROWD_HAIR_COLORS = HAIR_COLORS.slice(0, 7);
 /** Reproducible identities; both body frames and all six starter designs appear in every full crowd. */
 export function crowdAppearances(seed: number): PlayerAppearance[] {
     const random = seededRandom(seed), skins = ['#edc7a5', '#d4a373', '#ba8258', '#a96f46', '#8d5524', '#754832', '#593a2d', '#3e2c26'];
@@ -12,9 +14,9 @@ export function crowdAppearances(seed: number): PlayerAppearance[] {
         a.body.skin = skins[i % skins.length];
         a.body.height = .91 + random() * .18;
         a.body.build = .87 + random() * .26;
-        a.head.hairStyle = HAIR_STYLES[i % HAIR_STYLES.length];
-        a.head.hair = HAIR_COLORS[(i + Math.floor(random() * 4)) % HAIR_COLORS.length][1];
-        a.head.facialHair = i % 2 ? 'none' : (['none', 'moustache', 'goatee', 'short_beard', 'full_beard', 'sideburns'] as const)[Math.floor(i / 2) % 6];
+        a.head.hairStyle = CROWD_HAIR_STYLES[Math.floor(random() * CROWD_HAIR_STYLES.length)];
+        a.head.hair = CROWD_HAIR_COLORS[(i + Math.floor(random() * 4)) % CROWD_HAIR_COLORS.length][1];
+        a.head.facialHair = i % 2 ? 'none' : (['none', 'none', 'stubble', 'moustache', 'goatee', 'short_beard', 'full_beard', 'sideburns'] as const)[Math.floor(random() * 8)];
         for (const [index, slot] of (['top', 'bottom', 'footwear'] as const).entries()) {
             a.equipment[slot].itemId = STARTER_ITEMS[slot][(i + index * 2) % 6].id;
             a.equipment[slot].color = CLOTHING_COLORS[(i * 5 + index * 3) % CLOTHING_COLORS.length][1];
