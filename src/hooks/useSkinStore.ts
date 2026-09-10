@@ -179,6 +179,7 @@ export const usePurchaseSkin = () => {
       queryClient.invalidateQueries({ queryKey: ["owned-skins", profileId] });
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ['equipped-rich-clothing', profileId] });
       queryClient.invalidateQueries({ queryKey: ['gig-player-appearances'] });
       toast.success("Clothing purchased successfully!");
     },
@@ -218,7 +219,7 @@ export const useSaveClothingCustomization = () => {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['owned-skins', profileId] });
       queryClient.invalidateQueries({ queryKey: ['player-owned-skins', profileId] });
-      queryClient.invalidateQueries({ queryKey: ['equipped-clothing', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['equipped-rich-clothing', profileId] });
       queryClient.invalidateQueries({ queryKey: ['gig-player-appearances'] });
       toast.success(
         variables.equipped === true
