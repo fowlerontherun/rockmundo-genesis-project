@@ -29,6 +29,7 @@ export interface ClothingPreviewManifest {
   mode: 'turntable' | 'live-plus-turntable';
   thumbnail?: string;
   frames: ClothingPreviewFrame[];
+  stale?: boolean;
 }
 
 export function createClothingPreviewManifest(itemId: string, frameUrls: Partial<Record<ClothingPreviewViewKey, string>>, generatedAt = new Date().toISOString()): ClothingPreviewManifest {
@@ -47,7 +48,7 @@ export function createClothingPreviewManifest(itemId: string, frameUrls: Partial
 }
 
 export function usablePreviewFrames(manifest: unknown): ClothingPreviewFrame[] {
-  if (!manifest || typeof manifest !== 'object') return [];
+  if (!manifest || typeof manifest !== 'object' || (manifest as any).stale === true) return [];
   const frames = (manifest as any).frames;
   if (!Array.isArray(frames)) return [];
   return frames.filter(frame => frame && typeof frame.url === 'string' && /^https?:\/\//.test(frame.url));
