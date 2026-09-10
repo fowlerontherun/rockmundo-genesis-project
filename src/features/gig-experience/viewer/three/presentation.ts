@@ -7,6 +7,7 @@ import { replayResultAttendance, resolvePresentationAttendance } from '../engine
 import type { ConcertFrame, ConcertOptions, ConcertVenue, StageRole } from '@/features/gig-demo-3d/liveTypes';
 import { resolveVenueProfile, stagePosition, type VenueProfile } from '@/features/gig-demo-3d/venueProfile';
 import { defaultAppearance, type PlayerAppearance } from '@/features/player-model/appearance';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { CrowdTuningOptions } from '../engine/CrowdTuning';
 
 const clamp = (n: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
@@ -20,14 +21,32 @@ export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienc
 function stagePoint(plan: PerformerPlan, point: { x: number; y: number }, venue: VenueProfile): [number, number, number] {
   return stagePosition(venue, (point.x - plan.stage.x) / plan.stage.width, (point.y - plan.stage.y) / plan.stage.height);
 }
-export function concertOptions(plan: PerformerPlan, appearances: Record<string, PlayerAppearance>, replay: GigViewerReplay, experience: GigExperienceDTO | null, archetype: string): ConcertOptions {
+export function concertOptions(
+  plan: PerformerPlan,
+  appearances: Record<string, PlayerAppearance>,
+  replay: GigViewerReplay,
+  experience: GigExperienceDTO | null,
+  archetype: string,
+  richClothing: Record<string, ResolvedEquippedClothing[]> = {},
+): ConcertOptions {
   let seed = 0; for (const c of String(experience?.gig.venue.id ?? replay.simulationSeed)) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
   const venue: ConcertVenue = { name: experience?.gig.venue.name ?? 'Live performance', bandName: 'ROCKMUNDO', archetype, seed, type: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity, id: experience?.gig.venue.id };
   const profile = resolveVenueProfile(venue);
   return {
     externalClock: true,
     venue,
-    performers: plan.entities.map(p => ({ id: p.id, displayName: p.displayName, ...stageAssignment(p.instrument, roleMap[p.role]), phase: p.idlePhase, position: stagePoint(plan, p.stageSlot, profile), appearance: appearances[p.profileId ?? p.id] ?? defaultAppearance(p.profileId ?? p.id) })),
+    performers: plan.entities.map(p => {
+      const profileId = p.profileId ?? p.id;
+      return {
+        id: p.id,
+        displayName: p.displayName,
+        ...stageAssignment(p.instrument, roleMap[p.role]),
+        phase: p.idlePhase,
+        position: stagePoint(plan, p.stageSlot, profile),
+        appearance: appearances[profileId] ?? defaultAppearance(profileId),
+        richClothing: richClothing[profileId] ?? [],
+      };
+    }),
   };
 }
 
