@@ -16,7 +16,7 @@ import {
 import { CollectionCard } from "@/components/skin-store/CollectionCard";
 import { StoreItemCard } from "@/components/skin-store/StoreItemCard";
 import { FeaturedCarousel } from "@/components/skin-store/FeaturedCarousel";
-import { ItemPreviewDialog } from "@/components/skin-store/ItemPreviewDialog";
+import { ItemPreviewDialog, type ClothingPurchaseCustomization } from "@/components/skin-store/ItemPreviewDialog";
 import {
   useSkinCollections,
   useClothingItems,
@@ -44,15 +44,22 @@ const SkinStore = () => {
   const { data: vipStatus } = useVipStatus();
   const purchaseMutation = usePurchaseSkin();
 
-  const ownedItemIds = ownedSkins.map((s) => s.item_id);
+  const ownedItemIds = ownedSkins.map((skin) => skin.item_id);
+  const ownedClothingItems = allItems.filter((item) => ownedItemIds.includes(item.id));
+  const previewOwnedSkin = previewItem
+    ? ownedSkins.find((skin) => skin.item_id === previewItem.id) || null
+    : null;
 
-  const handlePurchase = (item: ClothingItem) => {
+  const handlePurchase = (item: ClothingItem, customization?: ClothingPurchaseCustomization) => {
     purchaseMutation.mutate({
       itemId: item.id,
-      itemType: item.category,
-      price: item.price || 0,
+      variantKey: customization?.variantKey || null,
+      zoneColours: customization?.zoneColours || {},
+    }, {
+      onSuccess: () => {
+        setPreviewItem((current) => current?.id === item.id ? null : current);
+      },
     });
-    setPreviewItem(null);
   };
 
   const handlePreview = (item: ClothingItem) => {
@@ -69,13 +76,11 @@ const SkinStore = () => {
     setActiveTab("collections");
   };
 
-  // Get collection item counts
   const collectionItemCounts = collections.reduce((acc, col) => {
     acc[col.id] = allItems.filter((item) => item.collection_id === col.id).length;
     return acc;
   }, {} as Record<string, number>);
 
-  // Filter items by category
   const getItemsByCategory = (category: string) =>
     allItems.filter((item) => item.category === category);
 
@@ -96,9 +101,6 @@ const SkinStore = () => {
         ) : undefined
       }
     >
-
-
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="featured" className="gap-1.5">
@@ -123,7 +125,6 @@ const SkinStore = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Featured Tab */}
         <TabsContent value="featured" className="space-y-6">
           {featuredItems.length > 0 ? (
             <>
@@ -141,7 +142,6 @@ const SkinStore = () => {
                 </CardContent>
               </Card>
 
-              {/* Limited Time Offers */}
               {collections.filter((c) => c.ends_at).length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -168,15 +168,12 @@ const SkinStore = () => {
             <Card>
               <CardContent className="p-12 text-center">
                 <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  No featured items right now. Check back soon!
-                </p>
+                <p className="text-muted-foreground">No featured items right now. Check back soon!</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* New Arrivals Tab */}
         <TabsContent value="new" className="space-y-6">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -195,15 +192,10 @@ const SkinStore = () => {
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground">No new arrivals yet.</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-12 text-center"><p className="text-muted-foreground">No new arrivals yet.</p></CardContent></Card>
           )}
         </TabsContent>
 
-        {/* Collections Tab */}
         <TabsContent value="collections" className="space-y-6">
           {collectionsLoading ? (
             <div className="text-center py-12">Loading collections...</div>
@@ -219,36 +211,22 @@ const SkinStore = () => {
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground">No collections available.</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-12 text-center"><p className="text-muted-foreground">No collections available.</p></CardContent></Card>
           )}
         </TabsContent>
 
-        {/* Collection Detail Tab */}
         <TabsContent value="collection" className="space-y-6">
           {selectedCollectionData && (
             <>
-              <Button
-                variant="ghost"
-                onClick={handleBackToCollections}
-                className="mb-4"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Collections
+              <Button variant="ghost" onClick={handleBackToCollections} className="mb-4">
+                <ArrowLeft className="h-4 w-4 mr-2" />Back to Collections
               </Button>
 
               <Card className="bg-gradient-primary border-none mb-6">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-primary-foreground">
-                    {selectedCollectionData.name}
-                  </h2>
+                  <h2 className="text-xl font-bold text-primary-foreground">{selectedCollectionData.name}</h2>
                   {selectedCollectionData.description && (
-                    <p className="text-primary-foreground/80 mt-2">
-                      {selectedCollectionData.description}
-                    </p>
+                    <p className="text-primary-foreground/80 mt-2">{selectedCollectionData.description}</p>
                   )}
                 </CardContent>
               </Card>
@@ -266,19 +244,12 @@ const SkinStore = () => {
                   ))}
                 </div>
               ) : (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <p className="text-muted-foreground">
-                      No items in this collection yet.
-                    </p>
-                  </CardContent>
-                </Card>
+                <Card><CardContent className="p-12 text-center"><p className="text-muted-foreground">No items in this collection yet.</p></CardContent></Card>
               )}
             </>
           )}
         </TabsContent>
 
-        {/* Browse Tab */}
         <TabsContent value="browse" className="space-y-6">
           <ScrollArea className="h-[calc(100vh-280px)]">
             {["shirt", "pants", "jacket", "shoes", "accessory", "hat"].map((category) => {
@@ -287,18 +258,16 @@ const SkinStore = () => {
 
               return (
                 <div key={category} className="mb-8">
-                  <h3 className="text-lg font-semibold capitalize mb-4">
-                    {category}s
-                  </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                      {categoryItems.map((item) => (
-                        <StoreItemCard
-                          key={item.id}
-                          item={item}
-                          isOwned={ownedItemIds.includes(item.id)}
-                          onPurchase={handlePurchase}
-                          onPreview={handlePreview}
-                        />
+                  <h3 className="text-lg font-semibold capitalize mb-4">{category}s</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                    {categoryItems.map((item) => (
+                      <StoreItemCard
+                        key={item.id}
+                        item={item}
+                        isOwned={ownedItemIds.includes(item.id)}
+                        onPurchase={handlePurchase}
+                        onPreview={handlePreview}
+                      />
                     ))}
                   </div>
                 </div>
@@ -307,46 +276,35 @@ const SkinStore = () => {
           </ScrollArea>
         </TabsContent>
 
-        {/* Owned Tab */}
         <TabsContent value="owned" className="space-y-6">
-          {ownedSkins.length > 0 ? (
+          {ownedClothingItems.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {allItems
-                .filter((item) => ownedItemIds.includes(item.id))
-                .map((item) => (
-                  <StoreItemCard
-                    key={item.id}
-                    item={item}
-                    isOwned={true}
-                    onPurchase={handlePurchase}
-                    onPreview={handlePreview}
-                  />
-                ))}
+              {ownedClothingItems.map((item) => (
+                <StoreItemCard
+                  key={item.id}
+                  item={item}
+                  isOwned={true}
+                  onPurchase={handlePurchase}
+                  onPreview={handlePreview}
+                />
+              ))}
             </div>
           ) : (
             <Card>
               <CardContent className="p-12 text-center">
                 <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  You don't own any skins yet. Start shopping!
-                </p>
-                <Button
-                  variant="default"
-                  className="mt-4"
-                  onClick={() => setActiveTab("featured")}
-                >
-                  Browse Store
-                </Button>
+                <p className="text-muted-foreground">You don't own any clothing yet. Start shopping!</p>
+                <Button variant="default" className="mt-4" onClick={() => setActiveTab("featured")}>Browse Store</Button>
               </CardContent>
             </Card>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* Item Preview Dialog */}
       <ItemPreviewDialog
         item={previewItem}
-        isOwned={previewItem ? ownedItemIds.includes(previewItem.id) : false}
+        isOwned={!!previewOwnedSkin}
+        ownedSkin={previewOwnedSkin}
         onClose={() => setPreviewItem(null)}
         onPurchase={handlePurchase}
       />

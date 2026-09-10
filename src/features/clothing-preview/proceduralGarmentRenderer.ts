@@ -4,6 +4,7 @@ import type { ClothingPreviewVariant } from './clothingPreview';
 import { buildRichGarmentVisualSpec } from './richGarmentVisuals';
 
 export type RichGarmentVisualSpec = ReturnType<typeof buildRichGarmentVisualSpec>;
+export type GarmentRigAnchor = 'Torso' | 'Hips' | 'UpperArm.L' | 'UpperArm.R' | 'UpperLeg.L' | 'UpperLeg.R' | 'Foot.L' | 'Foot.R' | 'Head';
 
 export function makeGarmentPatternTexture(spec: RichGarmentVisualSpec) {
   if (typeof document === 'undefined' || spec.pattern === 'solid' || spec.pattern === 'none') return null;
@@ -80,6 +81,18 @@ function garmentMaterial(spec: RichGarmentVisualSpec, texture: T.Texture | null)
   });
 }
 
+function defaultAnchor(spec: RichGarmentVisualSpec): GarmentRigAnchor {
+  if (spec.slot === 'bottom') return 'Hips';
+  if (spec.slot === 'footwear') return 'Hips';
+  if (spec.slot === 'headwear' || spec.slot === 'eyewear') return 'Head';
+  return 'Torso';
+}
+
+function markRigAnchor(mesh: T.Mesh, anchor: GarmentRigAnchor) {
+  mesh.userData.rigAnchor = anchor;
+  return mesh;
+}
+
 function addDetail(group: T.Group, detail: any, index: number, spec: RichGarmentVisualSpec) {
   const color = /^#[0-9a-fA-F]{6}$/.test(String(detail?.color || '')) ? detail.color : spec.secondaryColor;
   const scale = Math.max(.45, Math.min(1.8, Number(detail?.scale || 1)));
@@ -100,6 +113,7 @@ function addDetail(group: T.Group, detail: any, index: number, spec: RichGarment
   mesh.position.set(x, spec.y + yOffset, z + spec.z);
   mesh.rotation.z = T.MathUtils.degToRad(Number(detail?.rotation || 0));
   mesh.castShadow = true;
+  markRigAnchor(mesh, defaultAnchor(spec));
   group.add(mesh);
 }
 
@@ -109,9 +123,10 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   group.name = `rich-garment-${item.id}`;
   const texture = makeGarmentPatternTexture(spec);
   const material = garmentMaterial(spec, texture);
-  const add = (mesh: T.Mesh) => {
+  const add = (mesh: T.Mesh, anchor: GarmentRigAnchor) => {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    markRigAnchor(mesh, anchor);
     group.add(mesh);
   };
 
@@ -119,7 +134,7 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     const body = new T.Mesh(new T.CapsuleGeometry(spec.scaleX * .48, spec.scaleY * .78, 8, 18), material);
     body.scale.set(1, 1, spec.scaleZ / Math.max(.01, spec.scaleX * .48));
     body.position.set(0, spec.y, spec.z);
-    add(body);
+    add(body, 'Torso');
     const garment = (item.garment_config || {}) as Record<string, any>;
     const sleeves = String(garment.sleeve || garment.sleeveStyle || garment.sleeve_style || 'short').toLowerCase();
     if (sleeves !== 'sleeveless' && sleeves !== 'none') {
@@ -128,7 +143,7 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
         const sleeve = new T.Mesh(new T.CapsuleGeometry(.105 * spec.scaleX, sleeveLength, 6, 12), material);
         sleeve.position.set(side * spec.scaleX * .55, spec.y + .08, spec.z);
         sleeve.rotation.z = side * -.18;
-        add(sleeve);
+        add(sleeve, side > 0 ? 'UpperArm.L' : 'UpperArm.R');
       }
     }
   } else if (spec.slot === 'bottom') {
@@ -137,12 +152,12 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     if (skirtLike) {
       const skirt = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .42, spec.scaleX * (.5 + spec.flare), spec.scaleY, 28, 1, false), material);
       skirt.position.set(0, spec.y, spec.z);
-      add(skirt);
+      add(skirt, 'Hips');
     } else {
       for (const side of [-1, 1]) {
         const leg = new T.Mesh(new T.CapsuleGeometry(spec.scaleX * .22, spec.scaleY, 6, 14), material);
         leg.position.set(side * spec.scaleX * .25, spec.y, spec.z);
-        add(leg);
+        add(leg, side > 0 ? 'UpperLeg.L' : 'UpperLeg.R');
       }
     }
   } else if (spec.slot === 'footwear') {
@@ -150,30 +165,30 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       const shoe = new T.Mesh(new T.BoxGeometry(spec.scaleX, spec.scaleY, spec.scaleZ), material);
       shoe.position.set(side * .2, spec.y, .09 + spec.z);
       shoe.rotation.x = -.08;
-      add(shoe);
+      add(shoe, side > 0 ? 'Foot.L' : 'Foot.R');
     }
   } else if (spec.slot === 'headwear') {
     const crown = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .55, spec.scaleX * .62, spec.scaleY, 28), material);
     crown.position.set(0, spec.y, spec.z);
-    add(crown);
+    add(crown, 'Head');
     const brim = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .82, spec.scaleX * .82, .025, 32), material);
     brim.position.set(0, spec.y - spec.scaleY * .48, spec.z);
-    add(brim);
+    add(brim, 'Head');
   } else if (spec.slot === 'eyewear') {
     const frameMaterial = new T.MeshStandardMaterial({ color: spec.primaryColor, roughness: .28, metalness: .45 });
     for (const side of [-1, 1]) {
       const lens = new T.Mesh(new T.TorusGeometry(.105, .012, 8, 20), frameMaterial);
       lens.position.set(side * .13, spec.y, .18 + spec.z);
-      add(lens);
+      add(lens, 'Head');
     }
     const bridge = new T.Mesh(new T.BoxGeometry(.08, .012, .012), frameMaterial);
     bridge.position.set(0, spec.y, .18 + spec.z);
-    add(bridge);
+    add(bridge, 'Head');
   } else {
     const accessory = new T.Mesh(new T.TorusGeometry(.22, .025, 10, 28), material);
     accessory.position.set(0, spec.y, .2 + spec.z);
     accessory.rotation.x = Math.PI / 2;
-    add(accessory);
+    add(accessory, 'Torso');
   }
 
   const details = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 18) : [];
@@ -183,7 +198,7 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     const distress = new T.Mesh(new T.SphereGeometry(Math.max(.3, spec.scaleX * .58), 12, 8), distressMaterial);
     distress.scale.set(1.15, 1.3, .58);
     distress.position.set(0, spec.y, spec.z + .04);
-    group.add(distress);
+    add(distress, defaultAnchor(spec));
   }
 
   group.userData.dispose = () => {

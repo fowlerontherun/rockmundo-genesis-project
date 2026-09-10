@@ -2,10 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PlayerModelEditor from './PlayerModelEditor';
 import { defaultAppearance, SLOTS, SLOT_LABELS, STARTER_ITEMS } from './appearance';
-import { usePlayerModel } from './usePlayerModel';
+import { useEquippedRichClothing, usePlayerModel } from './usePlayerModel';
 
-vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn() }));
-vi.mock('./PlayerModelPreview', () => ({ PlayerModelPreview: () => <div>Model preview</div> }));
+vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn() }));
+const preview = vi.fn();
+vi.mock('./PlayerModelPreview', () => ({ PlayerModelPreview: (props: unknown) => { preview(props); return <div>Model preview</div>; } }));
 const save = vi.fn();
 function model(profileId = 'character-one') {
   return { profileId, profile: null, userId: 'owner', isLoading: false, error: null,
@@ -13,7 +14,15 @@ function model(profileId = 'character-one') {
     save: { isPending: false, mutateAsync: save },
   } as unknown as ReturnType<typeof usePlayerModel>;
 }
-beforeEach(() => { vi.clearAllMocks(); vi.mocked(usePlayerModel).mockReturnValue(model()); save.mockImplementation(async args => ({ appearance: args.appearance, revision: 1 })); });
+function clothing(data: unknown[] = [], isError = false) {
+  return { data, isError, isPending: false, isFetching: false } as unknown as ReturnType<typeof useEquippedRichClothing>;
+}
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(usePlayerModel).mockReturnValue(model());
+  vi.mocked(useEquippedRichClothing).mockReturnValue(clothing());
+  save.mockImplementation(async args => ({ appearance: args.appearance, revision: 1 }));
+});
 afterEach(cleanup);
 it('previews edits without saving, then persists the selected character and equipped pieces', async () => {
   render(<PlayerModelEditor />);
@@ -58,4 +67,12 @@ it('saves hairstyle and independent facial hair, with matching colour available'
   expect(save).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
   await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ appearance: expect.objectContaining({ head: expect.objectContaining({ hairStyle: 'quiff', facialHair: 'goatee', hair: '#426baa', facialHairColor: '#b75e32' }) }) })));
+});
+
+it('passes currently equipped rich clothing into the shared animated preview', () => {
+  const rich = [{ item: { id: 'jacket-1', name: 'Stage Jacket', category: 'jacket' }, variant: { id: 'red', label: 'Red', color: '#990000' } }];
+  vi.mocked(useEquippedRichClothing).mockReturnValue(clothing(rich));
+  render(<PlayerModelEditor />);
+  expect(preview).toHaveBeenCalledWith(expect.objectContaining({ richClothing: rich }));
+  expect(screen.getByText(/currently equipped Skin Store clothing/i)).toBeVisible();
 });

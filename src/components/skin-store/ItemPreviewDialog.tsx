@@ -7,20 +7,34 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Lock, ShoppingCart, Check, Rotate3D, UserRound, Shirt, Layers3, Images } from "lucide-react";
-import { ClothingItem } from "@/hooks/useSkinStore";
+import { Sparkles, Lock, ShoppingCart, Check, Rotate3D, UserRound, Shirt, Layers3, Images, Palette, Save, RotateCcw } from "lucide-react";
+import { ClothingItem, type OwnedSkin, useSaveClothingCustomization } from "@/hooks/useSkinStore";
 import { usePlayerAvatar } from "@/hooks/usePlayerAvatar";
-import { buildClothingPreviewAppearance, clothingPreviewVariants } from "@/features/clothing-preview/clothingPreview";
+import { buildClothingPreviewAppearance, clothingPreviewVariants, type ClothingPreviewVariant } from "@/features/clothing-preview/clothingPreview";
 import { RichClothingPreview, type RichClothingPreviewStatus } from "@/features/clothing-preview/RichClothingPreview";
 import { usablePreviewFrames } from "@/features/clothing-preview/previewManifest";
+import {
+  applyClothingZoneColours,
+  clothingVariantByKey,
+  playerEditableClothingZones,
+  sanitizeClothingZoneColours,
+  type ClothingZoneColours,
+} from "@/features/clothing-preview/clothingCustomization";
 import { GeneratedTurntablePreview } from "./GeneratedTurntablePreview";
+
+export interface ClothingPurchaseCustomization {
+  variantKey?: string | null;
+  zoneColours?: ClothingZoneColours;
+}
 
 interface ItemPreviewDialogProps {
   item: ClothingItem | null;
   isOwned: boolean;
+  ownedSkin?: OwnedSkin | null;
   onClose: () => void;
-  onPurchase: (item: ClothingItem) => void;
+  onPurchase: (item: ClothingItem, customization?: ClothingPurchaseCustomization) => void;
 }
 
 const rarityColors: Record<string, string> = {
@@ -31,34 +45,82 @@ const rarityColors: Record<string, string> = {
   legendary: "bg-warning/20 text-warning",
 };
 
-export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPreviewDialogProps) => {
+function variantKeyForPersistence(item: ClothingItem, variant?: ClothingPreviewVariant) {
+  if (!variant) return null;
+  const hasNamedVariants = Array.isArray(item.variant_matrix) && item.variant_matrix.length > 0;
+  const hasColourVariants = Array.isArray(item.color_variants) && item.color_variants.length > 0;
+  return hasNamedVariants || hasColourVariants ? variant.id : null;
+}
+
+export const ItemPreviewDialog = ({ item, isOwned, ownedSkin, onClose, onPurchase }: ItemPreviewDialogProps) => {
   const { avatarConfig, isLoading: avatarLoading } = usePlayerAvatar();
+  const saveMutation = useSaveClothingCustomization();
   const [variantId, setVariantId] = useState<string>("default");
+  const [zoneColours, setZoneColours] = useState<ClothingZoneColours>({});
   const [previewMode, setPreviewMode] = useState<'live' | 'turntable'>('live');
 
   const variants = useMemo(() => item ? clothingPreviewVariants(item) : [], [item]);
+  const editableZones = useMemo(() => item ? playerEditableClothingZones(item) : [], [item]);
   const selectedVariant = variants.find(variant => variant.id === variantId) || variants[0];
-  const appearance = useMemo(() => item ? buildClothingPreviewAppearance(avatarConfig, item, selectedVariant) : null, [avatarConfig, item, selectedVariant]);
+
+  const customizedItem = useMemo(
+    () => item ? applyClothingZoneColours(item, zoneColours) : null,
+    [item, zoneColours],
+  );
+
+  const primaryZone = editableZones.find(zone => String(zone.id) === 'main') || editableZones[0];
+  const secondaryZone = editableZones.find(zone => String(zone.id) === 'trim') || editableZones[1];
+  const previewVariant = useMemo<ClothingPreviewVariant | undefined>(() => {
+    if (!selectedVariant) return undefined;
+    const primaryOverride = primaryZone ? zoneColours[String(primaryZone.id)] : undefined;
+    const secondaryOverride = secondaryZone ? zoneColours[String(secondaryZone.id)] : undefined;
+    return {
+      ...selectedVariant,
+      ...(primaryOverride ? { color: primaryOverride } : {}),
+      ...(secondaryOverride ? { secondaryColor: secondaryOverride } : {}),
+    };
+  }, [primaryZone, secondaryZone, selectedVariant, zoneColours]);
+
+  const appearance = useMemo(
+    () => customizedItem ? buildClothingPreviewAppearance(avatarConfig, customizedItem, previewVariant) : null,
+    [avatarConfig, customizedItem, previewVariant],
+  );
   const generatedFrames = useMemo(() => item ? usablePreviewFrames(item.preview_manifest) : [], [item]);
   const hasGeneratedTurntable = generatedFrames.length > 0;
 
   useEffect(() => {
-    setVariantId('default');
+    if (!item) return;
+    const savedVariant = clothingVariantByKey(item, ownedSkin?.selected_variant_key);
+    const initialVariant = savedVariant || clothingPreviewVariants(item)[0];
+    setVariantId(initialVariant?.id || 'default');
+    setZoneColours(sanitizeClothingZoneColours(item, ownedSkin?.customization_config || {}));
     setPreviewMode('live');
-  }, [item?.id]);
+  }, [item?.id, ownedSkin?.selected_variant_key, ownedSkin?.customization_config]);
 
-  if (!item) return null;
+  if (!item || !customizedItem) return null;
 
   const colorVariants = item.color_variants as string[] | null;
-  const material = (item.material_config || {}) as Record<string, any>;
-  const garment = (item.garment_config || {}) as Record<string, any>;
-  const pattern = (item.pattern_config || {}) as Record<string, any>;
-  const fit = (item.fit_config || {}) as Record<string, any>;
-  const wear = (item.wear_config || {}) as Record<string, any>;
-  const detailCount = Array.isArray(item.detail_layers) ? item.detail_layers.length : 0;
+  const material = (customizedItem.material_config || {}) as Record<string, any>;
+  const garment = (customizedItem.garment_config || {}) as Record<string, any>;
+  const pattern = (customizedItem.pattern_config || {}) as Record<string, any>;
+  const fit = (customizedItem.fit_config || {}) as Record<string, any>;
+  const wear = (customizedItem.wear_config || {}) as Record<string, any>;
+  const detailCount = Array.isArray(customizedItem.detail_layers) ? customizedItem.detail_layers.length : 0;
+  const savedVariantKey = variantKeyForPersistence(item, selectedVariant);
+  const safeZoneColours = sanitizeClothingZoneColours(item, zoneColours);
+  const isEquipped = ownedSkin?.is_equipped === true;
 
   const handleLiveStatus = (status: RichClothingPreviewStatus) => {
     if (status === 'error' && hasGeneratedTurntable) setPreviewMode('turntable');
+  };
+
+  const saveLook = (equipped: boolean | null) => {
+    saveMutation.mutate({
+      itemId: item.id,
+      variantKey: savedVariantKey,
+      zoneColours: safeZoneColours,
+      equipped,
+    });
   };
 
   return (
@@ -68,6 +130,7 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
           <DialogTitle className="flex items-center gap-2">
             {item.name}
             {item.is_limited_edition && <Sparkles className="h-4 w-4 text-warning" />}
+            {isEquipped && <Badge className="ml-1">Equipped</Badge>}
           </DialogTitle>
         </DialogHeader>
 
@@ -86,7 +149,7 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
               {previewMode === 'turntable' && hasGeneratedTurntable ? (
                 <GeneratedTurntablePreview itemName={item.name} manifest={item.preview_manifest} />
               ) : appearance && !avatarLoading ? (
-                <RichClothingPreview appearance={appearance} item={item} variant={selectedVariant} onStatusChange={handleLiveStatus} />
+                <RichClothingPreview appearance={appearance} item={customizedItem} variant={previewVariant} onStatusChange={handleLiveStatus} />
               ) : (
                 <div className="min-h-[520px] flex items-center justify-center text-sm text-muted-foreground">Preparing your avatar fitting room…</div>
               )}
@@ -103,9 +166,9 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
 
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
               {previewMode === 'turntable' ? <>
-                <strong className="text-foreground">Generated fallback:</strong> these WebP frames are rendered from the same rich garment metadata and remain available on devices where live WebGL cannot initialise. Named variant switching remains most accurate in the live fitting room.
+                <strong className="text-foreground">Generated fallback:</strong> these WebP frames show the published default garment. Switch to Live 3D to see your selected variant and personal colour edits.
               </> : <>
-                <strong className="text-foreground">Rich garment preview:</strong> this view renders the item's stored cut/fit, fabric response, colours, pattern, sleeve treatment, wear/distress and supported detail layers directly in 3D on top of your character. If live 3D fails and generated frames exist, RockMundo automatically switches to the turntable.
+                <strong className="text-foreground">Live fitting room:</strong> variant changes and admin-approved colour-zone edits are composed directly onto the garment before it is rendered on your character.
               </>}
             </div>
           </div>
@@ -120,18 +183,66 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
 
             {variants.length > 1 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Preview variant</p>
+                <p className="text-sm font-medium">Variant</p>
                 <Select value={selectedVariant?.id || variants[0]?.id} onValueChange={setVariantId}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{variants.map(variant => <SelectItem key={variant.id} value={variant.id}>{variant.label}</SelectItem>)}</SelectContent>
                 </Select>
-                {selectedVariant && <div className="flex items-center gap-2 text-xs text-muted-foreground"><span className="w-5 h-5 rounded-full border" style={{ backgroundColor: selectedVariant.color }} />{selectedVariant.material || material.fabric || 'Default material'}{selectedVariant.pattern && selectedVariant.pattern !== 'solid' ? ` · ${selectedVariant.pattern}` : ''}</div>}
-                {previewMode === 'turntable' && variants.length > 1 && <p className="text-xs text-muted-foreground">Generated turntable frames currently show the item's default published variant. Switch to Live 3D to inspect this selected variant accurately.</p>}
+                {selectedVariant && <div className="flex items-center gap-2 text-xs text-muted-foreground"><span className="w-5 h-5 rounded-full border" style={{ backgroundColor: previewVariant?.color || selectedVariant.color }} />{selectedVariant.material || material.fabric || 'Default material'}{selectedVariant.pattern && selectedVariant.pattern !== 'solid' ? ` · ${selectedVariant.pattern}` : ''}</div>}
               </div>
             )}
 
             {variants.length <= 1 && colorVariants && colorVariants.length > 0 && (
               <div><p className="text-sm font-medium mb-2">Available colours</p><div className="flex gap-2 flex-wrap">{colorVariants.map((color, i) => <div key={i} className="w-7 h-7 rounded-full border-2 border-border" style={{ backgroundColor: color }} title={color} />)}</div></div>
+            )}
+
+            {editableZones.length > 0 && (
+              <div className="rounded-lg border p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium text-sm flex items-center gap-2"><Palette className="h-4 w-4" />Personalise colours</div>
+                  {Object.keys(zoneColours).length > 0 && (
+                    <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setZoneColours({})}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />Reset all
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Only zones explicitly unlocked by the clothing designer can be changed.</p>
+                <div className="space-y-2">
+                  {editableZones.map(zone => {
+                    const zoneId = String(zone.id);
+                    const fallback = typeof zone.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(zone.color) ? zone.color : '#ffffff';
+                    const value = zoneColours[zoneId] || fallback;
+                    return <div key={zoneId} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+                      <div className="min-w-0"><div className="text-sm truncate">{zone.name || zoneId}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">{zoneId}</div></div>
+                      <div className="flex items-center gap-2 rounded-md border px-2 py-1">
+                        <Input
+                          type="color"
+                          value={value}
+                          onChange={event => setZoneColours(current => ({ ...current, [zoneId]: event.target.value.toLowerCase() }))}
+                          className="h-7 w-9 border-0 p-0 bg-transparent"
+                          aria-label={`${zone.name || zoneId} colour`}
+                        />
+                        <span className="font-mono text-[10px] text-muted-foreground">{value.toUpperCase()}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        disabled={!zoneColours[zoneId]}
+                        onClick={() => setZoneColours(current => {
+                          const next = { ...current };
+                          delete next[zoneId];
+                          return next;
+                        })}
+                        aria-label={`Reset ${zone.name || zoneId} colour`}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>;
+                  })}
+                </div>
+              </div>
             )}
 
             <div className="rounded-lg border p-3 space-y-2">
@@ -157,18 +268,36 @@ export const ItemPreviewDialog = ({ item, isOwned, onClose, onPurchase }: ItemPr
                   {item.bonus_config.recording_pct ? <Badge variant="secondary">+{item.bonus_config.recording_pct}% recording</Badge> : null}
                   {item.bonus_config.songwriting_pct ? <Badge variant="secondary">+{item.bonus_config.songwriting_pct}% songwriting</Badge> : null}
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">These bonuses are active only while the item is equipped.</p>
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-4 border-t gap-3">
-              <div className="flex items-center gap-2">
-                {item.is_premium && <Lock className="h-4 w-4 text-warning" />}
-                <span className="text-xl font-bold">${item.price?.toLocaleString() || "Free"}</span>
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  {item.is_premium && <Lock className="h-4 w-4 text-warning" />}
+                  <span className="text-xl font-bold">${item.price?.toLocaleString() || "Free"}</span>
+                </div>
+                {isOwned && <Badge variant={isEquipped ? 'default' : 'outline'}>{isEquipped ? 'Currently equipped' : 'Owned'}</Badge>}
               </div>
+
               {isOwned ? (
-                <Button disabled className="gap-2"><Check className="h-4 w-4" />Owned</Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" disabled={saveMutation.isPending} onClick={() => saveLook(null)} className="gap-2">
+                    <Save className="h-4 w-4" />Save look
+                  </Button>
+                  <Button disabled={saveMutation.isPending} variant={isEquipped ? 'secondary' : 'default'} onClick={() => saveLook(!isEquipped)} className="gap-2">
+                    {isEquipped ? <RotateCcw className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                    {isEquipped ? 'Unequip' : 'Save & equip'}
+                  </Button>
+                </div>
               ) : (
-                <Button onClick={() => onPurchase(item)} className="gap-2"><ShoppingCart className="h-4 w-4" />Purchase</Button>
+                <Button
+                  onClick={() => onPurchase(item, { variantKey: savedVariantKey, zoneColours: safeZoneColours })}
+                  className="w-full gap-2"
+                >
+                  <ShoppingCart className="h-4 w-4" />Purchase this look
+                </Button>
               )}
             </div>
           </div>

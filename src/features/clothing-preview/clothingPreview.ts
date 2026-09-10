@@ -6,6 +6,7 @@ export interface ClothingPreviewVariant {
   id: string;
   label: string;
   color: string;
+  secondaryColor?: string;
   material?: string;
   pattern?: string;
 }
@@ -35,17 +36,23 @@ export function clothingPreviewVariants(item: ClothingItem): ClothingPreviewVari
   const matrix = Array.isArray(item.variant_matrix) ? item.variant_matrix as any[] : [];
   const material = (item.material_config || {}) as Record<string, any>;
   const pattern = (item.pattern_config || {}) as Record<string, any>;
-  const fromMatrix = matrix.map((variant, index) => ({
-    id: String(variant.id || variant.key || index),
-    label: String(variant.name || variant.label || `Variant ${index + 1}`),
-    color: validColor(variant.primaryColor || variant.color || variant.primary_color, validColor(material.primaryColor || material.primary_color)),
-    material: variant.material || material.fabric,
-    pattern: variant.pattern || pattern.type,
-  }));
+  const primary = validColor(material.primaryColor || material.primary_color);
+  const secondary = validColor(material.secondaryColor || material.secondary_color, '#d8ad49');
+  const fromMatrix = matrix.map((variant, index) => {
+    const label = String(variant.name || variant.label || `Variant ${index + 1}`);
+    return {
+      id: String(variant.id || variant.key || variant.name || variant.label || `variant-${index}`),
+      label,
+      color: validColor(variant.primaryColor || variant.color || variant.primary_color, primary),
+      secondaryColor: validColor(variant.secondaryColor || variant.secondary_color, secondary),
+      material: variant.material || material.fabric,
+      pattern: variant.pattern || pattern.type,
+    };
+  });
   if (fromMatrix.length) return fromMatrix;
   const colors = Array.isArray(item.color_variants) ? item.color_variants as string[] : [];
-  if (colors.length) return colors.map((color, index) => ({ id: `color-${index}`, label: `Colour ${index + 1}`, color: validColor(color), material: material.fabric, pattern: pattern.type }));
-  return [{ id: 'default', label: 'Default', color: validColor(material.primaryColor || material.primary_color), material: material.fabric, pattern: pattern.type }];
+  if (colors.length) return colors.map((color, index) => ({ id: `color-${index}`, label: `Colour ${index + 1}`, color: validColor(color), secondaryColor: secondary, material: material.fabric, pattern: pattern.type }));
+  return [{ id: 'default', label: 'Default', color: primary, secondaryColor: secondary, material: material.fabric, pattern: pattern.type }];
 }
 
 export function buildClothingPreviewAppearance(avatar: AvatarConfig | null | undefined, item: ClothingItem, variant?: ClothingPreviewVariant): PlayerAppearance {

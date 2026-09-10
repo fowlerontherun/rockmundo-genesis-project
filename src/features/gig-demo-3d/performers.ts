@@ -10,6 +10,8 @@ import { seededRandom } from './config';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
+import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import type { VenueProfile } from './venueProfile';
 import type { ConcertPerformer, StageRole } from './liveTypes';
@@ -63,7 +65,7 @@ export class Musician {
         number,
         number,
         number
-    ], public phase = 0, tint = '#728092', appearance?: PlayerAppearance, instrument?: InstrumentId | null, vocal?: VocalRole) {
+    ], public phase = 0, tint = '#728092', appearance?: PlayerAppearance, instrument?: InstrumentId | null, vocal?: VocalRole, richClothing: ResolvedEquippedClothing[] = []) {
         this.model = clone(source);
         this.root.add(this.model);
         this.root.position.set(...position);
@@ -104,6 +106,33 @@ export class Musician {
                 object.material = Array.isArray(object.material) ? object.material.map(configure) : configure(object.material);
             }
         });
+        // Procedural garments are authored in the same normalized rest-space used by
+        // the live fitting room. Attach their individual pieces to the performer
+        // skeleton before applying non-uniform body scaling so sleeves, legs, shoes,
+        // hats and torso pieces inherit the same animation as the character.
+        if (richClothing.length) {
+            this.root.updateMatrixWorld(true);
+            for (const resolved of richClothing) {
+                const garment = buildProceduralGarment(resolved.item, resolved.variant);
+                this.root.add(garment);
+                this.root.updateMatrixWorld(true);
+                const pieces: T.Mesh[] = [];
+                garment.traverse(object => {
+                    if (object instanceof T.Mesh)
+                        pieces.push(object);
+                });
+                for (const piece of pieces) {
+                    piece.frustumCulled = false;
+                    const anchorName = String(piece.userData.rigAnchor || 'Torso') as GarmentRigAnchor;
+                    const anchor = this.bones.get(anchorName);
+                    if (anchor)
+                        anchor.attach(piece);
+                    else
+                        this.root.attach(piece);
+                }
+                garment.removeFromParent();
+            }
+        }
         if (appearance)
             this.root.scale.set(appearance.body.build, appearance.body.height, appearance.body.build);
         const assignment = stageAssignment(instrument, role);
@@ -359,7 +388,7 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
     try {
         const actors = lineup ? lineup.map(p => {
             const assembled = assemblePlayerModel(library, p.appearance);
-            const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal);
+            const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing);
             disposeModel(assembled);
             actor.id = p.id;
             actor.root.name = p.displayName;
