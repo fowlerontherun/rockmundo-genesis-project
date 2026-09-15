@@ -6,15 +6,7 @@ import { useTutorial } from "@/hooks/useTutorial";
 import { X, ChevronRight, Lightbulb, CheckCircle2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-
-const LEGACY_TUTORIAL_ROUTE_REDIRECTS: Record<string, string> = {
-  "/rehearsals": "/band/rehearsals",
-};
-
-const resolveTutorialRoute = (route?: string | null) => {
-  if (!route) return null;
-  return LEGACY_TUTORIAL_ROUTE_REDIRECTS[route] ?? route;
-};
+import { resolveTutorialRoute } from "./tutorialRoutes";
 
 export const TutorialTooltip = () => {
   const { currentStep, progressPercent, completeStep, incompleteSteps } = useTutorial();
@@ -31,8 +23,8 @@ export const TutorialTooltip = () => {
     }
   }, []);
 
-  // Auto-complete step when user visits the target route, including legacy routes
-  // that have since moved into a hub.
+  // Auto-complete step when user visits the resolved route. The resolver keeps
+  // stale tutorial records working after pages are renamed or consolidated.
   useEffect(() => {
     const targetRoute = resolveTutorialRoute(currentStep?.target_route);
     if (targetRoute && location.pathname === targetRoute) {
