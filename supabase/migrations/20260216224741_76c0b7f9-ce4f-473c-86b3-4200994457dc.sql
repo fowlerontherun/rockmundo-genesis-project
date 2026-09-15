@@ -5,18 +5,18 @@
 INSERT INTO tutorial_steps (step_key, title, description, target_route, order_index, category, is_active) VALUES
 -- Education & Skills
 ('visit_education', 'Level Up Your Skills', 'Visit the Education hub to find university courses, books, mentors, and videos to improve your abilities.', '/education', 9, 'skills', true),
-('visit_skill_tree', 'Explore Your Skill Tree', 'Check out your full skill tree to see all available skills from instruments to business acumen.', '/skill-tree', 10, 'skills', true),
+('visit_skill_tree', 'Explore Your Skill Tree', 'Check out your full skill tree to see all available skills from instruments to business acumen.', '/skills', 10, 'skills', true),
 
 -- Equipment & Commerce
-('visit_equipment', 'Get Better Gear', 'Browse the Equipment Shop to upgrade your instruments and accessories. Better gear means better performances!', '/equipment', 11, 'commerce', true),
-('visit_merch', 'Set Up Merchandise', 'Design and sell band merchandise to earn extra income, especially during gigs and tours.', '/merch', 12, 'commerce', true),
+('visit_equipment', 'Get Better Gear', 'Browse the Equipment Shop to upgrade your instruments and accessories. Better gear means better performances!', '/gear-shop', 11, 'commerce', true),
+('visit_merch', 'Set Up Merchandise', 'Design and sell band merchandise to earn extra income, especially during gigs and tours.', '/merchandise', 12, 'commerce', true),
 
 -- Performance expansion
 ('visit_busking', 'Try Busking', 'Head out to the streets for a quick busking session. No booking needed — earn tips and practice your performance skills!', '/busking', 13, 'performance', true),
-('visit_tours', 'Plan a Tour', 'Ready for the big time? Plan a multi-city tour to build fanbases across different regions.', '/tours', 14, 'performance', true),
+('visit_tours', 'Plan a Tour', 'Ready for the big time? Plan a multi-city tour to build fanbases across different regions.', '/tour-manager', 14, 'performance', true),
 
 -- Music Industry
-('visit_charts', 'Check the Charts', 'See where your music ranks! Chart positions drive streaming discovery and unlock bigger opportunities.', '/charts', 15, 'music', true),
+('visit_charts', 'Check the Charts', 'See where your music ranks! Chart positions drive streaming discovery and unlock bigger opportunities.', '/music/charts', 15, 'music', true),
 ('visit_radio', 'Get on the Radio', 'Submit your tracks to radio stations for airplay. Radio exposure boosts fame and streams.', '/radio', 16, 'music', true),
 ('visit_labels', 'Explore Record Labels', 'Submit demos to labels for contract offers, or start your own label empire!', '/labels', 17, 'business', true),
 
