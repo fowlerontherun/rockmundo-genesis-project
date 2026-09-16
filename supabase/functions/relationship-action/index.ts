@@ -41,54 +41,79 @@ function pairKey(a: string, b: string): string {
   return [a, b].sort().join(":");
 }
 
-function calculateRequiredXp(level: number): number {
-  return Math.floor(100 * Math.pow(1.5, level));
+async function getSkillMaxLevel(client: any, skillSlug: string): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 20;
 }
 
-const MAX_SKILL_LEVEL = 20;
+async function getRequiredSkillXp(client: any, level: number): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_required_xp", {
+    p_level: level,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 100;
+}
 
 async function grantSkillXp(client: any, profileId: string, skillSlug: string, amount: number) {
   if (amount <= 0 || !skillSlug) return;
 
-  // Tier gating: skip if the higher-tier slug is locked.
-  const { data: unlocked } = await client.rpc("skill_tier_unlocked", {
+  const { data: unlocked, error: unlockError } = await client.rpc("skill_tier_unlocked", {
     p_profile_id: profileId,
     p_slug: skillSlug,
   });
+  if (unlockError) throw unlockError;
   if (unlocked === false) {
-    console.log(`[Mentor] Skipping XP for locked tier ${skillSlug} on profile ${profileId}`);
+    console.log(`[Relationship] Skipping XP for locked tier ${skillSlug} on profile ${profileId}`);
     return;
   }
 
-  const { data: skill } = await client
+  const maxLevel = await getSkillMaxLevel(client, skillSlug);
+  const { data: skill, error: skillLoadError } = await client
     .from("skill_progress")
     .select("current_xp, current_level, required_xp")
     .eq("profile_id", profileId)
     .eq("skill_slug", skillSlug)
     .maybeSingle();
+  if (skillLoadError) throw skillLoadError;
 
-  const currentXp = skill?.current_xp ?? 0;
-  let level = Math.min(skill?.current_level ?? 0, MAX_SKILL_LEVEL);
-  let remaining = currentXp + amount;
-  let required = skill?.required_xp ?? calculateRequiredXp(level);
+  let level = Math.min(Math.max(Number(skill?.current_level ?? 0), 0), maxLevel);
+  let remaining = Math.max(Number(skill?.current_xp ?? 0), 0);
+  let required = Number(skill?.required_xp ?? 0);
 
-  while (level < MAX_SKILL_LEVEL && remaining >= required) {
-    remaining -= required;
-    level += 1;
-    required = calculateRequiredXp(level);
+  if (level < maxLevel) {
+    if (required <= 0) required = await getRequiredSkillXp(client, level);
+    remaining += amount;
+
+    while (level < maxLevel && remaining >= required) {
+      remaining -= required;
+      level += 1;
+      required = level < maxLevel ? await getRequiredSkillXp(client, level) : 0;
+    }
   }
 
-  await client.from("skill_progress").upsert(
+  if (level >= maxLevel) {
+    level = maxLevel;
+    remaining = 0;
+    required = 0;
+  }
+
+  const { error: upsertError } = await client.from("skill_progress").upsert(
     {
       profile_id: profileId,
       skill_slug: skillSlug,
       current_xp: remaining,
       current_level: level,
-      required_xp: calculateRequiredXp(level),
+      required_xp: required,
       last_practiced_at: new Date().toISOString(),
     },
     { onConflict: "profile_id,skill_slug" },
   );
+  if (upsertError) throw upsertError;
 }
 
 async function updateStreak(client: any, profileId: string): Promise<{ streak: number; bonusApplied: boolean }> {
@@ -180,7 +205,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify profile belongs to user
     const { data: profile } = await admin
       .from("profiles")
       .select("id, user_id")
@@ -193,7 +217,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Enforce daily cap (per pair, per action)
     const pk = pairKey(profile_id, other_profile_id);
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
@@ -217,7 +240,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Award action XP via experience_ledger (matches progression edge function pattern)
     await admin.from("experience_ledger").insert({
       user_id: user.id,
       profile_id,
@@ -231,12 +253,10 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Grant skill XP instantly
     if (config.skillXp > 0 && config.skillSlug) {
       await grantSkillXp(admin, profile_id, config.skillSlug, config.skillXp);
     }
 
-    // Log the relationship XP event
     await admin.from("relationship_xp_log").insert({
       profile_id,
       other_profile_id,
@@ -247,7 +267,6 @@ Deno.serve(async (req) => {
       skill_slug: config.skillSlug ?? null,
     });
 
-    // Mirror to activity_feed so existing affinity / timeline still works
     await admin.from("activity_feed").insert({
       user_id: user.id,
       activity_type: `relationship_${action}`,
@@ -260,7 +279,6 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Streak update
     const { streak, bonusApplied } = await updateStreak(admin, profile_id);
     let streakReward = { xp: 0, skillXp: 0, label: "" };
     if (bonusApplied) {
@@ -284,7 +302,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Lifetime XP + tier from helper
     const { data: tierData } = await admin.rpc("get_friendship_tier", {
       profile_a: profile_id,
       profile_b: other_profile_id,
@@ -294,7 +311,6 @@ Deno.serve(async (req) => {
       profile_b: other_profile_id,
     });
 
-    // Co-op quest progression: increment progress for any active quest matching this action
     const completedQuests: Array<{ id: string; title: string; reward_xp: number; reward_skill_xp: number }> = [];
     try {
       const { data: activeQuests } = await admin
@@ -319,7 +335,6 @@ Deno.serve(async (req) => {
           })
           .eq("id", q.id);
 
-        // Activity log: progress
         await admin.from("coop_quest_events").insert({
           quest_id: q.id,
           pair_key: pk,
@@ -331,7 +346,6 @@ Deno.serve(async (req) => {
         });
 
         if (completed) {
-          // Activity log: completed
           await admin.from("coop_quest_events").insert({
             quest_id: q.id,
             pair_key: pk,
