@@ -8,37 +8,11 @@ import {
   startJobRun,
 } from "../_shared/job-logger.ts";
 
-// Skill level cap (must match src/data/skillConstants.ts MAX_SKILL_LEVEL)
-const MAX_SKILL_LEVEL = 20;
-
-// Attribute-based learning speed multiplier
 const MAX_ATTRIBUTE_VALUE = 1000;
 const MAX_BONUS_MULTIPLIER = 0.5;
-
-function calculateLearningMultiplier(skillSlug: string, attributes: Record<string, number> | null): number {
-  if (!attributes) return 1.0;
-  
-  let relevantAttribute = 0;
-  
-  if (skillSlug.includes('instruments_') || skillSlug.includes('guitar') || skillSlug.includes('bass') || skillSlug.includes('keyboard')) {
-    relevantAttribute = attributes.musical_ability ?? 0;
-  } else if (skillSlug.includes('singing') || skillSlug.includes('vocal') || skillSlug.includes('rapping')) {
-    relevantAttribute = attributes.vocal_talent ?? 0;
-  } else if (skillSlug.includes('drums') || skillSlug.includes('percussion') || skillSlug.includes('beatmaking')) {
-    relevantAttribute = attributes.rhythm_sense ?? 0;
-  } else if (skillSlug.includes('songwriting_') || skillSlug.includes('lyrics') || skillSlug.includes('composing')) {
-    relevantAttribute = attributes.creative_insight ?? 0;
-  } else if (skillSlug.includes('production') || skillSlug.includes('mixing') || skillSlug.includes('daw')) {
-    relevantAttribute = attributes.technical_mastery ?? 0;
-  } else if (skillSlug.includes('stage_') || skillSlug.includes('showmanship') || skillSlug.includes('crowd')) {
-    relevantAttribute = attributes.stage_presence ?? 0;
-  } else if (skillSlug.includes('genres_')) {
-    relevantAttribute = Math.max(attributes.musical_ability ?? 0, attributes.creative_insight ?? 0);
-  }
-  
-  const bonus = (Math.min(relevantAttribute, MAX_ATTRIBUTE_VALUE) / MAX_ATTRIBUTE_VALUE) * MAX_BONUS_MULTIPLIER;
-  return 1.0 + bonus;
-}
+const REMOTE_LEARNING_XP_PENALTY = 0.10;
+const CONNECTION_FAILURE_CHANCE = 0.25;
+const CONNECTION_FAILURE_XP_PENALTY = 0.50;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,41 +33,113 @@ interface Enrollment {
 
 interface Course {
   skill_slug: string;
+  name?: string;
   xp_per_day_min: number;
   xp_per_day_max: number;
+  class_start_hour?: number | null;
+  class_end_hour?: number | null;
 }
 
-interface University {
-  id: string;
-  city: string | null;
+function calculateLearningMultiplier(skillSlug: string, attributes: Record<string, number> | null): number {
+  if (!attributes) return 1.0;
+
+  let relevantAttribute = 0;
+  if (skillSlug.includes("instruments_") || skillSlug.includes("guitar") || skillSlug.includes("bass") || skillSlug.includes("keyboard")) {
+    relevantAttribute = attributes.musical_ability ?? 0;
+  } else if (skillSlug.includes("singing") || skillSlug.includes("vocal") || skillSlug.includes("rapping")) {
+    relevantAttribute = attributes.vocal_talent ?? 0;
+  } else if (skillSlug.includes("drums") || skillSlug.includes("percussion") || skillSlug.includes("beatmaking")) {
+    relevantAttribute = attributes.rhythm_sense ?? 0;
+  } else if (skillSlug.includes("songwriting_") || skillSlug.includes("lyrics") || skillSlug.includes("composing")) {
+    relevantAttribute = attributes.creative_insight ?? 0;
+  } else if (skillSlug.includes("production") || skillSlug.includes("mixing") || skillSlug.includes("daw")) {
+    relevantAttribute = attributes.technical_mastery ?? 0;
+  } else if (skillSlug.includes("stage_") || skillSlug.includes("showmanship") || skillSlug.includes("crowd")) {
+    relevantAttribute = attributes.stage_presence ?? 0;
+  } else if (skillSlug.includes("genres_")) {
+    relevantAttribute = Math.max(attributes.musical_ability ?? 0, attributes.creative_insight ?? 0);
+  }
+
+  const bonus = (Math.min(relevantAttribute, MAX_ATTRIBUTE_VALUE) / MAX_ATTRIBUTE_VALUE) * MAX_BONUS_MULTIPLIER;
+  return 1.0 + bonus;
 }
 
-// Remote learning configuration
-const REMOTE_LEARNING_XP_PENALTY = 0.10; // 10% less effective
-const CONNECTION_FAILURE_CHANCE = 0.25; // 25% chance of connection failure
-const CONNECTION_FAILURE_XP_PENALTY = 0.50; // Only get half XP if connection fails
+async function getSkillMaxLevel(client: any, skillSlug: string): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 20;
+}
+
+async function getRequiredXp(client: any, level: number): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_required_xp", {
+    p_level: level,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 100;
+}
+
+async function awardSkillXp(client: any, profileId: string, skillSlug: string, xpEarned: number) {
+  const maxLevel = await getSkillMaxLevel(client, skillSlug);
+  const { data: progress, error: progressError } = await client
+    .from("skill_progress")
+    .select("id, current_xp, current_level, required_xp")
+    .eq("profile_id", profileId)
+    .eq("skill_slug", skillSlug)
+    .maybeSingle();
+
+  if (progressError) throw progressError;
+
+  let level = Math.min(Math.max(Number(progress?.current_level ?? 0), 0), maxLevel);
+  let currentXp = Math.max(Number(progress?.current_xp ?? 0), 0);
+
+  if (level >= maxLevel) return;
+
+  currentXp += xpEarned;
+  let requiredXp = Number(progress?.required_xp ?? 0) || await getRequiredXp(client, level);
+
+  while (level < maxLevel && currentXp >= requiredXp) {
+    currentXp -= requiredXp;
+    level += 1;
+    requiredXp = level < maxLevel ? await getRequiredXp(client, level) : 0;
+  }
+
+  if (level >= maxLevel) {
+    level = maxLevel;
+    currentXp = 0;
+    requiredXp = 0;
+  }
+
+  const { error: upsertError } = await client
+    .from("skill_progress")
+    .upsert({
+      profile_id: profileId,
+      skill_slug: skillSlug,
+      current_xp: currentXp,
+      current_level: level,
+      required_xp: requiredXp,
+      last_practiced_at: new Date().toISOString(),
+    }, { onConflict: "profile_id,skill_slug" });
+
+  if (upsertError) throw upsertError;
+}
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
-
-  const supabaseClient = createClient(
+  const client = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    {
-      auth: {
-        persistSession: false,
-      },
-    }
+    { auth: { persistSession: false } },
   );
 
   let runId: string | null = null;
   const startedAt = Date.now();
-
   let processedCount = 0;
   let skippedCount = 0;
   let remoteCount = 0;
@@ -101,12 +147,10 @@ serve(async (req) => {
   let totalXpAwarded = 0;
 
   try {
-    console.log(`=== University Auto-Attendance Started at ${new Date().toISOString()} ===`);
-
     runId = await startJobRun({
       jobName: "university-attendance",
       functionName: "university-attendance",
-      supabaseClient,
+      supabaseClient: client,
       triggeredBy,
       requestPayload: payload ?? null,
       requestId: payload?.requestId ?? null,
@@ -114,265 +158,135 @@ serve(async (req) => {
 
     const now = new Date();
     const today = now.toISOString().split("T")[0];
-    console.log(`Processing attendance for date: ${today}`);
-
-    // Find active enrollments with auto_attend enabled
-    const { data: enrollments, error: enrollError } = await supabaseClient
+    const { data: enrollments, error: enrollError } = await client
       .from("player_university_enrollments")
       .select("id, profile_id, course_id, university_id, scheduled_end_date, status, days_attended, total_xp_earned")
       .in("status", ["enrolled", "in_progress"])
       .eq("auto_attend", true)
       .returns<Enrollment[]>();
 
-    if (enrollError) {
-      console.error('Error fetching enrollments:', enrollError);
-      throw enrollError;
-    }
+    if (enrollError) throw enrollError;
 
-    console.log(`Found ${enrollments?.length || 0} enrollments with auto_attend=true`);
-
-    for (const enrollment of enrollments || []) {
-      console.log(`\n--- Processing enrollment ${enrollment.id} for profile ${enrollment.profile_id} ---`);
-      
-      // Check if already attended today
-      const { data: existingAttendance } = await supabaseClient
-        .from("player_university_attendance")
-        .select("id")
-        .eq("enrollment_id", enrollment.id)
-        .eq("attendance_date", today)
-        .single();
-
-      if (existingAttendance) {
-        console.log(`Already attended today for enrollment ${enrollment.id}, skipping`);
-        skippedCount++;
-        continue;
-      }
-
-      // Get course details
-      const { data: course, error: courseError } = await supabaseClient
-        .from("university_courses")
-        .select("skill_slug, xp_per_day_min, xp_per_day_max")
-        .eq("id", enrollment.course_id)
-        .single<Course>();
-
-      if (courseError) {
-        console.error(`Error fetching course: ${courseError.message}`);
-        continue;
-      }
-
-      // Get university location
-      const { data: university, error: uniError } = await supabaseClient
-        .from("universities")
-        .select("id, city")
-        .eq("id", enrollment.university_id)
-        .single<University>();
-
-      if (uniError) {
-        console.error(`Error fetching university: ${uniError.message}`);
-        continue;
-      }
-
-      // Get player's current city
-      const { data: playerProfile } = await supabaseClient
-        .from("profiles")
-        .select("current_city_id, cities:current_city_id(name)")
-        .eq("id", enrollment.profile_id)
-        .single();
-
-      const playerCity = (playerProfile?.cities as any)?.name || null;
-      const universityCity = university?.city || null;
-      const isRemote = playerCity && universityCity && playerCity !== universityCity;
-
-      console.log(`Player city: ${playerCity}, University city: ${universityCity}, Remote: ${isRemote}`);
-
-      // If remote, check if player is activity blocked (can't attend at all if blocked)
-      let isActivityBlocked = false;
-      if (isRemote && playerProfile) {
-        const { data: activeActivity } = await supabaseClient
-          .from("player_scheduled_activities")
-          .select("id, activity_type")
-          .eq("profile_id", enrollment.profile_id)
-          .eq("status", "active")
-          .lte("scheduled_start", now.toISOString())
-          .gte("scheduled_end", now.toISOString())
+    for (const enrollment of enrollments ?? []) {
+      try {
+        const { data: existingAttendance } = await client
+          .from("player_university_attendance")
+          .select("id")
+          .eq("enrollment_id", enrollment.id)
+          .eq("attendance_date", today)
           .maybeSingle();
-
-        if (activeActivity) {
-          console.log(`Player is activity blocked (${activeActivity.activity_type}), skipping class`);
-          isActivityBlocked = true;
-          skippedCount++;
+        if (existingAttendance) {
+          skippedCount += 1;
           continue;
         }
-      }
 
-      // Fetch player attributes for learning speed bonus
-      const { data: playerAttrs } = await supabaseClient
-        .from("player_attributes")
-        .select("musical_ability, vocal_talent, rhythm_sense, creative_insight, technical_mastery, stage_presence")
-        .eq("profile_id", enrollment.profile_id)
-        .single();
+        const { data: course, error: courseError } = await client
+          .from("university_courses")
+          .select("skill_slug, name, xp_per_day_min, xp_per_day_max, class_start_hour, class_end_hour")
+          .eq("id", enrollment.course_id)
+          .single<Course>();
+        if (courseError || !course) throw courseError ?? new Error("University course not found");
 
-      const learningMultiplier = calculateLearningMultiplier(course.skill_slug, playerAttrs);
-      console.log(`Learning multiplier for ${course.skill_slug}: ${learningMultiplier.toFixed(2)}x`);
+        const { data: university, error: uniError } = await client
+          .from("universities")
+          .select("city")
+          .eq("id", enrollment.university_id)
+          .single();
+        if (uniError) throw uniError;
 
-      console.log(`Course XP range: ${course.xp_per_day_min}-${course.xp_per_day_max}`);
-
-      // Random XP between min and max, then apply learning multiplier
-      let baseXp = Math.floor(
-        Math.random() * (course.xp_per_day_max - course.xp_per_day_min + 1) +
-          course.xp_per_day_min
-      );
-      let xpEarned = Math.floor(baseXp * learningMultiplier);
-
-      // Apply remote learning penalties
-      let connectionFailed = false;
-      if (isRemote) {
-        // 10% less effective for remote learning
-        xpEarned = Math.floor(xpEarned * (1 - REMOTE_LEARNING_XP_PENALTY));
-        console.log(`Remote learning: XP reduced by ${REMOTE_LEARNING_XP_PENALTY * 100}% to ${xpEarned}`);
-        remoteCount++;
-
-        // Check for connection failure (25% chance)
-        if (Math.random() < CONNECTION_FAILURE_CHANCE) {
-          connectionFailed = true;
-          xpEarned = Math.floor(xpEarned * CONNECTION_FAILURE_XP_PENALTY);
-          console.log(`Connection failed mid-class! XP halved to ${xpEarned}`);
-          connectionFailedCount++;
-        }
-      }
-
-      console.log(`Final XP earned: ${xpEarned}`);
-      totalXpAwarded += xpEarned;
-
-      // Create attendance record
-      console.log('Creating attendance record...');
-      const { error: attendanceError } = await supabaseClient
-        .from("player_university_attendance")
-        .insert({
-          enrollment_id: enrollment.id,
-          attendance_date: today,
-          xp_earned: xpEarned,
-          was_locked_out: false,
-          was_remote: isRemote || false,
-          connection_failed: connectionFailed,
-        });
-
-      if (attendanceError) {
-        console.error(`Error creating attendance: ${attendanceError.message}`);
-        continue;
-      }
-      
-      console.log('Attendance record created successfully');
-
-      // Update enrollment
-      const newDaysAttended = enrollment.days_attended + 1;
-      const newTotalXp = enrollment.total_xp_earned + xpEarned;
-      const isCompleted = new Date(enrollment.scheduled_end_date) <= now;
-
-      const { error: updateError } = await supabaseClient
-        .from("player_university_enrollments")
-        .update({
-          status: isCompleted ? "completed" : "in_progress",
-          days_attended: newDaysAttended,
-          total_xp_earned: newTotalXp,
-          actual_completion_date: isCompleted ? now.toISOString() : null,
-        })
-        .eq("id", enrollment.id);
-
-      if (updateError) {
-        console.error(`Error updating enrollment: ${updateError.message}`);
-        continue;
-      }
-
-      // Tier gating: skip XP grant if the higher-tier slug isn't unlocked.
-      const { data: unlocked } = await supabaseClient.rpc("skill_tier_unlocked", {
-        p_profile_id: enrollment.profile_id,
-        p_slug: course.skill_slug,
-      });
-      if (unlocked === false) {
-        console.log(`[University] Skipping XP for locked tier ${course.skill_slug} on profile ${enrollment.profile_id}`);
-        continue;
-      }
-
-      // Award XP to skill and player
-      const { data: skillProgress } = await supabaseClient
-        .from("skill_progress")
-        .select("id, current_xp, current_level, required_xp")
-        .eq("profile_id", enrollment.profile_id)
-        .eq("skill_slug", course.skill_slug)
-        .single();
-
-      if (skillProgress) {
-        let newCurrentXp = skillProgress.current_xp + xpEarned;
-        let newLevel = Math.min(skillProgress.current_level, MAX_SKILL_LEVEL);
-        let newRequiredXp = skillProgress.required_xp;
-
-        // Handle multiple level-ups
-        while (newLevel < MAX_SKILL_LEVEL && newCurrentXp >= newRequiredXp) {
-          newCurrentXp -= newRequiredXp;
-          newLevel += 1;
-          newRequiredXp = Math.floor(newRequiredXp * 1.5);
-        }
-
-        if (newLevel >= MAX_SKILL_LEVEL) {
-          newLevel = MAX_SKILL_LEVEL;
-          newCurrentXp = Math.min(newCurrentXp, skillProgress.current_xp);
-        }
-
-        await supabaseClient
-          .from("skill_progress")
-          .update({
-            current_xp: newCurrentXp,
-            current_level: newLevel,
-            required_xp: newRequiredXp,
-            last_practiced_at: now.toISOString(),
-          })
-          .eq("id", skillProgress.id);
-      } else {
-        // Create new skill progress with multi-level handling
-        let newCurrentXp = xpEarned;
-        let newLevel = 0;
-        let newRequiredXp = 100;
-
-        while (newLevel < MAX_SKILL_LEVEL && newCurrentXp >= newRequiredXp) {
-          newCurrentXp -= newRequiredXp;
-          newLevel += 1;
-          newRequiredXp = Math.floor(newRequiredXp * 1.5);
-        }
-
-        if (newLevel >= MAX_SKILL_LEVEL) {
-          newLevel = MAX_SKILL_LEVEL;
-          newCurrentXp = Math.min(newCurrentXp, newRequiredXp);
-        }
-
-        await supabaseClient.from("skill_progress").upsert({
-          profile_id: enrollment.profile_id,
-          skill_slug: course.skill_slug,
-          current_xp: newCurrentXp,
-          current_level: newLevel,
-          required_xp: newRequiredXp,
-          last_practiced_at: now.toISOString(),
-        }, { onConflict: 'profile_id,skill_slug' });
-      }
-
-      // Update player profile XP and log to experience ledger
-      const { data: profile } = await supabaseClient
-        .from("profiles")
-        .select("experience, user_id")
-        .eq("id", enrollment.profile_id)
-        .single();
-
-      if (profile) {
-        await supabaseClient
+        const { data: playerProfile, error: playerError } = await client
           .from("profiles")
+          .select("current_city_id, user_id, experience, cities:current_city_id(name)")
+          .eq("id", enrollment.profile_id)
+          .single();
+        if (playerError || !playerProfile) throw playerError ?? new Error("Profile not found");
+
+        const playerCity = (playerProfile.cities as any)?.name ?? null;
+        const universityCity = university?.city ?? null;
+        const isRemote = Boolean(playerCity && universityCity && playerCity !== universityCity);
+
+        if (isRemote) {
+          const { data: activeActivity } = await client
+            .from("player_scheduled_activities")
+            .select("id")
+            .eq("profile_id", enrollment.profile_id)
+            .eq("status", "active")
+            .lte("scheduled_start", now.toISOString())
+            .gte("scheduled_end", now.toISOString())
+            .maybeSingle();
+          if (activeActivity) {
+            skippedCount += 1;
+            continue;
+          }
+        }
+
+        const { data: unlocked, error: unlockError } = await client.rpc("skill_tier_unlocked", {
+          p_profile_id: enrollment.profile_id,
+          p_slug: course.skill_slug,
+        });
+        if (unlockError) throw unlockError;
+        if (unlocked === false) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const { data: playerAttrs } = await client
+          .from("player_attributes")
+          .select("musical_ability, vocal_talent, rhythm_sense, creative_insight, technical_mastery, stage_presence")
+          .eq("profile_id", enrollment.profile_id)
+          .maybeSingle();
+
+        const learningMultiplier = calculateLearningMultiplier(course.skill_slug, playerAttrs);
+        const minXp = Math.max(1, Number(course.xp_per_day_min ?? 1));
+        const maxXp = Math.max(minXp, Number(course.xp_per_day_max ?? minXp));
+        const baseXp = Math.floor(Math.random() * (maxXp - minXp + 1) + minXp);
+        let xpEarned = Math.max(1, Math.floor(baseXp * learningMultiplier));
+        let connectionFailed = false;
+
+        if (isRemote) {
+          remoteCount += 1;
+          xpEarned = Math.max(1, Math.floor(xpEarned * (1 - REMOTE_LEARNING_XP_PENALTY)));
+          if (Math.random() < CONNECTION_FAILURE_CHANCE) {
+            connectionFailed = true;
+            connectionFailedCount += 1;
+            xpEarned = Math.max(1, Math.floor(xpEarned * CONNECTION_FAILURE_XP_PENALTY));
+          }
+        }
+
+        const { error: attendanceError } = await client
+          .from("player_university_attendance")
+          .insert({
+            enrollment_id: enrollment.id,
+            attendance_date: today,
+            xp_earned: xpEarned,
+            was_locked_out: false,
+            was_remote: isRemote,
+            connection_failed: connectionFailed,
+          });
+        if (attendanceError) throw attendanceError;
+
+        const newDaysAttended = Number(enrollment.days_attended ?? 0) + 1;
+        const isCompleted = new Date(enrollment.scheduled_end_date) <= now;
+        const { error: enrollmentError } = await client
+          .from("player_university_enrollments")
           .update({
-            experience: (profile.experience || 0) + xpEarned,
+            status: isCompleted ? "completed" : "in_progress",
+            days_attended: newDaysAttended,
+            total_xp_earned: Number(enrollment.total_xp_earned ?? 0) + xpEarned,
+            actual_completion_date: isCompleted ? now.toISOString() : null,
           })
+          .eq("id", enrollment.id);
+        if (enrollmentError) throw enrollmentError;
+
+        await awardSkillXp(client, enrollment.profile_id, course.skill_slug, xpEarned);
+
+        await client
+          .from("profiles")
+          .update({ experience: Number(playerProfile.experience ?? 0) + xpEarned })
           .eq("id", enrollment.profile_id);
 
-        // Log to experience ledger
-        await supabaseClient.from("experience_ledger").insert({
-          user_id: profile.user_id,
+        await client.from("experience_ledger").insert({
+          user_id: playerProfile.user_id,
           profile_id: enrollment.profile_id,
           activity_type: "university_attendance",
           xp_amount: xpEarned,
@@ -380,101 +294,89 @@ serve(async (req) => {
           metadata: {
             enrollment_id: enrollment.id,
             completed: isCompleted,
-            was_remote: isRemote || false,
+            was_remote: isRemote,
             connection_failed: connectionFailed,
           },
         });
 
-        // Create player_scheduled_activities entry to block the player's schedule
-        // Fetch course with class hours
-        const { data: courseWithHours } = await supabaseClient
-          .from("university_courses")
-          .select("name, class_start_hour, class_end_hour")
-          .eq("id", enrollment.course_id)
-          .single();
+        const classStart = new Date(now);
+        classStart.setHours(course.class_start_hour || 10, 0, 0, 0);
+        const classEnd = new Date(now);
+        classEnd.setHours(course.class_end_hour || 14, 0, 0, 0);
+        const dayStart = new Date(classStart);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        const { data: existingSchedule } = await client
+          .from("player_scheduled_activities")
+          .select("id")
+          .eq("profile_id", enrollment.profile_id)
+          .eq("activity_type", "university")
+          .gte("scheduled_start", dayStart.toISOString())
+          .lt("scheduled_start", dayEnd.toISOString())
+          .maybeSingle();
 
-        if (courseWithHours) {
-          const classStart = new Date(now);
-          classStart.setHours(courseWithHours.class_start_hour || 10, 0, 0, 0);
-          const classEnd = new Date(now);
-          classEnd.setHours(courseWithHours.class_end_hour || 14, 0, 0, 0);
-
-          // Check if schedule entry already exists for today
-          const { data: existingSchedule } = await supabaseClient
-            .from("player_scheduled_activities")
-            .select("id")
-            .eq("user_id", profile.user_id)
-            .eq("activity_type", "university")
-            .gte("scheduled_start", classStart.toISOString().split('T')[0])
-            .lt("scheduled_start", new Date(classStart.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-            .single();
-
-          if (!existingSchedule) {
-            await supabaseClient
-              .from("player_scheduled_activities")
-              .insert({
-                user_id: profile.user_id,
-                profile_id: enrollment.profile_id,
-                activity_type: 'university',
-                title: `University: ${courseWithHours.name}`,
-                scheduled_start: classStart.toISOString(),
-                scheduled_end: classEnd.toISOString(),
-                status: 'completed', // Already attended via auto-attend
-                metadata: {
-                  enrollment_id: enrollment.id,
-                  course_id: enrollment.course_id,
-                  xp_earned: xpEarned,
-                  auto_attended: true,
-                  was_remote: isRemote || false,
-                  connection_failed: connectionFailed,
-                },
-              });
-            console.log(`Created schedule entry for auto-attended class: ${courseWithHours.name}`);
-          }
+        if (!existingSchedule) {
+          await client.from("player_scheduled_activities").insert({
+            user_id: playerProfile.user_id,
+            profile_id: enrollment.profile_id,
+            activity_type: "university",
+            title: `University: ${course.name ?? "Course"}`,
+            scheduled_start: classStart.toISOString(),
+            scheduled_end: classEnd.toISOString(),
+            status: "completed",
+            metadata: {
+              enrollment_id: enrollment.id,
+              course_id: enrollment.course_id,
+              xp_earned: xpEarned,
+              auto_attended: true,
+              was_remote: isRemote,
+              connection_failed: connectionFailed,
+            },
+          });
         }
-      }
 
-      // === UNIVERSITY ATTENDANCE → MORALE (v1.0.971) ===
-      // Learning new skills and attending class boosts band morale slightly
-      // Course completion gives a bigger boost
-      if (profile?.user_id) {
-        try {
-          const { data: bm } = await supabaseClient
-            .from('band_members')
-            .select('band_id')
-            .eq('user_id', profile.user_id)
-            .eq('is_touring_member', false)
+        if (playerProfile.user_id) {
+          const { data: membership } = await client
+            .from("band_members")
+            .select("band_id")
+            .eq("user_id", playerProfile.user_id)
+            .eq("is_touring_member", false)
             .limit(1)
             .maybeSingle();
-          if (bm?.band_id) {
-            const { data: band } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
+          if (membership?.band_id) {
+            const { data: band } = await client
+              .from("bands")
+              .select("morale")
+              .eq("id", membership.band_id)
+              .single();
             if (band) {
-              const curM = (band as any).morale ?? 50;
-              const moraleBoost = isCompleted ? 5 : 1; // +5 for graduating, +1 per class
-              const newMorale = Math.min(100, curM + moraleBoost);
-              await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
-              if (isCompleted) console.log(`University graduation morale boost: +${moraleBoost} for band ${bm.band_id}`);
-              // Health event log
-              try { await supabaseClient.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'university', description: isCompleted ? 'University course graduated' : 'University class attended' }); } catch (_) {}
+              const moraleBoost = isCompleted ? 5 : 1;
+              const newMorale = Math.min(100, Number((band as any).morale ?? 50) + moraleBoost);
+              await client.from("bands").update({ morale: newMorale } as any).eq("id", membership.band_id);
+              await client.from("band_health_events").insert({
+                band_id: membership.band_id,
+                event_type: "morale",
+                delta: moraleBoost,
+                new_value: newMorale,
+                source: "university",
+                description: isCompleted ? "University course graduated" : "University class attended",
+              });
             }
           }
-        } catch (_e) { /* non-critical */ }
+        }
+
+        processedCount += 1;
+        totalXpAwarded += xpEarned;
+      } catch (enrollmentError) {
+        console.error(`[university-attendance] Failed enrollment ${enrollment.id}`, enrollmentError);
+        skippedCount += 1;
       }
-
-      processedCount++;
-      const remoteInfo = isRemote ? ` [REMOTE${connectionFailed ? ' - CONNECTION FAILED' : ''}]` : '';
-      console.log(
-        `✓ Completed enrollment ${enrollment.id}: ${xpEarned} XP, days: ${newDaysAttended}, completed: ${isCompleted}${remoteInfo}`
-      );
     }
-
-    console.log(`\n=== University Auto-Attendance Complete ===`);
-    console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}, Remote: ${remoteCount}, Connection Failures: ${connectionFailedCount}`);
 
     await completeJobRun({
       jobName: "university-attendance",
       runId,
-      supabaseClient,
+      supabaseClient: client,
       durationMs: Date.now() - startedAt,
       processedCount,
       resultSummary: {
@@ -486,26 +388,20 @@ serve(async (req) => {
       },
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        processed: processedCount,
-        skipped: skippedCount,
-        remote: remoteCount,
-        connectionFailed: connectionFailedCount,
-        totalXpAwarded,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({
+      success: true,
+      processed: processedCount,
+      skipped: skippedCount,
+      remote: remoteCount,
+      connectionFailed: connectionFailedCount,
+      totalXpAwarded,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
-    console.error("Error:", error);
-
+    console.error("[university-attendance] Fatal error", error);
     await failJobRun({
       jobName: "university-attendance",
       runId,
-      supabaseClient,
+      supabaseClient: client,
       durationMs: Date.now() - startedAt,
       error,
       resultSummary: {
@@ -517,12 +413,9 @@ serve(async (req) => {
       },
     });
 
-    return new Response(
-      JSON.stringify({ error: getErrorMessage(error) }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: getErrorMessage(error) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
