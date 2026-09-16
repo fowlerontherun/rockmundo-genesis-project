@@ -23,6 +23,100 @@ export interface DjPerformanceOutcome extends DjOutcome {
 }
 
 const DJ_ENERGY_COST = 25;
+const DJ_PROGRESSION_SLUGS = [
+  "basic_dj_controller",
+  "professional_djing",
+  "dj_mastery",
+] as const;
+const DJ_RELEVANT_SLUGS = [
+  ...DJ_PROGRESSION_SLUGS,
+  "basic_sampling_remixing",
+  "professional_sampling_remixing",
+  "sampling_remixing_mastery",
+] as const;
+
+type SkillProgressLike = {
+  id?: string;
+  skill_slug: string;
+  current_level?: number | null;
+  current_xp?: number | null;
+  required_xp?: number | null;
+};
+
+async function getSkillMaxLevel(skillSlug: string): Promise<number> {
+  const { data, error } = await (supabase as any).rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const maxLevel = Number(data);
+  return Number.isFinite(maxLevel) && maxLevel > 0 ? maxLevel : 20;
+}
+
+async function getRequiredSkillXp(level: number): Promise<number> {
+  const { data, error } = await (supabase as any).rpc("progression_skill_required_xp", {
+    p_level: level,
+  });
+  if (error) throw error;
+  const required = Number(data);
+  return Number.isFinite(required) && required > 0 ? required : 100;
+}
+
+async function awardCanonicalSkillXp(
+  profileId: string,
+  skillSlug: string,
+  amount: number,
+  existing?: SkillProgressLike,
+) {
+  if (amount <= 0) return;
+
+  const maxLevel = await getSkillMaxLevel(skillSlug);
+  let level = Math.min(Math.max(Number(existing?.current_level ?? 0), 0), maxLevel);
+  let currentXp = Math.max(Number(existing?.current_xp ?? 0), 0);
+  let requiredXp = Number(existing?.required_xp ?? 0);
+
+  if (level >= maxLevel) return;
+  if (requiredXp <= 0) requiredXp = await getRequiredSkillXp(level);
+
+  currentXp += amount;
+  while (level < maxLevel && currentXp >= requiredXp) {
+    currentXp -= requiredXp;
+    level += 1;
+    requiredXp = level < maxLevel ? await getRequiredSkillXp(level) : 0;
+  }
+
+  if (level >= maxLevel) {
+    level = maxLevel;
+    currentXp = 0;
+    requiredXp = 0;
+  }
+
+  const { error } = await (supabase as any).from("skill_progress").upsert(
+    {
+      profile_id: profileId,
+      skill_slug: skillSlug,
+      current_level: level,
+      current_xp: currentXp,
+      required_xp: requiredXp,
+      last_practiced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "profile_id,skill_slug" },
+  );
+  if (error) throw error;
+}
+
+async function chooseDjRewardSkill(progress: SkillProgressLike[]): Promise<string> {
+  // Reward the highest DJ tier the player has actually started and can still
+  // progress. Starting a DJ set must never auto-unlock an advanced tier.
+  for (const slug of [...DJ_PROGRESSION_SLUGS].reverse()) {
+    const row = progress.find((entry) => entry.skill_slug === slug);
+    if (!row || Number(row.current_level ?? 0) <= 0) continue;
+    const maxLevel = await getSkillMaxLevel(slug);
+    if (Number(row.current_level ?? 0) < maxLevel) return slug;
+  }
+
+  return "basic_dj_controller";
+}
 
 export function useDjPerformance() {
   const { profileId } = useActiveProfile();
@@ -61,12 +155,14 @@ export function useDjPerformance() {
         throw new Error(`Need ${DJ_ENERGY_COST} energy for a DJ set`);
       }
 
-      // 2. Get DJ skill progress
-      const { data: skillProgress } = await supabase
+      // 2. Load the canonical DJ and sampling/remixing skill families.
+      const { data: skillProgress, error: skillProgressError } = await supabase
         .from("skill_progress")
         .select("*")
         .eq("profile_id", profileId)
-        .like("skill_slug", "dj_%");
+        .in("skill_slug", [...DJ_RELEVANT_SLUGS]);
+
+      if (skillProgressError) throw skillProgressError;
 
       // 3. Calculate performance
       const perfResult = calculateDjPerformanceScore({
@@ -135,37 +231,12 @@ export function useDjPerformance() {
         })
         .eq("id", profileId);
 
-      // 6. Award XP to DJ skills (spread across core skills)
-      const djCoreSlugs = [
-        "dj_basic_beatmatching",
-        "dj_basic_mixing",
-        "dj_basic_crowd_reading",
-        "dj_basic_set_building",
-      ];
-      const xpPerSkill = Math.round(djOutcome.xpGained / djCoreSlugs.length);
-
-      for (const slug of djCoreSlugs) {
-        const existing = (skillProgress ?? []).find((s) => s.skill_slug === slug);
-        if (existing) {
-          await supabase
-            .from("skill_progress")
-            .update({
-              current_xp: (existing.current_xp ?? 0) + xpPerSkill,
-              last_practiced_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existing.id);
-        } else {
-          await supabase.from("skill_progress").insert({
-            profile_id: profileId,
-            skill_slug: slug,
-            current_level: 0,
-            current_xp: xpPerSkill,
-            required_xp: 100,
-            last_practiced_at: new Date().toISOString(),
-          });
-        }
-      }
+      // 6. Award the full DJ skill reward to the highest DJ tier the player
+      // has already started. The canonical XP curve handles level-ups.
+      const progressRows = (skillProgress ?? []) as SkillProgressLike[];
+      const rewardSlug = await chooseDjRewardSkill(progressRows);
+      const existingRewardSkill = progressRows.find((row) => row.skill_slug === rewardSlug);
+      await awardCanonicalSkillXp(profileId, rewardSlug, djOutcome.xpGained, existingRewardSkill);
 
       // 7. Record performance
       const { data: { user: currentUser } } = await supabase.auth.getUser();
