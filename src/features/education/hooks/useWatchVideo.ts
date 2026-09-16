@@ -93,6 +93,15 @@ const getRequiredSkillXp = async (level: number) => {
   return Number(data) || 100;
 };
 
+const getSkillMaxLevel = async (skillSlug: string) => {
+  const { data, error } = await (supabase as any).rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 20;
+};
+
 export const useWatchVideo = () => {
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
@@ -134,6 +143,7 @@ export const useWatchVideo = () => {
           if (skillDefinitionError) throw skillDefinitionError;
 
           if (skillDefinition) {
+            const maxLevel = await getSkillMaxLevel(normalizedSkill);
             const { data: existingProgress, error: skillLoadError } = await supabase
               .from("skill_progress")
               .select("id, current_xp, current_level, required_xp")
@@ -145,13 +155,19 @@ export const useWatchVideo = () => {
 
             if (existingProgress) {
               let newXp = existingProgress.current_xp + XP_PER_VIDEO;
-              let newLevel = existingProgress.current_level;
+              let newLevel = Math.min(existingProgress.current_level, maxLevel);
               let requiredXp = existingProgress.required_xp || (await getRequiredSkillXp(newLevel));
 
-              while (newLevel < 100 && newXp >= requiredXp) {
+              while (newLevel < maxLevel && newXp >= requiredXp) {
                 newXp -= requiredXp;
                 newLevel += 1;
-                requiredXp = await getRequiredSkillXp(newLevel);
+                requiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
+              }
+
+              if (newLevel >= maxLevel) {
+                newLevel = maxLevel;
+                newXp = 0;
+                requiredXp = 0;
               }
 
               const { error: skillUpdateError } = await supabase
@@ -165,7 +181,7 @@ export const useWatchVideo = () => {
                 .eq("id", existingProgress.id);
 
               if (skillUpdateError) throw skillUpdateError;
-              skillXpAwarded = true;
+              skillXpAwarded = existingProgress.current_level < maxLevel;
             } else if (canVideoStartSkill(normalizedSkill)) {
               const requiredXp = await getRequiredSkillXp(0);
               const { error: skillInsertError } = await supabase.from("skill_progress").insert({
