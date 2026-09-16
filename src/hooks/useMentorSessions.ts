@@ -2,10 +2,27 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
 import { applyLearningMultiplier } from "@/utils/skillLearningMultiplier";
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const getSkillMaxLevel = async (skillSlug: string): Promise<number> => {
+  const { data, error } = await (supabase as any).rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 20;
+};
+
+const getRequiredSkillXp = async (level: number): Promise<number> => {
+  const { data, error } = await (supabase as any).rpc("progression_skill_required_xp", {
+    p_level: level,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 100;
+};
 
 export function useMentorSessions() {
   const { toast } = useToast();
@@ -78,51 +95,34 @@ export function useMentorSessions() {
     enabled: !!profile?.id,
   });
 
-  // Booking-side: all mentors remain unlocked for booking (design decision preserved)
-  const isMentorDiscovered = (_mentorId: string) => {
-    return true;
-  };
+  const isMentorDiscovered = (_mentorId: string) => true;
+  const hasClaimedDiscovery = (mentorId: string) => !!discoveries?.some((d) => d.mentor_id === mentorId);
+  const getDiscovery = (mentorId: string) => discoveries?.find((d) => d.mentor_id === mentorId) ?? null;
 
-  // Journal-side: real discovery claim state from player_master_discoveries
-  const hasClaimedDiscovery = (mentorId: string) => {
-    return !!discoveries?.some((d) => d.mentor_id === mentorId);
-  };
-
-  const getDiscovery = (mentorId: string) => {
-    return discoveries?.find((d) => d.mentor_id === mentorId) ?? null;
-  };
-
-  // Helper to get day name
   const getDayName = (day: number | null) => {
     if (day === null || day === undefined) return 'Any day';
     return DAY_NAMES[day] || 'Unknown';
   };
 
-  // Helper to check if today is the mentor's available day
   const isAvailableToday = (availableDay: number | null) => {
     if (availableDay === null || availableDay === undefined) return true;
-    const today = new Date().getDay();
-    return today === availableDay;
+    return new Date().getDay() === availableDay;
   };
 
-  // Helper to check if player is in the mentor's city
   const isInMentorCity = (mentorCityId: string | null) => {
-    if (!mentorCityId) return true; // No city restriction
+    if (!mentorCityId) return true;
     return profile?.current_city_id === mentorCityId;
   };
 
-  // Discover a mentor
   const discoverMutation = useMutation({
     mutationFn: async ({ mentorId, method = 'exploration' }: { mentorId: string; method?: string }) => {
       if (!profile) throw new Error("Profile not found");
-      
       const { error } = await supabase.rpc('discover_master', {
         p_profile_id: profile.id,
         p_mentor_id: mentorId,
         p_method: method,
         p_metadata: {}
       });
-      
       if (error) throw error;
       return { mentorId };
     },
@@ -134,11 +134,7 @@ export function useMentorSessions() {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Discovery Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Discovery Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -149,54 +145,52 @@ export function useMentorSessions() {
       const mentor = mentors?.find((m) => m.id === mentorId);
       if (!mentor) throw new Error("Master not found");
 
-      // Discovery check removed — all mentors unlocked
-
-      // Check if player is in the mentor's city
       if (mentor.city_id && !isInMentorCity(mentor.city_id)) {
         const cityName = mentor.city?.name || 'their city';
         throw new Error(`Travel to ${cityName} to train with this master`);
       }
 
-      // Check if today is the correct day
       if (mentor.available_day !== null && !isAvailableToday(mentor.available_day)) {
         const dayName = getDayName(mentor.available_day);
         throw new Error(`${mentor.name} is only available on ${dayName}s`);
       }
 
-      // Check if user has enough cash
       if (profile.cash < mentor.cost) {
         throw new Error(`Insufficient funds (need $${mentor.cost.toLocaleString()})`);
       }
 
-      // Check cooldown
       const lastSession = recentSessions?.find((s) => s.mentor_id === mentorId);
       if (lastSession) {
-        const hoursSinceLastSession =
-          (Date.now() - new Date(lastSession.session_date).getTime()) / (1000 * 60 * 60);
+        const hoursSinceLastSession = (Date.now() - new Date(lastSession.session_date).getTime()) / (1000 * 60 * 60);
         if (hoursSinceLastSession < mentor.cooldown_hours) {
           const hoursRemaining = Math.ceil(mentor.cooldown_hours - hoursSinceLastSession);
           throw new Error(`Cooldown: ${hoursRemaining} hours remaining`);
         }
       }
 
-      // Calculate XP and skill gains
+      const { data: tierUnlocked, error: tierError } = await (supabase as any).rpc("skill_tier_unlocked", {
+        p_profile_id: profile.id,
+        p_slug: mentor.focus_skill,
+      });
+      if (tierError) throw tierError;
+      if (tierUnlocked === false) throw new Error("This skill tier is not unlocked yet");
+
+      const maxLevel = await getSkillMaxLevel(mentor.focus_skill);
       const skill = skillProgress?.find((s) => s.skill_slug === mentor.focus_skill);
       const currentLevel = skill?.current_level || 0;
       const xpEarned = Math.floor(mentor.base_xp * (1 + currentLevel * 0.1));
-      
-      // Fetch player attributes for learning multiplier
+
       const { data: attrs } = await supabase
         .from('player_attributes')
         .select('*')
         .eq('profile_id', profile.id)
         .maybeSingle();
-      
+
       const baseSkillValue = Math.floor(xpEarned * mentor.skill_gain_ratio);
       const { xp: skillValueGained } = applyLearningMultiplier(baseSkillValue, mentor.focus_skill, attrs);
 
       if (!userId) throw new Error("Not signed in");
 
-      // Create session
       const { error: sessionError } = await supabase
         .from("player_mentor_sessions")
         .insert({
@@ -207,24 +201,26 @@ export function useMentorSessions() {
           skill_value_gained: skillValueGained,
           attribute_gains: mentor.attribute_keys || {},
         });
-
       if (sessionError) throw sessionError;
 
-      // Update skill progress with proper multi-level handling
-      let newXp = (skill?.current_xp || 0) + skillValueGained;
-      let newLevel = Math.min(skill?.current_level || 0, MAX_SKILL_LEVEL);
-      let newRequiredXp = skill?.required_xp || 100;
+      let newLevel = Math.min(Math.max(skill?.current_level || 0, 0), maxLevel);
+      let newXp = Math.max(skill?.current_xp || 0, 0);
+      let newRequiredXp = Number(skill?.required_xp ?? 0);
 
-      // Handle multiple level-ups
-      while (newLevel < MAX_SKILL_LEVEL && newXp >= newRequiredXp) {
-        newXp -= newRequiredXp;
-        newLevel += 1;
-        newRequiredXp = Math.floor(newRequiredXp * 1.5);
+      if (newLevel < maxLevel) {
+        if (newRequiredXp <= 0) newRequiredXp = await getRequiredSkillXp(newLevel);
+        newXp += skillValueGained;
+        while (newLevel < maxLevel && newXp >= newRequiredXp) {
+          newXp -= newRequiredXp;
+          newLevel += 1;
+          newRequiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
+        }
       }
 
-      if (newLevel >= MAX_SKILL_LEVEL) {
-        newLevel = MAX_SKILL_LEVEL;
-        newXp = Math.min(newXp, skill?.current_xp || newXp);
+      if (newLevel >= maxLevel) {
+        newLevel = maxLevel;
+        newXp = 0;
+        newRequiredXp = 0;
       }
 
       if (skill) {
@@ -237,38 +233,35 @@ export function useMentorSessions() {
             last_practiced_at: new Date().toISOString(),
           })
           .eq("id", skill.id);
-
         if (skillError) throw skillError;
       } else {
-        // For new skills, check if we level up from 0
-        newXp = skillValueGained;
-        newLevel = 0;
-        newRequiredXp = 100;
-        
-        while (newLevel < MAX_SKILL_LEVEL && newXp >= newRequiredXp) {
-          newXp -= newRequiredXp;
-          newLevel += 1;
-          newRequiredXp = Math.floor(newRequiredXp * 1.5);
+        let insertXp = skillValueGained;
+        let insertLevel = 0;
+        let insertRequiredXp = await getRequiredSkillXp(0);
+
+        while (insertLevel < maxLevel && insertXp >= insertRequiredXp) {
+          insertXp -= insertRequiredXp;
+          insertLevel += 1;
+          insertRequiredXp = insertLevel < maxLevel ? await getRequiredSkillXp(insertLevel) : 0;
         }
 
-        if (newLevel >= MAX_SKILL_LEVEL) {
-          newLevel = MAX_SKILL_LEVEL;
-          newXp = Math.min(newXp, newRequiredXp);
+        if (insertLevel >= maxLevel) {
+          insertLevel = maxLevel;
+          insertXp = 0;
+          insertRequiredXp = 0;
         }
-        
+
         const { error: skillError } = await supabase.from("skill_progress").insert({
           profile_id: profile.id,
           skill_slug: mentor.focus_skill,
-          current_xp: newXp,
-          current_level: newLevel,
-          required_xp: newRequiredXp,
+          current_xp: insertXp,
+          current_level: insertLevel,
+          required_xp: insertRequiredXp,
           last_practiced_at: new Date().toISOString(),
         });
-
         if (skillError) throw skillError;
       }
 
-      // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -276,10 +269,8 @@ export function useMentorSessions() {
           experience: (profile.experience || 0) + xpEarned,
         })
         .eq("id", profile.id);
-
       if (profileError) throw profileError;
 
-      // Log to experience ledger
       const { error: ledgerError } = await supabase.from("experience_ledger").insert({
         user_id: userId,
         profile_id: profile.id,
@@ -289,9 +280,9 @@ export function useMentorSessions() {
         metadata: {
           mentor_id: mentorId,
           mentor_name: mentor.name,
+          max_level: maxLevel,
         },
       });
-
       if (ledgerError) throw ledgerError;
 
       return { xpEarned, skillValueGained, mentor };
@@ -306,11 +297,7 @@ export function useMentorSessions() {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Session Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Session Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -318,30 +305,23 @@ export function useMentorSessions() {
     const mentor = mentors?.find((m) => m.id === mentorId);
     if (!mentor) return { canBook: false, reason: "Master not found" };
 
-    // Discovery check removed — all mentors unlocked
-
-    // Check city requirement
     if (mentor.city_id && !isInMentorCity(mentor.city_id)) {
       const cityName = mentor.city?.name || 'their city';
       return { canBook: false, reason: `Travel to ${cityName}` };
     }
 
-    // Check day requirement
     if (mentor.available_day !== null && !isAvailableToday(mentor.available_day)) {
       const dayName = getDayName(mentor.available_day);
       return { canBook: false, reason: `Available ${dayName}s` };
     }
 
-    // Check funds
     if (profile && profile.cash < mentor.cost) {
       return { canBook: false, reason: `Need $${mentor.cost.toLocaleString()}` };
     }
 
-    // Check cooldown
     const lastSession = recentSessions?.find((s) => s.mentor_id === mentorId);
     if (lastSession) {
-      const hoursSinceLastSession =
-        (Date.now() - new Date(lastSession.session_date).getTime()) / (1000 * 60 * 60);
+      const hoursSinceLastSession = (Date.now() - new Date(lastSession.session_date).getTime()) / (1000 * 60 * 60);
       if (hoursSinceLastSession < mentor.cooldown_hours) {
         const hoursRemaining = Math.ceil(mentor.cooldown_hours - hoursSinceLastSession);
         return { canBook: false, reason: `${hoursRemaining}h cooldown` };
@@ -351,7 +331,6 @@ export function useMentorSessions() {
     return { canBook: true, reason: "" };
   };
 
-  // Stats
   const discoveredCount = discoveries?.length || 0;
   const totalMentors = mentors?.length || 0;
 
