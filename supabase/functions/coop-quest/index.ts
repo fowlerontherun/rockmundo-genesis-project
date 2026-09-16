@@ -20,16 +20,16 @@ interface QuestTemplate {
 }
 
 const DAILY_TEMPLATES: QuestTemplate[] = [
-  { key: "daily_chat",  title: "Stay in touch",   description: "Send 2 quick pings each.",    action_type: "chat",    target_count: 2, reward_xp: 25, reward_skill_xp: 5,  reward_skill_slug: "charisma",    cadence: "daily" },
-  { key: "daily_jam",   title: "Daily jam",       description: "Run 1 jam session each.",     action_type: "jam",     target_count: 1, reward_xp: 40, reward_skill_xp: 15, reward_skill_slug: "performance", cadence: "daily" },
-  { key: "daily_gift",  title: "Generous duo",    description: "Each send 1 gift today.",     action_type: "gift",    target_count: 1, reward_xp: 30, reward_skill_xp: 10, reward_skill_slug: "charisma",    cadence: "daily" },
-  { key: "daily_trade", title: "Trading partners",description: "Each complete 1 trade.",      action_type: "trade",   target_count: 1, reward_xp: 35, reward_skill_xp: 10, reward_skill_slug: "business",    cadence: "daily" },
+  { key: "daily_chat", title: "Stay in touch", description: "Send 2 quick pings each.", action_type: "chat", target_count: 2, reward_xp: 25, reward_skill_xp: 5, reward_skill_slug: "charisma", cadence: "daily" },
+  { key: "daily_jam", title: "Daily jam", description: "Run 1 jam session each.", action_type: "jam", target_count: 1, reward_xp: 40, reward_skill_xp: 15, reward_skill_slug: "performance", cadence: "daily" },
+  { key: "daily_gift", title: "Generous duo", description: "Each send 1 gift today.", action_type: "gift", target_count: 1, reward_xp: 30, reward_skill_xp: 10, reward_skill_slug: "charisma", cadence: "daily" },
+  { key: "daily_trade", title: "Trading partners", description: "Each complete 1 trade.", action_type: "trade", target_count: 1, reward_xp: 35, reward_skill_xp: 10, reward_skill_slug: "business", cadence: "daily" },
 ];
 
 const WEEKLY_TEMPLATES: QuestTemplate[] = [
-  { key: "weekly_collab",  title: "Collab streak",     description: "Co-write 2 songs together this week.", action_type: "songwriting", target_count: 2, reward_xp: 150, reward_skill_xp: 60, reward_skill_slug: "songwriting", cadence: "weekly" },
-  { key: "weekly_gigs",    title: "Tour buddies",      description: "Play 2 gig collabs together.",         action_type: "gig",         target_count: 2, reward_xp: 200, reward_skill_xp: 75, reward_skill_slug: "performance", cadence: "weekly" },
-  { key: "weekly_hangout", title: "Best of friends",   description: "Plan 5 hangouts each this week.",      action_type: "hangout",     target_count: 5, reward_xp: 120, reward_skill_xp: 40, reward_skill_slug: "charisma",    cadence: "weekly" },
+  { key: "weekly_collab", title: "Collab streak", description: "Co-write 2 songs together this week.", action_type: "songwriting", target_count: 2, reward_xp: 150, reward_skill_xp: 60, reward_skill_slug: "songwriting", cadence: "weekly" },
+  { key: "weekly_gigs", title: "Tour buddies", description: "Play 2 gig collabs together.", action_type: "gig", target_count: 2, reward_xp: 200, reward_skill_xp: 75, reward_skill_slug: "performance", cadence: "weekly" },
+  { key: "weekly_hangout", title: "Best of friends", description: "Plan 5 hangouts each this week.", action_type: "hangout", target_count: 5, reward_xp: 120, reward_skill_xp: 40, reward_skill_slug: "charisma", cadence: "weekly" },
 ];
 
 function pairKey(a: string, b: string): string {
@@ -44,7 +44,7 @@ function endOfDay(): Date {
 
 function endOfWeek(): Date {
   const d = new Date();
-  const day = d.getUTCDay(); // 0..6 (Sun..Sat)
+  const day = d.getUTCDay();
   const daysUntilSunday = (7 - day) % 7 || 7;
   d.setUTCDate(d.getUTCDate() + daysUntilSunday);
   d.setUTCHours(23, 59, 59, 999);
@@ -55,35 +55,75 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+async function getSkillMaxLevel(client: any, skillSlug: string): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 20;
+}
+
+async function getRequiredSkillXp(client: any, level: number): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_required_xp", {
+    p_level: level,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 100;
+}
+
 async function grantSkillXp(client: any, profileId: string, skillSlug: string, amount: number) {
   if (amount <= 0 || !skillSlug) return;
-  const { data: skill } = await client
+
+  const { data: unlocked, error: unlockError } = await client.rpc("skill_tier_unlocked", {
+    p_profile_id: profileId,
+    p_slug: skillSlug,
+  });
+  if (unlockError) throw unlockError;
+  if (unlocked === false) return;
+
+  const maxLevel = await getSkillMaxLevel(client, skillSlug);
+  const { data: skill, error: skillLoadError } = await client
     .from("skill_progress")
     .select("current_xp, current_level, required_xp")
     .eq("profile_id", profileId)
     .eq("skill_slug", skillSlug)
     .maybeSingle();
-  const calcReq = (lvl: number) => Math.floor(100 * Math.pow(1.5, lvl));
-  const currentXp = skill?.current_xp ?? 0;
-  let level = Math.min(skill?.current_level ?? 0, 20);
-  let remaining = currentXp + amount;
-  let required = skill?.required_xp ?? calcReq(level);
-  while (level < 20 && remaining >= required) {
-    remaining -= required;
-    level += 1;
-    required = calcReq(level);
+  if (skillLoadError) throw skillLoadError;
+
+  let level = Math.min(Math.max(Number(skill?.current_level ?? 0), 0), maxLevel);
+  let remaining = Math.max(Number(skill?.current_xp ?? 0), 0);
+  let required = Number(skill?.required_xp ?? 0);
+
+  if (level < maxLevel) {
+    if (required <= 0) required = await getRequiredSkillXp(client, level);
+    remaining += amount;
+    while (level < maxLevel && remaining >= required) {
+      remaining -= required;
+      level += 1;
+      required = level < maxLevel ? await getRequiredSkillXp(client, level) : 0;
+    }
   }
-  await client.from("skill_progress").upsert(
+
+  if (level >= maxLevel) {
+    level = maxLevel;
+    remaining = 0;
+    required = 0;
+  }
+
+  const { error: upsertError } = await client.from("skill_progress").upsert(
     {
       profile_id: profileId,
       skill_slug: skillSlug,
       current_xp: remaining,
       current_level: level,
-      required_xp: calcReq(level),
+      required_xp: required,
       last_practiced_at: new Date().toISOString(),
     },
     { onConflict: "profile_id,skill_slug" },
   );
+  if (upsertError) throw upsertError;
 }
 
 Deno.serve(async (req) => {
@@ -97,6 +137,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -104,6 +145,7 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const admin = createClient(supabaseUrl, serviceKey);
+
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
@@ -122,7 +164,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify caller owns profile
     const { data: profile } = await admin
       .from("profiles")
       .select("id, user_id")
@@ -145,7 +186,6 @@ Deno.serve(async (req) => {
       const pk = pairKey(profile_id, other_profile_id);
       const expires_at = cadence === "weekly" ? endOfWeek().toISOString() : endOfDay().toISOString();
 
-      // Check existing active quest of same cadence for this pair
       const { data: existing } = await admin
         .from("coop_quests")
         .select("id")
@@ -185,7 +225,6 @@ Deno.serve(async (req) => {
         .single();
       if (insErr) throw insErr;
 
-      // Activity log: started
       await admin.from("coop_quest_events").insert({
         quest_id: created.id,
         pair_key: pk,
@@ -208,6 +247,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
       const { data: q } = await admin
         .from("coop_quests")
         .select("*")
@@ -231,6 +271,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
       const isA = q.profile_a_id === profile_id;
       if ((isA && q.claimed_by_a) || (!isA && q.claimed_by_b)) {
         return new Response(JSON.stringify({ success: false, error: "Already claimed" }), {
@@ -239,7 +280,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Award XP via experience_ledger
       await admin.from("experience_ledger").insert({
         user_id: user.id,
         profile_id,
@@ -261,7 +301,6 @@ Deno.serve(async (req) => {
       const updates: any = isA ? { claimed_by_a: true } : { claimed_by_b: true };
       await admin.from("coop_quests").update(updates).eq("id", q.id);
 
-      // Activity log: claimed
       await admin.from("coop_quest_events").insert({
         quest_id: q.id,
         pair_key: q.pair_key,
