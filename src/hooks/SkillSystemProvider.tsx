@@ -16,8 +16,129 @@ import {
   type UpdateSkillProgressInput,
 } from "./useSkillSystem.types";
 
-const SKILL_DEFINITIONS: readonly SkillDefinitionRecord[] = SKILL_TREE_DEFINITIONS;
-const SKILL_RELATIONSHIPS: readonly SkillRelationshipRecord[] = SKILL_TREE_RELATIONSHIPS;
+const isObsoleteDjSlug = (slug: string) =>
+  slug.startsWith("dj_basic_") ||
+  slug.startsWith("dj_professional_") ||
+  slug.startsWith("dj_mastery_");
+
+const CANONICAL_DJ_DEFINITIONS: readonly SkillDefinitionRecord[] = [
+  {
+    id: "basic_dj_controller",
+    slug: "basic_dj_controller",
+    display_name: "Basic DJ Controller Skills",
+    description: "Learn controller setup, beatmatching, transitions, cueing and crowd-aware set building.",
+    icon_slug: "turntable",
+    base_xp_gain: 6,
+    training_duration_minutes: 30,
+    metadata: { category: "DJ & Club Performance", tier: "Basic", track: "DJing" },
+  },
+  {
+    id: "professional_djing",
+    slug: "professional_djing",
+    display_name: "Professional DJing",
+    description: "Build polished club sets with advanced transitions, pacing and live crowd control.",
+    icon_slug: "turntable",
+    base_xp_gain: 10,
+    training_duration_minutes: 45,
+    metadata: { category: "DJ & Club Performance", tier: "Professional", track: "DJing" },
+  },
+  {
+    id: "dj_mastery",
+    slug: "dj_mastery",
+    display_name: "DJ Mastery",
+    description: "Deliver headline-level DJ performances with seamless technical and creative control.",
+    icon_slug: "turntable",
+    base_xp_gain: 14,
+    training_duration_minutes: 60,
+    metadata: { category: "DJ & Club Performance", tier: "Mastery", track: "DJing" },
+  },
+  {
+    id: "basic_sampling_remixing",
+    slug: "basic_sampling_remixing",
+    display_name: "Basic Sampling & Remixing",
+    description: "Learn sampling, chopping and remix fundamentals for electronic and DJ performance.",
+    icon_slug: "controller",
+    base_xp_gain: 6,
+    training_duration_minutes: 30,
+    metadata: { category: "DJ & Club Performance", tier: "Basic", track: "Sampling & Remixing" },
+  },
+  {
+    id: "professional_sampling_remixing",
+    slug: "professional_sampling_remixing",
+    display_name: "Professional Sampling & Remixing",
+    description: "Create polished edits, remixes and live-ready sample workflows.",
+    icon_slug: "controller",
+    base_xp_gain: 10,
+    training_duration_minutes: 45,
+    metadata: { category: "DJ & Club Performance", tier: "Professional", track: "Sampling & Remixing" },
+  },
+  {
+    id: "sampling_remixing_mastery",
+    slug: "sampling_remixing_mastery",
+    display_name: "Sampling & Remixing Mastery",
+    description: "Transform source material into distinctive, performance-ready remixes and edits.",
+    icon_slug: "controller",
+    base_xp_gain: 14,
+    training_duration_minutes: 60,
+    metadata: { category: "DJ & Club Performance", tier: "Mastery", track: "Sampling & Remixing" },
+  },
+] as const;
+
+const CANONICAL_DJ_RELATIONSHIPS: readonly SkillRelationshipRecord[] = [
+  {
+    id: "professional_djing__basic_dj_controller",
+    skill_slug: "professional_djing",
+    required_skill_slug: "basic_dj_controller",
+    required_value: 20,
+    metadata: { category: "DJ & Club Performance", type: "tier_prerequisite", tier: "Professional" },
+  },
+  {
+    id: "dj_mastery__professional_djing",
+    skill_slug: "dj_mastery",
+    required_skill_slug: "professional_djing",
+    required_value: 20,
+    metadata: { category: "DJ & Club Performance", type: "tier_prerequisite", tier: "Mastery" },
+  },
+  {
+    id: "professional_sampling_remixing__basic_sampling_remixing",
+    skill_slug: "professional_sampling_remixing",
+    required_skill_slug: "basic_sampling_remixing",
+    required_value: 20,
+    metadata: { category: "DJ & Club Performance", type: "tier_prerequisite", tier: "Professional" },
+  },
+  {
+    id: "sampling_remixing_mastery__professional_sampling_remixing",
+    skill_slug: "sampling_remixing_mastery",
+    required_skill_slug: "professional_sampling_remixing",
+    required_value: 20,
+    metadata: { category: "DJ & Club Performance", type: "tier_prerequisite", tier: "Mastery" },
+  },
+] as const;
+
+const staticDefinitions = SKILL_TREE_DEFINITIONS.filter((definition) => !isObsoleteDjSlug(definition.slug));
+const canonicalDjSlugs = new Set(CANONICAL_DJ_DEFINITIONS.map((definition) => definition.slug));
+const SKILL_DEFINITIONS: readonly SkillDefinitionRecord[] = [
+  ...staticDefinitions.filter((definition) => !canonicalDjSlugs.has(definition.slug)),
+  ...CANONICAL_DJ_DEFINITIONS,
+];
+
+const staticRelationships = SKILL_TREE_RELATIONSHIPS.filter(
+  (relationship) =>
+    !isObsoleteDjSlug(relationship.skill_slug) &&
+    !isObsoleteDjSlug(relationship.required_skill_slug) &&
+    !canonicalDjSlugs.has(relationship.skill_slug),
+);
+const SKILL_RELATIONSHIPS: readonly SkillRelationshipRecord[] = [
+  ...staticRelationships,
+  ...CANONICAL_DJ_RELATIONSHIPS,
+];
+
+const DJ_PREREQUISITES: Readonly<Record<string, string>> = {
+  professional_djing: "basic_dj_controller",
+  dj_mastery: "professional_djing",
+  professional_sampling_remixing: "basic_sampling_remixing",
+  sampling_remixing_mastery: "professional_sampling_remixing",
+};
 
 type SkillProgressTable = Database["public"]["Tables"]["skill_progress"];
 type SkillProgressRow = SkillProgressTable["Row"];
@@ -35,6 +156,13 @@ const mapProgressRow = (row: SkillProgressRow): SkillProgressRecord => ({
   updated_at: row.updated_at ?? null,
   metadata: (row.metadata as Record<string, unknown> | null) ?? null,
 });
+
+const isCanonicalDjTierUnlocked = (skillSlug: string, progress: SkillProgressRecord[]) => {
+  const prerequisite = DJ_PREREQUISITES[skillSlug];
+  if (!prerequisite) return true;
+  const prerequisiteProgress = progress.find((record) => record.skill_slug === prerequisite);
+  return Number(prerequisiteProgress?.current_level ?? 0) >= 20;
+};
 
 export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Element => {
   const { profile } = useGameData();
@@ -85,8 +213,9 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
       }
 
       // Tier gating: refuse XP for higher tiers until the prerequisite is maxed.
-      if (!isTierUnlocked(input.skillSlug, progress)) {
-        const prereq = getPrerequisiteSlug(input.skillSlug);
+      const canonicalDjUnlocked = isCanonicalDjTierUnlocked(input.skillSlug, progress);
+      if (!canonicalDjUnlocked || !isTierUnlocked(input.skillSlug, progress)) {
+        const prereq = DJ_PREREQUISITES[input.skillSlug] ?? getPrerequisiteSlug(input.skillSlug);
         const message = `Locked — reach level ${TIER_UNLOCK_LEVEL} in ${prereq ?? "the prerequisite skill"} first.`;
         toast.error("Skill tier locked", { description: message });
         setError(message);
