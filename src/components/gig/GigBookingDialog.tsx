@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle, Target, Star, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
-import { calculateAttendanceForecast } from "@/utils/gigPerformanceCalculator";
+import { calculateAttendanceForecast, getRecommendedGigTicketPrice } from "@/utils/gigPerformanceCalculator";
 import { calculateVenuePayout, getPayoutTier } from "@/utils/venuePayoutCalculator";
 import { GIG_SLOTS, getSlotBadgeVariant } from "@/utils/gigSlots";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
@@ -80,7 +80,10 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
   const payment = useBandPaymentSource(band.id);
   const { data: cityLaws } = useCityLaws(venue?.city_id ?? undefined);
   const [selectedSetlistId, setSelectedSetlistId] = useState<string>("");
-  const [ticketPrice, setTicketPrice] = useState<number>(20);
+  const [ticketPrice, setTicketPrice] = useState<number>(() => getRecommendedGigTicketPrice(
+    Math.max(1, venue?.capacity || 100),
+    venue?.prestige_level || 1,
+  ));
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate ? new Date(initialDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
@@ -229,7 +232,7 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
       optimistic: Math.min(effectiveCapacity, Math.round(baseForecast.optimistic * slotMultiplier))
     };
 
-    const suggested = 15 + (venue.prestige_level || 1) * 5;
+    const suggested = getRecommendedGigTicketPrice(effectiveCapacity, venue.prestige_level || 1);
     const ratio = ticketPrice / suggested;
 
     let rating: 'perfect' | 'good' | 'too-low' | 'too-high' = 'good';
