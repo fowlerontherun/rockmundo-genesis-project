@@ -8,36 +8,51 @@ import {
   startJobRun,
 } from "../_shared/job-logger.ts";
 
-// Skill level cap (must match src/data/skillConstants.ts MAX_SKILL_LEVEL)
-const MAX_SKILL_LEVEL = 20;
-
 // Attribute-based learning speed multiplier
 const MAX_ATTRIBUTE_VALUE = 1000;
 const MAX_BONUS_MULTIPLIER = 0.5;
 
 function calculateLearningMultiplier(skillSlug: string, attributes: Record<string, number> | null): number {
   if (!attributes) return 1.0;
-  
+
   let relevantAttribute = 0;
-  
-  if (skillSlug.includes('instruments_') || skillSlug.includes('guitar') || skillSlug.includes('bass') || skillSlug.includes('keyboard')) {
+
+  if (skillSlug.includes("instruments_") || skillSlug.includes("guitar") || skillSlug.includes("bass") || skillSlug.includes("keyboard")) {
     relevantAttribute = attributes.musical_ability ?? 0;
-  } else if (skillSlug.includes('singing') || skillSlug.includes('vocal') || skillSlug.includes('rapping')) {
+  } else if (skillSlug.includes("singing") || skillSlug.includes("vocal") || skillSlug.includes("rapping")) {
     relevantAttribute = attributes.vocal_talent ?? 0;
-  } else if (skillSlug.includes('drums') || skillSlug.includes('percussion') || skillSlug.includes('beatmaking')) {
+  } else if (skillSlug.includes("drums") || skillSlug.includes("percussion") || skillSlug.includes("beatmaking")) {
     relevantAttribute = attributes.rhythm_sense ?? 0;
-  } else if (skillSlug.includes('songwriting_') || skillSlug.includes('lyrics') || skillSlug.includes('composing')) {
+  } else if (skillSlug.includes("songwriting_") || skillSlug.includes("lyrics") || skillSlug.includes("composing")) {
     relevantAttribute = attributes.creative_insight ?? 0;
-  } else if (skillSlug.includes('production') || skillSlug.includes('mixing') || skillSlug.includes('daw')) {
+  } else if (skillSlug.includes("production") || skillSlug.includes("mixing") || skillSlug.includes("daw")) {
     relevantAttribute = attributes.technical_mastery ?? 0;
-  } else if (skillSlug.includes('stage_') || skillSlug.includes('showmanship') || skillSlug.includes('crowd')) {
+  } else if (skillSlug.includes("stage_") || skillSlug.includes("showmanship") || skillSlug.includes("crowd")) {
     relevantAttribute = attributes.stage_presence ?? 0;
-  } else if (skillSlug.includes('genres_')) {
+  } else if (skillSlug.includes("genres_")) {
     relevantAttribute = Math.max(attributes.musical_ability ?? 0, attributes.creative_insight ?? 0);
   }
-  
+
   const bonus = (Math.min(relevantAttribute, MAX_ATTRIBUTE_VALUE) / MAX_ATTRIBUTE_VALUE) * MAX_BONUS_MULTIPLIER;
   return 1.0 + bonus;
+}
+
+async function getSkillMaxLevel(client: any, skillSlug: string): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 20;
+}
+
+async function getRequiredSkillXp(client: any, level: number): Promise<number> {
+  const { data, error } = await client.rpc("progression_skill_required_xp", {
+    p_level: level,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 100;
 }
 
 const corsHeaders = {
@@ -57,9 +72,7 @@ async function processAttendance(supabaseClient: any) {
     `)
     .eq("status", "reading");
 
-  if (sessionsError) {
-    throw sessionsError;
-  }
+  if (sessionsError) throw sessionsError;
 
   console.log(`Found ${sessions?.length || 0} active reading sessions`);
 
@@ -84,8 +97,23 @@ async function processAttendance(supabaseClient: any) {
       }
 
       const book = session.skill_books;
-      const totalDays = book.base_reading_days;
-      const skillGainPercentage = Number(book.skill_percentage_gain);
+      if (!book?.skill_slug) throw new Error("Book skill is missing");
+
+      // Higher-tier and specialist books only award progress once their actual
+      // prerequisite is met. skill_tier_unlocked is the canonical gate.
+      const { data: tierUnlocked, error: tierError } = await supabaseClient.rpc("skill_tier_unlocked", {
+        p_profile_id: session.profile_id,
+        p_slug: book.skill_slug,
+      });
+      if (tierError) throw tierError;
+      if (tierUnlocked === false) {
+        console.log(`[Books] Skipping locked tier ${book.skill_slug} on profile ${session.profile_id}`);
+        continue;
+      }
+
+      const totalDays = Math.max(1, Number(book.base_reading_days) || 1);
+      const skillGainPercentage = Number(book.skill_percentage_gain) || 0;
+      const maxLevel = await getSkillMaxLevel(supabaseClient, book.skill_slug);
 
       const { data: skillProgress } = await supabaseClient
         .from("skill_progress")
@@ -94,25 +122,48 @@ async function processAttendance(supabaseClient: any) {
         .eq("skill_slug", book.skill_slug)
         .maybeSingle();
 
-      // Fetch player attributes for learning speed bonus
       const { data: playerAttrs } = await supabaseClient
         .from("player_attributes")
         .select("musical_ability, vocal_talent, rhythm_sense, creative_insight, technical_mastery, stage_presence")
         .eq("profile_id", session.profile_id)
-        .single();
+        .maybeSingle();
 
       const learningMultiplier = calculateLearningMultiplier(book.skill_slug, playerAttrs);
       console.log(`Learning multiplier for ${book.skill_slug}: ${learningMultiplier.toFixed(2)}x`);
 
-      const currentLevel = Math.min(skillProgress?.current_level || 1, MAX_SKILL_LEVEL);
-      const currentXp = skillProgress?.current_xp || 0;
-      const requiredXp = skillProgress?.required_xp || 100;
+      let currentLevel = Math.min(Math.max(Number(skillProgress?.current_level ?? 0), 0), maxLevel);
+      const currentXp = Math.max(0, Number(skillProgress?.current_xp ?? 0));
+      let requiredXp = Number(skillProgress?.required_xp ?? 0);
+      if (currentLevel < maxLevel && requiredXp <= 0) {
+        requiredXp = await getRequiredSkillXp(supabaseClient, currentLevel);
+      }
 
-      const totalSkillXp = Math.round(requiredXp * skillGainPercentage);
+      const totalSkillXp = currentLevel >= maxLevel
+        ? 0
+        : Math.round(requiredXp * skillGainPercentage);
       const baseXpPerDay = Math.round(totalSkillXp / totalDays);
       const randomBonus = Math.floor(Math.random() * 200) + 1;
-      const dailyXp = Math.floor(Math.max(1, Math.min(200, baseXpPerDay + randomBonus)) * learningMultiplier);
-      totalXpAwarded += dailyXp;
+      const dailyXp = currentLevel >= maxLevel
+        ? 0
+        : Math.floor(Math.max(1, Math.min(200, baseXpPerDay + randomBonus)) * learningMultiplier);
+
+      let remainingXp = currentXp + dailyXp;
+      let newLevel = currentLevel;
+      let newRequiredXp = requiredXp;
+
+      while (newLevel < maxLevel && remainingXp >= newRequiredXp) {
+        remainingXp -= newRequiredXp;
+        newLevel += 1;
+        newRequiredXp = newLevel < maxLevel
+          ? await getRequiredSkillXp(supabaseClient, newLevel)
+          : 0;
+      }
+
+      if (newLevel >= maxLevel) {
+        newLevel = maxLevel;
+        remainingXp = 0;
+        newRequiredXp = 0;
+      }
 
       const { error: attendanceError } = await supabaseClient
         .from("player_book_reading_attendance")
@@ -122,36 +173,7 @@ async function processAttendance(supabaseClient: any) {
           skill_xp_earned: dailyXp,
           was_locked_out: false,
         });
-
-      if (attendanceError) {
-        throw attendanceError;
-      }
-
-      const newXp = (skillProgress?.current_xp || 0) + dailyXp;
-      let newLevel = currentLevel;
-      let newRequiredXp = requiredXp;
-      let remainingXp = newXp;
-
-      while (newLevel < MAX_SKILL_LEVEL && remainingXp >= newRequiredXp) {
-        remainingXp -= newRequiredXp;
-        newLevel += 1;
-        newRequiredXp = Math.floor(newRequiredXp * 1.5);
-      }
-
-      if (newLevel >= MAX_SKILL_LEVEL) {
-        newLevel = MAX_SKILL_LEVEL;
-        remainingXp = Math.min(remainingXp, currentXp);
-      }
-
-      // Tier gating: skip XP if the higher tier isn't unlocked.
-      const { data: tierUnlocked } = await supabaseClient.rpc("skill_tier_unlocked", {
-        p_profile_id: session.profile_id,
-        p_slug: book.skill_slug,
-      });
-      if (tierUnlocked === false) {
-        console.log(`[Books] Skipping XP for locked tier ${book.skill_slug} on profile ${session.profile_id}`);
-        continue;
-      }
+      if (attendanceError) throw attendanceError;
 
       const { error: skillError } = await supabaseClient
         .from("skill_progress")
@@ -164,17 +186,13 @@ async function processAttendance(supabaseClient: any) {
             required_xp: newRequiredXp,
             last_practiced_at: new Date().toISOString(),
           },
-          {
-            onConflict: "profile_id,skill_slug",
-          }
+          { onConflict: "profile_id,skill_slug" },
         );
-
-      if (skillError) {
-        throw skillError;
-      }
+      if (skillError) throw skillError;
 
       const newDaysRead = session.days_read + 1;
       const isComplete = newDaysRead >= totalDays;
+      totalXpAwarded += dailyXp;
 
       const { error: updateError } = await supabaseClient
         .from("player_book_reading_sessions")
@@ -185,10 +203,7 @@ async function processAttendance(supabaseClient: any) {
           actual_completion_date: isComplete ? new Date().toISOString() : null,
         })
         .eq("id", session.id);
-
-      if (updateError) {
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
       if (isComplete) {
         await supabaseClient
@@ -203,12 +218,10 @@ async function processAttendance(supabaseClient: any) {
         .eq("id", session.profile_id)
         .maybeSingle();
 
-      if (profile) {
+      if (profile && dailyXp > 0) {
         await supabaseClient
           .from("profiles")
-          .update({
-            experience: (profile.experience || 0) + dailyXp,
-          })
+          .update({ experience: (profile.experience || 0) + dailyXp })
           .eq("id", session.profile_id);
       }
 
@@ -225,6 +238,7 @@ async function processAttendance(supabaseClient: any) {
             day: newDaysRead,
             total_days: totalDays,
             completed: isComplete,
+            max_level: maxLevel,
           },
         });
 
@@ -234,52 +248,59 @@ async function processAttendance(supabaseClient: any) {
         days_read: newDaysRead,
         total_days: totalDays,
         completed: isComplete,
+        skill_level: newLevel,
+        skill_max_level: maxLevel,
       });
 
       // === BOOK READING → MORALE (v1.0.974) ===
-      // Completing a book gives a morale boost; daily reading gives tiny boost
       if (session.user_id) {
         try {
           const { data: bm } = await supabaseClient
-            .from('band_members')
-            .select('band_id')
-            .eq('user_id', session.user_id)
-            .eq('is_touring_member', false)
+            .from("band_members")
+            .select("band_id")
+            .eq("user_id", session.user_id)
+            .eq("is_touring_member", false)
             .limit(1)
             .maybeSingle();
           if (bm?.band_id) {
-            const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
+            const { data: bd } = await supabaseClient
+              .from("bands")
+              .select("morale")
+              .eq("id", bm.band_id)
+              .single();
             if (bd) {
-              const moraleBoost = isComplete ? 4 : 1; // +4 for finishing book, +1 per reading day
+              const moraleBoost = isComplete ? 4 : 1;
               const newMorale = Math.min(100, ((bd as any).morale ?? 50) + moraleBoost);
-              await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
+              await supabaseClient.from("bands").update({ morale: newMorale } as any).eq("id", bm.band_id);
               if (isComplete) console.log(`Book completed morale boost: +${moraleBoost} for band ${bm.band_id}`);
-              // Health event log
-              try { await supabaseClient.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'book_reading', description: isComplete ? 'Finished reading a skill book' : 'Daily book reading session' }); } catch (_) {}
+              try {
+                await supabaseClient.from("band_health_events").insert({
+                  band_id: bm.band_id,
+                  event_type: "morale",
+                  delta: moraleBoost,
+                  new_value: newMorale,
+                  source: "book_reading",
+                  description: isComplete ? "Finished reading a skill book" : "Daily book reading session",
+                });
+              } catch (_) {}
             }
           }
-        } catch (_e) { /* non-critical */ }
+        } catch (_e) {
+          // Non-critical morale integration.
+        }
       }
 
       processedCount += 1;
       console.log(`Processed session ${session.id}: ${dailyXp} XP, day ${newDaysRead}/${totalDays}`);
     } catch (error: any) {
       console.error(`Error processing session ${session.id}:`, error);
-      records.push({
-        session_id: session.id,
-        error: error.message,
-      });
+      records.push({ session_id: session.id, error: error.message });
       errorCount += 1;
     }
   }
 
   console.log("Book reading attendance processing complete");
-  return {
-    records,
-    processedCount,
-    errorCount,
-    totalXpAwarded,
-  };
+  return { records, processedCount, errorCount, totalXpAwarded };
 }
 
 serve(async (req) => {
@@ -292,7 +313,7 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
   let runId: string | null = null;
@@ -317,11 +338,7 @@ serve(async (req) => {
       durationMs: Date.now() - startedAt,
       processedCount,
       errorCount,
-      resultSummary: {
-        processedCount,
-        errorCount,
-        totalXpAwarded,
-      },
+      resultSummary: { processedCount, errorCount, totalXpAwarded },
     });
 
     return new Response(
@@ -335,7 +352,7 @@ serve(async (req) => {
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
+      },
     );
   } catch (error) {
     console.error("Error in book-reading-attendance:", error);
@@ -353,7 +370,7 @@ serve(async (req) => {
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
-      }
+      },
     );
   }
 });
