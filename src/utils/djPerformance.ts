@@ -1,31 +1,16 @@
 import type { SkillProgressRecord } from "@/hooks/useSkillSystem.types";
 
-// DJ skill slugs used for performance calculation
+// Canonical DJ skill families from skill_definitions.
 const DJ_CORE_SLUGS = [
-  "dj_basic_beatmatching",
-  "dj_professional_beatmatching",
-  "dj_mastery_beatmatching",
-  "dj_basic_mixing",
-  "dj_professional_mixing",
-  "dj_mastery_mixing",
-  "dj_basic_crowd_reading",
-  "dj_professional_crowd_reading",
-  "dj_mastery_crowd_reading",
-  "dj_basic_set_building",
-  "dj_professional_set_building",
-  "dj_mastery_set_building",
+  "basic_dj_controller",
+  "professional_djing",
+  "dj_mastery",
 ] as const;
 
 const DJ_BONUS_SLUGS = [
-  "dj_basic_scratching",
-  "dj_professional_scratching",
-  "dj_mastery_scratching",
-  "dj_basic_live_remixing",
-  "dj_professional_live_remixing",
-  "dj_mastery_live_remixing",
-  "dj_basic_club_promotion",
-  "dj_professional_club_promotion",
-  "dj_mastery_club_promotion",
+  "basic_sampling_remixing",
+  "professional_sampling_remixing",
+  "sampling_remixing_mastery",
 ] as const;
 
 export interface DjPerformanceInput {
@@ -57,42 +42,30 @@ function getSkillLevel(progress: SkillProgressRecord[], slug: string): number {
 }
 
 /**
- * Average level across the 4 core DJ tracks (beatmatching, mixing, crowd reading, set building).
- * For each track, we take the highest tier level the player has progressed in.
+ * DJ ability is the combined Basic → Professional → Mastery DJ progression,
+ * normalized back to the legacy 0-20 scoring range.
  */
 export function getDjSkillAverage(progress: SkillProgressRecord[]): number {
-  const tracks = [
-    ["dj_basic_beatmatching", "dj_professional_beatmatching", "dj_mastery_beatmatching"],
-    ["dj_basic_mixing", "dj_professional_mixing", "dj_mastery_mixing"],
-    ["dj_basic_crowd_reading", "dj_professional_crowd_reading", "dj_mastery_crowd_reading"],
-    ["dj_basic_set_building", "dj_professional_set_building", "dj_mastery_set_building"],
-  ];
+  const totalLevel = DJ_CORE_SLUGS.reduce(
+    (total, slug) => total + getSkillLevel(progress, slug),
+    0,
+  );
 
-  let totalLevel = 0;
-  for (const track of tracks) {
-    // Sum all tiers for this track (basic + professional + mastery)
-    let trackTotal = 0;
-    for (const slug of track) {
-      trackTotal += getSkillLevel(progress, slug);
-    }
-    totalLevel += trackTotal;
-  }
-
-  // Max possible = 4 tracks * 3 tiers * 20 levels = 240
-  // Normalize to 0-20 range for compatibility with existing systems
-  return Math.min(20, totalLevel / 12);
+  // Three 20-level tiers = 60 total levels, normalized to 0-20.
+  return Math.min(20, totalLevel / 3);
 }
 
 /**
- * Bonus from scratching, live remixing, and club promotion (smaller contribution).
+ * Sampling/remixing contributes a smaller DJ-performance bonus.
  */
 function getDjBonusSkillAverage(progress: SkillProgressRecord[]): number {
-  let total = 0;
-  for (const slug of DJ_BONUS_SLUGS) {
-    total += getSkillLevel(progress, slug);
-  }
-  // Max = 9 * 20 = 180 → normalize to 0-5 bonus
-  return Math.min(5, total / 36);
+  const totalLevel = DJ_BONUS_SLUGS.reduce(
+    (total, slug) => total + getSkillLevel(progress, slug),
+    0,
+  );
+
+  // Three 20-level tiers = 60 total levels, normalized to a 0-5 bonus.
+  return Math.min(5, totalLevel / 12);
 }
 
 /**
@@ -104,7 +77,7 @@ export function calculateDjPerformanceScore(input: DjPerformanceInput): DjPerfor
   const coreAvg = getDjSkillAverage(skillProgress);
   const bonusAvg = getDjBonusSkillAverage(skillProgress);
 
-  // Base score from skills (0-20 → scaled to ~0-60 range)
+  // Base score from skills (0-25 combined → scaled to ~0-60 range)
   const baseScore = (coreAvg + bonusAvg) * 2.4;
 
   // Attribute bonus (up to +15)
