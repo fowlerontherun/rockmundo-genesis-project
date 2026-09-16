@@ -172,6 +172,51 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
   };
 }
 
+/**
+ * Ticketing historically received venue prestige in two shapes: the normal
+ * gameplay scale (1-10) and legacy famous venues (70-100). Convert either form
+ * to one 1-10 tier before it affects price or demand.
+ */
+export function normalizeVenuePrestigeForTickets(venuePrestige: number): number {
+  const safePrestige = Number.isFinite(venuePrestige) && venuePrestige > 0
+    ? venuePrestige
+    : 1;
+  const normalized = safePrestige > 10
+    ? Math.round(safePrestige / 10)
+    : Math.round(safePrestige);
+
+  return Math.max(1, Math.min(10, normalized));
+}
+
+/**
+ * Lower-capacity venues should be affordable stepping stones. Capacity sets the
+ * base price and prestige adds a modest premium instead of multiplying it.
+ */
+export function getRecommendedGigTicketPrice(venueCapacity: number, venuePrestige: number): number {
+  const capacity = Math.max(1, Number.isFinite(venueCapacity) ? Math.round(venueCapacity) : 100);
+  const prestigeTier = normalizeVenuePrestigeForTickets(venuePrestige);
+
+  let capacityPrice: number;
+  if (capacity <= 100) capacityPrice = 5;
+  else if (capacity <= 200) capacityPrice = 6;
+  else if (capacity <= 500) capacityPrice = 8;
+  else if (capacity <= 1000) capacityPrice = 10;
+  else if (capacity <= 2500) capacityPrice = 13;
+  else if (capacity <= 5000) capacityPrice = 16;
+  else if (capacity <= 10000) capacityPrice = 20;
+  else if (capacity <= 25000) capacityPrice = 24;
+  else if (capacity <= 50000) capacityPrice = 28;
+  else capacityPrice = 32;
+
+  const starterDiscount = capacity <= 200 && prestigeTier <= 2
+    ? 2
+    : capacity <= 500 && prestigeTier <= 3
+      ? 1
+      : 0;
+
+  return Math.max(5, Math.round(capacityPrice + ((prestigeTier - 1) * 2) - starterDiscount));
+}
+
 export function calculateAttendanceForecast(
   bandFame: number,
   bandPopularity: number,
@@ -185,44 +230,65 @@ export function calculateAttendanceForecast(
   realistic: number;
   optimistic: number;
 } {
-  // IMPROVED: More generous base demand calculation
+  // More generous base demand calculation, while still making venue fit matter.
   const fameMultiplier = Math.min(1, Math.max(0.15, (bandFame / 2000) * 0.6 + (bandPopularity / 500) * 0.4));
-  
-  // IMPROVED: Better venue matching - small bands can fill small venues easier
   const idealCapacity = (bandFame / 30) + (bandPopularity / 8);
-  const venueMatchPenalty = venueCapacity > idealCapacity ? 
-    Math.max(0.5, Math.min(1.0, idealCapacity / venueCapacity)) : 1.0;
-  
-  // Price sensitivity: demand curve
-  const avgTicketPrice = 20 + (venuePrestige * 5); // baseline $20-$70
-  const priceRatio = ticketPrice / avgTicketPrice;
-  let priceDemandMultiplier;
-  
-  if (priceRatio < 0.5) {
-    priceDemandMultiplier = 1.2; // cheap = higher demand
-  } else if (priceRatio < 0.8) {
-    priceDemandMultiplier = 1.1;
-  } else if (priceRatio < 1.2) {
-    priceDemandMultiplier = 1.0; // fair price
-  } else if (priceRatio < 1.5) {
-    priceDemandMultiplier = 0.8; // expensive = lower demand
+  const venueMatchPenalty = venueCapacity > idealCapacity
+    ? Math.max(0.5, Math.min(1.0, idealCapacity / venueCapacity))
+    : 1.0;
+
+  const prestigeTier = normalizeVenuePrestigeForTickets(venuePrestige);
+  const recommendedTicketPrice = getRecommendedGigTicketPrice(venueCapacity, venuePrestige);
+  const priceRatio = Math.max(ticketPrice, 1) / recommendedTicketPrice;
+
+  let priceDemandMultiplier: number;
+  if (priceRatio <= 0.75) {
+    priceDemandMultiplier = 1.30;
+  } else if (priceRatio <= 1.00) {
+    priceDemandMultiplier = 1.15;
+  } else if (priceRatio <= 1.25) {
+    priceDemandMultiplier = 1.00;
+  } else if (priceRatio <= 1.50) {
+    priceDemandMultiplier = 0.82;
+  } else if (priceRatio <= 2.00) {
+    priceDemandMultiplier = 0.60;
   } else {
-    priceDemandMultiplier = 0.5; // very expensive
+    priceDemandMultiplier = 0.40;
   }
-  
-  // Setlist quality bonus (1.0 to 1.2x)
+
   const setlistBonus = 1 + Math.min(0.2, setlistQuality / 1000);
-  
-  // Production notes attendance bonus (1.0 to 1.3x)
   const productionBonus = 1 + productionNotesAttendanceBonus;
-  
-  // Base expected attendance - ensure minimum 5% if price isn't too high
-  const baseAttendance = Math.max(
-    priceRatio < 2 ? venueCapacity * 0.05 : 0,
-    venueCapacity * fameMultiplier * venueMatchPenalty * priceDemandMultiplier * setlistBonus * productionBonus
+
+  // Small low-prestige rooms get local walk-up demand so they are viable for
+  // starter bands, but an overpriced ticket still cuts that demand sharply.
+  let starterWalkupFloor = 0;
+  if (venueCapacity <= 100 && prestigeTier <= 2) {
+    starterWalkupFloor = venueCapacity * 0.18;
+  } else if (venueCapacity <= 200 && prestigeTier <= 3) {
+    starterWalkupFloor = venueCapacity * 0.15;
+  } else if (venueCapacity <= 500 && prestigeTier <= 3) {
+    starterWalkupFloor = venueCapacity * 0.10;
+  }
+
+  const organicAttendance = venueCapacity
+    * fameMultiplier
+    * venueMatchPenalty
+    * priceDemandMultiplier
+    * setlistBonus
+    * productionBonus;
+  const walkupAttendance = starterWalkupFloor
+    * priceDemandMultiplier
+    * setlistBonus
+    * productionBonus;
+  const minimumAttendance = priceRatio <= 2
+    ? venueCapacity * 0.05 * priceDemandMultiplier
+    : 0;
+
+  const baseAttendance = Math.min(
+    venueCapacity,
+    Math.max(minimumAttendance, walkupAttendance, organicAttendance)
   );
-  
-  // Add variance for estimates
+
   return {
     pessimistic: Math.max(1, Math.round(baseAttendance * 0.7)),
     realistic: Math.max(1, Math.round(baseAttendance)),
