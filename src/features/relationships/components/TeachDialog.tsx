@@ -17,6 +17,24 @@ interface TeachDialogProps {
   onComplete?: () => void;
 }
 
+const getSkillMaxLevel = async (skillSlug: string): Promise<number> => {
+  const { data, error } = await (supabase as any).rpc("progression_skill_max_level", {
+    p_skill_slug: skillSlug,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 20;
+};
+
+const getRequiredSkillXp = async (level: number): Promise<number> => {
+  const { data, error } = await (supabase as any).rpc("progression_skill_required_xp", {
+    p_level: level,
+  });
+  if (error) throw error;
+  const value = Number(data);
+  return Number.isFinite(value) && value > 0 ? value : 100;
+};
+
 export function TeachDialog({
   open,
   onOpenChange,
@@ -54,7 +72,6 @@ export function TeachDialog({
     if (!selectedSkill) return;
     setBusy(true);
     try {
-      // Mentor reward
       const mentorResult = await executeRelationshipAction({
         action: "teach",
         profileId: mentorProfileId,
@@ -68,34 +85,56 @@ export function TeachDialog({
         return;
       }
 
-      // Grant the actual skill XP to the student via direct skill_progress upsert (bonus 15 XP in target skill)
-      // Note: student doesn't get the action XP / streak — that requires their own session.
+      // Student skill reward. This remains non-blocking because RLS may prevent a
+      // client from writing another profile, but when allowed it follows the same
+      // canonical cap, tier gate and XP curve as every other skill progression path.
       try {
-        const { data: existing } = await (supabase as any)
+        const { data: tierUnlocked, error: tierError } = await (supabase as any).rpc("skill_tier_unlocked", {
+          p_profile_id: studentProfileId,
+          p_slug: selectedSkill,
+        });
+        if (tierError) throw tierError;
+        if (tierUnlocked === false) throw new Error("Student has not unlocked this skill tier");
+
+        const maxLevel = await getSkillMaxLevel(selectedSkill);
+        const { data: existing, error: existingError } = await (supabase as any)
           .from("skill_progress")
           .select("current_xp, current_level, required_xp")
           .eq("profile_id", studentProfileId)
           .eq("skill_slug", selectedSkill)
           .maybeSingle();
-        const calculateRequired = (lvl: number) => Math.floor(100 * Math.pow(1.5, lvl));
-        let level = Math.min(existing?.current_level ?? 0, 20);
-        let remaining = (existing?.current_xp ?? 0) + 15;
-        let required = existing?.required_xp ?? calculateRequired(level);
-        while (level < 20 && remaining >= required) {
-          remaining -= required;
-          level += 1;
-          required = calculateRequired(level);
+        if (existingError) throw existingError;
+
+        let level = Math.min(Math.max(Number(existing?.current_level ?? 0), 0), maxLevel);
+        let remaining = Math.max(Number(existing?.current_xp ?? 0), 0);
+        let required = Number(existing?.required_xp ?? 0);
+
+        if (level < maxLevel) {
+          if (required <= 0) required = await getRequiredSkillXp(level);
+          remaining += 15;
+          while (level < maxLevel && remaining >= required) {
+            remaining -= required;
+            level += 1;
+            required = level < maxLevel ? await getRequiredSkillXp(level) : 0;
+          }
         }
-        await (supabase as any).from("skill_progress").upsert({
+
+        if (level >= maxLevel) {
+          level = maxLevel;
+          remaining = 0;
+          required = 0;
+        }
+
+        const { error: grantError } = await (supabase as any).from("skill_progress").upsert({
           profile_id: studentProfileId,
           skill_slug: selectedSkill,
           current_xp: remaining,
           current_level: level,
-          required_xp: calculateRequired(level),
+          required_xp: required,
           last_practiced_at: new Date().toISOString(),
         }, { onConflict: "profile_id,skill_slug" });
+        if (grantError) throw grantError;
       } catch (err) {
-        // student grant may fail under RLS; non-blocking
         console.warn("Couldn't update student skill progress directly", err);
       }
 
