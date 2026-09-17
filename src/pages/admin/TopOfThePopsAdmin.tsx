@@ -11,6 +11,7 @@ import {
   getTotpEpisode,
   getTotpPublicHistory,
 } from "@/features/top-of-the-pops/api";
+import { TotpAdminDemo } from "@/features/top-of-the-pops/TotpAdminDemo";
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { Archive, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
 
@@ -20,6 +21,16 @@ function formatDateTime(value: string) {
     timeStyle: "short",
     timeZone: "Europe/London",
   }).format(new Date(value));
+}
+
+function AdminHeading({ subtitle }: { subtitle: string }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Tv2 className="h-4 w-4" /> Television administration</div>
+      <h1 className="text-3xl font-bold">Top of the Pops</h1>
+      <p className="text-muted-foreground">{subtitle}</p>
+    </div>
+  );
 }
 
 export default function TopOfThePopsAdmin() {
@@ -72,16 +83,36 @@ export default function TopOfThePopsAdmin() {
   });
 
   if (episode.isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading Top of the Pops episode…</div>;
+    return (
+      <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+        <AdminHeading subtitle="Loading live broadcast state…" />
+        <TotpAdminDemo />
+      </div>
+    );
   }
 
   if (episode.isError) {
-    return <div className="p-6 text-sm text-destructive">{(episode.error as Error).message}</div>;
+    return (
+      <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+        <AdminHeading subtitle="The production demo remains available while live episode data is unavailable." />
+        <TotpAdminDemo />
+        <Card className="border-destructive/40"><CardContent className="p-6 text-sm text-destructive">{(episode.error as Error).message}</CardContent></Card>
+      </div>
+    );
   }
 
   const current = episode.data;
   if (!current) {
-    return <div className="p-6"><Card><CardContent className="p-6">No scheduled Top of the Pops episode found.</CardContent></Card></div>;
+    return (
+      <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+        <AdminHeading subtitle="No live episode is scheduled yet. Use the studio demo below to inspect the broadcast experience." />
+        <TotpAdminDemo />
+        <Card>
+          <CardHeader><CardTitle>Live broadcast control</CardTitle><CardDescription>The fortnightly scheduler will create an eligible episode from the locked UK chart snapshot.</CardDescription></CardHeader>
+          <CardContent className="text-sm text-muted-foreground">No scheduled Top of the Pops episode found. The demo above is synthetic and does not create a real episode.</CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const presenter = resolveTotpPresenter((current as any).presenter_key);
@@ -94,16 +125,14 @@ export default function TopOfThePopsAdmin() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Tv2 className="h-4 w-4" /> Television administration</div>
-          <h1 className="text-3xl font-bold">Top of the Pops</h1>
-          <p className="text-muted-foreground">Episode #{current.episode_number} · {formatDateTime(current.broadcast_at)} · {presenter.displayName}</p>
-        </div>
+        <AdminHeading subtitle={`Episode #${current.episode_number} · ${formatDateTime(current.broadcast_at)} · ${presenter.displayName}`} />
         <div className="flex flex-wrap gap-2">
           {variantLabel && <Badge variant="outline">{variantLabel}</Badge>}
           <Badge variant="secondary">{current.status}</Badge>
         </div>
       </div>
+
+      <TotpAdminDemo />
 
       <Card>
         <CardHeader>
