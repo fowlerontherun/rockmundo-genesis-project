@@ -17,15 +17,13 @@ export function isTvStudioAudienceBlocked(x: number, z: number, p: VenueProfile)
     if (p.kind !== 'tv_studio') return false;
     const inRect = (cx: number, cz: number, halfWidth: number, halfDepth: number) => Math.abs(x - cx) < halfWidth && Math.abs(z - cz) < halfDepth;
     const inCircle = (cx: number, cz: number, radius: number) => Math.hypot(x - cx, z - cz) < radius;
-    // Performance decks plus safe circulation around their edges.
-    if (inRect(5.4, 2.05, 2.85, 2.15)) return true;       // Stage B
-    if (inRect(-4.5, 4.05, 3.45, 2.65)) return true;      // Rock Stage
-    if (inCircle(1.4, 5.65, 3.45)) return true;           // Studio Floor
-    // Camera/operator footprints. Positions mirror tvStudioProduction.ts.
+    if (inRect(5.4, 2.05, 2.85, 2.15)) return true;
+    if (inRect(-4.5, 4.05, 3.45, 2.65)) return true;
+    if (inCircle(1.4, 5.65, 3.45)) return true;
     if (inCircle(-p.crowdWidth * .42, 4.7, .95)) return true;
     if (inCircle(p.crowdWidth * .42, 5.3, .95)) return true;
     if (inCircle(p.stageWidth * .24, 2.55, .8)) return true;
-    if (inCircle(p.crowdWidth * .58, 7.4, 1.15)) return true; // Jib base/service area
+    if (inCircle(p.crowdWidth * .58, 7.4, 1.15)) return true;
     return false;
 }
 
@@ -65,14 +63,22 @@ export function audienceFloorPlaces(p: VenueProfile): AudiencePlace[] {
 
 export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: number, seats: AudiencePlace[]) {
     const random = seededRandom(seed), root = new T.Group(); root.name = 'venue-distant-audience'; parent.add(root);
+    const television = p.kind === 'tv_studio';
     const all = [...audienceFloorPlaces(p).map(point => ({ point, seated: false })), ...seats.map(point => ({ point, seated: true }))];
     for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
     const maximum = Math.min(AUDIENCE_BUDGET, Math.max(0, p.capacity - 160), all.length), buckets: ({ point: AudiencePlace; rank: number; })[][] = Array.from({ length: 8 }, () => []);
     for (let i = 0; i < maximum; i++) { const entry = all[Math.floor(i * all.length / maximum)]; buckets[(entry.seated ? 4 : 0) + i % 4].push({ point: entry.point, rank: i }); }
-    const clock = { value: 0 }, strength = { value: 0 }; root.userData.clock = clock; root.userData.strength = strength; root.userData.maxCount = maximum; root.userData.capacity = p.capacity;
+    const clock = { value: 0 }, strength = { value: 0 }, televisionMix = { value: television ? 1 : 0 };
+    root.userData.clock = clock; root.userData.strength = strength; root.userData.televisionAudience = television; root.userData.maxCount = maximum; root.userData.capacity = p.capacity;
     const material = new T.MeshStandardMaterial({ vertexColors: true, roughness: .92, flatShading: true });
-    material.customProgramCacheKey = () => 'anatomical-audience-v1';
-    material.onBeforeCompile = shader => { shader.uniforms.audienceTime = clock; shader.uniforms.audienceMotion = strength; shader.vertexShader = 'uniform float audienceTime;\nuniform float audienceMotion;\n' + shader.vertexShader; shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed=position;\nfloat phase=instanceMatrix[3].x*1.73+instanceMatrix[3].z*.91;\nfloat weight=smoothstep(.6,1.7,position.y);\ntransformed.x+=sin(audienceTime*1.5+phase)*.028*weight*audienceMotion;\ntransformed.y+=max(0.,sin(audienceTime*4.0+phase))*.035*audienceMotion;\n`); };
+    material.customProgramCacheKey = () => television ? 'anatomical-audience-tv-v2' : 'anatomical-audience-v2';
+    material.onBeforeCompile = shader => {
+        shader.uniforms.audienceTime = clock;
+        shader.uniforms.audienceMotion = strength;
+        shader.uniforms.audienceTelevision = televisionMix;
+        shader.vertexShader = 'uniform float audienceTime;\nuniform float audienceMotion;\nuniform float audienceTelevision;\n' + shader.vertexShader;
+        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed=position;\nfloat phase=instanceMatrix[3].x*1.73+instanceMatrix[3].z*.91;\nfloat weight=smoothstep(.6,1.7,position.y);\nfloat tvPulse=(sin(audienceTime*2.1+phase)*.5+.5);\nfloat sway=.028+audienceTelevision*.022;\nfloat bounce=.035+audienceTelevision*.035;\ntransformed.x+=sin(audienceTime*(1.5+audienceTelevision*.55)+phase)*sway*weight*audienceMotion;\ntransformed.y+=max(0.,sin(audienceTime*(4.0+audienceTelevision*1.2)+phase))*bounce*audienceMotion;\ntransformed.z+=cos(audienceTime*1.25+phase)*.018*audienceTelevision*weight*audienceMotion;\ntransformed.x+=sin(audienceTime*3.4+phase*1.7)*.018*tvPulse*audienceTelevision*weight*audienceMotion;\n`);
+    };
     for (let kind = 0; kind < 8; kind++) {
         const rows = buckets[kind]; if (!rows.length) continue;
         const mesh = new T.InstancedMesh(audienceHumanGeometry(kind % 4, kind >= 4), material, rows.length); mesh.name = `audience-humans-${kind}`; mesh.userData.ranks = rows.map(row => row.rank); mesh.userData.maxCount = rows.length; mesh.frustumCulled = false;
@@ -85,6 +91,8 @@ export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: numbe
 
 export function updateVenueAudience(root: T.Group, occupancy: number, seconds: number, reduced: boolean, energy: number, frontCount = 0) {
     const safe = Number.isFinite(occupancy) ? T.MathUtils.clamp(occupancy, 0, 1) : 0, limit = Math.min(Math.round(root.userData.maxCount * safe), Math.max(0, Math.floor(root.userData.capacity * safe) - frontCount));
-    root.userData.clock.value = reduced ? 0 : seconds; root.userData.strength.value = reduced ? 0 : energy;
+    const televisionBoost = root.userData.televisionAudience ? 1.35 : 1;
+    root.userData.clock.value = reduced ? 0 : seconds;
+    root.userData.strength.value = reduced ? 0 : T.MathUtils.clamp(energy * televisionBoost, 0, 1.35);
     root.children.forEach(child => { if (!(child instanceof T.InstancedMesh)) return; const ranks = child.userData.ranks as number[]; let count = 0; while (count < ranks.length && ranks[count] < limit) count++; child.count = count; });
 }
