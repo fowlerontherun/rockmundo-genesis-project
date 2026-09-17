@@ -150,6 +150,33 @@ export interface TotpBandStats {
   latest_appearance: string | null;
 }
 
+export type TotpInterviewChoice = "confident" | "humble" | "cheeky";
+
+export interface TotpBackstageInteraction {
+  id: string;
+  invitation_id: string;
+  episode_id: string;
+  band_id: string;
+  band_name: string;
+  prompt_key: "first_impressions" | "chart_pressure" | "fans_waiting" | "live_television" | string;
+  selected_choice: TotpInterviewChoice | null;
+  effects: {
+    reputation?: number;
+    fan_sentiment?: number;
+    media_intensity?: number;
+    chart_effect?: number;
+    cash_effect?: number;
+  };
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface TotpBackstageChoiceResult {
+  status: "resolved" | "already_resolved";
+  choice: TotpInterviewChoice;
+  effects: TotpBackstageInteraction["effects"];
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function invitationId(value: string): string {
@@ -229,6 +256,22 @@ export async function getTotpBandStats(bandId: string): Promise<TotpBandStats> {
     first_appearance: null,
     latest_appearance: null,
   }) as TotpBandStats;
+}
+
+export async function listMyTotpBackstageInteractions(): Promise<TotpBackstageInteraction[]> {
+  const { data, error } = await supabase.rpc("totp_my_backstage_interactions" as any);
+  if (error) throw new Error(error.message || "Could not load the Top of the Pops backstage interview.");
+  return (data ?? []) as TotpBackstageInteraction[];
+}
+
+export async function chooseTotpBackstageInterview(id: string, choice: TotpInterviewChoice): Promise<TotpBackstageChoiceResult> {
+  const normalizedId = invitationId(id);
+  const { data, error } = await supabase.rpc("totp_choose_backstage_interview" as any, {
+    p_interaction_id: normalizedId,
+    p_choice: choice,
+  });
+  if (error) throw new Error(error.message || "Could not save the Top of the Pops interview response.");
+  return data as TotpBackstageChoiceResult;
 }
 
 export async function adminLockTotpRunningOrder(episodeId: string): Promise<number> {
