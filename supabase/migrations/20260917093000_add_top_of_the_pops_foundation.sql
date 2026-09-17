@@ -111,6 +111,20 @@ BEGIN
     RAISE EXCEPTION 'Top of the Pops episode date must be a scheduled fortnightly Thursday';
   END IF;
 
+  -- An existing prepared episode is immutable. Returning it prevents scheduler retries,
+  -- manual reruns or chart backfills from changing the locked chart snapshot, deleting
+  -- player responses or firing duplicate invitation notifications.
+  SELECT id, chart_snapshot_date
+  INTO v_episode_id, v_snapshot_date
+  FROM public.totp_episodes
+  WHERE episode_date = p_episode_date;
+
+  IF v_episode_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.totp_candidates WHERE episode_id = v_episode_id
+  ) THEN
+    RETURN v_episode_id;
+  END IF;
+
   SELECT id INTO v_london_id
   FROM public.cities
   WHERE lower(name) = 'london'
@@ -121,48 +135,43 @@ BEGIN
     RAISE EXCEPTION 'London city record not found';
   END IF;
 
-  SELECT max(chart_date) INTO v_snapshot_date
-  FROM (
-    SELECT chart_date
-    FROM public.chart_entries
-    WHERE country = 'United Kingdom'
-      AND chart_type IN ('streaming', 'digital_sales')
-      AND entry_type = 'song'
-      AND chart_date <= (p_episode_date - 3)
-    GROUP BY chart_date
-    HAVING count(DISTINCT chart_type) = 2
-  ) snapshots;
+  IF v_snapshot_date IS NULL THEN
+    SELECT max(chart_date) INTO v_snapshot_date
+    FROM (
+      SELECT chart_date
+      FROM public.chart_entries
+      WHERE country = 'United Kingdom'
+        AND chart_type IN ('streaming', 'digital_sales')
+        AND entry_type = 'song'
+        AND chart_date <= (p_episode_date - 3)
+      GROUP BY chart_date
+      HAVING count(DISTINCT chart_type) = 2
+    ) snapshots;
+  END IF;
 
   IF v_snapshot_date IS NULL THEN
     RAISE EXCEPTION 'No complete UK streaming + digital sales chart snapshot found for episode %', p_episode_date;
   END IF;
 
-  INSERT INTO public.totp_episodes (
-    episode_date,
-    chart_snapshot_date,
-    city_id,
-    check_in_at,
-    broadcast_at,
-    status
-  )
-  VALUES (
-    p_episode_date,
-    v_snapshot_date,
-    v_london_id,
-    ((p_episode_date::timestamp + time '15:00') AT TIME ZONE 'Europe/London'),
-    ((p_episode_date::timestamp + time '20:00') AT TIME ZONE 'Europe/London'),
-    'inviting'
-  )
-  ON CONFLICT (episode_date) DO UPDATE
-  SET chart_snapshot_date = EXCLUDED.chart_snapshot_date,
-      city_id = EXCLUDED.city_id,
-      check_in_at = EXCLUDED.check_in_at,
-      broadcast_at = EXCLUDED.broadcast_at,
-      updated_at = now()
-  RETURNING id INTO v_episode_id;
-
-  DELETE FROM public.totp_invitations WHERE episode_id = v_episode_id;
-  DELETE FROM public.totp_candidates WHERE episode_id = v_episode_id;
+  IF v_episode_id IS NULL THEN
+    INSERT INTO public.totp_episodes (
+      episode_date,
+      chart_snapshot_date,
+      city_id,
+      check_in_at,
+      broadcast_at,
+      status
+    )
+    VALUES (
+      p_episode_date,
+      v_snapshot_date,
+      v_london_id,
+      ((p_episode_date::timestamp + time '15:00') AT TIME ZONE 'Europe/London'),
+      ((p_episode_date::timestamp + time '20:00') AT TIME ZONE 'Europe/London'),
+      'inviting'
+    )
+    RETURNING id INTO v_episode_id;
+  END IF;
 
   WITH source_rows AS (
     SELECT
@@ -234,7 +243,8 @@ BEGIN
       ) THEN 'previous_episode_performer'
       ELSE NULL
     END
-  FROM best_song_per_band b;
+  FROM best_song_per_band b
+  ON CONFLICT DO NOTHING;
 
   -- Stable editorial selection: chart success determines the pool, while an episode-
   -- seeded hash prevents players from changing selection through retries or refreshes.
@@ -276,7 +286,8 @@ BEGIN
     (((p_episode_date - 1)::timestamp + time '18:00') AT TIME ZONE 'Europe/London')
   FROM public.totp_candidates c
   WHERE c.episode_id = v_episode_id
-    AND c.selected = true;
+    AND c.selected = true
+  ON CONFLICT DO NOTHING;
 
   RETURN v_episode_id;
 END;
