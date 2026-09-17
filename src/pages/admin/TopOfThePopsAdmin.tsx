@@ -86,6 +86,7 @@ export default function TopOfThePopsAdmin() {
   const completedByPerformance = new Map(
     (history.data ?? []).filter((row) => row.episode_number === current.episode_number).map((row) => [row.performance_id, row]),
   );
+  const allPerformancesSettled = current.performances.length > 0 && completedByPerformance.size === current.performances.length;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -102,7 +103,7 @@ export default function TopOfThePopsAdmin() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Broadcast controls</CardTitle>
           <CardDescription>
-            Lock the running order first, then freeze the canonical broadcast archive. Performance settlement awards fame and achievements exactly once; replaying the archive never settles rewards.
+            Lock the running order, complete and settle every performance, then freeze the canonical archive. The final replay snapshots the locked live-TV incident, recovery, performance style and studio-audience reaction; replaying it never settles rewards.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
@@ -115,7 +116,8 @@ export default function TopOfThePopsAdmin() {
           <Button
             variant="outline"
             onClick={() => buildArchive.mutate(current.id)}
-            disabled={buildArchive.isPending || current.performances.length === 0}
+            disabled={buildArchive.isPending || !allPerformancesSettled}
+            title={allPerformancesSettled ? "Build the immutable television replay" : "Settle every performance before archiving"}
           >
             <Archive className="mr-2 h-4 w-4" /> Build canonical archive
           </Button>
@@ -125,6 +127,9 @@ export default function TopOfThePopsAdmin() {
           <Badge variant="secondary" className="self-center">
             {completedByPerformance.size}/{current.performances.length} settled
           </Badge>
+          {!allPerformancesSettled && current.performances.length > 0 && (
+            <span className="self-center text-xs text-muted-foreground">Archive unlocks after every act is settled.</span>
+          )}
         </CardContent>
       </Card>
 
