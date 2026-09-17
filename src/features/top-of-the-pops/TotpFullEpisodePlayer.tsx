@@ -10,11 +10,15 @@ export interface TotpFullEpisodePlayerProps {
   replays: TotpBroadcastReplay[];
 }
 
+export function orderTotpEpisodeReplays(replays: TotpBroadcastReplay[]): TotpBroadcastReplay[] {
+  return [...replays].sort((a, b) => {
+    const runningOrder = Number(a.payload.runningOrder) - Number(b.payload.runningOrder);
+    return runningOrder !== 0 ? runningOrder : a.id.localeCompare(b.id);
+  });
+}
+
 export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
-  const ordered = useMemo(
-    () => [...replays].sort((a, b) => Number(a.payload.runningOrder) - Number(b.payload.runningOrder)),
-    [replays],
-  );
+  const ordered = useMemo(() => orderTotpEpisodeReplays(replays), [replays]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [continuous, setContinuous] = useState(false);
   const current = ordered[currentIndex] ?? null;
