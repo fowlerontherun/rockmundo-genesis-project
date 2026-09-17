@@ -68,13 +68,14 @@ Implemented substantially in PR #1921.
 - The Top of the Pops page can select and replay archived performances through the real television-studio renderer.
 - Added tests proving the TV studio gets the production objects and normal gig venues do not.
 - Added tests for camera targeting, timeline construction, TV-studio geometry and archive payload shape.
+- Canonical replay v2 now snapshots the final live-TV incident, recovery, performance style and audience reaction after the performance settles.
+- The locked audience reaction drives the actual shared 3D crowd-tuning system, changing density, stage pull and crowd movement while leaving gameplay untouched.
 
 Remaining polish within Phase 3:
 
 - Add studio-specific audience blocking around each performance zone and ensure visible production cameras never collide with performer staging.
 - Snapshot equipped clothing/appearance into the archive payload so very old appearances can preserve the exact historical outfit rather than resolving the current player model.
 - Add a full-episode autoplay mode that joins all archived performances and presenter transitions into one continuous show.
-- Snapshot the final live-TV event/style/audience state only after on-air choices are locked, so immutable replays never freeze incomplete interaction data.
 
 ## Phase 4 — Rewards, history and achievements
 
@@ -118,22 +119,23 @@ Implemented:
 - Confident primarily increases reputation/media attention, humble primarily increases fan sentiment, and cheeky gives the largest media boost with a small fan-sentiment downside.
 - Effects are stored once in `totp_backstage_interactions` and remain visible after resolution.
 - Interview choices never alter chart positions, Top of the Pops eligibility or cash.
-- The interaction is surfaced directly inside the checked-in invitation card on the Top of the Pops page.
-- Added one deterministic live-TV production incident per checked-in act: extra camera rehearsal, fan chant, broken rehearsal string, floor-manager scramble, green-room encounter or perfect mic check.
-- Production incidents are seeded from the invitation and cannot be rerolled by refreshing.
-- Incidents can shift reputation, fan sentiment and media intensity by small bounded amounts but never change charts, cash or eligibility.
-- Added leader-only performance-style choices: polished television performance, crowd-first performance and raw-live performance.
-- Polished gives a small stable fame/reputation lift; crowd-first gives the strongest studio-audience/fan response; raw-live has a deterministic higher-upside/lower-downside result that cannot be rerolled.
-- Performance-style fame modifiers are capped to a narrow 0.97–1.08 range and are applied once by the authoritative appearance-history transaction.
-- Style fame adjustments write their own `band_fame_events` audit row and also update the permanent appearance-history total.
-- Added a combined studio-audience reaction meter (Nervous / Settled / Warm / Loud / Roaring) from the incident plus selected performance style.
-- The live-TV cards show the exact audience, reputation, fan-sentiment and media consequences before/after choices.
+- Added one deterministic harmless production incident per checked-in act: camera rehearsal, fan chant, broken rehearsal string, floor-manager scramble, green-room encounter or mic check.
+- Broken-string and floor-manager incidents now have one-time leader recovery choices: professional, improvise or showman, with incident-specific copy/effects.
+- Missing recovery choices safely fall back to a neutral professional response when the canonical broadcast locks; this gives no bonus.
+- Added leader-selected performance styles: polished, crowd-first and raw-live.
+- Raw-live success/failure is deterministic from the invitation, preventing refresh-based rerolls.
+- Performance-style fame variance is tightly bounded and applied once through the authoritative appearance-history path.
+- If no style is chosen before settlement/archive lock, the broadcast uses neutral `house_direction` with a 1.00 fame multiplier.
+- Added a combined studio-audience reaction meter: Nervous, Settled, Warm, Loud or Roaring.
+- Final reaction is frozen into replay v2 and drives the real shared Gig Viewer crowd tuning during archive playback.
+- Admin archive controls now remain disabled until every performance in the episode is settled.
+- All interaction effects remain independent of chart position, cash payout and future TOTP eligibility.
 
 Next within Phase 5:
 
-- Add selectable recovery choices to a subset of production incidents rather than auto-resolving every incident.
-- Feed the final studio-audience reaction into the 3D crowd behaviour once the immutable replay lock point includes the interaction snapshot.
 - Add guest presenters and milestone-special interaction variants.
+- Add optional post-performance green-room choices/reactions.
+- Expand television-specific crowd animation intensity beyond the current density/stage-pull tuning.
 
 ## Phase 6 — Specials
 
