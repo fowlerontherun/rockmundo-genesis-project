@@ -11,6 +11,7 @@ import {
   getTotpEpisode,
   getTotpPublicHistory,
 } from "@/features/top-of-the-pops/api";
+import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { Archive, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
@@ -83,6 +84,8 @@ export default function TopOfThePopsAdmin() {
     return <div className="p-6"><Card><CardContent className="p-6">No scheduled Top of the Pops episode found.</CardContent></Card></div>;
   }
 
+  const presenter = resolveTotpPresenter((current as any).presenter_key);
+  const variantLabel = totpVariantLabel((current as any).show_variant);
   const completedByPerformance = new Map(
     (history.data ?? []).filter((row) => row.episode_number === current.episode_number).map((row) => [row.performance_id, row]),
   );
@@ -94,16 +97,19 @@ export default function TopOfThePopsAdmin() {
         <div>
           <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Tv2 className="h-4 w-4" /> Television administration</div>
           <h1 className="text-3xl font-bold">Top of the Pops</h1>
-          <p className="text-muted-foreground">Episode #{current.episode_number} · {formatDateTime(current.broadcast_at)}</p>
+          <p className="text-muted-foreground">Episode #{current.episode_number} · {formatDateTime(current.broadcast_at)} · {presenter.displayName}</p>
         </div>
-        <Badge variant="secondary">{current.status}</Badge>
+        <div className="flex flex-wrap gap-2">
+          {variantLabel && <Badge variant="outline">{variantLabel}</Badge>}
+          <Badge variant="secondary">{current.status}</Badge>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Broadcast controls</CardTitle>
           <CardDescription>
-            Lock the running order, complete and settle every performance, then freeze the canonical archive. The final replay snapshots the locked live-TV incident, recovery, performance style and studio-audience reaction; replaying it never settles rewards.
+            {presenter.displayName} presents this {variantLabel ? `${variantLabel.toLowerCase()} ` : ""}episode. Lock the running order, complete and settle every performance, then freeze the canonical archive. The final replay snapshots the presenter, edition, live-TV incident, recovery, performance style and studio-audience reaction; replaying it never settles rewards.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
