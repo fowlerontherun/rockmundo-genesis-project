@@ -31,6 +31,7 @@ export function TotpBroadcastCanvas({
   className,
 }: TotpBroadcastCanvasProps) {
   const directedShot = reducedMotion ? "studio_master" : cue?.cameraShot ?? "studio_master";
+  const directedStage = cue?.stage ?? "main_stage";
   const lowerThird = cue?.type === "graphic" ? cue.graphic : null;
   const presenterText = cue?.type === "presenter" ? cue.presenterText : null;
 
@@ -40,6 +41,7 @@ export function TotpBroadcastCanvas({
       data-totp-broadcast
       data-totp-cue={cue?.type ?? "performance"}
       data-totp-shot={directedShot}
+      data-totp-stage={directedStage}
     >
       <GigCanvas
         replay={replay}
@@ -53,6 +55,7 @@ export function TotpBroadcastCanvas({
         performancePreference={performancePreference}
         presentationMode="totp"
         totpCameraShot={directedShot}
+        totpStage={directedStage}
         capability={{ audience: "player", subjectId: `totp:${replay.id}` }}
       />
 
