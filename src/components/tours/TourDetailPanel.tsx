@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { TravelTimelineLog } from "@/components/travel/TravelTimelineLog";
 import { TourMemberSyncStatus } from "@/components/tours/TourMemberSyncStatus";
 import { LiveTourHQPanel } from "@/components/tours/LiveTourHQPanel";
+import { TourOperationsCommandCenter } from "@/components/tours/TourOperationsCommandCenter";
 
 interface TourDetailPanelProps {
   tour: {
@@ -247,7 +248,10 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
       )}
 
       {supportsTourOperations && (
-        <LiveTourHQPanel tourId={tour.id} tourStatus={tour.status} />
+        <>
+          <TourOperationsCommandCenter tourId={tour.id} />
+          <LiveTourHQPanel tourId={tour.id} tourStatus={tour.status} />
+        </>
       )}
 
       {/* Per-member live sync status (current city, assigned leg, ETA, sync health) */}
