@@ -20,11 +20,11 @@ import type { PerformancePreference } from "./hooks/useGigViewerPreferences";
 import { resolveViewerCapabilities, type ViewerCapabilityContext } from "./config/viewerCapabilityFlags";
 import type { ConcertPresentationMode } from "./three/presentation";
 
-export function GigCanvas({ replay, experience, playbackState, reducedMotion = false, pyrotechnics = true, pyroIntensity = 1, crowdTuning, fill = false, immersive = false, cameraMode = "venue_wide", performancePreference = "auto", capability, className, presentationMode = "gig", totpCameraShot, totpStage = "main_stage", totpPresenterKey = "alex_rayne", totpShowVariant = "regular", playerModelsSnapshot = null }: {
+export function GigCanvas({ replay, experience, playbackState, reducedMotion = false, pyrotechnics = true, pyroIntensity = 1, crowdTuning, fill = false, immersive = false, cameraMode = "venue_wide", performancePreference = "auto", capability, className, presentationMode = "gig", totpCameraShot, totpStage = "main_stage", totpPresenterKey = "alex_rayne", totpShowVariant = "regular", totpAudienceReaction = 0, playerModelsSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; reducedMotion?: boolean; pyrotechnics?: boolean; pyroIntensity?: number;
   crowdTuning?: Partial<CrowdTuningOptions> | null; fill?: boolean; immersive?: boolean; cameraMode?: GigViewerCameraMode; performancePreference?: PerformancePreference;
   capability?: Partial<ViewerCapabilityContext>; className?: string; presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
-  totpPresenterKey?: string | null; totpShowVariant?: string | null; playerModelsSnapshot?: GigPlayerModelsData | null;
+  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; playerModelsSnapshot?: GigPlayerModelsData | null;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const { container, fit } = useCanvasSize(wrapRef, { fill });
@@ -46,14 +46,15 @@ export function GigCanvas({ replay, experience, playbackState, reducedMotion = f
     data-performance-tier={diagnostics.performanceTier} data-render-dpr-cap={diagnostics.performanceTier === "high" ? 1.75 : diagnostics.performanceTier === "low" ? .9 : 1.15}
     data-crowd-detail={renderBudget.crowdDetail} data-degradations={renderBudget.appliedDegradations.join(",")} data-living-venue="3d" data-presentation-mode={presentationMode}
     data-totp-stage={presentationMode === "totp" ? totpStage : undefined} data-totp-presenter={presentationMode === "totp" ? totpPresenterKey ?? "alex_rayne" : undefined}
-    data-totp-show-variant={presentationMode === "totp" ? totpShowVariant ?? "regular" : undefined} data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
+    data-totp-show-variant={presentationMode === "totp" ? totpShowVariant ?? "regular" : undefined} data-totp-audience-reaction={presentationMode === "totp" ? Number(totpAudienceReaction ?? 0) : undefined}
+    data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
     data-viewer-rollout-bucket={capabilities.bucket} data-legacy-fallback-available={capabilities.legacyFallbackAvailable ? "true" : "false"}>
     {demoTuning.demoMode && !fill ? <><GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} /><CrowdTuningPanel value={demoTuning.value} onChange={demoTuning.setValue} attendance={attendance} capacity={capacity} /></> : null}
     <div ref={wrapRef} className={`${fill ? "h-full" : ""} relative flex w-full items-center justify-center overflow-hidden bg-slate-950`} style={{ minHeight: fill ? 0 : container.height, height: fill ? undefined : container.height }} data-scene-viewport data-scene-scale={fit.scale.toFixed(4)}>
       <Suspense fallback={<div role="status" className="p-8 text-slate-200">Loading 3D stage…</div>}>
         <GigStage3D replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} cameraMode={cameraMode} tier={diagnostics.performanceTier}
           archetype={presentationMode === "totp" ? "tv_studio" : diagnostics.venueArchetype} tuning={normalizeCrowdTuning(resolved.tuning)} pyrotechnics={pyrotechnics} pyroIntensity={pyroIntensity}
-          presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpStage={totpStage} totpPresenterKey={totpPresenterKey} totpShowVariant={totpShowVariant} playerModelsSnapshot={playerModelsSnapshot} />
+          presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpStage={totpStage} totpPresenterKey={totpPresenterKey} totpShowVariant={totpShowVariant} totpAudienceReaction={totpAudienceReaction} playerModelsSnapshot={playerModelsSnapshot} />
       </Suspense>
     </div>
   </div>;
