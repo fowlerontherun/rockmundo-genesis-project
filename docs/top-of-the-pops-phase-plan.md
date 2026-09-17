@@ -129,6 +129,7 @@ Implemented:
 - Added a combined studio-audience reaction meter: Nervous, Settled, Warm, Loud or Roaring.
 - Final reaction is frozen into replay v2 and drives the real shared Gig Viewer crowd tuning during archive playback.
 - Admin archive controls now remain disabled until every performance in the episode is settled.
+- The database independently rejects canonical replay creation before a performance is completed, so archive integrity does not depend on the admin UI.
 - All interaction effects remain independent of chart position, cash payout and future TOTP eligibility.
 
 Next within Phase 5:
