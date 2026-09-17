@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS totp_chart_rundown_episode_chart_rank_idx
   ON public.totp_chart_rundown_snapshots (episode_id, chart_type, chart_rank);
 
 ALTER TABLE public.totp_chart_rundown_snapshots ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.totp_chart_rundown_snapshots FROM anon, authenticated;
+REVOKE ALL ON public.totp_chart_rundown_snapshots FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.totp_capture_chart_rundown_for_episode(p_episode_id uuid)
 RETURNS integer
