@@ -15,6 +15,8 @@ export interface VenueProfile {
   stageWidth: number; stageDepth: number; stageHeight: number; rigHeight: number;
   roomWidth: number; roomDepth: number; roofHeight: number; crowdWidth: number; crowdDepth: number;
   seating: boolean; seatRows: number; production: 'portable' | 'house' | 'touring'; accent: string;
+  presenterKey?: string | null;
+  showVariant?: string | null;
 }
 const aliases: Record<string, VenueKind> = { pub: 'dive_bar', club: 'rock_club', arena: 'indoor_arena', theatre: 'theatre', stadium: 'stadium', theater: 'theatre', amphitheater: 'amphitheatre', beach: 'beach_stage', festival: 'festival_stage', cafe: 'cafe_stage', bar: 'dive_bar', studio: 'tv_studio', television_studio: 'tv_studio' };
 const alias = (key: string): VenueKind | undefined => Object.prototype.hasOwnProperty.call(aliases, key) ? aliases[key] : undefined;
@@ -51,6 +53,8 @@ export function resolveVenueProfile(venue: Partial<ConcertVenue> = {}): VenuePro
       seatRows: 0,
       production: 'house',
       accent: '#d134a6',
+      presenterKey: venue.presenterKey ?? 'alex_rayne',
+      showVariant: venue.showVariant ?? 'regular',
     };
   }
 
