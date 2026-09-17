@@ -68,14 +68,18 @@ Implemented substantially in PR #1921.
 - The Top of the Pops page can select and replay archived performances through the real television-studio renderer.
 - Canonical replay v2 snapshots the final live-TV incident, recovery, performance style and audience reaction after the performance settles.
 - Canonical replay v3 snapshots presenter identity and show variant.
+- Canonical replay v4 snapshots each performer's render-only stage appearance, legacy-avatar fallback and equipped rich-clothing visuals at archive-lock time.
+- Replay v4 deliberately excludes purchase history, balances, private inventory metadata and account information.
+- Archived broadcasts prefer the frozen performer snapshot; replay v1-v3 retains a safe live-model fallback for backwards compatibility.
 - The locked audience reaction drives the actual shared Gig Viewer crowd-tuning system, changing density, stage pull and crowd movement while leaving gameplay untouched.
 - Added full-episode archive autoplay. Archived acts are sorted by locked running order and automatically advance through the programme while retaining manual act selection and per-performance replay controls.
 - Added deterministic replay-order tests and source-array immutability coverage.
+- Added TV-studio audience blocking: the close-up crowd is constrained to a compact central television pocket and distant audience placement excludes Stage B, Rock Stage, Studio Floor, pedestal cameras, handheld camera and jib/service footprints.
+- Added regression coverage confirming those blocking rules apply only to the `tv_studio` archetype and do not affect ordinary gig venues.
 
 Remaining polish within Phase 3:
 
-- Add studio-specific audience blocking around each performance zone and ensure visible production cameras never collide with performer staging.
-- Snapshot equipped clothing/appearance into the archive payload so very old appearances can preserve the exact historical outfit rather than resolving the current player model.
+- Expand television-specific crowd animation intensity beyond the current density/stage-pull tuning.
 
 ## Phase 4 — Rewards, history and achievements
 
