@@ -14,6 +14,7 @@ import {
   listMyTotpInvitations,
   respondToTotpInvitation,
 } from "@/features/top-of-the-pops/api";
+import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
 import { TotpBackstageInterviewCard } from "@/features/top-of-the-pops/TotpBackstageInterviewCard";
 import { TotpLiveTvExtrasCard } from "@/features/top-of-the-pops/TotpLiveTvExtrasCard";
@@ -84,6 +85,8 @@ export default function TopOfThePops() {
 
   const now = new Date();
   const currentEpisode = episode.data;
+  const currentPresenter = currentEpisode ? resolveTotpPresenter((currentEpisode as any).presenter_key) : null;
+  const currentVariantLabel = currentEpisode ? totpVariantLabel((currentEpisode as any).show_variant) : null;
   const archiveReplays = archive.data?.replays ?? [];
   const selectedReplay = archiveReplays.find((replay) => replay.id === selectedReplayId) ?? archiveReplays[0] ?? null;
   const recentHistory = history.data ?? [];
@@ -108,9 +111,12 @@ export default function TopOfThePops() {
       {currentEpisode && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Radio className="h-5 w-5" /> Episode #{currentEpisode.episode_number}</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2"><Radio className="h-5 w-5" /> Episode #{currentEpisode.episode_number}</CardTitle>
+              {currentVariantLabel && <Badge variant="secondary">{currentVariantLabel}</Badge>}
+            </div>
             <CardDescription>
-              Broadcast {formatDateTime(currentEpisode.broadcast_at)} · Presenter: {currentEpisode.presenter_key.replaceAll("_", " ")}
+              Broadcast {formatDateTime(currentEpisode.broadcast_at)} · Presenter: {currentPresenter?.displayName ?? "Alex Rayne"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
