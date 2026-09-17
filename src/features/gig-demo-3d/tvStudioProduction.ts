@@ -68,6 +68,36 @@ function buildPresenter(root: T.Group, x: number, z: number) {
   return presenter;
 }
 
+function buildPerformanceZones(root: T.Group, p: VenueProfile) {
+  const dark = matte('#12161c');
+  const black = matte('#080a0e');
+  const steel = metal('#46505b');
+  const magenta = new T.MeshStandardMaterial({ color: '#9a164f', emissive: '#5a0a2b', emissiveIntensity: .7, roughness: .5 });
+  const blue = new T.MeshStandardMaterial({ color: '#233f69', emissive: '#142c51', emissiveIntensity: .55, roughness: .5 });
+  const amber = new T.MeshStandardMaterial({ color: '#7c3f1f', emissive: '#4b2411', emissiveIntensity: .45, roughness: .55 });
+
+  const mainDeck = box(root, [p.stageWidth + .7, .12, p.stageDepth + .45], [0, p.stageHeight - .06, .65 - p.stageDepth / 2], dark);
+  mainDeck.name = 'totp-zone-main-stage';
+  box(root, [p.stageWidth * .82, 2.4, .12], [0, p.stageHeight + 2.0, .65 - p.stageDepth - .32], magenta).name = 'totp-main-stage-backdrop';
+  for (const x of [-p.stageWidth * .38, 0, p.stageWidth * .38]) rod(root, [x, p.stageHeight, .5 - p.stageDepth], [x, p.rigHeight - .7, .5 - p.stageDepth], .04, steel);
+
+  const stageB = box(root, [4.9, .22, 3.7], [5.4, .11, 2.05], blue);
+  stageB.name = 'totp-zone-stage-b';
+  box(root, [4.4, 1.7, .12], [5.4, 1.45, .28], blue).name = 'totp-stage-b-backdrop';
+
+  const rock = box(root, [6.2, .28, 4.7], [-4.5, .14, 4.05], black);
+  rock.name = 'totp-zone-rock-stage';
+  for (const x of [-6.4, -4.5, -2.6]) rod(root, [x, .28, 2.2], [x, 4.5, 2.2], .055, steel);
+  box(root, [5.8, 1.5, .14], [-4.5, 2.0, 1.72], amber).name = 'totp-rock-stage-backdrop';
+
+  const floorDisc = cylinder(root, 2.85, 3.05, .08, [1.4, .04, 5.65], magenta, 40);
+  floorDisc.name = 'totp-zone-studio-floor';
+  for (let i = 0; i < 10; i++) {
+    const a = i / 10 * Math.PI * 2;
+    cylinder(root, .045, .045, .06, [1.4 + Math.cos(a) * 2.65, .11, 5.65 + Math.sin(a) * 2.65], blue, 10);
+  }
+}
+
 export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   if (p.kind !== 'tv_studio') return;
 
@@ -75,6 +105,8 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const steel = metal('#4f5965');
   const accent = new T.MeshStandardMaterial({ color: '#b41945', emissive: '#7a0d2d', emissiveIntensity: .55, roughness: .55 });
   const floor = matte('#242830');
+
+  buildPerformanceZones(root, p);
 
   const presenterX = -p.stageWidth * .66;
   const presenterZ = -.35;
