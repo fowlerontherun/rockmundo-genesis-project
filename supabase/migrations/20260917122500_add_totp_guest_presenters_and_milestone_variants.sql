@@ -177,11 +177,18 @@ BEGIN
   IF v_episode.status IN ('completed', 'cancelled') THEN RAISE EXCEPTION 'This episode can no longer be changed'; END IF;
   DELETE FROM public.totp_performances WHERE episode_id = p_episode_id AND completed_at IS NULL;
 
-  WITH eligible AS (
+  WITH eligible_base AS (
     SELECT i.id AS invitation_id, i.band_id, i.song_id, i.qualifying_rank, s.genre,
-      row_number() OVER (ORDER BY md5(p_episode_id::text || ':' || i.band_id::text || ':' || i.song_id::text)) AS running_order
-    FROM public.totp_invitations i JOIN public.songs s ON s.id = i.song_id
+      md5(p_episode_id::text || ':' || i.band_id::text || ':' || i.song_id::text) AS editorial_key
+    FROM public.totp_invitations i
+    JOIN public.songs s ON s.id = i.song_id
     WHERE i.episode_id = p_episode_id AND i.status = 'checked_in'
+  ),
+  eligible AS (
+    SELECT *, row_number() OVER (
+      ORDER BY CASE WHEN qualifying_rank = 1 THEN 1 ELSE 0 END ASC, editorial_key ASC
+    ) AS running_order
+    FROM eligible_base
   )
   INSERT INTO public.totp_performances (episode_id, invitation_id, band_id, song_id, running_order, stage_key, camera_profile, presenter_intro)
   SELECT p_episode_id, e.invitation_id, e.band_id, e.song_id, e.running_order,
