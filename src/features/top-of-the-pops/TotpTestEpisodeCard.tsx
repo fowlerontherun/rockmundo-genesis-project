@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Clapperboard, FlaskConical, ShieldCheck } from "lucide-react";
 import { TotpTestLifecycleSimulator } from "./TotpTestLifecycleSimulator";
 import { adminPreviewTotpTestEpisode, type TotpTestPreviewPerformance } from "./testPreviewApi";
+import { getTotpChartRundown } from "./chartRundownApi";
 
 function formatSnapshotDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Europe/London" }).format(new Date(`${value}T12:00:00Z`));
@@ -15,6 +16,11 @@ function formatSnapshotDate(value: string) {
 export function TotpTestEpisodeCard() {
   const { toast } = useToast();
   const [selectedPerformance, setSelectedPerformance] = useState<TotpTestPreviewPerformance | null>(null);
+  const rundown = useQuery({
+    queryKey: ["totp", "chart-rundown", "admin-demo"],
+    queryFn: () => getTotpChartRundown(null),
+    staleTime: 60_000,
+  });
   const preview = useMutation({
     mutationFn: () => adminPreviewTotpTestEpisode("admin-test", 10),
     onSuccess: (result) => {
@@ -62,6 +68,7 @@ export function TotpTestEpisodeCard() {
                 performance={selectedPerformance}
                 seed={result.seed}
                 generatedAt={result.generated_at}
+                chartRundown={rundown.data ?? null}
                 onExit={() => setSelectedPerformance(null)}
               />
             ) : result.performances.length === 0 ? (
@@ -81,6 +88,9 @@ export function TotpTestEpisodeCard() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline">{performance.selection_bucket.replaceAll("_", " ")}</Badge>
                         <Badge variant="secondary">{performance.stage_key.replaceAll("_", " ")}</Badge>
+                        <Badge variant={performance.audio?.audio_url || performance.audio?.extended_audio_url ? "secondary" : "outline"}>
+                          {performance.audio?.audio_url || performance.audio?.extended_audio_url ? "song audio ready" : "no song audio"}
+                        </Badge>
                         <Button size="sm" variant="outline" onClick={() => setSelectedPerformance(performance)}>
                           <Clapperboard className="mr-2 h-4 w-4" /> Run full demo lifecycle
                         </Button>
