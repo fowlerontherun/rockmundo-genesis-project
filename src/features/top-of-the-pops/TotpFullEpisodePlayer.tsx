@@ -4,35 +4,42 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
+import type { TotpChartRundown } from "./chartRundownApi";
+import { totpRundownHasRealPositions } from "./chartRundown";
 import { TotpArchivePlayer } from "./TotpArchivePlayer";
+import { TotpChartRundownSequence } from "./TotpChartRundownSequence";
 import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
 import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
 
 export interface TotpFullEpisodePlayerProps {
   replays: TotpBroadcastReplay[];
+  chartRundown?: TotpChartRundown | null;
 }
 
 export function orderTotpEpisodeReplays(replays: TotpBroadcastReplay[]): TotpBroadcastReplay[] {
   return orderTotpProgrammeReplays(replays);
 }
 
-export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
+export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFullEpisodePlayerProps) {
   const ordered = useMemo(() => orderTotpEpisodeReplays(replays), [replays]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [continuous, setContinuous] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  const [showChartRundown, setShowChartRundown] = useState(false);
   const [continuityKind, setContinuityKind] = useState<TotpContinuityKind | null>(null);
   const current = ordered[currentIndex] ?? null;
+  const hasChartRundown = totpRundownHasRealPositions(chartRundown);
 
   if (!current) return null;
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
-  const fullEpisodeRunning = showIntro || continuityKind !== null || continuous;
+  const fullEpisodeRunning = showIntro || showChartRundown || continuityKind !== null || continuous;
 
   const goTo = (index: number) => {
     setShowIntro(false);
+    setShowChartRundown(false);
     setContinuityKind(null);
     setContinuous(false);
     setCurrentIndex(Math.max(0, Math.min(ordered.length - 1, index)));
@@ -40,6 +47,7 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
 
   const startFullEpisode = () => {
     setCurrentIndex(0);
+    setShowChartRundown(false);
     setContinuityKind(null);
     setContinuous(false);
     setShowIntro(true);
@@ -47,6 +55,7 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
 
   const stopFullEpisode = () => {
     setShowIntro(false);
+    setShowChartRundown(false);
     setContinuityKind(null);
     setContinuous(false);
   };
@@ -64,15 +73,27 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
   const finishContinuity = () => {
     if (continuityKind === "opening") {
       setContinuityKind(null);
+      if (ordered.length === 1 && hasChartRundown) setShowChartRundown(true);
       return;
     }
     if (continuityKind === "between") {
-      setCurrentIndex((index) => Math.min(ordered.length - 1, index + 1));
       setContinuityKind(null);
+      if (currentIndex === ordered.length - 2 && hasChartRundown) {
+        setShowChartRundown(true);
+        return;
+      }
+      setCurrentIndex((index) => Math.min(ordered.length - 1, index + 1));
       return;
     }
     setContinuityKind(null);
     setContinuous(false);
+  };
+
+  const finishChartRundown = () => {
+    setShowChartRundown(false);
+    if (currentIndex < ordered.length - 1) {
+      setCurrentIndex((index) => Math.min(ordered.length - 1, index + 1));
+    }
   };
 
   return (
@@ -84,20 +105,22 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
               <ListVideo className="h-4 w-4" /> Full episode playback
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Play the programme intro, presenter continuity, tonight's locked chart-act rundown and archived running order as one continuous television show. Archive playback never awards fame, XP or money.
+              Play the programme intro, presenter continuity, frozen UK Streaming and Digital Sales rundown, and archived running order as one continuous television show. Archive playback never awards fame, XP or money.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">
               {showIntro
                 ? "Programme intro"
-                : continuityKind
-                  ? continuityKind === "opening"
-                    ? "Studio opening"
-                    : continuityKind === "between"
-                      ? "Presenter link"
-                      : "Programme close"
-                  : `Act ${currentIndex + 1} of ${ordered.length}`}
+                : showChartRundown
+                  ? "Chart rundown"
+                  : continuityKind
+                    ? continuityKind === "opening"
+                      ? "Studio opening"
+                      : continuityKind === "between"
+                        ? "Presenter link"
+                        : "Programme close"
+                    : `Act ${currentIndex + 1} of ${ordered.length}`}
             </Badge>
             <Button size="sm" onClick={fullEpisodeRunning ? stopFullEpisode : startFullEpisode}>
               {fullEpisodeRunning ? <PauseCircle className="mr-2 h-4 w-4" /> : <PlayCircle className="mr-2 h-4 w-4" />}
@@ -111,7 +134,7 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
             <Button
               key={replay.id}
               size="sm"
-              variant={!showIntro && continuityKind === null && index === currentIndex ? "default" : "outline"}
+              variant={!showIntro && !showChartRundown && continuityKind === null && index === currentIndex ? "default" : "outline"}
               onClick={() => goTo(index)}
               className="h-auto whitespace-normal text-left"
             >
@@ -131,6 +154,8 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
           autoPlay={continuous}
           onEnded={finishContinuity}
         />
+      ) : showChartRundown && chartRundown ? (
+        <TotpChartRundownSequence rundown={chartRundown} autoPlay={continuous} onEnded={finishChartRundown} />
       ) : (
         <TotpArchivePlayer
           key={`${current.id}:${continuous ? "auto" : "manual"}`}
@@ -140,7 +165,7 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
         />
       )}
 
-      {!showIntro && continuityKind === null && !continuous ? (
+      {!showIntro && !showChartRundown && continuityKind === null && !continuous ? (
         <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={() => goTo(currentIndex - 1)} disabled={currentIndex === 0}>
             <SkipBack className="mr-2 h-4 w-4" /> Previous act
