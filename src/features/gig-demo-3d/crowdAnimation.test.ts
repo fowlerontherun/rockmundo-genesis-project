@@ -21,6 +21,18 @@ describe('individual crowd identity and motion', () => {
             expect(new Set(appearances.map(a => a.equipment[slot].itemId))).toEqual(new Set(STARTER_ITEMS[slot].map(i => i.id)));
         expect(new Set(Array.from({ length: 100 }, (_, i) => crowdMotion('bounce', .9, i / 100, 10))).size).toBeGreaterThanOrEqual(5);
     });
+    it('keeps television choreography isolated from ordinary gig reactions', () => {
+        const nervous = Array.from({ length: 12 }, (_, index) => crowdMotion('tv_nervous', .8, index / 12, index * 2.75));
+        const roaring = Array.from({ length: 12 }, (_, index) => crowdMotion('tv_roaring', .8, index / 12, index * 2.75));
+        expect(nervous.every(motion => [0, 1, 3].includes(motion))).toBe(true);
+        expect(nervous.some(motion => motion === 0)).toBe(true);
+        expect(roaring.some(motion => motion === 6)).toBe(true);
+        expect(roaring.some(motion => motion === 7)).toBe(true);
+        expect(crowdMotion('still', .9, .2, 20)).toBe(0);
+        expect(crowdMotion('phone_lights', .9, .2, 20)).toBe(5);
+        expect(crowdMotion('jump', .9, .2, 20)).toBe(6);
+        expect(crowdMotion('cheer', .9, .2, 20)).toBe(2);
+    });
     it('bakes articulated poses, preserves exact attendance and reconstructs phone lights and motion on seek', async () => {
         const library: ModelLibrary = new Map();
         for (const file of requiredModelFiles(crowdAppearances(42))) {
