@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FlaskConical, ShieldCheck } from "lucide-react";
-import { adminPreviewTotpTestEpisode } from "./testPreviewApi";
+import { Clapperboard, FlaskConical, ShieldCheck } from "lucide-react";
+import { TotpTestLifecycleSimulator } from "./TotpTestLifecycleSimulator";
+import { adminPreviewTotpTestEpisode, type TotpTestPreviewPerformance } from "./testPreviewApi";
 
 function formatSnapshotDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Europe/London" }).format(new Date(`${value}T12:00:00Z`));
@@ -12,9 +14,11 @@ function formatSnapshotDate(value: string) {
 
 export function TotpTestEpisodeCard() {
   const { toast } = useToast();
+  const [selectedPerformance, setSelectedPerformance] = useState<TotpTestPreviewPerformance | null>(null);
   const preview = useMutation({
     mutationFn: () => adminPreviewTotpTestEpisode("admin-test", 10),
     onSuccess: (result) => {
+      setSelectedPerformance(null);
       toast({
         title: "Safe test preview generated",
         description: `${result.selected_count} act${result.selected_count === 1 ? "" : "s"} selected from ${result.eligible_count} eligible bands. No gameplay data was changed.`,
@@ -32,7 +36,7 @@ export function TotpTestEpisodeCard() {
           <div>
             <CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" /> Test episode</CardTitle>
             <CardDescription className="mt-1 max-w-3xl">
-              Run the live UK chart eligibility, editorial selection, running-order and stage-assignment rules without creating a real episode. This dry run cannot send invitations or notifications, award rewards, write appearance history or alter charts.
+              Run the live UK chart eligibility, editorial selection, running-order and stage-assignment rules without creating a real episode. Then take any selected act through an accelerated invitation-to-archive simulation using the real TOTP 3D broadcast viewer. Nothing in test mode writes player progression.
             </CardDescription>
           </div>
           <Badge variant="outline" className="w-fit gap-1"><ShieldCheck className="h-3 w-3" /> Safe dry run</Badge>
@@ -52,13 +56,21 @@ export function TotpTestEpisodeCard() {
               <Badge variant="outline">No writes / no rewards</Badge>
             </div>
 
-            {result.performances.length === 0 ? (
+            {selectedPerformance ? (
+              <TotpTestLifecycleSimulator
+                key={`${result.seed}:${selectedPerformance.band_id}:${selectedPerformance.song_id}`}
+                performance={selectedPerformance}
+                seed={result.seed}
+                generatedAt={result.generated_at}
+                onExit={() => setSelectedPerformance(null)}
+              />
+            ) : result.performances.length === 0 ? (
               <p className="text-sm text-muted-foreground">The current chart snapshot produced no eligible test acts.</p>
             ) : (
               <div className="space-y-2">
                 {result.performances.map((performance) => (
                   <div key={`${performance.band_id}:${performance.song_id}`} className="rounded-lg border bg-muted/20 p-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="font-medium">{performance.running_order}. {performance.band_name}</div>
                         <div className="text-sm text-muted-foreground">
@@ -66,9 +78,12 @@ export function TotpTestEpisodeCard() {
                         </div>
                         <div className="mt-1 text-xs italic text-muted-foreground">“{performance.presenter_intro}”</div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline">{performance.selection_bucket.replaceAll("_", " ")}</Badge>
                         <Badge variant="secondary">{performance.stage_key.replaceAll("_", " ")}</Badge>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedPerformance(performance)}>
+                          <Clapperboard className="mr-2 h-4 w-4" /> Run full lifecycle
+                        </Button>
                       </div>
                     </div>
                   </div>
