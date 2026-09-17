@@ -8,6 +8,7 @@ import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { TotpCameraShot, TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
 import { resolveTotpPresenter, totpVariantLabel } from '@/features/top-of-the-pops/presenters';
+import { totpAudienceChoreography } from '@/features/top-of-the-pops/studioAudience';
 import type { GigViewerReplay } from '../../events/types';
 import type { GigExperienceDTO } from '../../types';
 import type { DerivedPlaybackState } from '../engine/PlaybackController';
@@ -26,12 +27,12 @@ const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   push_in: 'guitar', pull_back: 'front', finale_wide: 'tv_crane',
 };
 
-export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', playerModelsSnapshot = null }: {
+export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, playerModelsSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState;
   reducedMotion: boolean; cameraMode: GigViewerCameraMode; tier: PerformanceTier; archetype: string;
   tuning: CrowdTuningOptions; pyrotechnics: boolean; pyroIntensity: number;
   presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
-  totpPresenterKey?: string | null; totpShowVariant?: string | null;
+  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null;
   /** Frozen render-only performer models, used by historical broadcasts instead of current player cosmetics. */
   playerModelsSnapshot?: GigPlayerModelsData | null;
 }) {
@@ -60,7 +61,10 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant]);
   const optionsKey = JSON.stringify(options);
   const venueProfile = resolveVenueProfile(options.venue);
-  const frame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue, presentationMode, totpStage);
+  const baseFrame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue, presentationMode, totpStage);
+  const frame = presentationMode === 'totp'
+    ? { ...baseFrame, crowdReaction: reducedMotion ? 'still' : totpAudienceChoreography(Number(totpAudienceReaction ?? 0)) }
+    : baseFrame;
   const resolvedCamera: CameraShot = presentationMode === 'totp' && totpCameraShot ? TOTP_CAMERAS[totpCameraShot] : CAMERAS[cameraMode];
   const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: resolvedCamera, reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: frame.look, energy: frame.energy, crowd: frame.crowd, haze: tier !== 'low' };
   const latest = useRef({ settings, frame, pyrotechnics, pyroIntensity, tuning }); latest.current = { settings, frame, pyrotechnics, pyroIntensity, tuning };
@@ -88,7 +92,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
     ? `Top of the Pops television performance presented by ${presenter.displayName} on ${totpStage.replaceAll('_', ' ')}. ${plan.entities.map(p => `${p.displayName}, ${p.roleLabel}`).join('; ')}.`
     : `3D performance at ${experience?.gig.venue.name ?? 'the venue'}. ${plan.entities.map(p => `${p.displayName}, ${p.roleLabel}`).join('; ')}. Use the timeline for commentary.`;
 
-  return <div className="relative h-full min-h-0 w-full bg-slate-950" data-renderer="three" data-renderer-status={status} data-presentation-mode={presentationMode} data-totp-camera-shot={totpCameraShot ?? undefined} data-totp-stage={isTotp ? totpStage : undefined} data-totp-presenter={isTotp ? presenter.key : undefined} data-totp-show-variant={isTotp ? totpShowVariant ?? 'regular' : undefined} data-player-model-source={playerModelsSnapshot ? 'snapshot' : 'live'}>
+  return <div className="relative h-full min-h-0 w-full bg-slate-950" data-renderer="three" data-renderer-status={status} data-presentation-mode={presentationMode} data-totp-camera-shot={totpCameraShot ?? undefined} data-totp-stage={isTotp ? totpStage : undefined} data-totp-presenter={isTotp ? presenter.key : undefined} data-totp-show-variant={isTotp ? totpShowVariant ?? 'regular' : undefined} data-totp-audience-choreography={isTotp ? frame.crowdReaction : undefined} data-player-model-source={playerModelsSnapshot ? 'snapshot' : 'live'}>
     <canvas ref={canvas} className="block h-full min-h-0 w-full" role="img" aria-label={ariaLabel} />
     <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3 text-xs text-white/80" aria-hidden="true">
       <span className="rounded bg-black/40 px-3 py-2 backdrop-blur">{venueLabel}</span>
