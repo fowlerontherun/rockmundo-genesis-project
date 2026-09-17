@@ -8,6 +8,14 @@ export interface TotpTestPreviewSideEffects {
   chart_changes: boolean;
 }
 
+export interface TotpTestPreviewBandMember {
+  profile_id: string | null;
+  display_name: string;
+  role: string;
+  instrument_role: string | null;
+  vocal_role: string | null;
+}
+
 export interface TotpTestPreviewPerformance {
   running_order: number;
   band_id: string;
@@ -20,6 +28,7 @@ export interface TotpTestPreviewPerformance {
   selection_bucket: "top10" | "11_20" | "21_40" | string;
   stage_key: "main_stage" | "stage_b" | "rock_stage" | "studio_floor" | string;
   presenter_intro: string;
+  members?: TotpTestPreviewBandMember[];
 }
 
 export interface TotpAdminTestPreview {
@@ -53,5 +62,19 @@ export async function adminPreviewTotpTestEpisode(seed = "admin-test", maxPerfor
   if (error) throw new Error(error.message || "Could not build the Top of the Pops test preview.");
   if (!data) throw new Error("Top of the Pops returned no test preview.");
   if (!isTotpTestPreviewSafe(data)) throw new Error("Top of the Pops test preview failed its safety contract.");
-  return data;
+
+  const bandIds = [...new Set(data.performances.map((performance) => performance.band_id))];
+  const { data: lineupData, error: lineupError } = await totpRpc<Record<string, TotpTestPreviewBandMember[]>>(
+    "totp_admin_test_band_lineups",
+    { p_band_ids: bandIds },
+  );
+  if (lineupError) throw new Error(lineupError.message || "Could not load the Top of the Pops demo band lineups.");
+
+  return {
+    ...data,
+    performances: data.performances.map((performance) => ({
+      ...performance,
+      members: lineupData?.[performance.band_id] ?? [],
+    })),
+  };
 }

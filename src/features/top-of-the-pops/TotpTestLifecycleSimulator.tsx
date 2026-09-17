@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TotpArchivePlayer } from "./TotpArchivePlayer";
+import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
+import { TotpShowIntro } from "./TotpShowIntro";
 import { totpAudienceReactionLabel } from "./studioAudience";
 import type { TotpTestPreviewPerformance } from "./testPreviewApi";
 import {
@@ -91,8 +93,11 @@ function signed(value: number): string {
   return `${value >= 0 ? "+" : ""}${Number.isInteger(value) ? value : value.toFixed(2)}`;
 }
 
+type TotpDemoBroadcastStep = "intro" | "presenter" | "performance";
+
 export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onExit }: TotpTestLifecycleSimulatorProps) {
   const [state, setState] = useState<TotpTestLifecycleState>(initialState);
+  const [broadcastStep, setBroadcastStep] = useState<TotpDemoBroadcastStep>("intro");
   const incident = getTotpTestIncident(seed, performance);
   const interviewEffects = getTotpTestInterviewEffects(state.interviewChoice);
   const recoveryEffects = getTotpTestRecoveryEffects(incident.event_key, state.recoveryChoice);
@@ -120,6 +125,10 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onE
   const phaseIndex = PHASES.findIndex((phase) => phase.key === state.phase);
 
   const advance = (phase: TotpTestPhase) => setState((current) => ({ ...current, phase }));
+  const beginBroadcast = (choice: TotpTestPerformanceStyleChoice) => {
+    setBroadcastStep("intro");
+    setState((current) => ({ ...current, styleChoice: choice, phase: "broadcast" }));
+  };
 
   return (
     <Card className="border-primary/30 bg-primary/[0.03]">
@@ -133,7 +142,7 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onE
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" /> zero gameplay writes</Badge>
-            <Button size="sm" variant="ghost" onClick={() => setState(initialState())}><RotateCcw className="mr-2 h-4 w-4" /> Reset</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setState(initialState()); setBroadcastStep("intro"); }}><RotateCcw className="mr-2 h-4 w-4" /> Reset</Button>
             <Button size="sm" variant="outline" onClick={onExit}>Choose another act</Button>
           </div>
         </div>
@@ -260,7 +269,7 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onE
                   key={choice.key}
                   variant="outline"
                   className="h-auto justify-start whitespace-normal p-3 text-left"
-                  onClick={() => setState((current) => ({ ...current, styleChoice: choice.key, phase: "broadcast" }))}
+                  onClick={() => beginBroadcast(choice.key)}
                 >
                   <span>
                     <span className="font-medium">{choice.title}</span>
@@ -290,10 +299,33 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onE
               )}
             </div>
 
-            <TotpArchivePlayer replay={replay} />
+            {broadcastStep === "intro" ? (
+              <TotpShowIntro playing onEnded={() => setBroadcastStep("presenter")} />
+            ) : broadcastStep === "presenter" ? (
+              <TotpProgrammeContinuity
+                kind="opening"
+                replays={[replay]}
+                autoPlay
+                onEnded={() => setBroadcastStep("performance")}
+              />
+            ) : (
+              <TotpArchivePlayer
+                replay={replay}
+                autoPlay
+                onEnded={() => advance("green_room")}
+              />
+            )}
 
-            <div className="flex justify-end">
-              <Button onClick={() => advance("green_room")}>Finish virtual broadcast</Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {broadcastStep === "intro" && (
+                <Button variant="outline" onClick={() => setBroadcastStep("presenter")}>Skip to presenter</Button>
+              )}
+              {broadcastStep === "presenter" && (
+                <Button variant="outline" onClick={() => setBroadcastStep("performance")}>Skip to performance</Button>
+              )}
+              {broadcastStep === "performance" && (
+                <Button onClick={() => advance("green_room")}>Finish virtual broadcast</Button>
+              )}
             </div>
           </div>
         )}

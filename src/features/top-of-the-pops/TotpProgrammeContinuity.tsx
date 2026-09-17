@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Radio, Tv } from "lucide-react";
+import { ChevronRight, Radio, Tv, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -39,6 +39,23 @@ export function TotpProgrammeContinuity({
   const variantLabel = totpVariantLabel(orderedFirst?.payload.showVariant ?? "regular");
   const durationMs = CONTINUITY_DURATION_MS[kind];
   const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    if (!autoPlay || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const speech = `${copy.headline}. ${copy.body}`;
+    const utterance = new SpeechSynthesisUtterance(speech);
+    utterance.rate = 0.98;
+    utterance.pitch = 1;
+    utterance.volume = 0.9;
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
+    if (preferred) utterance.voice = preferred;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, [autoPlay, copy.body, copy.headline, kind, currentIndex]);
 
   useEffect(() => {
     if (!autoPlay) return;
@@ -87,7 +104,12 @@ export function TotpProgrammeContinuity({
         <div className="mx-auto mt-12 max-w-5xl">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-fuchsia-200">{copy.eyebrow}</p>
           <h3 className="mt-3 max-w-4xl text-3xl font-black tracking-tight md:text-5xl">{copy.headline}</h3>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-white/70 md:text-base">{copy.body}</p>
+          <div className="mt-5 max-w-3xl rounded-2xl border border-white/15 bg-black/35 p-4 shadow-xl backdrop-blur">
+            <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-fuchsia-200">
+              <Volume2 className="h-4 w-4" /> {presenter.displayName}
+            </div>
+            <p className="text-sm leading-6 text-white/85 md:text-base">{copy.body}</p>
+          </div>
 
           {copy.nextAct ? (
             <div className="mt-7 inline-flex max-w-full items-center gap-3 rounded-lg border border-white/15 bg-black/25 px-4 py-3">

@@ -296,7 +296,7 @@ export function buildTotpTestReplay(
   const shots = buildTotpShotGrammar({
     genre: performance.genre,
     energy: energyForGenre(performance.genre),
-    performerCount: 1,
+    performerCount: Math.max(1, performance.members?.length ?? 0),
   });
   const cues = buildTotpPerformanceTimeline({
     artistName: performance.band_name,
@@ -335,7 +335,13 @@ export function buildTotpTestReplay(
       band: {
         id: performance.band_id,
         name: performance.band_name,
-        members: [],
+        members: (performance.members ?? []).map((member) => ({
+          profile_id: member.profile_id,
+          display_name: member.display_name,
+          role: member.role,
+          instrument_role: member.instrument_role,
+          vocal_role: member.vocal_role,
+        })),
       },
       song: {
         id: performance.song_id,
