@@ -98,6 +98,9 @@ export interface TotpBroadcastReplayPayload {
     title: string;
     genre: string;
     qualifyingRank: number;
+    audioUrl?: string | null;
+    audioGenerationStatus?: string | null;
+    audioDurationSeconds?: number | null;
   };
   stage: "main_stage" | "stage_b" | "rock_stage" | "studio_floor";
   performanceDurationMs: number;
