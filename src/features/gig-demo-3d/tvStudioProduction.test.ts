@@ -20,6 +20,8 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-zone-stage-b')).toBeTruthy();
     expect(root.getObjectByName('totp-zone-rock-stage')).toBeTruthy();
     expect(root.getObjectByName('totp-zone-studio-floor')).toBeTruthy();
+    expect(root.getObjectByName('totp-special-christmas')).toBeFalsy();
+    expect(root.getObjectByName('totp-special-anniversary')).toBeFalsy();
 
     const monitors = root.children.filter((child) => child.name === 'totp-studio-monitor');
     expect(monitors).toHaveLength(3);
@@ -34,6 +36,30 @@ describe('Top of the Pops TV studio production', () => {
     expect(maya?.userData.presenterKey).toBe('maya_stone');
     expect(maya?.userData.presenterDisplayName).toBe('Maya Stone');
     expect(root.getObjectByName('totp-presenter-alex-rayne')).toBeFalsy();
+  });
+
+  it('adds Christmas-only set dressing for Christmas specials', () => {
+    const root = new T.Group();
+    buildTvStudioProduction(root, resolveVenueProfile({ type: 'tv_studio', showVariant: 'christmas' }));
+
+    const special = root.getObjectByName('totp-special-christmas');
+    expect(special).toBeTruthy();
+    expect(special?.userData.showVariant).toBe('christmas');
+    expect(root.getObjectByName('totp-christmas-tree-topper')).toBeTruthy();
+    expect(root.getObjectByName('totp-christmas-present-red')).toBeTruthy();
+    expect(root.getObjectByName('totp-special-anniversary')).toBeFalsy();
+  });
+
+  it('adds anniversary-only gold set dressing for anniversary specials', () => {
+    const root = new T.Group();
+    buildTvStudioProduction(root, resolveVenueProfile({ type: 'tv_studio', showVariant: 'anniversary' }));
+
+    const special = root.getObjectByName('totp-special-anniversary');
+    expect(special).toBeTruthy();
+    expect(special?.userData.showVariant).toBe('anniversary');
+    expect(root.getObjectByName('totp-anniversary-header')).toBeTruthy();
+    expect(root.getObjectByName('totp-anniversary-emblem')).toBeTruthy();
+    expect(root.getObjectByName('totp-special-christmas')).toBeFalsy();
   });
 
   it('falls back to Alex Rayne for unknown presenter keys', () => {

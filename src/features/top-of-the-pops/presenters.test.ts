@@ -15,9 +15,11 @@ describe("Top of the Pops presenter profiles", () => {
     expect(presenter.displayName).toBe("Alex Rayne");
   });
 
-  it("labels guest and milestone editions without labelling regular shows", () => {
+  it("labels special editions without labelling regular shows", () => {
     expect(totpVariantLabel("guest_host")).toBe("Guest host edition");
     expect(totpVariantLabel("milestone")).toBe("Milestone edition");
+    expect(totpVariantLabel("christmas")).toBe("Christmas special");
+    expect(totpVariantLabel("anniversary")).toBe("Anniversary special");
     expect(totpVariantLabel("regular")).toBeNull();
   });
 });
