@@ -20,31 +20,31 @@ export function TotpTestEpisodeCard() {
     onSuccess: (result) => {
       setSelectedPerformance(null);
       toast({
-        title: "Safe test preview generated",
+        title: "Top of the Pops demo generated",
         description: `${result.selected_count} act${result.selected_count === 1 ? "" : "s"} selected from ${result.eligible_count} eligible bands. No gameplay data was changed.`,
       });
     },
-    onError: (error: Error) => toast({ title: "Could not generate test preview", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Could not generate TOTP demo", description: error.message, variant: "destructive" }),
   });
 
   const result = preview.data;
 
   return (
-    <Card className="border-dashed">
+    <Card className="border-dashed border-primary/40">
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" /> Test episode</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Top of the Pops Demo</CardTitle>
             <CardDescription className="mt-1 max-w-3xl">
-              Run the live UK chart eligibility, editorial selection, running-order and stage-assignment rules without creating a real episode. Then take any selected act through an accelerated invitation-to-archive simulation using the real TOTP 3D broadcast viewer. Nothing in test mode writes player progression.
+              Preview the complete Top of the Pops experience without waiting for a real Thursday broadcast. The demo uses the live UK chart eligibility, editorial selection, running-order and stage-assignment rules, then lets you take a selected act through an accelerated invitation-to-archive simulation using the real TOTP 3D broadcast viewer. Demo mode never writes player progression or rewards.
             </CardDescription>
           </div>
-          <Badge variant="outline" className="w-fit gap-1"><ShieldCheck className="h-3 w-3" /> Safe dry run</Badge>
+          <Badge variant="outline" className="w-fit gap-1"><ShieldCheck className="h-3 w-3" /> Safe admin demo</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button onClick={() => preview.mutate()} disabled={preview.isPending} variant="secondary">
-          <FlaskConical className="mr-2 h-4 w-4" /> {preview.isPending ? "Building preview…" : result ? "Refresh test preview" : "Run test preview"}
+        <Button onClick={() => preview.mutate()} disabled={preview.isPending}>
+          <FlaskConical className="mr-2 h-4 w-4" /> {preview.isPending ? "Building demo…" : result ? "Refresh demo lineup" : "Launch Top of the Pops demo"}
         </Button>
 
         {result && (
@@ -65,7 +65,7 @@ export function TotpTestEpisodeCard() {
                 onExit={() => setSelectedPerformance(null)}
               />
             ) : result.performances.length === 0 ? (
-              <p className="text-sm text-muted-foreground">The current chart snapshot produced no eligible test acts.</p>
+              <p className="text-sm text-muted-foreground">The current chart snapshot produced no eligible demo acts.</p>
             ) : (
               <div className="space-y-2">
                 {result.performances.map((performance) => (
@@ -82,7 +82,7 @@ export function TotpTestEpisodeCard() {
                         <Badge variant="outline">{performance.selection_bucket.replaceAll("_", " ")}</Badge>
                         <Badge variant="secondary">{performance.stage_key.replaceAll("_", " ")}</Badge>
                         <Button size="sm" variant="outline" onClick={() => setSelectedPerformance(performance)}>
-                          <Clapperboard className="mr-2 h-4 w-4" /> Run full lifecycle
+                          <Clapperboard className="mr-2 h-4 w-4" /> Run full demo lifecycle
                         </Button>
                       </div>
                     </div>
