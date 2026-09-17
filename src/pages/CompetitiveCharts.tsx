@@ -58,7 +58,7 @@ const CompetitiveCharts = () => {
             audio_url,
             audio_generation_status,
             bands (name),
-            profiles:profile_id (stage_name)
+            profiles:profile_id (display_name, username)
           )
         `)
         .eq("chart_date", new Date().toISOString().split('T')[0])
@@ -111,7 +111,11 @@ const CompetitiveCharts = () => {
       <div className="space-y-2">
         {data.map((entry, index) => {
           const song = entry.songs;
-          const artistName = song?.bands?.name || song?.profiles?.stage_name || "Unknown Artist";
+          const artistName =
+            song?.bands?.name ||
+            song?.profiles?.display_name ||
+            song?.profiles?.username ||
+            "Unknown Artist";
           const voteScore = voteScores?.[entry.song_id];
           
           return (
