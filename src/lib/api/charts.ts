@@ -13,7 +13,7 @@ type SongRelation = {
   title: string;
   genre: string | null;
   bands?: { name: string | null } | null;
-  profiles?: { stage_name: string | null } | null;
+  profiles?: { display_name: string | null; username: string | null } | null;
 };
 
 export type ChartEntryWithRelations = (Tables<"chart_entries"> & {
@@ -50,7 +50,7 @@ const SELECT_WITH_RELATIONS = `
     title,
     genre,
     bands(name),
-    profiles:profile_id(stage_name)
+    profiles:profile_id(display_name, username)
   )
 `;
 
@@ -171,7 +171,11 @@ export const fetchChartAggregates = async (
       .map(entry => ({
         rank: entry.rank ?? 0,
         title: entry.songs?.title ?? "Unknown Song",
-        artist: entry.songs?.bands?.name ?? entry.songs?.profiles?.stage_name ?? "Unknown Artist",
+        artist:
+          entry.songs?.bands?.name ??
+          entry.songs?.profiles?.display_name ??
+          entry.songs?.profiles?.username ??
+          "Unknown Artist",
       }));
 
     const latestTrend = trendSeries.at(-1)?.averageRank ?? averageRank;
