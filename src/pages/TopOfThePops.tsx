@@ -17,6 +17,7 @@ import {
 import { getTotpChartRundown } from "@/features/top-of-the-pops/chartRundownApi";
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
+import { TotpBroadcastStatusCard } from "@/features/top-of-the-pops/TotpBroadcastStatusCard";
 import { TotpFullEpisodePlayer } from "@/features/top-of-the-pops/TotpFullEpisodePlayer";
 import { TotpBackstageInterviewCard } from "@/features/top-of-the-pops/TotpBackstageInterviewCard";
 import { TotpLiveTvExtrasCard } from "@/features/top-of-the-pops/TotpLiveTvExtrasCard";
@@ -43,16 +44,22 @@ export default function TopOfThePops() {
   const invitations = useQuery({
     queryKey: ["totp", "my-invitations"],
     queryFn: listMyTotpInvitations,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const episode = useQuery({
     queryKey: ["totp", "episode", "current"],
     queryFn: () => getTotpEpisode(),
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 
   const history = useQuery({
     queryKey: ["totp", "history", "public"],
     queryFn: () => getTotpPublicHistory(null, 30),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const currentEpisodeId = episode.data?.id ?? null;
@@ -60,12 +67,16 @@ export default function TopOfThePops() {
     queryKey: ["totp", "archive", currentEpisodeId],
     queryFn: () => getTotpBroadcastArchive(currentEpisodeId),
     enabled: !!currentEpisodeId,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 
   const chartRundown = useQuery({
     queryKey: ["totp", "chart-rundown", currentEpisodeId],
     queryFn: () => getTotpChartRundown(currentEpisodeId),
     enabled: !!currentEpisodeId,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const respond = useMutation({
@@ -105,6 +116,8 @@ export default function TopOfThePops() {
   const currentPresenter = currentEpisode ? resolveTotpPresenter((currentEpisode as any).presenter_key) : null;
   const currentVariantLabel = currentEpisode ? totpVariantLabel((currentEpisode as any).show_variant) : null;
   const archiveReplays = archive.data?.replays ?? [];
+  const isLiveBroadcast = currentEpisode?.status === "broadcast";
+  const liveReplay = archiveReplays.length > 0 ? archiveReplays[archiveReplays.length - 1] : null;
   const selectedReplay = archiveReplays.find((replay) => replay.id === selectedReplayId) ?? archiveReplays[0] ?? null;
   const recentHistory = history.data ?? [];
 
@@ -125,12 +138,17 @@ export default function TopOfThePops() {
         </div>
       </section>
 
+      {currentEpisode && <TotpBroadcastStatusCard episode={currentEpisode} archiveReady={archiveReplays.length > 0} />}
+
       {currentEpisode && (
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2"><Radio className="h-5 w-5" /> Episode #{currentEpisode.episode_number}</CardTitle>
-              {currentVariantLabel && <Badge variant="secondary">{currentVariantLabel}</Badge>}
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{currentEpisode.status.replaceAll("_", " ")}</Badge>
+                {currentVariantLabel && <Badge variant="secondary">{currentVariantLabel}</Badge>}
+              </div>
             </div>
             <CardDescription>
               Broadcast {formatDateTime(currentEpisode.broadcast_at)} · Presenter: {currentPresenter?.displayName ?? "Alex Rayne"}
@@ -154,7 +172,20 @@ export default function TopOfThePops() {
         </Card>
       )}
 
-      {archiveReplays.length > 0 && (
+      {isLiveBroadcast && liveReplay && (
+        <section className="space-y-3" data-totp-live-studio-feed>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold"><Radio className="h-5 w-5" /> Live studio feed</h2>
+              <p className="text-sm text-muted-foreground">Future acts stay locked until their scheduled airtime. The feed advances automatically as the programme progresses.</p>
+            </div>
+            <Badge>On air · act {liveReplay.payload.runningOrder}</Badge>
+          </div>
+          <TotpArchivePlayer key={`live:${liveReplay.id}`} replay={liveReplay} autoPlay />
+        </section>
+      )}
+
+      {!isLiveBroadcast && archiveReplays.length > 0 && (
         <section className="space-y-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
