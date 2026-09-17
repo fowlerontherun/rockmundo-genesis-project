@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, Flame, RadioTower, Sparkles, Users, Wrench } from "lucide-react";
+import { Activity, Flame, MessageSquareMore, RadioTower, Sparkles, Users, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,11 @@ import {
   type TotpIncidentRecoveryChoice,
   type TotpPerformanceStyleChoice,
 } from "./liveTvApi";
+import {
+  chooseTotpPostShowInteraction,
+  getMyTotpPostShowInteractions,
+  type TotpPostShowChoice,
+} from "./postShowApi";
 import { totpAudienceReactionLabel } from "./studioAudience";
 
 interface TotpLiveTvExtrasCardProps {
@@ -57,6 +62,23 @@ const RECOVERY_COPY: Record<string, Array<{
   ],
 };
 
+const POSTSHOW_PROMPTS: Record<string, string> = {
+  press_line: "The performance is over and the press line is forming outside the green room.",
+  fan_barrier: "You can hear fans calling for the band at the barrier outside the television centre.",
+  green_room_wrap: "The cameras are down, the adrenaline is still high, and the green room is starting to empty.",
+  producer_chat: "A RockMundo Television producer asks if the band can stay for a quick post-show conversation.",
+};
+
+const POSTSHOW_CHOICES: Array<{
+  key: TotpPostShowChoice;
+  title: string;
+  description: string;
+}> = [
+  { key: "press", title: "Stay for the press", description: "Lean into the television moment. Strongest media boost with a small reputation gain." },
+  { key: "fans", title: "Go meet the fans", description: "Spend the time at the barrier. Strongest fan-sentiment gain with a little extra buzz." },
+  { key: "band", title: "Decompress with the band", description: "Skip the circus and regroup together. Strongest reputation gain with a small fan benefit." },
+];
+
 function signed(value: number | undefined) {
   const numeric = Number(value ?? 0);
   return `${numeric >= 0 ? "+" : ""}${numeric}`;
@@ -69,9 +91,14 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
     queryKey: ["totp", "live-tv-extras"],
     queryFn: getMyTotpLiveTvExtras,
   });
+  const postShow = useQuery({
+    queryKey: ["totp", "postshow"],
+    queryFn: getMyTotpPostShowInteractions,
+  });
 
   const event = extras.data?.events.find((row) => row.invitation_id === invitationId) ?? null;
   const style = extras.data?.styles.find((row) => row.invitation_id === invitationId) ?? null;
+  const followUp = postShow.data?.find((row) => row.invitation_id === invitationId) ?? null;
 
   const chooseStyle = useMutation({
     mutationFn: (choice: Exclude<TotpPerformanceStyleChoice, "house_direction">) => {
@@ -111,13 +138,34 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
     }),
   });
 
-  if (extras.isLoading || (!event && !style)) return null;
+  const choosePostShow = useMutation({
+    mutationFn: (choice: TotpPostShowChoice) => {
+      if (!followUp) throw new Error("The post-show green-room choice is not ready yet.");
+      return chooseTotpPostShowInteraction(followUp.id, choice);
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Post-show choice locked",
+        description: `Reputation ${signed(result.effects.reputation)}, fan sentiment ${signed(result.effects.fan_sentiment)}, media ${signed(result.effects.media_intensity)}.`,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["totp", "postshow"] });
+    },
+    onError: (error: Error) => toast({
+      title: "Could not save post-show choice",
+      description: error.message,
+      variant: "destructive",
+    }),
+  });
+
+  if ((extras.isLoading || postShow.isLoading) && !event && !style && !followUp) return null;
+  if (!event && !style && !followUp) return null;
 
   const selectedStyle = STYLE_CHOICES.find((choice) => choice.key === style?.selected_style) ?? null;
   const recoveryChoices = event ? RECOVERY_COPY[event.event_key] ?? [] : [];
   const audienceReaction = Number(event?.audience_reaction ?? 0) + Number(style?.selected_style ? style.audience_reaction : 0);
   const audienceMeter = Math.max(0, Math.min(100, 50 + audienceReaction * 8));
   const audienceLabel = totpAudienceReactionLabel(audienceReaction);
+  const selectedPostShow = POSTSHOW_CHOICES.find((choice) => choice.key === followUp?.selected_choice) ?? null;
 
   return (
     <Card className="border-amber-500/20 bg-amber-500/5">
@@ -127,23 +175,25 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
             <CardTitle className="flex items-center gap-2 text-base">
               <RadioTower className="h-4 w-4" /> Live television production
             </CardTitle>
-            <CardDescription>Studio incidents and the performance approach for tonight&apos;s broadcast.</CardDescription>
+            <CardDescription>Studio incidents, performance direction and the post-show green room.</CardDescription>
           </div>
           <Badge variant="secondary"><Users className="mr-1 h-3 w-3" /> Audience: {audienceLabel}</Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="rounded-lg border bg-background/70 p-4">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" /> Studio audience</div>
-            <Badge variant="secondary">{audienceLabel} · {signed(audienceReaction)}</Badge>
+        {(event || style) && (
+          <div className="rounded-lg border bg-background/70 p-4">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" /> Studio audience</div>
+              <Badge variant="secondary">{audienceLabel} · {signed(audienceReaction)}</Badge>
+            </div>
+            <Progress value={audienceMeter} className="mt-3 h-2" />
+            <p className="mt-2 text-xs text-muted-foreground">
+              The locked reaction drives the canonical 3D studio crowd density and how tightly fans press toward the performance area.
+            </p>
           </div>
-          <Progress value={audienceMeter} className="mt-3 h-2" />
-          <p className="mt-2 text-xs text-muted-foreground">
-            The locked reaction now drives the canonical 3D studio crowd density and how tightly fans press toward the performance area.
-          </p>
-        </div>
+        )}
 
         {event && (
           <div className="rounded-lg border bg-background/70 p-4">
@@ -243,9 +293,51 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          Production events and raw-live risk are seeded from the invitation, so refreshing cannot reroll the outcome.
-        </p>
+        {followUp && (
+          <div className="space-y-3 border-t pt-4">
+            <div>
+              <div className="flex items-center gap-2 font-medium"><MessageSquareMore className="h-4 w-4 text-violet-500" /> After the cameras stop</div>
+              <p className="mt-1 text-sm text-muted-foreground">{POSTSHOW_PROMPTS[followUp.prompt_key] ?? POSTSHOW_PROMPTS.green_room_wrap}</p>
+            </div>
+
+            {followUp.resolved_at ? (
+              <div className="rounded-lg border bg-background/70 p-4">
+                <div className="font-medium">{selectedPostShow?.title ?? followUp.selected_choice?.replaceAll("_", " ")}</div>
+                <p className="mt-1 text-sm text-muted-foreground">{selectedPostShow?.description}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  {Number(followUp.effects.reputation ?? 0) !== 0 && <Badge variant="outline">Reputation {signed(followUp.effects.reputation)}</Badge>}
+                  {Number(followUp.effects.fan_sentiment ?? 0) !== 0 && <Badge variant="outline">Fan sentiment {signed(followUp.effects.fan_sentiment)}</Badge>}
+                  {Number(followUp.effects.media_intensity ?? 0) !== 0 && <Badge variant="outline">Media {signed(followUp.effects.media_intensity)}</Badge>}
+                  <Badge variant="secondary">0 extra fame</Badge>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-2 lg:grid-cols-3">
+                {POSTSHOW_CHOICES.map((choice) => (
+                  <Button
+                    key={choice.key}
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal p-3 text-left"
+                    onClick={() => choosePostShow.mutate(choice.key)}
+                    disabled={choosePostShow.isPending}
+                  >
+                    <span>
+                      <span className="font-medium">{choice.title}</span>
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">{choice.description}</span>
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Post-show choices never change fame, chart position, cash or future eligibility.</p>
+          </div>
+        )}
+
+        {(event || style) && (
+          <p className="text-xs text-muted-foreground">
+            Production events and raw-live risk are seeded from the invitation, so refreshing cannot reroll the outcome.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
