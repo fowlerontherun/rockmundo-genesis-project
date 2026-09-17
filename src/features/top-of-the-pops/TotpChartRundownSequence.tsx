@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { TotpChartRundown, TotpChartRundownEntry } from "./chartRundownApi";
 import { buildTotpChartRundownPages } from "./chartRundown";
+import { resolveTotpPresenter } from "./presenters";
+import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 
 const PAGE_DURATION_MS = 5_000;
 
 export interface TotpChartRundownSequenceProps {
   rundown: TotpChartRundown;
   autoPlay?: boolean;
+  presenterKey?: string | null;
   onEnded?: () => void;
 }
 
@@ -30,11 +33,12 @@ function formatActivity(value: number) {
   return new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
 }
 
-export function TotpChartRundownSequence({ rundown, autoPlay = false, onEnded }: TotpChartRundownSequenceProps) {
+export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterKey = "alex_rayne", onEnded }: TotpChartRundownSequenceProps) {
   const pages = useMemo(() => buildTotpChartRundownPages(rundown), [rundown]);
   const [pageIndex, setPageIndex] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const page = pages[pageIndex] ?? null;
+  const presenter = resolveTotpPresenter(presenterKey);
 
   const advance = useCallback(() => {
     if (pageIndex >= pages.length - 1) {
@@ -44,6 +48,35 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, onEnded }:
     setElapsedMs(0);
     setPageIndex((index) => Math.min(pages.length - 1, index + 1));
   }, [onEnded, pageIndex, pages.length]);
+
+  useEffect(() => {
+    if (!autoPlay || !page || pageIndex !== 0 || typeof window === "undefined") return;
+    const recordedUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart"));
+    let cancelled = false;
+    let recorded: HTMLAudioElement | null = null;
+    const fallback = () => {
+      if (cancelled || !("speechSynthesis" in window)) return;
+      const utterance = new SpeechSynthesisUtterance("And now, let's take a look at this week's UK charts.");
+      utterance.rate = 0.98;
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
+      if (preferred) utterance.voice = preferred;
+      window.speechSynthesis.speak(utterance);
+    };
+    void fetch(recordedUrl, { method: "HEAD" })
+      .then((response) => {
+        if (!response.ok || cancelled) { fallback(); return; }
+        recorded = new Audio(recordedUrl);
+        recorded.volume = 0.95;
+        void recorded.play().catch(fallback);
+      })
+      .catch(fallback);
+    return () => {
+      cancelled = true;
+      recorded?.pause();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    };
+  }, [autoPlay, page, pageIndex, presenter.key]);
 
   useEffect(() => {
     if (!autoPlay || !page) return;
