@@ -99,7 +99,7 @@ BEGIN
     LEFT JOIN track_counts tc ON tc.release_id = rf.release_id
     WHERE rf.format_type = 'digital'
       AND rs.country = 'United Kingdom'
-      AND rs.sale_date >= p_chart_date::timestamp
+      AND rs.sale_date >= (p_chart_date - 6)::timestamp
       AND rs.sale_date < (p_chart_date + 1)::timestamp
       AND s.status = 'recorded'
       AND coalesce(s.archived, false) = false
