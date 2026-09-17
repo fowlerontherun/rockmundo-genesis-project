@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { TotpArchivedBandMember, TotpBroadcastReplay } from './api';
 import { archivedPlayerModels } from './TotpArchivePlayer';
 
 const PROFILE_ID = '11111111-1111-4111-8111-111111111111';
 
-function replayWithMember(member: Record<string, unknown>) {
+function replayWithMember(member: TotpArchivedBandMember): TotpBroadcastReplay {
   return {
     id: 'replay-1',
     performance_id: 'perf-1',
@@ -21,7 +22,7 @@ function replayWithMember(member: Record<string, unknown>) {
       song: { id: 'song-1', title: 'Test Song', genre: 'rock', qualifyingRank: 10 },
       stage: 'main_stage', performanceDurationMs: 187000, totalDurationMs: 198000, cues: [],
     },
-  } as any;
+  };
 }
 
 describe('Top of the Pops archived performer visuals', () => {
