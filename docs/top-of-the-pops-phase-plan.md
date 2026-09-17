@@ -77,15 +77,31 @@ Remaining polish within Phase 3:
 
 ## Phase 4 — Rewards, history and achievements
 
-Next major phase.
+Implemented substantially in PR #1921.
 
-- Fame reward after a completed appearance; no cash payment.
-- Rank-sensitive fame tiers with diminishing lifetime returns.
-- Permanent episode archive and appearance history.
-- First appearance, Top 20, Top 10, #1, 5/10/25/50 appearance achievements.
-- Profile statistic for Top of the Pops appearances.
-- Twaater/media reaction events after broadcast.
-- Rewards must be written exactly once by the authoritative completion path and never by archive playback.
+- Added an admin-only idempotent performance-completion path. A performance can be settled repeatedly after a network retry, but fame/history/achievements are written only once.
+- Rank-sensitive raw fame rewards: #1 is highest, followed by #2–3, Top 10, Top 20, Top 30 and #31–40.
+- First TV appearance receives a modest 20% fame lift.
+- Repeat appearances use a diminishing-return curve with a 60% floor, preventing Top of the Pops from becoming a farmable fame loop.
+- Fame also follows RockMundo's existing collective-fame long-tail progression factor, so established global acts do not gain disproportionately large jumps.
+- No cash reward is paid and the completion path never changes chart positions.
+- Collective band fame is updated and audited in `band_fame_events` with the performance, episode, chart rank and both diminishing factors recorded.
+- Active core band members receive a smaller personal-fame share; touring/NPC members are excluded.
+- Added permanent `totp_appearance_history` with episode, song, chart rank, stage, appearance number and settled fame.
+- Added public history and band-stat RPCs for appearances, best chart rank, #1 appearances, Top 10 appearances and total TOTP fame.
+- Added player-facing Top of the Pops history to the main show page.
+- Added admin settlement status beside every act in the running order.
+- Seeded eight achievements: TV Debut, Top 20 Performer, Top 10 Performer, Top of the Pops (#1), Household Name (5), Television Regular (10), Pop Institution (25) and Legend of the Pops (50).
+- Achievement settlement is compatible with the current live legacy achievement schema and with the later canonical achievement migration.
+- Added a small TOTP achievement-settlement bridge so achievement unlocks are idempotent even before canonical source-event fields reach production.
+- Added notification deep-link metadata for completed appearances.
+- Live schema was checked before finalising the migration; TOTP no longer assumes the not-yet-live canonical achievement columns/functions.
+
+Remaining within Phase 4:
+
+- Surface `totp_band_stats` directly on the main public band profile / band fame page.
+- Add Twaater/media reaction events after broadcasts.
+- Add achievement-specific presentation polish (special badge art/title treatments) if desired.
 
 ## Phase 5 — Interactive television production
 
