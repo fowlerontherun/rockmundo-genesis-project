@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TopOfThePopsStatsCard } from "@/features/top-of-the-pops/TopOfThePopsStatsCard";
 import { 
   Globe, MapPin, Users, TrendingUp, Star, 
   Heart, Flame, Crown, BarChart3 
@@ -227,6 +228,8 @@ export function FameFansOverview({ bandId }: FameFansOverviewProps) {
           </div>
         </CardContent>
       </Card>
+
+      <TopOfThePopsStatsCard bandId={bandId} />
 
       {/* Detailed Tabs */}
       <Tabs defaultValue="countries" className="w-full">
