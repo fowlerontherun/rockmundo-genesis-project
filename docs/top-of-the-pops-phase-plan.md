@@ -32,7 +32,7 @@ Implemented in PR #1921.
 
 ## Phase 2.5 — Route/navigation integration
 
-Next.
+Pending final route patch.
 
 - Add `/top-of-the-pops` to the authenticated application route tree.
 - Add `/admin/top-of-the-pops` behind `AdminRoute`.
@@ -40,18 +40,32 @@ Next.
 - Route Top of the Pops notification clicks to the invitation page.
 - Add dashboard callouts for upcoming broadcasts and outstanding invitations.
 
+The page components and APIs are implemented. The remaining work is confined to the large central route/navigation files, which should be patched without replacing unrelated route content.
+
 ## Phase 3 — 3D television studio integration
 
-Next after route integration.
+In progress in PR #1921.
 
-- Add `totp` presentation mode to the shared 3D Gig Viewer shell.
-- Create permanent London television studio scene.
-- Support multiple performance zones and visible television cameras.
-- Add presenter model and presenter-to-performance transitions.
-- Implement music-aware broadcast direction using song sections/events.
-- Add crane sweeps, pedestal/handheld framing, performer close-ups, instrument shots, audience reverses and studio-master shots.
-- Add broadcast lower-thirds, chart-position graphics and show branding.
-- Keep free-camera disabled for the canonical broadcast replay.
+Implemented:
+
+- Added `presentationMode="totp"` to the shared `GigCanvas` / `GigStage3D` renderer path.
+- Added a dedicated `tv_studio` venue profile to the existing 3D venue engine rather than creating a second renderer.
+- The television centre uses a compact house-production room, low roof, dense standing audience and dedicated TOTP presentation identity.
+- TOTP continues to use the existing player avatars, clothing, instruments, performer reconstruction, crowd tuning and WebGL `ConcertScene`.
+- Added deterministic presenter/performance broadcast timelines.
+- Added TOTP camera-shot vocabulary mapped onto the existing 3D camera system.
+- Added a broadcast wrapper that overlays show branding, Alex Rayne presenter captions and chart lower-thirds over the shared 3D renderer.
+- Added reduced-motion fallback to the stable studio-master shot.
+- Added tests for camera targeting, timeline construction and the TV-studio venue profile.
+
+Next within Phase 3:
+
+- Add visible pedestal cameras, handheld operators and a crane/jib to the `tv_studio` scene geometry.
+- Add a presenter 3D model/position rather than caption-only presenter sequences.
+- Add dedicated studio camera transforms beyond the current mapping to shared camera presets.
+- Persist/reconstruct a canonical TOTP performance replay so every broadcast can be watched again from the archive.
+- Connect the episode viewer page to that canonical replay.
+- Add multiple performance-zone geometry to match `main_stage`, `stage_b`, `rock_stage` and `studio_floor` assignments.
 
 ## Phase 4 — Rewards, history and achievements
 
