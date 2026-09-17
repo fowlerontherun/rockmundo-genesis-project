@@ -27,12 +27,12 @@ BEGIN
         jsonb_agg(
           jsonb_build_object(
             'profile_id', bm.profile_id,
-            'display_name', coalesce(p.stage_name, p.display_name, p.username, 'Band member'),
+            'display_name', coalesce(nullif(p.display_name, ''), nullif(p.username, ''), 'Band member'),
             'role', coalesce(nullif(bm.role, ''), 'member'),
             'instrument_role', bm.instrument_role,
             'vocal_role', bm.vocal_role
           )
-          ORDER BY coalesce(p.stage_name, p.display_name, p.username, ''), bm.id
+          ORDER BY coalesce(nullif(p.display_name, ''), nullif(p.username, ''), ''), bm.id
         ) FILTER (WHERE bm.profile_id IS NOT NULL),
         '[]'::jsonb
       ) AS members
