@@ -16,6 +16,7 @@ import {
 } from "@/features/top-of-the-pops/api";
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
+import { TotpFullEpisodePlayer } from "@/features/top-of-the-pops/TotpFullEpisodePlayer";
 import { TotpBackstageInterviewCard } from "@/features/top-of-the-pops/TotpBackstageInterviewCard";
 import { TotpLiveTvExtrasCard } from "@/features/top-of-the-pops/TotpLiveTvExtrasCard";
 import { Archive, CalendarDays, History, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
@@ -138,7 +139,7 @@ export default function TopOfThePops() {
       )}
 
       {archiveReplays.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="flex items-center gap-2 text-xl font-semibold"><Archive className="h-5 w-5" /> Broadcast archive</h2>
@@ -147,22 +148,27 @@ export default function TopOfThePops() {
             <Badge variant="secondary">{archiveReplays.length} archived performance{archiveReplays.length === 1 ? "" : "s"}</Badge>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {archiveReplays.map((replay) => (
-              <Button
-                key={replay.id}
-                variant={selectedReplay?.id === replay.id ? "default" : "outline"}
-                size="sm"
-                className="shrink-0"
-                onClick={() => setSelectedReplayId(replay.id)}
-              >
-                <Play className="mr-2 h-3.5 w-3.5" />
-                {replay.payload.runningOrder}. {replay.payload.band.name} — {replay.payload.song.title}
-              </Button>
-            ))}
-          </div>
+          <TotpFullEpisodePlayer replays={archiveReplays} />
 
-          {selectedReplay && <TotpArchivePlayer replay={selectedReplay} />}
+          <div className="border-t pt-4">
+            <p className="mb-2 text-sm font-medium">Or jump directly to an individual performance</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {archiveReplays.map((replay) => (
+                <Button
+                  key={replay.id}
+                  variant={selectedReplay?.id === replay.id ? "default" : "outline"}
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setSelectedReplayId(replay.id)}
+                >
+                  <Play className="mr-2 h-3.5 w-3.5" />
+                  {replay.payload.runningOrder}. {replay.payload.band.name} — {replay.payload.song.title}
+                </Button>
+              ))}
+            </div>
+
+            {selectedReplay && <div className="mt-3"><TotpArchivePlayer replay={selectedReplay} /></div>}
+          </div>
         </section>
       )}
 
