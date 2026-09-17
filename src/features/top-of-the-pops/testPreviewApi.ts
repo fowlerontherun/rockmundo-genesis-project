@@ -28,7 +28,7 @@ export interface TotpTestPreviewPerformance {
   selection_bucket: "top10" | "11_20" | "21_40" | string;
   stage_key: "main_stage" | "stage_b" | "rock_stage" | "studio_floor" | string;
   presenter_intro: string;
-  members: TotpTestPreviewBandMember[];
+  members?: TotpTestPreviewBandMember[];
 }
 
 export interface TotpAdminTestPreview {
