@@ -5,17 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
 import { TotpArchivePlayer } from "./TotpArchivePlayer";
+import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
+import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
 
 export interface TotpFullEpisodePlayerProps {
   replays: TotpBroadcastReplay[];
 }
 
 export function orderTotpEpisodeReplays(replays: TotpBroadcastReplay[]): TotpBroadcastReplay[] {
-  return [...replays].sort((a, b) => {
-    const runningOrder = Number(a.payload.runningOrder) - Number(b.payload.runningOrder);
-    return runningOrder !== 0 ? runningOrder : a.id.localeCompare(b.id);
-  });
+  return orderTotpProgrammeReplays(replays);
 }
 
 export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
@@ -23,36 +22,57 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [continuous, setContinuous] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  const [continuityKind, setContinuityKind] = useState<TotpContinuityKind | null>(null);
   const current = ordered[currentIndex] ?? null;
 
   if (!current) return null;
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
+  const fullEpisodeRunning = showIntro || continuityKind !== null || continuous;
+
   const goTo = (index: number) => {
     setShowIntro(false);
+    setContinuityKind(null);
     setContinuous(false);
     setCurrentIndex(Math.max(0, Math.min(ordered.length - 1, index)));
   };
-  const next = () => {
-    if (currentIndex < ordered.length - 1) {
-      setCurrentIndex((index) => index + 1);
-    } else {
-      setContinuous(false);
-    }
-  };
+
   const startFullEpisode = () => {
     setCurrentIndex(0);
+    setContinuityKind(null);
     setContinuous(false);
     setShowIntro(true);
   };
+
   const stopFullEpisode = () => {
     setShowIntro(false);
+    setContinuityKind(null);
     setContinuous(false);
   };
+
   const finishIntro = () => {
     setShowIntro(false);
     setContinuous(true);
+    setContinuityKind("opening");
+  };
+
+  const finishAct = () => {
+    setContinuityKind(currentIndex < ordered.length - 1 ? "between" : "closing");
+  };
+
+  const finishContinuity = () => {
+    if (continuityKind === "opening") {
+      setContinuityKind(null);
+      return;
+    }
+    if (continuityKind === "between") {
+      setCurrentIndex((index) => Math.min(ordered.length - 1, index + 1));
+      setContinuityKind(null);
+      return;
+    }
+    setContinuityKind(null);
+    setContinuous(false);
   };
 
   return (
@@ -64,14 +84,24 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
               <ListVideo className="h-4 w-4" /> Full episode playback
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Play the programme intro, then the archived running order as one continuous television show. Archive playback never awards fame, XP or money.
+              Play the programme intro, presenter continuity, tonight's locked chart-act rundown and archived running order as one continuous television show. Archive playback never awards fame, XP or money.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">{showIntro ? "Programme intro" : `Act ${currentIndex + 1} of ${ordered.length}`}</Badge>
-            <Button size="sm" onClick={showIntro || continuous ? stopFullEpisode : startFullEpisode}>
-              {showIntro || continuous ? <PauseCircle className="mr-2 h-4 w-4" /> : <PlayCircle className="mr-2 h-4 w-4" />}
-              {showIntro || continuous ? "Stop full episode" : "Play full episode"}
+            <Badge variant="secondary">
+              {showIntro
+                ? "Programme intro"
+                : continuityKind
+                  ? continuityKind === "opening"
+                    ? "Studio opening"
+                    : continuityKind === "between"
+                      ? "Presenter link"
+                      : "Programme close"
+                  : `Act ${currentIndex + 1} of ${ordered.length}`}
+            </Badge>
+            <Button size="sm" onClick={fullEpisodeRunning ? stopFullEpisode : startFullEpisode}>
+              {fullEpisodeRunning ? <PauseCircle className="mr-2 h-4 w-4" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+              {fullEpisodeRunning ? "Stop full episode" : "Play full episode"}
             </Button>
           </div>
         </div>
@@ -81,7 +111,7 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
             <Button
               key={replay.id}
               size="sm"
-              variant={!showIntro && index === currentIndex ? "default" : "outline"}
+              variant={!showIntro && continuityKind === null && index === currentIndex ? "default" : "outline"}
               onClick={() => goTo(index)}
               className="h-auto whitespace-normal text-left"
             >
@@ -93,16 +123,24 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
 
       {showIntro ? (
         <TotpShowIntro playing onEnded={finishIntro} />
+      ) : continuityKind ? (
+        <TotpProgrammeContinuity
+          kind={continuityKind}
+          replays={ordered}
+          currentIndex={currentIndex}
+          autoPlay={continuous}
+          onEnded={finishContinuity}
+        />
       ) : (
         <TotpArchivePlayer
           key={`${current.id}:${continuous ? "auto" : "manual"}`}
           replay={current}
           autoPlay={continuous}
-          onEnded={continuous ? next : undefined}
+          onEnded={continuous ? finishAct : undefined}
         />
       )}
 
-      {!showIntro && (
+      {!showIntro && continuityKind === null && !continuous ? (
         <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={() => goTo(currentIndex - 1)} disabled={currentIndex === 0}>
             <SkipBack className="mr-2 h-4 w-4" /> Previous act
@@ -111,7 +149,7 @@ export function TotpFullEpisodePlayer({ replays }: TotpFullEpisodePlayerProps) {
             Next act <SkipForward className="ml-2 h-4 w-4" />
           </Button>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
