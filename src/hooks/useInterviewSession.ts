@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { useToast } from "@/hooks/use-toast";
 import type { InterviewQuestion, InterviewAnswer, InterviewPhase } from "@/data/interviewQuestions";
 
 interface PendingInterview {
@@ -41,7 +42,8 @@ const questionCountForMedia = (mediaType: string) => {
 const shuffled = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
 
 export const useInterviewSession = () => {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
+  const { toast } = useToast();
   const { data: primaryBandRecord } = usePrimaryBand();
   const bandId = primaryBandRecord?.bands?.id || null;
 
@@ -201,11 +203,11 @@ export const useInterviewSession = () => {
   }, [phase, currentIndex, handleAnswer]);
 
   const finishInterview = useCallback(async () => {
-    if (!pending || !totalEffects || !profileId || !bandId) return;
+    if (!pending || !totalEffects || !userId || !bandId) return;
     setLoading(true);
     try {
       const { error: resultError } = await (supabase as any).from("interview_results").insert({
-        user_id: profileId,
+        user_id: userId,
         band_id: bandId,
         offer_id: pending.offerId,
         media_type: pending.mediaType,
@@ -235,10 +237,21 @@ export const useInterviewSession = () => {
       setPending(null);
       setPhase("intro");
       checkedRef.current = false;
+      toast({
+        title: "Interview complete",
+        description: "Your PR interview results have been saved and the appearance is complete.",
+      });
+    } catch (error) {
+      console.error("Failed to finish PR interview", error);
+      toast({
+        title: "Couldn't finish interview",
+        description: error instanceof Error ? error.message : "The interview could not be completed. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [pending, totalEffects, profileId, bandId, answers]);
+  }, [pending, totalEffects, userId, bandId, answers, toast]);
 
   return {
     pending,
