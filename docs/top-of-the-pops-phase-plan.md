@@ -51,12 +51,12 @@ Implemented substantially in PR #1921.
 - The television centre uses a compact house-production room, low roof, dense standing audience and dedicated TOTP presentation identity.
 - TOTP continues to use the existing player avatars, clothing, instruments, performer reconstruction, crowd tuning and WebGL `ConcertScene`.
 - Added deterministic presenter/performance broadcast timelines.
-- Added a broadcast wrapper that overlays show branding, Alex Rayne presenter captions and chart lower-thirds over the shared 3D renderer.
+- Added a broadcast wrapper that overlays show branding, presenter captions and chart lower-thirds over the shared 3D renderer.
 - Added reduced-motion fallback to the stable studio-master shot.
 - Added physical TV-production geometry inside `tv_studio` only: two pedestal cameras/operators, a handheld camera/operator, a jib/crane and three studio monitors.
-- Added Alex Rayne as a physical in-scene presenter on a dedicated rostrum/backdrop, while keeping the caption layer for accessibility and readable dialogue.
+- Added a physical in-scene presenter on a dedicated rostrum/backdrop, while keeping the caption layer for accessibility and readable dialogue.
 - Added dedicated studio camera transforms for presenter wide/close, crane sweeps, overhead, audience reverse, side tracking and low-angle performance shots.
-- Presenter and performance timeline cues now drive those dedicated camera IDs directly through `GigStage3D` into `ConcertScene`, producing real Alex Rayne -> stage broadcast cuts.
+- Presenter and performance timeline cues now drive those dedicated camera IDs directly through `GigStage3D` into `ConcertScene`.
 - Crane/tracking transforms use restrained deterministic movement while the external replay clock keeps seeking/replays stable.
 - Added four physical performance zones: `main_stage`, `stage_b`, `rock_stage` and `studio_floor`.
 - Locked running-order stage assignment now reaches performer reconstruction, so archived/live acts render in the correct studio zone.
@@ -68,8 +68,9 @@ Implemented substantially in PR #1921.
 - The Top of the Pops page can select and replay archived performances through the real television-studio renderer.
 - Added tests proving the TV studio gets the production objects and normal gig venues do not.
 - Added tests for camera targeting, timeline construction, TV-studio geometry and archive payload shape.
-- Canonical replay v2 now snapshots the final live-TV incident, recovery, performance style and audience reaction after the performance settles.
+- Canonical replay v2 snapshots the final live-TV incident, recovery, performance style and audience reaction after the performance settles.
 - The locked audience reaction drives the actual shared 3D crowd-tuning system, changing density, stage pull and crowd movement while leaving gameplay untouched.
+- Canonical replay v3 also freezes presenter identity and show variant so old broadcasts always reconstruct the host and edition that originally aired.
 
 Remaining polish within Phase 3:
 
@@ -108,11 +109,9 @@ Implemented in PR #1921.
 
 ## Phase 5 — Interactive television production
 
-In progress in PR #1921.
+Implemented substantially in PR #1921.
 
-Implemented:
-
-- Added one deterministic Alex Rayne backstage interview per successfully checked-in invitation.
+- Added one deterministic backstage interview per successfully checked-in invitation.
 - Interview prompt is seeded from the invitation/episode so refreshes and retries cannot reroll the question.
 - Only the band leader can submit the interview response.
 - Three visible response styles: confident, humble and cheeky.
@@ -120,7 +119,7 @@ Implemented:
 - Effects are stored once in `totp_backstage_interactions` and remain visible after resolution.
 - Interview choices never alter chart positions, Top of the Pops eligibility or cash.
 - Added one deterministic harmless production incident per checked-in act: camera rehearsal, fan chant, broken rehearsal string, floor-manager scramble, green-room encounter or mic check.
-- Broken-string and floor-manager incidents now have one-time leader recovery choices: professional, improvise or showman, with incident-specific copy/effects.
+- Broken-string and floor-manager incidents have one-time leader recovery choices: professional, improvise or showman, with incident-specific copy/effects.
 - Missing recovery choices safely fall back to a neutral professional response when the canonical broadcast locks; this gives no bonus.
 - Added leader-selected performance styles: polished, crowd-first and raw-live.
 - Raw-live success/failure is deterministic from the invitation, preventing refresh-based rerolls.
@@ -128,15 +127,22 @@ Implemented:
 - If no style is chosen before settlement/archive lock, the broadcast uses neutral `house_direction` with a 1.00 fame multiplier.
 - Added a combined studio-audience reaction meter: Nervous, Settled, Warm, Loud or Roaring.
 - Final reaction is frozen into replay v2 and drives the real shared Gig Viewer crowd tuning during archive playback.
-- Admin archive controls now remain disabled until every performance in the episode is settled.
+- Admin archive controls remain disabled until every performance in the episode is settled.
 - The database independently rejects canonical replay creation before a performance is completed, so archive integrity does not depend on the admin UI.
-- All interaction effects remain independent of chart position, cash payout and future TOTP eligibility.
+- Added deterministic presenter rotation: regular episodes use Alex Rayne, every fifth episode is a guest-host edition rotating Maya Stone, Jack Mercer and Nia Vale, and every 25th episode is a milestone edition hosted by Alex.
+- Guest presenters have distinct presenter scripts and physical 3D presenter palettes while reusing the same rostrum/camera-blocking system.
+- Presenter identity and show variant are frozen into canonical replay v3 and reconstructed during archive playback.
+- Added guest-presenter regression tests and safe fallback to Alex for unknown presenter keys.
+- Added one deterministic post-performance green-room interaction after an appearance settles.
+- The band leader can stay for the press, meet the fans or decompress with the band; effects are limited to reputation, fan sentiment and media intensity.
+- Post-show choices explicitly grant no extra fame and never change chart position, cash or future TOTP eligibility.
+- All interaction effects remain independent of chart position, cash payout and future TOTP eligibility unless explicitly documented as the tightly bounded performance-style fame modifier.
 
 Next within Phase 5:
 
-- Add guest presenters and milestone-special interaction variants.
-- Add optional post-performance green-room choices/reactions.
 - Expand television-specific crowd animation intensity beyond the current density/stage-pull tuning.
+- Add more post-show prompt variants tied to milestones, chart position and special editions.
+- Add richer presenter-specific backstage questions for guest-host episodes.
 
 ## Phase 6 — Specials
 
