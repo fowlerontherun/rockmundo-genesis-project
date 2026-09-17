@@ -120,6 +120,7 @@ const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 // TourManagerNew removed - using TourManager instead
 // StreamingNew removed in v1.1.194 — consolidated into StreamingPlatforms
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
+const TopOfThePops = lazyWithRetry(() => import("./pages/TopOfThePops"));
 // const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
 const FestivalLegacyPage = lazyWithRetry(() => import("./pages/festivals/FestivalLegacyPage"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
@@ -146,6 +147,7 @@ const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const AdminGigViewerDemo = lazyWithRetry(() => import("./pages/admin/GigViewerDemo"));
 const AdminGigViewerReplayAudit = lazyWithRetry(() => import("./pages/admin/GigViewerReplayAudit"));
+const TopOfThePopsAdmin = lazyWithRetry(() => import("./pages/admin/TopOfThePopsAdmin"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const TwaaterProfileView = lazyWithRetry(() => import("./pages/TwaaterProfileView"));
 const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagView"));
@@ -419,6 +421,7 @@ const ROUTE_TITLES = new Map<string, string>([
   ["/rehearsal-studio-business/:studioId", "Rehearsal Studio Business"],
   ["/recording-studio-business/:studioId", "Recording Studio Business"],
   ["/family/child/:childId", "Child Detail"],
+  ["/admin/top-of-the-pops", "Top of the Pops Admin"],
 ]);
 
 for (const module of FM_MODULES) {
@@ -546,6 +549,7 @@ function App() {
                     <Route path="streaming" element={<Navigate to="/streaming-platforms" replace />} />
                     <Route path="streaming/dashboard" element={<StreamingRevenueDashboard />} />
                     <Route path="music/charts" element={<ChartsPage />} />
+                    <Route path="top-of-the-pops" element={<TopOfThePops />} />
                     <Route path="christmas-charts" element={<ChristmasCharts />} />
                     <Route path="seasonal-events" element={<SeasonalEventsCalendar />} />
                     {/* <Route path="eurovision" element={<EurovisionResultsPage />} /> */}
@@ -952,6 +956,7 @@ function App() {
                     <Route path="admin/gigs" element={<GigsAdmin />} />
                     <Route path="admin/gig-viewer-demo" element={<AdminGigViewerDemo />} />
                     <Route path="admin/gig-viewer-replays" element={<AdminGigViewerReplayAudit />} />
+                    <Route path="admin/top-of-the-pops" element={<TopOfThePopsAdmin />} />
                     
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />
