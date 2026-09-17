@@ -69,7 +69,6 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/gig-viewer-demo", label: "Gig Viewer Demo", description: "Fixture viewer and replay inspector" },
       { path: "/admin/gig-viewer-demo?view=3d", label: "3D Concert Demo", description: "Immersive club, animated band and camera views" },
       { path: "/admin/gig-viewer-replays", label: "Gig Viewer Replay Audit", description: "Replay status, validation and regeneration" },
-      
       { path: "/admin/venues", label: "Venues", description: "Venue management" },
       { path: "/admin/rehearsal-rooms", label: "Rehearsal Rooms", description: "Practice spaces" },
       { path: "/admin/stage-equipment", label: "Stage Equipment", description: "Equipment catalog" },
@@ -84,10 +83,11 @@ export const adminCategories: AdminCategory[] = [
   {
     id: "events",
     title: "Events & Competitions",
-    description: "Festivals, Eurovision, and award shows",
+    description: "Festivals, television, Eurovision, and award shows",
     icon: Trophy,
     items: [
       { path: "/admin/festivals", label: "Festivals", description: "Festival system" },
+      { path: "/admin/top-of-the-pops", label: "Top of the Pops", description: "Live episode controls and interactive TV studio demo" },
       { path: "/admin/eurovision", label: "Eurovision", description: "Eurovision management" },
       { path: "/admin/awards", label: "Awards", description: "Award shows" },
       { path: "/admin/random-events", label: "Random Events", description: "In-game random events" },
