@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
+import { TOTP_MEDIA_PATHS, totpMediaPublicUrl, type TotpPresenterAudioSlot } from "./totpMedia";
 import {
   buildTotpContinuityCopy,
   buildTotpProgrammeRundown,
@@ -41,21 +42,44 @@ export function TotpProgrammeContinuity({
   const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
-    if (!autoPlay || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (!autoPlay || typeof window === "undefined") return;
     const speech = `${copy.headline}. ${copy.body}`;
-    const utterance = new SpeechSynthesisUtterance(speech);
-    utterance.rate = 0.98;
-    utterance.pitch = 1;
-    utterance.volume = 0.9;
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
-    if (preferred) utterance.voice = preferred;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    return () => {
+    const slot: TotpPresenterAudioSlot = kind === "opening" ? "opening" : kind === "closing" ? "closing" : "between";
+    const recordedUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot));
+    let cancelled = false;
+    let recorded: HTMLAudioElement | null = null;
+
+    const speakFallback = () => {
+      if (cancelled || !("speechSynthesis" in window)) return;
+      const utterance = new SpeechSynthesisUtterance(speech);
+      utterance.rate = 0.98;
+      utterance.pitch = 1;
+      utterance.volume = 0.9;
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
+      if (preferred) utterance.voice = preferred;
       window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
     };
-  }, [autoPlay, copy.body, copy.headline, kind, currentIndex]);
+
+    void fetch(recordedUrl, { method: "HEAD" })
+      .then((response) => {
+        if (!response.ok || cancelled) {
+          speakFallback();
+          return;
+        }
+        recorded = new Audio(recordedUrl);
+        recorded.volume = 0.95;
+        void recorded.play().catch(speakFallback);
+      })
+      .catch(speakFallback);
+
+    return () => {
+      cancelled = true;
+      recorded?.pause();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    };
+  }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key]);
 
   useEffect(() => {
     if (!autoPlay) return;
