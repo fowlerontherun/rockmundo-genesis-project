@@ -143,11 +143,17 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             const body = g.getObjectByName('instrument-body') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>;
             body.material.color.set(colour);
         }
-        g.position.set(-.07, 1.03, .16);
-        g.rotation.set(.04, -.06, -1.03);
+        // Keep the instrument body in front of the torso. The previous .16 depth
+        // could put acoustic/electric bodies inside broader player-model chests.
+        g.position.set(-.07, 1.03, .29);
+        g.rotation.set(.035, -.045, -1.01);
         root.add(g);
         const left = marker(g, 'grip-left', [.015, .71, .12]), right = marker(g, 'grip-right', [0, .03, .22]);
-        moving.push((t, e) => { left.position.y = .71 + Math.sin(t * 1.9) * .04 * e; right.position.x = Math.sin(t * Math.PI * 8) * .065 * e; });
+        moving.push((t, e) => {
+            left.position.y = .71 + Math.sin(t * 1.9) * .035 * e;
+            right.position.x = Math.sin(t * Math.PI * 8) * .085 * e;
+            right.position.y = .03 + Math.cos(t * Math.PI * 8) * .018 * e;
+        });
         return finish(left, right);
     }
     if (spec.family === 'bow' || spec.family === 'upright') {
