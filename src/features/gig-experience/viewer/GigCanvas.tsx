@@ -36,6 +36,8 @@ export function GigCanvas({
   presentationMode = "gig",
   totpCameraShot,
   totpStage = "main_stage",
+  totpPresenterKey = "alex_rayne",
+  totpShowVariant = "regular",
 }: {
   replay: GigViewerReplay;
   experience: GigExperienceDTO | null;
@@ -57,9 +59,13 @@ export function GigCanvas({
   totpCameraShot?: TotpCameraShot | null;
   /** Physical TOTP performance zone selected by the locked running order. */
   totpStage?: TotpStageKey;
+  /** Locked episode presenter; ignored by normal gig scenes. */
+  totpPresenterKey?: string | null;
+  /** Locked episode visual/script variant; ignored by normal gig scenes. */
+  totpShowVariant?: string | null;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const { container, fit, logical } = useCanvasSize(wrapRef, { fill });
+  const { container, fit } = useCanvasSize(wrapRef, { fill });
   const demoTuning = useDemoCrowdTuning();
   const replayTuning = replay.crowdTuning ?? null;
   const shouldLoadGlobal = !crowdTuning && !demoTuning.demoMode && !replayTuning;
@@ -103,6 +109,8 @@ export function GigCanvas({
       data-living-venue="3d"
       data-presentation-mode={presentationMode}
       data-totp-stage={presentationMode === "totp" ? totpStage : undefined}
+      data-totp-presenter={presentationMode === "totp" ? totpPresenterKey ?? "alex_rayne" : undefined}
+      data-totp-show-variant={presentationMode === "totp" ? totpShowVariant ?? "regular" : undefined}
       data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
       data-viewer-rollout-bucket={capabilities.bucket}
       data-legacy-fallback-available={capabilities.legacyFallbackAvailable ? "true" : "false"}>
@@ -129,7 +137,8 @@ export function GigCanvas({
             reducedMotion={reducedMotion} cameraMode={cameraMode} tier={diagnostics.performanceTier}
             archetype={presentationMode === "totp" ? "tv_studio" : diagnostics.venueArchetype} tuning={normalizeCrowdTuning(resolved.tuning)}
             pyrotechnics={pyrotechnics} pyroIntensity={pyroIntensity}
-            presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpStage={totpStage} />
+            presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpStage={totpStage}
+            totpPresenterKey={totpPresenterKey} totpShowVariant={totpShowVariant} />
         </Suspense>
       </div>
     </div>
