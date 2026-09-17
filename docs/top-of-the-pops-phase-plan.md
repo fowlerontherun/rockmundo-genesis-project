@@ -67,7 +67,7 @@ Implemented substantially in PR #1921.
 - Replaying an archived broadcast never calls completion, reward or progression paths.
 - The Top of the Pops page can select and replay archived performances through the real television-studio renderer.
 - Added tests proving the TV studio gets the production objects and normal gig venues do not.
-- Added tests for camera targeting, timeline construction and the TV-studio venue profile.
+- Added tests for camera targeting, timeline construction, TV-studio geometry and archive payload shape.
 
 Remaining polish within Phase 3:
 
@@ -85,6 +85,7 @@ Next major phase.
 - First appearance, Top 20, Top 10, #1, 5/10/25/50 appearance achievements.
 - Profile statistic for Top of the Pops appearances.
 - Twaater/media reaction events after broadcast.
+- Rewards must be written exactly once by the authoritative completion path and never by archive playback.
 
 ## Phase 5 — Interactive television production
 
