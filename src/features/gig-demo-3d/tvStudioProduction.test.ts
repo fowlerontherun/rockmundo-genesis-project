@@ -25,6 +25,23 @@ describe('Top of the Pops TV studio production', () => {
     expect(monitors).toHaveLength(3);
   });
 
+  it('builds the locked guest presenter instead of Alex for guest-host editions', () => {
+    const root = new T.Group();
+    buildTvStudioProduction(root, resolveVenueProfile({ type: 'tv_studio', presenterKey: 'maya_stone', showVariant: 'guest_host' }));
+
+    const maya = root.getObjectByName('totp-presenter-maya-stone');
+    expect(maya).toBeTruthy();
+    expect(maya?.userData.presenterKey).toBe('maya_stone');
+    expect(maya?.userData.presenterDisplayName).toBe('Maya Stone');
+    expect(root.getObjectByName('totp-presenter-alex-rayne')).toBeFalsy();
+  });
+
+  it('falls back to Alex Rayne for unknown presenter keys', () => {
+    const root = new T.Group();
+    buildTvStudioProduction(root, resolveVenueProfile({ type: 'tv_studio', presenterKey: 'unknown_host' }));
+    expect(root.getObjectByName('totp-presenter-alex-rayne')).toBeTruthy();
+  });
+
   it('does not add television production props or stage zones to normal gig venues', () => {
     const root = new T.Group();
     buildTvStudioProduction(root, resolveVenueProfile({ type: 'rock_club' }));
