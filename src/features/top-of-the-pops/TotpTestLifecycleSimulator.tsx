@@ -18,6 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TotpArchivePlayer } from "./TotpArchivePlayer";
 import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
+import { TotpChartRundownSequence } from "./TotpChartRundownSequence";
+import type { TotpChartRundown } from "./chartRundownApi";
 import { totpAudienceReactionLabel } from "./studioAudience";
 import type { TotpTestPreviewPerformance } from "./testPreviewApi";
 import {
@@ -64,6 +66,7 @@ interface TotpTestLifecycleSimulatorProps {
   performance: TotpTestPreviewPerformance;
   seed: string;
   generatedAt: string;
+  chartRundown?: TotpChartRundown | null;
   onExit: () => void;
 }
 
@@ -93,9 +96,9 @@ function signed(value: number): string {
   return `${value >= 0 ? "+" : ""}${Number.isInteger(value) ? value : value.toFixed(2)}`;
 }
 
-type TotpDemoBroadcastStep = "intro" | "presenter" | "performance";
+type TotpDemoBroadcastStep = "intro" | "presenter" | "chart" | "performance";
 
-export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onExit }: TotpTestLifecycleSimulatorProps) {
+export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, chartRundown = null, onExit }: TotpTestLifecycleSimulatorProps) {
   const [state, setState] = useState<TotpTestLifecycleState>(initialState);
   const [broadcastStep, setBroadcastStep] = useState<TotpDemoBroadcastStep>("intro");
   const incident = getTotpTestIncident(seed, performance);
@@ -308,11 +311,17 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onE
                 autoPlay
                 onEnded={() => setBroadcastStep("performance")}
               />
+            ) : broadcastStep === "chart" && chartRundown ? (
+              <TotpChartRundownSequence
+                rundown={chartRundown}
+                autoPlay
+                onEnded={() => advance("green_room")}
+              />
             ) : (
               <TotpArchivePlayer
                 replay={replay}
                 autoPlay
-                onEnded={() => advance("green_room")}
+                onEnded={() => chartRundown ? setBroadcastStep("chart") : advance("green_room")}
               />
             )}
 
@@ -323,8 +332,13 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, onE
               {broadcastStep === "presenter" && (
                 <Button variant="outline" onClick={() => setBroadcastStep("performance")}>Skip to performance</Button>
               )}
+              {broadcastStep === "chart" && (
+                <Button variant="outline" onClick={() => advance("green_room")}>Skip chart rundown</Button>
+              )}
               {broadcastStep === "performance" && (
-                <Button onClick={() => advance("green_room")}>Finish virtual broadcast</Button>
+                <Button onClick={() => chartRundown ? setBroadcastStep("chart") : advance("green_room")}>
+                  {chartRundown ? "Finish performance & show chart" : "Finish virtual broadcast"}
+                </Button>
               )}
             </div>
           </div>

@@ -98,6 +98,9 @@ export interface TotpBroadcastReplayPayload {
     title: string;
     genre: string;
     qualifyingRank: number;
+    audioUrl?: string | null;
+    audioGenerationStatus?: string | null;
+    audioDurationSeconds?: number | null;
   };
   stage: "main_stage" | "stage_b" | "rock_stage" | "studio_floor";
   performanceDurationMs: number;
@@ -120,6 +123,12 @@ export interface TotpBroadcastReplay {
 export interface TotpBroadcastArchive {
   episode_id: string | null;
   replays: TotpBroadcastReplay[];
+}
+
+export interface TotpPerformanceAudio {
+  audio_url: string | null;
+  audio_generation_status: string | null;
+  duration_seconds: number | null;
 }
 
 export interface TotpCheckInResult {
@@ -250,6 +259,15 @@ export async function getTotpBroadcastArchive(episodeId?: string | null): Promis
   });
   if (error) throw new Error(error.message || "Could not load the Top of the Pops broadcast archive.");
   return data ?? { episode_id: normalized, replays: [] };
+}
+
+export async function getTotpPerformanceAudio(performanceId: string): Promise<TotpPerformanceAudio | null> {
+  const normalizedId = invitationId(performanceId);
+  const { data, error } = await totpRpc<TotpPerformanceAudio>("totp_public_performance_audio", {
+    p_performance_id: normalizedId,
+  });
+  if (error) throw new Error(error.message || "Could not load Top of the Pops performance audio.");
+  return data ?? null;
 }
 
 export async function getTotpPublicHistory(bandId?: string | null, limit = 50): Promise<TotpAppearanceHistoryRow[]> {

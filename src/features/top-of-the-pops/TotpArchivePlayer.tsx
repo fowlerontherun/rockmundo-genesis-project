@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, RotateCcw } from "lucide-react";
+import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { GigViewerReplay } from "@/features/gig-experience/events/types";
@@ -8,11 +8,12 @@ import { derivePlaybackState } from "@/features/gig-experience/viewer/engine/Pla
 import { appearanceFromLegacy, resolveAppearance } from "@/features/player-model/appearance";
 import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel";
 import { resolveEquippedClothingVisual } from "@/features/clothing-preview/equippedClothing";
-import type { TotpBroadcastReplay } from "./api";
+import { getTotpPerformanceAudio, type TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
 import { totpAudienceReactionLabel } from "./studioAudience";
+import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 
 const metric = <T,>(value: T) => ({ status: "available" as const, value, source: "authoritative" as const });
 const unavailable = (reason: string) => ({ status: "not_applicable" as const, reason });
@@ -117,11 +118,123 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const showVariant = useMemo(() => lockedShowVariant(source), [source]);
   const presenter = resolveTotpPresenter(presenterKey), variantLabel = totpVariantLabel(showVariant);
   const [positionMs, setPositionMs] = useState(0), [playing, setPlaying] = useState(autoPlay);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const [resolvedBroadcastAudio, setResolvedBroadcastAudio] = useState<{ url: string | null; durationSeconds: number | null } | null>(null);
   const endedRef = useRef(false);
+  const songAudioRef = useRef<HTMLAudioElement | null>(null);
+  const presenterAudioRef = useRef<HTMLAudioElement | null>(null);
+  const spokenPresenterCueRef = useRef<string | null>(null);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
   const cue = useMemo(() => activeCue(source.payload.cues, positionMs), [source.payload.cues, positionMs]);
 
-  useEffect(() => { setPositionMs(0); setPlaying(autoPlay); endedRef.current = false; }, [source.id, autoPlay]);
+  useEffect(() => {
+    setPositionMs(0);
+    setPlaying(autoPlay);
+    setAudioBlocked(false);
+    endedRef.current = false;
+    spokenPresenterCueRef.current = null;
+  }, [source.id, autoPlay]);
+
+  useEffect(() => {
+    setResolvedBroadcastAudio(null);
+    if (source.payload.song.audioUrl || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(source.performance_id)) return;
+    let cancelled = false;
+    void getTotpPerformanceAudio(source.performance_id)
+      .then((audio) => {
+        if (!cancelled) setResolvedBroadcastAudio({
+          url: audio?.audio_url?.trim() || null,
+          durationSeconds: audio?.duration_seconds ?? null,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedBroadcastAudio({ url: null, durationSeconds: null });
+      });
+    return () => { cancelled = true; };
+  }, [source.performance_id, source.payload.song.audioUrl]);
+
+  useEffect(() => {
+    const url = source.payload.song.audioUrl?.trim() || resolvedBroadcastAudio?.url || "";
+    songAudioRef.current?.pause();
+    songAudioRef.current = null;
+    if (!url) return;
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    audio.volume = 0.9;
+    songAudioRef.current = audio;
+    return () => {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      if (songAudioRef.current === audio) songAudioRef.current = null;
+    };
+  }, [resolvedBroadcastAudio?.url, source.id, source.payload.song.audioUrl]);
+
+  useEffect(() => {
+    if (!playing) {
+      songAudioRef.current?.pause();
+      presenterAudioRef.current?.pause();
+      return;
+    }
+    if (!audioEnabled || !songAudioRef.current) return;
+
+    const songStartMs = 7_000;
+    const songEndMs = songStartMs + source.payload.performanceDurationMs;
+    if (positionMs >= songEndMs) {
+      songAudioRef.current.pause();
+      return;
+    }
+
+    let timer = 0;
+    const startSong = () => {
+      const audio = songAudioRef.current;
+      if (!audio || !audioEnabled) return;
+      const target = Math.max(0, Math.min(
+        source.payload.song.audioDurationSeconds ?? resolvedBroadcastAudio?.durationSeconds ?? Number.POSITIVE_INFINITY,
+        (Math.max(songStartMs, positionMs) - songStartMs) / 1000,
+      ));
+      if (Number.isFinite(target) && Math.abs(audio.currentTime - target) > 1.5) audio.currentTime = target;
+      void audio.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
+    };
+
+    if (positionMs < songStartMs) timer = window.setTimeout(startSong, songStartMs - positionMs);
+    else startSong();
+    return () => { if (timer) window.clearTimeout(timer); };
+  }, [audioEnabled, playing, resolvedBroadcastAudio?.durationSeconds, source.id, source.payload.performanceDurationMs, source.payload.song.audioDurationSeconds]);
+
+  useEffect(() => {
+    if (!playing || cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
+    spokenPresenterCueRef.current = cue.id;
+    const recordedUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro"));
+    let cancelled = false;
+
+    const speakFallback = () => {
+      if (cancelled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      const utterance = new SpeechSynthesisUtterance(cue.presenterText!);
+      utterance.rate = 0.98;
+      utterance.pitch = 1;
+      const voices = window.speechSynthesis.getVoices();
+      utterance.voice = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang)) ?? null;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    void fetch(recordedUrl, { method: "HEAD" })
+      .then((response) => {
+        if (!response.ok || cancelled) { speakFallback(); return; }
+        const audio = new Audio(recordedUrl);
+        audio.volume = 0.95;
+        presenterAudioRef.current = audio;
+        void audio.play().catch(speakFallback);
+      })
+      .catch(speakFallback);
+
+    return () => {
+      cancelled = true;
+      presenterAudioRef.current?.pause();
+      presenterAudioRef.current = null;
+      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    };
+  }, [cue?.id, cue?.presenterText, cue?.type, playing, presenterKey]);
   useEffect(() => {
     if (!playing) return;
     let frame = 0, previous = performance.now();
@@ -137,11 +250,33 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame);
   }, [playing, replay.durationMs, onEnded]);
 
-  const restart = () => { endedRef.current = false; setPositionMs(0); setPlaying(false); };
+  const restart = () => {
+    endedRef.current = false;
+    setPositionMs(0);
+    setPlaying(false);
+    setAudioBlocked(false);
+    if (songAudioRef.current) songAudioRef.current.currentTime = 0;
+  };
+  const toggleAudio = () => {
+    setAudioEnabled((enabled) => {
+      const next = !enabled;
+      if (!next) songAudioRef.current?.pause();
+      setAudioBlocked(false);
+      return next;
+    });
+  };
+  const enableBlockedAudio = () => {
+    setAudioEnabled(true);
+    const audio = songAudioRef.current;
+    if (!audio) return;
+    const target = Math.max(0, (positionMs - 7_000) / 1000);
+    audio.currentTime = target;
+    void audio.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
+  };
   const progress = Math.min(100, positionMs / Math.max(1, replay.durationMs) * 100);
   return <div className="space-y-3 rounded-xl border bg-card p-3" data-totp-archive-player data-visual-snapshot={playerModelsSnapshot ? "locked" : "legacy-fallback"}>
-    <div className="aspect-video min-h-[28rem] overflow-hidden rounded-lg bg-slate-950"><TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} className="h-full min-h-[28rem] w-full" /></div>
-    <div className="space-y-2"><Progress value={progress} className="h-1.5" /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex gap-2"><Button size="sm" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{playing ? "Pause" : "Play"}</Button><Button size="sm" variant="outline" onClick={restart}><RotateCcw className="mr-2 h-4 w-4" /> Restart</Button></div><div className="text-xs text-muted-foreground">{presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · {playerModelsSnapshot ? "historical outfits locked" : "legacy outfit fallback"} · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}</div></div></div>
+    <div className="mx-auto aspect-[4/3] min-h-[28rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10"><TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} className="h-full min-h-[28rem] w-full" /></div>
+    <div className="space-y-2"><Progress value={progress} className="h-1.5" /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{playing ? "Pause" : "Play"}</Button><Button size="sm" variant="outline" onClick={restart}><RotateCcw className="mr-2 h-4 w-4" /> Restart</Button>{(source.payload.song.audioUrl || resolvedBroadcastAudio?.url) ? <Button size="sm" variant={audioBlocked ? "default" : "outline"} onClick={audioBlocked ? enableBlockedAudio : toggleAudio}>{audioEnabled ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}{audioBlocked ? "Enable song audio" : audioEnabled ? "Song audio on" : "Song audio off"}</Button> : <span className="self-center text-xs text-muted-foreground">No recording attached to this song</span>}</div><div className="text-xs text-muted-foreground">{presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · {playerModelsSnapshot ? "historical outfits locked" : "legacy outfit fallback"} · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}</div></div></div>
   </div>;
 }
 

@@ -162,14 +162,25 @@ export class Musician {
         reach(this.bones.get(`UpperArm.${side}`), this.bones.get(`LowerArm.${side}`), this.bones.get(`Hand.${side}`), target, pole);
     }
     update(seconds: number, energy: number, reduced: boolean) {
-        const t = reduced ? 0 : seconds, beat = t * Math.PI * 4, sway = Math.sin(t * 1.6 + this.phase) * 0.018 * energy;
+        const t = reduced ? 0 : seconds, beat = t * Math.PI * 4;
+        const performanceScale = this.role === 'fan' ? 1 : this.role === 'drums' ? .7 : 1.35;
+        const sway = Math.sin(t * 1.6 + this.phase) * 0.026 * energy * performanceScale;
         this.rest.forEach(({ bone, quaternion, position }) => { bone.quaternion.copy(quaternion); bone.position.copy(position); });
         const torso = this.bones.get('Torso');
         if (torso)
-            torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(Math.sin(beat / 2 + this.phase) * 0.02 * energy, sway, sway)));
+            torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
+                Math.sin(beat / 2 + this.phase) * 0.032 * energy * performanceScale,
+                sway,
+                Math.sin(t * 2.2 + this.phase) * 0.018 * energy * performanceScale,
+            )));
         const head = this.bones.get('Head');
         if (head)
-            head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(Math.sin(beat + this.phase) * 0.035 * energy, Math.sin(t * 0.65 + this.phase) * 0.09, 0)));
+            head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(Math.sin(beat + this.phase) * 0.045 * energy, Math.sin(t * 0.65 + this.phase) * 0.11, 0)));
+        const hips = this.bones.get('Hips');
+        if (hips && this.role !== 'fan' && this.role !== 'drums' && !this.walking && !reduced) {
+            hips.position.y += Math.abs(Math.sin(beat / 2 + this.phase)) * 0.014 * energy;
+            hips.rotation.y += Math.sin(t * 1.45 + this.phase) * 0.018 * energy;
+        }
         this.root.updateMatrixWorld(true);
         const rig = this.instrumentRig;
         rig?.tools.forEach(tool => { tool.visible = this.root.visible && !this.walking; });
