@@ -116,6 +116,8 @@ export default function TopOfThePops() {
   const currentPresenter = currentEpisode ? resolveTotpPresenter((currentEpisode as any).presenter_key) : null;
   const currentVariantLabel = currentEpisode ? totpVariantLabel((currentEpisode as any).show_variant) : null;
   const archiveReplays = archive.data?.replays ?? [];
+  const isLiveBroadcast = currentEpisode?.status === "broadcast";
+  const liveReplay = archiveReplays.length > 0 ? archiveReplays[archiveReplays.length - 1] : null;
   const selectedReplay = archiveReplays.find((replay) => replay.id === selectedReplayId) ?? archiveReplays[0] ?? null;
   const recentHistory = history.data ?? [];
 
@@ -170,7 +172,20 @@ export default function TopOfThePops() {
         </Card>
       )}
 
-      {archiveReplays.length > 0 && (
+      {isLiveBroadcast && liveReplay && (
+        <section className="space-y-3" data-totp-live-studio-feed>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold"><Radio className="h-5 w-5" /> Live studio feed</h2>
+              <p className="text-sm text-muted-foreground">Future acts stay locked until their scheduled airtime. The feed advances automatically as the programme progresses.</p>
+            </div>
+            <Badge>On air · act {liveReplay.payload.runningOrder}</Badge>
+          </div>
+          <TotpArchivePlayer key={`live:${liveReplay.id}`} replay={liveReplay} autoPlay />
+        </section>
+      )}
+
+      {!isLiveBroadcast && archiveReplays.length > 0 && (
         <section className="space-y-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
