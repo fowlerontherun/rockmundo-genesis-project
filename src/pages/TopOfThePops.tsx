@@ -17,6 +17,7 @@ import {
 import { getTotpChartRundown } from "@/features/top-of-the-pops/chartRundownApi";
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
+import { TotpBroadcastStatusCard } from "@/features/top-of-the-pops/TotpBroadcastStatusCard";
 import { TotpFullEpisodePlayer } from "@/features/top-of-the-pops/TotpFullEpisodePlayer";
 import { TotpBackstageInterviewCard } from "@/features/top-of-the-pops/TotpBackstageInterviewCard";
 import { TotpLiveTvExtrasCard } from "@/features/top-of-the-pops/TotpLiveTvExtrasCard";
@@ -43,16 +44,22 @@ export default function TopOfThePops() {
   const invitations = useQuery({
     queryKey: ["totp", "my-invitations"],
     queryFn: listMyTotpInvitations,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const episode = useQuery({
     queryKey: ["totp", "episode", "current"],
     queryFn: () => getTotpEpisode(),
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 
   const history = useQuery({
     queryKey: ["totp", "history", "public"],
     queryFn: () => getTotpPublicHistory(null, 30),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const currentEpisodeId = episode.data?.id ?? null;
@@ -60,12 +67,16 @@ export default function TopOfThePops() {
     queryKey: ["totp", "archive", currentEpisodeId],
     queryFn: () => getTotpBroadcastArchive(currentEpisodeId),
     enabled: !!currentEpisodeId,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 
   const chartRundown = useQuery({
     queryKey: ["totp", "chart-rundown", currentEpisodeId],
     queryFn: () => getTotpChartRundown(currentEpisodeId),
     enabled: !!currentEpisodeId,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const respond = useMutation({
@@ -125,12 +136,17 @@ export default function TopOfThePops() {
         </div>
       </section>
 
+      {currentEpisode && <TotpBroadcastStatusCard episode={currentEpisode} archiveReady={archiveReplays.length > 0} />}
+
       {currentEpisode && (
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2"><Radio className="h-5 w-5" /> Episode #{currentEpisode.episode_number}</CardTitle>
-              {currentVariantLabel && <Badge variant="secondary">{currentVariantLabel}</Badge>}
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{currentEpisode.status.replaceAll("_", " ")}</Badge>
+                {currentVariantLabel && <Badge variant="secondary">{currentVariantLabel}</Badge>}
+              </div>
             </div>
             <CardDescription>
               Broadcast {formatDateTime(currentEpisode.broadcast_at)} · Presenter: {currentPresenter?.displayName ?? "Alex Rayne"}
