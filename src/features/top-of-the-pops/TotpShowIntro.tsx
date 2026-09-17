@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, SkipForward, Tv2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
+
+const configuredIntroUrl = (import.meta.env.VITE_TOTP_INTRO_URL as string | undefined)?.trim();
 
 export const TOTP_INTRO_VIDEO_URL =
-  (import.meta.env.VITE_TOTP_INTRO_URL as string | undefined)?.trim() || "/media/top-of-the-pops/show-intro.webm";
+  configuredIntroUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.programmeIntro);
 export const TOTP_INTRO_DURATION_MS = 15_943;
 
 export interface TotpShowIntroProps {
@@ -18,9 +21,17 @@ export interface TotpShowIntroProps {
  */
 export function TotpShowIntro({ playing, onEnded }: TotpShowIntroProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const introSources = Array.from(new Set([
+    configuredIntroUrl,
+    totpMediaPublicUrl(TOTP_MEDIA_PATHS.programmeIntro),
+    "/media/top-of-the-pops/show-intro.webm",
+    "/media/totp-intro.mp4",
+  ].filter((value): value is string => !!value)));
+  const [sourceIndex, setSourceIndex] = useState(0);
   const [failed, setFailed] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [fallbackElapsed, setFallbackElapsed] = useState(0);
+  const source = introSources[sourceIndex] ?? "";
 
   const playIntro = () => {
     const video = videoRef.current;
@@ -61,12 +72,19 @@ export function TotpShowIntro({ playing, onEnded }: TotpShowIntroProps) {
         {!failed ? (
           <video
             ref={videoRef}
-            src={TOTP_INTRO_VIDEO_URL}
+            src={source}
             className="h-full w-full object-contain"
             playsInline
             preload="auto"
             onEnded={onEnded}
-            onError={() => setFailed(true)}
+            onError={() => {
+              if (sourceIndex < introSources.length - 1) {
+                setSourceIndex((index) => index + 1);
+                setBlocked(false);
+              } else {
+                setFailed(true);
+              }
+            }}
             aria-label="Top of the Pops programme intro"
           />
         ) : (
