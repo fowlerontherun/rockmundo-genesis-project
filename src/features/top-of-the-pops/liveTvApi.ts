@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { totpRpc } from "./rpc";
 
 export type TotpPerformanceStyleChoice = "polished" | "crowd_first" | "raw_live" | "house_direction";
 export type TotpIncidentRecoveryChoice = "professional" | "improvise" | "showman";
@@ -88,31 +88,33 @@ function uuid(value: string): string {
 }
 
 export async function getMyTotpLiveTvExtras(): Promise<TotpLiveTvExtras> {
-  const { data, error } = await supabase.rpc("totp_my_live_tv_extras" as any);
+  const { data, error } = await totpRpc<TotpLiveTvExtras>("totp_my_live_tv_extras");
   if (error) throw new Error(error.message || "Could not load Top of the Pops live-TV events.");
-  return (data ?? { events: [], styles: [] }) as TotpLiveTvExtras;
+  return data ?? { events: [], styles: [] };
 }
 
 export async function chooseTotpPerformanceStyle(
   styleId: string,
   style: Exclude<TotpPerformanceStyleChoice, "house_direction">,
 ): Promise<TotpPerformanceStyleResult> {
-  const { data, error } = await supabase.rpc("totp_choose_performance_style" as any, {
+  const { data, error } = await totpRpc<TotpPerformanceStyleResult>("totp_choose_performance_style", {
     p_style_id: uuid(styleId),
     p_style: style,
   });
   if (error) throw new Error(error.message || "Could not save the Top of the Pops performance style.");
-  return data as TotpPerformanceStyleResult;
+  if (!data) throw new Error("Top of the Pops returned no performance-style response.");
+  return data;
 }
 
 export async function chooseTotpIncidentRecovery(
   eventId: string,
   choice: TotpIncidentRecoveryChoice,
 ): Promise<TotpIncidentRecoveryResult> {
-  const { data, error } = await supabase.rpc("totp_choose_incident_recovery" as any, {
+  const { data, error } = await totpRpc<TotpIncidentRecoveryResult>("totp_choose_incident_recovery", {
     p_event_id: uuid(eventId),
     p_choice: choice,
   });
   if (error) throw new Error(error.message || "Could not save the Top of the Pops production recovery.");
-  return data as TotpIncidentRecoveryResult;
+  if (!data) throw new Error("Top of the Pops returned no incident-recovery response.");
+  return data;
 }
