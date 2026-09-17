@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { TotpBroadcastCue } from "./broadcastTimeline";
 
 export type TotpInvitationStatus =
   | "invited"
@@ -32,7 +33,7 @@ export interface TotpPerformance {
   band_name: string;
   song_id: string;
   song_title: string;
-  stage_key: "main_stage" | "secondary_stage" | "rock_stage" | "studio_floor" | string;
+  stage_key: "main_stage" | "secondary_stage" | "stage_b" | "rock_stage" | "studio_floor" | string;
   presenter_intro: string | null;
   qualifying_rank: number;
 }
@@ -47,6 +48,57 @@ export interface TotpEpisode {
   presenter_key: string;
   broadcast_profile: string;
   performances: TotpPerformance[];
+}
+
+export interface TotpArchivedBandMember {
+  profile_id: string | null;
+  display_name: string;
+  role: string;
+  instrument_role?: string | null;
+  vocal_role?: string | null;
+}
+
+export interface TotpBroadcastReplayPayload {
+  schemaVersion: number;
+  episodeId: string;
+  episodeNumber: number;
+  episodeDate: string;
+  broadcastAt: string;
+  performanceId: string;
+  runningOrder: number;
+  presenterKey: string;
+  band: {
+    id: string;
+    name: string;
+    members: TotpArchivedBandMember[];
+  };
+  song: {
+    id: string;
+    title: string;
+    genre: string;
+    qualifyingRank: number;
+  };
+  stage: "main_stage" | "stage_b" | "rock_stage" | "studio_floor";
+  performanceDurationMs: number;
+  totalDurationMs: number;
+  cues: TotpBroadcastCue[];
+}
+
+export interface TotpBroadcastReplay {
+  id: string;
+  performance_id: string;
+  replay_version: number;
+  stage_key: string;
+  presenter_key: string;
+  duration_ms: number;
+  checksum: string;
+  generated_at: string;
+  payload: TotpBroadcastReplayPayload;
+}
+
+export interface TotpBroadcastArchive {
+  episode_id: string | null;
+  replays: TotpBroadcastReplay[];
 }
 
 export interface TotpCheckInResult {
@@ -101,12 +153,30 @@ export async function getTotpEpisode(id?: string | null): Promise<TotpEpisode | 
   return (data ?? null) as TotpEpisode | null;
 }
 
+export async function getTotpBroadcastArchive(episodeId?: string | null): Promise<TotpBroadcastArchive> {
+  const normalized = episodeId ? invitationId(episodeId) : null;
+  const { data, error } = await supabase.rpc("totp_public_broadcast_archive" as any, {
+    p_episode_id: normalized,
+  });
+  if (error) throw new Error(error.message || "Could not load the Top of the Pops broadcast archive.");
+  return (data ?? { episode_id: normalized, replays: [] }) as TotpBroadcastArchive;
+}
+
 export async function adminLockTotpRunningOrder(episodeId: string): Promise<number> {
   const normalizedId = invitationId(episodeId);
   const { data, error } = await supabase.rpc("totp_admin_lock_running_order" as any, {
     p_episode_id: normalizedId,
   });
   if (error) throw new Error(error.message || "Could not lock the Top of the Pops running order.");
+  return Number(data ?? 0);
+}
+
+export async function adminBuildTotpBroadcastArchive(episodeId: string): Promise<number> {
+  const normalizedId = invitationId(episodeId);
+  const { data, error } = await supabase.rpc("totp_build_episode_broadcast_replays" as any, {
+    p_episode_id: normalizedId,
+  });
+  if (error) throw new Error(error.message || "Could not build the Top of the Pops broadcast archive.");
   return Number(data ?? 0);
 }
 
