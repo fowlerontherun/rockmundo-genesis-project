@@ -63,13 +63,21 @@ export default function TopOfThePops() {
   const respond = useMutation({
     mutationFn: ({ id, response }: { id: string; response: "accepted" | "declined" }) =>
       respondToTotpInvitation(id, response),
-    onSuccess: (_result, variables) => {
-      toast({
-        title: variables.response === "accepted" ? "Invitation accepted" : "Invitation declined",
-        description: variables.response === "accepted"
-          ? "Get every active band member to London before studio check-in."
-          : "The appearance has been declined.",
-      });
+    onSuccess: (result, variables) => {
+      if (result === "expired") {
+        toast({
+          title: "Invitation expired",
+          description: "The response deadline has passed, so this appearance can no longer be accepted or declined.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: variables.response === "accepted" ? "Invitation accepted" : "Invitation declined",
+          description: variables.response === "accepted"
+            ? "Get every active band member to London before studio check-in."
+            : "The appearance has been declined.",
+        });
+      }
       void queryClient.invalidateQueries({ queryKey: ["totp"] });
     },
     onError: (error: Error) => toast({ title: "Could not update invitation", description: error.message, variant: "destructive" }),
