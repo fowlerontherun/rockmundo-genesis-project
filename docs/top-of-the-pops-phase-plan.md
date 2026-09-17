@@ -73,6 +73,9 @@ Implemented substantially in PR #1921.
 - Archived broadcasts prefer the frozen performer snapshot; replay v1-v3 retains a safe live-model fallback for backwards compatibility.
 - The locked audience reaction drives the actual shared Gig Viewer crowd-tuning system, changing density, stage pull and crowd movement while leaving gameplay untouched.
 - Added full-episode archive autoplay. Archived acts are sorted by locked running order and automatically advance through the programme while retaining manual act selection and per-performance replay controls.
+- Full-episode playback now opens with a hosted programme intro before Act 1, while direct individual-performance playback bypasses the opener.
+- The intro is loaded from `VITE_TOTP_INTRO_URL`, with `/media/totp-intro.mp4` as a same-origin fallback; the video is deliberately kept outside the application bundle so it can be replaced on the web host without rebuilding replay data.
+- Added a visible Skip intro fallback and graceful media-load failure state so a missing host asset can never block the archived programme.
 - Added deterministic replay-order tests and source-array immutability coverage.
 - Added TV-studio audience blocking: the close-up crowd is constrained to a compact central television pocket and distant audience placement excludes Stage B, Rock Stage, Studio Floor, pedestal cameras, handheld camera and jib/service footprints.
 - Added regression coverage confirming those blocking rules apply only to the `tv_studio` archetype and do not affect ordinary gig venues.
