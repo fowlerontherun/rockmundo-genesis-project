@@ -77,7 +77,7 @@ Remaining polish within Phase 3:
 
 ## Phase 4 — Rewards, history and achievements
 
-Implemented substantially in PR #1921.
+Implemented in PR #1921.
 
 - Added an admin-only idempotent performance-completion path. A performance can be settled repeatedly after a network retry, but fame/history/achievements are written only once.
 - Rank-sensitive raw fame rewards: #1 is highest, followed by #2–3, Top 10, Top 20, Top 30 and #31–40.
@@ -103,10 +103,6 @@ Implemented substantially in PR #1921.
 - Bot posts are public, system-generated, award no player XP, and use the live Twaater 500-character/sentiment constraints.
 - Added a Top of the Pops résumé card to Band → Fame showing appearances, best chart rank, #1 and Top 10 appearances, first/latest appearance dates and total TOTP fame earned.
 - The résumé card stays hidden until a band has a completed TOTP appearance.
-
-Remaining within Phase 4:
-
-- Add achievement-specific presentation polish (special badge art/title treatments) if desired.
 
 ## Phase 5 — Interactive television production
 
