@@ -15,6 +15,7 @@ import {
   respondToTotpInvitation,
 } from "@/features/top-of-the-pops/api";
 import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
+import { TotpBackstageInterviewCard } from "@/features/top-of-the-pops/TotpBackstageInterviewCard";
 import { Archive, CalendarDays, History, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
@@ -188,7 +189,7 @@ export default function TopOfThePops() {
       <section className="space-y-3">
         <div>
           <h2 className="text-xl font-semibold">Your invitations</h2>
-          <p className="text-sm text-muted-foreground">Only the band leader can accept, decline or complete studio check-in.</p>
+          <p className="text-sm text-muted-foreground">Only the band leader can accept, decline, complete studio check-in or answer the backstage interview.</p>
         </div>
 
         {invitations.isLoading && <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading invitations…</CardContent></Card>}
@@ -233,6 +234,10 @@ export default function TopOfThePops() {
                     <Button onClick={() => checkIn.mutate(invitation.invitation_id)} disabled={checkIn.isPending}>Check band into studio</Button>
                   )}
                 </div>
+
+                {(invitation.status === "checked_in" || invitation.status === "performed") && (
+                  <TotpBackstageInterviewCard invitationId={invitation.invitation_id} />
+                )}
               </CardContent>
             </Card>
           );
