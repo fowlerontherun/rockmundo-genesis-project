@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -147,13 +147,7 @@ function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
       startedAt: payload.broadcastAt,
       completedAt: payload.broadcastAt,
       ticketPrice: metric(0),
-      venue: {
-        id: "totp-tv-studio",
-        name: "RockMundo Television Centre",
-        location: "London",
-        capacity: 250,
-        type: "tv_studio",
-      },
+      venue: { id: "totp-tv-studio", name: "RockMundo Television Centre", location: "London", capacity: 250, type: "tv_studio" },
     },
     headline: {
       overallRating: unavailable("Broadcast archive"),
@@ -201,7 +195,13 @@ function activeCue(cues: TotpBroadcastCue[], positionMs: number): TotpBroadcastC
   return active.at(-1) ?? cues.filter((cue) => cue.offsetMs <= positionMs).at(-1) ?? cues[0] ?? null;
 }
 
-export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastReplay }) {
+export interface TotpArchivePlayerProps {
+  replay: TotpBroadcastReplay;
+  autoPlay?: boolean;
+  onEnded?: () => void;
+}
+
+export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }: TotpArchivePlayerProps) {
   const replay = useMemo(() => archivedReplay(source), [source]);
   const experience = useMemo(() => archivedExperience(source), [source]);
   const audienceReaction = useMemo(() => lockedAudienceReaction(source), [source]);
@@ -210,9 +210,16 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
   const presenter = resolveTotpPresenter(presenterKey);
   const variantLabel = totpVariantLabel(showVariant);
   const [positionMs, setPositionMs] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(autoPlay);
+  const endedRef = useRef(false);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
   const cue = useMemo(() => activeCue(source.payload.cues, positionMs), [source.payload.cues, positionMs]);
+
+  useEffect(() => {
+    setPositionMs(0);
+    setPlaying(autoPlay);
+    endedRef.current = false;
+  }, [source.id, autoPlay]);
 
   useEffect(() => {
     if (!playing) return;
@@ -223,15 +230,26 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
       previous = now;
       setPositionMs((current) => {
         const next = Math.min(replay.durationMs, current + elapsed);
-        if (next >= replay.durationMs) setPlaying(false);
+        if (next >= replay.durationMs) {
+          setPlaying(false);
+          if (!endedRef.current) {
+            endedRef.current = true;
+            queueMicrotask(() => onEnded?.());
+          }
+        }
         return next;
       });
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, replay.durationMs]);
+  }, [playing, replay.durationMs, onEnded]);
 
+  const restart = () => {
+    endedRef.current = false;
+    setPositionMs(0);
+    setPlaying(false);
+  };
   const progress = Math.min(100, positionMs / Math.max(1, replay.durationMs) * 100);
 
   return (
@@ -256,7 +274,7 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
               {playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
               {playing ? "Pause" : "Play"}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => { setPositionMs(0); setPlaying(false); }}>
+            <Button size="sm" variant="outline" onClick={restart}>
               <RotateCcw className="mr-2 h-4 w-4" /> Restart
             </Button>
           </div>
