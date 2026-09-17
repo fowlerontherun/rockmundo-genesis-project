@@ -3,7 +3,7 @@ const GigStage3D = lazy(() => import("./three/GigStage3D"));
 import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
 import type { ReportMetric } from "../types";
-import type { TotpCameraShot } from "@/features/top-of-the-pops/broadcastProfile";
+import type { TotpCameraShot, TotpStageKey } from "@/features/top-of-the-pops/broadcastProfile";
 import { CrowdTuningPanel, useDemoCrowdTuning } from "./CrowdTuningPanel";
 import { GlobalCrowdDefaultsControls } from "./GlobalCrowdDefaultsControls";
 import type { DerivedPlaybackState } from "./engine/PlaybackController";
@@ -35,6 +35,7 @@ export function GigCanvas({
   className,
   presentationMode = "gig",
   totpCameraShot,
+  totpStage = "main_stage",
 }: {
   replay: GigViewerReplay;
   experience: GigExperienceDTO | null;
@@ -54,6 +55,8 @@ export function GigCanvas({
   presentationMode?: ConcertPresentationMode;
   /** Directed TOTP shot. Normal gigs continue to use cameraMode unchanged. */
   totpCameraShot?: TotpCameraShot | null;
+  /** Physical TOTP performance zone selected by the locked running order. */
+  totpStage?: TotpStageKey;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const { container, fit, logical } = useCanvasSize(wrapRef, { fill });
@@ -99,6 +102,7 @@ export function GigCanvas({
       data-degradations={renderBudget.appliedDegradations.join(",")}
       data-living-venue="3d"
       data-presentation-mode={presentationMode}
+      data-totp-stage={presentationMode === "totp" ? totpStage : undefined}
       data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
       data-viewer-rollout-bucket={capabilities.bucket}
       data-legacy-fallback-available={capabilities.legacyFallbackAvailable ? "true" : "false"}>
@@ -125,7 +129,7 @@ export function GigCanvas({
             reducedMotion={reducedMotion} cameraMode={cameraMode} tier={diagnostics.performanceTier}
             archetype={presentationMode === "totp" ? "tv_studio" : diagnostics.venueArchetype} tuning={normalizeCrowdTuning(resolved.tuning)}
             pyrotechnics={pyrotechnics} pyroIntensity={pyroIntensity}
-            presentationMode={presentationMode} totpCameraShot={totpCameraShot} />
+            presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpStage={totpStage} />
         </Suspense>
       </div>
     </div>
