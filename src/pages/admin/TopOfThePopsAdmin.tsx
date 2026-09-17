@@ -105,9 +105,9 @@ export default function TopOfThePopsAdmin() {
         <CardContent className="space-y-3">
           {current.performances.length === 0 && <p className="text-sm text-muted-foreground">No acts have been locked into the broadcast yet.</p>}
           {current.performances.map((performance) => {
-            const archived = archive.data?.replays.some((replay) => replay.performance_id === (performance as any).performance_id) ?? false;
+            const archived = archive.data?.replays.some((replay) => replay.performance_id === performance.performance_id) ?? false;
             return (
-              <div key={`${performance.band_id}-${performance.running_order}`} className="rounded-lg border p-4">
+              <div key={performance.performance_id} className="rounded-lg border p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="font-semibold">{performance.running_order}. {performance.band_name}</div>
