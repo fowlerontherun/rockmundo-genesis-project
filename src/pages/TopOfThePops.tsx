@@ -10,11 +10,12 @@ import {
   checkInToTotp,
   getTotpBroadcastArchive,
   getTotpEpisode,
+  getTotpPublicHistory,
   listMyTotpInvitations,
   respondToTotpInvitation,
 } from "@/features/top-of-the-pops/api";
 import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
-import { Archive, CalendarDays, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
+import { Archive, CalendarDays, History, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -22,6 +23,10 @@ function formatDateTime(value: string) {
     timeStyle: "short",
     timeZone: "Europe/London",
   }).format(new Date(value));
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Europe/London" }).format(new Date(`${value}T12:00:00Z`));
 }
 
 export default function TopOfThePops() {
@@ -37,6 +42,11 @@ export default function TopOfThePops() {
   const episode = useQuery({
     queryKey: ["totp", "episode", "current"],
     queryFn: () => getTotpEpisode(),
+  });
+
+  const history = useQuery({
+    queryKey: ["totp", "history", "public"],
+    queryFn: () => getTotpPublicHistory(null, 30),
   });
 
   const currentEpisodeId = episode.data?.id ?? null;
@@ -74,6 +84,7 @@ export default function TopOfThePops() {
   const currentEpisode = episode.data;
   const archiveReplays = archive.data?.replays ?? [];
   const selectedReplay = archiveReplays.find((replay) => replay.id === selectedReplayId) ?? archiveReplays[0] ?? null;
+  const recentHistory = history.data ?? [];
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -146,6 +157,33 @@ export default function TopOfThePops() {
           {selectedReplay && <TotpArchivePlayer replay={selectedReplay} />}
         </section>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Top of the Pops history</CardTitle>
+          <CardDescription>Completed appearances are permanent career history. Fame is shown exactly as it was settled at broadcast completion.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {history.isLoading && <p className="text-sm text-muted-foreground">Loading appearance history…</p>}
+          {history.isError && <p className="text-sm text-destructive">{(history.error as Error).message}</p>}
+          {!history.isLoading && recentHistory.length === 0 && <p className="text-sm text-muted-foreground">No completed Top of the Pops appearances yet.</p>}
+          {recentHistory.map((appearance) => (
+            <div key={appearance.performance_id} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div className="min-w-0">
+                <div className="font-semibold">{appearance.band_name} — {appearance.song_title}</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  Episode #{appearance.episode_number} · {formatDate(appearance.episode_date)} · appearance #{appearance.appearance_number} · chart #{appearance.qualifying_rank}
+                </div>
+                {appearance.presenter_intro && <div className="mt-2 truncate text-sm italic text-muted-foreground">“{appearance.presenter_intro}”</div>}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <Badge variant="outline">{appearance.stage_key.replaceAll("_", " ")}</Badge>
+                <Badge>+{appearance.fame_awarded.toLocaleString()} fame</Badge>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <section className="space-y-3">
         <div>
