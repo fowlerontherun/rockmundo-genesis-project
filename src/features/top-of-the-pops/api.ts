@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
+import { totpRpc } from "./rpc";
 
 export type TotpInvitationStatus =
   | "invited"
@@ -49,8 +49,20 @@ export interface TotpEpisode {
   check_in_at: string;
   broadcast_at: string;
   presenter_key: string;
+  presenter_display_name?: string | null;
+  show_variant?: string | null;
   broadcast_profile: string;
   performances: TotpPerformance[];
+}
+
+export interface TotpArchivedVisualSnapshot {
+  appearance?: unknown;
+  legacyAvatar?: unknown;
+  richClothing?: Array<{
+    item?: unknown;
+    selectedVariantKey?: string | null;
+    customizationConfig?: unknown;
+  }>;
 }
 
 export interface TotpArchivedBandMember {
@@ -59,6 +71,7 @@ export interface TotpArchivedBandMember {
   role: string;
   instrument_role?: string | null;
   vocal_role?: string | null;
+  visual_snapshot?: TotpArchivedVisualSnapshot | null;
 }
 
 export interface TotpBroadcastReplayPayload {
@@ -70,6 +83,11 @@ export interface TotpBroadcastReplayPayload {
   performanceId: string;
   runningOrder: number;
   presenterKey: string;
+  presenterDisplayName?: string | null;
+  showVariant?: string | null;
+  liveTv?: {
+    audienceReaction?: number | null;
+  } | null;
   band: {
     id: string;
     name: string;
@@ -190,67 +208,67 @@ function invitationId(value: string): string {
 }
 
 export async function listMyTotpInvitations(): Promise<TotpInvitation[]> {
-  const { data, error } = await supabase.rpc("totp_my_invitations" as any);
+  const { data, error } = await totpRpc<TotpInvitation[]>("totp_my_invitations");
   if (error) throw new Error(error.message || "Could not load Top of the Pops invitations.");
-  return (data ?? []) as TotpInvitation[];
+  return data ?? [];
 }
 
 export async function respondToTotpInvitation(id: string, response: "accepted" | "declined"): Promise<TotpInvitationResponseOutcome> {
   const normalizedId = invitationId(id);
-  const { data, error } = await supabase.rpc("totp_respond_to_invitation" as any, {
+  const { data, error } = await totpRpc<TotpInvitationResponseOutcome>("totp_respond_to_invitation", {
     p_invitation_id: normalizedId,
     p_response: response,
   });
   if (error) throw new Error(error.message || "Could not update the Top of the Pops invitation.");
-  const outcome = String(data ?? response);
+  const outcome = data ?? response;
   if (outcome === "accepted" || outcome === "declined" || outcome === "expired") return outcome;
   throw new Error("Top of the Pops returned an unexpected invitation response.");
 }
 
 export async function checkInToTotp(id: string): Promise<TotpCheckInResult> {
   const normalizedId = invitationId(id);
-  const { data, error } = await supabase.rpc("totp_check_in" as any, {
+  const { data, error } = await totpRpc<TotpCheckInResult>("totp_check_in", {
     p_invitation_id: normalizedId,
   });
   if (error) throw new Error(error.message || "Top of the Pops studio check-in failed.");
-  return (data ?? { status: "checked_in" }) as TotpCheckInResult;
+  return data ?? { status: "checked_in" };
 }
 
 export async function getTotpEpisode(id?: string | null): Promise<TotpEpisode | null> {
   const normalized = id ? invitationId(id) : null;
-  const { data, error } = await supabase.rpc("totp_public_episode" as any, {
+  const { data, error } = await totpRpc<TotpEpisode>("totp_public_episode", {
     p_episode_id: normalized,
   });
   if (error) throw new Error(error.message || "Could not load the Top of the Pops episode.");
-  return (data ?? null) as TotpEpisode | null;
+  return data;
 }
 
 export async function getTotpBroadcastArchive(episodeId?: string | null): Promise<TotpBroadcastArchive> {
   const normalized = episodeId ? invitationId(episodeId) : null;
-  const { data, error } = await supabase.rpc("totp_public_broadcast_archive" as any, {
+  const { data, error } = await totpRpc<TotpBroadcastArchive>("totp_public_broadcast_archive", {
     p_episode_id: normalized,
   });
   if (error) throw new Error(error.message || "Could not load the Top of the Pops broadcast archive.");
-  return (data ?? { episode_id: normalized, replays: [] }) as TotpBroadcastArchive;
+  return data ?? { episode_id: normalized, replays: [] };
 }
 
 export async function getTotpPublicHistory(bandId?: string | null, limit = 50): Promise<TotpAppearanceHistoryRow[]> {
   const normalizedBandId = bandId ? invitationId(bandId) : null;
-  const { data, error } = await supabase.rpc("totp_public_history" as any, {
+  const { data, error } = await totpRpc<TotpAppearanceHistoryRow[]>("totp_public_history", {
     p_band_id: normalizedBandId,
     p_limit: Math.max(1, Math.min(200, Math.round(limit))),
   });
   if (error) throw new Error(error.message || "Could not load Top of the Pops appearance history.");
-  return (data ?? []) as TotpAppearanceHistoryRow[];
+  return data ?? [];
 }
 
 export async function getTotpBandStats(bandId: string): Promise<TotpBandStats> {
   const normalizedBandId = invitationId(bandId);
-  const { data, error } = await supabase.rpc("totp_band_stats" as any, {
+  const { data, error } = await totpRpc<TotpBandStats>("totp_band_stats", {
     p_band_id: normalizedBandId,
   });
   if (error) throw new Error(error.message || "Could not load Top of the Pops statistics.");
-  return (data ?? {
+  return data ?? {
     band_id: normalizedBandId,
     appearances: 0,
     best_chart_rank: null,
@@ -259,28 +277,29 @@ export async function getTotpBandStats(bandId: string): Promise<TotpBandStats> {
     total_fame_awarded: 0,
     first_appearance: null,
     latest_appearance: null,
-  }) as TotpBandStats;
+  };
 }
 
 export async function listMyTotpBackstageInteractions(): Promise<TotpBackstageInteraction[]> {
-  const { data, error } = await supabase.rpc("totp_my_backstage_interactions" as any);
+  const { data, error } = await totpRpc<TotpBackstageInteraction[]>("totp_my_backstage_interactions");
   if (error) throw new Error(error.message || "Could not load the Top of the Pops backstage interview.");
-  return (data ?? []) as TotpBackstageInteraction[];
+  return data ?? [];
 }
 
 export async function chooseTotpBackstageInterview(id: string, choice: TotpInterviewChoice): Promise<TotpBackstageChoiceResult> {
   const normalizedId = invitationId(id);
-  const { data, error } = await supabase.rpc("totp_choose_backstage_interview" as any, {
+  const { data, error } = await totpRpc<TotpBackstageChoiceResult>("totp_choose_backstage_interview", {
     p_interaction_id: normalizedId,
     p_choice: choice,
   });
   if (error) throw new Error(error.message || "Could not save the Top of the Pops interview response.");
-  return data as TotpBackstageChoiceResult;
+  if (!data) throw new Error("Top of the Pops returned no interview response.");
+  return data;
 }
 
 export async function adminLockTotpRunningOrder(episodeId: string): Promise<number> {
   const normalizedId = invitationId(episodeId);
-  const { data, error } = await supabase.rpc("totp_admin_lock_running_order" as any, {
+  const { data, error } = await totpRpc<number>("totp_admin_lock_running_order", {
     p_episode_id: normalizedId,
   });
   if (error) throw new Error(error.message || "Could not lock the Top of the Pops running order.");
@@ -289,7 +308,7 @@ export async function adminLockTotpRunningOrder(episodeId: string): Promise<numb
 
 export async function adminBuildTotpBroadcastArchive(episodeId: string): Promise<number> {
   const normalizedId = invitationId(episodeId);
-  const { data, error } = await supabase.rpc("totp_build_episode_broadcast_replays" as any, {
+  const { data, error } = await totpRpc<number>("totp_build_episode_broadcast_replays", {
     p_episode_id: normalizedId,
   });
   if (error) throw new Error(error.message || "Could not build the Top of the Pops broadcast archive.");
@@ -298,12 +317,13 @@ export async function adminBuildTotpBroadcastArchive(episodeId: string): Promise
 
 export async function adminCompleteTotpPerformance(performanceId: string, performanceScore?: number | null): Promise<TotpCompletionResult> {
   const normalizedId = invitationId(performanceId);
-  const { data, error } = await supabase.rpc("totp_complete_performance" as any, {
+  const { data, error } = await totpRpc<TotpCompletionResult>("totp_complete_performance", {
     p_performance_id: normalizedId,
     p_performance_score: performanceScore == null ? null : Math.max(0, Math.min(100, Math.round(performanceScore))),
   });
   if (error) throw new Error(error.message || "Could not complete the Top of the Pops performance.");
-  return data as TotpCompletionResult;
+  if (!data) throw new Error("Top of the Pops returned no performance settlement.");
+  return data;
 }
 
 export function canRespondToTotpInvitation(invitation: TotpInvitation, now = new Date()): boolean {
