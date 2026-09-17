@@ -5,12 +5,14 @@ import { GigCanvas } from "@/features/gig-experience/viewer/GigCanvas";
 import type { PerformancePreference } from "@/features/gig-experience/viewer/hooks/useGigViewerPreferences";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { formatTotpChartGraphic } from "./broadcastTimeline";
+import { totpAudienceCrowdTuning, totpAudienceReactionLabel } from "./studioAudience";
 
 export interface TotpBroadcastCanvasProps {
   replay: GigViewerReplay;
   experience: GigExperienceDTO | null;
   playbackState: DerivedPlaybackState;
   cue?: TotpBroadcastCue | null;
+  audienceReaction?: number | null;
   reducedMotion?: boolean;
   performancePreference?: PerformancePreference;
   className?: string;
@@ -26,6 +28,7 @@ export function TotpBroadcastCanvas({
   experience,
   playbackState,
   cue,
+  audienceReaction = 0,
   reducedMotion = false,
   performancePreference = "auto",
   className,
@@ -34,6 +37,9 @@ export function TotpBroadcastCanvas({
   const directedStage = cue?.stage ?? "main_stage";
   const lowerThird = cue?.type === "graphic" ? cue.graphic : null;
   const presenterText = cue?.type === "presenter" ? cue.presenterText : null;
+  const lockedAudienceReaction = Number.isFinite(Number(audienceReaction)) ? Number(audienceReaction) : 0;
+  const crowdTuning = totpAudienceCrowdTuning(lockedAudienceReaction);
+  const audienceLabel = totpAudienceReactionLabel(lockedAudienceReaction);
 
   return (
     <div
@@ -42,6 +48,8 @@ export function TotpBroadcastCanvas({
       data-totp-cue={cue?.type ?? "performance"}
       data-totp-shot={directedShot}
       data-totp-stage={directedStage}
+      data-totp-audience-reaction={lockedAudienceReaction}
+      data-totp-audience-label={audienceLabel.toLowerCase()}
     >
       <GigCanvas
         replay={replay}
@@ -49,6 +57,7 @@ export function TotpBroadcastCanvas({
         playbackState={playbackState}
         reducedMotion={reducedMotion}
         pyrotechnics
+        crowdTuning={crowdTuning}
         fill
         immersive
         cameraMode="auto"
@@ -63,8 +72,13 @@ export function TotpBroadcastCanvas({
         <div className="rounded-md bg-fuchsia-700/90 px-3 py-2 text-xs font-black tracking-[0.18em] shadow-lg backdrop-blur">
           TOP OF THE POPS
         </div>
-        <div className="rounded-md bg-black/65 px-3 py-2 text-[11px] font-semibold tracking-wide backdrop-blur">
-          ROCKMUNDO TELEVISION · LONDON
+        <div className="flex items-center gap-2">
+          <div className="rounded-md bg-black/65 px-3 py-2 text-[11px] font-semibold tracking-wide backdrop-blur">
+            ROCKMUNDO TELEVISION · LONDON
+          </div>
+          <div className="rounded-md bg-black/65 px-3 py-2 text-[11px] font-semibold tracking-wide backdrop-blur">
+            AUDIENCE · {audienceLabel.toUpperCase()}
+          </div>
         </div>
       </div>
 
