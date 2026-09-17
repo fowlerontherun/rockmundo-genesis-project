@@ -96,11 +96,15 @@ Implemented substantially in PR #1921.
 - Added a small TOTP achievement-settlement bridge so achievement unlocks are idempotent even before canonical source-event fields reach production.
 - Added notification deep-link metadata for completed appearances.
 - Live schema was checked before finalising the migration; TOTP no longer assumes the not-yet-live canonical achievement columns/functions.
+- Added a verified `@rockmundo_tv` Twaater bot identity for official television posts.
+- Every completed appearance now publishes exactly one official Twaater reaction using an audited `totp_media_posts` link table.
+- Twaater copy varies for TV debuts, Top 10 appearances, UK #1 performances and 5/10/25/50 appearance milestones.
+- Twaater publishing has a second performance-level duplicate guard, so retrying settlement cannot spam posts.
+- Bot posts are public, system-generated, award no player XP, and use the live Twaater 500-character/sentiment constraints.
 
 Remaining within Phase 4:
 
 - Surface `totp_band_stats` directly on the main public band profile / band fame page.
-- Add Twaater/media reaction events after broadcasts.
 - Add achievement-specific presentation polish (special badge art/title treatments) if desired.
 
 ## Phase 5 — Interactive television production
