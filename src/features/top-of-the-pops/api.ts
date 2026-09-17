@@ -110,6 +110,46 @@ export interface TotpCheckInResult {
   checked_in_at?: string;
 }
 
+export interface TotpCompletionResult {
+  status: "completed" | "already_completed";
+  performance_id: string;
+  history_id?: string;
+  appearance_number: number;
+  qualifying_rank: number;
+  raw_fame_reward?: number;
+  fame_awarded: number;
+  lifetime_factor?: number;
+  progression_factor?: number;
+}
+
+export interface TotpAppearanceHistoryRow {
+  episode_date: string;
+  episode_number: number;
+  performance_id: string;
+  band_id: string;
+  band_name: string;
+  song_id: string;
+  song_title: string;
+  qualifying_rank: number;
+  running_order: number;
+  stage_key: string;
+  appearance_number: number;
+  fame_awarded: number;
+  presenter_intro: string | null;
+  completed_at: string;
+}
+
+export interface TotpBandStats {
+  band_id: string;
+  appearances: number;
+  best_chart_rank: number | null;
+  number_one_appearances: number;
+  top_10_appearances: number;
+  total_fame_awarded: number;
+  first_appearance: string | null;
+  latest_appearance: string | null;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function invitationId(value: string): string {
@@ -163,6 +203,34 @@ export async function getTotpBroadcastArchive(episodeId?: string | null): Promis
   return (data ?? { episode_id: normalized, replays: [] }) as TotpBroadcastArchive;
 }
 
+export async function getTotpPublicHistory(bandId?: string | null, limit = 50): Promise<TotpAppearanceHistoryRow[]> {
+  const normalizedBandId = bandId ? invitationId(bandId) : null;
+  const { data, error } = await supabase.rpc("totp_public_history" as any, {
+    p_band_id: normalizedBandId,
+    p_limit: Math.max(1, Math.min(200, Math.round(limit))),
+  });
+  if (error) throw new Error(error.message || "Could not load Top of the Pops appearance history.");
+  return (data ?? []) as TotpAppearanceHistoryRow[];
+}
+
+export async function getTotpBandStats(bandId: string): Promise<TotpBandStats> {
+  const normalizedBandId = invitationId(bandId);
+  const { data, error } = await supabase.rpc("totp_band_stats" as any, {
+    p_band_id: normalizedBandId,
+  });
+  if (error) throw new Error(error.message || "Could not load Top of the Pops statistics.");
+  return (data ?? {
+    band_id: normalizedBandId,
+    appearances: 0,
+    best_chart_rank: null,
+    number_one_appearances: 0,
+    top_10_appearances: 0,
+    total_fame_awarded: 0,
+    first_appearance: null,
+    latest_appearance: null,
+  }) as TotpBandStats;
+}
+
 export async function adminLockTotpRunningOrder(episodeId: string): Promise<number> {
   const normalizedId = invitationId(episodeId);
   const { data, error } = await supabase.rpc("totp_admin_lock_running_order" as any, {
@@ -179,6 +247,16 @@ export async function adminBuildTotpBroadcastArchive(episodeId: string): Promise
   });
   if (error) throw new Error(error.message || "Could not build the Top of the Pops broadcast archive.");
   return Number(data ?? 0);
+}
+
+export async function adminCompleteTotpPerformance(performanceId: string, performanceScore?: number | null): Promise<TotpCompletionResult> {
+  const normalizedId = invitationId(performanceId);
+  const { data, error } = await supabase.rpc("totp_complete_performance" as any, {
+    p_performance_id: normalizedId,
+    p_performance_score: performanceScore == null ? null : Math.max(0, Math.min(100, Math.round(performanceScore))),
+  });
+  if (error) throw new Error(error.message || "Could not complete the Top of the Pops performance.");
+  return data as TotpCompletionResult;
 }
 
 export function canRespondToTotpInvitation(invitation: TotpInvitation, now = new Date()): boolean {
