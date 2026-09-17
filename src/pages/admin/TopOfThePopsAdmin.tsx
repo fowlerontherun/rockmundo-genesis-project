@@ -3,8 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { adminBuildTotpBroadcastArchive, adminLockTotpRunningOrder, getTotpBroadcastArchive, getTotpEpisode } from "@/features/top-of-the-pops/api";
-import { Archive, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
+import {
+  adminBuildTotpBroadcastArchive,
+  adminCompleteTotpPerformance,
+  adminLockTotpRunningOrder,
+  getTotpBroadcastArchive,
+  getTotpEpisode,
+  getTotpPublicHistory,
+} from "@/features/top-of-the-pops/api";
+import { Archive, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -27,6 +34,11 @@ export default function TopOfThePopsAdmin() {
     queryFn: () => getTotpBroadcastArchive(currentId),
     enabled: !!currentId,
   });
+  const history = useQuery({
+    queryKey: ["totp", "history", "admin-current"],
+    queryFn: () => getTotpPublicHistory(null, 200),
+    enabled: !!currentId,
+  });
 
   const lockOrder = useMutation({
     mutationFn: adminLockTotpRunningOrder,
@@ -46,6 +58,18 @@ export default function TopOfThePopsAdmin() {
     onError: (error: Error) => toast({ title: "Could not build archive", description: error.message, variant: "destructive" }),
   });
 
+  const completePerformance = useMutation({
+    mutationFn: (performanceId: string) => adminCompleteTotpPerformance(performanceId),
+    onSuccess: (result) => {
+      toast({
+        title: result.status === "already_completed" ? "Already settled" : "Performance completed",
+        description: `Appearance #${result.appearance_number} · ${result.fame_awarded.toLocaleString()} fame awarded.`,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["totp"] });
+    },
+    onError: (error: Error) => toast({ title: "Could not complete performance", description: error.message, variant: "destructive" }),
+  });
+
   if (episode.isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Loading Top of the Pops episode…</div>;
   }
@@ -58,6 +82,10 @@ export default function TopOfThePopsAdmin() {
   if (!current) {
     return <div className="p-6"><Card><CardContent className="p-6">No scheduled Top of the Pops episode found.</CardContent></Card></div>;
   }
+
+  const completedByPerformance = new Map(
+    (history.data ?? []).filter((row) => row.episode_number === current.episode_number).map((row) => [row.performance_id, row]),
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -74,7 +102,7 @@ export default function TopOfThePopsAdmin() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Broadcast controls</CardTitle>
           <CardDescription>
-            Lock the running order first, then freeze the canonical broadcast archive. Archive generation never awards fame, XP or money.
+            Lock the running order first, then freeze the canonical broadcast archive. Performance settlement awards fame and achievements exactly once; replaying the archive never settles rewards.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
@@ -94,6 +122,9 @@ export default function TopOfThePopsAdmin() {
           <Badge variant="secondary" className="self-center">
             {archive.data?.replays.length ?? 0}/{current.performances.length} archived
           </Badge>
+          <Badge variant="secondary" className="self-center">
+            {completedByPerformance.size}/{current.performances.length} settled
+          </Badge>
         </CardContent>
       </Card>
 
@@ -106,17 +137,34 @@ export default function TopOfThePopsAdmin() {
           {current.performances.length === 0 && <p className="text-sm text-muted-foreground">No acts have been locked into the broadcast yet.</p>}
           {current.performances.map((performance) => {
             const archived = archive.data?.replays.some((replay) => replay.performance_id === performance.performance_id) ?? false;
+            const settled = completedByPerformance.get(performance.performance_id);
             return (
               <div key={performance.performance_id} className="rounded-lg border p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="font-semibold">{performance.running_order}. {performance.band_name}</div>
                     <div className="text-sm text-muted-foreground">{performance.song_title} · chart #{performance.qualifying_rank}</div>
                     {performance.presenter_intro && <div className="mt-2 text-sm italic">“{performance.presenter_intro}”</div>}
+                    {settled && (
+                      <div className="mt-2 text-sm font-medium text-emerald-600">
+                        Appearance #{settled.appearance_number} · +{settled.fame_awarded.toLocaleString()} fame
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{performance.stage_key.replaceAll("_", " ")}</Badge>
                     {archived && <Badge variant="secondary">archived</Badge>}
+                    {settled ? (
+                      <Badge className="gap-1"><CheckCircle2 className="h-3 w-3" /> settled</Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => completePerformance.mutate(performance.performance_id)}
+                        disabled={completePerformance.isPending}
+                      >
+                        Complete & settle
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
