@@ -41,7 +41,6 @@ export function TotpProgrammeContinuity({
   const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
-    setElapsedMs(0);
     if (!autoPlay) return;
 
     const startedAt = performance.now();
