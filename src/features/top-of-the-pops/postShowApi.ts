@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { totpRpc } from "./rpc";
 
 export type TotpPostShowChoice = "press" | "fans" | "band";
 
@@ -39,19 +39,20 @@ function uuid(value: string): string {
 }
 
 export async function getMyTotpPostShowInteractions(): Promise<TotpPostShowInteraction[]> {
-  const { data, error } = await supabase.rpc("totp_my_postshow_interactions" as any);
+  const { data, error } = await totpRpc<TotpPostShowInteraction[]>("totp_my_postshow_interactions");
   if (error) throw new Error(error.message || "Could not load the Top of the Pops green-room follow-up.");
-  return (data ?? []) as TotpPostShowInteraction[];
+  return data ?? [];
 }
 
 export async function chooseTotpPostShowInteraction(
   interactionId: string,
   choice: TotpPostShowChoice,
 ): Promise<TotpPostShowResult> {
-  const { data, error } = await supabase.rpc("totp_choose_postshow_interaction" as any, {
+  const { data, error } = await totpRpc<TotpPostShowResult>("totp_choose_postshow_interaction", {
     p_interaction_id: uuid(interactionId),
     p_choice: choice,
   });
   if (error) throw new Error(error.message || "Could not save the Top of the Pops post-show response.");
-  return data as TotpPostShowResult;
+  if (!data) throw new Error("Top of the Pops returned no post-show response.");
+  return data;
 }
