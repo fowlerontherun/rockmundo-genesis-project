@@ -8,6 +8,14 @@ export interface TotpTestPreviewSideEffects {
   chart_changes: boolean;
 }
 
+export interface TotpTestPreviewBandMember {
+  profile_id: string | null;
+  display_name: string;
+  role: string;
+  instrument_role: string | null;
+  vocal_role: string | null;
+}
+
 export interface TotpTestPreviewPerformance {
   running_order: number;
   band_id: string;
@@ -20,6 +28,7 @@ export interface TotpTestPreviewPerformance {
   selection_bucket: "top10" | "11_20" | "21_40" | string;
   stage_key: "main_stage" | "stage_b" | "rock_stage" | "studio_floor" | string;
   presenter_intro: string;
+  members: TotpTestPreviewBandMember[];
 }
 
 export interface TotpAdminTestPreview {
