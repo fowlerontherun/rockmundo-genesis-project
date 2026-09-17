@@ -1,6 +1,13 @@
 import * as T from 'three';
 import { box, cylinder, rod, matte, metal } from './stage';
 import type { VenueProfile } from './venueProfile';
+import { resolveTotpPresenter } from '@/features/top-of-the-pops/presenters';
+
+function namedMat(name: string, color: string) {
+  const material = matte(color);
+  material.name = name;
+  return material;
+}
 
 function buildCameraBody(root: T.Group, x: number, z: number, yaw = 0, handheld = false) {
   const dark = matte('#151a20');
@@ -44,13 +51,15 @@ function buildOperator(root: T.Group, x: number, z: number, yaw = 0, name = 'tot
 }
 
 function buildPresenter(root: T.Group, x: number, z: number) {
-  const suit = matte('#171c26');
-  const shirt = matte('#e8ecef');
-  const skin = matte('#b98968');
-  const hair = matte('#2d2119');
-  const accent = matte('#c72f52');
+  const profile = resolveTotpPresenter('alex_rayne');
+  const suit = namedMat('totp-presenter-suit', profile.visual.suit);
+  const shirt = namedMat('totp-presenter-shirt', profile.visual.shirt);
+  const skin = namedMat('totp-presenter-skin', profile.visual.skin);
+  const hair = namedMat('totp-presenter-hair', profile.visual.hair);
+  const accent = namedMat('totp-presenter-accent', profile.visual.accent);
   const presenter = new T.Group();
-  presenter.name = 'totp-presenter-alex-rayne';
+  presenter.name = 'totp-presenter-alex_rayne';
+  presenter.userData.presenterKey = 'alex_rayne';
   presenter.position.set(x, 0, z);
   presenter.rotation.y = Math.PI * .08;
 
@@ -66,6 +75,37 @@ function buildPresenter(root: T.Group, x: number, z: number) {
   cylinder(presenter, .035, .045, .28, [.42, 1.08, -.24], matte('#111318'), 10).rotation.x = Math.PI / 2;
   root.add(presenter);
   return presenter;
+}
+
+export function applyTvStudioPresenterProfile(root: T.Object3D, presenterKey?: string | null) {
+  const profile = resolveTotpPresenter(presenterKey);
+  const presenter = root.getObjectByName('totp-presenter-alex_rayne')
+    ?? root.children.find(child => child.userData.presenterKey && child.name.startsWith('totp-presenter-'))
+    ?? null;
+  if (!presenter) return;
+
+  presenter.name = `totp-presenter-${profile.key}`;
+  presenter.userData.presenterKey = profile.key;
+  presenter.userData.presenterDisplayName = profile.displayName;
+
+  const palette: Record<string, string> = {
+    'totp-presenter-suit': profile.visual.suit,
+    'totp-presenter-shirt': profile.visual.shirt,
+    'totp-presenter-skin': profile.visual.skin,
+    'totp-presenter-hair': profile.visual.hair,
+    'totp-presenter-accent': profile.visual.accent,
+  };
+  presenter.traverse(object => {
+    if (!(object instanceof T.Mesh)) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    materials.forEach(material => {
+      const next = palette[material.name];
+      if (next && material instanceof T.MeshStandardMaterial) {
+        material.color.set(next);
+        if (material.emissive) material.emissive.set('#000000');
+      }
+    });
+  });
 }
 
 function buildPerformanceZones(root: T.Group, p: VenueProfile) {
