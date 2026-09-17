@@ -173,14 +173,5 @@ BEGIN
 END;
 $$;
 
--- Build a fresh source immediately, then prepare the next valid show. Both operations are
--- idempotent, so rerunning the migration in a clean/replay environment is safe.
-DO $$
-BEGIN
-  PERFORM public.totp_refresh_uk_chart_snapshot(current_date);
-  PERFORM public.totp_prepare_next_episode();
-END;
-$$;
-
 COMMENT ON FUNCTION public.totp_refresh_uk_chart_snapshot(date) IS
   'Builds the authoritative UK streaming and digital-sales Top 40 snapshots used by Top of the Pops directly from recent raw game activity.';
