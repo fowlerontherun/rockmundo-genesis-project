@@ -1,5 +1,5 @@
 export type TotpPresenterKey = "alex_rayne" | "maya_stone" | "jack_mercer" | "nia_vale";
-export type TotpShowVariant = "regular" | "guest_host" | "milestone" | string;
+export type TotpShowVariant = "regular" | "guest_host" | "milestone" | "christmas" | "anniversary" | string;
 
 export interface TotpPresenterProfile {
   key: TotpPresenterKey;
@@ -48,5 +48,7 @@ export function resolveTotpPresenter(key?: string | null): TotpPresenterProfile 
 export function totpVariantLabel(variant?: string | null): string | null {
   if (variant === "guest_host") return "Guest host edition";
   if (variant === "milestone") return "Milestone edition";
+  if (variant === "christmas") return "Christmas special";
+  if (variant === "anniversary") return "Anniversary special";
   return null;
 }
