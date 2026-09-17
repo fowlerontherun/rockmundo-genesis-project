@@ -11,6 +11,7 @@ import {
   getTotpEpisode,
   getTotpPublicHistory,
 } from "@/features/top-of-the-pops/api";
+import { TotpAdminDemo } from "@/features/top-of-the-pops/TotpAdminDemo";
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { Archive, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
 
@@ -29,7 +30,8 @@ export default function TopOfThePopsAdmin() {
     queryKey: ["totp", "episode", "admin-current"],
     queryFn: () => getTotpEpisode(),
   });
-  const currentId = episode.data?.id ?? null;
+  const current = episode.data ?? null;
+  const currentId = current?.id ?? null;
   const archive = useQuery({
     queryKey: ["totp", "archive", currentId],
     queryFn: () => getTotpBroadcastArchive(currentId),
@@ -71,25 +73,14 @@ export default function TopOfThePopsAdmin() {
     onError: (error: Error) => toast({ title: "Could not complete performance", description: error.message, variant: "destructive" }),
   });
 
-  if (episode.isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading Top of the Pops episode…</div>;
-  }
-
-  if (episode.isError) {
-    return <div className="p-6 text-sm text-destructive">{(episode.error as Error).message}</div>;
-  }
-
-  const current = episode.data;
-  if (!current) {
-    return <div className="p-6"><Card><CardContent className="p-6">No scheduled Top of the Pops episode found.</CardContent></Card></div>;
-  }
-
-  const presenter = resolveTotpPresenter((current as any).presenter_key);
-  const variantLabel = totpVariantLabel((current as any).show_variant);
+  const presenter = resolveTotpPresenter(current?.presenter_key);
+  const variantLabel = totpVariantLabel(current?.show_variant);
   const completedByPerformance = new Map(
-    (history.data ?? []).filter((row) => row.episode_number === current.episode_number).map((row) => [row.performance_id, row]),
+    current
+      ? (history.data ?? []).filter((row) => row.episode_number === current.episode_number).map((row) => [row.performance_id, row])
+      : [],
   );
-  const allPerformancesSettled = current.performances.length > 0 && completedByPerformance.size === current.performances.length;
+  const allPerformancesSettled = !!current && current.performances.length > 0 && completedByPerformance.size === current.performances.length;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -97,92 +88,121 @@ export default function TopOfThePopsAdmin() {
         <div>
           <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Tv2 className="h-4 w-4" /> Television administration</div>
           <h1 className="text-3xl font-bold">Top of the Pops</h1>
-          <p className="text-muted-foreground">Episode #{current.episode_number} · {formatDateTime(current.broadcast_at)} · {presenter.displayName}</p>
+          <p className="text-muted-foreground">
+            {current
+              ? `Episode #${current.episode_number} · ${formatDateTime(current.broadcast_at)} · ${presenter.displayName}`
+              : "Live episode operations and a safe production-studio preview."}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {variantLabel && <Badge variant="outline">{variantLabel}</Badge>}
-          <Badge variant="secondary">{current.status}</Badge>
-        </div>
+        {current && (
+          <div className="flex flex-wrap gap-2">
+            {variantLabel && <Badge variant="outline">{variantLabel}</Badge>}
+            <Badge variant="secondary">{current.status}</Badge>
+          </div>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Broadcast controls</CardTitle>
-          <CardDescription>
-            {presenter.displayName} presents this {variantLabel ? `${variantLabel.toLowerCase()} ` : ""}episode. Lock the running order, complete and settle every performance, then freeze the canonical archive. The final replay snapshots the presenter, edition, live-TV incident, recovery, performance style and studio-audience reaction; replaying it never settles rewards.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Button
-            onClick={() => lockOrder.mutate(current.id)}
-            disabled={lockOrder.isPending || current.status === "completed" || current.status === "cancelled"}
-          >
-            <LockKeyhole className="mr-2 h-4 w-4" /> Lock running order
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => buildArchive.mutate(current.id)}
-            disabled={buildArchive.isPending || !allPerformancesSettled}
-            title={allPerformancesSettled ? "Build the immutable television replay" : "Settle every performance before archiving"}
-          >
-            <Archive className="mr-2 h-4 w-4" /> Build canonical archive
-          </Button>
-          <Badge variant="secondary" className="self-center">
-            {archive.data?.replays.length ?? 0}/{current.performances.length} archived
-          </Badge>
-          <Badge variant="secondary" className="self-center">
-            {completedByPerformance.size}/{current.performances.length} settled
-          </Badge>
-          {!allPerformancesSettled && current.performances.length > 0 && (
-            <span className="self-center text-xs text-muted-foreground">Archive unlocks after every act is settled.</span>
-          )}
-        </CardContent>
-      </Card>
+      <TotpAdminDemo />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Published running order</CardTitle>
-          <CardDescription>{current.performances.length} act{current.performances.length === 1 ? "" : "s"} currently in the show.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {current.performances.length === 0 && <p className="text-sm text-muted-foreground">No acts have been locked into the broadcast yet.</p>}
-          {current.performances.map((performance) => {
-            const archived = archive.data?.replays.some((replay) => replay.performance_id === performance.performance_id) ?? false;
-            const settled = completedByPerformance.get(performance.performance_id);
-            return (
-              <div key={performance.performance_id} className="rounded-lg border p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <div className="font-semibold">{performance.running_order}. {performance.band_name}</div>
-                    <div className="text-sm text-muted-foreground">{performance.song_title} · chart #{performance.qualifying_rank}</div>
-                    {performance.presenter_intro && <div className="mt-2 text-sm italic">“{performance.presenter_intro}”</div>}
-                    {settled && (
-                      <div className="mt-2 text-sm font-medium text-emerald-600">
-                        Appearance #{settled.appearance_number} · +{settled.fame_awarded.toLocaleString()} fame
+      {episode.isLoading && (
+        <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading live Top of the Pops episode controls…</CardContent></Card>
+      )}
+
+      {episode.isError && (
+        <Card className="border-destructive/40"><CardContent className="p-6 text-sm text-destructive">Live episode controls could not load: {(episode.error as Error).message}</CardContent></Card>
+      )}
+
+      {!episode.isLoading && !episode.isError && !current && (
+        <Card>
+          <CardHeader>
+            <CardTitle>No live episode scheduled</CardTitle>
+            <CardDescription>The studio demo above remains fully available. The Monday scheduler will prepare the next eligible fortnightly Thursday episode.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {current && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Broadcast controls</CardTitle>
+              <CardDescription>
+                {presenter.displayName} presents this {variantLabel ? `${variantLabel.toLowerCase()} ` : ""}episode. Lock the running order, complete and settle every performance, then freeze the canonical archive. The final replay snapshots the presenter, edition, live-TV incident, recovery, performance style and studio-audience reaction; replaying it never settles rewards.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => lockOrder.mutate(current.id)}
+                disabled={lockOrder.isPending || current.status === "completed" || current.status === "cancelled"}
+              >
+                <LockKeyhole className="mr-2 h-4 w-4" /> Lock running order
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => buildArchive.mutate(current.id)}
+                disabled={buildArchive.isPending || !allPerformancesSettled}
+                title={allPerformancesSettled ? "Build the immutable television replay" : "Settle every performance before archiving"}
+              >
+                <Archive className="mr-2 h-4 w-4" /> Build canonical archive
+              </Button>
+              <Badge variant="secondary" className="self-center">
+                {archive.data?.replays.length ?? 0}/{current.performances.length} archived
+              </Badge>
+              <Badge variant="secondary" className="self-center">
+                {completedByPerformance.size}/{current.performances.length} settled
+              </Badge>
+              {!allPerformancesSettled && current.performances.length > 0 && (
+                <span className="self-center text-xs text-muted-foreground">Archive unlocks after every act is settled.</span>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Published running order</CardTitle>
+              <CardDescription>{current.performances.length} act{current.performances.length === 1 ? "" : "s"} currently in the show.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {current.performances.length === 0 && <p className="text-sm text-muted-foreground">No acts have been locked into the broadcast yet.</p>}
+              {current.performances.map((performance) => {
+                const archived = archive.data?.replays.some((replay) => replay.performance_id === performance.performance_id) ?? false;
+                const settled = completedByPerformance.get(performance.performance_id);
+                return (
+                  <div key={performance.performance_id} className="rounded-lg border p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="font-semibold">{performance.running_order}. {performance.band_name}</div>
+                        <div className="text-sm text-muted-foreground">{performance.song_title} · chart #{performance.qualifying_rank}</div>
+                        {performance.presenter_intro && <div className="mt-2 text-sm italic">“{performance.presenter_intro}”</div>}
+                        {settled && (
+                          <div className="mt-2 text-sm font-medium text-emerald-600">
+                            Appearance #{settled.appearance_number} · +{settled.fame_awarded.toLocaleString()} fame
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{performance.stage_key.replaceAll("_", " ")}</Badge>
+                        {archived && <Badge variant="secondary">archived</Badge>}
+                        {settled ? (
+                          <Badge className="gap-1"><CheckCircle2 className="h-3 w-3" /> settled</Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => completePerformance.mutate(performance.performance_id)}
+                            disabled={completePerformance.isPending}
+                          >
+                            Complete & settle
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">{performance.stage_key.replaceAll("_", " ")}</Badge>
-                    {archived && <Badge variant="secondary">archived</Badge>}
-                    {settled ? (
-                      <Badge className="gap-1"><CheckCircle2 className="h-3 w-3" /> settled</Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => completePerformance.mutate(performance.performance_id)}
-                        disabled={completePerformance.isPending}
-                      >
-                        Complete & settle
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
