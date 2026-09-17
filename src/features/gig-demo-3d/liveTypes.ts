@@ -14,7 +14,18 @@ export interface ConcertPerformer {
   richClothing?: ResolvedEquippedClothing[];
   phase: number;
 }
-export interface ConcertVenue { name: string; bandName: string; archetype: string; seed: number; type?: string | null; capacity?: number | null; id?: string | null; }
+export interface ConcertVenue {
+  name: string;
+  bandName: string;
+  archetype: string;
+  seed: number;
+  type?: string | null;
+  capacity?: number | null;
+  id?: string | null;
+  /** TV-studio-only presentation metadata. Ignored by ordinary venues. */
+  presenterKey?: string | null;
+  showVariant?: string | null;
+}
 export interface ConcertFrame {
   positionMs: number;
   energy: number;
