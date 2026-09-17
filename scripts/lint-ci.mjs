@@ -37,12 +37,21 @@ if (newErrors > 0) {
     "/src/components/stage-practice/StagePracticeResults.tsx",
     "/src/pages/Rehearsals.tsx",
   ];
-  const focused = report.filter((file) =>
-    file.errorCount > 0 && activeSessionPaths.some((path) => file.filePath.replaceAll("\\", "/").endsWith(path)),
-  );
+  const normalizedPath = (filePath) => filePath.replaceAll("\\", "/");
+  const focused = report.filter((file) => {
+    const path = normalizedPath(file.filePath);
+    return file.errorCount > 0 && (
+      activeSessionPaths.some((activePath) => path.endsWith(activePath)) ||
+      path.includes("/src/features/top-of-the-pops/") ||
+      path.includes("/src/features/gig-demo-3d/") ||
+      path.endsWith("/src/features/gig-experience/viewer/GigCanvas.tsx") ||
+      path.endsWith("/src/features/gig-experience/viewer/three/GigStage3D.tsx") ||
+      path.endsWith("/src/features/gig-experience/viewer/three/presentation.ts")
+    );
+  });
 
   if (focused.length) {
-    console.error("\nErrors in Active Sessions release files:");
+    console.error("\nErrors in release-focused files:");
     for (const file of focused) {
       console.error(`\n${file.filePath}`);
       for (const message of file.messages.filter((item) => item.severity === 2)) {
