@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,13 @@ import {
   canAttemptTotpCheckIn,
   canRespondToTotpInvitation,
   checkInToTotp,
+  getTotpBroadcastArchive,
   getTotpEpisode,
   listMyTotpInvitations,
   respondToTotpInvitation,
 } from "@/features/top-of-the-pops/api";
-import { CalendarDays, MapPin, Music2, Radio, Tv2 } from "lucide-react";
+import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
+import { Archive, CalendarDays, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -24,6 +27,7 @@ function formatDateTime(value: string) {
 export default function TopOfThePops() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [selectedReplayId, setSelectedReplayId] = useState<string | null>(null);
 
   const invitations = useQuery({
     queryKey: ["totp", "my-invitations"],
@@ -33,6 +37,13 @@ export default function TopOfThePops() {
   const episode = useQuery({
     queryKey: ["totp", "episode", "current"],
     queryFn: () => getTotpEpisode(),
+  });
+
+  const currentEpisodeId = episode.data?.id ?? null;
+  const archive = useQuery({
+    queryKey: ["totp", "archive", currentEpisodeId],
+    queryFn: () => getTotpBroadcastArchive(currentEpisodeId),
+    enabled: !!currentEpisodeId,
   });
 
   const respond = useMutation({
@@ -61,6 +72,8 @@ export default function TopOfThePops() {
 
   const now = new Date();
   const currentEpisode = episode.data;
+  const archiveReplays = archive.data?.replays ?? [];
+  const selectedReplay = archiveReplays.find((replay) => replay.id === selectedReplayId) ?? archiveReplays[0] ?? null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -92,7 +105,7 @@ export default function TopOfThePops() {
               <p className="text-sm text-muted-foreground">The running order has not been published yet.</p>
             ) : (
               currentEpisode.performances.map((performance) => (
-                <div key={`${performance.band_id}-${performance.running_order}`} className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <div key={performance.performance_id} className="flex items-center justify-between gap-4 rounded-lg border p-3">
                   <div className="min-w-0">
                     <div className="font-medium">{performance.running_order}. {performance.band_name}</div>
                     <div className="truncate text-sm text-muted-foreground">{performance.song_title} · qualifying chart #{performance.qualifying_rank}</div>
@@ -103,6 +116,35 @@ export default function TopOfThePops() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {archiveReplays.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold"><Archive className="h-5 w-5" /> Broadcast archive</h2>
+              <p className="text-sm text-muted-foreground">Watch the immutable television replay as it originally aired. Replays never award fame, XP or money.</p>
+            </div>
+            <Badge variant="secondary">{archiveReplays.length} archived performance{archiveReplays.length === 1 ? "" : "s"}</Badge>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {archiveReplays.map((replay) => (
+              <Button
+                key={replay.id}
+                variant={selectedReplay?.id === replay.id ? "default" : "outline"}
+                size="sm"
+                className="shrink-0"
+                onClick={() => setSelectedReplayId(replay.id)}
+              >
+                <Play className="mr-2 h-3.5 w-3.5" />
+                {replay.payload.runningOrder}. {replay.payload.band.name} — {replay.payload.song.title}
+              </Button>
+            ))}
+          </div>
+
+          {selectedReplay && <TotpArchivePlayer replay={selectedReplay} />}
+        </section>
       )}
 
       <section className="space-y-3">
@@ -145,21 +187,12 @@ export default function TopOfThePops() {
                 <div className="flex flex-wrap gap-2">
                   {canRespond && (
                     <>
-                      <Button
-                        onClick={() => respond.mutate({ id: invitation.invitation_id, response: "accepted" })}
-                        disabled={respond.isPending}
-                      >Accept invitation</Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => respond.mutate({ id: invitation.invitation_id, response: "declined" })}
-                        disabled={respond.isPending}
-                      >Decline</Button>
+                      <Button onClick={() => respond.mutate({ id: invitation.invitation_id, response: "accepted" })} disabled={respond.isPending}>Accept invitation</Button>
+                      <Button variant="outline" onClick={() => respond.mutate({ id: invitation.invitation_id, response: "declined" })} disabled={respond.isPending}>Decline</Button>
                     </>
                   )}
                   {canCheckIn && (
-                    <Button onClick={() => checkIn.mutate(invitation.invitation_id)} disabled={checkIn.isPending}>
-                      Check band into studio
-                    </Button>
+                    <Button onClick={() => checkIn.mutate(invitation.invitation_id)} disabled={checkIn.isPending}>Check band into studio</Button>
                   )}
                 </div>
               </CardContent>
