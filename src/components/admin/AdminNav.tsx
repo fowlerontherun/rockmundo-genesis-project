@@ -1,8 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Users, Music, Building2, Trophy, DollarSign, Map, GraduationCap, 
-  Radio, Settings, FileText, Warehouse, TrendingUp, Shield, Briefcase,
-  Guitar, Sparkles, Calendar, Cog
+import {
+  Users, Music, Trophy, DollarSign, Map, GraduationCap,
+  Radio, Settings, Briefcase, Guitar,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -69,7 +68,6 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/gig-viewer-demo", label: "Gig Viewer Demo", description: "Fixture viewer and replay inspector" },
       { path: "/admin/gig-viewer-demo?view=3d", label: "3D Concert Demo", description: "Immersive club, animated band and camera views" },
       { path: "/admin/gig-viewer-replays", label: "Gig Viewer Replay Audit", description: "Replay status, validation and regeneration" },
-      
       { path: "/admin/venues", label: "Venues", description: "Venue management" },
       { path: "/admin/rehearsal-rooms", label: "Rehearsal Rooms", description: "Practice spaces" },
       { path: "/admin/stage-equipment", label: "Stage Equipment", description: "Equipment catalog" },
@@ -84,9 +82,10 @@ export const adminCategories: AdminCategory[] = [
   {
     id: "events",
     title: "Events & Competitions",
-    description: "Festivals, Eurovision, and award shows",
+    description: "Festivals, television, Eurovision, and award shows",
     icon: Trophy,
     items: [
+      { path: "/admin/top-of-the-pops", label: "Top of the Pops / Demo", description: "Run the safe TOTP lifecycle demo and manage live broadcasts" },
       { path: "/admin/festivals", label: "Festivals", description: "Festival system" },
       { path: "/admin/eurovision", label: "Eurovision", description: "Eurovision management" },
       { path: "/admin/awards", label: "Awards", description: "Award shows" },
