@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarChart3, ChevronRight, Minus, Radio, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,14 +36,14 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, onEnded }:
   const [elapsedMs, setElapsedMs] = useState(0);
   const page = pages[pageIndex] ?? null;
 
-  const advance = () => {
+  const advance = useCallback(() => {
     if (pageIndex >= pages.length - 1) {
       onEnded?.();
       return;
     }
     setElapsedMs(0);
     setPageIndex((index) => Math.min(pages.length - 1, index + 1));
-  };
+  }, [onEnded, pageIndex, pages.length]);
 
   useEffect(() => {
     if (!autoPlay || !page) return;
@@ -57,7 +57,7 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, onEnded }:
       }
     }, 100);
     return () => window.clearInterval(timer);
-  }, [autoPlay, pageIndex, page, pages.length]);
+  }, [advance, autoPlay, page]);
 
   if (!page) {
     return (
