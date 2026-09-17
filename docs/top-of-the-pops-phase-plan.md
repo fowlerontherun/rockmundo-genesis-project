@@ -56,13 +56,15 @@ Implemented:
 - Added TOTP camera-shot vocabulary mapped onto the existing 3D camera system.
 - Added a broadcast wrapper that overlays show branding, Alex Rayne presenter captions and chart lower-thirds over the shared 3D renderer.
 - Added reduced-motion fallback to the stable studio-master shot.
+- Added physical TV-production geometry inside `tv_studio` only: two pedestal cameras/operators, a handheld camera/operator, a jib/crane and three studio monitors.
+- Added Alex Rayne as a physical in-scene presenter on a dedicated rostrum/backdrop, while keeping the caption layer for accessibility and readable dialogue.
+- Added tests proving the TV studio gets the production objects and normal gig venues do not.
 - Added tests for camera targeting, timeline construction and the TV-studio venue profile.
 
 Next within Phase 3:
 
-- Add visible pedestal cameras, handheld operators and a crane/jib to the `tv_studio` scene geometry.
-- Add a presenter 3D model/position rather than caption-only presenter sequences.
-- Add dedicated studio camera transforms beyond the current mapping to shared camera presets.
+- Add dedicated studio camera transforms for presenter close/wide, crane sweeps, overheads and audience-reverse shots beyond the current mapping to shared camera presets.
+- Make presenter cues drive those dedicated transforms so the broadcast visibly cuts from Alex Rayne to the performance stage.
 - Persist/reconstruct a canonical TOTP performance replay so every broadcast can be watched again from the archive.
 - Connect the episode viewer page to that canonical replay.
 - Add multiple performance-zone geometry to match `main_stage`, `stage_b`, `rock_stage` and `studio_floor` assignments.
