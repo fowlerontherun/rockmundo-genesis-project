@@ -69,6 +69,7 @@ AS $$
   SELECT coalesce(jsonb_agg(jsonb_build_object(
     'id',i.id,
     'performance_id',i.performance_id,
+    'invitation_id',tp.invitation_id,
     'episode_id',i.episode_id,
     'band_id',i.band_id,
     'band_name',b.name,
@@ -79,6 +80,7 @@ AS $$
     'resolved_at',i.resolved_at
   ) ORDER BY i.created_at DESC),'[]'::jsonb)
   FROM public.totp_postshow_interactions i
+  JOIN public.totp_performances tp ON tp.id=i.performance_id
   JOIN public.bands b ON b.id=i.band_id
   WHERE EXISTS (
     SELECT 1
