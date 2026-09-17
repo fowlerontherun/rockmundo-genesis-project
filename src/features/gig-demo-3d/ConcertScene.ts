@@ -23,8 +23,8 @@ const CAMERAS = {
   tv_crane: { position: [6.8, 6.6, 6.5], target: [0, 1.75, -1.2], fov: 50 },
   tv_overhead: { position: [0, 10.5, 1.8], target: [0, 0.6, -0.9], fov: 48 },
   tv_audience_reverse: { position: [0, 2.15, -3.1], target: [0, 1.55, 7.0], fov: 58 },
-  tv_tracking: { position: [-5.2, 2.2, 2.4], target: [0, 1.55, -1.5], fov: 45 },
-  tv_low_angle: { position: [0.3, 0.75, 2.25], target: [0, 2.1, -1.6], fov: 44 },
+  tv_tracking: { position: [-5.8, 2.35, 3.45], target: [0, 1.55, -1.5], fov: 46 },
+  tv_low_angle: { position: [0.3, 0.95, 3.65], target: [0, 1.95, -1.6], fov: 46 },
 } as const;
 
 const TV_CAMERA_SHOTS = new Set<CameraShot>([
@@ -245,7 +245,32 @@ export class ConcertScene {
       }
     }
     if (!this.options && this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
-    const lerp = this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
+
+    // Television cameras cut between pre-planned positions instead of flying through
+    // the stage. Keep every TOTP lens outside a performer safety bubble as a final
+    // presentation-only guard against clipping through heads, torsos or instruments.
+    if (this.options?.television) {
+      const minSubjectDistance = selected === 'guitar' || selected === 'drums' ? 1.65 : 1.35;
+      for (const actor of this.actors) {
+        if (!actor.root.visible) continue;
+        const centre = actor.root.position.clone().add(new T.Vector3(0, 1.15, 0));
+        const away = this.cameraPos.clone().sub(centre);
+        if (away.lengthSq() < minSubjectDistance * minSubjectDistance) {
+          if (away.lengthSq() < 0.0001) away.copy(this.cameraPos).sub(this.targetPos);
+          if (away.lengthSq() < 0.0001) away.set(0, .3, 1);
+          this.cameraPos.copy(centre).add(away.normalize().multiplyScalar(minSubjectDistance));
+        }
+      }
+      const sightline = this.cameraPos.clone().sub(this.targetPos);
+      const minimumLensDistance = selected === 'tv_presenter_close' ? 2.2 : 2.8;
+      if (sightline.length() < minimumLensDistance) {
+        if (sightline.lengthSq() < 0.0001) sightline.set(0, .2, 1);
+        this.cameraPos.copy(this.targetPos).add(sightline.normalize().multiplyScalar(minimumLensDistance));
+      }
+    }
+
+    const televisionCut = !!this.options?.television && selected !== this.sceneKey;
+    const lerp = televisionCut || this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
     this.camera.position.lerp(this.cameraPos, lerp); this.lookAt.lerp(this.targetPos, lerp);
     this.camera.fov = T.MathUtils.lerp(this.camera.fov, shot.fov, lerp); this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;
   }
