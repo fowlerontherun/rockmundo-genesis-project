@@ -13,6 +13,7 @@ import {
 } from "@/features/top-of-the-pops/api";
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { TotpTestEpisodeCard } from "@/features/top-of-the-pops/TotpTestEpisodeCard";
+import { TotpMediaManager } from "@/features/top-of-the-pops/TotpMediaManager";
 import { Archive, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
@@ -89,6 +90,7 @@ export default function TopOfThePopsAdmin() {
           <h1 className="text-3xl font-bold">Top of the Pops</h1>
           <p className="text-muted-foreground">No real episode is currently scheduled. You can still run the safe test harness below.</p>
         </div>
+        <TotpMediaManager presenterKey="alex_rayne" />
         <TotpTestEpisodeCard />
         <Card><CardContent className="p-6">No scheduled Top of the Pops episode found.</CardContent></Card>
       </div>
@@ -115,6 +117,8 @@ export default function TopOfThePopsAdmin() {
           <Badge variant="secondary">{current.status}</Badge>
         </div>
       </div>
+
+      <TotpMediaManager presenterKey={(current as any).presenter_key ?? "alex_rayne"} />
 
       <TotpTestEpisodeCard />
 
