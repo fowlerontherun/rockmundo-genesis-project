@@ -28,12 +28,13 @@ export interface TotpInvitation {
 }
 
 export interface TotpPerformance {
+  performance_id: string;
   running_order: number;
   band_id: string;
   band_name: string;
   song_id: string;
   song_title: string;
-  stage_key: "main_stage" | "secondary_stage" | "stage_b" | "rock_stage" | "studio_floor" | string;
+  stage_key: "main_stage" | "stage_b" | "rock_stage" | "studio_floor" | string;
   presenter_intro: string | null;
   qualifying_rank: number;
 }
