@@ -10,6 +10,8 @@ export type TotpInvitationStatus =
   | "performed"
   | "missed";
 
+export type TotpInvitationResponseOutcome = "accepted" | "declined" | "expired";
+
 export interface TotpInvitation {
   invitation_id: string;
   episode_id: string;
@@ -193,14 +195,16 @@ export async function listMyTotpInvitations(): Promise<TotpInvitation[]> {
   return (data ?? []) as TotpInvitation[];
 }
 
-export async function respondToTotpInvitation(id: string, response: "accepted" | "declined"): Promise<string> {
+export async function respondToTotpInvitation(id: string, response: "accepted" | "declined"): Promise<TotpInvitationResponseOutcome> {
   const normalizedId = invitationId(id);
   const { data, error } = await supabase.rpc("totp_respond_to_invitation" as any, {
     p_invitation_id: normalizedId,
     p_response: response,
   });
   if (error) throw new Error(error.message || "Could not update the Top of the Pops invitation.");
-  return String(data ?? response);
+  const outcome = String(data ?? response);
+  if (outcome === "accepted" || outcome === "declined" || outcome === "expired") return outcome;
+  throw new Error("Top of the Pops returned an unexpected invitation response.");
 }
 
 export async function checkInToTotp(id: string): Promise<TotpCheckInResult> {
