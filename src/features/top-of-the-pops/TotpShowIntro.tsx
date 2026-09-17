@@ -3,7 +3,7 @@ import { Play, SkipForward, Tv2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const TOTP_INTRO_VIDEO_URL =
-  (import.meta.env.VITE_TOTP_INTRO_URL as string | undefined)?.trim() || "/media/top-of-the-pops/show-intro.webm";
+  (import.meta.env.VITE_TOTP_INTRO_URL as string | undefined)?.trim() || "/media/top-of-the-pops/show-intro.mp4";
 export const TOTP_INTRO_DURATION_MS = 15_943;
 
 export interface TotpShowIntroProps {
@@ -12,9 +12,9 @@ export interface TotpShowIntroProps {
 }
 
 /**
- * Programme opener for full-episode playback only. The supplied source clip is
- * WebM/VP9+Opus, so the same-origin default uses a .webm filename. Production
- * may override the asset host/path with VITE_TOTP_INTRO_URL.
+ * Programme opener for full-episode playback and the admin studio demo. The
+ * supplied source clip is an MP4 container carrying VP9 video and Opus audio.
+ * Production may override the asset host/path with VITE_TOTP_INTRO_URL.
  */
 export function TotpShowIntro({ playing, onEnded }: TotpShowIntroProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
