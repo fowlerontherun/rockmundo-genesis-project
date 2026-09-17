@@ -12,6 +12,9 @@ import type { CrowdTuningOptions } from '../engine/CrowdTuning';
 
 const clamp = (n: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
 const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backing_vocals: 'vocals', lead_guitar: 'guitar', rhythm_guitar: 'guitar', guitar: 'guitar', bass: 'bass', drums: 'drums', keyboard: 'keyboard', piano: 'keyboard', dj: 'dj', electronic: 'dj', percussion: 'percussion', strings: 'strings', brass: 'brass', woodwind: 'woodwind', other: 'other', unknown: 'other' };
+
+export type ConcertPresentationMode = 'gig' | 'totp';
+
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
   const entrances = new Set(replay.events.flatMap(e => e.visualPayload.type === 'performer_enter' ? [e.visualPayload.performerId] : []));
   const candidates = experience?.performers ?? [], performed = candidates.filter(p => p.lineupStatus === 'performed');
@@ -28,9 +31,22 @@ export function concertOptions(
   experience: GigExperienceDTO | null,
   archetype: string,
   richClothing: Record<string, ResolvedEquippedClothing[]> = {},
+  presentationMode: ConcertPresentationMode = 'gig',
 ): ConcertOptions {
-  let seed = 0; for (const c of String(experience?.gig.venue.id ?? replay.simulationSeed)) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
-  const venue: ConcertVenue = { name: experience?.gig.venue.name ?? 'Live performance', bandName: 'ROCKMUNDO', archetype, seed, type: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity, id: experience?.gig.venue.id };
+  const totp = presentationMode === 'totp';
+  const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
+  let seed = 0; for (const c of seedSource) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const venue: ConcertVenue = totp
+    ? {
+        name: 'RockMundo Television Centre',
+        bandName: 'TOP OF THE POPS',
+        archetype: 'tv_studio',
+        seed,
+        type: 'tv_studio',
+        capacity: 250,
+        id: `totp-${replay.id}`,
+      }
+    : { name: experience?.gig.venue.name ?? 'Live performance', bandName: 'ROCKMUNDO', archetype, seed, type: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity, id: experience?.gig.venue.id };
   const profile = resolveVenueProfile(venue);
   return {
     externalClock: true,
