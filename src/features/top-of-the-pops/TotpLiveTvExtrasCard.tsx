@@ -3,6 +3,7 @@ import { Activity, Flame, RadioTower, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import {
   chooseTotpPerformanceStyle,
@@ -41,6 +42,14 @@ function signed(value: number | undefined) {
   return `${numeric >= 0 ? "+" : ""}${numeric}`;
 }
 
+function audienceLabel(reaction: number) {
+  if (reaction >= 6) return "Roaring";
+  if (reaction >= 4) return "Loud";
+  if (reaction >= 2) return "Warm";
+  if (reaction >= 0) return "Settled";
+  return "Nervous";
+}
+
 export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -74,6 +83,8 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
   if (extras.isLoading || (!event && !style)) return null;
 
   const selectedStyle = STYLE_CHOICES.find((choice) => choice.key === style?.selected_style) ?? null;
+  const audienceReaction = Number(event?.audience_reaction ?? 0) + Number(style?.selected_style ? style.audience_reaction : 0);
+  const audienceMeter = Math.max(0, Math.min(100, 50 + audienceReaction * 8));
 
   return (
     <Card className="border-amber-500/20 bg-amber-500/5">
@@ -90,6 +101,17 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
       </CardHeader>
 
       <CardContent className="space-y-4">
+        <div className="rounded-lg border bg-background/70 p-4">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" /> Studio audience</div>
+            <Badge variant="secondary">{audienceLabel(audienceReaction)} · {signed(audienceReaction)}</Badge>
+          </div>
+          <Progress value={audienceMeter} className="mt-3 h-2" />
+          <p className="mt-2 text-xs text-muted-foreground">
+            This reaction combines tonight's production incident with the chosen performance style. It is flavour and bounded progression, not a chart modifier.
+          </p>
+        </div>
+
         {event && (
           <div className="rounded-lg border bg-background/70 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
