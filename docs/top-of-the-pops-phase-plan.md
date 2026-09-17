@@ -101,20 +101,35 @@ Implemented substantially in PR #1921.
 - Twaater copy varies for TV debuts, Top 10 appearances, UK #1 performances and 5/10/25/50 appearance milestones.
 - Twaater publishing has a second performance-level duplicate guard, so retrying settlement cannot spam posts.
 - Bot posts are public, system-generated, award no player XP, and use the live Twaater 500-character/sentiment constraints.
+- Added a Top of the Pops résumé card to Band → Fame showing appearances, best chart rank, #1 and Top 10 appearances, first/latest appearance dates and total TOTP fame earned.
+- The résumé card stays hidden until a band has a completed TOTP appearance.
 
 Remaining within Phase 4:
 
-- Surface `totp_band_stats` directly on the main public band profile / band fame page.
 - Add achievement-specific presentation polish (special badge art/title treatments) if desired.
 
 ## Phase 5 — Interactive television production
 
-- Backstage/green-room interactions.
-- Presenter interview choices with reputation/fan/media effects only.
-- Performance-style choice with modest fame variance, never chart impact.
-- Studio-audience reactions and television-specific crowd behaviour.
-- Rare harmless production incidents and live-show flavour events.
-- Guest presenters and milestone specials.
+In progress in PR #1921.
+
+Implemented:
+
+- Added one deterministic Alex Rayne backstage interview per successfully checked-in invitation.
+- Interview prompt is seeded from the invitation/episode so refreshes and retries cannot reroll the question.
+- Only the band leader can submit the interview response.
+- Three visible response styles: confident, humble and cheeky.
+- Confident primarily increases reputation/media attention, humble primarily increases fan sentiment, and cheeky gives the largest media boost with a small fan-sentiment downside.
+- Effects are stored once in `totp_backstage_interactions` and remain visible after resolution.
+- Interview choices never alter chart positions, Top of the Pops eligibility or cash.
+- The interaction is surfaced directly inside the checked-in invitation card on the Top of the Pops page.
+
+Next within Phase 5:
+
+- Add green-room/random production events with selectable outcomes.
+- Add performance-style choice with modest fame variance, never chart impact.
+- Add television-specific studio-audience reactions tied to the chosen performance style.
+- Add rare harmless live-production incidents and recovery choices.
+- Add guest presenters and milestone-special interaction variants.
 
 ## Phase 6 — Specials
 
