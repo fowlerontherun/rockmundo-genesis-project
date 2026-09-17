@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type TotpPerformanceStyleChoice = "polished" | "crowd_first" | "raw_live";
+export type TotpPerformanceStyleChoice = "polished" | "crowd_first" | "raw_live" | "house_direction";
+export type TotpIncidentRecoveryChoice = "professional" | "improvise" | "showman";
 
 export interface TotpLiveTvEvent {
   id: string;
@@ -19,6 +20,19 @@ export interface TotpLiveTvEvent {
     cash_effect?: number;
     eligibility_effect?: number;
   };
+  requires_recovery?: boolean;
+  recovery_choice?: TotpIncidentRecoveryChoice | null;
+  recovery_effects?: {
+    reputation?: number;
+    fan_sentiment?: number;
+    media_intensity?: number;
+    audience_reaction?: number;
+    chart_effect?: number;
+    cash_effect?: number;
+    eligibility_effect?: number;
+    auto_locked?: boolean;
+  };
+  recovered_at?: string | null;
   created_at: string;
 }
 
@@ -36,6 +50,7 @@ export interface TotpPerformanceStyle {
     media_intensity?: number;
     chart_effect?: number;
     cash_effect?: number;
+    auto_locked?: boolean;
   };
   created_at: string;
   selected_at: string | null;
@@ -53,6 +68,13 @@ export interface TotpPerformanceStyleResult {
   fame_multiplier: number;
   audience_reaction: number;
   effects: TotpPerformanceStyle["effects"];
+}
+
+export interface TotpIncidentRecoveryResult {
+  status: "resolved" | "already_resolved";
+  choice: TotpIncidentRecoveryChoice;
+  audience_reaction: number;
+  effects: NonNullable<TotpLiveTvEvent["recovery_effects"]>;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -73,7 +95,7 @@ export async function getMyTotpLiveTvExtras(): Promise<TotpLiveTvExtras> {
 
 export async function chooseTotpPerformanceStyle(
   styleId: string,
-  style: TotpPerformanceStyleChoice,
+  style: Exclude<TotpPerformanceStyleChoice, "house_direction">,
 ): Promise<TotpPerformanceStyleResult> {
   const { data, error } = await supabase.rpc("totp_choose_performance_style" as any, {
     p_style_id: uuid(styleId),
@@ -81,4 +103,16 @@ export async function chooseTotpPerformanceStyle(
   });
   if (error) throw new Error(error.message || "Could not save the Top of the Pops performance style.");
   return data as TotpPerformanceStyleResult;
+}
+
+export async function chooseTotpIncidentRecovery(
+  eventId: string,
+  choice: TotpIncidentRecoveryChoice,
+): Promise<TotpIncidentRecoveryResult> {
+  const { data, error } = await supabase.rpc("totp_choose_incident_recovery" as any, {
+    p_event_id: uuid(eventId),
+    p_choice: choice,
+  });
+  if (error) throw new Error(error.message || "Could not save the Top of the Pops production recovery.");
+  return data as TotpIncidentRecoveryResult;
 }
