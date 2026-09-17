@@ -32,7 +32,7 @@ Implemented in PR #1921.
 
 ## Phase 2.5 — Route/navigation integration
 
-Pending final route patch.
+Pending final central route patch.
 
 - Add `/top-of-the-pops` to the authenticated application route tree.
 - Add `/admin/top-of-the-pops` behind `AdminRoute`.
@@ -40,7 +40,7 @@ Pending final route patch.
 - Route Top of the Pops notification clicks to the invitation page.
 - Add dashboard callouts for upcoming broadcasts and outstanding invitations.
 
-The page components and APIs are implemented. The remaining work is confined to the large central route/navigation files, which should be patched without replacing unrelated route content.
+The page components and APIs are implemented. The remaining work is confined to the very large central route/navigation files. `src/App.tsx` is currently roughly 77 KB and should only be changed once a complete writable source body or patch-capable edit is available; replacing it from a truncated connector read risks deleting unrelated routes.
 
 ## Phase 3 — 3D television studio integration
 
@@ -56,27 +56,26 @@ Implemented substantially in PR #1921.
 - Added physical TV-production geometry inside `tv_studio` only: two pedestal cameras/operators, a handheld camera/operator, a jib/crane and three studio monitors.
 - Added a physical in-scene presenter on a dedicated rostrum/backdrop, while keeping the caption layer for accessibility and readable dialogue.
 - Added dedicated studio camera transforms for presenter wide/close, crane sweeps, overhead, audience reverse, side tracking and low-angle performance shots.
-- Presenter and performance timeline cues now drive those dedicated camera IDs directly through `GigStage3D` into `ConcertScene`.
+- Presenter and performance timeline cues drive those dedicated camera IDs directly through `GigStage3D` into `ConcertScene`.
 - Crane/tracking transforms use restrained deterministic movement while the external replay clock keeps seeking/replays stable.
 - Added four physical performance zones: `main_stage`, `stage_b`, `rock_stage` and `studio_floor`.
-- Locked running-order stage assignment now reaches performer reconstruction, so archived/live acts render in the correct studio zone.
+- Locked running-order stage assignment reaches performer reconstruction, so archived/live acts render in the correct studio zone.
 - Added immutable `totp_broadcast_replays` archive rows containing the exact TV cue sequence, presenter intro, chart graphic, stage assignment and frozen band lineup/roles.
 - Added checksum/version metadata so historical broadcasts remain auditable and deterministic.
 - Added admin archive generation and a public read-only broadcast archive RPC.
 - Added a 3D archive player that reconstructs presentation-only events from the frozen snapshot and feeds the saved cues back through `TotpBroadcastCanvas`.
 - Replaying an archived broadcast never calls completion, reward or progression paths.
 - The Top of the Pops page can select and replay archived performances through the real television-studio renderer.
-- Added tests proving the TV studio gets the production objects and normal gig venues do not.
-- Added tests for camera targeting, timeline construction, TV-studio geometry and archive payload shape.
 - Canonical replay v2 snapshots the final live-TV incident, recovery, performance style and audience reaction after the performance settles.
-- The locked audience reaction drives the actual shared 3D crowd-tuning system, changing density, stage pull and crowd movement while leaving gameplay untouched.
-- Canonical replay v3 also freezes presenter identity and show variant so old broadcasts always reconstruct the host and edition that originally aired.
+- Canonical replay v3 snapshots presenter identity and show variant.
+- The locked audience reaction drives the actual shared Gig Viewer crowd-tuning system, changing density, stage pull and crowd movement while leaving gameplay untouched.
+- Added full-episode archive autoplay. Archived acts are sorted by locked running order and automatically advance through the programme while retaining manual act selection and per-performance replay controls.
+- Added deterministic replay-order tests and source-array immutability coverage.
 
 Remaining polish within Phase 3:
 
 - Add studio-specific audience blocking around each performance zone and ensure visible production cameras never collide with performer staging.
 - Snapshot equipped clothing/appearance into the archive payload so very old appearances can preserve the exact historical outfit rather than resolving the current player model.
-- Add a full-episode autoplay mode that joins all archived performances and presenter transitions into one continuous show.
 
 ## Phase 4 — Rewards, history and achievements
 
@@ -100,10 +99,10 @@ Implemented in PR #1921.
 - Added notification deep-link metadata for completed appearances.
 - Live schema was checked before finalising the migration; TOTP no longer assumes the not-yet-live canonical achievement columns/functions.
 - Added a verified `@rockmundo_tv` Twaater bot identity for official television posts.
-- Every completed appearance now publishes exactly one official Twaater reaction using an audited `totp_media_posts` link table.
+- Every completed appearance publishes exactly one official Twaater reaction using an audited `totp_media_posts` link table.
 - Twaater copy varies for TV debuts, Top 10 appearances, UK #1 performances and 5/10/25/50 appearance milestones.
 - Twaater publishing has a second performance-level duplicate guard, so retrying settlement cannot spam posts.
-- Bot posts are public, system-generated, award no player XP, and use the live Twaater 500-character/sentiment constraints.
+- Bot posts are public, system-generated, award no player XP, and use the live Twaater constraints.
 - Added a Top of the Pops résumé card to Band → Fame showing appearances, best chart rank, #1 and Top 10 appearances, first/latest appearance dates and total TOTP fame earned.
 - The résumé card stays hidden until a band has a completed TOTP appearance.
 
@@ -111,12 +110,12 @@ Implemented in PR #1921.
 
 Implemented substantially in PR #1921.
 
-- Added one deterministic backstage interview per successfully checked-in invitation.
+- Added one deterministic pre-show presenter interview per successfully checked-in invitation.
 - Interview prompt is seeded from the invitation/episode so refreshes and retries cannot reroll the question.
 - Only the band leader can submit the interview response.
 - Three visible response styles: confident, humble and cheeky.
 - Confident primarily increases reputation/media attention, humble primarily increases fan sentiment, and cheeky gives the largest media boost with a small fan-sentiment downside.
-- Effects are stored once in `totp_backstage_interactions` and remain visible after resolution.
+- Effects are stored once and remain visible after resolution.
 - Interview choices never alter chart positions, Top of the Pops eligibility or cash.
 - Added one deterministic harmless production incident per checked-in act: camera rehearsal, fan chant, broken rehearsal string, floor-manager scramble, green-room encounter or mic check.
 - Broken-string and floor-manager incidents have one-time leader recovery choices: professional, improvise or showman, with incident-specific copy/effects.
@@ -126,23 +125,19 @@ Implemented substantially in PR #1921.
 - Performance-style fame variance is tightly bounded and applied once through the authoritative appearance-history path.
 - If no style is chosen before settlement/archive lock, the broadcast uses neutral `house_direction` with a 1.00 fame multiplier.
 - Added a combined studio-audience reaction meter: Nervous, Settled, Warm, Loud or Roaring.
-- Final reaction is frozen into replay v2 and drives the real shared Gig Viewer crowd tuning during archive playback.
+- Final reaction is frozen into the canonical replay and drives the real shared Gig Viewer crowd tuning during archive playback.
 - Admin archive controls remain disabled until every performance in the episode is settled.
 - The database independently rejects canonical replay creation before a performance is completed, so archive integrity does not depend on the admin UI.
-- Added deterministic presenter rotation: regular episodes use Alex Rayne, every fifth episode is a guest-host edition rotating Maya Stone, Jack Mercer and Nia Vale, and every 25th episode is a milestone edition hosted by Alex.
-- Guest presenters have distinct presenter scripts and physical 3D presenter palettes while reusing the same rostrum/camera-blocking system.
-- Presenter identity and show variant are frozen into canonical replay v3 and reconstructed during archive playback.
-- Added guest-presenter regression tests and safe fallback to Alex for unknown presenter keys.
-- Added one deterministic post-performance green-room interaction after an appearance settles.
-- The band leader can stay for the press, meet the fans or decompress with the band; effects are limited to reputation, fan sentiment and media intensity.
-- Post-show choices explicitly grant no extra fame and never change chart position, cash or future TOTP eligibility.
-- All interaction effects remain independent of chart position, cash payout and future TOTP eligibility unless explicitly documented as the tightly bounded performance-style fame modifier.
+- Added deterministic presenter rotation: Alex Rayne for regular shows, Maya Stone / Jack Mercer / Nia Vale on every fifth guest-host episode, with Alex returning for every 25th milestone edition.
+- Added presenter-specific introduction copy and distinct 3D presenter palettes using the same studio rostrum/camera system.
+- Added one deterministic post-performance green-room interaction per completed appearance with press, fans or band choices.
+- Post-show choices affect reputation/fan/media only and award no extra fame.
+- All interaction effects remain independent of chart position, cash payout and future TOTP eligibility except the explicitly bounded performance-style fame modifier.
 
-Next within Phase 5:
+Remaining polish within Phase 5:
 
 - Expand television-specific crowd animation intensity beyond the current density/stage-pull tuning.
-- Add more post-show prompt variants tied to milestones, chart position and special editions.
-- Add richer presenter-specific backstage questions for guest-host episodes.
+- Add more presenter/post-show variants tied to chart position and special editions.
 
 ## Phase 6 — Specials
 
