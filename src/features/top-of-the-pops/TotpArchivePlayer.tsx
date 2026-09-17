@@ -7,6 +7,7 @@ import type { GigExperienceDTO } from "@/features/gig-experience/types";
 import { derivePlaybackState } from "@/features/gig-experience/viewer/engine/PlaybackController";
 import type { TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
+import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
 import { totpAudienceReactionLabel } from "./studioAudience";
 
@@ -16,6 +17,14 @@ const unavailable = (reason: string) => ({ status: "not_applicable" as const, re
 function lockedAudienceReaction(source: TotpBroadcastReplay): number {
   const value = Number((source.payload as any)?.liveTv?.audienceReaction ?? 0);
   return Number.isFinite(value) ? Math.max(-10, Math.min(10, value)) : 0;
+}
+
+function lockedPresenterKey(source: TotpBroadcastReplay): string {
+  return String((source.payload as any)?.presenterKey ?? source.presenter_key ?? "alex_rayne");
+}
+
+function lockedShowVariant(source: TotpBroadcastReplay): string {
+  return String((source.payload as any)?.showVariant ?? "regular");
 }
 
 function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
@@ -196,6 +205,10 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
   const replay = useMemo(() => archivedReplay(source), [source]);
   const experience = useMemo(() => archivedExperience(source), [source]);
   const audienceReaction = useMemo(() => lockedAudienceReaction(source), [source]);
+  const presenterKey = useMemo(() => lockedPresenterKey(source), [source]);
+  const showVariant = useMemo(() => lockedShowVariant(source), [source]);
+  const presenter = resolveTotpPresenter(presenterKey);
+  const variantLabel = totpVariantLabel(showVariant);
   const [positionMs, setPositionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
@@ -230,6 +243,8 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
           playbackState={playback}
           cue={cue}
           audienceReaction={audienceReaction}
+          presenterKey={presenterKey}
+          showVariant={showVariant}
           className="h-full min-h-[28rem] w-full"
         />
       </div>
@@ -246,7 +261,7 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
             </Button>
           </div>
           <div className="text-xs text-muted-foreground">
-            {totpAudienceReactionLabel(audienceReaction)} audience · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}
+            {presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}
           </div>
         </div>
       </div>
