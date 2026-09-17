@@ -44,7 +44,7 @@ export const fetchWorldNews = async (limit = NEWS_LIMIT): Promise<WorldNewsItem[
     collect(async () => {
       const { data, error } = await db
         .from("chart_entries")
-        .select("id, rank, previous_rank, trend, chart_date, chart_type, country, songs(title, genre, bands(name), profiles:profile_id(stage_name))")
+        .select("id, rank, previous_rank, trend, chart_date, chart_type, country, songs(title, genre, bands(name), profiles:profile_id(display_name, username))")
         .order("chart_date", { ascending: false, nullsFirst: false })
         .order("rank", { ascending: true })
         .limit(12);
@@ -54,7 +54,11 @@ export const fetchWorldNews = async (limit = NEWS_LIMIT): Promise<WorldNewsItem[
         const movement = Number(entry.previous_rank ?? 0) - Number(entry.rank ?? 0);
         const timestamp = validDate(entry.chart_date);
         if (!timestamp) return null;
-        const artist = song?.bands?.name ?? song?.profiles?.stage_name ?? "an emerging artist";
+        const artist =
+          song?.bands?.name ??
+          song?.profiles?.display_name ??
+          song?.profiles?.username ??
+          "an emerging artist";
         return {
           id: `chart-${entry.id}`,
           category: "Charts",
