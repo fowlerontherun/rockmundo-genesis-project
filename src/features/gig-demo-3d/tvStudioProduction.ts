@@ -141,6 +141,93 @@ function buildPerformanceZones(root: T.Group, p: VenueProfile) {
   }
 }
 
+function buildChristmasSpecialDecor(root: T.Group, p: VenueProfile) {
+  const group = new T.Group();
+  group.name = 'totp-special-christmas';
+  group.userData.showVariant = 'christmas';
+  const green = namedMat('totp-christmas-foliage', '#164b31');
+  const trunk = matte('#5b3420');
+  const red = new T.MeshStandardMaterial({ color: '#9c1f30', emissive: '#3a0710', emissiveIntensity: .35, roughness: .45 });
+  const gold = new T.MeshStandardMaterial({ color: '#c9a74b', emissive: '#604910', emissiveIntensity: .5, roughness: .3, metalness: .45 });
+  const warm = new T.MeshStandardMaterial({ color: '#fff1b8', emissive: '#ffd86b', emissiveIntensity: 1.25, roughness: .2 });
+
+  const treeX = p.stageWidth * .58;
+  const treeZ = .35 - p.stageDepth;
+  cylinder(group, .16, .2, 1.0, [treeX, .5, treeZ], trunk, 12);
+  [
+    { y: 1.2, radius: 1.15, height: 1.7 },
+    { y: 2.05, radius: .9, height: 1.55 },
+    { y: 2.8, radius: .62, height: 1.35 },
+  ].forEach(({ y, radius, height }) => {
+    const foliage = new T.Mesh(new T.ConeGeometry(radius, height, 18), green);
+    foliage.position.set(treeX, y, treeZ);
+    group.add(foliage);
+  });
+  const topper = new T.Mesh(new T.OctahedronGeometry(.2), gold);
+  topper.position.set(treeX, 3.55, treeZ);
+  topper.rotation.z = Math.PI / 4;
+  topper.name = 'totp-christmas-tree-topper';
+  group.add(topper);
+
+  for (let index = 0; index < 10; index += 1) {
+    const angle = index / 10 * Math.PI * 2;
+    const ornament = new T.Mesh(new T.SphereGeometry(.075, 10, 8), index % 2 === 0 ? red : gold);
+    const y = 1.05 + (index % 5) * .48;
+    const radius = Math.max(.42, 1.0 - (y - 1.05) * .2);
+    ornament.position.set(treeX + Math.cos(angle) * radius, y, treeZ + Math.sin(angle) * radius);
+    group.add(ornament);
+  }
+
+  box(group, [.7, .45, .6], [treeX - .48, .23, treeZ + .65], red).name = 'totp-christmas-present-red';
+  box(group, [.58, .36, .52], [treeX + .42, .18, treeZ + .68], gold).name = 'totp-christmas-present-gold';
+
+  for (let index = 0; index < 12; index += 1) {
+    const light = new T.Mesh(new T.SphereGeometry(.055, 8, 6), index % 3 === 0 ? red : warm);
+    light.position.set(-p.stageWidth * .39 + index * (p.stageWidth * .78 / 11), p.stageHeight + 3.0 + Math.sin(index * .9) * .16, .5 - p.stageDepth - .2);
+    group.add(light);
+  }
+
+  root.add(group);
+}
+
+function buildAnniversarySpecialDecor(root: T.Group, p: VenueProfile) {
+  const group = new T.Group();
+  group.name = 'totp-special-anniversary';
+  group.userData.showVariant = 'anniversary';
+  const gold = new T.MeshStandardMaterial({ color: '#c6a34b', emissive: '#4f3b0d', emissiveIntensity: .55, roughness: .25, metalness: .6 });
+  const paleGold = new T.MeshStandardMaterial({ color: '#f0d98b', emissive: '#7a5f18', emissiveIntensity: .45, roughness: .3, metalness: .35 });
+  const dark = matte('#171410');
+
+  const backdropZ = .46 - p.stageDepth;
+  box(group, [p.stageWidth * .7, .09, .08], [0, p.stageHeight + 3.05, backdropZ], gold).name = 'totp-anniversary-header';
+  for (const x of [-p.stageWidth * .35, p.stageWidth * .35]) {
+    box(group, [.12, 3.1, .1], [x, p.stageHeight + 1.75, backdropZ], gold);
+  }
+
+  for (let index = 0; index < 9; index += 1) {
+    const angle = index / 9 * Math.PI * 2;
+    const medallion = new T.Mesh(new T.CylinderGeometry(.11, .11, .035, 18), index % 2 === 0 ? gold : paleGold);
+    medallion.rotation.x = Math.PI / 2;
+    medallion.position.set(Math.cos(angle) * (p.stageWidth * .27), p.stageHeight + 2.05 + Math.sin(angle) * .75, backdropZ + .08);
+    group.add(medallion);
+  }
+
+  const podium = cylinder(group, .5, .62, .72, [-p.stageWidth * .58, .36, -.28], dark, 24);
+  podium.name = 'totp-anniversary-podium';
+  const emblem = new T.Mesh(new T.TorusGeometry(.28, .055, 10, 24), gold);
+  emblem.rotation.x = Math.PI / 2;
+  emblem.position.set(-p.stageWidth * .58, .76, -.28);
+  emblem.name = 'totp-anniversary-emblem';
+  group.add(emblem);
+
+  root.add(group);
+}
+
+function buildSpecialEditionDecor(root: T.Group, p: VenueProfile) {
+  if (p.showVariant === 'christmas') buildChristmasSpecialDecor(root, p);
+  if (p.showVariant === 'anniversary') buildAnniversarySpecialDecor(root, p);
+}
+
 export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   if (p.kind !== 'tv_studio') return;
 
@@ -150,6 +237,7 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const floor = matte('#242830');
 
   buildPerformanceZones(root, p);
+  buildSpecialEditionDecor(root, p);
 
   const presenterX = -p.stageWidth * .66;
   const presenterZ = -.35;
