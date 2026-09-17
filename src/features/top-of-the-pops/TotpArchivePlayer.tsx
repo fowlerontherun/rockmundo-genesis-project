@@ -8,12 +8,21 @@ import { derivePlaybackState } from "@/features/gig-experience/viewer/engine/Pla
 import type { TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
+import { totpAudienceReactionLabel } from "./studioAudience";
 
 const metric = <T,>(value: T) => ({ status: "available" as const, value, source: "authoritative" as const });
 const unavailable = (reason: string) => ({ status: "not_applicable" as const, reason });
 
+function lockedAudienceReaction(source: TotpBroadcastReplay): number {
+  const value = Number((source.payload as any)?.liveTv?.audienceReaction ?? 0);
+  return Number.isFinite(value) ? Math.max(-10, Math.min(10, value)) : 0;
+}
+
 function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
   const payload = source.payload;
+  const audienceReaction = lockedAudienceReaction(source);
+  const baseCrowdEnergy = Math.max(28, Math.min(62, 44 + audienceReaction * 2));
+  const performanceCrowdEnergy = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
   const songStart = 7_000;
   const songEnd = songStart + payload.performanceDurationMs;
   let sequence = 0;
@@ -45,8 +54,8 @@ function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
       eventType: "crowd_arrived",
       scheduledOffsetMs: 0,
       durationMs: 5_000,
-      crowdEnergyBefore: 36,
-      crowdEnergyAfter: 46,
+      crowdEnergyBefore: Math.max(20, baseCrowdEnergy - 10),
+      crowdEnergyAfter: baseCrowdEnergy,
       visualPayload: { type: "crowd_fill", targetDensity: .92, zoneIds: ["studio_floor"], enteringCount: 220 },
     }),
   ];
@@ -75,8 +84,8 @@ function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
     scheduledOffsetMs: songStart,
     durationMs: payload.performanceDurationMs,
     songId: payload.song.id,
-    crowdEnergyBefore: 46,
-    crowdEnergyAfter: 72,
+    crowdEnergyBefore: baseCrowdEnergy,
+    crowdEnergyAfter: performanceCrowdEnergy,
     visualPayload: {
       type: "song_start",
       songId: payload.song.id,
@@ -117,6 +126,8 @@ function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
 
 function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
   const payload = source.payload;
+  const audienceReaction = lockedAudienceReaction(source);
+  const crowdPeak = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
   return {
     schemaVersion: 1,
     gig: {
@@ -138,7 +149,7 @@ function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
     headline: {
       overallRating: unavailable("Broadcast archive"),
       performanceGrade: unavailable("Broadcast archive"),
-      verdict: "Archived Top of the Pops television performance",
+      verdict: `Archived Top of the Pops television performance · ${totpAudienceReactionLabel(audienceReaction)} studio audience`,
       attendance: metric(220),
       capacity: metric(250),
       netProfit: metric(0),
@@ -164,7 +175,7 @@ function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
     },
     analysis: {
       equipmentQuality: unavailable("Broadcast archive"), crewSkill: unavailable("Broadcast archive"), bandChemistry: unavailable("Broadcast archive"),
-      memberSkills: unavailable("Broadcast archive"), crowdEnergyPeak: metric(72), stageBehaviorUsed: unavailable("Broadcast archive"), gearEffects: null, warnings: [],
+      memberSkills: unavailable("Broadcast archive"), crowdEnergyPeak: metric(crowdPeak), stageBehaviorUsed: unavailable("Broadcast archive"), gearEffects: null, warnings: [],
     },
     postConsequences: {
       processingStatus: "skipped", processingVersion: null, processedAt: null,
@@ -184,6 +195,7 @@ function activeCue(cues: TotpBroadcastCue[], positionMs: number): TotpBroadcastC
 export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastReplay }) {
   const replay = useMemo(() => archivedReplay(source), [source]);
   const experience = useMemo(() => archivedExperience(source), [source]);
+  const audienceReaction = useMemo(() => lockedAudienceReaction(source), [source]);
   const [positionMs, setPositionMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
@@ -217,6 +229,7 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
           experience={experience}
           playbackState={playback}
           cue={cue}
+          audienceReaction={audienceReaction}
           className="h-full min-h-[28rem] w-full"
         />
       </div>
@@ -233,7 +246,7 @@ export function TotpArchivePlayer({ replay: source }: { replay: TotpBroadcastRep
             </Button>
           </div>
           <div className="text-xs text-muted-foreground">
-            Archived broadcast · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}
+            {totpAudienceReactionLabel(audienceReaction)} audience · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}
           </div>
         </div>
       </div>
