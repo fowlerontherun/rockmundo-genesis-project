@@ -8,6 +8,7 @@ import { Clapperboard, FlaskConical, ShieldCheck } from "lucide-react";
 import { TotpTestLifecycleSimulator } from "./TotpTestLifecycleSimulator";
 import { adminPreviewTotpTestEpisode, type TotpTestPreviewPerformance } from "./testPreviewApi";
 import { getTotpChartRundown } from "./chartRundownApi";
+import { getTotpEpisode } from "./api";
 
 function formatSnapshotDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Europe/London" }).format(new Date(`${value}T12:00:00Z`));
@@ -16,9 +17,16 @@ function formatSnapshotDate(value: string) {
 export function TotpTestEpisodeCard() {
   const { toast } = useToast();
   const [selectedPerformance, setSelectedPerformance] = useState<TotpTestPreviewPerformance | null>(null);
+  const currentEpisode = useQuery({
+    queryKey: ["totp", "episode", "admin-demo-rundown"],
+    queryFn: () => getTotpEpisode(),
+    staleTime: 30_000,
+  });
+  const currentEpisodeId = currentEpisode.data?.id ?? null;
   const rundown = useQuery({
-    queryKey: ["totp", "chart-rundown", "admin-demo"],
-    queryFn: () => getTotpChartRundown(null),
+    queryKey: ["totp", "chart-rundown", "admin-demo", currentEpisodeId],
+    queryFn: () => getTotpChartRundown(currentEpisodeId),
+    enabled: !!currentEpisodeId,
     staleTime: 60_000,
   });
   const preview = useMutation({
