@@ -14,6 +14,7 @@ import {
   listMyTotpInvitations,
   respondToTotpInvitation,
 } from "@/features/top-of-the-pops/api";
+import { getTotpChartRundown } from "@/features/top-of-the-pops/chartRundownApi";
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer";
 import { TotpFullEpisodePlayer } from "@/features/top-of-the-pops/TotpFullEpisodePlayer";
@@ -57,6 +58,12 @@ export default function TopOfThePops() {
   const archive = useQuery({
     queryKey: ["totp", "archive", currentEpisodeId],
     queryFn: () => getTotpBroadcastArchive(currentEpisodeId),
+    enabled: !!currentEpisodeId,
+  });
+
+  const chartRundown = useQuery({
+    queryKey: ["totp", "chart-rundown", currentEpisodeId],
+    queryFn: () => getTotpChartRundown(currentEpisodeId),
     enabled: !!currentEpisodeId,
   });
 
@@ -156,7 +163,7 @@ export default function TopOfThePops() {
             <Badge variant="secondary">{archiveReplays.length} archived performance{archiveReplays.length === 1 ? "" : "s"}</Badge>
           </div>
 
-          <TotpFullEpisodePlayer replays={archiveReplays} />
+          <TotpFullEpisodePlayer replays={archiveReplays} chartRundown={chartRundown.data} />
 
           <div className="border-t pt-4">
             <p className="mb-2 text-sm font-medium">Or jump directly to an individual performance</p>
