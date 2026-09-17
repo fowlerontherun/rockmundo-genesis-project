@@ -62,5 +62,19 @@ export async function adminPreviewTotpTestEpisode(seed = "admin-test", maxPerfor
   if (error) throw new Error(error.message || "Could not build the Top of the Pops test preview.");
   if (!data) throw new Error("Top of the Pops returned no test preview.");
   if (!isTotpTestPreviewSafe(data)) throw new Error("Top of the Pops test preview failed its safety contract.");
-  return data;
+
+  const bandIds = [...new Set(data.performances.map((performance) => performance.band_id))];
+  const { data: lineupData, error: lineupError } = await totpRpc<Record<string, TotpTestPreviewBandMember[]>>(
+    "totp_admin_test_band_lineups",
+    { p_band_ids: bandIds },
+  );
+  if (lineupError) throw new Error(lineupError.message || "Could not load the Top of the Pops demo band lineups.");
+
+  return {
+    ...data,
+    performances: data.performances.map((performance) => ({
+      ...performance,
+      members: lineupData?.[performance.band_id] ?? [],
+    })),
+  };
 }
