@@ -50,16 +50,17 @@ function buildOperator(root: T.Group, x: number, z: number, yaw = 0, name = 'tot
   return operator;
 }
 
-function buildPresenter(root: T.Group, x: number, z: number) {
-  const profile = resolveTotpPresenter('alex_rayne');
+function buildPresenter(root: T.Group, x: number, z: number, presenterKey?: string | null) {
+  const profile = resolveTotpPresenter(presenterKey);
   const suit = namedMat('totp-presenter-suit', profile.visual.suit);
   const shirt = namedMat('totp-presenter-shirt', profile.visual.shirt);
   const skin = namedMat('totp-presenter-skin', profile.visual.skin);
   const hair = namedMat('totp-presenter-hair', profile.visual.hair);
   const accent = namedMat('totp-presenter-accent', profile.visual.accent);
   const presenter = new T.Group();
-  presenter.name = 'totp-presenter-alex_rayne';
-  presenter.userData.presenterKey = 'alex_rayne';
+  presenter.name = `totp-presenter-${profile.key}`;
+  presenter.userData.presenterKey = profile.key;
+  presenter.userData.presenterDisplayName = profile.displayName;
   presenter.position.set(x, 0, z);
   presenter.rotation.y = Math.PI * .08;
 
@@ -153,7 +154,7 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const rostrum = box(root, [2.7, .2, 2.0], [presenterX, .1, presenterZ], floor);
   rostrum.name = 'totp-presenter-rostrum';
   box(root, [2.5, 1.25, .12], [presenterX, .9, presenterZ - .95], accent).name = 'totp-presenter-backdrop';
-  buildPresenter(root, presenterX, presenterZ - .12);
+  buildPresenter(root, presenterX, presenterZ - .12, p.presenterKey);
 
   const pedestalLeft = buildCameraBody(root, -p.crowdWidth * .42, 4.5, -.18);
   pedestalLeft.name = 'totp-camera-pedestal-left';
