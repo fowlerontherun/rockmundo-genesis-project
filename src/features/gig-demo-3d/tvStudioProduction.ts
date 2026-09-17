@@ -3,6 +3,8 @@ import { box, cylinder, rod, matte, metal } from './stage';
 import type { VenueProfile } from './venueProfile';
 import { resolveTotpPresenter } from '@/features/top-of-the-pops/presenters';
 
+const presenterSceneName = (key: string) => `totp-presenter-${key.replaceAll('_', '-')}`;
+
 function namedMat(name: string, color: string) {
   const material = matte(color);
   material.name = name;
@@ -58,7 +60,7 @@ function buildPresenter(root: T.Group, x: number, z: number, presenterKey?: stri
   const hair = namedMat('totp-presenter-hair', profile.visual.hair);
   const accent = namedMat('totp-presenter-accent', profile.visual.accent);
   const presenter = new T.Group();
-  presenter.name = `totp-presenter-${profile.key}`;
+  presenter.name = presenterSceneName(profile.key);
   presenter.userData.presenterKey = profile.key;
   presenter.userData.presenterDisplayName = profile.displayName;
   presenter.position.set(x, 0, z);
@@ -80,12 +82,12 @@ function buildPresenter(root: T.Group, x: number, z: number, presenterKey?: stri
 
 export function applyTvStudioPresenterProfile(root: T.Object3D, presenterKey?: string | null) {
   const profile = resolveTotpPresenter(presenterKey);
-  const presenter = root.getObjectByName('totp-presenter-alex_rayne')
+  const presenter = root.getObjectByName('totp-presenter-alex-rayne')
     ?? root.children.find(child => child.userData.presenterKey && child.name.startsWith('totp-presenter-'))
     ?? null;
   if (!presenter) return;
 
-  presenter.name = `totp-presenter-${profile.key}`;
+  presenter.name = presenterSceneName(profile.key);
   presenter.userData.presenterKey = profile.key;
   presenter.userData.presenterDisplayName = profile.displayName;
 
