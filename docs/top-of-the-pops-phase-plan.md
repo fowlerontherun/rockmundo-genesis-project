@@ -44,9 +44,7 @@ The page components and APIs are implemented. The remaining work is confined to 
 
 ## Phase 3 — 3D television studio integration
 
-In progress in PR #1921.
-
-Implemented:
+Implemented substantially in PR #1921.
 
 - Added `presentationMode="totp"` to the shared `GigCanvas` / `GigStage3D` renderer path.
 - Added a dedicated `tv_studio` venue profile to the existing 3D venue engine rather than creating a second renderer.
@@ -60,17 +58,26 @@ Implemented:
 - Added dedicated studio camera transforms for presenter wide/close, crane sweeps, overhead, audience reverse, side tracking and low-angle performance shots.
 - Presenter and performance timeline cues now drive those dedicated camera IDs directly through `GigStage3D` into `ConcertScene`, producing real Alex Rayne -> stage broadcast cuts.
 - Crane/tracking transforms use restrained deterministic movement while the external replay clock keeps seeking/replays stable.
+- Added four physical performance zones: `main_stage`, `stage_b`, `rock_stage` and `studio_floor`.
+- Locked running-order stage assignment now reaches performer reconstruction, so archived/live acts render in the correct studio zone.
+- Added immutable `totp_broadcast_replays` archive rows containing the exact TV cue sequence, presenter intro, chart graphic, stage assignment and frozen band lineup/roles.
+- Added checksum/version metadata so historical broadcasts remain auditable and deterministic.
+- Added admin archive generation and a public read-only broadcast archive RPC.
+- Added a 3D archive player that reconstructs presentation-only events from the frozen snapshot and feeds the saved cues back through `TotpBroadcastCanvas`.
+- Replaying an archived broadcast never calls completion, reward or progression paths.
+- The Top of the Pops page can select and replay archived performances through the real television-studio renderer.
 - Added tests proving the TV studio gets the production objects and normal gig venues do not.
 - Added tests for camera targeting, timeline construction and the TV-studio venue profile.
 
-Next within Phase 3:
+Remaining polish within Phase 3:
 
-- Persist/reconstruct a canonical TOTP performance replay so every broadcast can be watched again from the archive.
-- Connect the episode viewer page to that canonical replay.
-- Add multiple performance-zone geometry to match `main_stage`, `stage_b`, `rock_stage` and `studio_floor` assignments.
 - Add studio-specific audience blocking around each performance zone and ensure visible production cameras never collide with performer staging.
+- Snapshot equipped clothing/appearance into the archive payload so very old appearances can preserve the exact historical outfit rather than resolving the current player model.
+- Add a full-episode autoplay mode that joins all archived performances and presenter transitions into one continuous show.
 
 ## Phase 4 — Rewards, history and achievements
+
+Next major phase.
 
 - Fame reward after a completed appearance; no cash payment.
 - Rank-sensitive fame tiers with diminishing lifetime returns.
