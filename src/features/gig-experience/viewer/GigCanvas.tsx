@@ -3,6 +3,8 @@ const GigStage3D = lazy(() => import("./three/GigStage3D"));
 import type { GigViewerReplay } from "../events/types";
 import type { GigExperienceDTO } from "../types";
 import type { ReportMetric } from "../types";
+import type { TotpCameraShot, TotpStageKey } from "@/features/top-of-the-pops/broadcastProfile";
+import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel";
 import { CrowdTuningPanel, useDemoCrowdTuning } from "./CrowdTuningPanel";
 import { GlobalCrowdDefaultsControls } from "./GlobalCrowdDefaultsControls";
 import type { DerivedPlaybackState } from "./engine/PlaybackController";
@@ -16,112 +18,46 @@ import { buildViewerDiagnostics } from "./engine/ViewerDiagnostics";
 import { resolveRenderBudget } from "./engine/PerformanceProfile";
 import type { PerformancePreference } from "./hooks/useGigViewerPreferences";
 import { resolveViewerCapabilities, type ViewerCapabilityContext } from "./config/viewerCapabilityFlags";
+import type { ConcertPresentationMode } from "./three/presentation";
 
-export function GigCanvas({
-  replay,
-  experience,
-  playbackState,
-  reducedMotion = false,
-  pyrotechnics = true,
-  pyroIntensity = 1,
-  crowdTuning,
-  fill = false,
-  immersive = false,
-  cameraMode = "venue_wide",
-  performancePreference = "auto",
-  capability,
-  className,
-}: {
-  replay: GigViewerReplay;
-  experience: GigExperienceDTO | null;
-  playbackState: DerivedPlaybackState;
-  reducedMotion?: boolean;
-  pyrotechnics?: boolean;
-  pyroIntensity?: number;
-  crowdTuning?: Partial<CrowdTuningOptions> | null;
-  fill?: boolean;
-  immersive?: boolean;
-  cameraMode?: GigViewerCameraMode;
-  performancePreference?: PerformancePreference;
-  /** Staged-rollout context; defaults to a player audience bucketed on the gig id. */
-  capability?: Partial<ViewerCapabilityContext>;
-  className?: string;
+export function GigCanvas({ replay, experience, playbackState, reducedMotion = false, pyrotechnics = true, pyroIntensity = 1, crowdTuning, fill = false, immersive = false, cameraMode = "venue_wide", performancePreference = "auto", capability, className, presentationMode = "gig", totpCameraShot, totpStage = "main_stage", totpPresenterKey = "alex_rayne", totpShowVariant = "regular", totpAudienceReaction = 0, playerModelsSnapshot = null }: {
+  replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; reducedMotion?: boolean; pyrotechnics?: boolean; pyroIntensity?: number;
+  crowdTuning?: Partial<CrowdTuningOptions> | null; fill?: boolean; immersive?: boolean; cameraMode?: GigViewerCameraMode; performancePreference?: PerformancePreference;
+  capability?: Partial<ViewerCapabilityContext>; className?: string; presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
+  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; playerModelsSnapshot?: GigPlayerModelsData | null;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const { container, fit, logical } = useCanvasSize(wrapRef, { fill });
+  const { container, fit } = useCanvasSize(wrapRef, { fill });
   const demoTuning = useDemoCrowdTuning();
   const replayTuning = replay.crowdTuning ?? null;
   const shouldLoadGlobal = !crowdTuning && !demoTuning.demoMode && !replayTuning;
   const globalTuning = useGlobalCrowdTuning(shouldLoadGlobal);
-  const resolved = resolveCrowdTuning({
-    explicit: crowdTuning,
-    demoMode: demoTuning.demoMode,
-    demo: demoTuning.value,
-    replay: replayTuning,
-    global: globalTuning.data?.settings,
-  });
-  const capabilities = resolveViewerCapabilities({
-    audience: capability?.audience ?? "player",
-    subjectId: capability?.subjectId ?? replay.gigId ?? replay.id,
-    stage: capability?.stage ?? null,
-    percentage: capability?.percentage ?? null,
-    legacyFallbackAvailable: capability?.legacyFallbackAvailable ?? null,
-  });
+  const resolved = resolveCrowdTuning({ explicit: crowdTuning, demoMode: demoTuning.demoMode, demo: demoTuning.value, replay: replayTuning, global: globalTuning.data?.settings });
+  const capabilities = resolveViewerCapabilities({ audience: capability?.audience ?? "player", subjectId: capability?.subjectId ?? replay.gigId ?? replay.id, stage: capability?.stage ?? null, percentage: capability?.percentage ?? null, legacyFallbackAvailable: capability?.legacyFallbackAvailable ?? null });
   const diagnostics = buildViewerDiagnostics({ replay, experience, cameraMode, reducedMotion, performancePreference: performancePreference === "auto" ? null : performancePreference });
-  const renderBudget = resolveRenderBudget({
-    tier: diagnostics.performanceTier,
-    displayedCrowd: diagnostics.representativeCrowdCount,
-    reducedMotion,
-    archetype: diagnostics.venueArchetype,
-    devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio,
-  });
+  const renderBudget = resolveRenderBudget({ tier: diagnostics.performanceTier, displayedCrowd: diagnostics.representativeCrowdCount, reducedMotion, archetype: presentationMode === "totp" ? "tv_studio" : diagnostics.venueArchetype, devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio });
+  const attendance = metricNumber(experience?.headline?.attendance), capacity = experience?.gig?.venue?.capacity ?? 0;
 
-  const attendance = metricNumber(experience?.headline?.attendance);
-  const capacity = experience?.gig?.venue?.capacity ?? 0;
-
-  return (
-    <div className={className ?? (fill ? "h-full w-full" : "w-full")} data-crowd-tuning-source={resolved.source}
-      data-viewer-camera={diagnostics.cameraMode} data-venue-archetype={diagnostics.venueArchetype}
-      data-venue-variation={diagnostics.venueVariation} data-environment-kind={diagnostics.environmentKind}
-      data-venue-descriptor-version={diagnostics.descriptorVersion} data-venue-structural-fingerprint={diagnostics.structuralFingerprint}
-      data-seed-fingerprint={diagnostics.seedFingerprint} data-representative-crowd-count={diagnostics.representativeCrowdCount}
-      data-attendance-state={diagnostics.attendanceState} data-attendance-source={diagnostics.attendanceSource}
-      data-activity-evidence-mode={diagnostics.activityEvidenceMode} data-performance-tier={diagnostics.performanceTier}
-      data-render-dpr-cap={diagnostics.performanceTier === "high" ? 1.75 : diagnostics.performanceTier === "low" ? .9 : 1.15} data-crowd-detail={renderBudget.crowdDetail}
-      data-degradations={renderBudget.appliedDegradations.join(",")}
-      data-living-venue="3d"
-      data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
-      data-viewer-rollout-bucket={capabilities.bucket}
-      data-legacy-fallback-available={capabilities.legacyFallbackAvailable ? "true" : "false"}>
-      {demoTuning.demoMode && !fill ? (
-        <>
-          <GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} />
-          <CrowdTuningPanel
-            value={demoTuning.value}
-            onChange={demoTuning.setValue}
-            attendance={attendance}
-            capacity={capacity}
-          />
-        </>
-      ) : null}
-      <div
-        ref={wrapRef}
-        className={`${fill ? "h-full" : ""} relative flex w-full items-center justify-center overflow-hidden bg-slate-950`}
-        style={{ minHeight: fill ? 0 : container.height, height: fill ? undefined : container.height }}
-        data-scene-viewport
-        data-scene-scale={fit.scale.toFixed(4)}
-      >
-        <Suspense fallback={<div role="status" className="p-8 text-slate-200">Loading 3D stage…</div>}>
-          <GigStage3D replay={replay} experience={experience} playbackState={playbackState}
-            reducedMotion={reducedMotion} cameraMode={cameraMode} tier={diagnostics.performanceTier}
-            archetype={diagnostics.venueArchetype} tuning={normalizeCrowdTuning(resolved.tuning)}
-            pyrotechnics={pyrotechnics} pyroIntensity={pyroIntensity} />
-        </Suspense>
-      </div>
+  return <div className={className ?? (fill ? "h-full w-full" : "w-full")} data-crowd-tuning-source={resolved.source}
+    data-viewer-camera={presentationMode === "totp" ? totpCameraShot ?? "studio_master" : diagnostics.cameraMode} data-venue-archetype={presentationMode === "totp" ? "tv_studio" : diagnostics.venueArchetype}
+    data-venue-variation={diagnostics.venueVariation} data-environment-kind={diagnostics.environmentKind} data-venue-descriptor-version={diagnostics.descriptorVersion}
+    data-venue-structural-fingerprint={diagnostics.structuralFingerprint} data-seed-fingerprint={diagnostics.seedFingerprint} data-representative-crowd-count={diagnostics.representativeCrowdCount}
+    data-attendance-state={diagnostics.attendanceState} data-attendance-source={diagnostics.attendanceSource} data-activity-evidence-mode={diagnostics.activityEvidenceMode}
+    data-performance-tier={diagnostics.performanceTier} data-render-dpr-cap={diagnostics.performanceTier === "high" ? 1.75 : diagnostics.performanceTier === "low" ? .9 : 1.15}
+    data-crowd-detail={renderBudget.crowdDetail} data-degradations={renderBudget.appliedDegradations.join(",")} data-living-venue="3d" data-presentation-mode={presentationMode}
+    data-totp-stage={presentationMode === "totp" ? totpStage : undefined} data-totp-presenter={presentationMode === "totp" ? totpPresenterKey ?? "alex_rayne" : undefined}
+    data-totp-show-variant={presentationMode === "totp" ? totpShowVariant ?? "regular" : undefined} data-totp-audience-reaction={presentationMode === "totp" ? Number(totpAudienceReaction ?? 0) : undefined}
+    data-viewer-rollout-stage={capabilities.stage} data-viewer-rollout-reason={capabilities.reason}
+    data-viewer-rollout-bucket={capabilities.bucket} data-legacy-fallback-available={capabilities.legacyFallbackAvailable ? "true" : "false"}>
+    {demoTuning.demoMode && !fill ? <><GlobalCrowdDefaultsControls value={demoTuning.value} onLoad={demoTuning.setValue} /><CrowdTuningPanel value={demoTuning.value} onChange={demoTuning.setValue} attendance={attendance} capacity={capacity} /></> : null}
+    <div ref={wrapRef} className={`${fill ? "h-full" : ""} relative flex w-full items-center justify-center overflow-hidden bg-slate-950`} style={{ minHeight: fill ? 0 : container.height, height: fill ? undefined : container.height }} data-scene-viewport data-scene-scale={fit.scale.toFixed(4)}>
+      <Suspense fallback={<div role="status" className="p-8 text-slate-200">Loading 3D stage…</div>}>
+        <GigStage3D replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} cameraMode={cameraMode} tier={diagnostics.performanceTier}
+          archetype={presentationMode === "totp" ? "tv_studio" : diagnostics.venueArchetype} tuning={normalizeCrowdTuning(resolved.tuning)} pyrotechnics={pyrotechnics} pyroIntensity={pyroIntensity}
+          presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpStage={totpStage} totpPresenterKey={totpPresenterKey} totpShowVariant={totpShowVariant} totpAudienceReaction={totpAudienceReaction} playerModelsSnapshot={playerModelsSnapshot} />
+      </Suspense>
     </div>
-  );
+  </div>;
 }
 
-function metricNumber(metric: ReportMetric<number> | undefined) {
-  return metric?.status === "available" && typeof metric.value === "number" ? metric.value : 0;
-}
+function metricNumber(metric: ReportMetric<number> | undefined) { return metric?.status === "available" && typeof metric.value === "number" ? metric.value : 0; }

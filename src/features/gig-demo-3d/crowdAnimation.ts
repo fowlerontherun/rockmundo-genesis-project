@@ -27,8 +27,30 @@ export function crowdAppearances(seed: number): PlayerAppearance[] {
     });
 }
 export type CrowdMotion = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+function televisionCrowdMotion(reaction: string, personality: number, seconds: number): CrowdMotion | null {
+    if (!reaction.startsWith('tv_')) return null;
+    const cue = (Math.floor(seconds / 2.75) + Math.floor(personality * 11)) % 8;
+    switch (reaction) {
+        case 'tv_nervous':
+            return personality < .58 ? 0 : cue % 3 === 0 ? 3 : 1;
+        case 'tv_settled':
+            return ([1, 1, 3, 1, 2, 1, 3, 0] as const)[cue];
+        case 'tv_warm':
+            return ([3, 1, 3, 2, 4, 1, 3, 2] as const)[cue];
+        case 'tv_loud':
+            return ([3, 2, 4, 3, 6, 2, 4, 3] as const)[cue];
+        case 'tv_roaring':
+            return ([6, 3, 2, 6, 4, 7, 3, 6] as const)[cue];
+        default:
+            return null;
+    }
+}
+
 /** Motion choice is derived from time and identity, never accumulated between frames. */
 export function crowdMotion(reaction: string, energy: number, personality: number, seconds: number): CrowdMotion {
+    const television = televisionCrowdMotion(reaction, personality, seconds);
+    if (television !== null) return television;
     if (reaction === 'still' || reaction === 'disperse')
         return 0;
     if (reaction === 'phone_lights')

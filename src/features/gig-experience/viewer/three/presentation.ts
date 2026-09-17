@@ -9,18 +9,35 @@ import { resolveVenueProfile, stagePosition, type VenueProfile } from '@/feature
 import { defaultAppearance, type PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { CrowdTuningOptions } from '../engine/CrowdTuning';
+import type { TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
 
 const clamp = (n: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
 const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backing_vocals: 'vocals', lead_guitar: 'guitar', rhythm_guitar: 'guitar', guitar: 'guitar', bass: 'bass', drums: 'drums', keyboard: 'keyboard', piano: 'keyboard', dj: 'dj', electronic: 'dj', percussion: 'percussion', strings: 'strings', brass: 'brass', woodwind: 'woodwind', other: 'other', unknown: 'other' };
+
+export type ConcertPresentationMode = 'gig' | 'totp';
+
+const TOTP_STAGE_OFFSETS: Record<TotpStageKey, readonly [number, number, number]> = {
+  main_stage: [0, 0, 0],
+  stage_b: [5.4, 0, 1.4],
+  rock_stage: [-4.5, 0, 3.4],
+  studio_floor: [1.4, -.42, 5.0],
+};
+
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
   const entrances = new Set(replay.events.flatMap(e => e.visualPayload.type === 'performer_enter' ? [e.visualPayload.performerId] : []));
   const candidates = experience?.performers ?? [], performed = candidates.filter(p => p.lineupStatus === 'performed');
   const performers = entrances.size ? candidates.filter(p => entrances.has(p.profileId || p.id)) : performed.length ? performed : candidates.filter(p => !/cancelled|declined|removed|absent/i.test(p.lineupStatus));
   return buildPerformerPlan({ replay, experience: experience ? { ...experience, performers: performers ?? [] } : null, size: { width: 1200, height: 760 } });
 }
-function stagePoint(plan: PerformerPlan, point: { x: number; y: number }, venue: VenueProfile): [number, number, number] {
-  return stagePosition(venue, (point.x - plan.stage.x) / plan.stage.width, (point.y - plan.stage.y) / plan.stage.height);
+
+function stagePoint(plan: PerformerPlan, point: { x: number; y: number }, venue: VenueProfile, presentationMode: ConcertPresentationMode = 'gig', totpStage: TotpStageKey = 'main_stage'): [number, number, number] {
+  const base = stagePosition(venue, (point.x - plan.stage.x) / plan.stage.width, (point.y - plan.stage.y) / plan.stage.height);
+  if (presentationMode !== 'totp') return base;
+  const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
+  const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .78 : .66;
+  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy), (base[2] - .65) * scale + .65 + dz];
 }
+
 export function concertOptions(
   plan: PerformerPlan,
   appearances: Record<string, PlayerAppearance>,
@@ -28,9 +45,23 @@ export function concertOptions(
   experience: GigExperienceDTO | null,
   archetype: string,
   richClothing: Record<string, ResolvedEquippedClothing[]> = {},
+  presentationMode: ConcertPresentationMode = 'gig',
+  totpStage: TotpStageKey = 'main_stage',
 ): ConcertOptions {
-  let seed = 0; for (const c of String(experience?.gig.venue.id ?? replay.simulationSeed)) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
-  const venue: ConcertVenue = { name: experience?.gig.venue.name ?? 'Live performance', bandName: 'ROCKMUNDO', archetype, seed, type: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity, id: experience?.gig.venue.id };
+  const totp = presentationMode === 'totp';
+  const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
+  let seed = 0; for (const c of seedSource) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const venue: ConcertVenue = totp
+    ? {
+        name: 'RockMundo Television Centre',
+        bandName: 'TOP OF THE POPS',
+        archetype: 'tv_studio',
+        seed,
+        type: 'tv_studio',
+        capacity: 250,
+        id: `totp-${replay.id}`,
+      }
+    : { name: experience?.gig.venue.name ?? 'Live performance', bandName: 'ROCKMUNDO', archetype, seed, type: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity, id: experience?.gig.venue.id };
   const profile = resolveVenueProfile(venue);
   return {
     externalClock: true,
@@ -42,7 +73,7 @@ export function concertOptions(
         displayName: p.displayName,
         ...stageAssignment(p.instrument, roleMap[p.role]),
         phase: p.idlePhase,
-        position: stagePoint(plan, p.stageSlot, profile),
+        position: stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
         appearance: appearances[profileId] ?? defaultAppearance(profileId),
         richClothing: richClothing[profileId] ?? [],
       };
@@ -52,7 +83,7 @@ export function concertOptions(
 
 /** Pure reconstruction: the same replay timestamp gives the same stage after
  * pause, speed changes, a reload or a backwards seek. Never writes gig outcomes. */
-export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, experience: GigExperienceDTO | null, playback: DerivedPlaybackState, reducedMotion: boolean, tuning: CrowdTuningOptions, venue?: ConcertVenue): ConcertFrame {
+export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, experience: GigExperienceDTO | null, playback: DerivedPlaybackState, reducedMotion: boolean, tuning: CrowdTuningOptions, venue?: ConcertVenue, presentationMode: ConcertPresentationMode = 'gig', totpStage: TotpStageKey = 'main_stage'): ConcertFrame {
   const profile = resolveVenueProfile(venue ?? { type: experience?.gig.venue.type, name: experience?.gig.venue.name, capacity: experience?.gig.venue.capacity });
   const positionMs = playback.positionMs;
   const past = replay.events.filter(e => e.scheduledOffsetMs <= positionMs).sort((a, b) => a.scheduledOffsetMs - b.scheduledOffsetMs || a.sequence - b.sequence);
@@ -88,7 +119,7 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
       const fixed = stageAssignment(p.instrument, roleMap[p.role]).stationary && p.lifecycleState === 'performing';
       return {
         id: p.id,
-        position: stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile),
+        position: stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile, presentationMode, totpStage),
         visible: p.visible && p.lifecycleState !== 'waiting_backstage',
         walking: ['entering', 'taking_position', 'exiting'].includes(p.lifecycleState),
         action: itemPayload && (!itemPayload.performerId ? p.id === (focusId ?? plan.entities.find(e => e.role === 'vocalist')?.id ?? plan.entities[0]?.id) : itemPayload.performerId === p.id) ? itemPayload.action : null,

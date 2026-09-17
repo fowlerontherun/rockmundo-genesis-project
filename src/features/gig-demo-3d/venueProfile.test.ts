@@ -8,7 +8,7 @@ describe('game venue profiles', () => {
       expect(profile.kind).toBe(type);
       expect(profile.capacity).toBe(capacity);
     }
-    for (const [type, kind] of Object.entries({ arena: 'indoor_arena', club: 'rock_club', theater: 'theatre', amphitheater: 'amphitheatre' })) expect(resolveVenueProfile({ type }).kind).toBe(kind);
+    for (const [type, kind] of Object.entries({ arena: 'indoor_arena', club: 'rock_club', theater: 'theatre', amphitheater: 'amphitheatre', studio: 'tv_studio' })) expect(resolveVenueProfile({ type }).kind).toBe(kind);
     expect(resolveVenueProfile({ type: 'large_venue', capacity: 7000 }).kind).toBe('indoor_arena');
   });
   it('sizes the physical deck and keeps performers on its floor', () => {
@@ -32,5 +32,16 @@ describe('game venue profiles', () => {
     for (const type of ['constructor', '__proto__', 'unknown_type']) expect(resolveVenueProfile({ type, capacity: 500 }).kind).toBe('rock_club');
     expect(resolveVenueProfile({ type: 'festival_tent' }).outdoor).toBe(false);
     expect(resolveVenueProfile({ type: 'amphitheatre' }).seating).toBe(true);
+  });
+  it('uses a compact house-production television studio for Top of the Pops', () => {
+    const studio = resolveVenueProfile({ type: 'tv_studio' });
+    expect(studio.kind).toBe('tv_studio');
+    expect(studio.capacity).toBe(250);
+    expect(studio.outdoor).toBe(false);
+    expect(studio.seating).toBe(false);
+    expect(studio.production).toBe('house');
+    expect(studio.stageWidth).toBeGreaterThan(10);
+    expect(studio.roofHeight).toBeLessThan(10);
+    expect(studio.crowdDepth).toBeLessThan(12);
   });
 });

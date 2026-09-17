@@ -18,7 +18,19 @@ const CAMERAS = {
   guitar: { position: [-4, 2.35, 1.2], target: [-2.0, 2.05, -1.5], fov: 49 },
   drums: { position: [3.5, 3.65, -4.45], target: [0.7, 2.15, -2.65], fov: 55 },
   stage: { position: [-3.7, 2.75, -4.1], target: [1.25, 1.65, 6], fov: 58 },
+  tv_presenter_wide: { position: [-5.1, 2.8, 4.8], target: [-3.2, 1.75, -0.4], fov: 46 },
+  tv_presenter_close: { position: [-4.25, 2.15, 2.05], target: [-3.2, 1.72, -0.45], fov: 34 },
+  tv_crane: { position: [6.8, 6.6, 6.5], target: [0, 1.75, -1.2], fov: 50 },
+  tv_overhead: { position: [0, 10.5, 1.8], target: [0, 0.6, -0.9], fov: 48 },
+  tv_audience_reverse: { position: [0, 2.15, -3.1], target: [0, 1.55, 7.0], fov: 58 },
+  tv_tracking: { position: [-5.2, 2.2, 2.4], target: [0, 1.55, -1.5], fov: 45 },
+  tv_low_angle: { position: [0.3, 0.75, 2.25], target: [0, 2.1, -1.6], fov: 44 },
 } as const;
+
+const TV_CAMERA_SHOTS = new Set<CameraShot>([
+  'tv_presenter_wide', 'tv_presenter_close', 'tv_crane', 'tv_overhead',
+  'tv_audience_reverse', 'tv_tracking', 'tv_low_angle',
+]);
 
 export class ConcertScene {
   private scene = new T.Scene();
@@ -77,8 +89,6 @@ export class ConcertScene {
     const pmrem = new T.PMREMGenerator(this.renderer), room = new RoomEnvironment();
     this.environment = pmrem.fromScene(room, 0.04); this.scene.environment = this.environment.texture; room.dispose(); pmrem.dispose();
     this.scene.background = new T.Color('#010205'); this.scene.fog = this.fog;
-    // Keep house lighting almost entirely off. The audience should read mostly as silhouettes,
-    // with the stage spots providing the only meaningful illumination during a performance.
     this.scene.add(new T.HemisphereLight('#526070', '#050406', 0.18));
     const key = new T.DirectionalLight('#f4d5b3', 0.22); key.position.set(0, 5, 6); this.scene.add(key);
     const backFill = new T.DirectionalLight('#5f7390', 0.08); backFill.position.set(0, 5, -7); this.scene.add(backFill);
@@ -117,7 +127,6 @@ export class ConcertScene {
         light.position.set(...positions[Math.floor(i*positions.length/(this.venueProfile.production==='portable'?4:8))]);
         light.target.position.set(x/5*this.venueProfile.stageWidth*.35,this.venueProfile.stageHeight+.8,.65-this.venueProfile.stageDepth*(back?.25:.6));
         light.angle=back?.28:.38;
-        // Stop the cones shortly beyond the performance area so they do not wash the crowd.
         light.distance = light.position.distanceTo(light.target.position) * 1.35;
         if (this.venueProfile.production === 'portable') rod(this.scene, [light.position.x, 0, light.position.z], light.position.toArray(), .025, matte('#343b43'));
       }
@@ -143,7 +152,6 @@ export class ConcertScene {
         beam.position.set(...positions[i]);beam.userData.extraProductionBeam=true;this.scene.add(beam);this.beams.push(beam);
       }
     }
-    // Small warm footlights outline the stage without illuminating the room.
     for (let i = 0; i < 8; i++) {
       const mat = new T.MeshStandardMaterial({ color: '#ffd09c', emissive: '#ff8844', emissiveIntensity: 2.2 });
       const point = [-5 + i * 1.42, 0.93, 0.4];
@@ -193,8 +201,17 @@ export class ConcertScene {
       if (actor) { this.targetPos.copy(actor.root.position).add(new T.Vector3(0, 1.2, .1)); this.cameraPos.copy(this.targetPos).add(selected === 'drums' ? new T.Vector3(2.4, 1.6, -1.5) : new T.Vector3(-1.8, .45, 3.1)); }
       else { selected = 'front'; this.cameraPos.fromArray(CAMERAS.front.position); this.targetPos.fromArray(CAMERAS.front.target); }
     }
-    if (!reducedMotion) { this.cameraPos.x += Math.sin(this.seconds * 0.15) * 0.16; this.cameraPos.y += Math.sin(this.seconds * 0.13) * 0.035; }
-    // Keep the complete band in frame when the viewport narrows.
+    if (!reducedMotion) {
+      const drift = TV_CAMERA_SHOTS.has(selected) ? 0.055 : 0.16;
+      this.cameraPos.x += Math.sin(this.seconds * 0.15) * drift;
+      this.cameraPos.y += Math.sin(this.seconds * 0.13) * (TV_CAMERA_SHOTS.has(selected) ? 0.018 : 0.035);
+      if (selected === 'tv_crane') {
+        this.cameraPos.x += Math.sin(this.seconds * 0.28) * 1.25;
+        this.cameraPos.z += Math.cos(this.seconds * 0.2) * 0.6;
+      } else if (selected === 'tv_tracking') {
+        this.cameraPos.x += Math.sin(this.seconds * 0.42) * 1.4;
+      }
+    }
     if (this.venueProfile) {
       const p = this.venueProfile;
       if (selected === 'front') {
@@ -207,10 +224,27 @@ export class ConcertScene {
         this.cameraPos.set(-p.stageWidth * .32, p.stageHeight + 1.9, .65 - p.stageDepth * .85);
         this.targetPos.set(0, 1.5, Math.min(p.crowdDepth * .55, 20));
       }
+      if (p.kind === 'tv_studio') {
+        const sx = p.stageWidth / 12, sz = p.stageDepth / 7.2;
+        if (selected === 'tv_presenter_wide' || selected === 'tv_presenter_close') {
+          this.cameraPos.x *= sx; this.cameraPos.z *= sz;
+          this.targetPos.x *= sx; this.targetPos.z *= sz;
+        }
+        if (selected === 'tv_crane' || selected === 'tv_tracking' || selected === 'tv_low_angle') {
+          this.cameraPos.x *= sx; this.cameraPos.z *= sz;
+          this.targetPos.set(0, p.stageHeight + 1.25, .65 - p.stageDepth * .45);
+        }
+        if (selected === 'tv_overhead') {
+          this.cameraPos.set(0, Math.min(p.roofHeight - .35, p.rigHeight + 2.2), p.crowdDepth * .24);
+          this.targetPos.set(0, p.stageHeight + .3, .65 - p.stageDepth * .35);
+        }
+        if (selected === 'tv_audience_reverse') {
+          this.cameraPos.set(0, 1.85, .65 - p.stageDepth + .55);
+          this.targetPos.set(0, 1.35, Math.min(p.crowdDepth * .62, 8.5));
+        }
+      }
     }
     if (!this.options && this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
-    // An external replay uses analytic cuts/dollies: seeking to a timestamp must
-    // produce the same camera, including while paused and after a backwards seek.
     const lerp = this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
     this.camera.position.lerp(this.cameraPos, lerp); this.lookAt.lerp(this.targetPos, lerp);
     this.camera.fov = T.MathUtils.lerp(this.camera.fov, shot.fov, lerp); this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;

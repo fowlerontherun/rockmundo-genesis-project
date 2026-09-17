@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { box, rod, cylinder, matte, metal } from './stage';
 import type { VenueProfile } from './venueProfile';
+import { buildTvStudioProduction } from './tvStudioProduction';
 /** Recognisable silhouettes and ceiling structures are visible from stage-facing cameras. */
 export function venueArchitecture(root: T.Group, p: VenueProfile, wood: T.Material) {
     const half = p.roomWidth / 2, back = .65 - p.stageDepth - 1.4, pale = matte('#dbd0af'), dark = matte('#212830'), brass = metal('#a78950');
@@ -32,7 +33,6 @@ export function venueArchitecture(root: T.Group, p: VenueProfile, wood: T.Materi
         canopy.name = 'tent-fabric-canopy';
         canopy.castShadow = true;
         root.add(canopy);
-        // A gable closes the end behind the stage; side skirts leave real entrance gaps.
         const end = new T.BufferGeometry();
         end.setAttribute('position', new T.Float32BufferAttribute([-half, 0, back, half, 0, back, -half, eave, back, half, 0, back, half, eave, back, -half, eave, back, -half, eave, back, half, eave, back, 0, point(0, back).y, back], 3));
         end.computeVertexNormals();
@@ -61,47 +61,28 @@ export function venueArchitecture(root: T.Group, p: VenueProfile, wood: T.Materi
         base.scale.z = p.stageDepth / p.stageWidth;
         for (let i = 0; i < 8; i++) {
             const a = i * Math.PI / 4, x = Math.cos(a) * radius, z = center + Math.sin(a) * radius * p.stageDepth / p.stageWidth;
-            if (z > .5)
-                continue;
+            if (z > .5) continue;
             rod(root, [x, p.stageHeight, z], [x, p.rigHeight, z], .07, pale);
         }
     }
     if (p.kind === 'theatre') {
         const w = p.stageWidth / 2 + .5, y = p.rigHeight + .4;
         const shape = new T.Shape();
-        shape.moveTo(-w, 0);
-        shape.lineTo(-w, y - .4);
-        shape.quadraticCurveTo(0, y + 1.4, w, y - .4);
-        shape.lineTo(w, 0);
-        shape.lineTo(w - .45, 0);
-        shape.lineTo(w - .45, y - .9);
-        shape.quadraticCurveTo(0, y + .5, -w + .45, y - .9);
-        shape.lineTo(-w + .45, 0);
-        shape.closePath();
+        shape.moveTo(-w, 0); shape.lineTo(-w, y - .4); shape.quadraticCurveTo(0, y + 1.4, w, y - .4); shape.lineTo(w, 0);
+        shape.lineTo(w - .45, 0); shape.lineTo(w - .45, y - .9); shape.quadraticCurveTo(0, y + .5, -w + .45, y - .9); shape.lineTo(-w + .45, 0); shape.closePath();
         const arch = new T.Mesh(new T.ExtrudeGeometry(shape, { depth: .2, bevelEnabled: false }), brass);
-        arch.position.z = .8;
-        arch.name = 'theatre-proscenium';
-        root.add(arch);
+        arch.position.z = .8; arch.name = 'theatre-proscenium'; root.add(arch);
     }
     if (p.kind === 'church_hall') {
         for (const x of [-p.stageWidth * .35, p.stageWidth * .35]) {
             const shape = new T.Shape();
-            shape.moveTo(-.55, 0);
-            shape.lineTo(-.55, 2.2);
-            shape.quadraticCurveTo(-.5, 2.7, 0, 3.15);
-            shape.quadraticCurveTo(.5, 2.7, .55, 2.2);
-            shape.lineTo(.55, 0);
-            shape.closePath();
+            shape.moveTo(-.55, 0); shape.lineTo(-.55, 2.2); shape.quadraticCurveTo(-.5, 2.7, 0, 3.15); shape.quadraticCurveTo(.5, 2.7, .55, 2.2); shape.lineTo(.55, 0); shape.closePath();
             const window = new T.Mesh(new T.ShapeGeometry(shape), new T.MeshStandardMaterial({ color: '#a7845a', emissive: '#aa6b3e', emissiveIntensity: .3, side: T.DoubleSide }));
-            window.position.set(x, 1.8, back + .18);
-            window.name = 'church-pointed-window';
-            root.add(window);
-            beam([x, 1.8, back + .2], [x, 4.8, back + .2], .025);
-            beam([x - .5, 3.3, back + .2], [x + .5, 3.3, back + .2], .025);
+            window.position.set(x, 1.8, back + .18); window.name = 'church-pointed-window'; root.add(window);
+            beam([x, 1.8, back + .2], [x, 4.8, back + .2], .025); beam([x - .5, 3.3, back + .2], [x + .5, 3.3, back + .2], .025);
         }
         for (let z = back + 1; z < p.roomDepth; z += 5) {
-            beam([-half, p.roofHeight - .7, z], [0, p.roofHeight + 1.4, z], .09);
-            beam([0, p.roofHeight + 1.4, z], [half, p.roofHeight - .7, z], .09);
+            beam([-half, p.roofHeight - .7, z], [0, p.roofHeight + 1.4, z], .09); beam([0, p.roofHeight + 1.4, z], [half, p.roofHeight - .7, z], .09);
         }
     }
     if (p.kind === 'concert_hall')
@@ -115,15 +96,13 @@ export function venueArchitecture(root: T.Group, p: VenueProfile, wood: T.Materi
             for (const side of [-1, 1]) {
                 beam([side * half, roofY - 3, z], [side * half * .3, roofY, z], .12);
                 if (p.kind === 'stadium') {
-                    const canopy = box(root, [half * .48, .15, 8], [side * half * .76, roofY - 1, z + 4], pale);
-                    canopy.rotation.z = side * .13;
+                    const canopy = box(root, [half * .48, .15, 8], [side * half * .76, roofY - 1, z + 4], pale); canopy.rotation.z = side * .13;
                 }
             }
         if (p.kind === 'ice_arena') {
             const board = box(root, [3.8, 2.3, 3.8], [0, Math.min(roofY - 2, 12), p.crowdDepth * .45], dark);
             board.name = 'ice-arena-scoreboard';
-            for (const side of [-1, 1])
-                box(root, [3.4, 1.7, .025], [0, board.position.y, p.crowdDepth * .45 + side * 1.92], matte('#31566d'));
+            for (const side of [-1, 1]) box(root, [3.4, 1.7, .025], [0, board.position.y, p.crowdDepth * .45 + side * 1.92], matte('#31566d'));
         }
     }
     if (['cafe_stage', 'jazz_lounge', 'dive_bar'].includes(p.kind)) {
@@ -133,22 +112,17 @@ export function venueArchitecture(root: T.Group, p: VenueProfile, wood: T.Materi
             cylinder(root, .15, .36, .3, [x, p.roofHeight - 1.2, z], p.kind === 'jazz_lounge' ? brass : pale, 20);
         }
         if (p.kind === 'cafe_stage') {
-            const board = box(root, [1.1, 1.8, .08], [p.stageWidth * .4, 2, back + .2], dark);
-            board.name = 'cafe-menu-board';
-            for (let i = 0; i < 6; i++)
-                box(root, [.72, .024, .012], [p.stageWidth * .4, 2.5 - i * .2, back + .25], pale);
+            const board = box(root, [1.1, 1.8, .08], [p.stageWidth * .4, 2, back + .2], dark); board.name = 'cafe-menu-board';
+            for (let i = 0; i < 6; i++) box(root, [.72, .024, .012], [p.stageWidth * .4, 2.5 - i * .2, back + .25], pale);
         }
     }
-    if (p.kind === 'warehouse')
-        for (let i = 0; i < 7; i++)
-            box(root, [1.25, 2.1, .07], [(i - 3) * p.roomWidth / 8, p.roofHeight - 1.8, back + .2], new T.MeshStandardMaterial({ color: '#607079', emissive: '#374e5d', emissiveIntensity: .2 }));
+    if (p.kind === 'warehouse') for (let i = 0; i < 7; i++) box(root, [1.25, 2.1, .07], [(i - 3) * p.roomWidth / 8, p.roofHeight - 1.8, back + .2], new T.MeshStandardMaterial({ color: '#607079', emissive: '#374e5d', emissiveIntensity: .2 }));
     if (p.kind === 'beach_stage')
-        for (const side of [-1, 1])
-            for (let i = 0; i < 3; i++) {
-                const x = side * (p.stageWidth / 2 + 2), z = back + 2 + i * 4;
-                rod(root, [x, 0, z], [x, 5, z], .045, wood);
-                const sail = new T.Mesh(new T.ConeGeometry(2.7, .8, 3, 1, true), new T.MeshStandardMaterial({ color: '#dfcaa1', side: T.DoubleSide, roughness: .9 }));
-                sail.position.set(x, 5, z);
-                root.add(sail);
-            }
+        for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {
+            const x = side * (p.stageWidth / 2 + 2), z = back + 2 + i * 4;
+            rod(root, [x, 0, z], [x, 5, z], .045, wood);
+            const sail = new T.Mesh(new T.ConeGeometry(2.7, .8, 3, 1, true), new T.MeshStandardMaterial({ color: '#dfcaa1', side: T.DoubleSide, roughness: .9 }));
+            sail.position.set(x, 5, z); root.add(sail);
+        }
+    buildTvStudioProduction(root, p);
 }
