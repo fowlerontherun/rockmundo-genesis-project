@@ -1,5 +1,5 @@
 -- Top of the Pops phase 1 foundation.
--- Server-authoritative fortnightly television event driven by immutable chart snapshots.
+-- Server-authoritative fortnightly television event driven by immutable UK chart snapshots.
 
 CREATE TABLE IF NOT EXISTS public.totp_episodes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.totp_candidates (
   band_id uuid NOT NULL REFERENCES public.bands(id) ON DELETE CASCADE,
   song_id uuid NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
   chart_rank integer NOT NULL CHECK (chart_rank BETWEEN 1 AND 40),
-  chart_type text NOT NULL DEFAULT 'daily',
+  qualifying_chart text NOT NULL CHECK (qualifying_chart IN ('streaming', 'digital_sales', 'both')),
   chart_snapshot_date date NOT NULL,
   selection_bucket text NOT NULL CHECK (selection_bucket IN ('top10', '11_20', '21_40')),
   selected boolean NOT NULL DEFAULT false,
@@ -122,12 +122,19 @@ BEGIN
   END IF;
 
   SELECT max(chart_date) INTO v_snapshot_date
-  FROM public.global_charts
-  WHERE chart_type = 'daily'
-    AND chart_date <= (p_episode_date - 3);
+  FROM (
+    SELECT chart_date
+    FROM public.chart_entries
+    WHERE country = 'United Kingdom'
+      AND chart_type IN ('streaming', 'digital_sales')
+      AND entry_type = 'song'
+      AND chart_date <= (p_episode_date - 3)
+    GROUP BY chart_date
+    HAVING count(DISTINCT chart_type) = 2
+  ) snapshots;
 
   IF v_snapshot_date IS NULL THEN
-    RAISE EXCEPTION 'No qualifying daily chart snapshot found for episode %', p_episode_date;
+    RAISE EXCEPTION 'No complete UK streaming + digital sales chart snapshot found for episode %', p_episode_date;
   END IF;
 
   INSERT INTO public.totp_episodes (
@@ -154,22 +161,47 @@ BEGIN
       updated_at = now()
   RETURNING id INTO v_episode_id;
 
+  DELETE FROM public.totp_invitations WHERE episode_id = v_episode_id;
   DELETE FROM public.totp_candidates WHERE episode_id = v_episode_id;
 
-  WITH latest_chart AS (
-    SELECT gc.song_id, gc.rank, s.band_id,
-           row_number() OVER (PARTITION BY s.band_id ORDER BY gc.rank ASC, gc.song_id) AS band_song_rank
-    FROM public.global_charts gc
-    JOIN public.songs s ON s.id = gc.song_id
-    WHERE gc.chart_type = 'daily'
-      AND gc.chart_date = v_snapshot_date
-      AND gc.rank BETWEEN 1 AND 40
+  WITH source_rows AS (
+    SELECT
+      ce.song_id,
+      ce.chart_type,
+      ce.rank,
+      s.band_id
+    FROM public.chart_entries ce
+    JOIN public.songs s ON s.id = ce.song_id
+    WHERE ce.chart_date = v_snapshot_date
+      AND ce.country = 'United Kingdom'
+      AND ce.entry_type = 'song'
+      AND ce.chart_type IN ('streaming', 'digital_sales')
+      AND ce.rank BETWEEN 1 AND 40
       AND s.band_id IS NOT NULL
       AND coalesce(s.archived, false) = false
   ),
+  combined_eligibility AS (
+    SELECT
+      song_id,
+      band_id,
+      min(rank) AS best_rank,
+      CASE
+        WHEN count(DISTINCT chart_type) = 2 THEN 'both'
+        WHEN bool_or(chart_type = 'streaming') THEN 'streaming'
+        ELSE 'digital_sales'
+      END AS qualifying_chart
+    FROM source_rows
+    GROUP BY song_id, band_id
+  ),
+  ranked_band_songs AS (
+    SELECT
+      *,
+      row_number() OVER (PARTITION BY band_id ORDER BY best_rank ASC, song_id) AS band_song_rank
+    FROM combined_eligibility
+  ),
   best_song_per_band AS (
-    SELECT song_id, rank, band_id
-    FROM latest_chart
+    SELECT song_id, band_id, best_rank, qualifying_chart
+    FROM ranked_band_songs
     WHERE band_song_rank = 1
   ),
   previous_episode AS (
@@ -181,17 +213,17 @@ BEGIN
     LIMIT 1
   )
   INSERT INTO public.totp_candidates (
-    episode_id, band_id, song_id, chart_rank, chart_type,
+    episode_id, band_id, song_id, chart_rank, qualifying_chart,
     chart_snapshot_date, selection_bucket, ineligible_reason
   )
   SELECT
     v_episode_id,
     b.band_id,
     b.song_id,
-    b.rank,
-    'daily',
+    b.best_rank,
+    b.qualifying_chart,
     v_snapshot_date,
-    CASE WHEN b.rank <= 10 THEN 'top10' WHEN b.rank <= 20 THEN '11_20' ELSE '21_40' END,
+    CASE WHEN b.best_rank <= 10 THEN 'top10' WHEN b.best_rank <= 20 THEN '11_20' ELSE '21_40' END,
     CASE
       WHEN EXISTS (
         SELECT 1
@@ -204,9 +236,10 @@ BEGIN
     END
   FROM best_song_per_band b;
 
-  -- Stable editorial selection: #1 is always prioritised when eligible, then the
-  -- remaining slots are spread across chart bands. Hash ordering is seeded by the
-  -- episode UUID so players cannot alter the outcome by repeatedly refreshing.
+  -- Stable editorial selection: chart success determines the pool, while an episode-
+  -- seeded hash prevents players from changing selection through retries or refreshes.
+  -- Slots are intentionally spread across the Top 40 so the programme is not simply
+  -- another Top 10 reward screen.
   WITH ranked AS (
     SELECT c.id,
            c.selection_bucket,
@@ -243,8 +276,7 @@ BEGIN
     (((p_episode_date - 1)::timestamp + time '18:00') AT TIME ZONE 'Europe/London')
   FROM public.totp_candidates c
   WHERE c.episode_id = v_episode_id
-    AND c.selected = true
-  ON CONFLICT (episode_id, band_id) DO NOTHING;
+    AND c.selected = true;
 
   RETURN v_episode_id;
 END;
@@ -300,6 +332,6 @@ END;
 $$;
 
 COMMENT ON TABLE public.totp_episodes IS 'Fortnightly Thursday Top of the Pops broadcasts in London.';
-COMMENT ON TABLE public.totp_candidates IS 'Immutable Top 40 eligibility snapshot for each Top of the Pops episode.';
+COMMENT ON TABLE public.totp_candidates IS 'Immutable eligibility snapshot from the UK streaming and digital sales Top 40.';
 COMMENT ON TABLE public.totp_invitations IS 'Server-authoritative invitations; qualifying song is locked to the chart snapshot.';
 COMMENT ON TABLE public.totp_performances IS 'Permanent appearance history and broadcast metadata for Top of the Pops.';
