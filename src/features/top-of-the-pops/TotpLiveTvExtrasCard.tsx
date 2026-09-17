@@ -1,22 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, Flame, RadioTower, Sparkles, Users } from "lucide-react";
+import { Activity, Flame, RadioTower, Sparkles, Users, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import {
+  chooseTotpIncidentRecovery,
   chooseTotpPerformanceStyle,
   getMyTotpLiveTvExtras,
+  type TotpIncidentRecoveryChoice,
   type TotpPerformanceStyleChoice,
 } from "./liveTvApi";
+import { totpAudienceReactionLabel } from "./studioAudience";
 
 interface TotpLiveTvExtrasCardProps {
   invitationId: string;
 }
 
 const STYLE_CHOICES: Array<{
-  key: TotpPerformanceStyleChoice;
+  key: Exclude<TotpPerformanceStyleChoice, "house_direction">;
   title: string;
   description: string;
 }> = [
@@ -37,17 +40,26 @@ const STYLE_CHOICES: Array<{
   },
 ];
 
+const RECOVERY_COPY: Record<string, Array<{
+  key: TotpIncidentRecoveryChoice;
+  title: string;
+  description: string;
+}>> = {
+  broken_string: [
+    { key: "professional", title: "Take the spare", description: "Swap instruments cleanly and keep the room calm. Safest reputation gain." },
+    { key: "improvise", title: "Play through it", description: "Adapt the part on the fly. Better audience reaction with moderate buzz." },
+    { key: "showman", title: "Make it part of the show", description: "Turn the mishap into a visible live-TV moment. Biggest crowd/media upside." },
+  ],
+  late_floor_manager: [
+    { key: "professional", title: "Follow the new cue", description: "Trust the floor team and hit the revised mark. Safest reputation gain." },
+    { key: "improvise", title: "Adapt on the move", description: "Rework the entrance naturally. Better crowd response and some media buzz." },
+    { key: "showman", title: "Lean into the chaos", description: "Make the scramble look deliberate. Bigger media reaction with a small fan-sentiment risk." },
+  ],
+};
+
 function signed(value: number | undefined) {
   const numeric = Number(value ?? 0);
   return `${numeric >= 0 ? "+" : ""}${numeric}`;
-}
-
-function audienceLabel(reaction: number) {
-  if (reaction >= 6) return "Roaring";
-  if (reaction >= 4) return "Loud";
-  if (reaction >= 2) return "Warm";
-  if (reaction >= 0) return "Settled";
-  return "Nervous";
 }
 
 export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps) {
@@ -62,7 +74,7 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
   const style = extras.data?.styles.find((row) => row.invitation_id === invitationId) ?? null;
 
   const chooseStyle = useMutation({
-    mutationFn: (choice: TotpPerformanceStyleChoice) => {
+    mutationFn: (choice: Exclude<TotpPerformanceStyleChoice, "house_direction">) => {
       if (!style) throw new Error("The performance-style choice is not ready yet.");
       return chooseTotpPerformanceStyle(style.id, choice);
     },
@@ -80,11 +92,32 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
     }),
   });
 
+  const chooseRecovery = useMutation({
+    mutationFn: (choice: TotpIncidentRecoveryChoice) => {
+      if (!event) throw new Error("The production incident is not ready yet.");
+      return chooseTotpIncidentRecovery(event.id, choice);
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Production recovery locked",
+        description: `${result.choice.replaceAll("_", " ")} · audience now ${signed(result.audience_reaction)}.`,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["totp", "live-tv-extras"] });
+    },
+    onError: (error: Error) => toast({
+      title: "Could not save production recovery",
+      description: error.message,
+      variant: "destructive",
+    }),
+  });
+
   if (extras.isLoading || (!event && !style)) return null;
 
   const selectedStyle = STYLE_CHOICES.find((choice) => choice.key === style?.selected_style) ?? null;
+  const recoveryChoices = event ? RECOVERY_COPY[event.event_key] ?? [] : [];
   const audienceReaction = Number(event?.audience_reaction ?? 0) + Number(style?.selected_style ? style.audience_reaction : 0);
   const audienceMeter = Math.max(0, Math.min(100, 50 + audienceReaction * 8));
+  const audienceLabel = totpAudienceReactionLabel(audienceReaction);
 
   return (
     <Card className="border-amber-500/20 bg-amber-500/5">
@@ -94,9 +127,9 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
             <CardTitle className="flex items-center gap-2 text-base">
               <RadioTower className="h-4 w-4" /> Live television production
             </CardTitle>
-            <CardDescription>Studio incidents and the performance approach for tonight's broadcast.</CardDescription>
+            <CardDescription>Studio incidents and the performance approach for tonight&apos;s broadcast.</CardDescription>
           </div>
-          <Badge variant="secondary">studio floor</Badge>
+          <Badge variant="secondary"><Users className="mr-1 h-3 w-3" /> Audience: {audienceLabel}</Badge>
         </div>
       </CardHeader>
 
@@ -104,11 +137,11 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
         <div className="rounded-lg border bg-background/70 p-4">
           <div className="flex items-center justify-between gap-3 text-sm">
             <div className="flex items-center gap-2 font-medium"><Users className="h-4 w-4" /> Studio audience</div>
-            <Badge variant="secondary">{audienceLabel(audienceReaction)} · {signed(audienceReaction)}</Badge>
+            <Badge variant="secondary">{audienceLabel} · {signed(audienceReaction)}</Badge>
           </div>
           <Progress value={audienceMeter} className="mt-3 h-2" />
           <p className="mt-2 text-xs text-muted-foreground">
-            This reaction combines tonight's production incident with the chosen performance style. It is flavour and bounded progression, not a chart modifier.
+            The locked reaction now drives the canonical 3D studio crowd density and how tightly fans press toward the performance area.
           </p>
         </div>
 
@@ -126,6 +159,38 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
               {Number(event.effects.fan_sentiment ?? 0) !== 0 && <Badge variant="outline">Fan sentiment {signed(event.effects.fan_sentiment)}</Badge>}
               {Number(event.effects.media_intensity ?? 0) !== 0 && <Badge variant="outline">Media {signed(event.effects.media_intensity)}</Badge>}
             </div>
+
+            {event.requires_recovery && !event.recovered_at && recoveryChoices.length > 0 && (
+              <div className="mt-4 space-y-2 border-t pt-4">
+                <div className="flex items-center gap-2 text-sm font-medium"><Wrench className="h-4 w-4" /> How do you recover?</div>
+                <div className="grid gap-2 lg:grid-cols-3">
+                  {recoveryChoices.map((choice) => (
+                    <Button
+                      key={choice.key}
+                      variant="outline"
+                      className="h-auto justify-start whitespace-normal p-3 text-left"
+                      onClick={() => chooseRecovery.mutate(choice.key)}
+                      disabled={chooseRecovery.isPending}
+                    >
+                      <span>
+                        <span className="font-medium">{choice.title}</span>
+                        <span className="mt-1 block text-xs font-normal text-muted-foreground">{choice.description}</span>
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {event.recovered_at && event.recovery_choice && (
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4 text-xs">
+                <Badge variant="secondary">Recovery: {event.recovery_choice.replaceAll("_", " ")}</Badge>
+                {event.recovery_effects?.auto_locked && <Badge variant="outline">safe fallback</Badge>}
+                {Number(event.recovery_effects?.audience_reaction ?? 0) !== 0 && (
+                  <Badge variant="outline">Recovery audience {signed(event.recovery_effects?.audience_reaction)}</Badge>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -142,11 +207,18 @@ export function TotpLiveTvExtrasCard({ invitationId }: TotpLiveTvExtrasCardProps
 
             {style.selected_style ? (
               <div className="rounded-lg border bg-background/70 p-4">
-                <div className="font-medium">{selectedStyle?.title ?? style.selected_style.replaceAll("_", " ")}</div>
-                <p className="mt-1 text-sm text-muted-foreground">{selectedStyle?.description}</p>
+                <div className="font-medium">
+                  {style.selected_style === "house_direction" ? "House television direction" : selectedStyle?.title ?? style.selected_style.replaceAll("_", " ")}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {style.selected_style === "house_direction"
+                    ? "No player style was locked before the performance completed, so the broadcast uses neutral house direction."
+                    : selectedStyle?.description}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
                   <Badge>Fame x{Number(style.fame_multiplier).toFixed(2)}</Badge>
                   <Badge variant="outline"><Users className="mr-1 h-3 w-3" /> Audience {signed(style.audience_reaction)}</Badge>
+                  {style.effects?.auto_locked && <Badge variant="secondary">automatic fallback</Badge>}
                   {style.applied_at && <Badge variant="secondary">applied</Badge>}
                 </div>
               </div>
