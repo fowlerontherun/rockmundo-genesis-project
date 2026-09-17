@@ -17,26 +17,39 @@ import { totpAudienceReactionLabel } from "./studioAudience";
 const metric = <T,>(value: T) => ({ status: "available" as const, value, source: "authoritative" as const });
 const unavailable = (reason: string) => ({ status: "not_applicable" as const, reason });
 
+type ReplayEvent = GigViewerReplay["events"][number];
+type AppearanceInput = Parameters<typeof resolveAppearance>[0];
+type LegacyAppearanceInput = Parameters<typeof appearanceFromLegacy>[0];
+type ClothingItemInput = Parameters<typeof resolveEquippedClothingVisual>[0];
+type ClothingVariantInput = Parameters<typeof resolveEquippedClothingVisual>[1];
+type ClothingCustomizationInput = Parameters<typeof resolveEquippedClothingVisual>[2];
+
 function lockedAudienceReaction(source: TotpBroadcastReplay): number {
-  const value = Number((source.payload as any)?.liveTv?.audienceReaction ?? 0);
+  const value = Number(source.payload.liveTv?.audienceReaction ?? 0);
   return Number.isFinite(value) ? Math.max(-10, Math.min(10, value)) : 0;
 }
-function lockedPresenterKey(source: TotpBroadcastReplay): string { return String((source.payload as any)?.presenterKey ?? source.presenter_key ?? "alex_rayne"); }
-function lockedShowVariant(source: TotpBroadcastReplay): string { return String((source.payload as any)?.showVariant ?? "regular"); }
+function lockedPresenterKey(source: TotpBroadcastReplay): string { return String(source.payload.presenterKey ?? source.presenter_key ?? "alex_rayne"); }
+function lockedShowVariant(source: TotpBroadcastReplay): string { return String(source.payload.showVariant ?? "regular"); }
 
 /** Decode replay-v4 render snapshots into the exact shape consumed by the shared Gig Viewer. */
 export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerModelsData | null {
   const appearances: GigPlayerModelsData["appearances"] = {};
   const richClothing: GigPlayerModelsData["richClothing"] = {};
   let frozen = 0;
-  for (const rawMember of source.payload.band.members as any[]) {
-    const profileId = rawMember?.profile_id ? String(rawMember.profile_id) : "";
-    const snapshot = rawMember?.visual_snapshot;
+  for (const member of source.payload.band.members) {
+    const profileId = member.profile_id ? String(member.profile_id) : "";
+    const snapshot = member.visual_snapshot;
     if (!profileId || !snapshot) continue;
-    if (snapshot.appearance) appearances[profileId] = resolveAppearance(snapshot.appearance, profileId);
-    else if (snapshot.legacyAvatar) appearances[profileId] = appearanceFromLegacy(snapshot.legacyAvatar, profileId);
+    if (snapshot.appearance) appearances[profileId] = resolveAppearance(snapshot.appearance as AppearanceInput, profileId);
+    else if (snapshot.legacyAvatar) appearances[profileId] = appearanceFromLegacy(snapshot.legacyAvatar as LegacyAppearanceInput, profileId);
     richClothing[profileId] = Array.isArray(snapshot.richClothing)
-      ? snapshot.richClothing.filter((row: any) => row?.item).map((row: any) => resolveEquippedClothingVisual(row.item, row.selectedVariantKey, row.customizationConfig))
+      ? snapshot.richClothing
+          .filter((row) => row.item)
+          .map((row) => resolveEquippedClothingVisual(
+            row.item as ClothingItemInput,
+            row.selectedVariantKey as ClothingVariantInput,
+            row.customizationConfig as ClothingCustomizationInput,
+          ))
       : [];
     frozen++;
   }
@@ -49,9 +62,18 @@ function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
   const performanceCrowdEnergy = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
   const songStart = 7_000, songEnd = songStart + payload.performanceDurationMs;
   let sequence = 0;
-  const event = (partial: any) => ({ id: `${source.id}:${++sequence}`, gigId: `totp:${payload.performanceId}`, sequence, durationMs: 1_000, importance: "normal", messageKey: "totp.archive", messageParams: {}, ...partial });
+  const event = (partial: Record<string, unknown>): ReplayEvent => ({
+    id: `${source.id}:${++sequence}`,
+    gigId: `totp:${payload.performanceId}`,
+    sequence,
+    durationMs: 1_000,
+    importance: "normal",
+    messageKey: "totp.archive",
+    messageParams: {},
+    ...partial,
+  } as unknown as ReplayEvent);
   const members = payload.band.members.length > 0 ? payload.band.members : [{ profile_id: `totp-placeholder:${payload.band.id}`, display_name: payload.band.name, role: "performer" }];
-  const events: any[] = [
+  const events: GigViewerReplay["events"] = [
     event({ phase: "venue_opening", eventType: "venue_opened", scheduledOffsetMs: 0, durationMs: 3_000, visualPayload: { type: "venue_open", entranceIds: ["studio"], lightLevel: .35 } }),
     event({ phase: "crowd_entry", eventType: "crowd_arrived", scheduledOffsetMs: 0, durationMs: 5_000, crowdEnergyBefore: Math.max(20, baseCrowdEnergy - 10), crowdEnergyAfter: baseCrowdEnergy, visualPayload: { type: "crowd_fill", targetDensity: .92, zoneIds: ["studio_floor"], enteringCount: 220 } }),
   ];
