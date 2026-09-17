@@ -309,19 +309,19 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, cha
                 kind="opening"
                 replays={[replay]}
                 autoPlay
-                onEnded={() => setBroadcastStep(chartRundown ? "chart" : "performance")}
+                onEnded={() => setBroadcastStep("performance")}
               />
             ) : broadcastStep === "chart" && chartRundown ? (
               <TotpChartRundownSequence
                 rundown={chartRundown}
                 autoPlay
-                onEnded={() => setBroadcastStep("performance")}
+                onEnded={() => advance("green_room")}
               />
             ) : (
               <TotpArchivePlayer
                 replay={replay}
                 autoPlay
-                onEnded={() => advance("green_room")}
+                onEnded={() => chartRundown ? setBroadcastStep("chart") : advance("green_room")}
               />
             )}
 
@@ -330,15 +330,15 @@ export function TotpTestLifecycleSimulator({ performance, seed, generatedAt, cha
                 <Button variant="outline" onClick={() => setBroadcastStep("presenter")}>Skip to presenter</Button>
               )}
               {broadcastStep === "presenter" && (
-                <Button variant="outline" onClick={() => setBroadcastStep(chartRundown ? "chart" : "performance")}>
-                  {chartRundown ? "Skip to chart" : "Skip to performance"}
-                </Button>
+                <Button variant="outline" onClick={() => setBroadcastStep("performance")}>Skip to performance</Button>
               )}
               {broadcastStep === "chart" && (
-                <Button variant="outline" onClick={() => setBroadcastStep("performance")}>Skip chart rundown</Button>
+                <Button variant="outline" onClick={() => advance("green_room")}>Skip chart rundown</Button>
               )}
               {broadcastStep === "performance" && (
-                <Button onClick={() => advance("green_room")}>Finish virtual broadcast</Button>
+                <Button onClick={() => chartRundown ? setBroadcastStep("chart") : advance("green_room")}>
+                  {chartRundown ? "Finish performance & show chart" : "Finish virtual broadcast"}
+                </Button>
               )}
             </div>
           </div>
