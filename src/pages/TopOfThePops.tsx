@@ -20,6 +20,7 @@ import { TotpArchivePlayer } from "@/features/top-of-the-pops/TotpArchivePlayer"
 import { TotpFullEpisodePlayer } from "@/features/top-of-the-pops/TotpFullEpisodePlayer";
 import { TotpBackstageInterviewCard } from "@/features/top-of-the-pops/TotpBackstageInterviewCard";
 import { TotpLiveTvExtrasCard } from "@/features/top-of-the-pops/TotpLiveTvExtrasCard";
+import { TotpStudioReadinessCard } from "@/features/top-of-the-pops/TotpStudioReadinessCard";
 import { Archive, CalendarDays, History, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
@@ -227,6 +228,7 @@ export default function TopOfThePops() {
         {invitations.data?.map((invitation) => {
           const canRespond = canRespondToTotpInvitation(invitation, now);
           const canCheckIn = canAttemptTotpCheckIn(invitation, now);
+          const showReadiness = invitation.status === "accepted" || invitation.status === "checked_in";
           return (
             <Card key={invitation.invitation_id}>
               <CardHeader>
@@ -244,6 +246,8 @@ export default function TopOfThePops() {
                   <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> {invitation.london_city_name}</div>
                   <div className="flex items-center gap-2"><Music2 className="h-4 w-4 text-muted-foreground" /> Studio call {formatDateTime(invitation.check_in_at)}</div>
                 </div>
+
+                {showReadiness && <TotpStudioReadinessCard invitationId={invitation.invitation_id} />}
 
                 {invitation.status === "accepted" && !canCheckIn && (
                   <p className="text-sm text-muted-foreground">
