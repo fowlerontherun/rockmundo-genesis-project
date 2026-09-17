@@ -7,6 +7,7 @@ import { useGigPlayerModels } from '@/features/player-model/usePlayerModel';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { TotpCameraShot, TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
+import { resolveTotpPresenter, totpVariantLabel } from '@/features/top-of-the-pops/presenters';
 import type { GigViewerReplay } from '../../events/types';
 import type { GigExperienceDTO } from '../../types';
 import type { DerivedPlaybackState } from '../engine/PlaybackController';
@@ -37,28 +38,45 @@ const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   finale_wide: 'tv_crane',
 };
 
-export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage' }: {
+export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular' }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState;
   reducedMotion: boolean; cameraMode: GigViewerCameraMode; tier: PerformanceTier; archetype: string;
   tuning: CrowdTuningOptions; pyrotechnics: boolean; pyroIntensity: number;
   presentationMode?: ConcertPresentationMode;
   totpCameraShot?: TotpCameraShot | null;
   totpStage?: TotpStageKey;
+  totpPresenterKey?: string | null;
+  totpShowVariant?: string | null;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null), renderer = useRef<ConcertScene | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [message, setMessage] = useState(''), [attempt, setAttempt] = useState(0);
   const plan = useMemo(() => buildStagePlan(replay, experience), [replay, experience]);
   const playerModels = useGigPlayerModels(plan.entities.flatMap(p => p.profileId ? [p.profileId] : []));
-  const options = useMemo(() => concertOptions(
-    plan,
-    playerModels.data?.appearances ?? EMPTY_APPEARANCES,
-    replay,
-    experience,
-    archetype,
-    playerModels.data?.richClothing ?? EMPTY_RICH_CLOTHING,
-    presentationMode,
-    totpStage,
-  ), [plan, playerModels.data, replay, experience, archetype, presentationMode, totpStage]);
+  const options = useMemo(() => {
+    const base = concertOptions(
+      plan,
+      playerModels.data?.appearances ?? EMPTY_APPEARANCES,
+      replay,
+      experience,
+      archetype,
+      playerModels.data?.richClothing ?? EMPTY_RICH_CLOTHING,
+      presentationMode,
+      totpStage,
+    );
+    if (presentationMode !== 'totp') return base;
+    return {
+      ...base,
+      venue: {
+        ...base.venue,
+        presenterKey: totpPresenterKey ?? 'alex_rayne',
+        showVariant: totpShowVariant ?? 'regular',
+      },
+      television: {
+        presenterKey: totpPresenterKey ?? 'alex_rayne',
+        showVariant: totpShowVariant ?? 'regular',
+      },
+    };
+  }, [plan, playerModels.data, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant]);
   const optionsKey = JSON.stringify(options);
   const venueProfile = resolveVenueProfile(options.venue);
   const frame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue, presentationMode, totpStage);
@@ -87,19 +105,21 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   });
 
   const isTotp = presentationMode === 'totp';
+  const presenter = resolveTotpPresenter(totpPresenterKey);
+  const variantLabel = totpVariantLabel(totpShowVariant);
   const venueLabel = isTotp ? 'RockMundo Television Centre · London' : experience?.gig.venue.name ?? 'Live performance';
   const ariaLabel = isTotp
-    ? `Top of the Pops television performance on ${totpStage.replaceAll('_', ' ')}. ${plan.entities.map(p => `${p.displayName}, ${p.roleLabel}`).join('; ')}.`
+    ? `Top of the Pops television performance presented by ${presenter.displayName} on ${totpStage.replaceAll('_', ' ')}. ${plan.entities.map(p => `${p.displayName}, ${p.roleLabel}`).join('; ')}.`
     : `3D performance at ${experience?.gig.venue.name ?? 'the venue'}. ${plan.entities.map(p => `${p.displayName}, ${p.roleLabel}`).join('; ')}. Use the timeline for commentary.`;
 
-  return <div className="relative h-full min-h-0 w-full bg-slate-950" data-renderer="three" data-renderer-status={status} data-presentation-mode={presentationMode} data-totp-camera-shot={totpCameraShot ?? undefined} data-totp-stage={isTotp ? totpStage : undefined}>
+  return <div className="relative h-full min-h-0 w-full bg-slate-950" data-renderer="three" data-renderer-status={status} data-presentation-mode={presentationMode} data-totp-camera-shot={totpCameraShot ?? undefined} data-totp-stage={isTotp ? totpStage : undefined} data-totp-presenter={isTotp ? presenter.key : undefined} data-totp-show-variant={isTotp ? totpShowVariant ?? 'regular' : undefined}>
     <canvas ref={canvas} className="block h-full min-h-0 w-full" role="img" aria-label={ariaLabel} />
     <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3 text-xs text-white/80" aria-hidden="true">
       <span className="rounded bg-black/40 px-3 py-2 backdrop-blur">{venueLabel}</span>
-      <span className="rounded bg-black/40 px-3 py-2">{isTotp ? `TOP OF THE POPS · ${totpStage.replaceAll('_', ' ').toUpperCase()}` : `${venueProfile.label}${options.venue.capacity && options.venue.capacity > 0 ? ` · ${options.venue.capacity.toLocaleString()} capacity` : ''}`}</span>
+      <span className="rounded bg-black/40 px-3 py-2">{isTotp ? `TOP OF THE POPS · ${variantLabel ? `${variantLabel.toUpperCase()} · ` : ''}${totpStage.replaceAll('_', ' ').toUpperCase()}` : `${venueProfile.label}${options.venue.capacity && options.venue.capacity > 0 ? ` · ${options.venue.capacity.toLocaleString()} capacity` : ''}`}</span>
     </div>
     {(status !== 'ready' || waiting) && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-8 text-center text-slate-100" role={status === 'error' ? 'alert' : 'status'}>
-      <strong className="text-lg">{status === 'error' ? 'The stage could not load' : isTotp ? 'Preparing the television studio' : 'Setting the stage'}</strong>
+      <strong className="text-lg">{status === 'error' ? 'The stage could not load' : isTotp ? `Preparing ${presenter.displayName}'s television studio` : 'Setting the stage'}</strong>
       <p className="max-w-md text-sm text-slate-300">{status === 'error' ? message : isTotp ? 'Loading the performers, outfits, studio lights, cameras and audience…' : 'Loading the performers, outfits, lighting and venue materials…'}</p>
       {status === 'error' && <button className="rounded-lg bg-cyan-300 px-5 py-2 font-semibold text-slate-950" onClick={() => setAttempt(n => n + 1)}>Retry 3D stage</button>}
     </div>}
