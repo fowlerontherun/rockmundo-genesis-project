@@ -137,7 +137,7 @@ export const FM_MODULES: FMModule[] = [
       "/songwriting", "/stage-practice", "/recording-studio",
       "/release-manager", "/release", "/music-videos",
       "/streaming-platforms", "/streaming",
-      "/music/charts", "/country-charts", "/christmas-charts",
+      "/music/charts", "/country-charts", "/christmas-charts", "/top-of-the-pops",
       "/competitive-charts", "/song-rankings", "/song-market", "/song-manager",
       "/cover-songs", "/music-studio",
     ],
@@ -172,6 +172,7 @@ export const FM_MODULES: FMModule[] = [
         items: [
           { label: "Global Charts", path: "/music/charts", icon: BarChart3 },
           { label: "Country Charts", path: "/country-charts", icon: BarChart3 },
+          { label: "Top of the Pops", path: "/top-of-the-pops", icon: Tv },
           { label: "Christmas Charts", path: "/christmas-charts", icon: BarChart3 },
           { label: "Competitive Charts", path: "/competitive-charts", icon: Trophy },
           { label: "Song Rankings", path: "/song-rankings", icon: Trophy },
