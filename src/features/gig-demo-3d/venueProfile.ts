@@ -7,6 +7,7 @@ export const VENUE_TYPES = {
   concert_hall: ['Concert hall', 2500], theatre: ['Theatre', 2000], indoor_arena: ['Indoor arena', 18000], ice_arena: ['Ice arena', 10000], stadium: ['Stadium', 65000],
   amphitheatre: ['Amphitheatre', 12000], park_bandstand: ['Park bandstand', 1500], city_square: ['City square', 4500], rooftop_terrace: ['Rooftop terrace', 450],
   festival_tent: ['Festival tent', 5000], beach_stage: ['Beach stage', 3000], festival_stage: ['Festival stage', 20000],
+  tv_studio: ['Television studio', 250],
 } as const;
 export type VenueKind = keyof typeof VENUE_TYPES;
 export interface VenueProfile {
@@ -15,7 +16,7 @@ export interface VenueProfile {
   roomWidth: number; roomDepth: number; roofHeight: number; crowdWidth: number; crowdDepth: number;
   seating: boolean; seatRows: number; production: 'portable' | 'house' | 'touring'; accent: string;
 }
-const aliases: Record<string, VenueKind> = { pub: 'dive_bar', club: 'rock_club', arena: 'indoor_arena', theatre: 'theatre', stadium: 'stadium', theater: 'theatre', amphitheater: 'amphitheatre', beach: 'beach_stage', festival: 'festival_stage', cafe: 'cafe_stage', bar: 'dive_bar' };
+const aliases: Record<string, VenueKind> = { pub: 'dive_bar', club: 'rock_club', arena: 'indoor_arena', theatre: 'theatre', stadium: 'stadium', theater: 'theatre', amphitheater: 'amphitheatre', beach: 'beach_stage', festival: 'festival_stage', cafe: 'cafe_stage', bar: 'dive_bar', studio: 'tv_studio', television_studio: 'tv_studio' };
 const alias = (key: string): VenueKind | undefined => Object.prototype.hasOwnProperty.call(aliases, key) ? aliases[key] : undefined;
 const normalise = (s: string) => s.toLowerCase().trim().replace(/[\s-]+/g, '_');
 const fallback = (capacity: number): VenueKind => capacity >= 25000 ? 'stadium' : capacity >= 5000 ? 'indoor_arena' : capacity >= 700 ? 'concert_hall' : capacity <= 180 ? 'dive_bar' : 'rock_club';
@@ -29,6 +30,30 @@ export function resolveVenueProfile(venue: Partial<ConcertVenue> = {}): VenuePro
   }
   const capacity = Number.isFinite(rawCapacity) && rawCapacity! > 0 ? Math.max(1, Math.min(150000, Math.round(rawCapacity!))) : kind ? VENUE_TYPES[kind][1] : 500;
   kind ??= fallback(capacity);
+
+  if (kind === 'tv_studio') {
+    return {
+      kind,
+      label: VENUE_TYPES[kind][0],
+      capacity,
+      outdoor: false,
+      size: 'small',
+      stageWidth: 11.5,
+      stageDepth: 6.8,
+      stageHeight: .55,
+      rigHeight: 6.4,
+      roomWidth: 25,
+      roomDepth: 25,
+      roofHeight: 8.2,
+      crowdWidth: 15,
+      crowdDepth: 10.5,
+      seating: false,
+      seatRows: 0,
+      production: 'house',
+      accent: '#d134a6',
+    };
+  }
+
   const level = capacity <= 100 ? 0 : capacity <= 500 ? 1 : capacity <= 3000 ? 2 : capacity <= 15000 ? 3 : 4;
   const stageWidth = [6.4, 8.6, 14, 26, 42][level], stageDepth = [3.8, 5, 8, 14, 20][level], stageHeight = [.25, .5, .9, 1.5, 2.2][level];
   const outdoor = ['street_corner','amphitheatre','park_bandstand','city_square','rooftop_terrace','beach_stage','festival_stage','stadium'].includes(kind);
