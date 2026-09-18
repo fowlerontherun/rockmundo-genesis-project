@@ -3,13 +3,14 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { seededRandom } from './config';
 import { productionLayout } from './venueProduction';
 import type { VenueProfile } from './venueProfile';
+import { resolveTotpStudioStageGeometry } from './totpStudioGeometry';
 export type AudiencePlace = [number, number, number, number];
 export const AUDIENCE_BUDGET = 12000;
 
 /** TOTP keeps the detailed front crowd in the central camera-visible pocket rather than
  * spilling those high-detail fans over Stage B, Rock Stage or the studio-floor set. */
 export function detailedCrowdArea(p?: VenueProfile) {
-    if (p?.kind === 'tv_studio') return { width: Math.min(9.5, p.crowdWidth), depth: Math.min(4.0, p.crowdDepth), front: 1.45, runway: false };
+    if (p?.kind === 'tv_studio') return { width: Math.min(8.0, p.crowdWidth), depth: Math.min(3.6, p.crowdDepth), front: 1.75, runway: false };
     return { width: Math.min(13, p?.crowdWidth ?? 13), depth: Math.min(11, p?.crowdDepth ?? 11), front: 2.15, runway: !!p && productionLayout(p).runway };
 }
 
@@ -17,13 +18,31 @@ export function isTvStudioAudienceBlocked(x: number, z: number, p: VenueProfile)
     if (p.kind !== 'tv_studio') return false;
     const inRect = (cx: number, cz: number, halfWidth: number, halfDepth: number) => Math.abs(x - cx) < halfWidth && Math.abs(z - cz) < halfDepth;
     const inCircle = (cx: number, cz: number, radius: number) => Math.hypot(x - cx, z - cz) < radius;
-    if (inRect(5.4, 2.05, 2.85, 2.15)) return true;
-    if (inRect(-4.5, 4.05, 3.45, 2.65)) return true;
-    if (inCircle(1.4, 5.65, 3.45)) return true;
-    if (inCircle(-p.crowdWidth * .42, 4.7, .95)) return true;
-    if (inCircle(p.crowdWidth * .42, 5.3, .95)) return true;
-    if (inCircle(p.stageWidth * .24, 2.55, .8)) return true;
-    if (inCircle(p.crowdWidth * .58, 7.4, 1.15)) return true;
+
+    // Keep the audience outside every physical performance deck plus a floor-crew
+    // margin. This uses the same geometry contract as the performers and cameras.
+    for (const stage of ['stage_b', 'rock_stage', 'studio_floor'] as const) {
+        const geometry = resolveTotpStudioStageGeometry(stage, p);
+        const margin = stage === 'studio_floor' ? .45 : .35;
+        if (stage === 'studio_floor') {
+            if (inCircle(geometry.centerX, geometry.centerZ, geometry.deckWidth / 2 + margin)) return true;
+        } else if (inRect(
+            geometry.centerX,
+            geometry.centerZ,
+            geometry.deckWidth / 2 + margin,
+            geometry.deckDepth / 2 + margin,
+        )) return true;
+    }
+
+    // Camera/operator pockets and clear tracking lanes.
+    if (inCircle(-p.crowdWidth * .42, 4.7, 1.1)) return true;
+    if (inCircle(p.crowdWidth * .42, 5.3, 1.1)) return true;
+    if (inCircle(p.stageWidth * .24, 2.55, .9)) return true;
+    if (inCircle(p.crowdWidth * .58, 7.4, 1.25)) return true;
+    if (inRect(0, 3.55, .58, 2.4)) return true; // central camera/tracking aisle
+    if (inRect(-p.crowdWidth * .32, 4.7, .44, 1.8)) return true;
+    if (inRect(p.crowdWidth * .32, 5.1, .44, 1.8)) return true;
+
     return false;
 }
 
