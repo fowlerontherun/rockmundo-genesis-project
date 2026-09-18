@@ -146,7 +146,8 @@ function totpStagePoint(
   const base = stagePosition(venue, mark.u, mark.v);
   const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
   const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .96 : totpStage === 'stage_b' ? .92 : .90;
-  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy), (base[2] - .65) * scale + .65 + dz];
+  const roleLift = entity?.role === 'drums' && totpStage !== 'studio_floor' ? .18 : 0;
+  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy + roleLift), (base[2] - .65) * scale + .65 + dz];
 }
 
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
