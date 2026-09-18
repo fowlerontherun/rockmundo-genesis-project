@@ -1,6 +1,10 @@
 import * as T from 'three';
 import { box, cylinder, rod, matte, metal, batchStaticMeshes } from './stage';
 import type { VenueProfile } from './venueProfile';
+
+function stagePositionForTv(p: VenueProfile, u: number, v: number): [number, number, number] {
+    return [(u - .5) * p.stageWidth * .78, p.stageHeight, .65 - p.stageDepth * .91 + v * p.stageDepth * .8];
+}
 export function productionLayout(p: VenueProfile) {
     const tier = p.production === 'portable' ? 0 : p.capacity <= 500 ? 1 : p.capacity <= 3000 ? 2 : p.capacity <= 15000 ? 3 : 4;
     return { tier, rows: [1, 1, 2, 3, 4][tier], columns: [2, 4, 6, 10, 14][tier], arrayBoxes: [0, 2, 4, 8, 12][tier], subs: [0, 2, 4, 8, 14][tier], monitors: [2, 3, 4, 6, 8][tier], wings: tier >= 3, runway: tier >= 4 && ['stadium', 'festival_stage', 'indoor_arena'].includes(p.kind) };
@@ -101,18 +105,43 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         const scrim = box(root, [p.stageWidth * .72, (p.rigHeight - y) * .58, .06], [0, y + (p.rigHeight - y) * .6, back + .2], black);
         scrim.name = 'stage-scrim';
     }
+    if (p.kind === 'tv_studio') {
+        // Keep scenery outside the performer lanes and use light to separate
+        // silhouettes from the set, rather than placing solid props behind them.
+        const riserZ = stagePositionForTv(p, .5, .28)[2];
+        box(root, [3.35, .18, 1.9], [0, y + .09, riserZ], matte('#202631'));
+        box(root, [3.15, .025, 1.72], [0, y + .195, riserZ], trim);
+
+        const sidePanel = new T.MeshStandardMaterial({ color: '#251634', emissive: p.accent, emissiveIntensity: .42, roughness: .6 });
+        for (const side of [-1, 1]) {
+            const x = side * (half - .7);
+            const panel = box(root, [1.05, 3.8, .12], [x, y + 2.25, back + .45], sidePanel);
+            panel.rotation.z = side * -.08;
+        }
+
+        const key = new T.PointLight('#fff1df', 4.8, 9, 1.6);
+        key.position.set(0, p.rigHeight - 1.2, 1.2);
+        root.add(key);
+        for (const side of [-1, 1]) {
+            const rim = new T.PointLight(side < 0 ? '#8ddcff' : '#ff92df', 3.4, 8, 1.8);
+            rim.position.set(side * 4.4, 3.2, -1.0);
+            root.add(rim);
+        }
+    }
+
     const banner = makeLabel(bandName, Math.min(p.stageWidth * .5, 10), Math.min(1.1, p.stageWidth * .13));
     banner.name = 'stage-band-banner';
     banner.position.set(0, Math.min(p.rigHeight - 1, y + (p.rigHeight - y) * .77), back + .55);
     root.add(banner);
     // Backline amplifiers remain human-sized, even on a stadium deck.
     for (const side of [-1, 1]) {
-        const x = side * Math.min(half * .67, 6.2);
+        const x = side * Math.min(half * (p.kind === 'tv_studio' ? .82 : .67), 6.2);
         for (let row = 0; row < (layout.tier >= 2 ? 2 : 1); row++) {
-            box(root, [.88, .72, .48], [x, y + .38 + row * .77, back + p.stageDepth * .45], black);
-            box(root, [.8, .64, .018], [x, y + .38 + row * .77, back + p.stageDepth * .45 + .25], grille);
+            const backlineDepth = back + p.stageDepth * (p.kind === 'tv_studio' ? .24 : .45);
+            box(root, [.88, .72, .48], [x, y + .38 + row * .77, backlineDepth], black);
+            box(root, [.8, .64, .018], [x, y + .38 + row * .77, backlineDepth + .25], grille);
         }
-        box(root, [.8, .22, .42], [x, y + (layout.tier >= 2 ? 1.63 : .86), back + p.stageDepth * .45], black);
+        box(root, [.8, .22, .42], [x, y + (layout.tier >= 2 ? 1.63 : .86), back + p.stageDepth * (p.kind === 'tv_studio' ? .24 : .45)], black);
         if (layout.arrayBoxes === 0) {
             const speaker = box(root, [.5, .76, .42], [side * (half - .3), y + 1.65, 0], black);
             speaker.name = `portable-speaker-${side}`;
@@ -133,7 +162,8 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         box(root, [.96, .64, .02], [x, .4, 1.61], grille);
     }
     for (let i = 0; i < layout.monitors; i++) {
-        const x = (i / Math.max(1, layout.monitors - 1) - .5) * Math.min(p.stageWidth * .8, 18);
+        const spread = p.kind === 'tv_studio' ? Math.min(p.stageWidth * .9, 18) : Math.min(p.stageWidth * .8, 18);
+        const x = (i / Math.max(1, layout.monitors - 1) - .5) * spread;
         const m = box(root, [.8, .32, .55], [x, y + .2, -.2], black);
         m.rotation.x = -.28;
         box(m, [.7, .02, .42], [0, .17, 0], grille);
