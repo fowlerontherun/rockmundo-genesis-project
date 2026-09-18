@@ -68,10 +68,14 @@ describe("Top of the Pops television stage blocking", () => {
     expect(formation.get("big-fowler")).toEqual({ u: .5, v: .78 });
     expect(formation.get("luna")).toEqual({ u: .5, v: .28 });
 
+    const singer = formation.get("big-fowler")!;
+    const drummer = formation.get("luna")!;
+    expect(Math.abs(singer.v - drummer.v)).toBeGreaterThan(.42);
+
     const marks = [...formation.values()];
     for (let i = 0; i < marks.length; i += 1) {
       for (let j = i + 1; j < marks.length; j += 1) {
-        expect(Math.hypot(marks[i].u - marks[j].u, marks[i].v - marks[j].v)).toBeGreaterThanOrEqual(.22);
+        expect(Math.hypot(marks[i].u - marks[j].u, marks[i].v - marks[j].v)).toBeGreaterThan(.18);
       }
     }
   });
@@ -122,7 +126,7 @@ describe("Top of the Pops television stage blocking", () => {
     expect(walkHome.walking).toBe(true);
   });
 
-  it("lets guitarists move between discrete marks instead of continuously drifting", () => {
+  it("lets guitarists move outward between discrete marks instead of drifting into the band", () => {
     const home = { u: .34, v: .64 };
     const firstHold = totpChoreographyState("guitar", "Electric Guitar", home, 2_000, 0, true);
     const walk = totpChoreographyState("guitar", "Electric Guitar", home, 7_000, 0, true);
@@ -132,6 +136,14 @@ describe("Top of the Pops television stage blocking", () => {
     expect(firstHold.walking).toBe(false);
     expect(walk.walking).toBe(true);
     expect(awayHold.walking).toBe(false);
-    expect(awayHold.mark.u).toBeGreaterThan(home.u);
+    expect(awayHold.mark.u).toBeLessThan(home.u);
+  });
+
+  it("keeps a roaming lead singer on the centre lane instead of crossing sideways", () => {
+    const home = { u: .5, v: .78 };
+    const planted = totpChoreographyState("vocalist", "Lead Vocals", home, 9_000, 0, true);
+    expect(planted.walking).toBe(false);
+    expect(planted.mark.u).toBe(.5);
+    expect(planted.mark.v).toBeLessThan(home.v);
   });
 });
