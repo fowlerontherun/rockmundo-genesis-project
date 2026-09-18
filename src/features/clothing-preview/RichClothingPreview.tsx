@@ -181,9 +181,10 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     live.garment = next;
   }, [item, variant, appearance.body.height]);
 
-  return <div className="player-model-preview">
+  return <div className="player-model-preview" style={{ position: "relative", width: "100%", height: "100%", minHeight: 520 }}>
     <canvas
       ref={canvas}
+      style={{ display: "block", width: "100%", height: "100%", minHeight: 520 }}
       tabIndex={0}
       role="img"
       aria-label={`${item.name} on your avatar. Drag to rotate 360 degrees and scroll to zoom.`}
