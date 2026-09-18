@@ -491,9 +491,9 @@ export class ConcertScene {
     if (jibHead) {
       jibHead.rotation.y = reduced ? 0 : Math.sin(t * .2) * .18;
       jibHead.rotation.x = reduced ? 0 : -.08 + Math.sin(t * .16 + .8) * .05;
-      if (!reduced && (this.settings.camera === 'tv_crane' || this.settings.camera === 'front')) {
-        jibHead.position.y += Math.sin(t * .24) * .025;
-      }
+      const jibBaseY = Number(jibHead.userData.baseY ?? jibHead.position.y);
+      jibHead.userData.baseY = jibBaseY;
+      jibHead.position.y = jibBaseY + (!reduced && (this.settings.camera === 'tv_crane' || this.settings.camera === 'front') ? Math.sin(t * .24) * .025 : 0);
     }
 
     const operators = [
