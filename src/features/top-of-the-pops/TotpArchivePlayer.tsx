@@ -32,6 +32,14 @@ function lockedAudienceReaction(source: TotpBroadcastReplay): number {
 function lockedPresenterKey(source: TotpBroadcastReplay): string { return String(source.payload.presenterKey ?? source.presenter_key ?? "alex_rayne"); }
 function lockedShowVariant(source: TotpBroadcastReplay): string { return String(source.payload.showVariant ?? "regular"); }
 
+export function totpPerformanceStartMs(source: TotpBroadcastReplay): number {
+  const offsets = source.payload.cues
+    .filter((cue) => cue.type === "performance")
+    .map((cue) => Number(cue.offsetMs))
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  return offsets.length > 0 ? Math.min(...offsets) : 4_200;
+}
+
 export function memberStageDuty(member: TotpBroadcastReplay["payload"]["band"]["members"][number], members: TotpBroadcastReplay["payload"]["band"]["members"]): string {
   const instrument = member.instrument_role?.trim() || "";
   const explicitVocal = member.vocal_role?.trim() || "";
@@ -75,7 +83,7 @@ function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
   const payload = source.payload, audienceReaction = lockedAudienceReaction(source);
   const baseCrowdEnergy = Math.max(28, Math.min(62, 44 + audienceReaction * 2));
   const performanceCrowdEnergy = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
-  const songStart = 7_000, songEnd = songStart + payload.performanceDurationMs;
+  const songStart = totpPerformanceStartMs(source), songEnd = songStart + payload.performanceDurationMs;
   let sequence = 0;
   const event = (partial: Record<string, unknown>): ReplayEvent => ({
     id: `${source.id}:${++sequence}`,
@@ -192,7 +200,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     }
     if (!audioEnabled || !songAudioRef.current) return;
 
-    const songStartMs = 7_000;
+    const songStartMs = totpPerformanceStartMs(source);
     const songEndMs = songStartMs + source.payload.performanceDurationMs;
     if (positionMs >= songEndMs) {
       songAudioRef.current.pause();
@@ -284,7 +292,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     setAudioEnabled(true);
     const audio = songAudioRef.current;
     if (!audio) return;
-    const target = Math.max(0, (positionMs - 7_000) / 1000);
+    const target = Math.max(0, (positionMs - totpPerformanceStartMs(source)) / 1000);
     audio.currentTime = target;
     void audio.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
   };
