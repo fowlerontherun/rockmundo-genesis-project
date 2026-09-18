@@ -210,7 +210,7 @@ export default function CrowdSoundsAdmin() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Crowd Sounds</h1>
-          <p className="text-muted-foreground">Manage audio effects for live gig experiences</p>
+          <p className="text-muted-foreground">Manage audio effects for live gigs and Top of the Pops studio audiences</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -319,7 +319,7 @@ export default function CrowdSoundsAdmin() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Sound Library</CardTitle>
-              <CardDescription>{sounds?.length || 0} sounds available</CardDescription>
+              <CardDescription>{sounds?.length || 0} sounds available · active cheers, applause, crowd singing and ambience are automatically eligible for Top of the Pops</CardDescription>
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-48">
