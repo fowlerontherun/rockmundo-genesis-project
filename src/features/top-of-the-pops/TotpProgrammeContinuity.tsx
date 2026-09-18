@@ -13,9 +13,9 @@ import {
 } from "./programmeContinuity";
 
 const CONTINUITY_DURATION_MS: Record<TotpContinuityKind, number> = {
-  opening: 8_000,
-  between: 6_500,
-  closing: 8_500,
+  opening: 5_800,
+  between: 4_800,
+  closing: 6_200,
 };
 
 export interface TotpProgrammeContinuityProps {
