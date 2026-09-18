@@ -56,7 +56,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
     return {
       ...base,
       venue: { ...base.venue, presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular' },
-      television: { presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular' },
+      television: { presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular', stageKey: totpStage },
     };
   }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant]);
   const optionsKey = JSON.stringify(options);
