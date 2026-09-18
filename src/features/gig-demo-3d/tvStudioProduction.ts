@@ -2,6 +2,7 @@ import * as T from 'three';
 import { box, cylinder, rod, matte, metal } from './stage';
 import type { VenueProfile } from './venueProfile';
 import { resolveTotpPresenter } from '@/features/top-of-the-pops/presenters';
+import { resolveTotpStudioStageGeometry } from './totpStudioGeometry';
 
 const presenterSceneName = (key: string) => `totp-presenter-${key.replaceAll('_', '-')}`;
 
@@ -231,56 +232,63 @@ function buildPerformanceZones(root: T.Group, p: VenueProfile) {
   const magenta = new T.MeshStandardMaterial({ color: '#9a164f', emissive: '#5a0a2b', emissiveIntensity: .7, roughness: .5 });
   const blue = new T.MeshStandardMaterial({ color: '#233f69', emissive: '#142c51', emissiveIntensity: .55, roughness: .5 });
   const amber = new T.MeshStandardMaterial({ color: '#7c3f1f', emissive: '#4b2411', emissiveIntensity: .45, roughness: .55 });
+  const main = resolveTotpStudioStageGeometry('main_stage', p);
+  const stageBGeometry = resolveTotpStudioStageGeometry('stage_b', p);
+  const rockGeometry = resolveTotpStudioStageGeometry('rock_stage', p);
+  const floorGeometry = resolveTotpStudioStageGeometry('studio_floor', p);
 
-  const mainDeck = box(root, [p.stageWidth + .7, .12, p.stageDepth + .45], [0, p.stageHeight - .06, .65 - p.stageDepth / 2], dark);
+  const mainDeck = box(root, [main.deckWidth, .12, main.deckDepth], [main.centerX, p.stageHeight - .06, main.centerZ], dark);
   mainDeck.name = 'totp-zone-main-stage';
   box(root, [p.stageWidth * .82, 2.4, .12], [0, p.stageHeight + 2.0, .65 - p.stageDepth - .32], magenta).name = 'totp-main-stage-backdrop';
   for (const x of [-p.stageWidth * .38, 0, p.stageWidth * .38]) rod(root, [x, p.stageHeight, .5 - p.stageDepth], [x, p.rigHeight - .7, .5 - p.stageDepth], .04, steel);
 
-  const stageB = box(root, [4.9, .22, 3.7], [5.4, .11, 2.05], blue);
+  const stageBRear = stageBGeometry.centerZ - stageBGeometry.deckDepth / 2;
+  const stageB = box(root, [stageBGeometry.deckWidth, .22, stageBGeometry.deckDepth], [stageBGeometry.centerX, .11, stageBGeometry.centerZ], blue);
   stageB.name = 'totp-zone-stage-b';
-  box(root, [4.4, 1.7, .12], [5.4, 1.45, .28], blue).name = 'totp-stage-b-backdrop';
-  for (const x of [3.55, 4.45, 5.35, 6.25, 7.15]) {
-    const strip = box(root, [.055, 2.25, .07], [x, 1.65, .38], x === 5.35 ? magenta : blue);
+  box(root, [4.4, 1.7, .12], [stageBGeometry.centerX, 1.45, stageBRear + .08], blue).name = 'totp-stage-b-backdrop';
+  for (const x of [stageBGeometry.centerX - 1.85, stageBGeometry.centerX - .95, stageBGeometry.centerX - .05, stageBGeometry.centerX + .85, stageBGeometry.centerX + 1.75]) {
+    const strip = box(root, [.055, 2.25, .07], [x, 1.65, stageBRear + .18], Math.abs(x - stageBGeometry.centerX) < .1 ? magenta : blue);
     strip.name = 'totp-stage-b-light-strip';
   }
   const stageBRing = new T.Mesh(new T.TorusGeometry(1.45, .055, 10, 48), magenta);
-  stageBRing.position.set(5.4, 1.75, .2);
+  stageBRing.position.set(stageBGeometry.centerX, 1.75, stageBRear);
   stageBRing.name = 'totp-stage-b-ring';
   root.add(stageBRing);
 
-  const rock = box(root, [6.2, .28, 4.7], [-4.5, .14, 4.05], black);
+  const rockRear = rockGeometry.centerZ - rockGeometry.deckDepth / 2;
+  const rock = box(root, [rockGeometry.deckWidth, .28, rockGeometry.deckDepth], [rockGeometry.centerX, .14, rockGeometry.centerZ], black);
   rock.name = 'totp-zone-rock-stage';
-  for (const x of [-6.4, -4.5, -2.6]) rod(root, [x, .28, 2.2], [x, 4.5, 2.2], .055, steel);
-  box(root, [5.8, 1.5, .14], [-4.5, 2.0, 1.72], amber).name = 'totp-rock-stage-backdrop';
+  for (const x of [rockGeometry.centerX - 1.9, rockGeometry.centerX, rockGeometry.centerX + 1.9]) rod(root, [x, .28, rockRear + .5], [x, 4.5, rockRear + .5], .055, steel);
+  box(root, [5.8, 1.5, .14], [rockGeometry.centerX, 2.0, rockRear + .02], amber).name = 'totp-rock-stage-backdrop';
   for (const side of [-1, 1]) {
-    const towerX = -4.5 + side * 2.25;
+    const towerX = rockGeometry.centerX + side * 2.25;
     for (let level = 0; level < 3; level += 1) {
-      const amp = box(root, [.85, .62, .42], [towerX, .62 + level * .67, 2.55], black);
+      const amp = box(root, [.85, .62, .42], [towerX, .62 + level * .67, rockRear + .85], black);
       amp.name = 'totp-rock-amp-stack';
       box(amp, [.74, .5, .025], [0, 0, .225], steel);
     }
   }
   for (let index = 0; index < 7; index += 1) {
-    const bar = box(root, [.055, 2.0 + (index % 3) * .35, .06], [-6.0 + index * .5, 2.15, 1.82], amber);
+    const bar = box(root, [.055, 2.0 + (index % 3) * .35, .06], [rockGeometry.centerX - 1.5 + index * .5, 2.15, rockRear + .12], amber);
     bar.rotation.z = (index - 3) * .035;
   }
 
-  const floorDisc = cylinder(root, 2.85, 3.05, .08, [1.4, .04, 5.65], magenta, 40);
+  const floorRadius = floorGeometry.deckWidth / 2;
+  const floorDisc = cylinder(root, floorRadius - .2, floorRadius, .08, [floorGeometry.centerX, .04, floorGeometry.centerZ], magenta, 40);
   floorDisc.name = 'totp-zone-studio-floor';
   const floorRingOuter = new T.Mesh(new T.TorusGeometry(2.65, .045, 10, 56), blue);
   floorRingOuter.rotation.x = Math.PI / 2;
-  floorRingOuter.position.set(1.4, .1, 5.65);
+  floorRingOuter.position.set(floorGeometry.centerX, .1, floorGeometry.centerZ);
   floorRingOuter.name = 'totp-studio-floor-ring-outer';
   root.add(floorRingOuter);
   const floorRingInner = new T.Mesh(new T.TorusGeometry(1.75, .035, 10, 48), amber);
   floorRingInner.rotation.x = Math.PI / 2;
-  floorRingInner.position.set(1.4, .105, 5.65);
+  floorRingInner.position.set(floorGeometry.centerX, .105, floorGeometry.centerZ);
   floorRingInner.name = 'totp-studio-floor-ring-inner';
   root.add(floorRingInner);
   for (let i = 0; i < 10; i++) {
     const a = i / 10 * Math.PI * 2;
-    cylinder(root, .045, .045, .06, [1.4 + Math.cos(a) * 2.65, .11, 5.65 + Math.sin(a) * 2.65], blue, 10);
+    cylinder(root, .045, .045, .06, [floorGeometry.centerX + Math.cos(a) * 2.65, .11, floorGeometry.centerZ + Math.sin(a) * 2.65], blue, 10);
   }
 }
 
