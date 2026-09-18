@@ -22,9 +22,9 @@ const EMPTY_RICH_CLOTHING: Record<string, ResolvedEquippedClothing[]> = {};
 const CAMERAS: Record<GigViewerCameraMode, CameraShot> = { venue_wide: 'front', stage_focus: 'guitar', auto: 'director', drums: 'drums', band_pov: 'stage' };
 const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   presenter_wide: 'tv_presenter_wide', presenter_close: 'tv_presenter_close', crane_sweep: 'tv_crane', studio_master: 'front',
-  lead_close: 'guitar', lead_medium: 'front', instrument_close: 'guitar', drummer_close: 'drums', side_tracking: 'tv_tracking',
+  lead_close: 'tv_lead_close', lead_medium: 'tv_lead_medium', instrument_close: 'tv_instrument_left', drummer_close: 'tv_drummer_close', side_tracking: 'tv_tracking',
   low_angle: 'tv_low_angle', audience_reverse: 'tv_audience_reverse', audience_dance: 'tv_audience_reverse', overhead: 'tv_overhead',
-  push_in: 'guitar', pull_back: 'front', finale_wide: 'tv_crane',
+  push_in: 'tv_push_in', pull_back: 'front', finale_wide: 'tv_crane',
 };
 
 export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, playerModelsSnapshot = null }: {
