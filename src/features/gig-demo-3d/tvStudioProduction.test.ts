@@ -16,6 +16,10 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-camera-pedestal-right')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-handheld')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-jib')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-jib-head')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-pedestal-left')?.getObjectByName('totp-pedestal-camera-head')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-pedestal-right')?.getObjectByName('totp-pedestal-camera-head')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-handheld')?.getObjectByName('totp-handheld-camera-head')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-left')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-right')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-handheld')).toBeTruthy();
