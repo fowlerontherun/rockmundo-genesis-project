@@ -23,6 +23,97 @@ const TOTP_STAGE_OFFSETS: Record<TotpStageKey, readonly [number, number, number]
   studio_floor: [1.4, -.42, 5.0],
 };
 
+
+type TotpStageMark = { u: number; v: number };
+
+function totpPreferredMarks(role: PresentationRole, instrument: string | null): TotpStageMark[] {
+  const text = (instrument ?? '').toLowerCase();
+  const singsLead = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text);
+
+  if (singsLead) return [
+    { u: .50, v: .82 },
+    { u: .40, v: .76 },
+    { u: .60, v: .76 },
+  ];
+
+  switch (role) {
+    case 'vocalist': return [{ u: .50, v: .82 }, { u: .40, v: .76 }, { u: .60, v: .76 }];
+    case 'lead_guitar':
+    case 'rhythm_guitar':
+    case 'guitar': return [
+      { u: .24, v: .68 },
+      { u: .76, v: .68 },
+      { u: .36, v: .57 },
+      { u: .64, v: .57 },
+    ];
+    case 'bass': return [{ u: .82, v: .54 }, { u: .18, v: .54 }];
+    case 'drums': return [{ u: .50, v: .20 }, { u: .66, v: .22 }];
+    case 'keyboard':
+    case 'piano': return [{ u: .16, v: .31 }, { u: .84, v: .31 }];
+    case 'dj':
+    case 'electronic': return [{ u: .68, v: .28 }, { u: .32, v: .28 }];
+    case 'backing_vocals': return [{ u: .34, v: .64 }, { u: .66, v: .64 }];
+    case 'percussion': return [{ u: .33, v: .24 }, { u: .67, v: .24 }];
+    case 'brass':
+    case 'woodwind':
+    case 'strings': return [{ u: .18, v: .42 }, { u: .82, v: .42 }, { u: .30, v: .44 }, { u: .70, v: .44 }];
+    default: return [{ u: .30, v: .52 }, { u: .70, v: .52 }, { u: .50, v: .48 }];
+  }
+}
+
+export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
+  const assigned = new Map<string, TotpStageMark>();
+  const used: TotpStageMark[] = [];
+  const minimumDistance = .24;
+
+  const ranked = [...plan.entities].sort((a, b) => {
+    const aLead = /lead\s+(vocals?|singer)|frontperson/i.test(a.instrument ?? '') ? -10 : 0;
+    const bLead = /lead\s+(vocals?|singer)|frontperson/i.test(b.instrument ?? '') ? -10 : 0;
+    const roleRank: Record<PresentationRole, number> = {
+      vocalist: 0, lead_guitar: 1, rhythm_guitar: 2, guitar: 3, bass: 4, drums: 5,
+      keyboard: 6, piano: 6, dj: 7, electronic: 7, backing_vocals: 8,
+      percussion: 9, strings: 10, brass: 10, woodwind: 10, other: 11, unknown: 12,
+    };
+    return (aLead + roleRank[a.role]) - (bLead + roleRank[b.role]) || a.id.localeCompare(b.id);
+  });
+
+  for (const entity of ranked) {
+    const preferred = totpPreferredMarks(entity.role, entity.instrument);
+    const candidates = [
+      ...preferred,
+      { u: .12, v: .58 }, { u: .88, v: .58 },
+      { u: .22, v: .40 }, { u: .78, v: .40 },
+      { u: .38, v: .34 }, { u: .62, v: .34 },
+      { u: .50, v: .50 },
+    ];
+    const chosen = candidates.find((candidate) =>
+      used.every((other) => Math.hypot(candidate.u - other.u, candidate.v - other.v) >= minimumDistance),
+    ) ?? candidates.reduce((best, candidate) => {
+      const clearance = used.length ? Math.min(...used.map((other) => Math.hypot(candidate.u - other.u, candidate.v - other.v))) : 1;
+      const bestClearance = used.length ? Math.min(...used.map((other) => Math.hypot(best.u - other.u, best.v - other.v))) : 1;
+      return clearance > bestClearance ? candidate : best;
+    }, candidates[0]);
+
+    assigned.set(entity.id, chosen);
+    used.push(chosen);
+  }
+
+  return assigned;
+}
+
+function totpStagePoint(
+  plan: PerformerPlan,
+  entityId: string,
+  venue: VenueProfile,
+  totpStage: TotpStageKey,
+): [number, number, number] {
+  const mark = totpFormation(plan).get(entityId) ?? { u: .5, v: .55 };
+  const base = stagePosition(venue, mark.u, mark.v);
+  const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
+  const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .96 : totpStage === 'stage_b' ? .92 : .90;
+  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy), (base[2] - .65) * scale + .65 + dz];
+}
+
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
   const entrances = new Set(replay.events.flatMap(e => e.visualPayload.type === 'performer_enter' ? [e.visualPayload.performerId] : []));
   const candidates = experience?.performers ?? [], performed = candidates.filter(p => p.lineupStatus === 'performed');
@@ -73,7 +164,7 @@ export function concertOptions(
         displayName: p.displayName,
         ...stageAssignment(p.instrument, roleMap[p.role]),
         phase: p.idlePhase,
-        position: stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
+        position: totp ? totpStagePoint(plan, p.id, profile, totpStage) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
         appearance: appearances[profileId] ?? defaultAppearance(profileId),
         richClothing: richClothing[profileId] ?? [],
       };
@@ -119,7 +210,9 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
       const fixed = stageAssignment(p.instrument, roleMap[p.role]).stationary && p.lifecycleState === 'performing';
       return {
         id: p.id,
-        position: stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile, presentationMode, totpStage),
+        position: presentationMode === 'totp'
+          ? totpStagePoint(plan, p.id, profile, totpStage)
+          : stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile, presentationMode, totpStage),
         visible: p.visible && p.lifecycleState !== 'waiting_backstage',
         walking: ['entering', 'taking_position', 'exiting'].includes(p.lifecycleState),
         action: itemPayload && (!itemPayload.performerId ? p.id === (focusId ?? plan.entities.find(e => e.role === 'vocalist')?.id ?? plan.entities[0]?.id) : itemPayload.performerId === p.id) ? itemPayload.action : null,
