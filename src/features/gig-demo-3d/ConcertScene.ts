@@ -279,6 +279,20 @@ export class ConcertScene {
       }
     }
 
+    if (this.options?.television && (selected === 'tv_presenter_wide' || selected === 'tv_presenter_close')) {
+      const presenter = this.scene.getObjectByName(`totp-presenter-${(this.options.television.presenterKey ?? 'alex_rayne').replaceAll('_', '-')}`)
+        ?? this.scene.children.find(child => child.name.startsWith('totp-presenter-'));
+      if (presenter) {
+        const subject = presenter.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 1.18, 0));
+        this.targetPos.copy(subject);
+        this.cameraPos.copy(subject).add(
+          selected === 'tv_presenter_close'
+            ? new T.Vector3(.72, .2, 2.35)
+            : new T.Vector3(1.9, .65, 4.2),
+        );
+      }
+    }
+
     if (this.options?.television) {
       const visible = this.actors.filter(actor => actor.root.visible);
       const vocalist = visible.find(actor => actor.hasVocals()) ?? visible.find(actor => actor.role === 'vocals');
@@ -380,6 +394,7 @@ export class ConcertScene {
       const occupancy = this.playback?.occupancy ?? this.settings.crowd;
       updateVenueAudience(this.distantAudience, occupancy, t, this.settings.reducedMotion, energy, Math.round(160 * (this.playback?.crowd ?? this.settings.crowd)));
     }
+    this.updateTelevisionPresenter(t);
     this.updateEffects();
     this.lights.forEach((light, i) => {
       light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight-this.venueProfile.stageHeight)/5.3,1.3) : 1) * (this.playback?.lightLevel ?? 1);
@@ -395,6 +410,46 @@ export class ConcertScene {
     if (now - this.sampleAt >= 1000) { this.onStats({ fps: this.sampleAt ? Math.round(this.frames * 1000 / (now - this.sampleAt)) : 0, drawCalls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, seconds: this.seconds }); this.sampleAt = now; this.frames = 0; }
     this.raf = requestAnimationFrame(this.frame);
   };
+  private updateTelevisionPresenter(t: number) {
+    if (!this.options?.television || this.venueProfile?.kind !== 'tv_studio') return;
+    const presenter = this.scene.getObjectByName(`totp-presenter-${(this.options.television.presenterKey ?? 'alex_rayne').replaceAll('_', '-')}`)
+      ?? this.scene.children.find(child => child.name.startsWith('totp-presenter-'));
+    if (!presenter) return;
+
+    const onCamera = this.settings.camera === 'tv_presenter_wide' || this.settings.camera === 'tv_presenter_close';
+    const reduced = this.settings.reducedMotion;
+    const energy = onCamera ? 1 : .28;
+    const phrase = reduced ? 0 : Math.sin(t * 1.35);
+    const emphasis = reduced ? 0 : Math.max(0, Math.sin(t * 2.15));
+
+    presenter.rotation.y = Math.PI * .08 + phrase * .045 * energy;
+    presenter.rotation.z = phrase * .012 * energy;
+    presenter.position.y = reduced ? 0 : Math.max(0, Math.sin(t * 2.7)) * .012 * energy;
+
+    const leftArm = presenter.getObjectByName('totp-presenter-left-arm');
+    const rightArm = presenter.getObjectByName('totp-presenter-right-arm');
+    const mic = presenter.getObjectByName('totp-presenter-microphone');
+
+    if (leftArm) {
+      leftArm.rotation.z = -.18 - emphasis * .42 * energy;
+      leftArm.rotation.y = phrase * .16 * energy;
+    }
+    if (rightArm) {
+      rightArm.rotation.z = .08 + emphasis * .16 * energy;
+      rightArm.rotation.y = -phrase * .08 * energy;
+    }
+    if (mic) {
+      mic.rotation.y = -phrase * .04 * energy;
+      mic.rotation.z = emphasis * .05 * energy;
+    }
+
+    if (onCamera && !reduced) {
+      const stageKey = this.options.television.stageKey ?? 'main_stage';
+      const stageX = stageKey === 'stage_b' ? 5.4 : stageKey === 'rock_stage' ? -4.5 : stageKey === 'studio_floor' ? 1.4 : 0;
+      presenter.rotation.y += T.MathUtils.clamp(stageX / 18, -.22, .22) * emphasis;
+    }
+  }
+
   private updateEffects() {
     const effect = this.playback?.effect;
     const visible = !!effect && this.effectsEnabled && !this.settings.reducedMotion;
