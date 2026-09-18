@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveVenueProfile } from "@/features/gig-demo-3d/venueProfile";
 import type { PerformerPlan } from "../engine/PerformerLifecycle";
-import { totpChoreographyState, totpFormation, totpSafeStageMark, totpStageWorldPosition } from "./presentation";
+import { totpChoreographyState, totpFormation, totpLiveMarks, totpSafeStageMark, totpStageWorldPosition } from "./presentation";
 
 function plan(): PerformerPlan {
   const base = {
@@ -137,6 +137,19 @@ describe("Top of the Pops television stage blocking", () => {
     expect(walk.walking).toBe(true);
     expect(awayHold.walking).toBe(false);
     expect(awayHold.mark.u).toBeLessThan(home.u);
+  });
+
+  it("keeps performers separated throughout live choreography, not just at setup", () => {
+    for (const ms of [0, 4_000, 7_000, 10_000, 13_000, 17_000, 22_000]) {
+      const marks = totpLiveMarks(plan(), ms, true);
+      const singer = marks.get("big-fowler")!;
+      const guitar = marks.get("sable")!;
+      const drummer = marks.get("luna")!;
+
+      expect(Math.hypot(singer.u - guitar.u, singer.v - guitar.v)).toBeGreaterThan(.18);
+      expect(Math.hypot(singer.u - drummer.u, singer.v - drummer.v)).toBeGreaterThan(.34);
+      expect(Math.hypot(guitar.u - drummer.u, guitar.v - drummer.v)).toBeGreaterThan(.24);
+    }
   });
 
   it("keeps a roaming lead singer on the centre lane instead of crossing sideways", () => {
