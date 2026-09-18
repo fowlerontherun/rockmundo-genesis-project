@@ -27,12 +27,12 @@ const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   push_in: 'tv_push_in', pull_back: 'front', finale_wide: 'tv_crane',
 };
 
-export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', playerModelsSnapshot = null }: {
+export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState;
   reducedMotion: boolean; cameraMode: GigViewerCameraMode; tier: PerformanceTier; archetype: string;
   tuning: CrowdTuningOptions; pyrotechnics: boolean; pyroIntensity: number;
   presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
-  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: 'presenter' | 'graphic' | 'performance' | 'audience';
+  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: 'presenter' | 'graphic' | 'performance' | 'audience'; totpMonitorPrimary?: string | null; totpMonitorSecondary?: string | null;
   /** Frozen render-only performer models, used by historical broadcasts instead of current player cosmetics. */
   playerModelsSnapshot?: GigPlayerModelsData | null;
 }) {
@@ -56,9 +56,9 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
     return {
       ...base,
       venue: { ...base.venue, presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular' },
-      television: { presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular', stageKey: totpStage },
+      television: { presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular', stageKey: totpStage, monitorMode: totpCueType, monitorPrimary: totpMonitorPrimary, monitorSecondary: totpMonitorSecondary },
     };
-  }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant]);
+  }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant, totpCueType, totpMonitorPrimary, totpMonitorSecondary]);
   const optionsKey = JSON.stringify(options);
   const venueProfile = resolveVenueProfile(options.venue);
   const baseFrame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue, presentationMode, totpStage);
