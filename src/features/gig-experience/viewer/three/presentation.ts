@@ -41,23 +41,23 @@ function totpPreferredMarks(role: PresentationRole, instrument: string | null): 
   const singsLead = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text);
 
   if (singsLead) return [
-    { u: .50, v: .74 },
-    { u: .43, v: .69 },
-    { u: .57, v: .69 },
+    { u: .50, v: .78 },
+    { u: .41, v: .72 },
+    { u: .59, v: .72 },
   ];
 
   switch (role) {
-    case 'vocalist': return [{ u: .50, v: .74 }, { u: .43, v: .69 }, { u: .57, v: .69 }];
+    case 'vocalist': return [{ u: .50, v: .78 }, { u: .41, v: .72 }, { u: .59, v: .72 }];
     case 'lead_guitar':
     case 'rhythm_guitar':
     case 'guitar': return [
-      { u: .36, v: .62 },
-      { u: .64, v: .62 },
-      { u: .42, v: .55 },
-      { u: .58, v: .55 },
+      { u: .34, v: .64 },
+      { u: .66, v: .64 },
+      { u: .40, v: .57 },
+      { u: .60, v: .57 },
     ];
-    case 'bass': return [{ u: .65, v: .54 }, { u: .35, v: .54 }];
-    case 'drums': return [{ u: .50, v: .33 }, { u: .61, v: .34 }];
+    case 'bass': return [{ u: .68, v: .57 }, { u: .32, v: .57 }];
+    case 'drums': return [{ u: .50, v: .28 }, { u: .62, v: .30 }];
     case 'keyboard':
     case 'piano': return [{ u: .34, v: .40 }, { u: .66, v: .40 }];
     case 'dj':
@@ -74,7 +74,7 @@ function totpPreferredMarks(role: PresentationRole, instrument: string | null): 
 export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
   const assigned = new Map<string, TotpStageMark>();
   const used: TotpStageMark[] = [];
-  const minimumDistance = .16;
+  const minimumDistance = .22;
 
   const ranked = [...plan.entities].sort((a, b) => {
     const aLead = /lead\s+(vocals?|singer)|frontperson/i.test(a.instrument ?? '') ? -10 : 0;

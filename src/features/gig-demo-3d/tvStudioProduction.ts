@@ -92,15 +92,36 @@ function buildCameraBody(root: T.Group, x: number, z: number, yaw = 0, handheld 
 
 function buildOperator(root: T.Group, x: number, z: number, yaw = 0, name = 'totp-camera-operator') {
   const skin = matte('#b98968');
-  const clothes = matte('#252a31');
+  const blackTop = matte('#111318');
+  const blackTrousers = matte('#0b0d10');
+  const blackShoes = matte('#08090b');
+  const hair = matte('#2a211c');
   const operator = new T.Group();
   operator.name = name;
+  operator.userData.crew = true;
   operator.position.set(x, 0, z);
   operator.rotation.y = yaw;
-  cylinder(operator, .18, .22, 1.0, [0, .8, 0], clothes, 14);
-  cylinder(operator, .18, .18, .34, [0, 1.47, 0], skin, 14);
-  rod(operator, [-.15, 1.15, 0], [-.38, .85, -.25], .055, clothes);
-  rod(operator, [.15, 1.15, 0], [.38, .85, -.25], .055, clothes);
+
+  // Use the same human proportions as the low-poly audience rather than a
+  // cylinder-shaped prop. Clothing is intentionally all black for TV crew.
+  cylinder(operator, .20, .15, .52, [0, 1.12, 0], blackTop, 8);
+  for (const side of [-1, 1]) {
+    const sx = side * .105;
+    rod(operator, [sx, .88, 0], [side * .12, .46, .02], .075, blackTrousers);
+    rod(operator, [side * .12, .46, .02], [side * .12, .08, .08], .062, blackTrousers);
+    box(operator, [.16, .09, .24], [side * .12, .055, .14], blackShoes);
+    rod(operator, [side * .16, 1.26, 0], [side * .31, 1.03, -.12], .055, blackTop);
+    rod(operator, [side * .31, 1.03, -.12], [side * .36, .87, -.24], .043, skin);
+  }
+  const head = new T.Mesh(new T.SphereGeometry(.15, 10, 8), skin);
+  head.scale.set(.86, 1.08, .9);
+  head.position.set(0, 1.58, 0);
+  head.name = 'totp-camera-operator-head';
+  operator.add(head);
+  const hairCap = new T.Mesh(new T.SphereGeometry(.154, 10, 5, 0, Math.PI * 2, 0, Math.PI * .52), hair);
+  hairCap.position.set(0, 1.66, -.01);
+  operator.add(hairCap);
+
   root.add(operator);
   return operator;
 }

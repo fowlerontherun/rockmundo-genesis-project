@@ -222,14 +222,15 @@ export function buildDrums(scene: T.Object3D) {
   return cymbals;
 }
 
-export function microphone(parent: T.Object3D, position: [number, number, number]) {
-  const root = new T.Group(); root.position.set(...position); parent.add(root);
+export function microphone(parent: T.Object3D, position: [number, number, number], height = 1.52) {
+  const root = new T.Group(); root.name = 'stand-microphone'; root.position.set(...position); parent.add(root);
   const chrome = metal('#5f6470'), black = matte('#16191f');
+  const mastTop = Math.max(1.18, height - .01);
   cylinder(root, 0.23, 0.25, 0.055, [0, 0.025, 0], black);
-  rod(root, [0, 0.02, 0], [0, 1.51, 0], 0.014, chrome);
-  rod(root, [0, 1.45, 0], [0, 1.51, -0.3], 0.015, chrome);
-  const mic = cylinder(root, 0.024, 0.022, 0.16, [0, 1.52, -0.31], black); mic.rotation.x = Math.PI / 2;
-  const head = new T.Mesh(new T.SphereGeometry(0.034, 12, 8), metal('#434956', 0.7)); head.position.set(0, 1.52, -0.39); root.add(head);
+  rod(root, [0, 0.02, 0], [0, mastTop, 0], 0.014, chrome);
+  rod(root, [0, mastTop - .06, 0], [0, mastTop, -0.3], 0.015, chrome);
+  const mic = cylinder(root, 0.024, 0.022, 0.16, [0, height, -0.31], black); mic.rotation.x = Math.PI / 2;
+  const head = new T.Mesh(new T.SphereGeometry(0.034, 12, 8), metal('#434956', 0.7)); head.position.set(0, height, -0.39); root.add(head);
   return root;
 }
 
