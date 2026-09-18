@@ -21,6 +21,15 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
   const directedStage = cue?.stage ?? "main_stage";
   const lowerThird = cue?.type === "graphic" ? cue.graphic : null;
   const presenterText = cue?.type === "presenter" ? cue.presenterText : null;
+  const cueProgress = cue ? Math.max(0, Math.min(1, (playbackState.positionMs - cue.offsetMs) / Math.max(1, cue.durationMs))) : 0;
+  const stageLabel = directedStage === "stage_b"
+    ? "STAGE B"
+    : directedStage === "rock_stage"
+      ? "ROCK STAGE"
+      : directedStage === "studio_floor"
+        ? "STUDIO FLOOR"
+        : "MAIN STAGE";
+  const showStageSting = cue?.type === "performance" && cue.id === "performance-1" && cueProgress < .62;
   const lockedAudienceReaction = Number.isFinite(Number(audienceReaction)) ? Number(audienceReaction) : 0;
   const crowdTuning = totpAudienceCrowdTuning(lockedAudienceReaction);
   const audienceLabel = totpAudienceReactionLabel(lockedAudienceReaction);
@@ -40,18 +49,47 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
           TOP OF THE POPS{variantLabel ? ` · ${variantLabel.toUpperCase()}` : ""}
         </div>
         <div className="flex items-center gap-2">
-          <div className="bg-black/70 px-2.5 py-1.5 text-[10px] font-black tracking-[0.16em] backdrop-blur">ROCKMUNDO TV</div>
+          <div className="hidden bg-black/65 px-2.5 py-1.5 text-[10px] font-black tracking-[0.16em] backdrop-blur sm:block">ROCKMUNDO TV · LONDON</div>
           <div className="flex items-center gap-1.5 bg-red-700/90 px-2.5 py-1.5 text-[10px] font-black tracking-[0.16em] shadow-lg">
-            <span className="h-1.5 w-1.5 rounded-full bg-white" /> LIVE
+            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> LIVE
           </div>
         </div>
       </div>
-      <div className="absolute bottom-3 right-3 bg-black/55 px-2 py-1 text-[9px] font-semibold tracking-wide text-white/65">
-        {presenter.displayName.toUpperCase()} · AUDIENCE {audienceLabel.toUpperCase()}
-      </div>
+      {showStageSting ? (
+        <div className="absolute right-4 top-16 animate-in fade-in slide-in-from-right-3 duration-300">
+          <div className="border-r-4 border-fuchsia-300 bg-black/75 px-3 py-2 text-right shadow-lg backdrop-blur">
+            <div className="text-[9px] font-bold tracking-[0.18em] text-cyan-200">LIVE FROM</div>
+            <div className="mt-0.5 text-xs font-black tracking-[0.16em] text-white">{stageLabel}</div>
+          </div>
+        </div>
+      ) : null}
     </div>
-    {lowerThird && <div className="pointer-events-none absolute bottom-10 left-5 z-20 max-w-[min(32rem,78vw)] text-white" role="status" aria-live="polite"><div className="border-l-4 border-cyan-300 bg-gradient-to-r from-fuchsia-800/95 to-slate-950/90 px-4 py-3 shadow-2xl"><div className="flex items-start justify-between gap-5"><div className="min-w-0"><p className="truncate text-lg font-black uppercase tracking-wide sm:text-xl">{lowerThird.artistName}</p><p className="mt-0.5 truncate text-xs font-semibold text-white/80 sm:text-sm">{lowerThird.songTitle}</p></div><p className="shrink-0 bg-white px-2 py-1 text-lg font-black text-slate-950 sm:text-xl">{formatTotpChartGraphic(lowerThird)}</p></div></div></div>}
-    {presenterText && <div className="pointer-events-none absolute bottom-9 left-1/2 z-20 w-[min(43rem,88vw)] -translate-x-1/2" role="status" aria-live="polite"><div className="border-t-2 border-fuchsia-400 bg-black/82 px-5 py-3 text-center text-sm font-medium leading-relaxed text-white shadow-2xl backdrop-blur-md sm:text-base"><span className="mr-2 font-black uppercase tracking-wide text-cyan-200">{presenter.displayName}:</span>{presenterText}</div></div>}
+    {lowerThird && (
+      <div
+        key={`lower-third:${cue?.id ?? "graphic"}`}
+        className="pointer-events-none absolute bottom-8 left-4 z-20 w-[min(36rem,86vw)] animate-in fade-in slide-in-from-left-8 duration-300 text-white"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="relative overflow-hidden border-l-4 border-cyan-300 bg-gradient-to-r from-fuchsia-800/95 via-slate-950/94 to-slate-950/80 shadow-2xl backdrop-blur-sm">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-cyan-300 via-white/70 to-fuchsia-300/0" />
+          <div className="grid grid-cols-[auto_1fr_auto] items-stretch">
+            <div className="flex min-w-16 flex-col items-center justify-center bg-white px-3 py-2 text-slate-950">
+              <span className="text-[9px] font-black tracking-[0.14em]">UK</span>
+              <span className="text-2xl font-black leading-none">#{lowerThird.chartRank}</span>
+            </div>
+            <div className="min-w-0 px-4 py-2.5">
+              <p className="truncate text-base font-black uppercase tracking-[0.06em] sm:text-lg">{lowerThird.artistName}</p>
+              <p className="mt-0.5 truncate text-xs font-semibold text-white/78 sm:text-sm">{lowerThird.songTitle}</p>
+            </div>
+            <div className="flex items-center px-3 text-xs font-black tracking-[0.12em] text-cyan-200">
+              {formatTotpChartGraphic(lowerThird).replace(`#${lowerThird.chartRank} `, "")}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    {presenterText && <div className="pointer-events-none absolute bottom-8 left-1/2 z-20 w-[min(43rem,88vw)] -translate-x-1/2 animate-in fade-in slide-in-from-bottom-3 duration-300" role="status" aria-live="polite"><div className="border-t-2 border-fuchsia-400 bg-black/82 px-5 py-3 text-center text-sm font-medium leading-relaxed text-white shadow-2xl backdrop-blur-md sm:text-base"><span className="mr-2 font-black uppercase tracking-wide text-cyan-200">{presenter.displayName}:</span>{presenterText}</div></div>}
   </div>;
 }
 
