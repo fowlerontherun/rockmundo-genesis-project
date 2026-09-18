@@ -20,6 +20,9 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-zone-stage-b')).toBeTruthy();
     expect(root.getObjectByName('totp-zone-rock-stage')).toBeTruthy();
     expect(root.getObjectByName('totp-zone-studio-floor')).toBeTruthy();
+    expect(root.getObjectByName('totp-stage-b-ring')).toBeTruthy();
+    expect(root.getObjectByName('totp-rock-amp-stack')).toBeTruthy();
+    expect(root.getObjectByName('totp-studio-floor-ring-outer')).toBeTruthy();
     expect(root.getObjectByName('totp-special-christmas')).toBeFalsy();
     expect(root.getObjectByName('totp-special-anniversary')).toBeFalsy();
 
