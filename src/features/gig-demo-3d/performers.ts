@@ -148,7 +148,7 @@ export class Musician {
                 this.root.add(this.instrumentRig.root);
             if (vocal && assignment.instrument !== 'vocal_performance') {
                 this.equipment ??= new T.Group();
-                microphone(this.equipment, [.1, 0, .65]);
+                microphone(this.equipment, [.08, 0, .58]);
             }
             if (this.equipment) {
                 this.equipment.position.set(...position);
@@ -168,21 +168,29 @@ export class Musician {
         const performanceScale = this.role === 'fan' ? 1 : this.role === 'drums' ? .7 : this.role === 'vocals' ? 1.5 : this.role === 'guitar' || this.role === 'bass' ? 1.2 : 1.1;
         const sway = Math.sin(t * (this.role === 'vocals' ? 1.05 : 1.6) + this.phase) * 0.026 * energy * performanceScale;
         this.rest.forEach(({ bone, quaternion, position }) => { bone.quaternion.copy(quaternion); bone.position.copy(position); });
+        const vocalActive = !!this.vocalRole || this.role === 'vocals' || this.instrumentRig?.family === 'voice';
+        const phrase = Math.sin(t * .54 + this.phase);
+        const vocalAccent = vocalActive ? Math.max(0, Math.sin(t * 1.08 + this.phase)) : 0;
         const torso = this.bones.get('Torso');
         if (torso)
             torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat / 2 + this.phase) * 0.032 * energy * performanceScale + (this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.018 : 0),
-                sway,
+                Math.sin(beat / 2 + this.phase) * 0.032 * energy * performanceScale
+                  + (this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.032 - vocalAccent * .016 : 0),
+                sway + (vocalActive ? phrase * .018 * energy : 0),
                 Math.sin(t * 2.2 + this.phase) * 0.018 * energy * performanceScale,
             )));
         const head = this.bones.get('Head');
         if (head) {
-            const singingLean = this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.055 : 0;
+            const singingLean = this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.075 : vocalActive ? -0.025 : 0;
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat + this.phase) * 0.045 * energy + singingLean,
-                Math.sin(t * 0.65 + this.phase) * 0.11,
-                0,
+                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025,
+                Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11),
+                vocalActive ? Math.sin(t * .42 + this.phase) * .018 : 0,
             )));
+        }
+        const jaw = this.bones.get('Jaw') ?? this.bones.get('jaw') ?? this.bones.get('Mouth');
+        if (jaw && vocalActive && !reduced) {
+            jaw.rotation.x += .035 + Math.abs(Math.sin(t * 5.2 + this.phase)) * .075 * energy;
         }
         const hips = this.bones.get('Hips');
         if (hips && this.role !== 'fan' && this.role !== 'drums' && !this.walking && !reduced) {
@@ -214,17 +222,26 @@ export class Musician {
             }
             this.hand('L', rig.left.getWorldPosition(new T.Vector3()), this.point(.65, .93, .15));
             this.hand('R', rig.right.getWorldPosition(new T.Vector3()), this.point(-.65, .93, .15));
+            if (this.vocalRole && rig.family !== 'voice' && !reduced && !this.walking) {
+                // Singer-instrumentalists keep both hands on the instrument, but
+                // lean into the stand mic on vocal phrases rather than abandoning
+                // the guitar/bass pose.
+                const shoulder = this.bones.get('Torso');
+                if (shoulder) shoulder.rotation.x -= .012 + vocalAccent * .018;
+            }
             if (rig.family === 'voice' && !reduced) {
                 // Cycle through TV-friendly singer gestures rather than repeating one
                 // arm raise: open palm, point to crowd, hand-to-chest, then low sweep.
-                const gesture = Math.floor((t + this.phase) / 2.8) % 4;
+                const gesture = Math.floor((t + this.phase) / 3.6) % 5;
                 const target: [number, number, number] = gesture === 0
-                    ? [.48, 1.35, .22]
+                    ? [.42, 1.28, .24]
                     : gesture === 1
-                        ? [.58, 1.58, .12]
+                        ? [.52, 1.52, .16]
                         : gesture === 2
-                            ? [.18, 1.28, .34]
-                            : [.42, .98, .30];
+                            ? [.16, 1.22, .31]
+                            : gesture === 3
+                                ? [.32, 1.05, .30]
+                                : [.12, 1.38, .26];
                 this.hand('L', this.point(...target), this.point(.68, 1.18, .12));
             }
         }

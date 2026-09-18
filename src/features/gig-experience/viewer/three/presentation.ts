@@ -114,11 +114,19 @@ function totpStagePoint(
   const entity = plan.entities.find((candidate) => candidate.id === entityId);
   const text = (entity?.instrument ?? '').toLowerCase();
   const singsLead = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text) || entity?.role === 'vocalist';
+  const singsWhilePlaying = singsLead && /(guitar|bass|ukulele|banjo|mandolin|keytar)/.test(text);
   const t = positionMs / 1000 + (entity?.idlePhase ?? 0);
 
   let mark = home;
   if (performing && entity) {
-    if (singsLead) {
+    if (singsLead && singsWhilePlaying) {
+      // Singer-instrumentalists perform into a fixed stand mic. Give them body
+      // movement, not cross-stage travel, so the mic never appears to drift.
+      mark = {
+        u: clamp(home.u + Math.sin(t * .42) * .012, .47, .53),
+        v: clamp(home.v + Math.sin(t * .28 + 1.1) * .008, .79, .84),
+      };
+    } else if (singsLead) {
       mark = {
         u: clamp(home.u + Math.sin(t * .48) * .055, .40, .60),
         v: clamp(home.v + Math.sin(t * .31 + 1.1) * .035, .74, .86),
