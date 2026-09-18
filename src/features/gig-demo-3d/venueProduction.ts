@@ -145,10 +145,12 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         }
     }
 
-    const banner = makeLabel(bandName, Math.min(p.stageWidth * .5, 10), Math.min(1.1, p.stageWidth * .13));
-    banner.name = 'stage-band-banner';
-    banner.position.set(0, Math.min(p.rigHeight - 1, y + (p.rigHeight - y) * .77), back + .55);
-    root.add(banner);
+    if (p.kind !== 'tv_studio') {
+        const banner = makeLabel(bandName, Math.min(p.stageWidth * .5, 10), Math.min(1.1, p.stageWidth * .13));
+        banner.name = 'stage-band-banner';
+        banner.position.set(0, Math.min(p.rigHeight - 1, y + (p.rigHeight - y) * .77), back + .55);
+        root.add(banner);
+    }
     // Backline amplifiers remain human-sized, even on a stadium deck.
     for (const side of [-1, 1]) {
         const x = side * Math.min(half * (p.kind === 'tv_studio' ? .82 : .67), 6.2);
