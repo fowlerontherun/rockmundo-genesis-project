@@ -81,6 +81,6 @@ describe("Top of the Pops programme continuity", () => {
     const withoutNumberOne = fixtures.filter((item) => item.payload.song.qualifyingRank !== 1);
     const copy = buildTotpContinuityCopy("closing", withoutNumberOne, 1);
     expect(copy.headline).toBe("See you for the next show");
-    expect(copy.body).toContain("fresh locked chart snapshot");
+    expect(copy.body).toContain("see you on the next Top of the Pops");
   });
 });
