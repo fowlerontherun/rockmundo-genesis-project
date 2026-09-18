@@ -41,22 +41,22 @@ function totpPreferredMarks(role: PresentationRole, instrument: string | null): 
     case 'lead_guitar':
     case 'rhythm_guitar':
     case 'guitar': return [
-      { u: .22, v: .64 },
-      { u: .78, v: .64 },
-      { u: .34, v: .54 },
-      { u: .66, v: .54 },
+      { u: .30, v: .66 },
+      { u: .70, v: .66 },
+      { u: .38, v: .57 },
+      { u: .62, v: .57 },
     ];
-    case 'bass': return [{ u: .84, v: .50 }, { u: .16, v: .50 }];
+    case 'bass': return [{ u: .72, v: .53 }, { u: .28, v: .53 }];
     case 'drums': return [{ u: .50, v: .28 }, { u: .68, v: .28 }];
     case 'keyboard':
-    case 'piano': return [{ u: .16, v: .31 }, { u: .84, v: .31 }];
+    case 'piano': return [{ u: .26, v: .34 }, { u: .74, v: .34 }];
     case 'dj':
-    case 'electronic': return [{ u: .68, v: .28 }, { u: .32, v: .28 }];
+    case 'electronic': return [{ u: .66, v: .30 }, { u: .34, v: .30 }];
     case 'backing_vocals': return [{ u: .34, v: .64 }, { u: .66, v: .64 }];
     case 'percussion': return [{ u: .33, v: .24 }, { u: .67, v: .24 }];
     case 'brass':
     case 'woodwind':
-    case 'strings': return [{ u: .18, v: .42 }, { u: .82, v: .42 }, { u: .30, v: .44 }, { u: .70, v: .44 }];
+    case 'strings': return [{ u: .26, v: .44 }, { u: .74, v: .44 }, { u: .34, v: .46 }, { u: .66, v: .46 }];
     default: return [{ u: .30, v: .52 }, { u: .70, v: .52 }, { u: .50, v: .48 }];
   }
 }
@@ -81,8 +81,8 @@ export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
     const preferred = totpPreferredMarks(entity.role, entity.instrument);
     const candidates = [
       ...preferred,
-      { u: .12, v: .58 }, { u: .88, v: .58 },
-      { u: .22, v: .40 }, { u: .78, v: .40 },
+      { u: .24, v: .58 }, { u: .76, v: .58 },
+      { u: .28, v: .40 }, { u: .72, v: .40 },
       { u: .38, v: .34 }, { u: .62, v: .34 },
       { u: .50, v: .50 },
     ];
@@ -120,19 +120,19 @@ function totpStagePoint(
   if (performing && entity) {
     if (singsLead) {
       mark = {
-        u: clamp(home.u + Math.sin(t * .48) * .075, .37, .63),
+        u: clamp(home.u + Math.sin(t * .48) * .055, .40, .60),
         v: clamp(home.v + Math.sin(t * .31 + 1.1) * .035, .74, .86),
       };
     } else if (['lead_guitar','rhythm_guitar','guitar'].includes(entity.role)) {
       const direction = home.u < .5 ? 1 : -1;
       mark = {
-        u: clamp(home.u + direction * (.018 + Math.sin(t * .42) * .032), .12, .88),
+        u: clamp(home.u + direction * (.012 + Math.sin(t * .42) * .024), .24, .76),
         v: clamp(home.v + Math.cos(t * .36) * .025, .48, .70),
       };
     } else if (entity.role === 'bass') {
       const direction = home.u < .5 ? 1 : -1;
       mark = {
-        u: clamp(home.u + direction * Math.sin(t * .33) * .042, .10, .90),
+        u: clamp(home.u + direction * Math.sin(t * .33) * .03, .24, .76),
         v: clamp(home.v + Math.cos(t * .27) * .018, .44, .60),
       };
     } else if (entity.role === 'backing_vocals') {
@@ -250,7 +250,12 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
           ? totpStagePoint(plan, p.id, profile, totpStage, positionMs, songPlaying)
           : stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile, presentationMode, totpStage),
         visible: p.visible && p.lifecycleState !== 'waiting_backstage',
-        walking: ['entering', 'taking_position', 'exiting'].includes(p.lifecycleState),
+        walking: ['entering', 'taking_position', 'exiting'].includes(p.lifecycleState)
+          || (presentationMode === 'totp' && songPlaying && !fixed && (() => {
+            const home = totpStagePoint(plan, p.id, profile, totpStage, 0, false);
+            const live = totpStagePoint(plan, p.id, profile, totpStage, positionMs, true);
+            return Math.hypot(live[0] - home[0], live[2] - home[2]) > .08;
+          })()),
         action: itemPayload && (!itemPayload.performerId ? p.id === (focusId ?? plan.entities.find(e => e.role === 'vocalist')?.id ?? plan.entities[0]?.id) : itemPayload.performerId === p.id) ? itemPayload.action : null,
         actionProgress: item ? progress(item) : 0,
       };
