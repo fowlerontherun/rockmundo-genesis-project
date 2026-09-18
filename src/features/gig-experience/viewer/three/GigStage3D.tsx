@@ -76,7 +76,10 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       }
     : baseFrame;
   const resolvedCamera: CameraShot = presentationMode === 'totp' && totpCameraShot ? TOTP_CAMERAS[totpCameraShot] : CAMERAS[cameraMode];
-  const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: resolvedCamera, reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: frame.look, energy: frame.energy, crowd: frame.crowd, haze: tier !== 'low' };
+  const totpEnergy = presentationMode === 'totp'
+    ? Math.min(1, frame.energy + (totpCueType === 'audience' ? .14 : totpCueType === 'performance' ? .07 : 0))
+    : frame.energy;
+  const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: resolvedCamera, reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: frame.look, energy: totpEnergy, crowd: frame.crowd, haze: tier !== 'low' };
   const latest = useRef({ settings, frame, pyrotechnics, pyroIntensity, tuning }); latest.current = { settings, frame, pyrotechnics, pyroIntensity, tuning };
   const waiting = !playerModelsSnapshot && livePlayerModels.isFetching && !livePlayerModels.data && !livePlayerModels.isError;
 
