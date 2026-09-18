@@ -16,55 +16,134 @@ const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backi
 
 export type ConcertPresentationMode = 'gig' | 'totp';
 
-const TOTP_STAGE_OFFSETS: Record<TotpStageKey, readonly [number, number, number]> = {
-  main_stage: [0, 0, 0],
-  stage_b: [5.4, 0, 1.4],
-  rock_stage: [-4.5, 0, 3.4],
-  studio_floor: [1.4, -.42, 5.0],
+type TotpStageFootprint = {
+  centerX: number;
+  centerZ: number;
+  floorY: number;
+  safeWidth: number;
+  safeDepth: number;
+  minU: number;
+  maxU: number;
+  minV: number;
+  maxV: number;
+  centerV: number;
 };
 
+function totpStageFootprint(stage: TotpStageKey, venue: VenueProfile): TotpStageFootprint {
+  switch (stage) {
+    case 'stage_b':
+      return {
+        centerX: 5.4,
+        centerZ: 2.05,
+        floorY: .22,
+        safeWidth: 3.25,
+        safeDepth: 2.15,
+        minU: .29,
+        maxU: .71,
+        minV: .30,
+        maxV: .78,
+        centerV: .54,
+      };
+    case 'rock_stage':
+      return {
+        centerX: -4.5,
+        centerZ: 4.05,
+        floorY: .28,
+        safeWidth: 4.35,
+        safeDepth: 2.7,
+        minU: .27,
+        maxU: .73,
+        minV: .29,
+        maxV: .78,
+        centerV: .53,
+      };
+    case 'studio_floor':
+      return {
+        centerX: 1.4,
+        centerZ: 5.65,
+        floorY: .08,
+        safeWidth: 3.5,
+        safeDepth: 2.45,
+        minU: .31,
+        maxU: .69,
+        minV: .31,
+        maxV: .75,
+        centerV: .53,
+      };
+    default:
+      return {
+        centerX: 0,
+        centerZ: .65 - venue.stageDepth / 2,
+        floorY: venue.stageHeight,
+        safeWidth: Math.min(6.6, venue.stageWidth * .58),
+        safeDepth: Math.min(4.25, venue.stageDepth * .64),
+        minU: .27,
+        maxU: .73,
+        minV: .28,
+        maxV: .80,
+        centerV: .53,
+      };
+  }
+}
 
 type TotpStageMark = { u: number; v: number };
+
+export function totpSafeStageMark(stage: TotpStageKey, venue: VenueProfile, mark: TotpStageMark): TotpStageMark {
+  const footprint = totpStageFootprint(stage, venue);
+  return {
+    u: clamp(mark.u, footprint.minU, footprint.maxU),
+    v: clamp(mark.v, footprint.minV, footprint.maxV),
+  };
+}
+
+export function totpStageWorldPosition(stage: TotpStageKey, venue: VenueProfile, mark: TotpStageMark, role?: PresentationRole): [number, number, number] {
+  const footprint = totpStageFootprint(stage, venue);
+  const safe = totpSafeStageMark(stage, venue, mark);
+  const x = footprint.centerX + (safe.u - .5) * footprint.safeWidth;
+  const z = footprint.centerZ + (safe.v - footprint.centerV) * footprint.safeDepth;
+  const roleLift = role === 'drums' && stage !== 'studio_floor' ? .18 : 0;
+  return [x, footprint.floorY + roleLift, z];
+}
 
 function totpPreferredMarks(role: PresentationRole, instrument: string | null): TotpStageMark[] {
   const text = (instrument ?? '').toLowerCase();
   const singsLead = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text);
 
   if (singsLead) return [
-    { u: .50, v: .82 },
-    { u: .40, v: .76 },
-    { u: .60, v: .76 },
+    { u: .50, v: .74 },
+    { u: .43, v: .69 },
+    { u: .57, v: .69 },
   ];
 
   switch (role) {
-    case 'vocalist': return [{ u: .50, v: .82 }, { u: .40, v: .76 }, { u: .60, v: .76 }];
+    case 'vocalist': return [{ u: .50, v: .74 }, { u: .43, v: .69 }, { u: .57, v: .69 }];
     case 'lead_guitar':
     case 'rhythm_guitar':
     case 'guitar': return [
-      { u: .30, v: .66 },
-      { u: .70, v: .66 },
-      { u: .38, v: .57 },
-      { u: .62, v: .57 },
+      { u: .36, v: .62 },
+      { u: .64, v: .62 },
+      { u: .42, v: .55 },
+      { u: .58, v: .55 },
     ];
-    case 'bass': return [{ u: .72, v: .53 }, { u: .28, v: .53 }];
-    case 'drums': return [{ u: .50, v: .28 }, { u: .68, v: .28 }];
+    case 'bass': return [{ u: .65, v: .54 }, { u: .35, v: .54 }];
+    case 'drums': return [{ u: .50, v: .33 }, { u: .61, v: .34 }];
     case 'keyboard':
-    case 'piano': return [{ u: .26, v: .34 }, { u: .74, v: .34 }];
+    case 'piano': return [{ u: .34, v: .40 }, { u: .66, v: .40 }];
     case 'dj':
-    case 'electronic': return [{ u: .66, v: .30 }, { u: .34, v: .30 }];
-    case 'backing_vocals': return [{ u: .34, v: .64 }, { u: .66, v: .64 }];
-    case 'percussion': return [{ u: .33, v: .24 }, { u: .67, v: .24 }];
+    case 'electronic': return [{ u: .62, v: .38 }, { u: .38, v: .38 }];
+    case 'backing_vocals': return [{ u: .40, v: .64 }, { u: .60, v: .64 }];
+    case 'percussion': return [{ u: .38, v: .35 }, { u: .62, v: .35 }];
     case 'brass':
     case 'woodwind':
-    case 'strings': return [{ u: .26, v: .44 }, { u: .74, v: .44 }, { u: .34, v: .46 }, { u: .66, v: .46 }];
-    default: return [{ u: .30, v: .52 }, { u: .70, v: .52 }, { u: .50, v: .48 }];
+    case 'strings': return [{ u: .34, v: .46 }, { u: .66, v: .46 }, { u: .41, v: .49 }, { u: .59, v: .49 }];
+    default: return [{ u: .38, v: .52 }, { u: .62, v: .52 }, { u: .50, v: .48 }];
   }
 }
 
 export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
   const assigned = new Map<string, TotpStageMark>();
   const used: TotpStageMark[] = [];
-  const minimumDistance = .24;
+  const minimumDistance = .16;
 
   const ranked = [...plan.entities].sort((a, b) => {
     const aLead = /lead\s+(vocals?|singer)|frontperson/i.test(a.instrument ?? '') ? -10 : 0;
@@ -81,9 +160,9 @@ export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
     const preferred = totpPreferredMarks(entity.role, entity.instrument);
     const candidates = [
       ...preferred,
-      { u: .24, v: .58 }, { u: .76, v: .58 },
-      { u: .28, v: .40 }, { u: .72, v: .40 },
-      { u: .38, v: .34 }, { u: .62, v: .34 },
+      { u: .34, v: .58 }, { u: .66, v: .58 },
+      { u: .37, v: .44 }, { u: .63, v: .44 },
+      { u: .42, v: .36 }, { u: .58, v: .36 },
       { u: .50, v: .50 },
     ];
     const chosen = candidates.find((candidate) =>
@@ -180,11 +259,7 @@ function totpStagePoint(
   const choreography = entity
     ? totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, performing)
     : { mark: home, walking: false };
-  const base = stagePosition(venue, choreography.mark.u, choreography.mark.v);
-  const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
-  const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .96 : totpStage === 'stage_b' ? .92 : .90;
-  const roleLift = entity?.role === 'drums' && totpStage !== 'studio_floor' ? .18 : 0;
-  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy + roleLift), (base[2] - .65) * scale + .65 + dz];
+  return totpStageWorldPosition(totpStage, venue, choreography.mark, entity?.role);
 }
 
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
@@ -197,9 +272,11 @@ export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienc
 function stagePoint(plan: PerformerPlan, point: { x: number; y: number }, venue: VenueProfile, presentationMode: ConcertPresentationMode = 'gig', totpStage: TotpStageKey = 'main_stage'): [number, number, number] {
   const base = stagePosition(venue, (point.x - plan.stage.x) / plan.stage.width, (point.y - plan.stage.y) / plan.stage.height);
   if (presentationMode !== 'totp') return base;
-  const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
-  const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .78 : .66;
-  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy), (base[2] - .65) * scale + .65 + dz];
+  const mark = {
+    u: (point.x - plan.stage.x) / plan.stage.width,
+    v: (point.y - plan.stage.y) / plan.stage.height,
+  };
+  return totpStageWorldPosition(totpStage, venue, mark);
 }
 
 export function concertOptions(
