@@ -52,8 +52,8 @@ export function TotpProgrammeContinuity({
     const speakFallback = () => {
       if (cancelled || !("speechSynthesis" in window)) return;
       const utterance = new SpeechSynthesisUtterance(speech);
-      utterance.rate = 0.98;
-      utterance.pitch = 1;
+      utterance.rate = 1.08;
+      utterance.pitch = 1.06;
       utterance.volume = 0.9;
       const voices = window.speechSynthesis.getVoices();
       const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
