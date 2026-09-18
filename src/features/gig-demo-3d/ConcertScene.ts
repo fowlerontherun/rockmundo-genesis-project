@@ -315,6 +315,7 @@ export class ConcertScene {
           actor.root.position.y += Math.abs(Math.sin(t * 5)) * .06;
         }
         if (!this.settings.reducedMotion && /stage_dive|crowd_surf/.test(state.action ?? '')) { const arc = Math.sin(state.actionProgress * Math.PI); actor.root.position.z += arc * 2.3; actor.root.position.y += arc * .55; actor.root.rotation.x = -arc * Math.PI / 2; }
+        actor.syncEquipmentToPerformer();
       }
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
     });
