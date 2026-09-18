@@ -131,19 +131,92 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   };
 
   if (spec.slot === 'top') {
-    const body = new T.Mesh(new T.CapsuleGeometry(spec.scaleX * .48, spec.scaleY * .78, 8, 18), material);
-    body.scale.set(1, 1, spec.scaleZ / Math.max(.01, spec.scaleX * .48));
+    const category = String(item.category || '').toLowerCase();
+    const isDress = /dress/.test(category);
+    const isOuterwear = /hoodie|jacket|coat|vest/.test(category);
+    const isBoxy = /boxy|oversized|structured/.test(`${spec.silhouette} ${spec.cut}`);
+    const isFitted = /slim|skinny|fitted|tailored/.test(`${spec.silhouette} ${spec.cut}`);
+    const bodyHeight = spec.scaleY * (isDress ? 1.05 : 1.12);
+    const shoulderRadius = spec.scaleX * (isBoxy ? .54 : .5);
+    const waistFactor = isBoxy ? .98 : isFitted ? .78 : .88;
+    const lowerRadius = shoulderRadius * (isDress ? 1.08 : waistFactor);
+    const body = new T.Mesh(
+      new T.CylinderGeometry(shoulderRadius, lowerRadius, bodyHeight, 12, 2, false),
+      material,
+    );
+    body.scale.z = spec.scaleZ / Math.max(.01, shoulderRadius);
     body.position.set(0, spec.y, spec.z);
     add(body, 'Torso');
-    const garment = (item.garment_config || {}) as Record<string, any>;
-    const sleeves = String(garment.sleeve || garment.sleeveStyle || garment.sleeve_style || 'short').toLowerCase();
+
+    // A dress needs a visible skirt rather than stretching a shirt-shaped torso.
+    if (isDress) {
+      const skirtHeight = Math.max(.5, spec.scaleY * .95);
+      const skirt = new T.Mesh(
+        new T.CylinderGeometry(lowerRadius * .92, lowerRadius * 1.28, skirtHeight, 18, 2, false),
+        material,
+      );
+      skirt.scale.z = (spec.scaleZ * 1.12) / Math.max(.01, lowerRadius);
+      skirt.position.set(0, spec.y - bodyHeight * .55 - skirtHeight * .42, spec.z);
+      add(skirt, 'Hips');
+    }
+
+    const sleeves = spec.sleeve;
     if (sleeves !== 'sleeveless' && sleeves !== 'none') {
-      const sleeveLength = /long|full/.test(sleeves) ? .58 : .28;
+      const sleeveLength =
+        /long|full/.test(sleeves) ? .62 :
+        /three-quarter/.test(sleeves) ? .48 :
+        /elbow/.test(sleeves) ? .38 :
+        /cap/.test(sleeves) ? .18 : .28;
+      const sleeveRadius = spec.scaleX * (isOuterwear ? .115 : .095);
+      const shoulderY = spec.y + bodyHeight * .33;
       for (const side of [-1, 1]) {
-        const sleeve = new T.Mesh(new T.CapsuleGeometry(.105 * spec.scaleX, sleeveLength, 6, 12), material);
-        sleeve.position.set(side * spec.scaleX * .55, spec.y + .08, spec.z);
-        sleeve.rotation.z = side * -.18;
+        const sleeve = new T.Mesh(new T.CylinderGeometry(sleeveRadius * .95, sleeveRadius, sleeveLength, 10), material);
+        sleeve.rotation.z = Math.PI / 2;
+        sleeve.position.set(side * (shoulderRadius + sleeveLength * .43), shoulderY, spec.z);
         add(sleeve, side > 0 ? 'UpperArm.L' : 'UpperArm.R');
+      }
+    }
+
+    const collar = spec.collar;
+    if (collar !== 'none') {
+      const collarRadius = /scoop/.test(collar) ? .2 : /v-neck/.test(collar) ? .17 : /turtle/.test(collar) ? .15 : .165;
+      const collarMesh = new T.Mesh(
+        new T.TorusGeometry(collarRadius, /turtle/.test(collar) ? .04 : .022, 8, 28),
+        new T.MeshStandardMaterial({ color: spec.secondaryColor, roughness: spec.roughness, metalness: spec.metalness }),
+      );
+      collarMesh.rotation.x = Math.PI / 2;
+      collarMesh.scale.z = .68;
+      collarMesh.position.set(0, spec.y + bodyHeight * .51, spec.z + spec.scaleZ * .13);
+      add(collarMesh, 'Torso');
+    }
+
+    if (/hood/.test(spec.collar) || /hoodie/.test(category)) {
+      const hood = new T.Mesh(
+        new T.TorusGeometry(.22, .065, 10, 28, Math.PI * 1.55),
+        material,
+      );
+      hood.rotation.x = Math.PI / 2;
+      hood.rotation.z = Math.PI * .22;
+      hood.position.set(0, spec.y + bodyHeight * .48, spec.z - spec.scaleZ * .32);
+      add(hood, 'Torso');
+    }
+
+    if (/zip/.test(spec.closure)) {
+      const zip = new T.Mesh(
+        new T.BoxGeometry(.018, bodyHeight * .78, .012),
+        new T.MeshStandardMaterial({ color: spec.secondaryColor, roughness: .35, metalness: .65 }),
+      );
+      zip.position.set(0, spec.y, spec.z + spec.scaleZ * .52);
+      add(zip, 'Torso');
+    } else if (/button|snap/.test(spec.closure)) {
+      for (let i = -2; i <= 2; i++) {
+        const button = new T.Mesh(
+          new T.SphereGeometry(.022, 10, 8),
+          new T.MeshStandardMaterial({ color: spec.secondaryColor, roughness: .36, metalness: .2 }),
+        );
+        button.position.set(0, spec.y + i * bodyHeight * .13, spec.z + spec.scaleZ * .52);
+        button.scale.z = .35;
+        add(button, 'Torso');
       }
     }
   } else if (spec.slot === 'bottom') {
@@ -190,6 +263,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     accessory.rotation.x = Math.PI / 2;
     add(accessory, 'Torso');
   }
+
+  group.position.x = spec.bodyOffsetX;
 
   const details = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 18) : [];
   details.forEach((detail, index) => addDetail(group, detail, index, spec));

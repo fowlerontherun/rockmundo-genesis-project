@@ -37,6 +37,21 @@ function anchors(clothing: ClothingItem) {
 }
 
 describe('procedural garment stage rig anchors', () => {
+  it('builds top garments from a shirt-shaped torso rather than a capsule', () => {
+    const garment = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'short', silhouette: 'classic' }));
+    const torso = garment.children.find(child => child.userData.rigAnchor === 'Torso') as any;
+    expect(torso?.geometry?.type).toBe('CylinderGeometry');
+    disposeProceduralGarment(garment);
+  });
+
+  it('lays sleeves along the avatar arms instead of vertically', () => {
+    const garment = buildProceduralGarment(item('shirt', 'top', { sleeve: 'elbow' }));
+    const sleeves = garment.children.filter(child => String(child.userData.rigAnchor).startsWith('UpperArm')) as any[];
+    expect(sleeves).toHaveLength(2);
+    expect(Math.abs(sleeves[0].rotation.z)).toBeCloseTo(Math.PI / 2);
+    disposeProceduralGarment(garment);
+  });
+
   it('anchors top bodies and sleeves to torso and both upper arms', () => {
     const result = anchors(item('shirt', 'top', { sleeve: 'long' }));
     expect(result).toContain('Torso');
