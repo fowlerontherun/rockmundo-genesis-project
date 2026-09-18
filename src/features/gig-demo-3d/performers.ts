@@ -61,11 +61,13 @@ export class Musician {
     walking = false;
     action: string | null = null;
     private scale: number;
+    private vocalRole: VocalRole = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
         number
     ], public phase = 0, tint = '#728092', appearance?: PlayerAppearance, instrument?: InstrumentId | null, vocal?: VocalRole, richClothing: ResolvedEquippedClothing[] = []) {
+        this.vocalRole = vocal ?? null;
         this.model = clone(source);
         this.root.add(this.model);
         this.root.position.set(...position);
@@ -169,13 +171,19 @@ export class Musician {
         const torso = this.bones.get('Torso');
         if (torso)
             torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat / 2 + this.phase) * 0.032 * energy * performanceScale,
+                Math.sin(beat / 2 + this.phase) * 0.032 * energy * performanceScale + (this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.018 : 0),
                 sway,
                 Math.sin(t * 2.2 + this.phase) * 0.018 * energy * performanceScale,
             )));
         const head = this.bones.get('Head');
-        if (head)
-            head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(Math.sin(beat + this.phase) * 0.045 * energy, Math.sin(t * 0.65 + this.phase) * 0.11, 0)));
+        if (head) {
+            const singingLean = this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.055 : 0;
+            head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
+                Math.sin(beat + this.phase) * 0.045 * energy + singingLean,
+                Math.sin(t * 0.65 + this.phase) * 0.11,
+                0,
+            )));
+        }
         const hips = this.bones.get('Hips');
         if (hips && this.role !== 'fan' && this.role !== 'drums' && !this.walking && !reduced) {
             hips.position.y += Math.abs(Math.sin(beat / 2 + this.phase)) * 0.014 * energy;
