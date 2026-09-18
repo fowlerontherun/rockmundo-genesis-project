@@ -71,10 +71,21 @@ function totpPreferredMarks(role: PresentationRole, instrument: string | null): 
   }
 }
 
+type TotpPerformerFootprint = { u: number; v: number };
+
+function totpPerformerFootprint(role: PresentationRole, instrument?: string | null): TotpPerformerFootprint {
+  const text = (instrument ?? '').toLowerCase();
+  if (role === 'drums' || /drums?|drummer|drum kit/.test(text)) return { u: .17, v: .23 };
+  if (role === 'keyboard' || role === 'piano' || role === 'electronic') return { u: .16, v: .17 };
+  if (role === 'guitar' || role === 'lead_guitar' || role === 'rhythm_guitar' || role === 'bass') return { u: .14, v: .14 };
+  if (role === 'percussion') return { u: .14, v: .16 };
+  if (role === 'vocalist') return { u: .115, v: .12 };
+  return { u: .12, v: .125 };
+}
+
 export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
   const assigned = new Map<string, TotpStageMark>();
-  const used: TotpStageMark[] = [];
-  const minimumDistance = .22;
+  const used: Array<{ mark: TotpStageMark; footprint: TotpPerformerFootprint }> = [];
 
   const ranked = [...plan.entities].sort((a, b) => {
     const aLead = /lead\s+(vocals?|singer)|frontperson/i.test(a.instrument ?? '') ? -10 : 0;
@@ -89,6 +100,7 @@ export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
 
   for (const entity of ranked) {
     const preferred = totpPreferredMarks(entity.role, entity.instrument);
+    const footprint = totpPerformerFootprint(entity.role, entity.instrument);
     const candidates = [
       ...preferred,
       { u: .34, v: .58 }, { u: .66, v: .58 },
@@ -96,16 +108,21 @@ export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
       { u: .42, v: .36 }, { u: .58, v: .36 },
       { u: .50, v: .50 },
     ];
-    const chosen = candidates.find((candidate) =>
-      used.every((other) => Math.hypot(candidate.u - other.u, candidate.v - other.v) >= minimumDistance),
-    ) ?? candidates.reduce((best, candidate) => {
-      const clearance = used.length ? Math.min(...used.map((other) => Math.hypot(candidate.u - other.u, candidate.v - other.v))) : 1;
-      const bestClearance = used.length ? Math.min(...used.map((other) => Math.hypot(best.u - other.u, best.v - other.v))) : 1;
-      return clearance > bestClearance ? candidate : best;
-    }, candidates[0]);
+    const clearanceScore = (candidate: TotpStageMark) => {
+      if (!used.length) return 99;
+      return Math.min(...used.map((other) => {
+        const requiredU = footprint.u + other.footprint.u;
+        const requiredV = footprint.v + other.footprint.v;
+        const du = Math.abs(candidate.u - other.mark.u) / requiredU;
+        const dv = Math.abs(candidate.v - other.mark.v) / requiredV;
+        return Math.hypot(du, dv);
+      }));
+    };
+    const chosen = candidates.find((candidate) => clearanceScore(candidate) >= 1)
+      ?? candidates.reduce((best, candidate) => clearanceScore(candidate) > clearanceScore(best) ? candidate : best, candidates[0]);
 
     assigned.set(entity.id, chosen);
-    used.push(chosen);
+    used.push({ mark: chosen, footprint });
   }
 
   return assigned;
@@ -141,14 +158,16 @@ export function totpChoreographyState(
   // motion is handled by the skeleton/torso animation rather than root travel.
   if (singsLead && singsWhilePlaying) return { mark: home, walking: false };
 
-  const direction = home.u < .5 ? 1 : -1;
+  const outward = home.u < .5 ? -1 : 1;
   let away = home;
   if (singsLead) {
-    away = { u: clamp(home.u + direction * .085, .39, .61), v: clamp(home.v - .045, .72, .86) };
+    // Keep a roaming lead on the centre lane so they never cut across guitar/bass
+    // players during a camera change.
+    away = { u: home.u, v: clamp(home.v - .065, .69, .86) };
   } else if (['lead_guitar','rhythm_guitar','guitar'].includes(role)) {
-    away = { u: clamp(home.u + direction * .075, .24, .76), v: clamp(home.v - .035, .48, .70) };
+    away = { u: clamp(home.u + outward * .055, .22, .78), v: clamp(home.v - .025, .48, .72) };
   } else if (role === 'bass') {
-    away = { u: clamp(home.u + direction * .06, .24, .76), v: clamp(home.v + .025, .44, .62) };
+    away = { u: clamp(home.u + outward * .045, .22, .78), v: clamp(home.v + .02, .44, .64) };
   } else {
     return { mark: home, walking: false };
   }

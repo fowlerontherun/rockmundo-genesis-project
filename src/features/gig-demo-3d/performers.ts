@@ -63,6 +63,7 @@ export class Musician {
     walking = false;
     action: string | null = null;
     private scale: number;
+    private bodyBuild = 1;
     private vocalRole: VocalRole = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
@@ -137,17 +138,29 @@ export class Musician {
                 garment.removeFromParent();
             }
         }
-        if (appearance)
+        if (appearance) {
+            this.bodyBuild = appearance.body.build;
             this.root.scale.set(appearance.body.build, appearance.body.height, appearance.body.build);
+        }
         const assignment = stageAssignment(instrument, role);
         if (assignment.instrument && role !== 'fan') {
             this.instrumentRig = buildInstrument(assignment.instrument, appearance?.equipment.instrument.color);
             if (this.instrumentRig.stationary) {
                 this.equipment = new T.Group();
                 this.equipment.add(this.instrumentRig.root);
-            }
-            else
+            } else {
+                // Handheld instruments need a little more chest clearance on wider
+                // avatars. Move the whole rig forward so its grips and IK targets
+                // remain coherent with the visual instrument.
+                const family = this.instrumentRig.family;
+                const forward = family === 'strum' || family === 'bow' || family === 'upright'
+                    ? Math.max(0, this.bodyBuild - 1) * .16
+                    : family === 'brass' || family === 'reed' || family === 'flute'
+                        ? Math.max(0, this.bodyBuild - 1) * .08
+                        : 0;
+                this.instrumentRig.root.position.z += forward;
                 this.root.add(this.instrumentRig.root);
+            }
             if (vocal && assignment.instrument !== 'vocal_performance') {
                 this.equipment ??= new T.Group();
                 microphone(this.equipment, [.02, 0, .44], 1.50 * (appearance?.body.height ?? 1));
@@ -245,8 +258,10 @@ export class Musician {
                     reach(this.bones.get(`UpperLeg.${side}`), this.bones.get(`LowerLeg.${side}`), this.bones.get(`Foot.${side}`), this.point(sign * .22, .09, .34), this.point(sign * .27, .55, .8));
                 }
             }
-            this.hand('L', rig.left.getWorldPosition(new T.Vector3()), this.point(.65, .93, .15));
-            this.hand('R', rig.right.getWorldPosition(new T.Vector3()), this.point(-.65, .93, .15));
+            const poleSpread = .65 + Math.max(0, this.bodyBuild - 1) * .32;
+            const poleForward = rig.family === 'strum' || rig.family === 'bow' || rig.family === 'upright' ? .22 : .15;
+            this.hand('L', rig.left.getWorldPosition(new T.Vector3()), this.point(poleSpread, .96, poleForward));
+            this.hand('R', rig.right.getWorldPosition(new T.Vector3()), this.point(-poleSpread, .96, poleForward));
             if (this.vocalRole && rig.family !== 'voice' && !reduced && !this.walking) {
                 // Singer-instrumentalists keep both hands on the instrument, but
                 // lean into the stand mic on vocal phrases rather than abandoning
