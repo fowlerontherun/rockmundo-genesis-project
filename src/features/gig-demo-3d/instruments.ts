@@ -517,6 +517,7 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
     }
     else if (spec.family === 'voice') {
         const mic = buildHandInstrument('vocals');
+        mic.name = 'playing-handheld-microphone';
         mic.position.set(-.025, 1.48, .27);
         root.add(mic);
         l = [.27, .86, .12];
@@ -529,16 +530,22 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             stick.name = 'playing-stick';
             tools.push(stick);
             grip.add(stick);
-            rod(stick, [0, 0, 0], [0, -.13, .19], .006, darkWood);
+            rod(stick, [0, .02, -.03], [0, -.19, .31], spec.family === 'kit' ? .009 : .007, darkWood);
             if (spec.family === 'mallets')
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
             moving.push((t, e) => {
                 const base = sign === 1 ? l[1] : r[1];
                 const phrase = Math.floor(t / 4) % 4;
                 const rate = phrase === 3 ? 16.2 : 12.56;
-                const accent = phrase === 2 ? .085 : .06;
-                grip.position.y = base + (1 + Math.sin(t * rate + (sign === 1 ? 0 : Math.PI))) * accent * e;
-                grip.position.x = (sign === 1 ? l[0] : r[0]) + Math.sin(t * 3.1 + sign) * .022 * e;
+                const accent = spec.family === 'kit' ? (phrase === 2 ? .16 : .12) : (phrase === 2 ? .085 : .06);
+                const hit = Math.max(0, Math.sin(t * rate + (sign === 1 ? 0 : Math.PI)));
+                grip.position.y = base + hit * accent * e;
+                grip.position.x = (sign === 1 ? l[0] : r[0]) + Math.sin(t * 3.1 + sign) * (spec.family === 'kit' ? .055 : .022) * e;
+                if (spec.family === 'kit') {
+                    grip.position.z = (sign === 1 ? l[2] : r[2]) + Math.cos(t * (phrase === 1 ? 5.4 : 3.8) + sign) * .08 * e;
+                    stick.rotation.x = -.18 + hit * .34 * e;
+                    stick.rotation.z = sign * (.08 + Math.sin(t * 2.6) * .05 * e);
+                }
             });
         }
     else if (!['voice', 'strum'].includes(spec.family))
