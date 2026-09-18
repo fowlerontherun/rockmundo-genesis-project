@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { DerivedPlaybackState } from "@/features/gig-experience/viewer/engine/PlaybackController";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
+import { loadTotpCrowdSounds, pickTotpCrowdSound, type TotpCrowdSound } from "./crowdSoundLibrary";
 
 export function useTotpAudienceAudio({
   playbackState,
@@ -16,6 +17,17 @@ export function useTotpAudienceAudio({
   const ambienceRef = useRef<GainNode | null>(null);
   const lastCueRef = useRef<string | null>(null);
   const lastPulseRef = useRef(0);
+  const libraryRef = useRef<TotpCrowdSound[]>([]);
+  const clipRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    void loadTotpCrowdSounds()
+      .then((sounds) => { if (!cancelled) libraryRef.current = sounds; })
+      .catch(() => { if (!cancelled) libraryRef.current = []; });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!playbackState.isPlaying || typeof window === "undefined") return;
@@ -64,17 +76,50 @@ export function useTotpAudienceAudio({
     const cueId = cue?.id ?? null;
     if (cueId && cueId !== lastCueRef.current) {
       lastCueRef.current = cueId;
-      if (cue?.type === "performance") playStudioCheer(ctx, master, 0.72 + Math.max(0, reaction) * 0.025, 1.1);
-      if (cue?.type === "audience") playStudioCheer(ctx, master, 0.95, 1.8);
+
+      if (cue?.type === "performance") {
+        const intensity = reaction >= 6 ? 9 : reaction >= 2 ? 7 : 5;
+        const clip = pickTotpCrowdSound(
+          libraryRef.current,
+          reaction >= 6 ? ["crowd_cheer_large", "crowd_cheer_medium"] : ["crowd_cheer_medium", "crowd_cheer_small"],
+          intensity,
+          `${cueId}:entrance`,
+        );
+        playApprovedClip(clipRef, clip, .58 + Math.max(0, reaction) * .025)
+          .catch(() => playStudioCheer(ctx!, master!, 0.72 + Math.max(0, reaction) * 0.025, 1.1));
+        if (!clip) playStudioCheer(ctx, master, 0.72 + Math.max(0, reaction) * 0.025, 1.1);
+      }
+
+      if (cue?.type === "audience") {
+        const clip = pickTotpCrowdSound(
+          libraryRef.current,
+          ["applause", "crowd_cheer_large", "crowd_cheer_medium"],
+          9,
+          `${cueId}:applause`,
+        );
+        playApprovedClip(clipRef, clip, .82)
+          .catch(() => playStudioCheer(ctx!, master!, 0.95, 1.8));
+        if (!clip) playStudioCheer(ctx, master, 0.95, 1.8);
+      }
     }
 
     if (performing && playbackState.positionMs - lastPulseRef.current > 18_000) {
       lastPulseRef.current = playbackState.positionMs;
-      playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
+      const clip = pickTotpCrowdSound(
+        libraryRef.current,
+        reaction >= 5 ? ["crowd_cheer_medium", "crowd_singing"] : ["crowd_cheer_small", "crowd_cheer_medium"],
+        reaction >= 5 ? 7 : 4,
+        `${cueId ?? "performance"}:${Math.floor(playbackState.positionMs / 18_000)}`,
+      );
+      playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018)
+        .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
+      if (!clip) playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
     }
   }, [audienceReaction, cue?.id, cue?.type, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
 
   useEffect(() => () => {
+    clipRef.current?.pause();
+    clipRef.current = null;
     ctxRef.current?.close().catch(() => undefined);
     ctxRef.current = null;
     masterRef.current = null;
@@ -108,4 +153,20 @@ function playStudioCheer(ctx: AudioContext, out: AudioNode, intensity: number, d
   lp.connect(gain);
   gain.connect(out);
   src.start();
+}
+
+
+async function playApprovedClip(
+  clipRef: { current: HTMLAudioElement | null },
+  sound: TotpCrowdSound | null,
+  volume: number,
+) {
+  if (!sound || typeof Audio === "undefined") return;
+  clipRef.current?.pause();
+  const audio = new Audio(sound.audio_url);
+  audio.preload = "auto";
+  audio.volume = Math.max(.08, Math.min(.9, volume));
+  clipRef.current = audio;
+  audio.onended = () => { if (clipRef.current === audio) clipRef.current = null; };
+  await audio.play();
 }
