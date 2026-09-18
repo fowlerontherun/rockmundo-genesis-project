@@ -150,9 +150,15 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
         root.add(g);
         const left = marker(g, 'grip-left', [.015, .71, .12]), right = marker(g, 'grip-right', [0, .03, .22]);
         moving.push((t, e) => {
-            left.position.y = .71 + Math.sin(t * 1.9) * .035 * e;
-            right.position.x = Math.sin(t * Math.PI * 8) * .085 * e;
-            right.position.y = .03 + Math.cos(t * Math.PI * 8) * .018 * e;
+            const phrase = Math.sin(t * .43);
+            const subdivision = id === 'bass_guitar' ? 4.2 : 7.6;
+            left.position.y = .71 + Math.sin(t * 1.35) * .055 * e + phrase * .025 * e;
+            left.position.x = .015 + Math.cos(t * .72) * .012 * e;
+            right.position.x = Math.sin(t * Math.PI * subdivision) * (id === 'bass_guitar' ? .052 : .092) * e;
+            right.position.y = .03 + Math.cos(t * Math.PI * subdivision) * .022 * e;
+            right.position.z = .22 + Math.sin(t * .9) * .012 * e;
+            g.rotation.y = -.045 + Math.sin(t * .55) * .025 * e;
+            g.rotation.x = .035 + Math.cos(t * .7) * .012 * e;
         });
         return finish(left, right);
     }
@@ -286,7 +292,11 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             stand(root, x, z, y);
             const cymbal = cylinder(root, rad * .2, rad, .035, [x, y, z], electronic ? black : brass, 32);
             cymbal.name = 'playing-cymbal';
-            moving.push((t, e) => { cymbal.rotation.z = Math.sin(t * 12 + x) * .012 * e; });
+            moving.push((t, e) => {
+                const hit = Math.max(0, Math.sin(t * 8.5 + x * 2.1));
+                cymbal.rotation.z = Math.sin(t * 12 + x) * .012 * e + hit * .018 * e;
+                cymbal.rotation.x = hit * .01 * e;
+            });
         }
         if (electronic) {
             rod(root, [-.7, .6, .8], [.7, .6, .8], .022, chrome);
@@ -522,7 +532,14 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             rod(stick, [0, 0, 0], [0, -.13, .19], .006, darkWood);
             if (spec.family === 'mallets')
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
-            moving.push((t, e) => { grip.position.y = (sign === 1 ? l[1] : r[1]) + (1 + Math.sin(t * 12.56 + (sign === 1 ? 0 : Math.PI))) * .06 * e; });
+            moving.push((t, e) => {
+                const base = sign === 1 ? l[1] : r[1];
+                const phrase = Math.floor(t / 4) % 4;
+                const rate = phrase === 3 ? 16.2 : 12.56;
+                const accent = phrase === 2 ? .085 : .06;
+                grip.position.y = base + (1 + Math.sin(t * rate + (sign === 1 ? 0 : Math.PI))) * accent * e;
+                grip.position.x = (sign === 1 ? l[0] : r[0]) + Math.sin(t * 3.1 + sign) * .022 * e;
+            });
         }
     else if (!['voice', 'strum'].includes(spec.family))
         moving.push((t, e) => {
