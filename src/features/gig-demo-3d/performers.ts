@@ -176,6 +176,20 @@ export class Musician {
                     handheld.userData.attachedToHand = true;
                 }
             }
+            if (this.instrumentRig?.family === 'kit') {
+                const sticks = this.instrumentRig.tools.filter(tool => tool.name === 'playing-stick');
+                (['L', 'R'] as const).forEach((side, index) => {
+                    const hand = this.bones.get(`Hand.${side}`);
+                    const stick = sticks[index];
+                    if (!hand || !stick) return;
+                    this.root.updateMatrixWorld(true);
+                    hand.attach(stick);
+                    stick.name = `playing-stick-${side.toLowerCase()}`;
+                    stick.position.set(side === 'L' ? .012 : -.012, -.015, -.04);
+                    stick.rotation.set(-.22, 0, side === 'L' ? -.08 : .08);
+                    stick.userData.attachedToHand = true;
+                });
+            }
             if (this.equipment) {
                 this.equipmentStageAnchor = new T.Vector3(...position);
                 this.equipment.position.copy(this.equipmentStageAnchor);
