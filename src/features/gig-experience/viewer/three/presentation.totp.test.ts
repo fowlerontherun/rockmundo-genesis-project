@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { resolveVenueProfile } from "@/features/gig-demo-3d/venueProfile";
 import type { PerformerPlan } from "../engine/PerformerLifecycle";
-import { totpChoreographyState, totpFormation } from "./presentation";
+import { totpChoreographyState, totpFormation, totpSafeStageMark, totpStageWorldPosition } from "./presentation";
 
 function plan(): PerformerPlan {
   const base = {
@@ -62,21 +63,44 @@ function plan(): PerformerPlan {
 }
 
 describe("Top of the Pops television stage blocking", () => {
-  it("puts a singing guitarist front-centre and separates the rest of the band", () => {
+  it("uses a compact centre-weighted TV formation", () => {
     const formation = totpFormation(plan());
-    expect(formation.get("big-fowler")).toEqual({ u: .5, v: .82 });
-    expect(formation.get("luna")).toEqual({ u: .5, v: .28 });
+    expect(formation.get("big-fowler")).toEqual({ u: .5, v: .74 });
+    expect(formation.get("luna")).toEqual({ u: .5, v: .33 });
 
     const marks = [...formation.values()];
     for (let i = 0; i < marks.length; i += 1) {
       for (let j = i + 1; j < marks.length; j += 1) {
-        expect(Math.hypot(marks[i].u - marks[j].u, marks[i].v - marks[j].v)).toBeGreaterThanOrEqual(.24);
+        expect(Math.hypot(marks[i].u - marks[j].u, marks[i].v - marks[j].v)).toBeGreaterThanOrEqual(.16);
       }
     }
   });
 
+  it("maps each TOTP stage to its real physical deck centre and height", () => {
+    const venue = resolveVenueProfile({ type: "tv_studio", seed: 42 });
+
+    expect(totpStageWorldPosition("main_stage", venue, { u: .5, v: .53 })).toEqual([0, .55, -2.75]);
+    expect(totpStageWorldPosition("stage_b", venue, { u: .5, v: .54 })).toEqual([5.4, .22, 2.05]);
+    expect(totpStageWorldPosition("rock_stage", venue, { u: .5, v: .53 })).toEqual([-4.5, .28, 4.05]);
+    expect(totpStageWorldPosition("studio_floor", venue, { u: .5, v: .53 })).toEqual([1.4, .08, 5.65]);
+  });
+
+  it("clamps extreme performer marks away from scenery and stage edges", () => {
+    const venue = resolveVenueProfile({ type: "tv_studio", seed: 42 });
+
+    expect(totpSafeStageMark("stage_b", venue, { u: 0, v: 0 })).toEqual({ u: .29, v: .30 });
+    expect(totpSafeStageMark("stage_b", venue, { u: 1, v: 1 })).toEqual({ u: .71, v: .78 });
+
+    const leftBack = totpStageWorldPosition("stage_b", venue, { u: 0, v: 0 });
+    const rightFront = totpStageWorldPosition("stage_b", venue, { u: 1, v: 1 });
+    expect(leftBack[0]).toBeGreaterThan(4.6);
+    expect(rightFront[0]).toBeLessThan(6.2);
+    expect(leftBack[2]).toBeGreaterThan(1.4);
+    expect(rightFront[2]).toBeLessThan(2.7);
+  });
+
   it("keeps singer-instrumentalists planted on the stand microphone", () => {
-    const home = { u: .5, v: .82 };
+    const home = { u: .5, v: .74 };
     for (const ms of [0, 4_000, 8_000, 12_000, 16_000]) {
       const state = totpChoreographyState("guitar", "Acoustic Guitar / Lead Vocals", home, ms, 0, true);
       expect(state.mark).toEqual(home);
@@ -85,7 +109,7 @@ describe("Top of the Pops television stage blocking", () => {
   });
 
   it("uses hold-walk-plant choreography for a roaming lead vocalist", () => {
-    const home = { u: .5, v: .82 };
+    const home = { u: .5, v: .74 };
     const hold = totpChoreographyState("vocalist", "Lead Vocals", home, 2_000, 0, true);
     const walkOut = totpChoreographyState("vocalist", "Lead Vocals", home, 6_000, 0, true);
     const planted = totpChoreographyState("vocalist", "Lead Vocals", home, 9_000, 0, true);
@@ -99,7 +123,7 @@ describe("Top of the Pops television stage blocking", () => {
   });
 
   it("lets guitarists move between discrete marks instead of continuously drifting", () => {
-    const home = { u: .3, v: .66 };
+    const home = { u: .36, v: .62 };
     const firstHold = totpChoreographyState("guitar", "Electric Guitar", home, 2_000, 0, true);
     const walk = totpChoreographyState("guitar", "Electric Guitar", home, 7_000, 0, true);
     const awayHold = totpChoreographyState("guitar", "Electric Guitar", home, 10_000, 0, true);
