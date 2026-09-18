@@ -301,7 +301,7 @@ export class ConcertScene {
           travel.y = 0;
           if (travel.lengthSq() > 0.000001) {
             const targetYaw = Math.atan2(travel.x, travel.z);
-            actor.root.rotation.y = targetYaw;
+            actor.root.rotation.y = T.MathUtils.clamp(targetYaw, -.72, .72);
           }
         }
         if (!this.settings.reducedMotion && state.action === 'dance' && !this.options?.television) {
