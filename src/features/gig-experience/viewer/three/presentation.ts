@@ -41,13 +41,13 @@ function totpPreferredMarks(role: PresentationRole, instrument: string | null): 
     case 'lead_guitar':
     case 'rhythm_guitar':
     case 'guitar': return [
-      { u: .24, v: .68 },
-      { u: .76, v: .68 },
-      { u: .36, v: .57 },
-      { u: .64, v: .57 },
+      { u: .22, v: .64 },
+      { u: .78, v: .64 },
+      { u: .34, v: .54 },
+      { u: .66, v: .54 },
     ];
-    case 'bass': return [{ u: .82, v: .54 }, { u: .18, v: .54 }];
-    case 'drums': return [{ u: .50, v: .20 }, { u: .66, v: .22 }];
+    case 'bass': return [{ u: .84, v: .50 }, { u: .16, v: .50 }];
+    case 'drums': return [{ u: .50, v: .28 }, { u: .68, v: .28 }];
     case 'keyboard':
     case 'piano': return [{ u: .16, v: .31 }, { u: .84, v: .31 }];
     case 'dj':
@@ -106,12 +106,48 @@ function totpStagePoint(
   entityId: string,
   venue: VenueProfile,
   totpStage: TotpStageKey,
+  positionMs = 0,
+  performing = false,
 ): [number, number, number] {
-  const mark = totpFormation(plan).get(entityId) ?? { u: .5, v: .55 };
+  const formation = totpFormation(plan);
+  const home = formation.get(entityId) ?? { u: .5, v: .55 };
+  const entity = plan.entities.find((candidate) => candidate.id === entityId);
+  const text = (entity?.instrument ?? '').toLowerCase();
+  const singsLead = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text) || entity?.role === 'vocalist';
+  const t = positionMs / 1000 + (entity?.idlePhase ?? 0);
+
+  let mark = home;
+  if (performing && entity) {
+    if (singsLead) {
+      mark = {
+        u: clamp(home.u + Math.sin(t * .48) * .075, .37, .63),
+        v: clamp(home.v + Math.sin(t * .31 + 1.1) * .035, .74, .86),
+      };
+    } else if (['lead_guitar','rhythm_guitar','guitar'].includes(entity.role)) {
+      const direction = home.u < .5 ? 1 : -1;
+      mark = {
+        u: clamp(home.u + direction * (.018 + Math.sin(t * .42) * .032), .12, .88),
+        v: clamp(home.v + Math.cos(t * .36) * .025, .48, .70),
+      };
+    } else if (entity.role === 'bass') {
+      const direction = home.u < .5 ? 1 : -1;
+      mark = {
+        u: clamp(home.u + direction * Math.sin(t * .33) * .042, .10, .90),
+        v: clamp(home.v + Math.cos(t * .27) * .018, .44, .60),
+      };
+    } else if (entity.role === 'backing_vocals') {
+      mark = {
+        u: clamp(home.u + Math.sin(t * .29) * .025, .18, .82),
+        v: clamp(home.v + Math.cos(t * .35) * .018, .55, .70),
+      };
+    }
+  }
+
   const base = stagePosition(venue, mark.u, mark.v);
   const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
   const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .96 : totpStage === 'stage_b' ? .92 : .90;
-  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy), (base[2] - .65) * scale + .65 + dz];
+  const roleLift = entity?.role === 'drums' && totpStage !== 'studio_floor' ? .18 : 0;
+  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy + roleLift), (base[2] - .65) * scale + .65 + dz];
 }
 
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
@@ -164,7 +200,7 @@ export function concertOptions(
         displayName: p.displayName,
         ...stageAssignment(p.instrument, roleMap[p.role]),
         phase: p.idlePhase,
-        position: totp ? totpStagePoint(plan, p.id, profile, totpStage) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
+        position: totp ? totpStagePoint(plan, p.id, profile, totpStage, 0, false) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
         appearance: appearances[profileId] ?? defaultAppearance(profileId),
         richClothing: richClothing[profileId] ?? [],
       };
@@ -211,7 +247,7 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
       return {
         id: p.id,
         position: presentationMode === 'totp'
-          ? totpStagePoint(plan, p.id, profile, totpStage)
+          ? totpStagePoint(plan, p.id, profile, totpStage, positionMs, songPlaying)
           : stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile, presentationMode, totpStage),
         visible: p.visible && p.lifecycleState !== 'waiting_backstage',
         walking: ['entering', 'taking_position', 'exiting'].includes(p.lifecycleState),

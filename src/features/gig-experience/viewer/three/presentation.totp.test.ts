@@ -65,7 +65,7 @@ describe("Top of the Pops television stage blocking", () => {
   it("puts a singing guitarist front-centre and separates the rest of the band", () => {
     const formation = totpFormation(plan());
     expect(formation.get("big-fowler")).toEqual({ u: .5, v: .82 });
-    expect(formation.get("luna")).toEqual({ u: .5, v: .2 });
+    expect(formation.get("luna")).toEqual({ u: .5, v: .28 });
 
     const marks = [...formation.values()];
     for (let i = 0; i < marks.length; i += 1) {

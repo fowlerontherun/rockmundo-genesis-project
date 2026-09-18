@@ -56,9 +56,11 @@ export function buildTotpContinuityCopy(
 
   if (kind === "opening") {
     return {
-      eyebrow: "Tonight on Top of the Pops",
-      headline: `${ordered.length} charting ${ordered.length === 1 ? "act" : "acts"} live from London`,
-      body: "Every performance tonight earned its place from the locked UK streaming and digital-sales chart snapshot.",
+      eyebrow: "Tonight on Top of the Pops!",
+      headline: `${ordered.length} charting ${ordered.length === 1 ? "act" : "acts"} — live from London!`,
+      body: ordered[0]
+        ? `The studio is packed, the cameras are rolling, and we're starting with ${ordered[0].payload.band.name}! Turn it up!`
+        : "The studio is packed, the cameras are rolling, and we're ready to go!",
       nextAct: ordered[0]
         ? {
             replayId: ordered[0].id,
@@ -73,22 +75,22 @@ export function buildTotpContinuityCopy(
 
   if (kind === "between" && current && nextAct) {
     return {
-      eyebrow: "Back to the studio",
-      headline: `${current.payload.band.name} — ${current.payload.song.title}`,
-      body: `That was this week's #${current.payload.song.qualifyingRank}. Coming up, ${nextAct.bandName} perform ${nextAct.songTitle}, currently #${nextAct.chartRank}.`,
+      eyebrow: "Back in the studio!",
+      headline: `${current.payload.band.name} — ${current.payload.song.title}!`,
+      body: `What a reaction! That's this week's #${current.payload.song.qualifyingRank}. Don't go anywhere — next up, ${nextAct.bandName} with ${nextAct.songTitle}, currently #${nextAct.chartRank}!`,
       nextAct,
     };
   }
 
   const numberOne = ordered.find((replay) => Number(replay.payload.song.qualifyingRank) === 1) ?? null;
   return {
-    eyebrow: "That's all from Top of the Pops",
+    eyebrow: "What a show!",
     headline: numberOne
       ? `Tonight's #1: ${numberOne.payload.band.name}`
       : "See you for the next show",
     body: numberOne
-      ? `${numberOne.payload.song.title} closes out the programme as the highest-ranked performance of the night.`
-      : "The studio lights are going down in London. The next edition will use a fresh locked chart snapshot and a new running order.",
+      ? `${numberOne.payload.song.title} is sitting at number one! Thanks for making some noise with us tonight — we'll see you next time!`
+      : "Thanks for joining us in London! Keep the music loud and we'll see you on the next Top of the Pops!",
     nextAct: null,
   };
 }

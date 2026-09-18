@@ -165,8 +165,8 @@ export class Musician {
     }
     update(seconds: number, energy: number, reduced: boolean) {
         const t = reduced ? 0 : seconds, beat = t * Math.PI * 4;
-        const performanceScale = this.role === 'fan' ? 1 : this.role === 'drums' ? .7 : 1.35;
-        const sway = Math.sin(t * 1.6 + this.phase) * 0.026 * energy * performanceScale;
+        const performanceScale = this.role === 'fan' ? 1 : this.role === 'drums' ? .7 : this.role === 'vocals' ? 1.5 : this.role === 'guitar' || this.role === 'bass' ? 1.2 : 1.1;
+        const sway = Math.sin(t * (this.role === 'vocals' ? 1.05 : 1.6) + this.phase) * 0.026 * energy * performanceScale;
         this.rest.forEach(({ bone, quaternion, position }) => { bone.quaternion.copy(quaternion); bone.position.copy(position); });
         const torso = this.bones.get('Torso');
         if (torso)
@@ -188,10 +188,11 @@ export class Musician {
         if (hips && this.role !== 'fan' && this.role !== 'drums' && !this.walking && !reduced) {
             // Instrument players should read as playing, not pogoing. Keep their
             // feet/hips vertically planted while allowing lateral performance sway.
-            if (!this.instrumentRig || this.instrumentRig.family === 'voice') {
-                hips.position.y += Math.abs(Math.sin(beat / 2 + this.phase)) * 0.012 * energy;
-            }
-            hips.rotation.y += Math.sin(t * 1.45 + this.phase) * 0.018 * energy;
+            // Stage travel is handled by the performance blocking system. Keep feet
+            // planted vertically so singers/guitarists do not look like they are
+            // bouncing on a spring, while allowing a natural twist into the song.
+            const roleTwist = this.role === 'vocals' ? .055 : this.role === 'guitar' || this.role === 'bass' ? .035 : .018;
+            hips.rotation.y += Math.sin(t * (this.role === 'vocals' ? .82 : 1.12) + this.phase) * roleTwist * energy;
         }
         this.root.updateMatrixWorld(true);
         const rig = this.instrumentRig;
@@ -213,8 +214,19 @@ export class Musician {
             }
             this.hand('L', rig.left.getWorldPosition(new T.Vector3()), this.point(.65, .93, .15));
             this.hand('R', rig.right.getWorldPosition(new T.Vector3()), this.point(-.65, .93, .15));
-            if (rig.family === 'voice' && !reduced)
-                this.hand('L', this.point(.35, 1.0 + Math.sin(t * .8) * .16, .26), this.point(.65, 1.05, .1));
+            if (rig.family === 'voice' && !reduced) {
+                // Cycle through TV-friendly singer gestures rather than repeating one
+                // arm raise: open palm, point to crowd, hand-to-chest, then low sweep.
+                const gesture = Math.floor((t + this.phase) / 2.8) % 4;
+                const target: [number, number, number] = gesture === 0
+                    ? [.48, 1.35, .22]
+                    : gesture === 1
+                        ? [.58, 1.58, .12]
+                        : gesture === 2
+                            ? [.18, 1.28, .34]
+                            : [.42, .98, .30];
+                this.hand('L', this.point(...target), this.point(.68, 1.18, .12));
+            }
         }
         else {
             for (const side of ['L', 'R'] as const) {
