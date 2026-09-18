@@ -17,6 +17,7 @@ export interface VenueProfile {
   seating: boolean; seatRows: number; production: 'portable' | 'house' | 'touring'; accent: string;
   presenterKey?: string | null;
   showVariant?: string | null;
+  seed: number;
 }
 const aliases: Record<string, VenueKind> = { pub: 'dive_bar', club: 'rock_club', arena: 'indoor_arena', theatre: 'theatre', stadium: 'stadium', theater: 'theatre', amphitheater: 'amphitheatre', beach: 'beach_stage', festival: 'festival_stage', cafe: 'cafe_stage', bar: 'dive_bar', studio: 'tv_studio', television_studio: 'tv_studio' };
 const alias = (key: string): VenueKind | undefined => Object.prototype.hasOwnProperty.call(aliases, key) ? aliases[key] : undefined;
@@ -55,6 +56,7 @@ export function resolveVenueProfile(venue: Partial<ConcertVenue> = {}): VenuePro
       accent: '#d134a6',
       presenterKey: venue.presenterKey ?? 'alex_rayne',
       showVariant: venue.showVariant ?? 'regular',
+      seed: Number.isFinite(venue.seed) ? Number(venue.seed) : 712,
     };
   }
 
@@ -66,7 +68,8 @@ export function resolveVenueProfile(venue: Partial<ConcertVenue> = {}): VenuePro
   return { kind, label: VENUE_TYPES[kind][0], capacity, outdoor, size: ['intimate','small','medium','large','landmark'][level] as VenueProfile['size'], stageWidth, stageDepth, stageHeight,
     rigHeight: stageHeight + [3.1, 4.2, 6.5, 10, 16][level], roomWidth: stageWidth + [5, 8, 16, 30, 52][level], roomDepth: [15, 22, 36, 64, 100][level], roofHeight: [4.5, 6, 10, 16, 26][level],
     crowdWidth: ['cafe_stage','jazz_lounge'].includes(kind) ? stageWidth : stageWidth + [0, 1, 4, 12, 24][level], crowdDepth: [6, 10, 20, 38, 68][level], seating, seatRows: seating ? [2, 3, 5, 8, 12][level] : 0, production,
-    accent: ['jazz_lounge','theatre','concert_hall'].includes(kind) ? '#9c3f52' : ['park_bandstand','church_hall'].includes(kind) ? '#537c62' : kind === 'warehouse' ? '#ba7c37' : '#3b8ba5' };
+    accent: ['jazz_lounge','theatre','concert_hall'].includes(kind) ? '#9c3f52' : ['park_bandstand','church_hall'].includes(kind) ? '#537c62' : kind === 'warehouse' ? '#ba7c37' : '#3b8ba5',
+    seed: Number.isFinite(venue.seed) ? Number(venue.seed) : 712 };
 }
 /** Coordinates shared by deck, rig, fixed instruments and replay performers. */
 export function stagePosition(p: VenueProfile, u: number, v: number): [number, number, number] {
