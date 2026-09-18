@@ -184,14 +184,44 @@ function buildPerformanceZones(root: T.Group, p: VenueProfile) {
   const stageB = box(root, [4.9, .22, 3.7], [5.4, .11, 2.05], blue);
   stageB.name = 'totp-zone-stage-b';
   box(root, [4.4, 1.7, .12], [5.4, 1.45, .28], blue).name = 'totp-stage-b-backdrop';
+  for (const x of [3.55, 4.45, 5.35, 6.25, 7.15]) {
+    const strip = box(root, [.055, 2.25, .07], [x, 1.65, .38], x === 5.35 ? magenta : blue);
+    strip.name = 'totp-stage-b-light-strip';
+  }
+  const stageBRing = new T.Mesh(new T.TorusGeometry(1.45, .055, 10, 48), magenta);
+  stageBRing.position.set(5.4, 1.75, .2);
+  stageBRing.name = 'totp-stage-b-ring';
+  root.add(stageBRing);
 
   const rock = box(root, [6.2, .28, 4.7], [-4.5, .14, 4.05], black);
   rock.name = 'totp-zone-rock-stage';
   for (const x of [-6.4, -4.5, -2.6]) rod(root, [x, .28, 2.2], [x, 4.5, 2.2], .055, steel);
   box(root, [5.8, 1.5, .14], [-4.5, 2.0, 1.72], amber).name = 'totp-rock-stage-backdrop';
+  for (const side of [-1, 1]) {
+    const towerX = -4.5 + side * 2.25;
+    for (let level = 0; level < 3; level += 1) {
+      const amp = box(root, [.85, .62, .42], [towerX, .62 + level * .67, 2.55], black);
+      amp.name = 'totp-rock-amp-stack';
+      box(amp, [.74, .5, .025], [0, 0, .225], steel);
+    }
+  }
+  for (let index = 0; index < 7; index += 1) {
+    const bar = box(root, [.055, 2.0 + (index % 3) * .35, .06], [-6.0 + index * .5, 2.15, 1.82], amber);
+    bar.rotation.z = (index - 3) * .035;
+  }
 
   const floorDisc = cylinder(root, 2.85, 3.05, .08, [1.4, .04, 5.65], magenta, 40);
   floorDisc.name = 'totp-zone-studio-floor';
+  const floorRingOuter = new T.Mesh(new T.TorusGeometry(2.65, .045, 10, 56), blue);
+  floorRingOuter.rotation.x = Math.PI / 2;
+  floorRingOuter.position.set(1.4, .1, 5.65);
+  floorRingOuter.name = 'totp-studio-floor-ring-outer';
+  root.add(floorRingOuter);
+  const floorRingInner = new T.Mesh(new T.TorusGeometry(1.75, .035, 10, 48), amber);
+  floorRingInner.rotation.x = Math.PI / 2;
+  floorRingInner.position.set(1.4, .105, 5.65);
+  floorRingInner.name = 'totp-studio-floor-ring-inner';
+  root.add(floorRingInner);
   for (let i = 0; i < 10; i++) {
     const a = i / 10 * Math.PI * 2;
     cylinder(root, .045, .045, .06, [1.4 + Math.cos(a) * 2.65, .11, 5.65 + Math.sin(a) * 2.65], blue, 10);
