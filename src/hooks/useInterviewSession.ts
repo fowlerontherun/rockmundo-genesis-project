@@ -216,11 +216,16 @@ export const useInterviewSession = () => {
       });
       if (resultError) throw resultError;
 
-      const { error: completeError } = await supabase
+      const { data: completedOffer, error: completeError } = await supabase
         .from("pr_media_offers")
         .update({ interview_completed: true } as any)
-        .eq("id", pending.offerId);
+        .eq("id", pending.offerId)
+        .select("id")
+        .maybeSingle();
       if (completeError) throw completeError;
+      if (!completedOffer) {
+        throw new Error("The interview result was saved, but the PR appearance could not be marked complete. Please try again.");
+      }
 
       const fameChange = Math.round(pending.fameBoost * (totalEffects.fame_mult - 1));
       const cashChange = Math.round(pending.compensation * (totalEffects.cash_mult - 1));
