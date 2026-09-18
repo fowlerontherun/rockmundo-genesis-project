@@ -186,7 +186,11 @@ export class Musician {
         }
         const hips = this.bones.get('Hips');
         if (hips && this.role !== 'fan' && this.role !== 'drums' && !this.walking && !reduced) {
-            hips.position.y += Math.abs(Math.sin(beat / 2 + this.phase)) * 0.014 * energy;
+            // Instrument players should read as playing, not pogoing. Keep their
+            // feet/hips vertically planted while allowing lateral performance sway.
+            if (!this.instrumentRig || this.instrumentRig.family === 'voice') {
+                hips.position.y += Math.abs(Math.sin(beat / 2 + this.phase)) * 0.012 * energy;
+            }
             hips.rotation.y += Math.sin(t * 1.45 + this.phase) * 0.018 * energy;
         }
         this.root.updateMatrixWorld(true);
