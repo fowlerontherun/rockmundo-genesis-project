@@ -31,13 +31,13 @@ BEGIN
         jsonb_agg(
           jsonb_build_object(
             'profile_id', bm.profile_id,
-            'display_name', coalesce(nullif(p.stage_name, ''), nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), 'Band member'),
+            'display_name', coalesce(nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), 'Band member'),
             'role', coalesce(nullif(bm.role, ''), 'member'),
             'instrument_role', bm.instrument_role,
             'vocal_role', bm.vocal_role,
             'is_touring_member', coalesce(bm.is_touring_member, false)
           )
-          ORDER BY coalesce(nullif(p.stage_name, ''), nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), ''), bm.id
+          ORDER BY coalesce(nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), ''), bm.id
         ),
         '[]'::jsonb
       ) AS members
@@ -114,12 +114,12 @@ BEGIN
 
   SELECT coalesce(jsonb_agg(jsonb_build_object(
       'profile_id', bm.profile_id,
-      'display_name', coalesce(nullif(p.stage_name, ''), nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), 'Band member'),
+      'display_name', coalesce(nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), 'Band member'),
       'role', coalesce(nullif(bm.instrument_role, ''), nullif(bm.vocal_role, ''), nullif(bm.role, ''), 'performer'),
       'instrument_role', bm.instrument_role,
       'vocal_role', bm.vocal_role,
       'is_touring_member', coalesce(bm.is_touring_member, false)
-    ) ORDER BY coalesce(nullif(p.stage_name, ''), nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), ''), bm.id), '[]'::jsonb)
+    ) ORDER BY coalesce(nullif(p.display_name, ''), nullif(p.username, ''), nullif(bm.role, ''), ''), bm.id), '[]'::jsonb)
   INTO v_members
   FROM public.band_members bm
   LEFT JOIN public.profiles p ON p.id = bm.profile_id
