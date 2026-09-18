@@ -51,15 +51,20 @@ export function TotpStageTransition({
     if (!autoPlay || typeof window === "undefined") return;
     let frame = 0;
     let previous = performance.now();
+    let ended = false;
     const tick = (now: number) => {
+      if (ended) return;
       const delta = now - previous;
       previous = now;
       setElapsedMs((current) => {
         const next = Math.min(DURATION_MS, current + delta);
-        if (next >= DURATION_MS) queueMicrotask(() => onEnded?.());
+        if (next >= DURATION_MS) {
+          ended = true;
+          queueMicrotask(() => onEnded?.());
+        }
         return next;
       });
-      frame = requestAnimationFrame(tick);
+      if (!ended) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
