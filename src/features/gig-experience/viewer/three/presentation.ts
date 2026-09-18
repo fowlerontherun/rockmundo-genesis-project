@@ -195,6 +195,63 @@ export function totpChoreographyState(
   return { mark: home, walking: false };
 }
 
+export function totpLiveMarks(
+  plan: PerformerPlan,
+  positionMs: number,
+  performing: boolean,
+): Map<string, TotpStageMark> {
+  const formation = totpFormation(plan);
+  const states = plan.entities.map((entity) => {
+    const home = formation.get(entity.id) ?? { u: .5, v: .55 };
+    const choreography = totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, performing);
+    const assignment = stageAssignment(entity.instrument, roleMap[entity.role]);
+    const text = (entity.instrument ?? '').toLowerCase();
+    const micLocked = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text)
+      && /(guitar|bass|ukulele|banjo|mandolin|keytar)/.test(text);
+    return {
+      entity,
+      mark: { ...choreography.mark },
+      footprint: totpPerformerFootprint(entity.role, entity.instrument),
+      fixed: assignment.stationary || micLocked,
+    };
+  });
+
+  // Resolve residual occupied-volume overlaps caused by live choreography.
+  // Fixed rigs (drums/keys) and singer-at-stand-mic positions stay anchored;
+  // movable players absorb the separation instead.
+  for (let pass = 0; pass < 4; pass += 1) {
+    for (let i = 0; i < states.length; i += 1) {
+      for (let j = i + 1; j < states.length; j += 1) {
+        const a = states[i], b = states[j];
+        const requiredU = a.footprint.u + b.footprint.u;
+        const requiredV = a.footprint.v + b.footprint.v;
+        let du = a.mark.u - b.mark.u;
+        let dv = a.mark.v - b.mark.v;
+        const normalized = Math.hypot(du / requiredU, dv / requiredV);
+        if (normalized >= 1) continue;
+
+        if (Math.abs(du) + Math.abs(dv) < .001) {
+          du = a.entity.id.localeCompare(b.entity.id) <= 0 ? -.01 : .01;
+          dv = .006;
+        }
+        const length = Math.hypot(du / requiredU, dv / requiredV) || 1;
+        const push = (1 - length) * .52;
+        const pushU = (du / Math.max(.001, Math.abs(du) + Math.abs(dv))) * requiredU * push;
+        const pushV = (dv / Math.max(.001, Math.abs(du) + Math.abs(dv))) * requiredV * push;
+
+        const aWeight = a.fixed ? 0 : b.fixed ? 1 : .5;
+        const bWeight = b.fixed ? 0 : a.fixed ? 1 : .5;
+        a.mark.u = clamp(a.mark.u + pushU * aWeight, .22, .78);
+        a.mark.v = clamp(a.mark.v + pushV * aWeight, .24, .84);
+        b.mark.u = clamp(b.mark.u - pushU * bWeight, .22, .78);
+        b.mark.v = clamp(b.mark.v - pushV * bWeight, .24, .84);
+      }
+    }
+  }
+
+  return new Map(states.map(({ entity, mark }) => [entity.id, mark]));
+}
+
 function totpStagePoint(
   plan: PerformerPlan,
   entityId: string,
@@ -203,13 +260,10 @@ function totpStagePoint(
   positionMs = 0,
   performing = false,
 ): [number, number, number] {
-  const formation = totpFormation(plan);
-  const home = formation.get(entityId) ?? { u: .5, v: .55 };
+  const live = totpLiveMarks(plan, positionMs, performing);
   const entity = plan.entities.find((candidate) => candidate.id === entityId);
-  const choreography = entity
-    ? totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, performing)
-    : { mark: home, walking: false };
-  return totpStageWorldPosition(totpStage, venue, choreography.mark, entity?.role);
+  const mark = live.get(entityId) ?? { u: .5, v: .55 };
+  return totpStageWorldPosition(totpStage, venue, mark, entity?.role);
 }
 
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
