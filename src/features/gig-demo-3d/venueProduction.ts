@@ -10,7 +10,7 @@ export function productionLayout(p: VenueProfile) {
     return { tier, rows: [1, 1, 2, 3, 4][tier], columns: [2, 4, 6, 10, 14][tier], arrayBoxes: [0, 2, 4, 8, 12][tier], subs: [0, 2, 4, 8, 14][tier], monitors: [2, 3, 4, 6, 8][tier], wings: tier >= 3, runway: tier >= 4 && ['stadium', 'festival_stage', 'indoor_arena'].includes(p.kind) };
 }
 function totpSetVariant(p: VenueProfile): 0 | 1 | 2 {
-    const key = `${p.showVariant ?? 'regular'}:${p.presenterKey ?? 'alex_rayne'}`;
+    const key = `${p.showVariant ?? 'regular'}:${p.presenterKey ?? 'alex_rayne'}:${p.seed}`;
     let hash = 0;
     for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
     return (hash % 3) as 0 | 1 | 2;
