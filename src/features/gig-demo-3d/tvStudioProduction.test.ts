@@ -35,6 +35,8 @@ describe('Top of the Pops TV studio production', () => {
 
     const monitors = root.children.filter((child) => child.name === 'totp-studio-monitor');
     expect(monitors).toHaveLength(3);
+    const screens = monitors.map((monitor) => monitor.getObjectByName('totp-studio-monitor-screen'));
+    expect(screens.every(Boolean)).toBe(true);
   });
 
   it('builds the locked guest presenter instead of Alex for guest-host editions', () => {
