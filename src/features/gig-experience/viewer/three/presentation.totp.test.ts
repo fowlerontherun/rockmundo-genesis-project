@@ -65,13 +65,13 @@ function plan(): PerformerPlan {
 describe("Top of the Pops television stage blocking", () => {
   it("uses a compact centre-weighted TV formation", () => {
     const formation = totpFormation(plan());
-    expect(formation.get("big-fowler")).toEqual({ u: .5, v: .74 });
-    expect(formation.get("luna")).toEqual({ u: .5, v: .33 });
+    expect(formation.get("big-fowler")).toEqual({ u: .5, v: .78 });
+    expect(formation.get("luna")).toEqual({ u: .5, v: .28 });
 
     const marks = [...formation.values()];
     for (let i = 0; i < marks.length; i += 1) {
       for (let j = i + 1; j < marks.length; j += 1) {
-        expect(Math.hypot(marks[i].u - marks[j].u, marks[i].v - marks[j].v)).toBeGreaterThanOrEqual(.16);
+        expect(Math.hypot(marks[i].u - marks[j].u, marks[i].v - marks[j].v)).toBeGreaterThanOrEqual(.22);
       }
     }
   });
@@ -100,7 +100,7 @@ describe("Top of the Pops television stage blocking", () => {
   });
 
   it("keeps singer-instrumentalists planted on the stand microphone", () => {
-    const home = { u: .5, v: .74 };
+    const home = { u: .5, v: .78 };
     for (const ms of [0, 4_000, 8_000, 12_000, 16_000]) {
       const state = totpChoreographyState("guitar", "Acoustic Guitar / Lead Vocals", home, ms, 0, true);
       expect(state.mark).toEqual(home);
@@ -109,7 +109,7 @@ describe("Top of the Pops television stage blocking", () => {
   });
 
   it("uses hold-walk-plant choreography for a roaming lead vocalist", () => {
-    const home = { u: .5, v: .74 };
+    const home = { u: .5, v: .78 };
     const hold = totpChoreographyState("vocalist", "Lead Vocals", home, 2_000, 0, true);
     const walkOut = totpChoreographyState("vocalist", "Lead Vocals", home, 6_000, 0, true);
     const planted = totpChoreographyState("vocalist", "Lead Vocals", home, 9_000, 0, true);
@@ -123,7 +123,7 @@ describe("Top of the Pops television stage blocking", () => {
   });
 
   it("lets guitarists move between discrete marks instead of continuously drifting", () => {
-    const home = { u: .36, v: .62 };
+    const home = { u: .34, v: .64 };
     const firstHold = totpChoreographyState("guitar", "Electric Guitar", home, 2_000, 0, true);
     const walk = totpChoreographyState("guitar", "Electric Guitar", home, 7_000, 0, true);
     const awayHold = totpChoreographyState("guitar", "Electric Guitar", home, 10_000, 0, true);
