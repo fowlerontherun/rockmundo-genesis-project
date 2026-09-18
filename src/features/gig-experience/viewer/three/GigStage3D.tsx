@@ -98,13 +98,14 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
     setStatus('loading'); setMessage('');
     try {
       const scene = new ConcertScene(canvas.current, latest.current.settings, () => {}, (state, error) => { if (alive) { setStatus(state); setMessage(error ?? ''); } }, options);
-      renderer.current = scene; scene.setFrame(latest.current.frame); scene.setEffects(latest.current.pyrotechnics, latest.current.pyroIntensity); scene.setCrowdTuning(latest.current.tuning);
+      renderer.current = scene; scene.setFrame(latest.current.frame); scene.setEffects(latest.current.pyrotechnics, latest.current.pyroIntensity); scene.setCrowdTuning(latest.current.tuning); scene.setTelevisionMonitorContent(totpMonitorPrimary, totpMonitorSecondary, totpCueType);
     } catch { setStatus('error'); setMessage('3D graphics could not start on this device. Try again or use the timeline and playback controls below.'); }
     return () => { alive = false; renderer.current?.destroy(); renderer.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionsKey, attempt, waiting]);
 
   useEffect(() => { renderer.current?.setSettings(settings); renderer.current?.setFrame(frame); renderer.current?.setEffects(pyrotechnics, pyroIntensity); renderer.current?.setCrowdTuning(tuning); });
+  useEffect(() => { renderer.current?.setTelevisionMonitorContent(totpMonitorPrimary, totpMonitorSecondary, totpCueType); }, [totpCueType, totpMonitorPrimary, totpMonitorSecondary]);
 
   const isTotp = presentationMode === 'totp';
   const presenter = resolveTotpPresenter(totpPresenterKey);
