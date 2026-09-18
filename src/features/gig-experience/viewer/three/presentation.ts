@@ -101,6 +101,71 @@ export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
   return assigned;
 }
 
+type TotpChoreographyState = { mark: TotpStageMark; walking: boolean };
+
+function lerpMark(a: TotpStageMark, b: TotpStageMark, amount: number): TotpStageMark {
+  const t = clamp(amount);
+  return { u: a.u + (b.u - a.u) * t, v: a.v + (b.v - a.v) * t };
+}
+
+function smoothStep(amount: number): number {
+  const t = clamp(amount);
+  return t * t * (3 - 2 * t);
+}
+
+export function totpChoreographyState(
+  role: PresentationRole,
+  instrument: string | null,
+  home: TotpStageMark,
+  positionMs: number,
+  idlePhase = 0,
+  performing = false,
+): TotpChoreographyState {
+  if (!performing) return { mark: home, walking: false };
+
+  const text = (instrument ?? '').toLowerCase();
+  const singsLead = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text) || role === 'vocalist';
+  const singsWhilePlaying = singsLead && /(guitar|bass|ukulele|banjo|mandolin|keytar)/.test(text);
+
+  // Singer-instrumentalists stay planted on their stand mic. Their expressive
+  // motion is handled by the skeleton/torso animation rather than root travel.
+  if (singsLead && singsWhilePlaying) return { mark: home, walking: false };
+
+  const direction = home.u < .5 ? 1 : -1;
+  let away = home;
+  if (singsLead) {
+    away = { u: clamp(home.u + direction * .085, .39, .61), v: clamp(home.v - .045, .72, .86) };
+  } else if (['lead_guitar','rhythm_guitar','guitar'].includes(role)) {
+    away = { u: clamp(home.u + direction * .075, .24, .76), v: clamp(home.v - .035, .48, .70) };
+  } else if (role === 'bass') {
+    away = { u: clamp(home.u + direction * .06, .24, .76), v: clamp(home.v + .025, .44, .62) };
+  } else {
+    return { mark: home, walking: false };
+  }
+
+  // Each role runs a deterministic stage route: hold at home, walk to a second
+  // mark, plant and perform there, then walk back. No continuous drifting.
+  const cycleMs = singsLead ? 16_000 : role === 'bass' ? 20_000 : 18_000;
+  const phaseOffset = Math.abs(idlePhase % 1) * cycleMs * .34;
+  const cycle = (positionMs + phaseOffset) % cycleMs;
+  const holdHomeEnd = cycleMs * .34;
+  const walkOutEnd = cycleMs * .48;
+  const holdAwayEnd = cycleMs * .78;
+  const walkHomeEnd = cycleMs * .92;
+
+  if (cycle < holdHomeEnd) return { mark: home, walking: false };
+  if (cycle < walkOutEnd) {
+    const progress = smoothStep((cycle - holdHomeEnd) / (walkOutEnd - holdHomeEnd));
+    return { mark: lerpMark(home, away, progress), walking: true };
+  }
+  if (cycle < holdAwayEnd) return { mark: away, walking: false };
+  if (cycle < walkHomeEnd) {
+    const progress = smoothStep((cycle - holdAwayEnd) / (walkHomeEnd - holdAwayEnd));
+    return { mark: lerpMark(away, home, progress), walking: true };
+  }
+  return { mark: home, walking: false };
+}
+
 function totpStagePoint(
   plan: PerformerPlan,
   entityId: string,
@@ -112,46 +177,10 @@ function totpStagePoint(
   const formation = totpFormation(plan);
   const home = formation.get(entityId) ?? { u: .5, v: .55 };
   const entity = plan.entities.find((candidate) => candidate.id === entityId);
-  const text = (entity?.instrument ?? '').toLowerCase();
-  const singsLead = /lead\s+(vocals?|singer)|lead\s+vocalist|frontperson|front\s+(man|woman)/.test(text) || entity?.role === 'vocalist';
-  const singsWhilePlaying = singsLead && /(guitar|bass|ukulele|banjo|mandolin|keytar)/.test(text);
-  const t = positionMs / 1000 + (entity?.idlePhase ?? 0);
-
-  let mark = home;
-  if (performing && entity) {
-    if (singsLead && singsWhilePlaying) {
-      // Singer-instrumentalists perform into a fixed stand mic. Give them body
-      // movement, not cross-stage travel, so the mic never appears to drift.
-      mark = {
-        u: clamp(home.u + Math.sin(t * .42) * .012, .47, .53),
-        v: clamp(home.v + Math.sin(t * .28 + 1.1) * .008, .79, .84),
-      };
-    } else if (singsLead) {
-      mark = {
-        u: clamp(home.u + Math.sin(t * .48) * .055, .40, .60),
-        v: clamp(home.v + Math.sin(t * .31 + 1.1) * .035, .74, .86),
-      };
-    } else if (['lead_guitar','rhythm_guitar','guitar'].includes(entity.role)) {
-      const direction = home.u < .5 ? 1 : -1;
-      mark = {
-        u: clamp(home.u + direction * (.012 + Math.sin(t * .42) * .024), .24, .76),
-        v: clamp(home.v + Math.cos(t * .36) * .025, .48, .70),
-      };
-    } else if (entity.role === 'bass') {
-      const direction = home.u < .5 ? 1 : -1;
-      mark = {
-        u: clamp(home.u + direction * Math.sin(t * .33) * .03, .24, .76),
-        v: clamp(home.v + Math.cos(t * .27) * .018, .44, .60),
-      };
-    } else if (entity.role === 'backing_vocals') {
-      mark = {
-        u: clamp(home.u + Math.sin(t * .29) * .025, .18, .82),
-        v: clamp(home.v + Math.cos(t * .35) * .018, .55, .70),
-      };
-    }
-  }
-
-  const base = stagePosition(venue, mark.u, mark.v);
+  const choreography = entity
+    ? totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, performing)
+    : { mark: home, walking: false };
+  const base = stagePosition(venue, choreography.mark.u, choreography.mark.v);
   const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
   const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .96 : totpStage === 'stage_b' ? .92 : .90;
   const roleLift = entity?.role === 'drums' && totpStage !== 'studio_floor' ? .18 : 0;
@@ -260,9 +289,11 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
         visible: p.visible && p.lifecycleState !== 'waiting_backstage',
         walking: ['entering', 'taking_position', 'exiting'].includes(p.lifecycleState)
           || (presentationMode === 'totp' && songPlaying && !fixed && (() => {
-            const home = totpStagePoint(plan, p.id, profile, totpStage, 0, false);
-            const live = totpStagePoint(plan, p.id, profile, totpStage, positionMs, true);
-            return Math.hypot(live[0] - home[0], live[2] - home[2]) > .08;
+            const entity = plan.entities.find((candidate) => candidate.id === p.id);
+            const home = totpFormation(plan).get(p.id) ?? { u: .5, v: .55 };
+            return entity
+              ? totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, true).walking
+              : false;
           })()),
         action: itemPayload && (!itemPayload.performerId ? p.id === (focusId ?? plan.entities.find(e => e.role === 'vocalist')?.id ?? plan.entities[0]?.id) : itemPayload.performerId === p.id) ? itemPayload.action : null,
         actionProgress: item ? progress(item) : 0,
