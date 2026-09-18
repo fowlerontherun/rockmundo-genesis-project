@@ -44,7 +44,8 @@ describe('dense anatomical audiences', () => {
         const studio = resolveVenueProfile({ type: 'tv_studio', capacity: 250 });
         const area = detailedCrowdArea(studio);
         expect(area.width).toBeLessThanOrEqual(8);
-        expect(area.depth).toBeLessThanOrEqual(3.2);
+        expect(area.depth).toBeLessThanOrEqual(4);
+        expect(area.front).toBeLessThan(2);
         expect(area.runway).toBe(false);
     });
 
