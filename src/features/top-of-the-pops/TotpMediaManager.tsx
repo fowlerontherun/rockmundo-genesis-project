@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Film, Loader2, Mic2, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, Film, Loader2, Mic2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,8 +34,9 @@ const PRESENTER_SLOTS: Array<{ slot: TotpPresenterAudioSlot; label: string; desc
 export function TotpMediaManager({ presenterKey = "alex_rayne" }: { presenterKey?: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const refs = useRef<Record<string, HTMLInputElement | null>>({});
   const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
+  const [uploadNames, setUploadNames] = useState<Record<string, string>>({});
 
   const slots = useMemo<MediaSlot[]>(() => [
     {
@@ -74,24 +75,44 @@ export function TotpMediaManager({ presenterKey = "alex_rayne" }: { presenterKey
 
   const upload = useMutation({
     mutationFn: async ({ slot, file }: { slot: MediaSlot; file: File }) => {
+      if (file.size <= 0) throw new Error("The selected file is empty.");
+      if (file.size > 50 * 1024 * 1024) throw new Error("The selected file is larger than the 50 MB Top of the Pops media limit.");
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error("Your admin session has expired. Sign in again and retry the upload.");
+
       const contentType = await detectTotpUploadMime(file);
-      if (slot.kind === "video" && !contentType.startsWith("video/")) throw new Error("Choose a video file for the programme intro.");
-      if (slot.kind === "audio" && !contentType.startsWith("audio/")) throw new Error("Choose an audio file for the presenter line.");
+      if (slot.kind === "video" && !contentType.startsWith("video/")) {
+        throw new Error(`This file was detected as ${contentType || "an unknown format"}. Choose a WebM or MP4 video.`);
+      }
+      if (slot.kind === "audio" && !contentType.startsWith("audio/")) {
+        throw new Error(`This file was detected as ${contentType || "an unknown format"}. Choose an MP3, WAV, OGG, WebM or M4A audio file.`);
+      }
+
       const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(slot.path, file, {
         upsert: true,
         contentType,
         cacheControl: "3600",
       });
-      if (error) throw error;
+      if (error) throw new Error(`${error.message} [${contentType}, ${(file.size / 1024 / 1024).toFixed(1)} MB]`);
       return slot;
     },
-    onMutate: ({ slot }) => setUploading(slot.id),
+    onMutate: ({ slot, file }) => {
+      setUploading(slot.id);
+      setUploadNames((current) => ({ ...current, [slot.id]: file.name }));
+      setUploadErrors((current) => {
+        const next = { ...current };
+        delete next[slot.id];
+        return next;
+      });
+    },
     onSuccess: (slot) => {
       toast({ title: "TOTP media uploaded", description: `${slot.label} is now available to the programme.` });
       void queryClient.invalidateQueries({ queryKey: ["totp", "media-assets"] });
       setUploading(null);
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      setUploadErrors((current) => ({ ...current, [variables.slot.id]: error.message }));
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
       setUploading(null);
     },
@@ -125,27 +146,59 @@ export function TotpMediaManager({ presenterKey = "alex_rayne" }: { presenterKey
               </div>
               {exists && slot.kind === "audio" ? <audio className="mt-3 h-8 w-full" controls preload="none" src={url} /> : null}
               {exists && slot.kind === "video" ? <video className="mt-3 aspect-video w-full rounded bg-black object-contain" controls preload="metadata" src={url} /> : null}
+              <label
+                htmlFor={`totp-media-${slot.id}`}
+                className={`mt-3 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed px-4 py-4 text-center transition-colors hover:bg-muted/40 ${uploading === slot.id ? "pointer-events-none opacity-60" : ""}`}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "copy";
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const file = event.dataTransfer.files?.[0];
+                  if (file) upload.mutate({ slot, file });
+                }}
+              >
+                {uploading === slot.id ? <Loader2 className="mb-2 h-5 w-5 animate-spin" /> : <Upload className="mb-2 h-5 w-5" />}
+                <span className="text-sm font-medium">
+                  {uploading === slot.id ? "Uploading…" : exists ? "Choose a replacement file" : "Choose a file to upload"}
+                </span>
+                <span className="mt-1 text-xs text-muted-foreground">
+                  {slot.kind === "video" ? "WebM or MP4 · maximum 50 MB" : "MP3, WAV, OGG, WebM or M4A · maximum 50 MB"}
+                </span>
+                {uploadNames[slot.id] ? <span className="mt-1 max-w-full truncate text-xs text-muted-foreground">{uploadNames[slot.id]}</span> : null}
+              </label>
               <input
-                ref={(node) => { refs.current[slot.id] = node; }}
-                className="hidden"
+                id={`totp-media-${slot.id}`}
+                className="sr-only"
                 type="file"
                 accept={slot.accept}
+                disabled={uploading === slot.id}
                 onChange={(event) => {
-                  const file = event.target.files?.[0];
+                  const file = event.currentTarget.files?.[0];
                   if (file) upload.mutate({ slot, file });
                   event.currentTarget.value = "";
                 }}
               />
-              <Button
-                className="mt-3"
-                size="sm"
-                variant="outline"
-                disabled={uploading === slot.id}
-                onClick={() => refs.current[slot.id]?.click()}
-              >
-                {uploading === slot.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                {exists ? "Replace" : "Upload"}
-              </Button>
+              {uploadErrors[slot.id] ? (
+                <div className="mt-2 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{uploadErrors[slot.id]}</span>
+                </div>
+              ) : null}
+              {uploading !== slot.id ? (
+                <Button
+                  asChild
+                  className="mt-2"
+                  size="sm"
+                  variant="outline"
+                >
+                  <label htmlFor={`totp-media-${slot.id}`} className="cursor-pointer">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {exists ? "Replace" : "Browse files"}
+                  </label>
+                </Button>
+              ) : null}
             </div>
           );
         })}
