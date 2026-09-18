@@ -26,6 +26,9 @@ interface Props {
 export function RichClothingPreview({ appearance, item, variant, onStatusChange }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const api = useRef<PreviewApi | null>(null);
+  const liveScene = useRef<{ scene: T.Scene; garment: T.Group | null; ready: boolean } | null>(null);
+  const latestPreview = useRef({ item, variant });
+  latestPreview.current = { item, variant };
   const [status, setStatus] = useState<RichClothingPreviewStatus>('loading');
   const [attempt, setAttempt] = useState(0);
 
@@ -42,6 +45,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     let controls: OrbitControls | undefined;
     let observer: ResizeObserver | undefined;
     const scene = new T.Scene();
+    liveScene.current = { scene, garment: null, ready: false };
     const camera = new T.PerspectiveCamera(35, 1, .05, 30);
     const element = canvas.current;
     const onContextLost = (event: Event) => {
@@ -118,9 +122,14 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
         library = loaded;
         const base = assemblePlayerModel(library, appearance);
         scene.add(base);
-        garment = buildProceduralGarment(item, variant);
+        const currentPreview = latestPreview.current;
+        garment = buildProceduralGarment(currentPreview.item, currentPreview.variant);
         garment.scale.y *= appearance.body.height;
         scene.add(garment);
+        if (liveScene.current) {
+          liveScene.current.garment = garment;
+          liveScene.current.ready = true;
+        }
         api.current = {
           rotate: angle => {
             camera.position.sub(controls!.target).applyAxisAngle(new T.Vector3(0, 1, 0), angle).add(controls!.target);
@@ -155,12 +164,27 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       environment?.dispose();
       renderer?.dispose();
       api.current = null;
+      liveScene.current = null;
     };
-  }, [appearance, item, variant, attempt]);
+  }, [appearance, attempt]);
 
-  return <div className="player-model-preview">
+  useEffect(() => {
+    const live = liveScene.current;
+    if (!live?.ready) return;
+    if (live.garment) {
+      live.scene.remove(live.garment);
+      disposeProceduralGarment(live.garment);
+    }
+    const next = buildProceduralGarment(item, variant);
+    next.scale.y *= appearance.body.height;
+    live.scene.add(next);
+    live.garment = next;
+  }, [item, variant, appearance.body.height]);
+
+  return <div className="player-model-preview" style={{ position: "relative", width: "100%", height: "100%", minHeight: 520 }}>
     <canvas
       ref={canvas}
+      style={{ display: "block", width: "100%", height: "100%", minHeight: 520 }}
       tabIndex={0}
       role="img"
       aria-label={`${item.name} on your avatar. Drag to rotate 360 degrees and scroll to zoom.`}
