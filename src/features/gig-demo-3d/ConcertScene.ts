@@ -1,4 +1,5 @@
 import { stageLightPositions } from './venueProduction';
+import { updateTvStudioMonitors } from './tvStudioProduction';
 import { updateVenueAudience } from './venueAudience';
 import * as T from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -186,6 +187,10 @@ export class ConcertScene {
     if (next.reducedMotion && this.sceneKey !== 'front') this.sceneKey = 'front';
   }
   setCrowdTuning(tuning: Partial<CrowdTuningOptions>) { this.crowdTuning = tuning; }
+  setTelevisionMonitorContent(primary: string | null, secondary: string | null, mode: string) {
+    if (!this.options?.television || this.venueProfile?.kind !== 'tv_studio') return;
+    updateTvStudioMonitors(this.scene, primary?.trim() || 'TOP OF THE POPS', secondary?.trim() || 'LIVE FROM LONDON', mode);
+  }
   setFrame(frame: ConcertFrame) { this.playback = frame; this.seconds = Math.max(0, frame.positionMs / 1000); }
   setEffects(enabled: boolean, intensity = 1) { this.effectsEnabled = enabled; this.effectsIntensity = T.MathUtils.clamp(intensity, 0, 1); }
   restart() { this.seconds = 0; this.last = 0; }

@@ -27,12 +27,12 @@ const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   push_in: 'tv_push_in', pull_back: 'front', finale_wide: 'tv_crane',
 };
 
-export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', playerModelsSnapshot = null }: {
+export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState;
   reducedMotion: boolean; cameraMode: GigViewerCameraMode; tier: PerformanceTier; archetype: string;
   tuning: CrowdTuningOptions; pyrotechnics: boolean; pyroIntensity: number;
   presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
-  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: 'presenter' | 'graphic' | 'performance' | 'audience';
+  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: 'presenter' | 'graphic' | 'performance' | 'audience'; totpMonitorPrimary?: string | null; totpMonitorSecondary?: string | null;
   /** Frozen render-only performer models, used by historical broadcasts instead of current player cosmetics. */
   playerModelsSnapshot?: GigPlayerModelsData | null;
 }) {
@@ -98,13 +98,14 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
     setStatus('loading'); setMessage('');
     try {
       const scene = new ConcertScene(canvas.current, latest.current.settings, () => {}, (state, error) => { if (alive) { setStatus(state); setMessage(error ?? ''); } }, options);
-      renderer.current = scene; scene.setFrame(latest.current.frame); scene.setEffects(latest.current.pyrotechnics, latest.current.pyroIntensity); scene.setCrowdTuning(latest.current.tuning);
+      renderer.current = scene; scene.setFrame(latest.current.frame); scene.setEffects(latest.current.pyrotechnics, latest.current.pyroIntensity); scene.setCrowdTuning(latest.current.tuning); scene.setTelevisionMonitorContent(totpMonitorPrimary, totpMonitorSecondary, totpCueType);
     } catch { setStatus('error'); setMessage('3D graphics could not start on this device. Try again or use the timeline and playback controls below.'); }
     return () => { alive = false; renderer.current?.destroy(); renderer.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionsKey, attempt, waiting]);
 
   useEffect(() => { renderer.current?.setSettings(settings); renderer.current?.setFrame(frame); renderer.current?.setEffects(pyrotechnics, pyroIntensity); renderer.current?.setCrowdTuning(tuning); });
+  useEffect(() => { renderer.current?.setTelevisionMonitorContent(totpMonitorPrimary, totpMonitorSecondary, totpCueType); }, [totpCueType, totpMonitorPrimary, totpMonitorSecondary]);
 
   const isTotp = presentationMode === 'totp';
   const presenter = resolveTotpPresenter(totpPresenterKey);
