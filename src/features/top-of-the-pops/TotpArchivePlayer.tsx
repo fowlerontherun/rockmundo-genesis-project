@@ -32,7 +32,7 @@ function lockedAudienceReaction(source: TotpBroadcastReplay): number {
 function lockedPresenterKey(source: TotpBroadcastReplay): string { return String(source.payload.presenterKey ?? source.presenter_key ?? "alex_rayne"); }
 function lockedShowVariant(source: TotpBroadcastReplay): string { return String(source.payload.showVariant ?? "regular"); }
 
-function memberStageDuty(member: TotpBroadcastReplay["payload"]["band"]["members"][number], members: TotpBroadcastReplay["payload"]["band"]["members"]): string {
+export function memberStageDuty(member: TotpBroadcastReplay["payload"]["band"]["members"][number], members: TotpBroadcastReplay["payload"]["band"]["members"]): string {
   const instrument = member.instrument_role?.trim() || "";
   const explicitVocal = member.vocal_role?.trim() || "";
   const anyExplicitSinger = members.some((candidate) => !!candidate.vocal_role?.trim());
