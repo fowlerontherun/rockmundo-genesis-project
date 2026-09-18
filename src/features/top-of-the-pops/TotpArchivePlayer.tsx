@@ -32,6 +32,20 @@ function lockedAudienceReaction(source: TotpBroadcastReplay): number {
 function lockedPresenterKey(source: TotpBroadcastReplay): string { return String(source.payload.presenterKey ?? source.presenter_key ?? "alex_rayne"); }
 function lockedShowVariant(source: TotpBroadcastReplay): string { return String(source.payload.showVariant ?? "regular"); }
 
+export function memberStageDuty(member: TotpBroadcastReplay["payload"]["band"]["members"][number], members: TotpBroadcastReplay["payload"]["band"]["members"]): string {
+  const instrument = member.instrument_role?.trim() || "";
+  const explicitVocal = member.vocal_role?.trim() || "";
+  const anyExplicitSinger = members.some((candidate) => !!candidate.vocal_role?.trim());
+  const nonDrummer = !/drum|percussion/i.test(instrument || member.role || "");
+  const fallbackSinger = !anyExplicitSinger
+    ? members.find((candidate) => candidate.profile_id && !/drum|percussion/i.test(candidate.instrument_role || candidate.role || ""))
+      ?? members.find((candidate) => !/drum|percussion/i.test(candidate.instrument_role || candidate.role || ""))
+      ?? null
+    : null;
+  const vocal = explicitVocal || (fallbackSinger === member && nonDrummer ? "Lead Vocals" : "");
+  return [instrument, vocal].filter(Boolean).join(" / ") || member.role || "performer";
+}
+
 /** Decode replay-v4 render snapshots into the exact shape consumed by the shared Gig Viewer. */
 export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerModelsData | null {
   const appearances: GigPlayerModelsData["appearances"] = {};
@@ -80,7 +94,7 @@ function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
   ];
   members.forEach((member, index) => {
     const performerId = member.profile_id || `totp-member:${index}`;
-    events.push(event({ phase: "band_entrance", eventType: "performer_entered", scheduledOffsetMs: 1_000 + index * 180, durationMs: 1_600, performerProfileId: performerId, visualPayload: { type: "performer_enter", performerId, displayName: member.display_name, roleOrInstrument: member.instrument_role || member.vocal_role || member.role || "performer", startPosition: { x: 600, y: 520, zone: "back_center" } } }));
+    events.push(event({ phase: "band_entrance", eventType: "performer_entered", scheduledOffsetMs: 1_000 + index * 180, durationMs: 1_600, performerProfileId: performerId, visualPayload: { type: "performer_enter", performerId, displayName: member.display_name, roleOrInstrument: memberStageDuty(member, payload.band.members), startPosition: { x: 600, y: 520, zone: "back_center" } } }));
   });
   events.push(event({ phase: "song_intro", eventType: "song_started", scheduledOffsetMs: songStart, durationMs: payload.performanceDurationMs, songId: payload.song.id, crowdEnergyBefore: baseCrowdEnergy, crowdEnergyAfter: performanceCrowdEnergy, visualPayload: { type: "song_start", songId: payload.song.id, title: payload.song.title, position: 1, montage: false, itemType: "song" } }));
   events.push(event({ phase: "finale", eventType: "band_exited", scheduledOffsetMs: songEnd, durationMs: 4_000, visualPayload: { type: "band_exit", exitStyle: "wave", performerIds: members.map((member, index) => member.profile_id || `totp-member:${index}`) } }));
@@ -93,7 +107,7 @@ function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
     schemaVersion: 1,
     gig: { id: `totp:${payload.performanceId}`, bandId: payload.band.id, status: "completed", scheduledDate: payload.episodeDate, startedAt: payload.broadcastAt, completedAt: payload.broadcastAt, ticketPrice: metric(0), venue: { id: "totp-tv-studio", name: "RockMundo Television Centre", location: "London", capacity: 250, type: "tv_studio" } },
     headline: { overallRating: unavailable("Broadcast archive"), performanceGrade: unavailable("Broadcast archive"), verdict: `Archived Top of the Pops television performance · ${totpAudienceReactionLabel(audienceReaction)} studio audience`, attendance: metric(220), capacity: metric(250), netProfit: metric(0), fameGained: unavailable("Rewards are not replayed"), fansGained: unavailable("Rewards are not replayed"), bestSongTitle: metric(payload.song.title) },
-    songs: [], performers: payload.band.members.map((member, index) => ({ id: member.profile_id || `totp-member:${index}`, profileId: member.profile_id || `totp-member:${index}`, displayName: member.display_name, roleOrInstrument: member.instrument_role || member.vocal_role || member.role || "performer", lineupStatus: "performed" })),
+    songs: [], performers: payload.band.members.map((member, index) => ({ id: member.profile_id || `totp-member:${index}`, profileId: member.profile_id || `totp-member:${index}`, displayName: member.display_name, roleOrInstrument: memberStageDuty(member, payload.band.members), lineupStatus: "performed" })),
     finances: { ticketRevenue: metric(0), merchRevenue: metric(0), totalRevenue: metric(0), crewCosts: metric(0), equipmentWearCost: metric(0), venueCost: metric(0), totalCosts: metric(0), netProfit: metric(0), merchItemsSold: metric(0) },
     progression: { fameGained: unavailable("Rewards are not replayed"), chemistryChange: unavailable("Broadcast archive"), totalXpAwarded: unavailable("Rewards are not replayed"), fansGained: unavailable("Rewards are not replayed"), fanConversions: unavailable("Rewards are not replayed") },
     analysis: { equipmentQuality: unavailable("Broadcast archive"), crewSkill: unavailable("Broadcast archive"), bandChemistry: unavailable("Broadcast archive"), memberSkills: unavailable("Broadcast archive"), crowdEnergyPeak: metric(crowdPeak), stageBehaviorUsed: unavailable("Broadcast archive"), gearEffects: null, warnings: [] },

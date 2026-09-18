@@ -287,7 +287,10 @@ export class ConcertScene {
       if (state) {
         actor.root.visible = state.visible; actor.root.position.set(...state.position); actor.walking = state.walking; actor.action = state.action;
         actor.root.rotation.set(0, 0, 0);
-        if (!this.settings.reducedMotion && state.action === 'dance') { actor.root.rotation.y = Math.sin(t * 2) * .24; actor.root.position.y += Math.abs(Math.sin(t * 5)) * .06; }
+        if (!this.settings.reducedMotion && state.action === 'dance' && !this.options?.television) {
+          actor.root.rotation.y = Math.sin(t * 2) * .24;
+          actor.root.position.y += Math.abs(Math.sin(t * 5)) * .06;
+        }
         if (!this.settings.reducedMotion && /stage_dive|crowd_surf/.test(state.action ?? '')) { const arc = Math.sin(state.actionProgress * Math.PI); actor.root.position.z += arc * 2.3; actor.root.position.y += arc * .55; actor.root.rotation.x = -arc * Math.PI / 2; }
       }
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
