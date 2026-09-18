@@ -61,7 +61,7 @@ function totpPreferredMarks(role: PresentationRole, instrument: string | null): 
   }
 }
 
-function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
+export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
   const assigned = new Map<string, TotpStageMark>();
   const used: TotpStageMark[] = [];
   const minimumDistance = .24;
