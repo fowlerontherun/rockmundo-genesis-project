@@ -62,6 +62,25 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-special-christmas')).toBeFalsy();
   });
 
+  it('selects a deterministic illuminated set from the replay seed', () => {
+    const names = new Set<string>();
+    for (let seed = 1; seed <= 9; seed += 1) {
+      const root = new T.Group();
+      buildTvStudioProduction(root, resolveVenueProfile({ type: 'tv_studio', seed }));
+      const set = root.children.find((child) => child.name.startsWith('totp-set-variant-'));
+      expect(set).toBeTruthy();
+      names.add(set!.name);
+    }
+    expect(names.size).toBeGreaterThan(1);
+
+    const first = new T.Group();
+    const second = new T.Group();
+    buildTvStudioProduction(first, resolveVenueProfile({ type: 'tv_studio', seed: 4242 }));
+    buildTvStudioProduction(second, resolveVenueProfile({ type: 'tv_studio', seed: 4242 }));
+    expect(first.children.find((child) => child.name.startsWith('totp-set-variant-'))?.name)
+      .toBe(second.children.find((child) => child.name.startsWith('totp-set-variant-'))?.name);
+  });
+
   it('falls back to Alex Rayne for unknown presenter keys', () => {
     const root = new T.Group();
     buildTvStudioProduction(root, resolveVenueProfile({ type: 'tv_studio', presenterKey: 'unknown_host' }));
