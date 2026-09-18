@@ -11,7 +11,12 @@ export type CameraShot =
   | 'tv_overhead'
   | 'tv_audience_reverse'
   | 'tv_tracking'
-  | 'tv_low_angle';
+  | 'tv_low_angle'
+  | 'tv_lead_close'
+  | 'tv_lead_medium'
+  | 'tv_instrument_left'
+  | 'tv_drummer_close'
+  | 'tv_push_in';
 export type LightingLook = 'electric' | 'amber' | 'encore';
 export type DemoQuality = 'balanced' | 'high' | 'low';
 export interface DemoSettings {

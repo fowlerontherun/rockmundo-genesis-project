@@ -25,11 +25,17 @@ const CAMERAS = {
   tv_audience_reverse: { position: [0, 2.15, -3.1], target: [0, 1.55, 7.0], fov: 58 },
   tv_tracking: { position: [-5.8, 2.35, 3.45], target: [0, 1.55, -1.5], fov: 46 },
   tv_low_angle: { position: [0.3, 0.95, 3.65], target: [0, 1.95, -1.6], fov: 46 },
+  tv_lead_close: { position: [0.7, 2.05, 3.35], target: [0, 1.63, -1.55], fov: 30 },
+  tv_lead_medium: { position: [-1.5, 2.35, 4.25], target: [0, 1.62, -1.55], fov: 39 },
+  tv_instrument_left: { position: [-3.0, 1.95, 3.1], target: [-1.45, 1.35, -1.5], fov: 34 },
+  tv_drummer_close: { position: [2.15, 2.55, 1.0], target: [0, 1.55, -3.0], fov: 36 },
+  tv_push_in: { position: [0, 2.0, 3.95], target: [0, 1.58, -1.55], fov: 35 },
 } as const;
 
 const TV_CAMERA_SHOTS = new Set<CameraShot>([
   'tv_presenter_wide', 'tv_presenter_close', 'tv_crane', 'tv_overhead',
-  'tv_audience_reverse', 'tv_tracking', 'tv_low_angle',
+  'tv_audience_reverse', 'tv_tracking', 'tv_low_angle', 'tv_lead_close',
+  'tv_lead_medium', 'tv_instrument_left', 'tv_drummer_close', 'tv_push_in',
 ]);
 
 export class ConcertScene {
