@@ -392,6 +392,7 @@ export class ConcertScene {
       actor.restoreEquipmentAnchor();
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
     });
+    if (this.options?.television?.stageKey) this.crowd?.setTelevisionStage(this.options.television.stageKey);
     this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction));
     if (this.distantAudience) {
       const occupancy = this.playback?.occupancy ?? this.settings.crowd;
