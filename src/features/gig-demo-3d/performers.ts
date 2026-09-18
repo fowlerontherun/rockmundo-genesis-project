@@ -56,7 +56,6 @@ export class Musician {
     private rest: RestBone[] = [];
     instrumentRig: InstrumentRig | null = null;
     equipment: T.Group | null = null;
-    private followsMicStand = false;
     fanPose: 'idle' | 'raised' | 'clapOpen' | 'clapClosed' | 'danceLeft' | 'danceRight' = 'idle';
     id = '';
     walking = false;
@@ -150,7 +149,6 @@ export class Musician {
             if (vocal && assignment.instrument !== 'vocal_performance') {
                 this.equipment ??= new T.Group();
                 microphone(this.equipment, [.08, 0, .58]);
-                this.followsMicStand = true;
             }
             if (this.equipment) {
                 this.equipment.position.set(...position);
@@ -162,13 +160,6 @@ export class Musician {
         this.update(0, 0.7, false);
     }
     point(x: number, y: number, z: number) { return this.root.localToWorld(new T.Vector3(x, y, z)); }
-    syncEquipmentToPerformer() {
-        if (!this.equipment || !this.followsMicStand) return;
-        this.equipment.position.copy(this.root.position);
-        this.equipment.rotation.y = this.root.rotation.y;
-        this.equipment.scale.copy(this.root.scale);
-        this.equipment.updateMatrixWorld(true);
-    }
     private hand(side: 'L' | 'R', target: T.Vector3, pole: T.Vector3) {
         reach(this.bones.get(`UpperArm.${side}`), this.bones.get(`LowerArm.${side}`), this.bones.get(`Hand.${side}`), target, pole);
     }
