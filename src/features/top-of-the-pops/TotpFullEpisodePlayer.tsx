@@ -10,6 +10,7 @@ import { TotpArchivePlayer } from "./TotpArchivePlayer";
 import { TotpChartRundownSequence } from "./TotpChartRundownSequence";
 import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
+import { TotpStageTransition } from "./TotpStageTransition";
 import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
 
 export interface TotpFullEpisodePlayerProps {
@@ -27,6 +28,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const [continuous, setContinuous] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [showChartRundown, setShowChartRundown] = useState(false);
+  const [showStageTransition, setShowStageTransition] = useState(false);
   const [continuityKind, setContinuityKind] = useState<TotpContinuityKind | null>(null);
   const current = ordered[currentIndex] ?? null;
   const hasChartRundown = totpRundownHasRealPositions(chartRundown);
@@ -35,11 +37,12 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
-  const fullEpisodeRunning = showIntro || showChartRundown || continuityKind !== null || continuous;
+  const fullEpisodeRunning = showIntro || showChartRundown || showStageTransition || continuityKind !== null || continuous;
 
   const goTo = (index: number) => {
     setShowIntro(false);
     setShowChartRundown(false);
+    setShowStageTransition(false);
     setContinuityKind(null);
     setContinuous(false);
     setCurrentIndex(Math.max(0, Math.min(ordered.length - 1, index)));
@@ -48,6 +51,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const startFullEpisode = () => {
     setCurrentIndex(0);
     setShowChartRundown(false);
+    setShowStageTransition(false);
     setContinuityKind(null);
     setContinuous(false);
     setShowIntro(true);
@@ -56,6 +60,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const stopFullEpisode = () => {
     setShowIntro(false);
     setShowChartRundown(false);
+    setShowStageTransition(false);
     setContinuityKind(null);
     setContinuous(false);
   };
@@ -67,7 +72,16 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   };
 
   const finishAct = () => {
-    setContinuityKind(currentIndex < ordered.length - 1 ? "between" : "closing");
+    if (currentIndex < ordered.length - 1) {
+      setShowStageTransition(true);
+      return;
+    }
+    setContinuityKind("closing");
+  };
+
+  const finishStageTransition = () => {
+    setShowStageTransition(false);
+    setContinuityKind("between");
   };
 
   const finishContinuity = () => {
@@ -114,7 +128,9 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
                 ? "Programme intro"
                 : showChartRundown
                   ? "Chart rundown"
-                  : continuityKind
+                  : showStageTransition
+                    ? "Studio reset"
+                    : continuityKind
                     ? continuityKind === "opening"
                       ? "Studio opening"
                       : continuityKind === "between"
@@ -146,6 +162,13 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
 
       {showIntro ? (
         <TotpShowIntro playing onEnded={finishIntro} />
+      ) : showStageTransition && ordered[currentIndex + 1] ? (
+        <TotpStageTransition
+          from={current}
+          to={ordered[currentIndex + 1]}
+          autoPlay={continuous}
+          onEnded={finishStageTransition}
+        />
       ) : continuityKind ? (
         <TotpProgrammeContinuity
           kind={continuityKind}
@@ -165,7 +188,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
         />
       )}
 
-      {!showIntro && !showChartRundown && continuityKind === null && !continuous ? (
+      {!showIntro && !showChartRundown && !showStageTransition && continuityKind === null && !continuous ? (
         <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={() => goTo(currentIndex - 1)} disabled={currentIndex === 0}>
             <SkipBack className="mr-2 h-4 w-4" /> Previous act
