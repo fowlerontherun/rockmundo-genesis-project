@@ -8,6 +8,7 @@ export interface TotpProgrammeRundownItem {
   chartRank: number;
   bandName: string;
   songTitle: string;
+  stage: TotpBroadcastReplay["payload"]["stage"];
 }
 
 export interface TotpContinuityCopy {
@@ -32,6 +33,7 @@ export function buildTotpProgrammeRundown(replays: TotpBroadcastReplay[]): TotpP
       chartRank: Number(replay.payload.song.qualifyingRank),
       bandName: replay.payload.band.name,
       songTitle: replay.payload.song.title,
+      stage: replay.payload.stage,
     }))
     .sort((a, b) => a.chartRank - b.chartRank || a.runningOrder - b.runningOrder || a.replayId.localeCompare(b.replayId));
 }
@@ -51,6 +53,7 @@ export function buildTotpContinuityCopy(
         chartRank: Number(next.payload.song.qualifyingRank),
         bandName: next.payload.band.name,
         songTitle: next.payload.song.title,
+        stage: next.payload.stage,
       }
     : null;
 
@@ -68,6 +71,7 @@ export function buildTotpContinuityCopy(
             chartRank: Number(ordered[0].payload.song.qualifyingRank),
             bandName: ordered[0].payload.band.name,
             songTitle: ordered[0].payload.song.title,
+            stage: ordered[0].payload.stage,
           }
         : null,
     };
@@ -77,7 +81,7 @@ export function buildTotpContinuityCopy(
     return {
       eyebrow: "Back in the studio!",
       headline: `${current.payload.band.name} — ${current.payload.song.title}!`,
-      body: `What a reaction! That's this week's #${current.payload.song.qualifyingRank}. Don't go anywhere — next up, ${nextAct.bandName} with ${nextAct.songTitle}, currently #${nextAct.chartRank}!`,
+      body: `What a reaction! That's this week's #${current.payload.song.qualifyingRank}. We're heading ${nextAct.stage === current.payload.stage ? "straight back to the same stage" : `across the studio to ${nextAct.stage.replaceAll("_", " ")}`} — next up, ${nextAct.bandName} with ${nextAct.songTitle}, currently #${nextAct.chartRank}!`,
       nextAct,
     };
   }

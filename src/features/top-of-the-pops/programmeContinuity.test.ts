@@ -6,12 +6,12 @@ import {
   orderTotpProgrammeReplays,
 } from "./programmeContinuity";
 
-function replay(id: string, runningOrder: number, chartRank: number, bandName: string, songTitle: string): TotpBroadcastReplay {
+function replay(id: string, runningOrder: number, chartRank: number, bandName: string, songTitle: string, stage: TotpBroadcastReplay["payload"]["stage"] = "main_stage"): TotpBroadcastReplay {
   return {
     id,
     performance_id: `performance-${id}`,
     replay_version: 4,
-    stage_key: "main_stage",
+    stage_key: stage,
     presenter_key: "alex_rayne",
     duration_ms: 120_000,
     checksum: `checksum-${id}`,
@@ -28,7 +28,7 @@ function replay(id: string, runningOrder: number, chartRank: number, bandName: s
       showVariant: "regular",
       band: { id: `band-${id}`, name: bandName, members: [] },
       song: { id: `song-${id}`, title: songTitle, genre: "rock", qualifyingRank: chartRank },
-      stage: "main_stage",
+      stage,
       performanceDurationMs: 110_000,
       totalDurationMs: 120_000,
       cues: [],
@@ -39,7 +39,7 @@ function replay(id: string, runningOrder: number, chartRank: number, bandName: s
 const fixtures = [
   replay("c", 3, 1, "The Number Ones", "Top Spot"),
   replay("a", 1, 18, "Opening Act", "First Song"),
-  replay("b", 2, 7, "Second Act", "Next Song"),
+  replay("b", 2, 7, "Second Act", "Next Song", "rock_stage"),
 ];
 
 describe("Top of the Pops programme continuity", () => {
@@ -69,6 +69,8 @@ describe("Top of the Pops programme continuity", () => {
     expect(copy.body).toContain("#18");
     expect(copy.body).toContain("Second Act");
     expect(copy.body).toContain("#7");
+    expect(copy.body).toContain("rock stage");
+    expect(copy.nextAct?.stage).toBe("rock_stage");
   });
 
   it("calls out a performed number one in the closing sequence", () => {
