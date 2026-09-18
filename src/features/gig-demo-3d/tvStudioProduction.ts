@@ -5,6 +5,55 @@ import { resolveTotpPresenter } from '@/features/top-of-the-pops/presenters';
 
 const presenterSceneName = (key: string) => `totp-presenter-${key.replaceAll('_', '-')}`;
 
+function monitorTexture(primary: string, secondary: string, mode: string) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 576;
+  const ctx = canvas.getContext('2d')!;
+  const gradient = ctx.createLinearGradient(0, 0, 1024, 576);
+  gradient.addColorStop(0, mode === 'chart' ? '#8d174a' : '#101a2d');
+  gradient.addColorStop(1, mode === 'audience' ? '#55204e' : '#07111e');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 1024, 576);
+  ctx.strokeStyle = '#41d9ff';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(18, 18, 988, 540);
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 42px sans-serif';
+  ctx.fillText('TOP OF THE POPS', 512, 118, 900);
+  ctx.fillStyle = '#83e9ff';
+  ctx.font = '800 26px sans-serif';
+  ctx.fillText(mode.toUpperCase(), 512, 178, 850);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `900 ${primary.length > 24 ? 42 : 56}px sans-serif`;
+  ctx.fillText(primary.toUpperCase(), 512, 302, 900);
+  ctx.fillStyle = 'rgba(255,255,255,.78)';
+  ctx.font = `700 ${secondary.length > 34 ? 26 : 31}px sans-serif`;
+  ctx.fillText(secondary, 512, 390, 900);
+  const texture = new T.CanvasTexture(canvas);
+  texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
+
+export function updateTvStudioMonitors(root: T.Object3D, primary: string, secondary: string, mode: string) {
+  root.traverse((object) => {
+    if (!(object instanceof T.Mesh) || object.name !== 'totp-studio-monitor-screen') return;
+    const material = object.material;
+    if (!(material instanceof T.MeshStandardMaterial)) return;
+    const texture = monitorTexture(primary || 'TOP OF THE POPS', secondary || 'LIVE FROM LONDON', mode || 'performance');
+    material.map?.dispose();
+    material.emissiveMap?.dispose();
+    material.map = texture;
+    material.emissiveMap = texture;
+    material.emissive.set('#ffffff');
+    material.emissiveIntensity = .62;
+    material.color.set('#ffffff');
+    material.needsUpdate = true;
+  });
+}
+
 function namedMat(name: string, color: string) {
   const material = matte(color);
   material.name = name;
@@ -374,7 +423,8 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
     tower.name = 'totp-studio-monitor';
     tower.position.set(x, p.stageHeight + 2.4, .65 - p.stageDepth - .18);
     box(tower, [2.0, 1.15, .14], [0, 0, 0], dark);
-    box(tower, [1.8, .95, .04], [0, 0, .09], accent);
+    const screen = box(tower, [1.8, .95, .04], [0, 0, .09], accent);
+    screen.name = 'totp-studio-monitor-screen';
     root.add(tower);
   }
 }
