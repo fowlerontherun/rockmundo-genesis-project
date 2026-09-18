@@ -36,10 +36,11 @@ export interface TotpPerformanceTimelineInput {
 /** Builds a deterministic TV segment around one performance. */
 export function buildTotpPerformanceTimeline(input: TotpPerformanceTimelineInput): TotpBroadcastCue[] {
   const duration = Math.max(30_000, input.performanceDurationMs);
-  const presenterDuration = 7_000;
-  const graphicDuration = 4_000;
+  const presenterDuration = 4_200;
+  const graphicDuration = 3_200;
   const performanceStart = presenterDuration;
-  const shotDuration = Math.max(3_500, Math.floor(duration / Math.max(1, input.shots.length)));
+  const targetCutMs = duration >= 150_000 ? 4_800 : duration >= 90_000 ? 4_500 : 4_200;
+  const shotDuration = Math.max(3_600, Math.min(5_400, targetCutMs));
   const cues: TotpBroadcastCue[] = [
     {
       id: "presenter-intro",
@@ -53,7 +54,7 @@ export function buildTotpPerformanceTimeline(input: TotpPerformanceTimelineInput
     {
       id: "lower-third",
       type: "graphic",
-      offsetMs: performanceStart + 800,
+      offsetMs: performanceStart + 650,
       durationMs: graphicDuration,
       cameraShot: input.shots[0] ?? "crane_sweep",
       stage: input.stage,
@@ -67,9 +68,11 @@ export function buildTotpPerformanceTimeline(input: TotpPerformanceTimelineInput
     },
   ];
 
-  input.shots.forEach((shot, index) => {
+  const shotCount = Math.ceil(duration / shotDuration);
+  for (let index = 0; index < shotCount; index += 1) {
+    const shot = input.shots[index % Math.max(1, input.shots.length)] ?? "studio_master";
     const offsetMs = performanceStart + index * shotDuration;
-    if (offsetMs >= performanceStart + duration) return;
+    if (offsetMs >= performanceStart + duration) break;
     cues.push({
       id: `performance-${index + 1}`,
       type: "performance",
@@ -78,13 +81,13 @@ export function buildTotpPerformanceTimeline(input: TotpPerformanceTimelineInput
       cameraShot: shot,
       stage: input.stage,
     });
-  });
+  }
 
   cues.push({
     id: "applause",
     type: "audience",
     offsetMs: performanceStart + duration,
-    durationMs: 4_000,
+    durationMs: 3_500,
     cameraShot: "finale_wide",
     stage: input.stage,
   });
