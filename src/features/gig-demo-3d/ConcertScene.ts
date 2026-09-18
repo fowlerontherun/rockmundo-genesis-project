@@ -260,12 +260,12 @@ export class ConcertScene {
     if (this.options?.television && this.venueProfile?.kind === 'tv_studio') {
       const stageKey = this.options.television.stageKey ?? 'main_stage';
       const [stageX, stageZ] = stageKey === 'stage_b'
-        ? [5.4, 1.4]
+        ? [5.4, 2.05]
         : stageKey === 'rock_stage'
-          ? [-4.5, 3.4]
+          ? [-4.5, 4.05]
           : stageKey === 'studio_floor'
-            ? [1.4, 5.0]
-            : [0, 0];
+            ? [1.4, 5.65]
+            : [0, .65 - this.venueProfile.stageDepth / 2];
 
       const stageWideShot = ['front','tv_crane','tv_tracking','tv_low_angle','tv_overhead','tv_audience_reverse'].includes(selected);
       if (stageWideShot && stageKey !== 'main_stage') {
@@ -461,12 +461,12 @@ export class ConcertScene {
     const reduced = this.settings.reducedMotion;
     const stageKey = this.options.television.stageKey ?? 'main_stage';
     const target = stageKey === 'stage_b'
-      ? new T.Vector3(5.4, 1.35, 1.4)
+      ? new T.Vector3(5.4, 1.15, 2.05)
       : stageKey === 'rock_stage'
-        ? new T.Vector3(-4.5, 1.35, 3.4)
+        ? new T.Vector3(-4.5, 1.25, 4.05)
         : stageKey === 'studio_floor'
-          ? new T.Vector3(1.4, 1.25, 5.0)
-          : new T.Vector3(0, 1.35, -.9);
+          ? new T.Vector3(1.4, 1.05, 5.65)
+          : new T.Vector3(0, 1.35, .65 - this.venueProfile.stageDepth / 2);
 
     const panHead = (cameraName: string, phase: number) => {
       const camera = this.scene.getObjectByName(cameraName);
