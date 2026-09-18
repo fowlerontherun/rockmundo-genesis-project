@@ -76,10 +76,37 @@ describe('richGarmentVisuals', () => {
     expect(spec.detailCount).toBe(8);
   });
 
+  it('normalizes creator percentage sliders before rendering', () => {
+    const spec = buildRichGarmentVisualSpec(item({
+      material_config: { roughness: 65, sheen: 62, metallic: 37 },
+      pattern_config: { scale: 274, rotation: -40, opacity: 100 },
+      render_config: { scale: 100, bodyOffsetX: 12, bodyOffsetY: -8 },
+    }));
+    expect(spec.roughness).toBeCloseTo(.65);
+    expect(spec.sheen).toBeCloseTo(.62);
+    expect(spec.metalness).toBeCloseTo(.37);
+    expect(spec.patternScale).toBeCloseTo(2.74);
+    expect(spec.opacity).toBe(1);
+    expect(spec.bodyOffsetX).toBe(.35);
+    expect(spec.y).toBeLessThan(1.15);
+  });
+
+  it('carries garment construction choices into the render spec', () => {
+    const spec = buildRichGarmentVisualSpec(item({
+      garment_config: { silhouette: 'oversized', cut: 'slim', sleeve: 'elbow', collar: 'v-neck', closure: 'buttons', length: 'cropped' },
+    }));
+    expect(spec.silhouette).toBe('oversized');
+    expect(spec.cut).toBe('slim');
+    expect(spec.sleeve).toBe('elbow');
+    expect(spec.collar).toBe('v-neck');
+    expect(spec.closure).toBe('buttons');
+    expect(spec.length).toBe('cropped');
+  });
+
   it('clamps unsafe imported render values', () => {
     const spec = buildRichGarmentVisualSpec(item({
-      material_config: { roughness: 99, metallic: -8 },
-      pattern_config: { scale: 99, rotation: 999 },
+      material_config: { roughness: 999, metallic: -8 },
+      pattern_config: { scale: 999, rotation: 999 },
       render_config: { scale: 1000, offsetY: 50, depthOffset: -50 },
     }));
     expect(spec.roughness).toBe(1);
