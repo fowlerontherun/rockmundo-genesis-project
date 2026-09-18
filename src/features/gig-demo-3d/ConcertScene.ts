@@ -1,5 +1,6 @@
 import { stageLightPositions } from './venueProduction';
 import { updateTvStudioMonitors } from './tvStudioProduction';
+import { resolveTotpStudioStageGeometry, totpStudioStageCenter } from './totpStudioGeometry';
 import { updateVenueAudience } from './venueAudience';
 import * as T from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -259,13 +260,9 @@ export class ConcertScene {
 
     if (this.options?.television && this.venueProfile?.kind === 'tv_studio') {
       const stageKey = this.options.television.stageKey ?? 'main_stage';
-      const [stageX, stageZ] = stageKey === 'stage_b'
-        ? [5.4, 2.05]
-        : stageKey === 'rock_stage'
-          ? [-4.5, 4.05]
-          : stageKey === 'studio_floor'
-            ? [1.4, 5.65]
-            : [0, .65 - this.venueProfile.stageDepth / 2];
+      const geometry = resolveTotpStudioStageGeometry(stageKey, this.venueProfile);
+      const stageX = geometry.centerX;
+      const stageZ = geometry.centerZ;
 
       const stageWideShot = ['front','tv_crane','tv_tracking','tv_low_angle','tv_overhead','tv_audience_reverse'].includes(selected);
       if (stageWideShot && stageKey !== 'main_stage') {
@@ -452,7 +449,7 @@ export class ConcertScene {
 
     if (onCamera && !reduced) {
       const stageKey = this.options.television.stageKey ?? 'main_stage';
-      const stageX = stageKey === 'stage_b' ? 5.4 : stageKey === 'rock_stage' ? -4.5 : stageKey === 'studio_floor' ? 1.4 : 0;
+      const [stageX] = totpStudioStageCenter(stageKey, this.venueProfile);
       presenter.rotation.y += T.MathUtils.clamp(stageX / 18, -.22, .22) * emphasis;
     }
   }
@@ -461,13 +458,8 @@ export class ConcertScene {
     if (!this.options?.television || this.venueProfile?.kind !== 'tv_studio') return;
     const reduced = this.settings.reducedMotion;
     const stageKey = this.options.television.stageKey ?? 'main_stage';
-    const target = stageKey === 'stage_b'
-      ? new T.Vector3(5.4, 1.15, 2.05)
-      : stageKey === 'rock_stage'
-        ? new T.Vector3(-4.5, 1.25, 4.05)
-        : stageKey === 'studio_floor'
-          ? new T.Vector3(1.4, 1.05, 5.65)
-          : new T.Vector3(0, 1.35, .65 - this.venueProfile.stageDepth / 2);
+    const [targetX, targetY, targetZ] = totpStudioStageCenter(stageKey, this.venueProfile);
+    const target = new T.Vector3(targetX, targetY, targetZ);
 
     const panHead = (cameraName: string, phase: number) => {
       const camera = this.scene.getObjectByName(cameraName);

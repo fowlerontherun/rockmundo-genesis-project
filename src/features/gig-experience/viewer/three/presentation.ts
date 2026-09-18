@@ -6,6 +6,7 @@ import type { DerivedPlaybackState } from '../engine/PlaybackController';
 import { replayResultAttendance, resolvePresentationAttendance } from '../engine/AuthoritativeMetric';
 import type { ConcertFrame, ConcertOptions, ConcertVenue, StageRole } from '@/features/gig-demo-3d/liveTypes';
 import { resolveVenueProfile, stagePosition, type VenueProfile } from '@/features/gig-demo-3d/venueProfile';
+import { resolveTotpStudioStageGeometry } from '@/features/gig-demo-3d/totpStudioGeometry';
 import { defaultAppearance, type PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { CrowdTuningOptions } from '../engine/CrowdTuning';
@@ -16,80 +17,10 @@ const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backi
 
 export type ConcertPresentationMode = 'gig' | 'totp';
 
-type TotpStageFootprint = {
-  centerX: number;
-  centerZ: number;
-  floorY: number;
-  safeWidth: number;
-  safeDepth: number;
-  minU: number;
-  maxU: number;
-  minV: number;
-  maxV: number;
-  centerV: number;
-};
-
-function totpStageFootprint(stage: TotpStageKey, venue: VenueProfile): TotpStageFootprint {
-  switch (stage) {
-    case 'stage_b':
-      return {
-        centerX: 5.4,
-        centerZ: 2.05,
-        floorY: .22,
-        safeWidth: 3.25,
-        safeDepth: 2.15,
-        minU: .29,
-        maxU: .71,
-        minV: .30,
-        maxV: .78,
-        centerV: .54,
-      };
-    case 'rock_stage':
-      return {
-        centerX: -4.5,
-        centerZ: 4.05,
-        floorY: .28,
-        safeWidth: 4.35,
-        safeDepth: 2.7,
-        minU: .27,
-        maxU: .73,
-        minV: .29,
-        maxV: .78,
-        centerV: .53,
-      };
-    case 'studio_floor':
-      return {
-        centerX: 1.4,
-        centerZ: 5.65,
-        floorY: .08,
-        safeWidth: 3.5,
-        safeDepth: 2.45,
-        minU: .31,
-        maxU: .69,
-        minV: .31,
-        maxV: .75,
-        centerV: .53,
-      };
-    default:
-      return {
-        centerX: 0,
-        centerZ: .65 - venue.stageDepth / 2,
-        floorY: venue.stageHeight,
-        safeWidth: Math.min(6.6, venue.stageWidth * .58),
-        safeDepth: Math.min(4.25, venue.stageDepth * .64),
-        minU: .27,
-        maxU: .73,
-        minV: .28,
-        maxV: .80,
-        centerV: .53,
-      };
-  }
-}
-
 type TotpStageMark = { u: number; v: number };
 
 export function totpSafeStageMark(stage: TotpStageKey, venue: VenueProfile, mark: TotpStageMark): TotpStageMark {
-  const footprint = totpStageFootprint(stage, venue);
+  const footprint = resolveTotpStudioStageGeometry(stage, venue);
   return {
     u: clamp(mark.u, footprint.minU, footprint.maxU),
     v: clamp(mark.v, footprint.minV, footprint.maxV),
@@ -97,7 +28,7 @@ export function totpSafeStageMark(stage: TotpStageKey, venue: VenueProfile, mark
 }
 
 export function totpStageWorldPosition(stage: TotpStageKey, venue: VenueProfile, mark: TotpStageMark, role?: PresentationRole): [number, number, number] {
-  const footprint = totpStageFootprint(stage, venue);
+  const footprint = resolveTotpStudioStageGeometry(stage, venue);
   const safe = totpSafeStageMark(stage, venue, mark);
   const x = footprint.centerX + (safe.u - .5) * footprint.safeWidth;
   const z = footprint.centerZ + (safe.v - footprint.centerV) * footprint.safeDepth;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { buildTvStudioProduction } from './tvStudioProduction';
 import { resolveVenueProfile } from './venueProfile';
+import { resolveTotpStudioStageGeometry } from './totpStudioGeometry';
 
 describe('Top of the Pops TV studio production', () => {
   it('adds presenter, cameras, operators, jib, monitors and four performance zones to the TV studio', () => {
@@ -32,6 +33,19 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-studio-floor-ring-outer')).toBeTruthy();
     expect(root.getObjectByName('totp-special-christmas')).toBeFalsy();
     expect(root.getObjectByName('totp-special-anniversary')).toBeFalsy();
+
+    const venue = resolveVenueProfile({ type: 'tv_studio' });
+    for (const [stage, objectName] of [
+      ['main_stage', 'totp-zone-main-stage'],
+      ['stage_b', 'totp-zone-stage-b'],
+      ['rock_stage', 'totp-zone-rock-stage'],
+      ['studio_floor', 'totp-zone-studio-floor'],
+    ] as const) {
+      const geometry = resolveTotpStudioStageGeometry(stage, venue);
+      const deck = root.getObjectByName(objectName)!;
+      expect(deck.position.x).toBeCloseTo(geometry.centerX, 4);
+      expect(deck.position.z).toBeCloseTo(geometry.centerZ, 4);
+    }
 
     const monitors = root.children.filter((child) => child.name === 'totp-studio-monitor');
     expect(monitors).toHaveLength(3);
