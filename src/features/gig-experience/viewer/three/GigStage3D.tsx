@@ -27,12 +27,12 @@ const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   push_in: 'tv_push_in', pull_back: 'front', finale_wide: 'tv_crane',
 };
 
-export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, playerModelsSnapshot = null }: {
+export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', playerModelsSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState;
   reducedMotion: boolean; cameraMode: GigViewerCameraMode; tier: PerformanceTier; archetype: string;
   tuning: CrowdTuningOptions; pyrotechnics: boolean; pyroIntensity: number;
   presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
-  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null;
+  totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: 'presenter' | 'graphic' | 'performance' | 'audience';
   /** Frozen render-only performer models, used by historical broadcasts instead of current player cosmetics. */
   playerModelsSnapshot?: GigPlayerModelsData | null;
 }) {
@@ -63,7 +63,17 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   const venueProfile = resolveVenueProfile(options.venue);
   const baseFrame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue, presentationMode, totpStage);
   const frame = presentationMode === 'totp'
-    ? { ...baseFrame, crowdReaction: reducedMotion ? 'still' : totpAudienceChoreography(Number(totpAudienceReaction ?? 0)) }
+    ? {
+        ...baseFrame,
+        crowd: Math.max(.9, baseFrame.crowd),
+        crowdReaction: reducedMotion
+          ? 'still'
+          : totpCueType === 'audience'
+            ? 'tv_roaring'
+            : totpCueType === 'presenter'
+              ? 'tv_warm'
+              : totpAudienceChoreography(Number(totpAudienceReaction ?? 0)),
+      }
     : baseFrame;
   const resolvedCamera: CameraShot = presentationMode === 'totp' && totpCameraShot ? TOTP_CAMERAS[totpCameraShot] : CAMERAS[cameraMode];
   const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: resolvedCamera, reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: frame.look, energy: frame.energy, crowd: frame.crowd, haze: tier !== 'low' };
