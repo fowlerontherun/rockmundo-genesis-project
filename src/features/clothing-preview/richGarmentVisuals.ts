@@ -23,6 +23,13 @@ export interface RichGarmentVisualSpec {
   patternScale: number;
   patternRotation: number;
   detailCount: number;
+  silhouette: string;
+  cut: string;
+  sleeve: string;
+  collar: string;
+  closure: string;
+  length: string;
+  bodyOffsetX: number;
 }
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => {
@@ -31,6 +38,18 @@ const clamp = (value: unknown, min: number, max: number, fallback: number) => {
 };
 
 const hex = (value: unknown, fallback: string) => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value.toLowerCase() : fallback;
+
+const percent01 = (value: unknown, fallback: number) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(0, Math.min(1, number > 1 ? number / 100 : number));
+};
+
+const percentScale = (value: unknown, fallback = 1) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(.1, Math.min(4, number > 10 ? number / 100 : number));
+};
 
 export function richGarmentSlot(item: ClothingItem): RichGarmentSlot {
   const slot = String(item.wearable_slot || item.category || '').toLowerCase();
@@ -70,10 +89,23 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
   const material = String(variant?.material || materialConfig.fabric || 'cotton');
   const defaults = materialDefaults(material);
   const fitName = String(fit.fit || 'regular').toLowerCase();
-  const silhouette = String(garment.silhouette || garment.cut || 'classic').toLowerCase();
-  const oversize = fitName === 'oversized' ? 1.16 : fitName === 'relaxed' ? 1.08 : fitName === 'slim' ? 0.94 : fitName === 'skinny' ? 0.9 : 1;
+  const silhouette = String(garment.silhouette || 'classic').toLowerCase();
+  const cut = String(garment.cut || 'regular').toLowerCase();
+  const sleeve = String(garment.sleeve || garment.sleeveStyle || garment.sleeve_style || 'short').toLowerCase();
+  const collar = String(garment.collar || 'crew').toLowerCase();
+  const closure = String(garment.closure || 'none').toLowerCase();
+  const length = String(garment.length || 'standard').toLowerCase();
+  const oversize =
+    fitName === 'oversized' || /oversized|boxy/.test(silhouette) || /oversized/.test(cut) ? 1.16 :
+    fitName === 'relaxed' || /relaxed|draped/.test(silhouette) || /relaxed|drop-shoulder/.test(cut) ? 1.08 :
+    fitName === 'slim' || /slim|fitted/.test(silhouette) || /slim|tailored/.test(cut) ? 0.94 :
+    fitName === 'skinny' || /skinny/.test(cut) ? 0.9 : 1;
   const flare = /flare|wide|a-line|skirt|dress/.test(`${silhouette} ${garment.hem || ''}`.toLowerCase()) ? 0.16 : 0;
-  const baseScale = slot === 'top' ? [0.78, 0.72, 0.42] : slot === 'bottom' ? [0.56, 0.78, 0.34] : slot === 'footwear' ? [0.32, 0.2, 0.58] : [0.42, 0.26, 0.32];
+  const lengthScale =
+    /crop/.test(length) ? .76 :
+    /long|maxi|longline/.test(length) ? 1.24 :
+    /mini|short/.test(length) ? .86 : 1;
+  const baseScale = slot === 'top' ? [0.78, 0.72 * lengthScale, 0.42] : slot === 'bottom' ? [0.56, 0.78 * lengthScale, 0.34] : slot === 'footwear' ? [0.32, 0.2, 0.58] : [0.42, 0.26, 0.32];
   const baseY = slot === 'top' ? 1.15 : slot === 'bottom' ? 0.58 : slot === 'footwear' ? 0.1 : slot === 'headwear' ? 1.83 : slot === 'eyewear' ? 1.61 : 1.08;
 
   return {
@@ -82,19 +114,26 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
     secondaryColor: hex((variant as any)?.secondaryColor || materialConfig.secondaryColor || materialConfig.secondary_color, '#d8ad49'),
     pattern: String(variant?.pattern || patternConfig.type || 'solid'),
     material,
-    roughness: clamp(materialConfig.roughness, 0.02, 1, defaults.roughness),
-    metalness: clamp(materialConfig.metallic ?? materialConfig.metalness, 0, 1, defaults.metalness),
-    sheen: clamp(materialConfig.sheen, 0, 1, defaults.sheen),
-    opacity: clamp(patternConfig.opacity, 0.08, 1, 1),
+    roughness: Math.max(.02, percent01(materialConfig.roughness, defaults.roughness)),
+    metalness: percent01(materialConfig.metallic ?? materialConfig.metalness, defaults.metalness),
+    sheen: percent01(materialConfig.sheen, defaults.sheen),
+    opacity: Math.max(.08, percent01(patternConfig.opacity, 1)),
     scaleX: baseScale[0] * oversize * clamp(render.scale ? Number(render.scale) / 100 : 1, 0.7, 1.4, 1),
     scaleY: baseScale[1] * clamp(garment.lengthScale ?? garment.length_scale, 0.7, 1.35, 1),
     scaleZ: baseScale[2] * (fitName === 'oversized' ? 1.12 : fitName === 'skinny' ? 0.92 : 1),
-    y: baseY + clamp(render.offsetY ?? render.offset_y, -0.35, 0.35, 0),
+    y: baseY + clamp(render.bodyOffsetY ?? render.body_offset_y ?? render.offsetY ?? render.offset_y, -0.35, 0.35, 0),
     z: clamp(render.depthOffset ?? render.depth_offset, -0.2, 0.2, 0),
     flare,
     distress: clamp(wear.distress ?? wear.distressIntensity ?? wear.distress_intensity, 0, 1, /distress|stage-worn/.test(String(wear.condition || '')) ? 0.45 : 0),
-    patternScale: clamp(patternConfig.scale, 0.25, 4, 1),
+    patternScale: percentScale(patternConfig.scale, 1),
     patternRotation: clamp(patternConfig.rotation, -360, 360, 0),
     detailCount: Array.isArray(item.detail_layers) ? Math.min(24, item.detail_layers.length) : 0,
+    silhouette,
+    cut,
+    sleeve,
+    collar,
+    closure,
+    length,
+    bodyOffsetX: clamp(render.bodyOffsetX ?? render.body_offset_x ?? render.offsetX ?? render.offset_x, -0.35, 0.35, 0),
   };
 }
