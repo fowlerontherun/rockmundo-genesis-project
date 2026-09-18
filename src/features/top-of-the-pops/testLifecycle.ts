@@ -292,7 +292,7 @@ export function buildTotpTestReplay(
 ): TotpBroadcastReplay {
   const stage = stageKey(performance.stage_key);
   const performanceDurationMs = 45_000;
-  const totalDurationMs = performanceDurationMs + 11_000;
+  const totalDurationMs = performanceDurationMs + 7_700;
   const shots = buildTotpShotGrammar({
     genre: performance.genre,
     energy: energyForGenre(performance.genre),
