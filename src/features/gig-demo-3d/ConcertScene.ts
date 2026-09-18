@@ -285,8 +285,25 @@ export class ConcertScene {
     this.actors.forEach(actor => {
       const state = this.playback?.performers.find(p => p.id === actor.id);
       if (state) {
-        actor.root.visible = state.visible; actor.root.position.set(...state.position); actor.walking = state.walking; actor.action = state.action;
+        const previousPosition = actor.root.position.clone();
+        const nextPosition = new T.Vector3(...state.position);
+        actor.root.visible = state.visible;
+        actor.root.position.copy(nextPosition);
+        actor.walking = state.walking;
+        actor.action = state.action;
         actor.root.rotation.set(0, 0, 0);
+
+        // When the television blocking moves a performer, turn them into the
+        // direction of travel so the existing leg cycle reads as walking rather
+        // than a character sliding sideways across the studio floor.
+        if (state.walking && !this.settings.reducedMotion) {
+          const travel = nextPosition.clone().sub(previousPosition);
+          travel.y = 0;
+          if (travel.lengthSq() > 0.000001) {
+            const targetYaw = Math.atan2(travel.x, travel.z);
+            actor.root.rotation.y = T.MathUtils.clamp(targetYaw, -.72, .72);
+          }
+        }
         if (!this.settings.reducedMotion && state.action === 'dance' && !this.options?.television) {
           actor.root.rotation.y = Math.sin(t * 2) * .24;
           actor.root.position.y += Math.abs(Math.sin(t * 5)) * .06;

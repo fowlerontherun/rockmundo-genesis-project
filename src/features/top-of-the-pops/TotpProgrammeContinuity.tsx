@@ -13,9 +13,9 @@ import {
 } from "./programmeContinuity";
 
 const CONTINUITY_DURATION_MS: Record<TotpContinuityKind, number> = {
-  opening: 8_000,
-  between: 6_500,
-  closing: 8_500,
+  opening: 5_800,
+  between: 4_800,
+  closing: 6_200,
 };
 
 export interface TotpProgrammeContinuityProps {
@@ -52,8 +52,8 @@ export function TotpProgrammeContinuity({
     const speakFallback = () => {
       if (cancelled || !("speechSynthesis" in window)) return;
       const utterance = new SpeechSynthesisUtterance(speech);
-      utterance.rate = 1.08;
-      utterance.pitch = 1.06;
+      utterance.rate = 1.22;
+      utterance.pitch = 1.12;
       utterance.volume = 0.9;
       const voices = window.speechSynthesis.getVoices();
       const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
@@ -70,6 +70,7 @@ export function TotpProgrammeContinuity({
         }
         recorded = new Audio(recordedUrl);
         recorded.volume = 0.95;
+        recorded.playbackRate = 1.08;
         void recorded.play().catch(speakFallback);
       })
       .catch(speakFallback);

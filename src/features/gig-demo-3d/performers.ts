@@ -260,9 +260,22 @@ export class Musician {
                 hips.updateWorldMatrix(false, true);
             }
             for (const side of ['L', 'R'] as const) {
-                const sign = side === 'L' ? 1 : -1, stride = Math.sin(t * 7 + (sign > 0 ? 0 : Math.PI));
-                reach(this.bones.get(`UpperLeg.${side}`), this.bones.get(`LowerLeg.${side}`), this.bones.get(`Foot.${side}`), this.point(sign * .12, .06 + Math.max(0, stride) * .09, stride * .18), this.point(sign * .15, .5, .6));
+                const sign = side === 'L' ? 1 : -1;
+                const stride = Math.sin(t * 6.2 + (sign > 0 ? 0 : Math.PI));
+                const lift = Math.max(0, Math.sin(t * 6.2 + (sign > 0 ? 0 : Math.PI))) * .075;
+                reach(
+                    this.bones.get(`UpperLeg.${side}`),
+                    this.bones.get(`LowerLeg.${side}`),
+                    this.bones.get(`Foot.${side}`),
+                    this.point(sign * .12, .045 + lift, stride * .22),
+                    this.point(sign * .17, .52, .48),
+                );
             }
+        }
+        if (this.walking && !reduced && (!this.instrumentRig || this.instrumentRig.family === 'voice')) {
+            const armSwing = Math.sin(t * 6.2) * .14;
+            this.hand('L', this.point(.28, .94, .12 + armSwing), this.point(.58, 1.12, .18));
+            this.hand('R', this.point(-.28, .94, .12 - armSwing), this.point(-.58, 1.12, .18));
         }
         if (this.action && /wave|singalong|crowd_interaction|storytelling|mic_trick/.test(this.action))
             this.hand('L', this.point(.3, 1.85, .2), this.point(.65, 1.4, .2));

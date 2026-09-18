@@ -225,8 +225,8 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     const speakFallback = () => {
       if (cancelled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
       const utterance = new SpeechSynthesisUtterance(cue.presenterText!);
-      utterance.rate = 0.98;
-      utterance.pitch = 1;
+      utterance.rate = 1.22;
+      utterance.pitch = 1.12;
       const voices = window.speechSynthesis.getVoices();
       utterance.voice = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang)) ?? null;
       window.speechSynthesis.speak(utterance);
@@ -237,6 +237,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
         if (!response.ok || cancelled) { speakFallback(); return; }
         const audio = new Audio(recordedUrl);
         audio.volume = 0.95;
+        audio.playbackRate = 1.08;
         presenterAudioRef.current = audio;
         void audio.play().catch(speakFallback);
       })
