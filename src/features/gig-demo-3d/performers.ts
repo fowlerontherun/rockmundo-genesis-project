@@ -56,6 +56,7 @@ export class Musician {
     private rest: RestBone[] = [];
     instrumentRig: InstrumentRig | null = null;
     equipment: T.Group | null = null;
+    private equipmentStageAnchor: T.Vector3 | null = null;
     fanPose: 'idle' | 'raised' | 'clapOpen' | 'clapClosed' | 'danceLeft' | 'danceRight' = 'idle';
     id = '';
     walking = false;
@@ -151,8 +152,11 @@ export class Musician {
                 microphone(this.equipment, [.08, 0, .58]);
             }
             if (this.equipment) {
-                this.equipment.position.set(...position);
-                this.equipment.scale.copy(this.root.scale);
+                this.equipmentStageAnchor = new T.Vector3(...position);
+                this.equipment.position.copy(this.equipmentStageAnchor);
+                // Stage hardware is authored in world scale. Do not stretch drum
+                // kits, keyboards or stand microphones to match avatar body size.
+                this.equipment.scale.set(1, 1, 1);
                 this.equipment.updateMatrixWorld(true);
             }
         }
@@ -161,6 +165,14 @@ export class Musician {
     }
     point(x: number, y: number, z: number) { return this.root.localToWorld(new T.Vector3(x, y, z)); }
     hasVocals() { return !!this.vocalRole || this.role === 'vocals' || this.instrumentRig?.family === 'voice'; }
+    equipmentAnchor() { return this.equipmentStageAnchor?.clone() ?? null; }
+    restoreEquipmentAnchor() {
+        if (!this.equipment || !this.equipmentStageAnchor) return;
+        this.equipment.position.copy(this.equipmentStageAnchor);
+        this.equipment.rotation.set(0, 0, 0);
+        this.equipment.scale.set(1, 1, 1);
+        this.equipment.updateMatrixWorld(true);
+    }
     private hand(side: 'L' | 'R', target: T.Vector3, pole: T.Vector3) {
         reach(this.bones.get(`UpperArm.${side}`), this.bones.get(`LowerArm.${side}`), this.bones.get(`Hand.${side}`), target, pole);
     }
