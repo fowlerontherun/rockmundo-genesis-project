@@ -160,6 +160,7 @@ export class Musician {
         this.update(0, 0.7, false);
     }
     point(x: number, y: number, z: number) { return this.root.localToWorld(new T.Vector3(x, y, z)); }
+    hasVocals() { return !!this.vocalRole || this.role === 'vocals' || this.instrumentRig?.family === 'voice'; }
     private hand(side: 'L' | 'R', target: T.Vector3, pole: T.Vector3) {
         reach(this.bones.get(`UpperArm.${side}`), this.bones.get(`LowerArm.${side}`), this.bones.get(`Hand.${side}`), target, pole);
     }

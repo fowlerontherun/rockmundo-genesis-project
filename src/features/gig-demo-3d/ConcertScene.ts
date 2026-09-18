@@ -252,11 +252,41 @@ export class ConcertScene {
     }
     if (!this.options && this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
 
+    if (this.options?.television) {
+      const visible = this.actors.filter(actor => actor.root.visible);
+      const vocalist = visible.find(actor => actor.hasVocals()) ?? visible.find(actor => actor.role === 'vocals');
+      const instrumentPlayers = visible.filter(actor => actor.role === 'guitar' || actor.role === 'bass');
+      const drummer = visible.find(actor => actor.role === 'drums');
+      const instrumentSubject = instrumentPlayers.length
+        ? instrumentPlayers[Math.floor(this.seconds / 8) % instrumentPlayers.length]
+        : visible.find(actor => actor.role !== 'drums' && !actor.hasVocals());
+
+      const frameActor = (actor: Musician | undefined, offset: T.Vector3, targetHeight = 1.42) => {
+        if (!actor) return false;
+        this.targetPos.copy(actor.root.position).add(new T.Vector3(0, targetHeight, .04));
+        this.cameraPos.copy(this.targetPos).add(offset);
+        return true;
+      };
+
+      if (selected === 'tv_lead_close') {
+        frameActor(vocalist, new T.Vector3(.72, .28, 2.65), 1.48);
+      } else if (selected === 'tv_lead_medium') {
+        frameActor(vocalist, new T.Vector3(-1.15, .48, 3.55), 1.38);
+      } else if (selected === 'tv_push_in') {
+        frameActor(vocalist, new T.Vector3(.2, .34, 3.05), 1.42);
+      } else if (selected === 'tv_instrument_left') {
+        frameActor(instrumentSubject, new T.Vector3(-1.2, .35, 2.55), 1.18);
+      } else if (selected === 'tv_drummer_close') {
+        frameActor(drummer, new T.Vector3(1.55, .82, 2.15), 1.18);
+      }
+    }
+
     // Television cameras cut between pre-planned positions instead of flying through
     // the stage. Keep every TOTP lens outside a performer safety bubble as a final
     // presentation-only guard against clipping through heads, torsos or instruments.
     if (this.options?.television) {
-      const minSubjectDistance = selected === 'guitar' || selected === 'drums' ? 1.65 : 1.35;
+      const closeShot = ['tv_lead_close','tv_lead_medium','tv_instrument_left','tv_drummer_close','tv_push_in'].includes(selected);
+      const minSubjectDistance = selected === 'guitar' || selected === 'drums' || closeShot ? 1.65 : 1.35;
       for (const actor of this.actors) {
         if (!actor.root.visible) continue;
         const centre = actor.root.position.clone().add(new T.Vector3(0, 1.15, 0));
