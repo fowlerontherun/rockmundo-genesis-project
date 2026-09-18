@@ -117,7 +117,23 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
             const x = side * (half - .7);
             const panel = box(root, [1.05, 3.8, .12], [x, y + 2.25, back + .45], sidePanel);
             panel.rotation.z = side * -.08;
+
+            const sideLogo = makeLabel('TOP OF THE POPS', 3.0, .72);
+            sideLogo.position.set(x - side * .08, y + 2.25, back + .54);
+            sideLogo.rotation.z = side * -.08;
+            root.add(sideLogo);
         }
+
+        const rearLogo = makeLabel('TOP OF THE POPS', Math.min(p.stageWidth * .58, 7.4), 1.35);
+        rearLogo.position.set(0, y + (p.rigHeight - y) * .63, back + .62);
+        rearLogo.name = 'totp-rear-logo';
+        root.add(rearLogo);
+
+        const floorLogo = makeLabel('TOP OF THE POPS', 4.8, .9);
+        floorLogo.position.set(0, y + .012, .15);
+        floorLogo.rotation.x = -Math.PI / 2;
+        floorLogo.name = 'totp-floor-logo';
+        root.add(floorLogo);
 
         const key = new T.PointLight('#fff1df', 4.8, 9, 1.6);
         key.position.set(0, p.rigHeight - 1.2, 1.2);
