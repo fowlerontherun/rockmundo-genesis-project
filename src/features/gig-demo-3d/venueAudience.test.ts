@@ -43,8 +43,9 @@ describe('dense anatomical audiences', () => {
     it('keeps the Top of the Pops close crowd inside a compact television pocket', () => {
         const studio = resolveVenueProfile({ type: 'tv_studio', capacity: 250 });
         const area = detailedCrowdArea(studio);
-        expect(area.width).toBeLessThanOrEqual(8);
-        expect(area.depth).toBeLessThanOrEqual(4);
+        expect(area.width).toBe(8);
+        expect(area.depth).toBeLessThanOrEqual(3.6);
+        expect(area.front).toBeGreaterThanOrEqual(1.7);
         expect(area.front).toBeLessThan(2);
         expect(area.runway).toBe(false);
     });
@@ -55,9 +56,13 @@ describe('dense anatomical audiences', () => {
         expect(isTvStudioAudienceBlocked(-4.5, 4.05, studio)).toBe(true);
         expect(isTvStudioAudienceBlocked(1.4, 5.65, studio)).toBe(true);
         expect(isTvStudioAudienceBlocked(studio.stageWidth * .24, 2.55, studio)).toBe(true);
+        expect(isTvStudioAudienceBlocked(0, 3.55, studio)).toBe(true);
+        expect(isTvStudioAudienceBlocked(-studio.crowdWidth * .32, 4.7, studio)).toBe(true);
+        expect(isTvStudioAudienceBlocked(studio.crowdWidth * .32, 5.1, studio)).toBe(true);
         const places = audienceFloorPlaces(studio);
         expect(places.length).toBeGreaterThan(0);
         expect(places.every(([x, , z]) => !isTvStudioAudienceBlocked(x, z, studio))).toBe(true);
+        expect(places.every(([x, , z]) => !(Math.abs(x) < .58 && Math.abs(z - 3.55) < 2.4))).toBe(true);
     });
 
     it('does not apply TOTP blocking rules to ordinary venues', () => {
