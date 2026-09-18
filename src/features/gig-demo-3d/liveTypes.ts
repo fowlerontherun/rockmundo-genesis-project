@@ -49,5 +49,8 @@ export interface ConcertOptions {
     presenterKey?: string | null;
     showVariant?: string | null;
     stageKey?: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor';
+    monitorMode?: 'presenter' | 'chart' | 'performance' | 'audience';
+    monitorPrimary?: string | null;
+    monitorSecondary?: string | null;
   };
 }
