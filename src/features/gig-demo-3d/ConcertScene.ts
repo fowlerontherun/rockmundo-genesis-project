@@ -252,6 +252,33 @@ export class ConcertScene {
     }
     if (!this.options && this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
 
+    if (this.options?.television && this.venueProfile?.kind === 'tv_studio') {
+      const stageKey = this.options.television.stageKey ?? 'main_stage';
+      const [stageX, stageZ] = stageKey === 'stage_b'
+        ? [5.4, 1.4]
+        : stageKey === 'rock_stage'
+          ? [-4.5, 3.4]
+          : stageKey === 'studio_floor'
+            ? [1.4, 5.0]
+            : [0, 0];
+
+      const stageWideShot = ['front','tv_crane','tv_tracking','tv_low_angle','tv_overhead','tv_audience_reverse'].includes(selected);
+      if (stageWideShot && stageKey !== 'main_stage') {
+        this.targetPos.x += stageX;
+        this.targetPos.z += stageZ;
+
+        // Keep the camera relationship coherent with the active performance zone,
+        // but don't drag audience-reverse or overhead cameras fully across the room.
+        if (selected === 'front' || selected === 'tv_crane' || selected === 'tv_tracking' || selected === 'tv_low_angle') {
+          this.cameraPos.x += stageX * .72;
+          this.cameraPos.z += stageZ * .42;
+        } else if (selected === 'tv_overhead') {
+          this.cameraPos.x += stageX * .45;
+          this.cameraPos.z += stageZ * .28;
+        }
+      }
+    }
+
     if (this.options?.television) {
       const visible = this.actors.filter(actor => actor.root.visible);
       const vocalist = visible.find(actor => actor.hasVocals()) ?? visible.find(actor => actor.role === 'vocals');

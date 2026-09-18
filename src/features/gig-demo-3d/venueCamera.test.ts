@@ -30,3 +30,44 @@ describe('capacity-aware camera framing', () => {
     expect(rig.camera.position.z).toBeGreaterThan(.65 - p.stageDepth + .3);
   });
 });
+
+
+describe('Top of the Pops multi-stage camera framing', () => {
+  const tvHarness = (stageKey: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor') => {
+    const p = resolveVenueProfile({ type: 'tv_studio', capacity: 250, seed: 1234 });
+    const rig = Object.assign(Object.create(ConcertScene.prototype), {
+      venueProfile: p,
+      options: { externalClock: true, television: { presenterKey: 'alex_rayne', showVariant: 'regular', stageKey } },
+      settings: { ...DEFAULT_SETTINGS, camera: 'front' },
+      camera: new T.PerspectiveCamera(42, 4 / 3, .08, 300),
+      cameraPos: new T.Vector3(),
+      targetPos: new T.Vector3(),
+      lookAt: new T.Vector3(),
+      actors: [],
+      seconds: 5,
+      sceneKey: 'front',
+      playback: null,
+    });
+    rig.moveCamera(.016);
+    return rig;
+  };
+
+  it('moves the master shot toward Stage B instead of leaving it on Main Stage', () => {
+    const main = tvHarness('main_stage');
+    const stageB = tvHarness('stage_b');
+    expect(stageB.targetPos.x).toBeGreaterThan(main.targetPos.x + 4);
+  });
+
+  it('moves the master shot left and deeper for Rock Stage', () => {
+    const main = tvHarness('main_stage');
+    const rock = tvHarness('rock_stage');
+    expect(rock.targetPos.x).toBeLessThan(main.targetPos.x - 3.5);
+    expect(rock.targetPos.z).toBeGreaterThan(main.targetPos.z + 2.5);
+  });
+
+  it('moves the master shot into the room for Studio Floor', () => {
+    const main = tvHarness('main_stage');
+    const floor = tvHarness('studio_floor');
+    expect(floor.targetPos.z).toBeGreaterThan(main.targetPos.z + 4);
+  });
+});
