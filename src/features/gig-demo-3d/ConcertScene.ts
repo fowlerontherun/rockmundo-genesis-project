@@ -395,6 +395,7 @@ export class ConcertScene {
       updateVenueAudience(this.distantAudience, occupancy, t, this.settings.reducedMotion, energy, Math.round(160 * (this.playback?.crowd ?? this.settings.crowd)));
     }
     this.updateTelevisionPresenter(t);
+    this.updateTelevisionCrew(t);
     this.updateEffects();
     this.lights.forEach((light, i) => {
       light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight-this.venueProfile.stageHeight)/5.3,1.3) : 1) * (this.playback?.lightLevel ?? 1);
@@ -448,6 +449,67 @@ export class ConcertScene {
       const stageX = stageKey === 'stage_b' ? 5.4 : stageKey === 'rock_stage' ? -4.5 : stageKey === 'studio_floor' ? 1.4 : 0;
       presenter.rotation.y += T.MathUtils.clamp(stageX / 18, -.22, .22) * emphasis;
     }
+  }
+
+  private updateTelevisionCrew(t: number) {
+    if (!this.options?.television || this.venueProfile?.kind !== 'tv_studio') return;
+    const reduced = this.settings.reducedMotion;
+    const stageKey = this.options.television.stageKey ?? 'main_stage';
+    const target = stageKey === 'stage_b'
+      ? new T.Vector3(5.4, 1.35, 1.4)
+      : stageKey === 'rock_stage'
+        ? new T.Vector3(-4.5, 1.35, 3.4)
+        : stageKey === 'studio_floor'
+          ? new T.Vector3(1.4, 1.25, 5.0)
+          : new T.Vector3(0, 1.35, -.9);
+
+    const panHead = (cameraName: string, phase: number) => {
+      const camera = this.scene.getObjectByName(cameraName);
+      if (!camera) return;
+      const head = camera.children.find(child => child.name.includes('camera-head'));
+      if (!head) return;
+      const world = camera.getWorldPosition(new T.Vector3());
+      const dx = target.x - world.x;
+      const dz = target.z - world.z;
+      const desired = Math.atan2(-dx, -dz) - camera.rotation.y;
+      head.rotation.y = desired + (reduced ? 0 : Math.sin(t * .22 + phase) * .025);
+      head.rotation.x = reduced ? 0 : Math.sin(t * .18 + phase) * .012;
+    };
+
+    panHead('totp-camera-pedestal-left', 0);
+    panHead('totp-camera-pedestal-right', 1.8);
+    panHead('totp-camera-handheld', 3.3);
+
+    const handheld = this.scene.getObjectByName('totp-camera-handheld');
+    if (handheld) {
+      const baseX = this.venueProfile.stageWidth * .24;
+      handheld.position.x = baseX + (reduced ? 0 : Math.sin(t * .34) * .12);
+      handheld.position.z = 2.4 + (reduced ? 0 : Math.cos(t * .27) * .08);
+    }
+
+    const jibHead = this.scene.getObjectByName('totp-camera-jib-head');
+    if (jibHead) {
+      jibHead.rotation.y = reduced ? 0 : Math.sin(t * .2) * .18;
+      jibHead.rotation.x = reduced ? 0 : -.08 + Math.sin(t * .16 + .8) * .05;
+      const jibBaseY = Number(jibHead.userData.baseY ?? jibHead.position.y);
+      jibHead.userData.baseY = jibBaseY;
+      jibHead.position.y = jibBaseY + (!reduced && (this.settings.camera === 'tv_crane' || this.settings.camera === 'front') ? Math.sin(t * .24) * .025 : 0);
+    }
+
+    const operators = [
+      this.scene.getObjectByName('totp-operator-left'),
+      this.scene.getObjectByName('totp-operator-right'),
+      this.scene.getObjectByName('totp-operator-handheld'),
+    ].filter(Boolean) as T.Object3D[];
+
+    operators.forEach((operator, index) => {
+      const world = operator.getWorldPosition(new T.Vector3());
+      const dx = target.x - world.x;
+      const dz = target.z - world.z;
+      const desired = Math.atan2(dx, dz);
+      operator.rotation.y = desired + (reduced ? 0 : Math.sin(t * .19 + index) * .025);
+      operator.rotation.z = reduced ? 0 : Math.sin(t * .65 + index * 1.7) * .01;
+    });
   }
 
   private updateEffects() {

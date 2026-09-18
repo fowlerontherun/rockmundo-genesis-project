@@ -30,9 +30,12 @@ function buildCameraBody(root: T.Group, x: number, z: number, yaw = 0, handheld 
   }
 
   const bodyY = handheld ? 1.55 : 1.45;
-  box(camera, [.58, .38, .66], [0, bodyY, 0], dark);
-  cylinder(camera, .12, .16, .38, [0, bodyY, -.48], glass, 18).rotation.x = Math.PI / 2;
-  box(camera, [.34, .22, .05], [.34, bodyY + .08, .05], glass);
+  const head = new T.Group();
+  head.name = handheld ? 'totp-handheld-camera-head' : 'totp-pedestal-camera-head';
+  box(head, [.58, .38, .66], [0, bodyY, 0], dark);
+  cylinder(head, .12, .16, .38, [0, bodyY, -.48], glass, 18).rotation.x = Math.PI / 2;
+  box(head, [.34, .22, .05], [.34, bodyY + .08, .05], glass);
+  camera.add(head);
   root.add(camera);
   return camera;
 }
@@ -359,6 +362,7 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const armEnd = new T.Vector3(baseX - 5.2, 4.1, baseZ - 5.5);
   rod(jib, armStart.toArray(), armEnd.toArray(), .075, steel);
   const head = new T.Group();
+  head.name = 'totp-camera-jib-head';
   head.position.copy(armEnd);
   box(head, [.48, .3, .56], [0, 0, 0], dark);
   cylinder(head, .11, .14, .32, [0, 0, -.39], matte('#203447'), 16).rotation.x = Math.PI / 2;
