@@ -10,7 +10,7 @@ export const AUDIENCE_BUDGET = 12000;
 /** TOTP keeps the detailed front crowd in the central camera-visible pocket rather than
  * spilling those high-detail fans over Stage B, Rock Stage or the studio-floor set. */
 export function detailedCrowdArea(p?: VenueProfile) {
-    if (p?.kind === 'tv_studio') return { width: Math.min(8.2, p.crowdWidth), depth: Math.min(3.6, p.crowdDepth), front: 1.75, runway: false };
+    if (p?.kind === 'tv_studio') return { width: Math.min(8.0, p.crowdWidth), depth: Math.min(3.6, p.crowdDepth), front: 1.75, runway: false };
     return { width: Math.min(13, p?.crowdWidth ?? 13), depth: Math.min(11, p?.crowdDepth ?? 11), front: 2.15, runway: !!p && productionLayout(p).runway };
 }
 
