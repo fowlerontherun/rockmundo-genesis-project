@@ -149,7 +149,18 @@ export class Musician {
                 this.root.add(this.instrumentRig.root);
             if (vocal && assignment.instrument !== 'vocal_performance') {
                 this.equipment ??= new T.Group();
-                microphone(this.equipment, [.08, 0, .58]);
+                microphone(this.equipment, [.02, 0, .44], 1.50 * (appearance?.body.height ?? 1));
+            }
+            if (this.instrumentRig?.family === 'voice') {
+                const handheld = this.instrumentRig.root.getObjectByName('playing-handheld-microphone');
+                const hand = this.bones.get('Hand.R');
+                if (handheld && hand) {
+                    this.root.updateMatrixWorld(true);
+                    hand.attach(handheld);
+                    handheld.position.set(.015, -.015, -.06);
+                    handheld.rotation.set(-.15, 0, .08);
+                    handheld.userData.attachedToHand = true;
+                }
             }
             if (this.equipment) {
                 this.equipmentStageAnchor = new T.Vector3(...position);
