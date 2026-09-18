@@ -37,11 +37,27 @@ function anchors(clothing: ClothingItem) {
 }
 
 describe('procedural garment stage rig anchors', () => {
-  it('builds top garments from a shirt-shaped torso rather than a capsule', () => {
-    const garment = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'short', silhouette: 'classic' }));
+  it('builds top garments from an extruded clothing panel rather than a primitive capsule or cylinder', () => {
+    const garment = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'short', silhouette: 'classic', collar: 'crew' }));
     const torso = garment.children.find(child => child.userData.rigAnchor === 'Torso') as any;
-    expect(torso?.geometry?.type).toBe('CylinderGeometry');
+    expect(torso?.geometry?.type).toBe('ExtrudeGeometry');
+    torso.geometry.computeBoundingBox();
+    const box = torso.geometry.boundingBox;
+    expect(box.max.x - box.min.x).toBeGreaterThan(box.max.z - box.min.z);
+    expect(box.max.y - box.min.y).toBeGreaterThan(.5);
     disposeProceduralGarment(garment);
+  });
+
+  it('creates a real neckline notch in the top panel', () => {
+    const crew = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'none', collar: 'crew' }));
+    const vneck = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'none', collar: 'v-neck' }));
+    const crewTorso = crew.children.find(child => child.userData.rigAnchor === 'Torso') as any;
+    const vTorso = vneck.children.find(child => child.userData.rigAnchor === 'Torso') as any;
+    expect(crewTorso.geometry.attributes.position.count).toBeGreaterThan(20);
+    expect(vTorso.geometry.attributes.position.count).toBeGreaterThan(20);
+    expect(vTorso.geometry.attributes.position.count).not.toBe(crewTorso.geometry.attributes.position.count);
+    disposeProceduralGarment(crew);
+    disposeProceduralGarment(vneck);
   });
 
   it('lays sleeves along the avatar arms instead of vertically', () => {
