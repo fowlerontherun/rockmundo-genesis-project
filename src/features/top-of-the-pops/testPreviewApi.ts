@@ -53,6 +53,10 @@ export interface TotpAdminTestPreview {
   performances: TotpTestPreviewPerformance[];
 }
 
+function energeticDemoIntro(performance: TotpTestPreviewPerformance): string {
+  return `Come on, studio — make some noise! At number ${performance.qualifying_rank} this week, here are ${performance.band_name} with ${performance.song_title}!`;
+}
+
 export function isTotpTestPreviewSafe(preview: TotpAdminTestPreview): boolean {
   return preview.mode === "dry_run"
     && preview.safe === true
@@ -88,6 +92,7 @@ export async function adminPreviewTotpTestEpisode(seed = "admin-test", maxPerfor
     ...data,
     performances: data.performances.map((performance) => ({
       ...performance,
+      presenter_intro: energeticDemoIntro(performance),
       members: lineups.data?.[performance.band_id] ?? [],
       audio: audio.data?.[performance.song_id] ?? null,
     })),
