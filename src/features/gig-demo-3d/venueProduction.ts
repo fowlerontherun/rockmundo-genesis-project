@@ -9,39 +9,6 @@ export function productionLayout(p: VenueProfile) {
     const tier = p.production === 'portable' ? 0 : p.capacity <= 500 ? 1 : p.capacity <= 3000 ? 2 : p.capacity <= 15000 ? 3 : 4;
     return { tier, rows: [1, 1, 2, 3, 4][tier], columns: [2, 4, 6, 10, 14][tier], arrayBoxes: [0, 2, 4, 8, 12][tier], subs: [0, 2, 4, 8, 14][tier], monitors: [2, 3, 4, 6, 8][tier], wings: tier >= 3, runway: tier >= 4 && ['stadium', 'festival_stage', 'indoor_arena'].includes(p.kind) };
 }
-function totpSetVariant(p: VenueProfile): 0 | 1 | 2 {
-    const key = `${p.showVariant ?? 'regular'}:${p.presenterKey ?? 'alex_rayne'}:${p.seed}`;
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-    return (hash % 3) as 0 | 1 | 2;
-}
-
-function addTvStudioCamera(root: T.Group, x: number, z: number, yaw: number, black: T.Material, steel: T.Material) {
-    const dolly = new T.Group();
-    dolly.position.set(x, 0, z);
-    dolly.rotation.y = yaw;
-    dolly.name = 'totp-studio-camera';
-    root.add(dolly);
-    box(dolly, [.62, .16, .72], [0, .10, 0], black);
-    for (const wheelX of [-.24, .24]) for (const wheelZ of [-.24, .24]) cylinder(dolly, .075, .075, .05, [wheelX, .04, wheelZ], steel, 10).rotation.x = Math.PI / 2;
-    rod(dolly, [0, .18, 0], [0, 1.02, 0], .035, steel);
-    box(dolly, [.48, .38, .76], [0, 1.16, -.03], black);
-    cylinder(dolly, .15, .19, .45, [0, 1.17, -.52], black, 14).rotation.x = Math.PI / 2;
-    box(dolly, [.28, .16, .08], [.34, 1.27, -.05], black);
-}
-
-function addTvCrew(root: T.Group, x: number, z: number, yaw: number, black: T.Material) {
-    const crew = new T.Group();
-    crew.position.set(x, 0, z);
-    crew.rotation.y = yaw;
-    crew.name = 'totp-studio-crew';
-    root.add(crew);
-    cylinder(crew, .16, .21, .78, [0, .55, 0], black, 8);
-    const head = new T.Mesh(new T.SphereGeometry(.14, 8, 6), new T.MeshStandardMaterial({ color: '#7e5f4b', roughness: .88 }));
-    head.position.set(0, 1.05, 0);
-    crew.add(head);
-}
-
 export function stageLightPositions(p: VenueProfile) {
     const layout = productionLayout(p), positions: [
         number,
@@ -167,45 +134,6 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         floorLogo.rotation.x = -Math.PI / 2;
         floorLogo.name = 'totp-floor-logo';
         root.add(floorLogo);
-
-        const variant = totpSetVariant(p);
-        const cyan = new T.MeshStandardMaterial({ color: '#153548', emissive: '#31d5ff', emissiveIntensity: 1.75, roughness: .48 });
-        const magenta = new T.MeshStandardMaterial({ color: '#411334', emissive: '#ff4fc8', emissiveIntensity: 1.65, roughness: .52 });
-        const amber = new T.MeshStandardMaterial({ color: '#4a3212', emissive: '#ffc24f', emissiveIntensity: 1.45, roughness: .55 });
-
-        if (variant === 0) {
-            // Layered luminous arches around the central performance pocket.
-            for (let i = 0; i < 4; i++) {
-                const width = 7.8 - i * .85;
-                const height = 4.6 - i * .45;
-                const z = back + .92 + i * .14;
-                rod(root, [-width / 2, y + .15, z], [-width / 2, y + height, z], .045, i % 2 ? magenta : cyan);
-                rod(root, [width / 2, y + .15, z], [width / 2, y + height, z], .045, i % 2 ? magenta : cyan);
-                rod(root, [-width / 2, y + height, z], [width / 2, y + height, z], .045, i % 2 ? magenta : cyan);
-            }
-        } else if (variant === 1) {
-            // Stacked illuminated geometry, deliberately outside the central band area.
-            for (const side of [-1, 1]) {
-                for (let i = 0; i < 4; i++) {
-                    const panel = box(root, [.86 + i * .12, .62 + i * .16, .08], [side * (3.45 + i * .18), y + 1.05 + i * .78, back + .78 + (i % 2) * .16], i % 2 ? amber : magenta);
-                    panel.rotation.z = side * (i % 2 ? .12 : -.08);
-                }
-            }
-        } else {
-            // Vertical strip-light wall with staggered heights.
-            for (let i = 0; i < 13; i++) {
-                const x = (i - 6) * .62;
-                const h = 1.2 + ((i * 7) % 5) * .58;
-                box(root, [.055, h, .06], [x, y + .7 + h / 2, back + .82], i % 3 === 0 ? amber : i % 2 ? magenta : cyan);
-            }
-        }
-
-        // Visible production hardware at the edges helps the room read as television,
-        // while staying outside the performer/camera sightlines.
-        addTvStudioCamera(root, -6.15, 3.15, .42, black, steel);
-        addTvStudioCamera(root, 6.05, 3.55, -.48, black, steel);
-        addTvCrew(root, -6.75, 3.75, .38, black);
-        addTvCrew(root, 6.72, 4.0, -.42, black);
 
         const key = new T.PointLight('#fff1df', 4.8, 9, 1.6);
         key.position.set(0, p.rigHeight - 1.2, 1.2);
