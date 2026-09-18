@@ -16,15 +16,94 @@ const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backi
 
 export type ConcertPresentationMode = 'gig' | 'totp';
 
-const TOTP_STAGE_OFFSETS: Record<TotpStageKey, readonly [number, number, number]> = {
-  main_stage: [0, 0, 0],
-  stage_b: [5.4, 0, 1.4],
-  rock_stage: [-4.5, 0, 3.4],
-  studio_floor: [1.4, -.42, 5.0],
+type TotpStageFootprint = {
+  centerX: number;
+  centerZ: number;
+  floorY: number;
+  safeWidth: number;
+  safeDepth: number;
+  minU: number;
+  maxU: number;
+  minV: number;
+  maxV: number;
+  centerV: number;
 };
 
+function totpStageFootprint(stage: TotpStageKey, venue: VenueProfile): TotpStageFootprint {
+  switch (stage) {
+    case 'stage_b':
+      return {
+        centerX: 5.4,
+        centerZ: 2.05,
+        floorY: .22,
+        safeWidth: 3.25,
+        safeDepth: 2.15,
+        minU: .29,
+        maxU: .71,
+        minV: .30,
+        maxV: .78,
+        centerV: .54,
+      };
+    case 'rock_stage':
+      return {
+        centerX: -4.5,
+        centerZ: 4.05,
+        floorY: .28,
+        safeWidth: 4.35,
+        safeDepth: 2.7,
+        minU: .27,
+        maxU: .73,
+        minV: .29,
+        maxV: .78,
+        centerV: .53,
+      };
+    case 'studio_floor':
+      return {
+        centerX: 1.4,
+        centerZ: 5.65,
+        floorY: .08,
+        safeWidth: 3.5,
+        safeDepth: 2.45,
+        minU: .31,
+        maxU: .69,
+        minV: .31,
+        maxV: .75,
+        centerV: .53,
+      };
+    default:
+      return {
+        centerX: 0,
+        centerZ: .65 - venue.stageDepth / 2,
+        floorY: venue.stageHeight,
+        safeWidth: Math.min(6.6, venue.stageWidth * .58),
+        safeDepth: Math.min(4.25, venue.stageDepth * .64),
+        minU: .27,
+        maxU: .73,
+        minV: .28,
+        maxV: .80,
+        centerV: .53,
+      };
+  }
+}
 
 type TotpStageMark = { u: number; v: number };
+
+export function totpSafeStageMark(stage: TotpStageKey, venue: VenueProfile, mark: TotpStageMark): TotpStageMark {
+  const footprint = totpStageFootprint(stage, venue);
+  return {
+    u: clamp(mark.u, footprint.minU, footprint.maxU),
+    v: clamp(mark.v, footprint.minV, footprint.maxV),
+  };
+}
+
+export function totpStageWorldPosition(stage: TotpStageKey, venue: VenueProfile, mark: TotpStageMark, role?: PresentationRole): [number, number, number] {
+  const footprint = totpStageFootprint(stage, venue);
+  const safe = totpSafeStageMark(stage, venue, mark);
+  const x = footprint.centerX + (safe.u - .5) * footprint.safeWidth;
+  const z = footprint.centerZ + (safe.v - footprint.centerV) * footprint.safeDepth;
+  const roleLift = role === 'drums' && stage !== 'studio_floor' ? .18 : 0;
+  return [x, footprint.floorY + roleLift, z];
+}
 
 function totpPreferredMarks(role: PresentationRole, instrument: string | null): TotpStageMark[] {
   const text = (instrument ?? '').toLowerCase();
@@ -180,11 +259,7 @@ function totpStagePoint(
   const choreography = entity
     ? totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, performing)
     : { mark: home, walking: false };
-  const base = stagePosition(venue, choreography.mark.u, choreography.mark.v);
-  const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
-  const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .96 : totpStage === 'stage_b' ? .92 : .90;
-  const roleLift = entity?.role === 'drums' && totpStage !== 'studio_floor' ? .18 : 0;
-  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy + roleLift), (base[2] - .65) * scale + .65 + dz];
+  return totpStageWorldPosition(totpStage, venue, choreography.mark, entity?.role);
 }
 
 export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienceDTO | null) {
@@ -197,9 +272,11 @@ export function buildStagePlan(replay: GigViewerReplay, experience: GigExperienc
 function stagePoint(plan: PerformerPlan, point: { x: number; y: number }, venue: VenueProfile, presentationMode: ConcertPresentationMode = 'gig', totpStage: TotpStageKey = 'main_stage'): [number, number, number] {
   const base = stagePosition(venue, (point.x - plan.stage.x) / plan.stage.width, (point.y - plan.stage.y) / plan.stage.height);
   if (presentationMode !== 'totp') return base;
-  const [dx, dy, dz] = TOTP_STAGE_OFFSETS[totpStage];
-  const scale = totpStage === 'main_stage' ? 1 : totpStage === 'rock_stage' ? .78 : .66;
-  return [base[0] * scale + dx, Math.max(0.04, base[1] + dy), (base[2] - .65) * scale + .65 + dz];
+  const mark = {
+    u: (point.x - plan.stage.x) / plan.stage.width,
+    v: (point.y - plan.stage.y) / plan.stage.height,
+  };
+  return totpStageWorldPosition(totpStage, venue, mark);
 }
 
 export function concertOptions(
