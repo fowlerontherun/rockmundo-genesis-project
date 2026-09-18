@@ -71,3 +71,34 @@ describe('Top of the Pops multi-stage camera framing', () => {
     expect(floor.targetPos.z).toBeGreaterThan(main.targetPos.z + 4);
   });
 });
+
+
+describe('Top of the Pops presenter camera framing', () => {
+  it('frames the actual presenter position for presenter close-up', () => {
+    const p = resolveVenueProfile({ type: 'tv_studio', seed: 1234, presenterKey: 'alex_rayne' });
+    const scene = new T.Scene();
+    const presenter = new T.Group();
+    presenter.name = 'totp-presenter-alex-rayne';
+    presenter.position.set(-4.2, 0, -.5);
+    scene.add(presenter);
+
+    const rig = Object.assign(Object.create(ConcertScene.prototype), {
+      venueProfile: p,
+      options: { externalClock: true, television: { presenterKey: 'alex_rayne', showVariant: 'regular', stageKey: 'main_stage' } },
+      settings: { ...DEFAULT_SETTINGS, camera: 'tv_presenter_close' },
+      camera: new T.PerspectiveCamera(42, 4 / 3, .08, 300),
+      cameraPos: new T.Vector3(),
+      targetPos: new T.Vector3(),
+      lookAt: new T.Vector3(),
+      actors: [],
+      seconds: 5,
+      sceneKey: 'tv_presenter_close',
+      playback: null,
+      scene,
+    });
+
+    rig.moveCamera(.016);
+    expect(rig.targetPos.x).toBeCloseTo(-4.2, 1);
+    expect(rig.targetPos.y).toBeGreaterThan(1);
+  });
+});

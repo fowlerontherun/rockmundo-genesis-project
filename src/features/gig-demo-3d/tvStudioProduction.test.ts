@@ -9,6 +9,9 @@ describe('Top of the Pops TV studio production', () => {
     buildTvStudioProduction(root, resolveVenueProfile({ type: 'tv_studio' }));
 
     expect(root.getObjectByName('totp-presenter-alex-rayne')).toBeTruthy();
+    expect(root.getObjectByName('totp-presenter-left-arm')).toBeTruthy();
+    expect(root.getObjectByName('totp-presenter-right-arm')).toBeTruthy();
+    expect(root.getObjectByName('totp-presenter-microphone')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-pedestal-left')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-pedestal-right')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-handheld')).toBeTruthy();
