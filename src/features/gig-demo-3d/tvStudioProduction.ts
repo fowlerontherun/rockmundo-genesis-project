@@ -73,9 +73,13 @@ function buildPresenter(root: T.Group, x: number, z: number, presenterKey?: stri
   const hairCap = new T.Mesh(new T.SphereGeometry(.195, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), hair);
   hairCap.position.set(0, 1.74, 0);
   presenter.add(hairCap);
-  rod(presenter, [-.18, 1.15, 0], [-.42, .96, -.08], .06, suit);
-  rod(presenter, [.18, 1.15, 0], [.38, 1.02, -.2], .06, suit);
-  cylinder(presenter, .035, .045, .28, [.42, 1.08, -.24], matte('#111318'), 10).rotation.x = Math.PI / 2;
+  const leftArm = rod(presenter, [-.18, 1.15, 0], [-.42, .96, -.08], .06, suit);
+  leftArm.name = 'totp-presenter-left-arm';
+  const rightArm = rod(presenter, [.18, 1.15, 0], [.38, 1.02, -.2], .06, suit);
+  rightArm.name = 'totp-presenter-right-arm';
+  const mic = cylinder(presenter, .035, .045, .28, [.42, 1.08, -.24], matte('#111318'), 10);
+  mic.rotation.x = Math.PI / 2;
+  mic.name = 'totp-presenter-microphone';
   root.add(presenter);
   return presenter;
 }
