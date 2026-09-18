@@ -195,7 +195,7 @@ export function totpChoreographyState(
   return { mark: home, walking: false };
 }
 
-function totpLiveMarks(
+export function totpLiveMarks(
   plan: PerformerPlan,
   positionMs: number,
   performing: boolean,
