@@ -111,6 +111,63 @@ export function applyTvStudioPresenterProfile(root: T.Object3D, presenterKey?: s
   });
 }
 
+function tvSetVariant(p: VenueProfile): 0 | 1 | 2 {
+  const key = `${p.showVariant ?? 'regular'}:${p.presenterKey ?? 'alex_rayne'}:${p.seed}`;
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) hash = (hash * 31 + key.charCodeAt(index)) >>> 0;
+  return (hash % 3) as 0 | 1 | 2;
+}
+
+function buildStudioSetVariant(root: T.Group, p: VenueProfile) {
+  const group = new T.Group();
+  const variant = tvSetVariant(p);
+  group.name = `totp-set-variant-${variant}`;
+  group.userData.variant = variant;
+
+  const cyan = new T.MeshStandardMaterial({ color: '#173b4c', emissive: '#27c9ff', emissiveIntensity: 1.55, roughness: .46 });
+  const magenta = new T.MeshStandardMaterial({ color: '#441633', emissive: '#ff4fbd', emissiveIntensity: 1.5, roughness: .5 });
+  const amber = new T.MeshStandardMaterial({ color: '#4a3315', emissive: '#ffbf4f', emissiveIntensity: 1.35, roughness: .52 });
+  const back = .65 - p.stageDepth;
+
+  if (variant === 0) {
+    for (let index = 0; index < 4; index += 1) {
+      const width = 8.2 - index * .8;
+      const height = 4.6 - index * .42;
+      const z = back + .78 + index * .13;
+      const material = index % 2 ? magenta : cyan;
+      rod(group, [-width / 2, p.stageHeight + .12, z], [-width / 2, p.stageHeight + height, z], .045, material);
+      rod(group, [width / 2, p.stageHeight + .12, z], [width / 2, p.stageHeight + height, z], .045, material);
+      rod(group, [-width / 2, p.stageHeight + height, z], [width / 2, p.stageHeight + height, z], .045, material);
+    }
+  } else if (variant === 1) {
+    for (const side of [-1, 1]) {
+      for (let index = 0; index < 4; index += 1) {
+        const panel = box(
+          group,
+          [.82 + index * .12, .66 + index * .16, .08],
+          [side * (3.4 + index * .18), p.stageHeight + 1.0 + index * .78, back + .82 + (index % 2) * .16],
+          index % 2 ? amber : magenta,
+        );
+        panel.rotation.z = side * (index % 2 ? .12 : -.08);
+      }
+    }
+  } else {
+    for (let index = 0; index < 13; index += 1) {
+      const x = (index - 6) * .62;
+      const height = 1.3 + ((index * 7) % 5) * .56;
+      box(group, [.055, height, .06], [x, p.stageHeight + .7 + height / 2, back + .84], index % 3 === 0 ? amber : index % 2 ? magenta : cyan);
+    }
+    for (const side of [-1, 1]) {
+      const ring = new T.Mesh(new T.TorusGeometry(1.05, .06, 10, 40, Math.PI * 1.5), side < 0 ? cyan : magenta);
+      ring.position.set(side * 3.55, p.stageHeight + 2.2, back + .72);
+      ring.rotation.z = side < 0 ? .35 : Math.PI - .35;
+      group.add(ring);
+    }
+  }
+
+  root.add(group);
+}
+
 function buildPerformanceZones(root: T.Group, p: VenueProfile) {
   const dark = matte('#12161c');
   const black = matte('#080a0e');
@@ -237,6 +294,7 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const floor = matte('#242830');
 
   buildPerformanceZones(root, p);
+  buildStudioSetVariant(root, p);
   buildSpecialEditionDecor(root, p);
 
   const presenterX = -p.stageWidth * .66;
