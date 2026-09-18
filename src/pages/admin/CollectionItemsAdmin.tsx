@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,11 +14,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Edit, Layers3, Plus, Shirt, Sparkles, Trash2, Zap } from "lucide-react";
+import { ArrowLeft, Download, Edit, Eye, Layers3, Plus, Shirt, Sparkles, Trash2, Zap } from "lucide-react";
 import { ClothingDesignStudio, DEFAULT_CLOTHING_DESIGN, type ClothingDesignConfig } from "@/components/admin/ClothingDesignStudio";
 import { ClothingTransferPanel } from "@/components/admin/clothing/ClothingTransferPanel";
 import { ClothingPreviewManager } from "@/components/admin/clothing/ClothingPreviewManager";
 import { browserDownloadJson, slugifyExternalKey, toPortableClothingItem } from "@/features/clothing-transfer/clothingTransfer";
+import { RichClothingPreview } from "@/features/clothing-preview/RichClothingPreview";
+import { defaultAppearance } from "@/features/player-model/appearance";
 
 const CATEGORIES = ["shirt", "t-shirt", "tank-top", "hoodie", "sweater", "pants", "jeans", "shorts", "skirt", "dress", "jacket", "coat", "vest", "shoes", "boots", "trainers", "accessory", "hat", "glasses"];
 const SLOTS = ["top", "outerwear", "bottom", "dress", "footwear", "headwear", "eyewear", "accessory"];
@@ -100,6 +102,32 @@ const CollectionItemsAdmin = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<ClothingForm>(emptyForm());
+  const previewAppearance = useMemo(() => defaultAppearance(`admin-skin-studio-${collectionId || "preview"}`), [collectionId]);
+  const livePreviewItem = useMemo(() => ({
+    id: editingItem?.id || "admin-live-clothing-preview",
+    name: formData.name.trim() || "Untitled clothing",
+    description: formData.description,
+    category: formData.category,
+    wearable_slot: formData.wearable_slot,
+    price: formData.price,
+    rarity: formData.rarity,
+    color_variants: formData.color_variants_text.split(",").map(v => v.trim()).filter(Boolean),
+    garment_config: formData.design.garment,
+    material_config: formData.design.material,
+    pattern_config: formData.design.pattern,
+    detail_layers: formData.design.details.map(d => ({ ...d, opacity: Math.max(0, Math.min(1, d.opacity / 100)) })),
+    fit_config: formData.design.fit,
+    wear_config: formData.design.wear,
+    customization_zones: formData.design.zones,
+    render_config: formData.design.render,
+    variant_matrix: formData.design.variants,
+    shape_config: {
+      ...(formData.design.garment || {}),
+      material: formData.design.material.fabric,
+      fit: formData.design.fit.fit,
+      pattern: formData.design.pattern.type,
+    },
+  }) as any, [editingItem?.id, formData]);
 
   const { data: collection } = useQuery({
     queryKey: ["admin-collection", collectionId],
@@ -252,28 +280,86 @@ const CollectionItemsAdmin = () => {
       <Card className="xl:col-span-2"><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="flex items-center gap-2"><Shirt className="h-5 w-5" />Pack Items ({items?.length || 0})</CardTitle>
         <Dialog open={isDialogOpen} onOpenChange={open => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Create Clothing</Button></DialogTrigger>
-          <DialogContent className="max-w-6xl max-h-[94vh] overflow-y-auto"><DialogHeader><DialogTitle>{editingItem ? "Edit Detailed Clothing Item" : "Create Detailed Clothing Item"}</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <Tabs defaultValue="identity"><TabsList className="grid grid-cols-4 w-full"><TabsTrigger value="identity">Identity</TabsTrigger><TabsTrigger value="design">Design Studio</TabsTrigger><TabsTrigger value="bonuses">Bonuses</TabsTrigger><TabsTrigger value="summary">Summary</TabsTrigger></TabsList>
-                <TabsContent value="identity" className="space-y-5 pt-4">
-                  <div className="grid sm:grid-cols-2 gap-4"><div className="space-y-2"><Label>Name</Label><Input required value={formData.name} onChange={e=>setFormData({...formData,name:e.target.value})}/></div><div className="space-y-2"><Label>Price</Label><Input type="number" min={0} value={formData.price} onChange={e=>setFormData({...formData,price:Number(e.target.value)})}/></div></div>
-                  <div className="space-y-2"><Label>Description</Label><Textarea rows={3} value={formData.description} onChange={e=>setFormData({...formData,description:e.target.value})}/></div>
-                  <div className="grid sm:grid-cols-3 gap-4">
-                    <div className="space-y-2"><Label>Category</Label><Select value={formData.category} onValueChange={v=>setFormData({...formData,category:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{CATEGORIES.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Wearable slot</Label><Select value={formData.wearable_slot} onValueChange={v=>setFormData({...formData,wearable_slot:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{SLOTS.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Rarity</Label><Select value={formData.rarity} onValueChange={v=>setFormData({...formData,rarity:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{RARITIES.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-                  </div>
-                  <div className="space-y-2"><Label>Quick colour variants</Label><Input value={formData.color_variants_text} onChange={e=>setFormData({...formData,color_variants_text:e.target.value})}/><p className="text-xs text-muted-foreground">Legacy/store palette. Rich named variants are configured in the Design Studio.</p></div>
-                  <div className="flex flex-wrap gap-5"><div className="flex items-center gap-2"><Switch checked={formData.is_premium} onCheckedChange={v=>setFormData({...formData,is_premium:v})}/><Label>Premium</Label></div><div className="flex items-center gap-2"><Switch checked={formData.is_limited_edition} onCheckedChange={v=>setFormData({...formData,is_limited_edition:v})}/><Label>Limited edition</Label></div><div className="flex items-center gap-2"><Switch checked={formData.featured} onCheckedChange={v=>setFormData({...formData,featured:v})}/><Label>Featured</Label></div></div>
-                </TabsContent>
+          <DialogContent className="max-w-[96vw] w-[1400px] h-[94vh] overflow-hidden p-0">
+            <form onSubmit={handleSubmit} className="grid h-full min-h-0 lg:grid-cols-[minmax(0,1fr)_400px]">
+              <div className="min-h-0 overflow-y-auto p-6">
+                <DialogHeader className="mb-5">
+                  <DialogTitle>{editingItem ? "Edit Clothing" : "Create Clothing"}</DialogTitle>
+                  <p className="text-sm text-muted-foreground">Start with the essentials. The preview stays live while you make changes; advanced garment controls are optional.</p>
+                </DialogHeader>
 
-                <TabsContent value="design" className="pt-4"><ClothingDesignStudio value={formData.design} onChange={design=>setFormData({...formData,design})}/></TabsContent>
+                <Tabs defaultValue="basics">
+                  <TabsList className="grid grid-cols-3 w-full">
+                    <TabsTrigger value="basics">Basics</TabsTrigger>
+                    <TabsTrigger value="design">Advanced design</TabsTrigger>
+                    <TabsTrigger value="bonuses">Bonuses</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="bonuses" className="pt-4"><Card><CardHeader><CardTitle className="text-base flex items-center justify-between"><span className="flex items-center gap-2"><Zap className="h-4 w-4"/>Equipped gameplay bonuses</span><Switch checked={formData.bonus_enabled} onCheckedChange={v=>setFormData({...formData,bonus_enabled:v})}/></CardTitle></CardHeader>{formData.bonus_enabled && <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-3"><div className="space-y-1"><Label>Daily XP</Label><Input type="number" min={0} max={25} value={formData.bonuses.daily_xp} onChange={e=>setBonus("daily_xp",Number(e.target.value))}/></div><div className="space-y-1"><Label>Daily AP</Label><Input type="number" min={0} max={5} value={formData.bonuses.daily_ap} onChange={e=>setBonus("daily_ap",Number(e.target.value))}/></div><div className="space-y-1"><Label>Performance %</Label><Input type="number" min={0} max={10} value={formData.bonuses.performance_pct} onChange={e=>setBonus("performance_pct",Number(e.target.value))}/></div><div className="space-y-1"><Label>Recording %</Label><Input type="number" min={0} max={10} value={formData.bonuses.recording_pct} onChange={e=>setBonus("recording_pct",Number(e.target.value))}/></div><div className="space-y-1"><Label>Songwriting %</Label><Input type="number" min={0} max={10} value={formData.bonuses.songwriting_pct} onChange={e=>setBonus("songwriting_pct",Number(e.target.value))}/></div></CardContent>}</Card></TabsContent>
+                  <TabsContent value="basics" className="space-y-5 pt-4">
+                    <Card>
+                      <CardHeader className="pb-3"><CardTitle className="text-base">Item details</CardTitle></CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-2"><Label>Name</Label><Input required autoFocus value={formData.name} onChange={e=>setFormData({...formData,name:e.target.value})}/></div>
+                          <div className="space-y-2"><Label>Price</Label><Input type="number" min={0} value={formData.price} onChange={e=>setFormData({...formData,price:Number(e.target.value)})}/></div>
+                        </div>
+                        <div className="space-y-2"><Label>Description</Label><Textarea rows={2} value={formData.description} onChange={e=>setFormData({...formData,description:e.target.value})}/></div>
+                        <div className="grid sm:grid-cols-3 gap-4">
+                          <div className="space-y-2"><Label>Category</Label><Select value={formData.category} onValueChange={v=>setFormData({...formData,category:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{CATEGORIES.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                          <div className="space-y-2"><Label>Wearable slot</Label><Select value={formData.wearable_slot} onValueChange={v=>setFormData({...formData,wearable_slot:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{SLOTS.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                          <div className="space-y-2"><Label>Rarity</Label><Select value={formData.rarity} onValueChange={v=>setFormData({...formData,rarity:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{RARITIES.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                <TabsContent value="summary" className="pt-4 space-y-4"><div className="grid md:grid-cols-3 gap-4"><Card><CardHeader><CardTitle className="text-sm">Construction</CardTitle></CardHeader><CardContent className="text-sm space-y-1"><p>{formData.design.garment.silhouette} / {formData.design.garment.cut}</p><p>{formData.design.material.fabric}</p><p>{formData.design.pattern.type} pattern</p><p>{formData.design.fit.fit} fit</p></CardContent></Card><Card><CardHeader><CardTitle className="text-sm">Complexity</CardTitle></CardHeader><CardContent className="text-sm space-y-1"><p>{formData.design.zones.length} editable zones</p><p>{formData.design.details.length} detail layers</p><p>{formData.design.variants.length} named variants</p><p>{formData.design.wear.condition} condition</p></CardContent></Card><Card><CardHeader><CardTitle className="text-sm">Rendering</CardTitle></CardHeader><CardContent className="text-sm space-y-1"><p>Layer {formData.design.render.layer}</p><p>Scale {formData.design.render.scale}%</p><p>Depth {formData.design.render.depthOffset}</p><p>{formData.design.render.castShadow ? "Casts shadow" : "No shadow"}</p></CardContent></Card></div></TabsContent>
-              </Tabs>
-              <div className="flex justify-end gap-2 sticky bottom-0 bg-background pt-3 border-t"><Button type="button" variant="outline" onClick={()=>setIsDialogOpen(false)}>Cancel</Button><Button type="submit" disabled={createMutation.isPending||updateMutation.isPending}>{editingItem?"Save Clothing Design":"Create Clothing Item"}</Button></div>
+                    <Card>
+                      <CardHeader className="pb-3"><CardTitle className="text-base">Look</CardTitle></CardHeader>
+                      <CardContent className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2"><Label>Primary colour</Label><Input type="color" value={formData.design.material.primaryColor} onChange={e=>setFormData(current=>({...current,design:{...current.design,material:{...current.design.material,primaryColor:e.target.value}}}))}/></div>
+                        <div className="space-y-2"><Label>Secondary colour</Label><Input type="color" value={formData.design.material.secondaryColor} onChange={e=>setFormData(current=>({...current,design:{...current.design,material:{...current.design.material,secondaryColor:e.target.value}}}))}/></div>
+                        <div className="space-y-2"><Label>Fabric</Label><Select value={formData.design.material.fabric} onValueChange={v=>setFormData(current=>({...current,design:{...current.design,material:{...current.design.material,fabric:v}}}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{["cotton","denim","leather","silk","satin","velvet","wool","canvas","mesh","nylon","vinyl","sequins"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Pattern</Label><Select value={formData.design.pattern.type} onValueChange={v=>setFormData(current=>({...current,design:{...current.design,pattern:{...current.design.pattern,type:v}}}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{["solid","stripes","checks","tartan","polka-dot","floral","camouflage","tie-dye","gradient","geometric","stars","flames"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Fit</Label><Select value={formData.design.fit.fit} onValueChange={v=>setFormData(current=>({...current,design:{...current.design,fit:{...current.design.fit,fit:v}}}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{["skinny","slim","regular","relaxed","oversized"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Condition</Label><Select value={formData.design.wear.condition} onValueChange={v=>setFormData(current=>({...current,design:{...current.design,wear:{...current.design.wear,condition:v}}}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{["new","washed","faded","vintage","distressed","stage-worn"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3"><CardTitle className="text-base">Store options</CardTitle></CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2"><Label>Colour variants</Label><Input value={formData.color_variants_text} onChange={e=>setFormData({...formData,color_variants_text:e.target.value})}/><p className="text-xs text-muted-foreground">Comma-separated store colours. Use Advanced design only when you need named variants, custom zones or layered details.</p></div>
+                        <div className="flex flex-wrap gap-5"><div className="flex items-center gap-2"><Switch checked={formData.is_premium} onCheckedChange={v=>setFormData({...formData,is_premium:v})}/><Label>Premium</Label></div><div className="flex items-center gap-2"><Switch checked={formData.is_limited_edition} onCheckedChange={v=>setFormData({...formData,is_limited_edition:v})}/><Label>Limited edition</Label></div><div className="flex items-center gap-2"><Switch checked={formData.featured} onCheckedChange={v=>setFormData({...formData,featured:v})}/><Label>Featured</Label></div></div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="design" className="pt-4"><ClothingDesignStudio value={formData.design} onChange={design=>setFormData({...formData,design})}/></TabsContent>
+
+                  <TabsContent value="bonuses" className="pt-4">
+                    <Card><CardHeader><CardTitle className="text-base flex items-center justify-between"><span className="flex items-center gap-2"><Zap className="h-4 w-4"/>Equipped gameplay bonuses</span><Switch checked={formData.bonus_enabled} onCheckedChange={v=>setFormData({...formData,bonus_enabled:v})}/></CardTitle></CardHeader>{formData.bonus_enabled ? <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-3"><div className="space-y-1"><Label>Daily XP</Label><Input type="number" min={0} max={25} value={formData.bonuses.daily_xp} onChange={e=>setBonus("daily_xp",Number(e.target.value))}/></div><div className="space-y-1"><Label>Daily AP</Label><Input type="number" min={0} max={5} value={formData.bonuses.daily_ap} onChange={e=>setBonus("daily_ap",Number(e.target.value))}/></div><div className="space-y-1"><Label>Performance %</Label><Input type="number" min={0} max={10} value={formData.bonuses.performance_pct} onChange={e=>setBonus("performance_pct",Number(e.target.value))}/></div><div className="space-y-1"><Label>Recording %</Label><Input type="number" min={0} max={10} value={formData.bonuses.recording_pct} onChange={e=>setBonus("recording_pct",Number(e.target.value))}/></div><div className="space-y-1"><Label>Songwriting %</Label><Input type="number" min={0} max={10} value={formData.bonuses.songwriting_pct} onChange={e=>setBonus("songwriting_pct",Number(e.target.value))}/></div></CardContent> : <CardContent><p className="text-sm text-muted-foreground">Leave this off for a cosmetic-only item.</p></CardContent>}</Card>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="flex justify-end gap-2 sticky bottom-0 bg-background/95 backdrop-blur pt-4 pb-1 mt-6 border-t">
+                  <Button type="button" variant="outline" onClick={()=>setIsDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={createMutation.isPending||updateMutation.isPending}>{editingItem?"Save Clothing":"Create Clothing Item"}</Button>
+                </div>
+              </div>
+
+              <aside className="hidden lg:flex min-h-0 flex-col border-l bg-muted/20 p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div><div className="font-semibold flex items-center gap-2"><Eye className="h-4 w-4"/>Live preview</div><p className="text-xs text-muted-foreground">Updates automatically as you edit.</p></div>
+                  <Badge variant="secondary" className="capitalize">{formData.category}</Badge>
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-background">
+                  <RichClothingPreview appearance={previewAppearance} item={livePreviewItem} />
+                </div>
+                <div className="mt-3 rounded-lg border bg-background p-3 text-xs text-muted-foreground">
+                  <div className="font-medium text-foreground mb-1">{formData.name || "Untitled clothing"}</div>
+                  <div className="capitalize">{formData.design.material.fabric} · {formData.design.pattern.type} · {formData.design.fit.fit} fit</div>
+                  <div className="mt-1">Drag the model to rotate and use the preview controls to zoom.</div>
+                </div>
+              </aside>
             </form>
           </DialogContent>
         </Dialog>
