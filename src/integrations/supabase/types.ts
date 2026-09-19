@@ -56740,6 +56740,53 @@ export type Database = {
           },
         ]
       }
+      totp_episode_plans: {
+        Row: {
+          closing_link: string | null
+          created_at: string
+          episode_id: string
+          id: string
+          notes: string | null
+          opening_link: string | null
+          segments: Json
+          theme: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          closing_link?: string | null
+          created_at?: string
+          episode_id: string
+          id?: string
+          notes?: string | null
+          opening_link?: string | null
+          segments?: Json
+          theme?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          closing_link?: string | null
+          created_at?: string
+          episode_id?: string
+          id?: string
+          notes?: string | null
+          opening_link?: string | null
+          segments?: Json
+          theme?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_episode_plans_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: true
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totp_episodes: {
         Row: {
           broadcast_at: string
@@ -70948,6 +70995,14 @@ export type Database = {
         Args: { p_contract_id: string; p_reason?: string }
         Returns: Json
       }
+      totp_admin_broadcast_schedule: {
+        Args: { p_from?: string; p_weeks?: number }
+        Returns: Json
+      }
+      totp_admin_cancel_episode: {
+        Args: { p_episode_id: string }
+        Returns: boolean
+      }
       totp_admin_cancel_render: {
         Args: { p_job_id: string }
         Returns: {
@@ -71015,6 +71070,10 @@ export type Database = {
         }
         Returns: Json
       }
+      totp_admin_save_episode_plan: {
+        Args: { p_episode_id: string; p_plan: Json }
+        Returns: Json
+      }
       totp_admin_test_band_lineups: {
         Args: { p_band_ids: string[] }
         Returns: Json
@@ -71026,6 +71085,20 @@ export type Database = {
       totp_admin_test_song_audio: {
         Args: { p_song_ids: string[] }
         Returns: Json
+      }
+      totp_admin_upsert_episode: {
+        Args: {
+          p_broadcast_at: string
+          p_chart_snapshot_date: string
+          p_check_in_at: string
+          p_city_id: string
+          p_episode_date: string
+          p_episode_id: string
+          p_max_performances: number
+          p_presenter_key: string
+          p_show_variant: string
+        }
+        Returns: string
       }
       totp_award_achievement: {
         Args: {
@@ -71120,6 +71193,7 @@ export type Database = {
         }
       }
       totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
+      totp_episode_plan: { Args: { p_episode_id: string }; Returns: Json }
       totp_episode_render_jobs: {
         Args: { p_episode_id?: string }
         Returns: {
