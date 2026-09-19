@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Captions, CaptionsOff, CloudUpload, Download, Pause, Play, RotateCcw, Video, Volume2, VolumeX } from "lucide-react";
+import { Captions, CaptionsOff, CloudUpload, Download, Mic, Pause, Play, RotateCcw, Video, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
