@@ -143,6 +143,11 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const [positionMs, setPositionMs] = useState(0), [playing, setPlaying] = useState(autoPlay);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const captions = useMemo(
+    () => buildTotpCaptionCues(source.payload.cues, { presenterName: resolveTotpPresenter(lockedPresenterKey(source)).displayName }),
+    [source],
+  );
   const [resolvedBroadcastAudio, setResolvedBroadcastAudio] = useState<{ url: string | null; durationSeconds: number | null } | null>(null);
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
