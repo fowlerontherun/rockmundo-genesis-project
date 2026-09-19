@@ -8,8 +8,8 @@ import {
 import type { TotpEpisodeManifest, TotpManifestSegment, TotpTrackRights } from "./episodeManifest";
 
 const clearedRights: TotpTrackRights = {
-  owner: "Rockmundo in-game master",
-  licence: "rockmundo-broadcast",
+  owner: "Example Master Owner",
+  licence: "broadcast-agreement-1",
   territories: ["WORLD"],
   expires_on: null,
   content_id_allowlisted: true,
@@ -28,7 +28,9 @@ function segment(overrides: Partial<TotpManifestSegment> = {}): TotpManifestSegm
     stage_key: "main_stage",
     qualifying_rank: 4,
     presenter_intro: "Straight in at number four, here are The Neon Tides with Coastline.",
-    assets: [{ kind: "song_audio", url: "https://audio/song-1.mp3", duration_ms: 185_000 }],
+    assets: [
+      { kind: "song_audio", url: "https://audio/song-1.mp3", duration_ms: 185_000, sha256: null, version: null, script_checksum: null },
+    ],
     rights: clearedRights,
     ...overrides,
   };
