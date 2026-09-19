@@ -180,7 +180,7 @@ Deno.serve(async (req: Request) => {
       for (const artifact of requested) {
         const filename = safeFileName(artifact.filename);
         const path = `${prefix}/${filename}`;
-        const { data, error } = await service.storage.from(BUCKET).createSignedUploadUrl(path);
+        const { data, error } = await service.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
         if (error || !data?.token) throw error ?? new Error(`Could not create upload slot for ${filename}.`);
         slots.push({
           kind: String(artifact.kind ?? "artifact"),
