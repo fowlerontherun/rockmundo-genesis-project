@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("./rpc", () => ({ totpRpc: rpc }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { storage: { from: () => ({ createSignedUrl: vi.fn() }) } },
+}));
 
 import {
   activeTotpRenderJob,
@@ -25,13 +28,8 @@ const manifest = {
   show_variant: null,
   broadcast_profile: "standard",
   programme_spec: {
-    width: 1920,
-    height: 1080,
-    frame_rate: 30,
-    video_codec: "h264",
-    audio_codec: "aac",
-    audio_channels: 2,
-    aspect_ratio: "16:9",
+    width: 1920, height: 1080, frame_rate: 30,
+    video_codec: "h264", audio_codec: "aac", audio_channels: 2, aspect_ratio: "16:9",
   },
   segments: [],
   total_runtime_ms: 0,
@@ -45,12 +43,20 @@ const job = (overrides: Partial<TotpRenderJob>): TotpRenderJob => ({
   manifest_checksum: "check-1",
   state: "queued",
   attempts: 0,
+  progress_percent: 0,
+  worker_id: null,
   plan: {} as TotpRenderJob["plan"],
   artifacts: [],
   qc: {},
+  probe: {},
+  timeline_sha256: null,
+  master_sha256: null,
+  input_sha256: null,
   error_message: null,
   requested_by: null,
   claimed_at: null,
+  started_at: null,
+  heartbeat_at: null,
   finished_at: null,
   created_at: "2026-09-19T10:00:00Z",
   updated_at: "2026-09-19T10:00:00Z",
@@ -61,7 +67,7 @@ describe("Top of the Pops render queue api", () => {
   beforeEach(() => rpc.mockReset());
 
   it("queues a render with the deterministic plan and the running-sheet fingerprint", async () => {
-    rpc.mockResolvedValue({ id: "job-9", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1" });
+    rpc.mockResolvedValue({ data: { id: "job-9", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1" }, error: null });
     const queued = await enqueueTotpRender(manifest);
     expect(rpc).toHaveBeenCalledWith("totp_admin_enqueue_render", expect.objectContaining({
       p_episode_id: "episode-1",
@@ -73,18 +79,27 @@ describe("Top of the Pops render queue api", () => {
   });
 
   it("lists jobs and tolerates an empty response", async () => {
-    rpc.mockResolvedValue(null);
+    rpc.mockResolvedValue({ data: null, error: null });
     expect(await getTotpRenderJobs("episode-1")).toEqual([]);
     expect(rpc).toHaveBeenCalledWith("totp_episode_render_jobs", { p_episode_id: "episode-1" });
   });
 
   it("cancels a job and unwraps a single-row response", async () => {
-    rpc.mockResolvedValue([{ id: "job-1", state: "cancelled" }]);
+    rpc.mockResolvedValue({ data: [{ id: "job-1", state: "cancelled" }], error: null });
     expect((await cancelTotpRender("job-1")).state).toBe("cancelled");
   });
 
+  it("surfaces RPC errors", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "queue unavailable" } });
+    await expect(getTotpRenderJobs("episode-1")).rejects.toThrow("queue unavailable");
+  });
+
   it("finds the active job and the latest matching master", () => {
-    const jobs = [job({ id: "a", state: "rendering" }), job({ id: "b", state: "succeeded" }), job({ id: "c", state: "succeeded", manifest_checksum: "old" })];
+    const jobs = [
+      job({ id: "a", state: "rendering" }),
+      job({ id: "b", state: "succeeded" }),
+      job({ id: "c", state: "succeeded", manifest_checksum: "old" }),
+    ];
     expect(activeTotpRenderJob(jobs)?.id).toBe("a");
     expect(latestSucceededTotpRender(jobs, "check-1")?.id).toBe("b");
     expect(latestSucceededTotpRender(jobs, "missing")).toBeNull();
@@ -92,6 +107,6 @@ describe("Top of the Pops render queue api", () => {
 
   it("describes each state in plain words", () => {
     expect(totpRenderStateLabel("rendering")).toBe("Rendering now");
-    expect(totpRenderStateLabel("succeeded")).toBe("Ready to publish");
+    expect(totpRenderStateLabel("succeeded")).toBe("Master approved");
   });
 });

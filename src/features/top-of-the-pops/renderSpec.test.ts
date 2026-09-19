@@ -122,6 +122,7 @@ describe("Top of the Pops render plan", () => {
       audio_sample_rate: 48_000,
       black_frame_count: 0,
       frozen_frame_count: 0,
+      silence_gap_count: 0,
       caption_issues: 0,
     };
     expect(evaluateTotpRenderQc(plan, probe)).toEqual({ passed: true, failures: [] });
@@ -146,6 +147,7 @@ describe("Top of the Pops render plan", () => {
       audio_sample_rate: 44_100,
       black_frame_count: 1,
       frozen_frame_count: 1,
+      silence_gap_count: 1,
       caption_issues: 2,
     });
     expect(result.passed).toBe(false);
@@ -164,6 +166,7 @@ describe("Top of the Pops render plan", () => {
       "audio_video_drift_under_frame",
       "no_black_frames",
       "no_frozen_frames",
+      "no_silence_gaps",
       "captions_valid",
     ]);
   });

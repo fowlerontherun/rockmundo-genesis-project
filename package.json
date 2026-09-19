@@ -78,7 +78,8 @@
     "worker:totp-render": "node workers/totp-render/index.mjs",
     "test:totp": "vitest run src/features/top-of-the-pops",
     "test:totp:db": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -X -v ON_ERROR_STOP=1 -f supabase/tests/totp_release_health_harness.sql -f supabase/tests/totp_render_pipeline_harness.sql'",
-    "test:totp:release": "npm run test:totp && npm run verify:migration-timestamps"
+    "test:totp:release": "npm run test:totp && npm run test:totp:worker && npm run verify:migration-timestamps",
+    "test:totp:worker": "node --test workers/totp-render/index.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

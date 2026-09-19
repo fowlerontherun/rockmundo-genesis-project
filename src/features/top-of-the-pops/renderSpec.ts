@@ -68,6 +68,7 @@ export interface TotpRenderQcCheck {
     | "audio_video_drift_under_frame"
     | "no_black_frames"
     | "no_frozen_frames"
+    | "no_silence_gaps"
     | "captions_valid";
   description: string;
 }
@@ -103,6 +104,7 @@ const QC_CHECKS: TotpRenderQcCheck[] = [
   { code: "audio_video_drift_under_frame", description: "Audio/video end drift is below one frame." },
   { code: "no_black_frames", description: "No sustained black-frame sections are detected." },
   { code: "no_frozen_frames", description: "No sustained frozen-frame sections are detected." },
+  { code: "no_silence_gaps", description: "No unexplained silence gap longer than 2.5 seconds is detected." },
   { code: "captions_valid", description: "Caption generation reports no overflow/readability failures." },
 ];
 
@@ -223,6 +225,7 @@ export interface TotpRenderProbe {
   audio_sample_rate: number;
   black_frame_count: number;
   frozen_frame_count: number;
+  silence_gap_count: number;
   caption_issues: number;
   video_bitrate?: number | null;
 }
@@ -271,6 +274,7 @@ export function evaluateTotpRenderQc(plan: TotpRenderPlan, probe: TotpRenderProb
   if (driftMs >= frameMs) fail("audio_video_drift_under_frame", `Audio/video end drift is ${driftMs.toFixed(2)}ms; one frame is ${frameMs.toFixed(2)}ms.`);
   if (probe.black_frame_count > 0) fail("no_black_frames", `Detected ${probe.black_frame_count} sustained black-frame section(s).`);
   if (probe.frozen_frame_count > 0) fail("no_frozen_frames", `Detected ${probe.frozen_frame_count} sustained frozen-frame section(s).`);
+  if (probe.silence_gap_count > 0) fail("no_silence_gaps", `Detected ${probe.silence_gap_count} unexplained silence gap(s).`);
   if (probe.caption_issues > 0) fail("captions_valid", `Caption QC reported ${probe.caption_issues} issue(s).`);
 
   return { passed: failures.length === 0, failures };

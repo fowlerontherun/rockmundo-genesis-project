@@ -61,6 +61,10 @@ function input(overrides: Partial<TotpManifestInput> = {}): TotpManifestInput {
       p1: { url: "https://cdn/p1.mp3", duration_ms: 180_000 },
       p2: { url: "https://cdn/p2.mp3", duration_ms: 200_000 },
     },
+    presenterAudio: {
+      p1: { url: "https://cdn/presenter.mp3", duration_ms: 8_000, version: "presenter-v1" },
+      p2: { url: "https://cdn/presenter.mp3", duration_ms: 8_000, version: "presenter-v1" },
+    },
     rights: { s1: cleared, s2: cleared },
     ...overrides,
   };
@@ -74,7 +78,7 @@ describe("TOTP episode manifest", () => {
     expect(first.segments.map((segment) => segment.performance_id)).toEqual(["p1", "p2"]);
     expect(first.checksum).toBe(second.checksum);
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    expect(first.total_runtime_ms).toBe(380_000);
+    expect(first.total_runtime_ms).toBe(396_000);
     expect(first.production_state).toBe("gameplay");
   });
 
@@ -86,10 +90,14 @@ describe("TOTP episode manifest", () => {
     expect(changed.checksum).not.toBe(base.checksum);
   });
 
-  it("blocks segments without audio, duration or cleared rights", () => {
+  it("blocks segments without audio, duration, presenter audio or cleared rights", () => {
     const manifest = buildTotpEpisodeManifest(
       input({
         songAudio: { p1: { url: null, duration_ms: null }, p2: { url: "https://cdn/p2.mp3", duration_ms: 0 } },
+        presenterAudio: {
+          p1: { url: null, duration_ms: null },
+          p2: { url: "https://cdn/presenter.mp3", duration_ms: 8_000 },
+        },
         rights: { s1: { ...cleared, status: "pending" } },
       }),
     );
@@ -98,6 +106,7 @@ describe("TOTP episode manifest", () => {
     expect(codes).toContain("missing_song_audio");
     expect(codes).toContain("missing_duration");
     expect(codes).toContain("rights_not_cleared");
+    expect(codes).toContain("missing_presenter_audio");
   });
 
   it("flags expired licences against the evaluation date", () => {
