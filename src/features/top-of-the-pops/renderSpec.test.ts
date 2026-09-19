@@ -101,7 +101,11 @@ describe("Top of the Pops render plan", () => {
     const b = buildTotpRenderPlan(manifest);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
     expect(a.delivery.master).toBe("totp-episode-007-2026-09-19-master.mp4");
+    expect(a.delivery.youtube).toBe("totp-episode-007-2026-09-19-youtube.mp4");
+    expect(a.delivery.thumbnails).toHaveLength(2);
     expect(a.delivery.captions.endsWith(".vtt")).toBe(true);
+    expect(a.captions_vtt).toContain("WEBVTT");
+    expect(a.expected_frame_count).toBe(Math.round((a.total_duration_ms / 1000) * 30));
   });
 
   it("creates one chapter per act plus titles and credits", () => {
@@ -114,14 +118,23 @@ describe("Top of the Pops render plan", () => {
     const plan = buildTotpRenderPlan(manifest);
     const probe: TotpRenderProbe = {
       duration_ms: plan.total_duration_ms,
+      audio_duration_ms: plan.total_duration_ms,
       width: 1920,
       height: 1080,
       frame_rate: 30,
+      frame_count: plan.expected_frame_count,
       video_codec: "h264",
       audio_codec: "aac",
       audio_channels: 2,
+      audio_sample_rate: 48_000,
+      video_bitrate_kbps: 10_000,
+      audio_bitrate_kbps: 192,
+      has_audio: true,
       programme_loudness_lufs: -14.2,
       true_peak_dbtp: -1.4,
+      black_frame_ratio: 0,
+      frozen_frame_ratio: 0,
+      caption_overflow_count: 0,
       chapter_count: plan.chapters.length,
     };
     expect(evaluateTotpRenderQc(plan, probe)).toEqual({ passed: true, failures: [] });
@@ -131,14 +144,23 @@ describe("Top of the Pops render plan", () => {
     const plan = buildTotpRenderPlan(manifest);
     const result = evaluateTotpRenderQc(plan, {
       duration_ms: plan.total_duration_ms + 9_000,
+      audio_duration_ms: plan.total_duration_ms + 15_000,
       width: 1280,
       height: 720,
       frame_rate: 25,
+      frame_count: plan.expected_frame_count - 10,
       video_codec: "vp9",
       audio_codec: "opus",
       audio_channels: 1,
+      audio_sample_rate: 44_100,
+      video_bitrate_kbps: 1_000,
+      audio_bitrate_kbps: 96,
+      has_audio: false,
       programme_loudness_lufs: -9,
       true_peak_dbtp: 0.4,
+      black_frame_ratio: 0.08,
+      frozen_frame_ratio: 0.12,
+      caption_overflow_count: 2,
       chapter_count: 1,
     });
     expect(result.passed).toBe(false);
@@ -146,11 +168,18 @@ describe("Top of the Pops render plan", () => {
       "duration_within_tolerance",
       "resolution_matches_spec",
       "frame_rate_matches_spec",
+      "frame_count_matches_plan",
       "video_codec_matches_spec",
       "audio_codec_matches_spec",
       "audio_channels_matches_spec",
+      "audio_sample_rate_matches_spec",
+      "audio_video_drift_under_frame",
+      "audio_stream_present",
       "programme_loudness_in_range",
       "true_peak_below_ceiling",
+      "black_frames_absent",
+      "frozen_frames_absent",
+      "caption_overflow_absent",
       "chapters_present",
     ]);
   });
