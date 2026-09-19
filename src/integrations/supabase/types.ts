@@ -56690,6 +56690,56 @@ export type Database = {
           },
         ]
       }
+      totp_episode_manifests: {
+        Row: {
+          checksum: string
+          created_at: string
+          episode_id: string
+          id: string
+          issues: Json
+          manifest: Json
+          manifest_version: number
+          production_state: string
+          segment_count: number
+          total_runtime_ms: number
+          updated_at: string
+        }
+        Insert: {
+          checksum: string
+          created_at?: string
+          episode_id: string
+          id?: string
+          issues?: Json
+          manifest: Json
+          manifest_version?: number
+          production_state?: string
+          segment_count?: number
+          total_runtime_ms?: number
+          updated_at?: string
+        }
+        Update: {
+          checksum?: string
+          created_at?: string
+          episode_id?: string
+          id?: string
+          issues?: Json
+          manifest?: Json
+          manifest_version?: number
+          production_state?: string
+          segment_count?: number
+          total_runtime_ms?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_episode_manifests_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: true
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totp_episodes: {
         Row: {
           broadcast_at: string
@@ -70843,6 +70893,15 @@ export type Database = {
         Args: { p_episode_id: string }
         Returns: number
       }
+      totp_admin_save_episode_manifest: {
+        Args: {
+          p_episode_id: string
+          p_issues?: Json
+          p_manifest: Json
+          p_production_state?: string
+        }
+        Returns: Json
+      }
       totp_admin_test_band_lineups: {
         Args: { p_band_ids: string[] }
         Returns: Json
@@ -70897,6 +70956,7 @@ export type Database = {
         Args: { p_performance_id: string; p_performance_score?: number }
         Returns: Json
       }
+      totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
       totp_is_anniversary_special_date: {
         Args: { p_episode_date: string }
         Returns: boolean
