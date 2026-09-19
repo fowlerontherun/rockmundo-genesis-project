@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { DerivedPlaybackState } from "@/features/gig-experience/viewer/engine/PlaybackController";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { loadTotpCrowdSounds, pickTotpCrowdSound, type TotpCrowdSound } from "./crowdSoundLibrary";
+import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
 
 export function useTotpAudienceAudio({
   playbackState,
@@ -86,9 +87,10 @@ export function useTotpAudienceAudio({
           intensity,
           `${cueId}:entrance`,
         );
-        playApprovedClip(clipRef, clip, .58 + Math.max(0, reaction) * .025)
-          .catch(() => playStudioCheer(ctx!, master!, 0.72 + Math.max(0, reaction) * 0.025, 1.1));
-        if (!clip) playStudioCheer(ctx, master, 0.72 + Math.max(0, reaction) * 0.025, 1.1);
+        const hit = clampTotpGain(mix.audienceHit);
+        playApprovedClip(clipRef, clip, hit)
+          .catch(() => playStudioCheer(ctx!, master!, hit, 1.1));
+        if (!clip) playStudioCheer(ctx, master, hit, 1.1);
       }
 
       if (cue?.type === "audience") {
@@ -98,9 +100,10 @@ export function useTotpAudienceAudio({
           9,
           `${cueId}:applause`,
         );
-        playApprovedClip(clipRef, clip, .82)
-          .catch(() => playStudioCheer(ctx!, master!, 0.95, 1.8));
-        if (!clip) playStudioCheer(ctx, master, 0.95, 1.8);
+        const hit = clampTotpGain(mix.audienceHit);
+        playApprovedClip(clipRef, clip, hit)
+          .catch(() => playStudioCheer(ctx!, master!, hit, 1.8));
+        if (!clip) playStudioCheer(ctx, master, hit, 1.8);
       }
     }
 
