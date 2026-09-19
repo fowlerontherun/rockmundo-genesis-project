@@ -13,6 +13,7 @@ export interface TotpMixLevels {
   presenter: number;
   audienceAmbience: number;
   audienceHit: number;
+  transitionSting: number;
 }
 
 export const TOTP_MIX_TARGET = Object.freeze({
@@ -20,7 +21,7 @@ export const TOTP_MIX_TARGET = Object.freeze({
   truePeakCeilingDbtp: -1,
 });
 
-const BASE: TotpMixLevels = { songBed: 0.9, presenter: 0.95, audienceAmbience: 0.045, audienceHit: 0.62 };
+const BASE: TotpMixLevels = { songBed: 0.9, presenter: 0.95, audienceAmbience: 0.045, audienceHit: 0.62, transitionSting: 0.18 };
 
 export function totpMixLevels(cueType: TotpBroadcastCueType | null | undefined, audienceReaction = 0): TotpMixLevels {
   const reaction = Math.max(-10, Math.min(10, Number.isFinite(Number(audienceReaction)) ? Number(audienceReaction) : 0));
@@ -29,9 +30,9 @@ export function totpMixLevels(cueType: TotpBroadcastCueType | null | undefined, 
   switch (cueType) {
     case "presenter":
       // Song bed ducks well under speech so the introduction stays intelligible.
-      return { songBed: 0.22, presenter: BASE.presenter, audienceAmbience: 0.03, audienceHit: 0.3 };
+      return { songBed: 0.22, presenter: BASE.presenter, audienceAmbience: 0.03, audienceHit: 0.3, transitionSting: 0.14 };
     case "audience":
-      return { songBed: 0.35, presenter: 0.4, audienceAmbience: 0.08 + lift, audienceHit: Math.min(0.92, 0.82 + lift) };
+      return { songBed: 0.35, presenter: 0.4, audienceAmbience: 0.08 + lift, audienceHit: Math.min(0.92, 0.82 + lift), transitionSting: 0.16 };
     case "graphic":
     case "performance":
     default:
@@ -40,6 +41,7 @@ export function totpMixLevels(cueType: TotpBroadcastCueType | null | undefined, 
         presenter: 0.35,
         audienceAmbience: Math.min(0.12, BASE.audienceAmbience + lift * 0.5),
         audienceHit: Math.min(0.9, BASE.audienceHit + lift),
+        transitionSting: BASE.transitionSting,
       };
   }
 }
