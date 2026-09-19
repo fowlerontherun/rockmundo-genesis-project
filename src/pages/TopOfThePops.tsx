@@ -22,7 +22,8 @@ import { TotpFullEpisodePlayer } from "@/features/top-of-the-pops/TotpFullEpisod
 import { TotpBackstageInterviewCard } from "@/features/top-of-the-pops/TotpBackstageInterviewCard";
 import { TotpLiveTvExtrasCard } from "@/features/top-of-the-pops/TotpLiveTvExtrasCard";
 import { TotpStudioReadinessCard } from "@/features/top-of-the-pops/TotpStudioReadinessCard";
-import { Archive, CalendarDays, History, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
+import { TotpProgrammePlaceholder } from "@/features/top-of-the-pops/TotpProgrammePlaceholder";
+import { Archive, CalendarDays, Clock3, History, MapPin, Music2, Play, Radio, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -138,6 +139,7 @@ export default function TopOfThePops() {
         </div>
       </section>
 
+      {episode.isLoading && <TotpProgrammePlaceholder label="Loading the next broadcast" />}
       {currentEpisode && <TotpBroadcastStatusCard episode={currentEpisode} archiveReady={archiveReplays.length > 0} />}
 
       {currentEpisode && (
@@ -151,7 +153,7 @@ export default function TopOfThePops() {
               </div>
             </div>
             <CardDescription>
-              Broadcast {formatDateTime(currentEpisode.broadcast_at)} · Presenter: {currentPresenter?.displayName ?? "Alex Rayne"}
+              Broadcast {formatDateTime(currentEpisode.broadcast_at)} · London time · Presenter: {currentPresenter?.displayName ?? "Alex Rayne"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -170,6 +172,10 @@ export default function TopOfThePops() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {isLiveBroadcast && archive.isLoading && (
+        <TotpProgrammePlaceholder label="Opening the live studio feed" />
       )}
 
       {isLiveBroadcast && liveReplay && (
@@ -272,10 +278,22 @@ export default function TopOfThePops() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-muted-foreground" /> {formatDateTime(invitation.broadcast_at)}</div>
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> {invitation.london_city_name}</div>
-                  <div className="flex items-center gap-2"><Music2 className="h-4 w-4 text-muted-foreground" /> Studio call {formatDateTime(invitation.check_in_at)}</div>
+                <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    Broadcast {formatDateTime(invitation.broadcast_at)} · London time
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" /> {invitation.london_city_name}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Music2 className="h-4 w-4 text-muted-foreground" />
+                    Studio call {formatDateTime(invitation.check_in_at)} · London time
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock3 className="h-4 w-4 text-muted-foreground" />
+                    Reply by {formatDateTime(invitation.response_deadline)} · London time
+                  </div>
                 </div>
 
                 {showReadiness && <TotpStudioReadinessCard invitationId={invitation.invitation_id} />}

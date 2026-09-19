@@ -19,6 +19,12 @@ describe("Top of the Pops audio mix", () => {
     expect(loud.audienceHit).toBeLessThanOrEqual(0.92);
   });
 
+  it("keeps transition stings below the programme headroom", () => {
+    expect(totpMixLevels("presenter").transitionSting).toBeLessThan(0.2);
+    expect(totpMixLevels("graphic").transitionSting).toBeLessThan(0.2);
+    expect(totpMixLevels("audience", 10).transitionSting).toBeLessThan(0.2);
+  });
+
   it("is deterministic and tolerates bad reaction values", () => {
     expect(totpMixLevels("performance", Number.NaN)).toEqual(totpMixLevels("performance", 0));
     expect(clampTotpGain(Number.POSITIVE_INFINITY)).toBe(0.95);

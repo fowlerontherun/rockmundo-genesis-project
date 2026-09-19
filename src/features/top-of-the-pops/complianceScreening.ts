@@ -369,7 +369,14 @@ export function screenTotpEpisode(input: TotpComplianceInput): TotpComplianceRep
   );
 
   // Rights --------------------------------------------------------------
-  const unclearedRights = manifest.segments.filter((segment) => segment.rights.status !== "cleared");
+  const unclearedRights = manifest.segments.filter((segment) =>
+    segment.rights.status !== "cleared"
+    || !segment.rights.owner.trim()
+    || !segment.rights.licence.trim()
+    || segment.rights.territories.length === 0
+    || !segment.rights.content_id_allowlisted
+    || !segment.rights.youtube_live_permitted,
+  );
   findings.push(
     finding(
       "rights_report",
@@ -378,7 +385,7 @@ export function screenTotpEpisode(input: TotpComplianceInput): TotpComplianceRep
       manifest.segments.length > 0 && unclearedRights.length === 0,
       "Music rights recorded",
       unclearedRights.length === 0
-        ? "Every track has an owner, licence, territory and online publishing status on record."
+        ? "Every track has an owner, licence, territory, Content ID clearance and YouTube permission on record."
         : `${unclearedRights.length} track${unclearedRights.length === 1 ? "" : "s"} have no clear licence.`,
     ),
   );

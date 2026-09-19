@@ -29,6 +29,8 @@ jobs:
         run: npm ci
       - name: Verify dependency tree
         run: npm run verify:dependencies
+      - name: Verify Top of the Pops migration timestamps
+        run: npm run verify:totp-migration-timestamps
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -49,6 +51,8 @@ jobs:
           version: 2.31.8
       - name: Festival SQL tests
         run: npm run test:festivals:db
+      - name: Top of the Pops SQL tests
+        run: npm run test:totp:db
       - name: Upload Supabase logs on festival DB gate failure
         if: failure()
         uses: actions/upload-artifact@v4

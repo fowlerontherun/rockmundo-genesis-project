@@ -32,7 +32,7 @@ export function useTotpAudienceAudio({
 
   useEffect(() => {
     if (!playbackState.isPlaying || typeof window === "undefined") return;
-    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
 
     let ctx = ctxRef.current;
@@ -78,6 +78,10 @@ export function useTotpAudienceAudio({
     const cueId = cue?.id ?? null;
     if (cueId && cueId !== lastCueRef.current) {
       lastCueRef.current = cueId;
+
+      if (cue?.type === "presenter" || cue?.type === "graphic" || cue?.type === "audience") {
+        playBroadcastSting(ctx, master, clampTotpGain(mix.transitionSting), cue.type);
+      }
 
       if (cue?.type === "performance") {
         const intensity = reaction >= 6 ? 9 : reaction >= 2 ? 7 : 5;
@@ -173,4 +177,34 @@ async function playApprovedClip(
   clipRef.current = audio;
   audio.onended = () => { if (clipRef.current === audio) clipRef.current = null; };
   await audio.play();
+}
+
+
+function playBroadcastSting(
+  ctx: AudioContext,
+  out: AudioNode,
+  intensity: number,
+  kind: "presenter" | "graphic" | "audience",
+) {
+  const now = ctx.currentTime;
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = kind === "audience" ? 1600 : 2400;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.02, intensity), now + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+  filter.connect(gain);
+  gain.connect(out);
+
+  const frequencies = kind === "graphic" ? [440, 660] : kind === "audience" ? [220, 330] : [330, 495];
+  frequencies.forEach((frequency, index) => {
+    const oscillator = ctx.createOscillator();
+    oscillator.type = index === 0 ? "sine" : "triangle";
+    oscillator.frequency.setValueAtTime(frequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.08, now + 0.28);
+    oscillator.connect(filter);
+    oscillator.start(now + index * 0.018);
+    oscillator.stop(now + 0.36);
+  });
 }

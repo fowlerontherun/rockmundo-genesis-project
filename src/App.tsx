@@ -121,6 +121,7 @@ const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
 // StreamingNew removed in v1.1.194 — consolidated into StreamingPlatforms
 const ChartsPage = lazyWithRetry(() => import("./pages/music/charts"));
 const TopOfThePops = lazyWithRetry(() => import("./pages/TopOfThePops"));
+const TotpRenderFrame = lazyWithRetry(() => import("./pages/internal/TotpRenderFrame"));
 // const EurovisionResultsPage = lazyWithRetry(() => import("./pages/EurovisionResults"));
 const FestivalLegacyPage = lazyWithRetry(() => import("./pages/festivals/FestivalLegacyPage"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
@@ -517,6 +518,7 @@ function App() {
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/internal/totp-render-frame" element={<TotpRenderFrame />} />
                   <Route path="/song/:songId" element={<PublicSong />} />
                   <Route path="/mobile" element={<MobileLayout />}>
                     <Route index element={<MobileHome />} />

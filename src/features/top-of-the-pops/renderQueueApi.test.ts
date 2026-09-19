@@ -54,6 +54,12 @@ const job = (overrides: Partial<TotpRenderJob>): TotpRenderJob => ({
   finished_at: null,
   created_at: "2026-09-19T10:00:00Z",
   updated_at: "2026-09-19T10:00:00Z",
+  progress_percent: 0,
+  progress_stage: null,
+  worker_id: null,
+  heartbeat_at: null,
+  max_attempts: 3,
+  output_metadata: {},
   ...overrides,
 });
 
@@ -61,7 +67,10 @@ describe("Top of the Pops render queue api", () => {
   beforeEach(() => rpc.mockReset());
 
   it("queues a render with the deterministic plan and the running-sheet fingerprint", async () => {
-    rpc.mockResolvedValue({ id: "job-9", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1" });
+    rpc.mockResolvedValue({
+      data: { id: "job-9", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1" },
+      error: null,
+    });
     const queued = await enqueueTotpRender(manifest);
     expect(rpc).toHaveBeenCalledWith("totp_admin_enqueue_render", expect.objectContaining({
       p_episode_id: "episode-1",
@@ -72,15 +81,26 @@ describe("Top of the Pops render queue api", () => {
     expect(queued.id).toBe("job-9");
   });
 
-  it("lists jobs and tolerates an empty response", async () => {
-    rpc.mockResolvedValue(null);
+  it("lists jobs and tolerates an empty data response", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
     expect(await getTotpRenderJobs("episode-1")).toEqual([]);
     expect(rpc).toHaveBeenCalledWith("totp_episode_render_jobs", { p_episode_id: "episode-1" });
   });
 
+  it("surfaces RPC failures instead of silently returning no jobs", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "Admin access required" } });
+    await expect(getTotpRenderJobs("episode-1")).rejects.toThrow("Admin access required");
+  });
+
   it("cancels a job and unwraps a single-row response", async () => {
-    rpc.mockResolvedValue([{ id: "job-1", state: "cancelled" }]);
+    rpc.mockResolvedValue({ data: [{ id: "job-1", state: "cancelled" }], error: null });
     expect((await cancelTotpRender("job-1")).state).toBe("cancelled");
+  });
+
+  it("rejects empty mutation responses", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    await expect(enqueueTotpRender(manifest)).rejects.toThrow("returned no render job");
+    await expect(cancelTotpRender("job-1")).rejects.toThrow("returned no cancelled render job");
   });
 
   it("finds the active job and the latest matching master", () => {

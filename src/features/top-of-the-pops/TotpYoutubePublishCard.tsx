@@ -13,6 +13,7 @@ import { ExternalLink, Loader2, Sparkles, Trash2, Youtube } from "lucide-react";
 import type { TotpEpisode } from "./api";
 import { resolveTotpPresenter } from "./presenters";
 import { getStoredTotpEpisodeManifest } from "./episodeManifestApi";
+import { getTotpRenderJobs, latestSucceededTotpRender } from "./renderQueueApi";
 import {
   deleteTotpYoutubePublication,
   getTotpYoutubePublications,
@@ -64,8 +65,14 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
     queryKey: ["totp", "running-sheet", "stored", episode.id],
     queryFn: () => getStoredTotpEpisodeManifest(episode.id),
   });
+  const renders = useQuery({
+    queryKey: ["totp", "render-jobs", episode.id],
+    queryFn: () => getTotpRenderJobs(episode.id),
+  });
 
   const latest = publications.data?.[0] ?? null;
+  const successfulRender = latestSucceededTotpRender(renders.data ?? [], stored.data?.checksum ?? null);
+  const masterArtifact = successfulRender?.artifacts.find((artifact) => artifact.kind === "master") ?? null;
   const editable = !latest || latest.state === "draft" || latest.state === "failed";
 
   const suggestion = useMemo(() => {
@@ -85,7 +92,6 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
   const [tags, setTags] = useState("");
   const [privacy, setPrivacy] = useState<TotpYoutubePrivacy>("private");
   const [publishAt, setPublishAt] = useState("");
-  const [sourceUrl, setSourceUrl] = useState("");
 
   useEffect(() => {
     if (latest && editable) {
@@ -94,7 +100,6 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
       setTags(latest.tags.join(", "));
       setPrivacy(latest.privacy_status);
       setPublishAt(toLocalInput(latest.publish_at));
-      setSourceUrl(latest.source_url ?? "");
       return;
     }
     if (!latest) {
@@ -103,7 +108,6 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
       setTags(suggestion.tags.join(", "));
       setPrivacy("private");
       setPublishAt(toLocalInput(episode.broadcast_at));
-      setSourceUrl("");
     }
   }, [latest, editable, suggestion, episode.broadcast_at]);
 
@@ -117,7 +121,7 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
         tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
         privacyStatus: privacy,
         publishAt: publishAt ? new Date(publishAt).toISOString() : null,
-        sourceUrl: sourceUrl || null,
+        sourceUrl: masterArtifact?.url ?? null,
         manifestChecksum: stored.data?.manifest?.checksum ?? null,
       }),
     onSuccess: () => {
@@ -131,7 +135,7 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
     mutationFn: (id: string) => publishTotpEpisodeToYoutube(id),
     onSuccess: (result) => {
       toast({
-        title: result.scheduled ? "Premiere scheduled on YouTube" : "Episode published to YouTube",
+        title: result.scheduled ? "Publication scheduled on YouTube" : "Episode published to YouTube",
         description: result.watchUrl ?? undefined,
       });
       void queryClient.invalidateQueries({ queryKey: ["totp", "youtube", episode.id] });
@@ -163,7 +167,7 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
               <Youtube className="h-4 w-4" /> YouTube publishing
             </CardTitle>
             <CardDescription>
-              Send the finished episode to the channel, either straight away or as a scheduled premiere.
+              Send the approved rendered master to the channel, either straight away or as scheduled publication.
             </CardDescription>
           </div>
           {latest ? (
@@ -206,7 +210,7 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
             </Select>
           </div>
           <div>
-            <Label className="text-xs">Premiere time (leave blank to publish now)</Label>
+            <Label className="text-xs">Publish time (leave blank to publish now)</Label>
             <Input
               type="datetime-local"
               value={publishAt}
@@ -215,13 +219,12 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
             />
           </div>
           <div>
-            <Label className="text-xs">Finished video link (Google Drive or direct link)</Label>
-            <Input
-              value={sourceUrl}
-              onChange={(event) => setSourceUrl(event.target.value)}
-              placeholder="https://drive.google.com/file/d/…"
-              disabled={!editable}
-            />
+            <Label className="text-xs">Approved master</Label>
+            <div className="flex h-10 items-center rounded-md border bg-muted/30 px-3 text-xs text-muted-foreground">
+              {masterArtifact?.url
+                ? `Ready · ${masterArtifact.filename}`
+                : "No successful QC-approved master is available yet."}
+            </div>
           </div>
         </div>
 
@@ -235,10 +238,10 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
             variant="secondary"
             data-totp-youtube-publish
             onClick={() => latest && publish.mutate(latest.id)}
-            disabled={!latest || !editable || !latest.source_url || busy}
+            disabled={!latest || !editable || !masterArtifact?.url || busy}
           >
             {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />}
-            {publishAt ? "Schedule premiere" : "Publish now"}
+            {publishAt ? "Schedule publication" : "Publish now"}
           </Button>
           {latest?.watch_url ? (
             <Button size="sm" variant="outline" asChild>
@@ -254,9 +257,9 @@ export function TotpYoutubePublishCard({ episode }: { episode: TotpEpisode }) {
           ) : null}
         </div>
 
-        {latest && !latest.source_url ? (
+        {!masterArtifact?.url ? (
           <p className="text-xs text-muted-foreground">
-            Export the episode video first, then paste its link above so it can be uploaded.
+            A successful render with QC-passed master, URL and checksum is required before YouTube publishing is enabled.
           </p>
         ) : null}
         {latest?.error_message ? (

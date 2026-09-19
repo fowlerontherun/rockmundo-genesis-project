@@ -48,13 +48,21 @@ export function TotpCountdownClock({
   const remainingMs = totpCountdownRemainingMs(durationMs, elapsedMs);
   const seconds = totpCountdownSeconds(remainingMs);
   const sweep = 1 - remainingMs / Math.max(1, durationMs);
+  const announcement = seconds <= 10
+    ? `${label} ${Math.max(1, seconds)} second${seconds === 1 ? "" : "s"}`
+    : seconds % 30 === 0
+      ? `${label} ${formatTotpCountdown(remainingMs)}`
+      : "";
 
   return (
     <section
       className="relative flex aspect-video min-h-[18rem] items-center justify-center overflow-hidden rounded-xl border bg-black text-white"
       data-totp-countdown-clock
       data-totp-countdown-seconds={seconds}
+      role="timer"
+      aria-label={`${label} ${formatTotpCountdown(remainingMs)}`}
     >
+      <span className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</span>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(34,211,238,.14),transparent_55%)]" />
       <div className="absolute inset-0 opacity-[0.05] [background-image:repeating-linear-gradient(0deg,transparent_0,transparent_2px,rgba(255,255,255,.4)_3px)]" />
       <div className="relative flex flex-col items-center">
@@ -72,6 +80,7 @@ export function TotpCountdownClock({
             key={seconds}
             className="relative animate-in zoom-in-75 fade-in text-6xl font-black tabular-nums duration-200 sm:text-7xl"
             data-totp-countdown-value
+            aria-hidden="true"
           >
             {Math.max(1, seconds)}
           </span>

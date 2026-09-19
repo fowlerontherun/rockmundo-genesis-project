@@ -8,6 +8,7 @@ import {
   type TotpTrackRights,
 } from "./episodeManifest";
 import { totpRpc } from "./rpc";
+import { getTotpEpisodePlan } from "./scheduleApi";
 
 export interface StoredTotpEpisodeManifest {
   episode_id: string;
@@ -22,20 +23,16 @@ export interface StoredTotpEpisodeManifest {
   updated_at: string;
 }
 
-/**
- * Every Top of the Pops performance is an in-game recording owned by the game
- * world, so the master rights are cleared by construction. Keeping this in one
- * place means a future licensing table only has to replace this function.
- */
-export function inGameTrackRights(): TotpTrackRights {
+/** Missing rights are deliberately pending: external clearance must be explicit. */
+export function unverifiedTrackRights(): TotpTrackRights {
   return {
-    owner: "Rockmundo in-game master",
-    licence: "rockmundo-broadcast",
-    territories: ["WORLD"],
+    owner: "",
+    licence: "",
+    territories: [],
     expires_on: null,
-    content_id_allowlisted: true,
-    youtube_live_permitted: true,
-    status: "cleared",
+    content_id_allowlisted: false,
+    youtube_live_permitted: false,
+    status: "pending",
   };
 }
 
@@ -44,7 +41,15 @@ export async function buildTotpEpisodeManifestFromEpisode(
   options: { excludePerformanceIds?: string[] } = {},
 ): Promise<{ manifest: TotpEpisodeManifest; issues: TotpManifestIssue[] }> {
   const songAudio: Record<string, { url: string | null; duration_ms: number | null }> = {};
+  const presenterAudio: Record<string, {
+    url: string | null;
+    duration_ms: number | null;
+    sha256: string | null;
+    version: number | null;
+    script_checksum: string | null;
+  }> = {};
   const rights: Record<string, TotpTrackRights> = {};
+  const plan = await getTotpEpisodePlan(episode.id);
 
   /**
    * Phase 5: an act removed by a takedown is dropped from the broadcast only.
@@ -61,10 +66,37 @@ export async function buildTotpEpisodeManifestFromEpisode(
       url: audio?.audio_url ?? null,
       duration_ms: seconds && seconds > 0 ? Math.round(seconds * 1000) : null,
     };
-    rights[performance.song_id] = inGameTrackRights();
+    const plannedRights = plan?.broadcast_rights?.[performance.song_id];
+    rights[performance.song_id] = plannedRights
+      ? {
+          owner: plannedRights.owner,
+          licence: plannedRights.licence,
+          territories: plannedRights.territories,
+          expires_on: plannedRights.expires_on,
+          content_id_allowlisted: plannedRights.content_id_allowlisted,
+          youtube_live_permitted: plannedRights.youtube_live_permitted,
+          status: plannedRights.status,
+        }
+      : unverifiedTrackRights();
+
+    const plannedPresenter = plan?.presenter_audio?.[performance.performance_id];
+    if (plannedPresenter) {
+      presenterAudio[performance.performance_id] = {
+        url: plannedPresenter.audio_url,
+        duration_ms: plannedPresenter.duration_ms,
+        sha256: plannedPresenter.sha256,
+        version: plannedPresenter.version,
+        script_checksum: plannedPresenter.script_checksum,
+      };
+    }
   }
 
-  const manifest = buildTotpEpisodeManifest({ episode: broadcastEpisode, songAudio, rights });
+  const manifest = buildTotpEpisodeManifest({
+    episode: broadcastEpisode,
+    songAudio,
+    presenterAudio,
+    rights,
+  });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };
 }
 

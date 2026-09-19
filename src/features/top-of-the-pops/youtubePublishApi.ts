@@ -92,9 +92,10 @@ export interface TotpYoutubePublishResult {
   videoId: string | null;
   watchUrl: string | null;
   scheduled: boolean;
+  processingStatus?: string | null;
 }
 
-/** Sends the finished master to YouTube, scheduling a premiere when a publish time is set. */
+/** Sends the approved finished master to YouTube. A publish time schedules normal video publication. */
 export async function publishTotpEpisodeToYoutube(publicationId: string): Promise<TotpYoutubePublishResult> {
   const { data, error } = await supabase.functions.invoke("totp-youtube-publish", {
     body: { publicationId },
@@ -114,12 +115,19 @@ export async function publishTotpEpisodeToYoutube(publicationId: string): Promis
     }
     throw new Error(detail || "The upload to YouTube failed.");
   }
-  const payload = (data ?? {}) as { publication?: unknown; videoId?: string | null; watchUrl?: string | null; scheduled?: boolean };
+  const payload = (data ?? {}) as {
+    publication?: unknown;
+    videoId?: string | null;
+    watchUrl?: string | null;
+    scheduled?: boolean;
+    processingStatus?: string | null;
+  };
   return {
     publication: normalise(payload.publication),
     videoId: payload.videoId ?? null,
     watchUrl: payload.watchUrl ?? null,
     scheduled: Boolean(payload.scheduled),
+    processingStatus: payload.processingStatus ?? null,
   };
 }
 
@@ -128,9 +136,9 @@ export function totpYoutubeStateLabel(state: TotpYoutubeState): string {
     case "uploading":
       return "Uploading";
     case "scheduled":
-      return "Premiere scheduled";
+      return "Publication scheduled";
     case "published":
-      return "Live on YouTube";
+      return "Published on YouTube";
     case "failed":
       return "Upload failed";
     default:
