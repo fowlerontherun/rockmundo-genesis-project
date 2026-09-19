@@ -12,7 +12,7 @@
   - [x] Deterministic caption track (presenter, chart graphics, audience) with WebVTT export and a subtitles toggle.
   - [x] Broadcast audio mix balance (song bed, presenter, audience) and end credits sequence.
   - [x] Loading and recovery states for the in-app broadcast viewer (audio preparing, retry on failure).
-- [ ] Phase 2: deterministic offline rendering and MP4 export.
+- [ ] Phase 2: deterministic offline rendering and MP4 export. (Partially superseded: browser-side Export video button + Google Drive upload shipped in v1.1.745; server render queue remains for hands-off rendering.)
   - [x] Deterministic render plan from the running sheet (shot list, chapters, poster/thumbnail marks, delivery filenames, loudness targets).
   - [x] Quality-control contract (duration, resolution, frame rate, codecs, loudness, true peak, chapters) with failure reporting.
   - [x] Render queue in the database (request, claim, complete, fail, cancel) with admin-only access and one active job per episode.
