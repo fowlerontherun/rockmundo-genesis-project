@@ -57399,6 +57399,71 @@ export type Database = {
           },
         ]
       }
+      totp_youtube_publications: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          episode_id: string
+          error_message: string | null
+          id: string
+          manifest_checksum: string | null
+          privacy_status: string
+          publish_at: string | null
+          source_url: string | null
+          state: string
+          tags: string[]
+          title: string
+          updated_at: string
+          video_id: string | null
+          watch_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          episode_id: string
+          error_message?: string | null
+          id?: string
+          manifest_checksum?: string | null
+          privacy_status?: string
+          publish_at?: string | null
+          source_url?: string | null
+          state?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          video_id?: string | null
+          watch_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          episode_id?: string
+          error_message?: string | null
+          id?: string
+          manifest_checksum?: string | null
+          privacy_status?: string
+          publish_at?: string | null
+          source_url?: string | null
+          state?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          video_id?: string | null
+          watch_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_youtube_publications_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tour_budget_ledger: {
         Row: {
           amount: number
@@ -71072,6 +71137,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      totp_admin_delete_youtube_publication: {
+        Args: { p_id: string }
+        Returns: boolean
+      }
       totp_admin_enqueue_render: {
         Args: {
           p_episode_id: string
@@ -71145,6 +71214,43 @@ export type Database = {
         Args: { p_episode_id: string; p_plan: Json }
         Returns: Json
       }
+      totp_admin_save_youtube_publication: {
+        Args: {
+          p_description?: string
+          p_episode_id: string
+          p_id?: string
+          p_manifest_checksum?: string
+          p_privacy_status?: string
+          p_publish_at?: string
+          p_source_url?: string
+          p_tags?: string[]
+          p_title: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          description: string
+          episode_id: string
+          error_message: string | null
+          id: string
+          manifest_checksum: string | null
+          privacy_status: string
+          publish_at: string | null
+          source_url: string | null
+          state: string
+          tags: string[]
+          title: string
+          updated_at: string
+          video_id: string | null
+          watch_url: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_youtube_publications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_admin_test_band_lineups: {
         Args: { p_band_ids: string[] }
         Returns: Json
@@ -71170,6 +71276,33 @@ export type Database = {
           p_show_variant: string
         }
         Returns: string
+      }
+      totp_admin_youtube_publications: {
+        Args: { p_episode_id?: string; p_limit?: number }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          description: string
+          episode_id: string
+          error_message: string | null
+          id: string
+          manifest_checksum: string | null
+          privacy_status: string
+          publish_at: string | null
+          source_url: string | null
+          state: string
+          tags: string[]
+          title: string
+          updated_at: string
+          video_id: string | null
+          watch_url: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "totp_youtube_publications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       totp_award_achievement: {
         Args: {
@@ -71419,6 +71552,39 @@ export type Database = {
         Returns: string
       }
       totp_run_broadcast_cycle: { Args: { p_now?: string }; Returns: Json }
+      totp_set_youtube_publication_state: {
+        Args: {
+          p_error_message?: string
+          p_id: string
+          p_state: string
+          p_video_id?: string
+          p_watch_url?: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          description: string
+          episode_id: string
+          error_message: string | null
+          id: string
+          manifest_checksum: string | null
+          privacy_status: string
+          publish_at: string | null
+          source_url: string | null
+          state: string
+          tags: string[]
+          title: string
+          updated_at: string
+          video_id: string | null
+          watch_url: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_youtube_publications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_show_variant_for_episode:
         | { Args: { p_episode_number: number }; Returns: string }
         | {
