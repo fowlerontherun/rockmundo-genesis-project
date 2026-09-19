@@ -284,7 +284,7 @@ export function TotpBroadcastContractCard({ episode }: { episode: TotpEpisode })
     && episode.performances.length > 0;
 
   return (
-    <Card data-totp-broadcast-contract>
+    <Card id="totp-broadcast-contract" data-totp-broadcast-contract>
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
