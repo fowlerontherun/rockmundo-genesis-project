@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { totpRpc } from "./rpc";
 import { buildTotpRenderPlan, type TotpRenderPlan } from "./renderSpec";
 import type { TotpEpisodeManifest } from "./episodeManifest";
@@ -5,11 +6,12 @@ import type { TotpEpisodeManifest } from "./episodeManifest";
 export type TotpRenderJobState = "queued" | "rendering" | "succeeded" | "failed" | "cancelled";
 
 export interface TotpRenderArtifact {
-  kind: "master" | "proxy" | "poster" | "captions" | "chapters";
+  kind: "master" | "youtube" | "proxy" | "poster" | "thumbnail" | "captions" | "chapters";
   filename: string;
   url: string | null;
   bytes: number | null;
   sha256: string | null;
+  content_type?: string | null;
 }
 
 export interface TotpRenderJob {
@@ -27,6 +29,12 @@ export interface TotpRenderJob {
   finished_at: string | null;
   created_at: string;
   updated_at: string;
+  progress_percent: number;
+  progress_stage: string | null;
+  worker_id: string | null;
+  heartbeat_at: string | null;
+  max_attempts: number;
+  output_metadata: Record<string, unknown>;
 }
 
 function normaliseJob(row: unknown): TotpRenderJob {
@@ -46,6 +54,15 @@ function normaliseJob(row: unknown): TotpRenderJob {
     finished_at: job.finished_at ?? null,
     created_at: String(job.created_at ?? ""),
     updated_at: String(job.updated_at ?? ""),
+    progress_percent: Number(job.progress_percent ?? 0),
+    progress_stage: job.progress_stage ?? null,
+    worker_id: job.worker_id ?? null,
+    heartbeat_at: job.heartbeat_at ?? null,
+    max_attempts: Number(job.max_attempts ?? 3),
+    output_metadata:
+      job.output_metadata && typeof job.output_metadata === "object" && !Array.isArray(job.output_metadata)
+        ? job.output_metadata as Record<string, unknown>
+        : {},
   };
 }
 
@@ -105,4 +122,25 @@ export function totpRenderStateLabel(state: TotpRenderJobState): string {
     default:
       return state;
   }
+}
+
+
+export async function resolveTotpRenderArtifactUrl(
+  artifact: TotpRenderArtifact,
+  expiresInSeconds = 3_600,
+): Promise<string | null> {
+  const value = artifact.url?.trim();
+  if (!value) return null;
+  if (!value.startsWith("supabase://")) return value;
+
+  const target = value.slice("supabase://".length);
+  const slash = target.indexOf("/");
+  if (slash <= 0 || slash === target.length - 1) {
+    throw new Error("The render artifact storage address is invalid.");
+  }
+  const bucket = target.slice(0, slash);
+  const path = target.slice(slash + 1);
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresInSeconds);
+  if (error) throw new Error(error.message || "Could not open the render artifact.");
+  return data.signedUrl;
 }
