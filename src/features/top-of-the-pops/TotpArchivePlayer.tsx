@@ -11,6 +11,7 @@ import { resolveEquippedClothingVisual } from "@/features/clothing-preview/equip
 import { getTotpPerformanceAudio, type TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { buildTotpCaptionCues } from "./broadcastCaptions";
+import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
 import { totpAudienceReactionLabel } from "./studioAudience";
