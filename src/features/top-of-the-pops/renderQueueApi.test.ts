@@ -7,8 +7,13 @@ import {
   activeTotpRenderJob,
   cancelTotpRender,
   enqueueTotpRender,
+  enqueueTotpRehearsalRender,
+  enqueueTotpSegmentPreview,
   getTotpRenderJobs,
   latestSucceededTotpRender,
+  latestSucceededTotpRehearsal,
+  latestSucceededTotpSegmentPreview,
+  totpRenderPurpose,
   totpRenderStateLabel,
   type TotpRenderJob,
 } from "./renderQueueApi";
@@ -114,4 +119,42 @@ describe("Top of the Pops render queue api", () => {
     expect(totpRenderStateLabel("rendering")).toBe("Rendering now");
     expect(totpRenderStateLabel("succeeded")).toBe("Ready to publish");
   });
+
+  it("queues rehearsals and segment previews through the dedicated rehearsal RPC", async () => {
+    const rehearsalManifest = {
+      ...manifest,
+      segments: [{
+        index: 0,
+        performance_id: "perf-1",
+        band_id: "band-1",
+        band_name: "Band",
+        song_id: "song-1",
+        song_title: "Song",
+        stage_key: "main",
+        qualifying_rank: 1,
+        presenter_intro: "Here they are",
+        assets: [{ kind: "song_audio", url: "https://audio/song.mp3", duration_ms: 120000, sha256: null, version: null, script_checksum: null }],
+        rights: { owner: "Owner", licence: "L1", territories: ["WORLD"], expires_on: null, content_id_allowlisted: true, youtube_live_permitted: true, status: "cleared" },
+      }],
+    } as unknown as TotpEpisodeManifest;
+    rpc.mockResolvedValue({ data: { id: "rehearsal-1", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1", plan: {} }, error: null });
+    await enqueueTotpRehearsalRender(rehearsalManifest);
+    expect(rpc.mock.calls.at(-1)?.[0]).toBe("totp_admin_enqueue_rehearsal_render");
+    expect((rpc.mock.calls.at(-1)?.[1] as any).p_plan.purpose).toBe("rehearsal");
+
+    await enqueueTotpSegmentPreview(rehearsalManifest, "perf-1");
+    expect((rpc.mock.calls.at(-1)?.[1] as any).p_plan.purpose).toBe("segment_preview");
+    expect((rpc.mock.calls.at(-1)?.[1] as any).p_plan.source_performance_id).toBe("perf-1");
+  });
+
+  it("distinguishes master, rehearsal and segment-preview successes", () => {
+    const master = job({ id: "master", state: "succeeded", qc: { passed: true }, plan: { purpose: "master" } as never });
+    const rehearsal = job({ id: "rehearsal", state: "succeeded", qc: { passed: true }, plan: { purpose: "rehearsal" } as never });
+    const preview = job({ id: "preview", state: "succeeded", qc: { passed: true }, plan: { purpose: "segment_preview", source_performance_id: "perf-1" } as never });
+    expect(totpRenderPurpose(master)).toBe("master");
+    expect(latestSucceededTotpRender([rehearsal, master], "check-1")?.id).toBe("master");
+    expect(latestSucceededTotpRehearsal([master, rehearsal], "check-1")?.id).toBe("rehearsal");
+    expect(latestSucceededTotpSegmentPreview([preview], "perf-1", "check-1")?.id).toBe("preview");
+  });
+
 });
