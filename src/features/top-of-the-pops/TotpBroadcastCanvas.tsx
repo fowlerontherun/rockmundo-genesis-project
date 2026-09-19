@@ -14,9 +14,10 @@ export interface TotpBroadcastCanvasProps {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; cue?: TotpBroadcastCue | null;
   audienceReaction?: number | null; presenterKey?: string | null; showVariant?: string | null; reducedMotion?: boolean;
   performancePreference?: PerformancePreference; className?: string; playerModelsSnapshot?: GigPlayerModelsData | null;
+  captions?: TotpCaptionCue[]; showCaptions?: boolean; showSafeAreaGuides?: boolean;
 }
 
-export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null }: TotpBroadcastCanvasProps) {
+export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null, captions, showCaptions = false, showSafeAreaGuides = false }: TotpBroadcastCanvasProps) {
   const directedShot = reducedMotion ? "studio_master" : cue?.cameraShot ?? "studio_master";
   const directedStage = cue?.stage ?? "main_stage";
   const lowerThird = cue?.type === "graphic" ? cue.graphic : null;
