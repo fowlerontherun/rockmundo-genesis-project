@@ -1,7 +1,16 @@
 import { totpRpc } from "./rpc";
 import type { TotpPreflightReport } from "./preflight";
 
-export type TotpAuditEventKind = "rehearsal" | "preflight" | "approval" | "note" | "render" | "publish";
+export type TotpAuditEventKind =
+  | "rehearsal"
+  | "preflight"
+  | "approval"
+  | "note"
+  | "render"
+  | "publish"
+  | "override"
+  | "rerender"
+  | "replacement";
 
 export interface TotpProductionAuditEntry {
   id: string;
@@ -59,6 +68,25 @@ export async function logTotpProductionEvent(params: {
   return normalise(Array.isArray(data) ? data[0] : data);
 }
 
+
+export async function recordTotpPreflightOverride(params: {
+  episodeId: string;
+  manifestChecksum: string;
+  checkCode: string;
+  severity: "warning" | "info";
+  reason: string;
+}): Promise<TotpProductionAuditEntry> {
+  const { data, error } = await totpRpc<unknown>("totp_admin_record_preflight_override", {
+    p_episode_id: params.episodeId,
+    p_manifest_checksum: params.manifestChecksum,
+    p_check_code: params.checkCode,
+    p_severity: params.severity,
+    p_reason: params.reason,
+  });
+  if (error) throw new Error(error.message || "Could not record the preflight acknowledgement.");
+  return normalise(Array.isArray(data) ? data[0] : data);
+}
+
 /** Compact, storable summary of a preflight report for the production log. */
 export function preflightAuditDetail(report: TotpPreflightReport): Record<string, unknown> {
   return {
@@ -84,6 +112,12 @@ export function totpAuditKindLabel(kind: TotpAuditEventKind): string {
       return "Export";
     case "publish":
       return "Published";
+    case "override":
+      return "Acknowledgement";
+    case "rerender":
+      return "Re-render";
+    case "replacement":
+      return "Replacement";
     default:
       return "Note";
   }
