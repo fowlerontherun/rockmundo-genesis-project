@@ -6,8 +6,9 @@ import type { TotpEpisodeManifest } from "./episodeManifest";
 export type TotpRenderJobState = "queued" | "rendering" | "succeeded" | "failed" | "cancelled";
 
 export interface TotpRenderArtifact {
-  kind: "master" | "youtube" | "proxy" | "poster" | "thumbnail" | "captions" | "chapters";
+  kind: "master" | "youtube" | "proxy" | "poster" | "thumbnail" | "captions" | "chapters" | `thumbnail_${number}`;
   filename: string;
+  storage_path?: string | null;
   url: string | null;
   bytes: number | null;
   sha256: string | null;
@@ -26,6 +27,7 @@ export interface TotpRenderJob {
   error_message: string | null;
   requested_by: string | null;
   claimed_at: string | null;
+  started_at?: string | null;
   finished_at: string | null;
   created_at: string;
   updated_at: string;
@@ -35,6 +37,10 @@ export interface TotpRenderJob {
   heartbeat_at: string | null;
   max_attempts: number;
   output_metadata: Record<string, unknown>;
+  probe?: Record<string, unknown>;
+  timeline_sha256?: string | null;
+  master_sha256?: string | null;
+  input_sha256?: string | null;
 }
 
 function normaliseJob(row: unknown): TotpRenderJob {
@@ -51,6 +57,7 @@ function normaliseJob(row: unknown): TotpRenderJob {
     error_message: job.error_message ?? null,
     requested_by: job.requested_by ?? null,
     claimed_at: job.claimed_at ?? null,
+    started_at: job.started_at ?? null,
     finished_at: job.finished_at ?? null,
     created_at: String(job.created_at ?? ""),
     updated_at: String(job.updated_at ?? ""),
@@ -63,6 +70,13 @@ function normaliseJob(row: unknown): TotpRenderJob {
       job.output_metadata && typeof job.output_metadata === "object" && !Array.isArray(job.output_metadata)
         ? job.output_metadata as Record<string, unknown>
         : {},
+    probe:
+      job.probe && typeof job.probe === "object" && !Array.isArray(job.probe)
+        ? job.probe as Record<string, unknown>
+        : {},
+    timeline_sha256: job.timeline_sha256 ?? null,
+    master_sha256: job.master_sha256 ?? null,
+    input_sha256: job.input_sha256 ?? null,
   };
 }
 

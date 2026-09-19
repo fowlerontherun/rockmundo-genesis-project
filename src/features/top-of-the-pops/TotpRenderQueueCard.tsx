@@ -46,11 +46,13 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
   const manifest = stored.data?.manifest ?? live.data?.manifest ?? null;
   const plan = manifest ? buildTotpRenderPlan(manifest) : null;
   const savedAndCurrent = Boolean(stored.data && live.data && stored.data.checksum === live.data.manifest.checksum);
+  const productionCleared = stored.data?.production_state === "production_ready" || stored.data?.production_state === "rendered_master";
 
   const queue = useMutation({
     mutationFn: async () => {
       if (!stored.data) throw new Error("Save the episode running sheet first.");
       if (!savedAndCurrent) throw new Error("The running sheet has changed — save it again before rendering.");
+      if (!productionCleared) throw new Error("Sign off the episode in the control room before rendering the broadcast master.");
       return await enqueueTotpRender(stored.data.manifest);
     },
     onSuccess: () => {
@@ -97,7 +99,7 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={active ? "secondary" : savedAndCurrent ? "default" : "outline"}>
-              {active ? totpRenderStateLabel(active.state) : savedAndCurrent ? "Ready to render" : "Running sheet not saved"}
+              {active ? totpRenderStateLabel(active.state) : savedAndCurrent && productionCleared ? "Ready to render" : savedAndCurrent ? "Needs sign-off" : "Running sheet not saved"}
             </Badge>
             <Button size="sm" variant="outline" onClick={() => void jobs.refetch()} disabled={jobs.isFetching}>
               <RefreshCw className={`h-4 w-4 ${jobs.isFetching ? "animate-spin" : ""}`} />
@@ -126,7 +128,7 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => queue.mutate()} disabled={queue.isPending || Boolean(active) || !savedAndCurrent}>
+          <Button size="sm" onClick={() => queue.mutate()} disabled={queue.isPending || Boolean(active) || !savedAndCurrent || !productionCleared}>
             <Clapperboard className="mr-2 h-4 w-4" /> Render episode file
           </Button>
           {active ? (

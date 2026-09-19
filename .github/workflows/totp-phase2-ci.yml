@@ -1,0 +1,40 @@
+name: TOTP Phase 2 release gate
+
+on:
+  pull_request:
+    paths:
+      - "src/features/top-of-the-pops/**"
+      - "src/renderers/**"
+      - "workers/totp-render-worker/**"
+      - "supabase/functions/totp-render-broker/**"
+      - "supabase/migrations/**"
+      - ".github/workflows/totp-*.yml"
+      - "totp-render.html"
+      - "vite.config.ts"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: TOTP deterministic renderer tests
+        run: npm run test:totp:phase2
+      - name: Production build
+        env:
+          VITE_SUPABASE_URL: "https://yztogmdixmchsmimtent.supabase.co"
+          VITE_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inl6dG9nbWRpeG1jaHNtaW10ZW50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5ODU0ODcsImV4cCI6MjA3MzU2MTQ4N30.vqfz_ZIvCIEXAuoSYmydg-XA6oUiPbcCc6yjfb2zL0g"
+        run: npm run build

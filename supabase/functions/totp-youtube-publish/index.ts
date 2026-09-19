@@ -21,7 +21,24 @@ interface PublishGate {
 }
 
 /** Turn a Google Drive share link into a gateway download request, or pass a plain URL through. */
-async function fetchSource(sourceUrl: string): Promise<Response> {
+async function fetchSource(sourceUrl: string, service: ReturnType<typeof createClient>): Promise<Response> {
+  if (sourceUrl.startsWith("supabase://")) {
+    const target = sourceUrl.slice("supabase://".length);
+    const slash = target.indexOf("/");
+    if (slash <= 0 || slash === target.length - 1) throw new Error("The approved master storage address is invalid.");
+    const bucket = target.slice(0, slash);
+    const path = target.slice(slash + 1);
+    const { data, error } = await service.storage.from(bucket).download(path);
+    if (error || !data) throw new Error(error?.message || "The approved master could not be downloaded from storage.");
+    return new Response(data, {
+      status: 200,
+      headers: {
+        "content-type": data.type || "video/mp4",
+        "content-length": String(data.size),
+      },
+    });
+  }
+
   const driveId =
     sourceUrl.match(/\/file\/d\/([^/]+)/)?.[1] ??
     sourceUrl.match(/[?&]id=([^&]+)/)?.[1] ??
@@ -142,7 +159,7 @@ serve(async (req) => {
 
     const accessToken = await youtubeAccessToken();
 
-    const source = await fetchSource(gate.master_url);
+    const source = await fetchSource(gate.master_url, service);
     if (!source.ok || !source.body) {
       const detail = source.ok ? "empty response" : await source.text();
       throw new Error(`The approved master could not be read (${source.status}): ${detail}`);
