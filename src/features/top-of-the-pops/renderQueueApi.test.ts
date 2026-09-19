@@ -54,6 +54,12 @@ const job = (overrides: Partial<TotpRenderJob>): TotpRenderJob => ({
   finished_at: null,
   created_at: "2026-09-19T10:00:00Z",
   updated_at: "2026-09-19T10:00:00Z",
+  progress_percent: 0,
+  progress_stage: null,
+  worker_id: null,
+  heartbeat_at: null,
+  max_attempts: 3,
+  output_metadata: {},
   ...overrides,
 });
 
