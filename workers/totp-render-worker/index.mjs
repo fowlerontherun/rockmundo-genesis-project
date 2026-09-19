@@ -453,6 +453,21 @@ async function uploadArtifacts({ token, workerId, jobId, files }) {
   return artifacts;
 }
 
+async function inputFingerprint(workDir, manifest, replays) {
+  const audioDir = path.join(workDir, "audio");
+  const files = await fsp.readdir(audioDir).catch(() => []);
+  const media = [];
+  for (const name of files.filter((value) => value.startsWith("source-")).sort()) {
+    media.push({ name, sha256: await fileSha256(path.join(audioDir, name)) });
+  }
+  return sha256Text(stableStringify({
+    manifest,
+    replays,
+    media,
+    renderer_commit: process.env.GITHUB_SHA ?? "unknown",
+  }));
+}
+
 async function renderJob(claim, token) {
   const { job, manifest, plan, replays, crowdSounds, workerId } = claim;
   if (!job || !plan?.items?.length || !manifest) throw new Error("Render broker returned an incomplete job.");
@@ -467,11 +482,11 @@ async function renderJob(claim, token) {
   console.log(`[TOTP] rendering episode ${plan.episode_number} job ${job.id} in ${workDir}`);
   try {
     const timelineSha256 = sha256Text(stableStringify(plan));
-    const inputSha256 = sha256Text(stableStringify({ manifest, replays }));
     const framesDir = await renderFrames({ plan, manifest, replays, token, workerId, jobId: job.id, workDir });
     await broker(token, { operation: "heartbeat", workerId, jobId: job.id, progress: 72 });
 
     const mixedAudio = await buildAudio({ plan, manifest, replays, crowdSounds: crowdSounds ?? [], workDir });
+    const inputSha256 = await inputFingerprint(workDir, manifest, replays);
     const { master, proxy } = await encode({ plan, framesDir, mixedAudio, workDir });
     await broker(token, { operation: "heartbeat", workerId, jobId: job.id, progress: 82 });
 
