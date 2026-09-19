@@ -12,6 +12,8 @@ import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
 import { TotpEndCredits } from "./TotpEndCredits";
 import { TotpStageTransition } from "./TotpStageTransition";
+import { TotpCountdownClock } from "./TotpCountdownClock";
+import { TotpSegmentFade } from "./TotpSegmentFade";
 import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
 
 export interface TotpFullEpisodePlayerProps {
