@@ -46,6 +46,6 @@ export function totpMixLevels(cueType: TotpBroadcastCueType | null | undefined, 
 
 /** Clamp any computed gain into a safe playback range. */
 export function clampTotpGain(value: number, min = 0.02, max = 0.95): number {
-  if (!Number.isFinite(value)) return min;
+  if (Number.isNaN(value)) return min;
   return Math.max(min, Math.min(max, value));
 }
