@@ -29,6 +29,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const [showIntro, setShowIntro] = useState(false);
   const [showChartRundown, setShowChartRundown] = useState(false);
   const [showStageTransition, setShowStageTransition] = useState(false);
+  const [showCredits, setShowCredits] = useState(false);
   const [continuityKind, setContinuityKind] = useState<TotpContinuityKind | null>(null);
   const current = ordered[currentIndex] ?? null;
   const hasChartRundown = totpRundownHasRealPositions(chartRundown);
@@ -100,6 +101,11 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
       return;
     }
     setContinuityKind(null);
+    setShowCredits(true);
+  };
+
+  const finishCredits = () => {
+    setShowCredits(false);
     setContinuous(false);
   };
 
