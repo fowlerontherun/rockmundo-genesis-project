@@ -9,6 +9,9 @@ import { formatTotpChartGraphic } from "./broadcastTimeline";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { totpAudienceCrowdTuning, totpAudienceReactionLabel } from "./studioAudience";
 import { useTotpAudienceAudio } from "./useTotpAudienceAudio";
+import { activeTotpCaption, type TotpCaptionCue } from "./broadcastCaptions";
+import { totpSafeAreaStyle } from "./broadcastSafeArea";
+
 
 export interface TotpBroadcastCanvasProps {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; cue?: TotpBroadcastCue | null;
