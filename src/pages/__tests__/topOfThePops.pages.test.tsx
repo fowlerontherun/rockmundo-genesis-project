@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TotpEpisode, TotpInvitation } from "@/features/top-of-the-pops/api";
 
+const { episode, invitation } = vi.hoisted(() => {
 const episode: TotpEpisode = {
   id: "11111111-1111-4111-8111-111111111111",
   episode_number: 12,
@@ -43,6 +44,8 @@ const invitation: TotpInvitation = {
   london_city_id: "66666666-6666-4666-8666-666666666666",
   london_city_name: "London",
 };
+return { episode, invitation };
+});
 
 vi.mock("@/features/top-of-the-pops/api", () => ({
   listMyTotpInvitations: vi.fn().mockResolvedValue([invitation]),
