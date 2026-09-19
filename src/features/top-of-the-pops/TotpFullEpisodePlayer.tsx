@@ -42,9 +42,10 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
-  const fullEpisodeRunning = showIntro || showChartRundown || showStageTransition || showCredits || continuityKind !== null || continuous;
+  const fullEpisodeRunning = showClock || showIntro || showChartRundown || showStageTransition || showCredits || continuityKind !== null || continuous;
 
   const goTo = (index: number) => {
+    setShowClock(false);
     setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
@@ -56,15 +57,17 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
 
   const startFullEpisode = () => {
     setCurrentIndex(0);
+    setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
     setShowCredits(false);
     setContinuityKind(null);
     setContinuous(false);
-    setShowIntro(true);
+    setShowClock(true);
   };
 
   const stopFullEpisode = () => {
+    setShowClock(false);
     setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
@@ -73,6 +76,10 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     setContinuous(false);
   };
 
+  const finishClock = () => {
+    setShowClock(false);
+    setShowIntro(true);
+  };
 
   const finishIntro = () => {
     setShowIntro(false);
