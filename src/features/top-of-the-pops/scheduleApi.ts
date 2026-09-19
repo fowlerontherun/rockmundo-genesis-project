@@ -37,6 +37,29 @@ export interface TotpPlannedSegment {
   notes?: string;
 }
 
+export interface TotpTrackBroadcastRightsPlan {
+  owner: string;
+  licence: string;
+  territories: string[];
+  expires_on: string | null;
+  content_id_allowlisted: boolean;
+  youtube_live_permitted: boolean;
+  status: "cleared" | "pending" | "blocked";
+  notes?: string | null;
+}
+
+export interface TotpPresenterAudioPlan {
+  performance_id: string;
+  presenter_key: string;
+  script_text: string;
+  script_checksum: string;
+  audio_url: string;
+  duration_ms: number;
+  sha256: string;
+  version: number;
+  uploaded_at: string;
+}
+
 export interface TotpEpisodePlan {
   episode_id: string;
   theme: string | null;
@@ -44,6 +67,8 @@ export interface TotpEpisodePlan {
   closing_link: string | null;
   segments: TotpPlannedSegment[];
   notes: string | null;
+  broadcast_rights: Record<string, TotpTrackBroadcastRightsPlan>;
+  presenter_audio: Record<string, TotpPresenterAudioPlan>;
   updated_at?: string;
 }
 
@@ -151,7 +176,18 @@ export async function getTotpEpisodePlan(episodeId: string): Promise<TotpEpisode
   });
   if (error) throw new Error(error.message || "Could not load the episode plan.");
   if (!data) return null;
-  return { ...data, segments: Array.isArray(data.segments) ? data.segments : [] };
+  return {
+    ...data,
+    segments: Array.isArray(data.segments) ? data.segments : [],
+    broadcast_rights:
+      data.broadcast_rights && typeof data.broadcast_rights === "object" && !Array.isArray(data.broadcast_rights)
+        ? data.broadcast_rights
+        : {},
+    presenter_audio:
+      data.presenter_audio && typeof data.presenter_audio === "object" && !Array.isArray(data.presenter_audio)
+        ? data.presenter_audio
+        : {},
+  };
 }
 
 export async function saveTotpEpisodePlan(
@@ -166,6 +202,8 @@ export async function saveTotpEpisodePlan(
       closing_link: plan.closing_link ?? null,
       notes: plan.notes ?? null,
       segments: plan.segments ?? [],
+      broadcast_rights: plan.broadcast_rights ?? {},
+      presenter_audio: plan.presenter_audio ?? {},
     },
   });
   if (error) throw new Error(error.message || "Could not save the episode plan.");
