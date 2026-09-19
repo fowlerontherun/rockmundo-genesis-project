@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.750",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Top of the Pops episodes can now be sent to YouTube from the control room, with the title, description, tags and visibility prepared for you" },
+      { type: "feature", description: "Choose a premiere time to schedule the episode, or publish it straight away" },
+      { type: "feature", description: "Paste the finished video link (including a Google Drive link) and the upload runs in the background, with the YouTube link and any failure shown" },
+      { type: "improvement", description: "Successful uploads are recorded in the episode production log" },
+    ],
+  },
+  {
     version: "1.1.749",
     date: "2026-09-19",
     changes: [
