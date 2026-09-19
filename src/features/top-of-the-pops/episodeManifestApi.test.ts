@@ -2,19 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const totpRpc = vi.fn();
 const getTotpPerformanceAudio = vi.fn();
+const getTotpEpisodePlan = vi.fn();
 
 vi.mock("./rpc", () => ({ totpRpc: (...args: unknown[]) => totpRpc(...args) }));
 vi.mock("./api", () => ({
   getTotpPerformanceAudio: (...args: unknown[]) => getTotpPerformanceAudio(...args),
 }));
+vi.mock("./scheduleApi", () => ({
+  getTotpEpisodePlan: (...args: unknown[]) => getTotpEpisodePlan(...args),
+}));
 
 import {
   buildTotpEpisodeManifestFromEpisode,
   getStoredTotpEpisodeManifest,
-  inGameTrackRights,
   saveTotpEpisodeManifest,
   storedManifestMatchesLive,
+  unverifiedTrackRights,
 } from "./episodeManifestApi";
+import { canonicalise, manifestChecksum } from "./episodeManifest";
 import type { TotpEpisode } from "./api";
 
 const episode: TotpEpisode = {
@@ -41,13 +46,50 @@ const episode: TotpEpisode = {
   ],
 };
 
+function clearedPlan() {
+  return {
+    episode_id: episode.id,
+    theme: null,
+    opening_link: null,
+    closing_link: null,
+    segments: [],
+    notes: null,
+    broadcast_rights: {
+      s1: {
+        owner: "Example Master Owner",
+        licence: "broadcast-agreement-1",
+        territories: ["WORLD"],
+        expires_on: null,
+        content_id_allowlisted: true,
+        youtube_live_permitted: true,
+        status: "cleared",
+      },
+    },
+    presenter_audio: {
+      p1: {
+        performance_id: "p1",
+        presenter_key: "presenter_a",
+        script_text: "Welcome!",
+        script_checksum: manifestChecksum(canonicalise("Welcome!")),
+        audio_url: "https://cdn/presenter-p1.wav",
+        duration_ms: 2_400,
+        sha256: "a".repeat(64),
+        version: 1,
+        uploaded_at: "2026-09-19T10:00:00Z",
+      },
+    },
+  };
+}
+
 beforeEach(() => {
   totpRpc.mockReset();
   getTotpPerformanceAudio.mockReset();
+  getTotpEpisodePlan.mockReset();
+  getTotpEpisodePlan.mockResolvedValue(clearedPlan());
 });
 
 describe("TOTP stored running sheet", () => {
-  it("builds a manifest from live performance audio with cleared in-game rights", async () => {
+  it("builds a manifest from explicit rights and versioned presenter audio", async () => {
     getTotpPerformanceAudio.mockResolvedValue({
       audio_url: "https://cdn/p1.mp3",
       audio_generation_status: "complete",
@@ -57,13 +99,40 @@ describe("TOTP stored running sheet", () => {
     const { manifest, issues } = await buildTotpEpisodeManifestFromEpisode(episode);
 
     expect(manifest.segments).toHaveLength(1);
-    expect(manifest.total_runtime_ms).toBe(182_000);
+    expect(manifest.total_runtime_ms).toBe(184_400);
     expect(manifest.segments[0].rights.status).toBe("cleared");
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.sha256).toBe("a".repeat(64));
     expect(issues).toEqual([]);
-    expect(inGameTrackRights().youtube_live_permitted).toBe(true);
   });
 
-  it("reports blocking issues when a performance has no audio", async () => {
+  it("does not auto-clear a track with no rights record", async () => {
+    getTotpEpisodePlan.mockResolvedValue({ ...clearedPlan(), broadcast_rights: {} });
+    getTotpPerformanceAudio.mockResolvedValue({
+      audio_url: "https://cdn/p1.mp3",
+      audio_generation_status: "complete",
+      duration_seconds: 182,
+    });
+
+    const { manifest, issues } = await buildTotpEpisodeManifestFromEpisode(episode);
+    expect(manifest.segments[0].rights).toEqual(unverifiedTrackRights());
+    expect(issues.map((issue) => issue.code)).toContain("rights_not_cleared");
+  });
+
+  it("blocks stale presenter audio when the script has changed", async () => {
+    const plan = clearedPlan();
+    plan.presenter_audio.p1.script_checksum = "old-script";
+    getTotpEpisodePlan.mockResolvedValue(plan);
+    getTotpPerformanceAudio.mockResolvedValue({
+      audio_url: "https://cdn/p1.mp3",
+      audio_generation_status: "complete",
+      duration_seconds: 182,
+    });
+
+    const { issues } = await buildTotpEpisodeManifestFromEpisode(episode);
+    expect(issues.map((issue) => issue.code)).toContain("missing_presenter_audio");
+  });
+
+  it("reports blocking issues when a performance has no song audio", async () => {
     getTotpPerformanceAudio.mockResolvedValue({
       audio_url: null,
       audio_generation_status: "pending",
@@ -109,9 +178,7 @@ describe("TOTP stored running sheet", () => {
     const { manifest } = await buildTotpEpisodeManifestFromEpisode(episode);
 
     expect(storedManifestMatchesLive(null, manifest)).toBe(false);
-    expect(
-      storedManifestMatchesLive({ checksum: manifest.checksum } as never, manifest),
-    ).toBe(true);
+    expect(storedManifestMatchesLive({ checksum: manifest.checksum } as never, manifest)).toBe(true);
     expect(storedManifestMatchesLive({ checksum: "other" } as never, manifest)).toBe(false);
   });
 });
