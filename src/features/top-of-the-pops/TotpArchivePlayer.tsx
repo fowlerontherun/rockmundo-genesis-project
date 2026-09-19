@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Captions, CaptionsOff, Download, Pause, Play, RotateCcw, Video, Volume2, VolumeX } from "lucide-react";
+import { Captions, CaptionsOff, CloudUpload, Download, Pause, Play, RotateCcw, Video, Volume2, VolumeX } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { GigViewerReplay } from "@/features/gig-experience/events/types";
@@ -162,6 +163,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const [exportState, setExportState] = useState<"idle" | "recording" | "finishing" | "error">("idle");
   const [exportPercent, setExportPercent] = useState(0);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [lastExport, setLastExport] = useState<{ blob: Blob; fileName: string } | null>(null);
+  const [driveState, setDriveState] = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const [driveLink, setDriveLink] = useState<string | null>(null);
+  const [driveError, setDriveError] = useState<string | null>(null);
   const spokenPresenterCueRef = useRef<string | null>(null);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
   const cue = useMemo(() => activeCue(source.payload.cues, positionMs), [source.payload.cues, positionMs]);
