@@ -5,17 +5,19 @@ import {
   toTotpChapterFile,
   type TotpRenderProbe,
 } from "./renderSpec";
-import type { TotpEpisodeManifest } from "./episodeManifest";
+import { canonicalise, manifestChecksum, type TotpEpisodeManifest } from "./episodeManifest";
 
 const rights = {
-  owner: "Rockmundo in-game master",
-  licence: "rockmundo-broadcast",
+  owner: "Example Master Owner",
+  licence: "broadcast-agreement-1",
   territories: ["WORLD"],
   expires_on: null,
   content_id_allowlisted: true,
   youtube_live_permitted: true,
   status: "cleared" as const,
 };
+
+const introChecksum = manifestChecksum(canonicalise("Here they are"));
 
 const manifest: TotpEpisodeManifest = {
   manifest_version: 1,
@@ -47,7 +49,10 @@ const manifest: TotpEpisodeManifest = {
       stage_key: "main",
       qualifying_rank: 1,
       presenter_intro: "Here they are",
-      assets: [{ kind: "song_audio", url: "https://audio/1.mp3", duration_ms: 200_000 }],
+      assets: [
+        { kind: "song_audio", url: "https://audio/1.mp3", duration_ms: 200_000, sha256: null, version: null, script_checksum: null },
+        { kind: "presenter_audio", url: "https://audio/p1.wav", duration_ms: 3_250, sha256: "b".repeat(64), version: 1, script_checksum: introChecksum },
+      ],
       rights,
     },
     {
@@ -60,11 +65,11 @@ const manifest: TotpEpisodeManifest = {
       stage_key: "main",
       qualifying_rank: 2,
       presenter_intro: null,
-      assets: [{ kind: "song_audio", url: null, duration_ms: null }],
+      assets: [{ kind: "song_audio", url: null, duration_ms: null, sha256: null, version: null, script_checksum: null }],
       rights,
     },
   ],
-  total_runtime_ms: 400_000,
+  total_runtime_ms: 203_250,
   production_state: "production_ready",
   checksum: "abc123",
 };
@@ -82,9 +87,11 @@ describe("Top of the Pops render plan", () => {
     expect(plan.total_duration_ms).toBe(plan.items.reduce((total, item) => total + item.duration_ms, 0));
   });
 
-  it("falls back to a standard performance length when audio duration is missing", () => {
+  it("uses the exact recorded presenter duration and falls back for missing song duration", () => {
     const plan = buildTotpRenderPlan(manifest);
+    const links = plan.items.filter((item) => item.kind === "presenter_link");
     const performances = plan.items.filter((item) => item.kind === "performance");
+    expect(links[0].duration_ms).toBe(3_250);
     expect(performances[0].duration_ms).toBe(200_000);
     expect(performances[1].duration_ms).toBe(180_000);
   });
