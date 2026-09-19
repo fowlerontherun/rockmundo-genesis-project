@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 
-export const version = "1.1.745";
+export const version = "1.1.746";
 
 export function VersionHeader() {
   return (

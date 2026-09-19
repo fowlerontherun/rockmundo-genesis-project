@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.746",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Top of the Pops now opens with a real ticking studio countdown clock before the programme intro" },
+      { type: "improvement", description: "Cuts between the clock, intro, acts, presenter links, chart rundown and credits now dissolve smoothly instead of snapping" },
+      { type: "improvement", description: "Studio resets between acts show a live 'up next in' countdown and fade cleanly in and out" },
+      { type: "improvement", description: "The export button now records a broadcast master, counting down 3-2-1 first and showing the picture and sound quality it captures" },
+    ],
+  },
+  {
     version: "1.1.745",
     date: "2026-09-19",
     changes: [
