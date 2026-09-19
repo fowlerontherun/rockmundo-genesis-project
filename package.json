@@ -79,7 +79,8 @@
     "test:e2e:finance": "playwright test --config=playwright.finance.config.ts --project=chromium",
     "test:totp-render-worker": "node --test workers/totp-render-worker/lib.test.mjs",
     "test:totp:phase2": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/episodeManifest.test.ts src/features/top-of-the-pops/episodeManifestApi.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx && node --test workers/totp-render-worker/lib.test.mjs",
-    "test:totp:phase3": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/__tests__/preflight.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx src/pages/__tests__/topOfThePops.pages.test.tsx && node --test workers/totp-render-worker/lib.test.mjs"
+    "test:totp:phase3": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/__tests__/preflight.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx src/pages/__tests__/topOfThePops.pages.test.tsx && node --test workers/totp-render-worker/lib.test.mjs",
+    "test:totp:render-smoke": "playwright test tests/totp/render-surface.spec.ts --project=chromium"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -158,34 +159,3 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
-    "@testing-library/user-event": "^14.5.2",
-    "@types/node": "^22.16.5",
-    "@types/react": "^18.3.23",
-    "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react-swc": "^3.11.0",
-    "autoprefixer": "^10.4.21",
-    "css.escape": "^1.5.1",
-    "dom-accessibility-api": "^0.7.1",
-    "eslint": "^9.32.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^15.15.0",
-    "jsdom": "^25.0.1",
-    "lodash": "^4.18.1",
-    "lovable-tagger": "^1.1.9",
-    "postcss": "^8.5.6",
-    "redent": "^4.0.0",
-    "rrweb-cssom": "^0.8.0",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.38.0",
-    "vite": "^5.4.19",
-    "vitest": "^2.1.4",
-    "whatwg-url": "^17.1.0"
-  },
-  "engines": {
-    "node": "20.x",
-    "npm": "10.9.x"
-  },
-  "packageManager": "npm@10.9.2"
-}
