@@ -168,6 +168,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const [driveState, setDriveState] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [driveLink, setDriveLink] = useState<string | null>(null);
   const [driveError, setDriveError] = useState<string | null>(null);
+  const [exportLeadIn, setExportLeadIn] = useState(0);
   const spokenPresenterCueRef = useRef<string | null>(null);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
   const cue = useMemo(() => activeCue(source.payload.cues, positionMs), [source.payload.cues, positionMs]);
@@ -342,6 +343,12 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     setExportPercent(0);
     exportStopRef.current = false;
     restart();
+    // Real on-air countdown so the recording starts on a clean cue.
+    for (let remaining = totpCountdownSeconds(TOTP_EXPORT_LEAD_IN_MS); remaining > 0; remaining -= 1) {
+      setExportLeadIn(remaining);
+      await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+    }
+    setExportLeadIn(0);
     try {
       const recording = recordTotpBroadcast({
         container,
