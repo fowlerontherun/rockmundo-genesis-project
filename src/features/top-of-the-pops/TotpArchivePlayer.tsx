@@ -32,12 +32,12 @@ type ClothingItemInput = Parameters<typeof resolveEquippedClothingVisual>[0];
 type ClothingVariantInput = Parameters<typeof resolveEquippedClothingVisual>[1];
 type ClothingCustomizationInput = Parameters<typeof resolveEquippedClothingVisual>[2];
 
-function lockedAudienceReaction(source: TotpBroadcastReplay): number {
+export function lockedAudienceReaction(source: TotpBroadcastReplay): number {
   const value = Number(source.payload.liveTv?.audienceReaction ?? 0);
   return Number.isFinite(value) ? Math.max(-10, Math.min(10, value)) : 0;
 }
-function lockedPresenterKey(source: TotpBroadcastReplay): string { return String(source.payload.presenterKey ?? source.presenter_key ?? "alex_rayne"); }
-function lockedShowVariant(source: TotpBroadcastReplay): string { return String(source.payload.showVariant ?? "regular"); }
+export function lockedPresenterKey(source: TotpBroadcastReplay): string { return String(source.payload.presenterKey ?? source.presenter_key ?? "alex_rayne"); }
+export function lockedShowVariant(source: TotpBroadcastReplay): string { return String(source.payload.showVariant ?? "regular"); }
 
 export function totpPerformanceStartMs(source: TotpBroadcastReplay): number {
   const offsets = source.payload.cues
@@ -86,7 +86,7 @@ export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerMode
   return frozen > 0 ? { appearances, richClothing } : null;
 }
 
-function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
+export function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
   const payload = source.payload, audienceReaction = lockedAudienceReaction(source);
   const baseCrowdEnergy = Math.max(28, Math.min(62, 44 + audienceReaction * 2));
   const performanceCrowdEnergy = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
@@ -116,7 +116,7 @@ function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
   return { id: source.id, gigId: `totp:${payload.performanceId}`, gigOutcomeId: `totp:${payload.performanceId}`, viewerVersion: 1, eventSchemaVersion: 1, simulationSeed: source.checksum, durationMs: payload.totalDurationMs, generatedAt: source.generated_at, events, checksum: source.checksum, status: "ready", resultAvailable: false } as GigViewerReplay;
 }
 
-function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
+export function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
   const payload = source.payload, audienceReaction = lockedAudienceReaction(source), crowdPeak = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
   return {
     schemaVersion: 1,
@@ -131,7 +131,7 @@ function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
   } as GigExperienceDTO;
 }
 
-function activeCue(cues: TotpBroadcastCue[], positionMs: number): TotpBroadcastCue | null {
+export function activeCue(cues: TotpBroadcastCue[], positionMs: number): TotpBroadcastCue | null {
   const active = cues.filter((cue) => positionMs >= cue.offsetMs && positionMs < cue.offsetMs + cue.durationMs);
   return active.at(-1) ?? cues.filter((cue) => cue.offsetMs <= positionMs).at(-1) ?? cues[0] ?? null;
 }

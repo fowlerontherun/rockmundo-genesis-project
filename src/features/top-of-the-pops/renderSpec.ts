@@ -62,7 +62,13 @@ export interface TotpRenderQcCheck {
     | "audio_channels_matches_spec"
     | "programme_loudness_in_range"
     | "true_peak_below_ceiling"
-    | "chapters_present";
+    | "chapters_present"
+    | "frame_count_matches"
+    | "audio_sample_rate_matches"
+    | "audio_video_drift_under_frame"
+    | "no_black_frames"
+    | "no_frozen_frames"
+    | "captions_valid";
   description: string;
 }
 
@@ -92,6 +98,12 @@ const QC_CHECKS: TotpRenderQcCheck[] = [
   { code: "programme_loudness_in_range", description: "Programme loudness is -14 LUFS +/- 1.0 LU." },
   { code: "true_peak_below_ceiling", description: "True peak does not exceed -1 dBTP." },
   { code: "chapters_present", description: "One chapter exists for every act plus titles and credits." },
+  { code: "frame_count_matches", description: "Rendered frame count exactly matches the authoritative 30fps timeline." },
+  { code: "audio_sample_rate_matches", description: "Audio is delivered at 48 kHz." },
+  { code: "audio_video_drift_under_frame", description: "Audio/video end drift is below one frame." },
+  { code: "no_black_frames", description: "No sustained black-frame sections are detected." },
+  { code: "no_frozen_frames", description: "No sustained frozen-frame sections are detected." },
+  { code: "captions_valid", description: "Caption generation reports no overflow/readability failures." },
 ];
 
 function slug(value: string): string {
@@ -205,6 +217,14 @@ export interface TotpRenderProbe {
   programme_loudness_lufs: number;
   true_peak_dbtp: number;
   chapter_count: number;
+  frame_count: number;
+  video_duration_ms: number;
+  audio_duration_ms: number;
+  audio_sample_rate: number;
+  black_frame_count: number;
+  frozen_frame_count: number;
+  caption_issues: number;
+  video_bitrate?: number | null;
 }
 
 export interface TotpRenderQcResult {
@@ -243,6 +263,15 @@ export function evaluateTotpRenderQc(plan: TotpRenderPlan, probe: TotpRenderProb
   if (probe.chapter_count !== plan.chapters.length) {
     fail("chapters_present", `Got ${probe.chapter_count} of ${plan.chapters.length} chapters.`);
   }
+  const expectedFrames = Math.round((plan.total_duration_ms / 1000) * plan.programme_spec.frame_rate);
+  if (probe.frame_count !== expectedFrames) fail("frame_count_matches", `Got ${probe.frame_count} frames; expected ${expectedFrames}.`);
+  if (probe.audio_sample_rate !== 48_000) fail("audio_sample_rate_matches", `Got ${probe.audio_sample_rate} Hz.`);
+  const frameMs = 1000 / plan.programme_spec.frame_rate;
+  const driftMs = Math.abs(probe.video_duration_ms - probe.audio_duration_ms);
+  if (driftMs >= frameMs) fail("audio_video_drift_under_frame", `Audio/video end drift is ${driftMs.toFixed(2)}ms; one frame is ${frameMs.toFixed(2)}ms.`);
+  if (probe.black_frame_count > 0) fail("no_black_frames", `Detected ${probe.black_frame_count} sustained black-frame section(s).`);
+  if (probe.frozen_frame_count > 0) fail("no_frozen_frames", `Detected ${probe.frozen_frame_count} sustained frozen-frame section(s).`);
+  if (probe.caption_issues > 0) fail("captions_valid", `Caption QC reported ${probe.caption_issues} issue(s).`);
 
   return { passed: failures.length === 0, failures };
 }

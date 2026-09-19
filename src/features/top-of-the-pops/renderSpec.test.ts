@@ -116,6 +116,13 @@ describe("Top of the Pops render plan", () => {
       programme_loudness_lufs: -14.2,
       true_peak_dbtp: -1.4,
       chapter_count: plan.chapters.length,
+      frame_count: Math.round((plan.total_duration_ms / 1000) * 30),
+      video_duration_ms: plan.total_duration_ms,
+      audio_duration_ms: plan.total_duration_ms,
+      audio_sample_rate: 48_000,
+      black_frame_count: 0,
+      frozen_frame_count: 0,
+      caption_issues: 0,
     };
     expect(evaluateTotpRenderQc(plan, probe)).toEqual({ passed: true, failures: [] });
   });
@@ -133,6 +140,13 @@ describe("Top of the Pops render plan", () => {
       programme_loudness_lufs: -9,
       true_peak_dbtp: 0.4,
       chapter_count: 1,
+      frame_count: 1,
+      video_duration_ms: plan.total_duration_ms,
+      audio_duration_ms: plan.total_duration_ms - 5_000,
+      audio_sample_rate: 44_100,
+      black_frame_count: 1,
+      frozen_frame_count: 1,
+      caption_issues: 2,
     });
     expect(result.passed).toBe(false);
     expect(result.failures.map((failure) => failure.code)).toEqual([
@@ -145,6 +159,12 @@ describe("Top of the Pops render plan", () => {
       "programme_loudness_in_range",
       "true_peak_below_ceiling",
       "chapters_present",
+      "frame_count_matches",
+      "audio_sample_rate_matches",
+      "audio_video_drift_under_frame",
+      "no_black_frames",
+      "no_frozen_frames",
+      "captions_valid",
     ]);
   });
 });

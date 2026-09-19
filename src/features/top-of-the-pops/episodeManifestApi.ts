@@ -1,4 +1,6 @@
+import { supabase } from "@/integrations/supabase/client";
 import { getTotpPerformanceAudio, type TotpEpisode } from "./api";
+import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import {
   buildTotpEpisodeManifest,
   validateTotpEpisodeManifest,
@@ -39,12 +41,34 @@ export function inGameTrackRights(): TotpTrackRights {
   };
 }
 
+async function recordedPresenterActIntro(presenterKey: string): Promise<{ url: string | null; duration_ms: number | null; version?: string | null }> {
+  try {
+    const folder = `presenters/${presenterKey}`;
+    const { data, error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).list(folder, { limit: 100 });
+    if (error) return { url: null, duration_ms: null, version: null };
+    const item = (data ?? []).find((entry) => entry.name === "act-intro");
+    if (!item) return { url: null, duration_ms: null, version: null };
+    const version = (item as { updated_at?: string | null; created_at?: string | null }).updated_at
+      ?? (item as { created_at?: string | null }).created_at
+      ?? null;
+    return {
+      url: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
+      duration_ms: 8_000,
+      version,
+    };
+  } catch {
+    return { url: null, duration_ms: null, version: null };
+  }
+}
+
 export async function buildTotpEpisodeManifestFromEpisode(
   episode: TotpEpisode,
   options: { excludePerformanceIds?: string[] } = {},
 ): Promise<{ manifest: TotpEpisodeManifest; issues: TotpManifestIssue[] }> {
-  const songAudio: Record<string, { url: string | null; duration_ms: number | null }> = {};
+  const songAudio: Record<string, { url: string | null; duration_ms: number | null; version?: string | null }> = {};
+  const presenterAudio: Record<string, { url: string | null; duration_ms: number | null; version?: string | null }> = {};
   const rights: Record<string, TotpTrackRights> = {};
+  const presenterAsset = await recordedPresenterActIntro(episode.presenter_key);
 
   /**
    * Phase 5: an act removed by a takedown is dropped from the broadcast only.
@@ -61,10 +85,11 @@ export async function buildTotpEpisodeManifestFromEpisode(
       url: audio?.audio_url ?? null,
       duration_ms: seconds && seconds > 0 ? Math.round(seconds * 1000) : null,
     };
+    presenterAudio[performance.performance_id] = presenterAsset;
     rights[performance.song_id] = inGameTrackRights();
   }
 
-  const manifest = buildTotpEpisodeManifest({ episode: broadcastEpisode, songAudio, rights });
+  const manifest = buildTotpEpisodeManifest({ episode: broadcastEpisode, songAudio, presenterAudio, rights });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };
 }
 
