@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("./rpc", () => ({ totpRpc: rpc }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { storage: { from: vi.fn(() => ({ createSignedUrl: vi.fn() })) } },
+}));
 
 import {
   activeTotpRenderJob,
@@ -45,13 +48,21 @@ const job = (overrides: Partial<TotpRenderJob>): TotpRenderJob => ({
   manifest_checksum: "check-1",
   state: "queued",
   attempts: 0,
+  progress_percent: 0,
+  worker_id: null,
   plan: {} as TotpRenderJob["plan"],
   artifacts: [],
   qc: {},
+  probe: {},
   error_message: null,
   requested_by: null,
   claimed_at: null,
+  started_at: null,
+  heartbeat_at: null,
   finished_at: null,
+  timeline_sha256: null,
+  master_sha256: null,
+  input_sha256: null,
   created_at: "2026-09-19T10:00:00Z",
   updated_at: "2026-09-19T10:00:00Z",
   ...overrides,
@@ -61,7 +72,7 @@ describe("Top of the Pops render queue api", () => {
   beforeEach(() => rpc.mockReset());
 
   it("queues a render with the deterministic plan and the running-sheet fingerprint", async () => {
-    rpc.mockResolvedValue({ id: "job-9", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1" });
+    rpc.mockResolvedValue({ data: { id: "job-9", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1" }, error: null });
     const queued = await enqueueTotpRender(manifest);
     expect(rpc).toHaveBeenCalledWith("totp_admin_enqueue_render", expect.objectContaining({
       p_episode_id: "episode-1",
@@ -73,14 +84,37 @@ describe("Top of the Pops render queue api", () => {
   });
 
   it("lists jobs and tolerates an empty response", async () => {
-    rpc.mockResolvedValue(null);
+    rpc.mockResolvedValue({ data: null, error: null });
     expect(await getTotpRenderJobs("episode-1")).toEqual([]);
     expect(rpc).toHaveBeenCalledWith("totp_episode_render_jobs", { p_episode_id: "episode-1" });
   });
 
   it("cancels a job and unwraps a single-row response", async () => {
-    rpc.mockResolvedValue([{ id: "job-1", state: "cancelled" }]);
+    rpc.mockResolvedValue({ data: [{ id: "job-1", state: "cancelled" }], error: null });
     expect((await cancelTotpRender("job-1")).state).toBe("cancelled");
+  });
+
+  it("normalises worker progress and deterministic hashes", async () => {
+    rpc.mockResolvedValue({
+      data: [{
+        id: "job-1",
+        state: "rendering",
+        progress_percent: 73,
+        timeline_sha256: "a".repeat(64),
+        master_sha256: null,
+        input_sha256: "b".repeat(64),
+      }],
+      error: null,
+    });
+    const [row] = await getTotpRenderJobs("episode-1");
+    expect(row.progress_percent).toBe(73);
+    expect(row.timeline_sha256).toBe("a".repeat(64));
+    expect(row.input_sha256).toBe("b".repeat(64));
+  });
+
+  it("surfaces RPC failures instead of returning empty jobs", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "schema cache failure" } });
+    await expect(getTotpRenderJobs("episode-1")).rejects.toThrow("schema cache failure");
   });
 
   it("finds the active job and the latest matching master", () => {
