@@ -14,6 +14,7 @@ import {
   getTotpRenderJobs,
   latestSucceededTotpRehearsal,
   resolveTotpRenderArtifactUrl,
+  totpRenderJobLabel,
   totpRenderStateLabel,
 } from "./renderQueueApi";
 import { buildTotpRenderPlan } from "./renderSpec";
@@ -156,7 +157,7 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
             (jobs.data ?? []).map((job) => (
               <div key={job.id} className="rounded-lg border p-2" data-totp-render-job>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-semibold">{totpRenderStateLabel(job.state)}</span>
+                  <span className="text-xs font-semibold">{totpRenderJobLabel(job)}</span>
                   <span className="text-[11px] text-muted-foreground">
                     Attempt {job.attempts} · {new Date(job.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })}
                   </span>
