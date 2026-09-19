@@ -18,6 +18,7 @@ import { TotpProductionHealthCard } from "@/features/top-of-the-pops/TotpProduct
 import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningSheetCard";
 import { TotpControlRoomCard } from "@/features/top-of-the-pops/TotpControlRoomCard";
 import { TotpRenderQueueCard } from "@/features/top-of-the-pops/TotpRenderQueueCard";
+import { TotpRehearsalCard } from "@/features/top-of-the-pops/TotpRehearsalCard";
 import { Link } from "react-router-dom";
 import { Archive, CalendarDays, CheckCircle2, Clapperboard, LockKeyhole, Radio, Tv2 } from "lucide-react";
 
@@ -139,6 +140,8 @@ export default function TopOfThePopsAdmin() {
       <TotpControlRoomCard episode={current} />
 
       <TotpRunningSheetCard episode={current} />
+
+      <TotpRehearsalCard episode={current} />
 
       <TotpRenderQueueCard episode={current} />
 
