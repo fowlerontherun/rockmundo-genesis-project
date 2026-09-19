@@ -357,7 +357,12 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
       setPlaying(true);
       const blob = await recording;
       setPlaying(false);
-      downloadTotpExport(blob, totpExportFileName(source.episode_number, source.payload.episodeDate, blob));
+      const fileName = totpExportFileName(source.episode_number, source.payload.episodeDate, blob);
+      downloadTotpExport(blob, fileName);
+      setLastExport({ blob, fileName });
+      setDriveState("idle");
+      setDriveLink(null);
+      setDriveError(null);
       setExportState("idle");
     } catch (error) {
       setPlaying(false);
