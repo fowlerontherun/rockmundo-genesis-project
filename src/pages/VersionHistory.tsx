@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.745",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Top of the Pops episodes now have an Export video button that records the broadcast and downloads it as a video file" },
+      { type: "feature", description: "After exporting, a Save to Google Drive button sends the episode straight to your Google Drive" },
+    ],
+  },
+  {
     version: "1.1.744",
     date: "2026-09-19",
     changes: [
