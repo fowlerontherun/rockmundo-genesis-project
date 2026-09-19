@@ -19,7 +19,7 @@ import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningShee
 import { TotpControlRoomCard } from "@/features/top-of-the-pops/TotpControlRoomCard";
 import { TotpRenderQueueCard } from "@/features/top-of-the-pops/TotpRenderQueueCard";
 import { Link } from "react-router-dom";
-import { Archive, CalendarDays, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
+import { Archive, CalendarDays, CheckCircle2, Clapperboard, LockKeyhole, Radio, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -126,10 +126,17 @@ export default function TopOfThePopsAdmin() {
               <CalendarDays className="mr-1 h-4 w-4" /> Broadcast schedule
             </Link>
           </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/admin/top-of-the-pops/control-room">
+              <Radio className="mr-1 h-4 w-4" /> Control room
+            </Link>
+          </Button>
         </div>
       </div>
 
       <TotpProductionHealthCard />
+
+      <TotpControlRoomCard episode={current} />
 
       <TotpRunningSheetCard episode={current} />
 
