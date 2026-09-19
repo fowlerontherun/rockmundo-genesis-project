@@ -31,7 +31,10 @@ export function TotpStageTransition({
   const fromStage = from.payload.stage;
   const toStage = to.payload.stage;
   const sameStage = fromStage === toStage;
-  const progress = Math.min(100, elapsedMs / DURATION_MS * 100);
+  const eased = totpEasedProgress(DURATION_MS, elapsedMs);
+  const progress = eased * 100;
+  const remainingMs = totpCountdownRemainingMs(DURATION_MS, elapsedMs);
+  const dipOpacity = autoPlay ? totpTransitionDipOpacity(DURATION_MS, elapsedMs) : 0;
   const copy = useMemo(() => {
     if (sameStage) {
       return {
