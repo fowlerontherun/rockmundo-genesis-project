@@ -5,7 +5,8 @@
 - [ ] Phase 0: typed calls, lifecycle checks, health monitoring and immutable broadcast contract.
   - [x] Typed show calls, production-health panel, lifecycle harness.
   - [x] Fixed episode running sheet with deterministic checksum, rights record and production states.
-  - [ ] Store the running sheet against the episode in the database and add route-level player/admin tests.
+  - [x] Store the running sheet against the episode in the database (admin save/read RPCs, immutable once rendered/published) with API tests.
+  - [ ] Add route-level player/admin tests for the Top of the Pops pages.
 - [ ] Phase 1: in-game television presentation polish and accessibility.
 - [ ] Phase 2: deterministic offline rendering and MP4 export.
 - [ ] Phase 3: production control room, rehearsal and release gates.
