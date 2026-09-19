@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Captions, CaptionsOff, Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { GigViewerReplay } from "@/features/gig-experience/events/types";
@@ -10,6 +10,7 @@ import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel
 import { resolveEquippedClothingVisual } from "@/features/clothing-preview/equippedClothing";
 import { getTotpPerformanceAudio, type TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
+import { buildTotpCaptionCues } from "./broadcastCaptions";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
 import { totpAudienceReactionLabel } from "./studioAudience";
@@ -142,6 +143,11 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const [positionMs, setPositionMs] = useState(0), [playing, setPlaying] = useState(autoPlay);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const captions = useMemo(
+    () => buildTotpCaptionCues(source.payload.cues, { presenterName: resolveTotpPresenter(lockedPresenterKey(source)).displayName }),
+    [source],
+  );
   const [resolvedBroadcastAudio, setResolvedBroadcastAudio] = useState<{ url: string | null; durationSeconds: number | null } | null>(null);
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -298,8 +304,8 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   };
   const progress = Math.min(100, positionMs / Math.max(1, replay.durationMs) * 100);
   return <div className="space-y-3 rounded-xl border bg-card p-3" data-totp-archive-player data-visual-snapshot={playerModelsSnapshot ? "locked" : "legacy-fallback"}>
-    <div className="mx-auto aspect-[4/3] min-h-[28rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10"><TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} className="h-full min-h-[28rem] w-full" /></div>
-    <div className="space-y-2"><Progress value={progress} className="h-1.5" /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{playing ? "Pause" : "Play"}</Button><Button size="sm" variant="outline" onClick={restart}><RotateCcw className="mr-2 h-4 w-4" /> Restart</Button>{(source.payload.song.audioUrl || resolvedBroadcastAudio?.url) ? <Button size="sm" variant={audioBlocked ? "default" : "outline"} onClick={audioBlocked ? enableBlockedAudio : toggleAudio}>{audioEnabled ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}{audioBlocked ? "Enable song audio" : audioEnabled ? "Song audio on" : "Song audio off"}</Button> : <span className="self-center text-xs text-muted-foreground">No recording attached to this song</span>}</div><div className="text-xs text-muted-foreground">{presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · {playerModelsSnapshot ? "historical outfits locked" : "legacy outfit fallback"} · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}</div></div></div>
+    <div className="mx-auto aspect-video min-h-[20rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10"><TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" /></div>
+    <div className="space-y-2"><Progress value={progress} className="h-1.5" /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{playing ? "Pause" : "Play"}</Button><Button size="sm" variant="outline" onClick={restart}><RotateCcw className="mr-2 h-4 w-4" /> Restart</Button><Button size="sm" variant="outline" onClick={() => setCaptionsEnabled((value) => !value)} aria-pressed={captionsEnabled} data-totp-captions-toggle>{captionsEnabled ? <Captions className="mr-2 h-4 w-4" /> : <CaptionsOff className="mr-2 h-4 w-4" />}{captionsEnabled ? "Subtitles on" : "Subtitles off"}</Button>{(source.payload.song.audioUrl || resolvedBroadcastAudio?.url) ? <Button size="sm" variant={audioBlocked ? "default" : "outline"} onClick={audioBlocked ? enableBlockedAudio : toggleAudio}>{audioEnabled ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}{audioBlocked ? "Enable song audio" : audioEnabled ? "Song audio on" : "Song audio off"}</Button> : <span className="self-center text-xs text-muted-foreground">No recording attached to this song</span>}</div><div className="text-xs text-muted-foreground">{presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · {playerModelsSnapshot ? "historical outfits locked" : "legacy outfit fallback"} · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}</div></div></div>
   </div>;
 }
 

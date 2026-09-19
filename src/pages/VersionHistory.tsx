@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.742",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Top of the Pops now has subtitles you can switch on or off, covering the presenter, the chart captions and the studio audience" },
+      { type: "improvement", description: "The show now plays in a widescreen television frame with on-screen graphics kept inside proper broadcast margins" },
+    ],
+  },
+  {
     version: "1.1.741",
     date: "2026-09-19",
     changes: [

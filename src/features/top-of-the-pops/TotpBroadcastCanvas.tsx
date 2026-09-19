@@ -9,14 +9,18 @@ import { formatTotpChartGraphic } from "./broadcastTimeline";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { totpAudienceCrowdTuning, totpAudienceReactionLabel } from "./studioAudience";
 import { useTotpAudienceAudio } from "./useTotpAudienceAudio";
+import { activeTotpCaption, type TotpCaptionCue } from "./broadcastCaptions";
+import { totpSafeAreaStyle } from "./broadcastSafeArea";
+
 
 export interface TotpBroadcastCanvasProps {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; cue?: TotpBroadcastCue | null;
   audienceReaction?: number | null; presenterKey?: string | null; showVariant?: string | null; reducedMotion?: boolean;
   performancePreference?: PerformancePreference; className?: string; playerModelsSnapshot?: GigPlayerModelsData | null;
+  captions?: TotpCaptionCue[]; showCaptions?: boolean; showSafeAreaGuides?: boolean;
 }
 
-export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null }: TotpBroadcastCanvasProps) {
+export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null, captions, showCaptions = false, showSafeAreaGuides = false }: TotpBroadcastCanvasProps) {
   const directedShot = reducedMotion ? "studio_master" : cue?.cameraShot ?? "studio_master";
   const directedStage = cue?.stage ?? "main_stage";
   const lowerThird = cue?.type === "graphic" ? cue.graphic : null;
@@ -50,6 +54,7 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
         ? "MAKE SOME NOISE"
         : "LIVE PERFORMANCE";
   useTotpAudienceAudio({ playbackState, cue, audienceReaction: lockedAudienceReaction });
+  const activeCaption = showCaptions && captions?.length ? activeTotpCaption(captions, playbackState.positionMs) : null;
 
   return <div className={className ?? "relative h-full min-h-[28rem] w-full overflow-hidden bg-slate-950"} data-totp-broadcast data-totp-cue={cue?.type ?? "performance"} data-totp-shot={directedShot} data-totp-stage={directedStage} data-totp-presenter={presenter.key} data-totp-show-variant={showVariant ?? "regular"} data-totp-audience-reaction={lockedAudienceReaction} data-totp-audience-label={audienceLabel.toLowerCase()} data-totp-visual-source={playerModelsSnapshot ? "archive" : "live"}>
     <GigCanvas replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} pyrotechnics crowdTuning={crowdTuning} fill immersive cameraMode="auto" performancePreference={performancePreference} presentationMode="totp" totpCameraShot={directedShot} totpStage={directedStage} totpPresenterKey={presenter.key} totpShowVariant={showVariant} totpAudienceReaction={lockedAudienceReaction} totpCueType={cue?.type ?? "performance"} totpMonitorPrimary={monitorPrimary} totpMonitorSecondary={monitorSecondary} playerModelsSnapshot={playerModelsSnapshot} capability={{ audience: "player", subjectId: `totp:${replay.id}` }} />
@@ -58,7 +63,13 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
       {cue?.type === "audience" ? <div className="absolute inset-0 animate-in fade-in duration-300 bg-[radial-gradient(circle_at_50%_65%,rgba(244,114,182,.16),transparent_48%)]" /> : null}
       {cue?.type === "performance" && cue.id === "performance-1" ? <div className="absolute inset-x-0 top-0 h-1 animate-pulse bg-gradient-to-r from-cyan-300 via-white to-fuchsia-400" /> : null}
       <div className="absolute inset-0 opacity-[0.045] mix-blend-screen [background-image:repeating-linear-gradient(0deg,transparent_0,transparent_2px,rgba(255,255,255,.35)_3px)]" />
-      <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 text-white">
+      {showSafeAreaGuides ? (
+        <>
+          <div className="absolute border border-dashed border-cyan-300/40" style={totpSafeAreaStyle("action")} data-totp-safe-area="action" />
+          <div className="absolute border border-dashed border-fuchsia-300/40" style={totpSafeAreaStyle("title")} data-totp-safe-area="title" />
+        </>
+      ) : null}
+      <div className="absolute flex items-start justify-between gap-3 text-white" style={{ ...totpSafeAreaStyle("title"), bottom: "auto" }} data-totp-branding>
         <div className="border-l-4 border-cyan-300 bg-fuchsia-700/90 px-3 py-2 text-xs font-black tracking-[0.18em] shadow-lg backdrop-blur">
           TOP OF THE POPS{variantLabel ? ` · ${variantLabel.toUpperCase()}` : ""}
         </div>
@@ -104,6 +115,14 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
       </div>
     )}
     {presenterText && <div className="pointer-events-none absolute bottom-8 left-1/2 z-20 w-[min(43rem,88vw)] -translate-x-1/2 animate-in fade-in slide-in-from-bottom-3 duration-300" role="status" aria-live="polite"><div className="border-t-2 border-fuchsia-400 bg-black/82 px-5 py-3 text-center text-sm font-medium leading-relaxed text-white shadow-2xl backdrop-blur-md sm:text-base"><span className="mr-2 font-black uppercase tracking-wide text-cyan-200">{presenter.displayName}:</span>{presenterText}</div></div>}
+    {activeCaption && (
+      <div className="pointer-events-none absolute bottom-[8%] left-1/2 z-30 w-[min(44rem,90%)] -translate-x-1/2 text-center" data-totp-caption role="status" aria-live="polite">
+        <p className="inline-block bg-black/85 px-4 py-2 text-sm font-semibold leading-snug text-white shadow-lg sm:text-base">
+          {activeCaption.speaker ? <span className="mr-1.5 font-black uppercase tracking-wide text-cyan-200">{activeCaption.speaker}:</span> : null}
+          {activeCaption.text}
+        </p>
+      </div>
+    )}
   </div>;
 }
 
