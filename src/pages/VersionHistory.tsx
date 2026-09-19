@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.739",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Every Top of the Pops episode now has one fixed running sheet listing each act, song, stage, audio and music permission" },
+      { type: "improvement", description: "An episode cannot move into production until all acts have usable audio, a measured length and cleared music permissions" },
+    ],
+  },
+  {
     version: "1.1.738",
     date: "2026-09-19",
     changes: [
