@@ -79,7 +79,7 @@
     "test:e2e:finance": "playwright test --config=playwright.finance.config.ts --project=chromium",
     "test:totp-render-worker": "node --test workers/totp-render-worker/lib.test.mjs",
     "test:totp:phase2": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/episodeManifest.test.ts src/features/top-of-the-pops/episodeManifestApi.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx && node --test workers/totp-render-worker/lib.test.mjs",
-    "test:totp:phase3": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/__tests__/preflight.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx src/pages/__tests__/topOfThePops.pages.test.tsx && node --test workers/totp-render-worker/lib.test.mjs",
+    "test:totp:phase3": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/__tests__/preflight.test.ts src/features/top-of-the-pops/productionAuditApi.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx src/pages/__tests__/topOfThePops.pages.test.tsx && node --test workers/totp-render-worker/lib.test.mjs",
     "test:totp:render-smoke": "playwright test tests/totp/render-surface.spec.ts --project=chromium"
   },
   "dependencies": {
@@ -138,24 +138,3 @@
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
-    "react-hook-form": "^7.61.1",
-    "react-resizable-panels": "^2.1.9",
-    "react-router-dom": "^6.30.1",
-    "recharts": "^2.15.4",
-    "sonner": "^1.7.4",
-    "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7",
-    "three": "^0.160.1",
-    "vaul": "^0.9.9",
-    "zod": "^3.25.76",
-    "zustand": "^5.0.8"
-  },
-  "devDependencies": {
-    "@adobe/css-tools": "^4.5.0",
-    "@axe-core/playwright": "^4.10.2",
-    "@eslint/js": "^9.32.0",
-    "@playwright/test": "^1.49.1",
-    "@tailwindcss/typography": "^0.5.16",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.1.0",
