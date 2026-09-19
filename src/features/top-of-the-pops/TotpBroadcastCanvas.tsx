@@ -115,6 +115,14 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
       </div>
     )}
     {presenterText && <div className="pointer-events-none absolute bottom-8 left-1/2 z-20 w-[min(43rem,88vw)] -translate-x-1/2 animate-in fade-in slide-in-from-bottom-3 duration-300" role="status" aria-live="polite"><div className="border-t-2 border-fuchsia-400 bg-black/82 px-5 py-3 text-center text-sm font-medium leading-relaxed text-white shadow-2xl backdrop-blur-md sm:text-base"><span className="mr-2 font-black uppercase tracking-wide text-cyan-200">{presenter.displayName}:</span>{presenterText}</div></div>}
+    {activeCaption && (
+      <div className="pointer-events-none absolute bottom-[8%] left-1/2 z-30 w-[min(44rem,90%)] -translate-x-1/2 text-center" data-totp-caption role="status" aria-live="polite">
+        <p className="inline-block bg-black/85 px-4 py-2 text-sm font-semibold leading-snug text-white shadow-lg sm:text-base">
+          {activeCaption.speaker ? <span className="mr-1.5 font-black uppercase tracking-wide text-cyan-200">{activeCaption.speaker}:</span> : null}
+          {activeCaption.text}
+        </p>
+      </div>
+    )}
   </div>;
 }
 
