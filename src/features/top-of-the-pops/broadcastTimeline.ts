@@ -37,7 +37,7 @@ export interface TotpPerformanceTimelineInput {
   presenterIntro: string;
   stage: TotpStageKey;
   performanceDurationMs: number;
-  shots: TotpCameraShot[];
+  shots: readonly TotpCameraShot[];
   trendChange?: number | null;
   debut?: boolean;
 }
@@ -118,9 +118,13 @@ export function buildTotpMusicalSections(durationMs: number): SectionWindow[] {
 }
 
 function candidateLibrary(input: TotpPerformanceTimelineInput, section: TotpMusicalSection): TotpCameraShot[] {
-  const requested = input.shots.length ? input.shots : ["studio_master"];
+  const requested: readonly TotpCameraShot[] = input.shots.length ? input.shots : ["studio_master"];
   const preferred = SECTION_PREFERENCES[section];
-  return [...new Set([...preferred.filter((shot) => requested.includes(shot)), ...requested, ...preferred])];
+  return [...new Set<TotpCameraShot>([
+    ...preferred.filter((shot) => requested.includes(shot)),
+    ...requested,
+    ...preferred,
+  ])];
 }
 
 function pickDirectedShot(params: {
@@ -135,7 +139,9 @@ function pickDirectedShot(params: {
 
   const library = candidateLibrary(params.input, params.section);
   const nonFinaleLibrary = library.filter((shot) => shot !== "finale_wide");
-  const usable = nonFinaleLibrary.length ? nonFinaleLibrary : ["studio_master", "lead_medium"];
+  const usable: TotpCameraShot[] = nonFinaleLibrary.length
+    ? nonFinaleLibrary
+    : ["studio_master", "lead_medium"];
   const rotated = usable.map((_, index) => usable[(index + params.cutIndex) % usable.length]);
   const candidate = rotated.find((shot) =>
     shot !== params.previous
