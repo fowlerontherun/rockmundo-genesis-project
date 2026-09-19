@@ -89,13 +89,26 @@ export const fetchPlayerCharacterIdentity = async (
 export const createPlayerCharacterIdentity = async (
   profileId: string
 ): Promise<PlayerCharacterIdentity> => {
+  const existing = await fetchPlayerCharacterIdentity(profileId);
+  if (existing) return existing;
+
   const { data, error } = await supabase
     .from("player_character_identity")
     .insert({ profile_id: profileId })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    // Character creation can race the onboarding bootstrap on fast reloads.
+    // If another request created the row first, reuse it instead of trapping
+    // the player in a retry loop.
+    if (error.code === "23505") {
+      const racedIdentity = await fetchPlayerCharacterIdentity(profileId);
+      if (racedIdentity) return racedIdentity;
+    }
+    throw error;
+  }
+
   return data as PlayerCharacterIdentity;
 };
 
@@ -161,6 +174,9 @@ export const createPlayerReputation = async (
     creativity?: number;
   }
 ): Promise<PlayerReputation> => {
+  const existing = await fetchPlayerReputation(profileId);
+  if (existing) return existing;
+
   const { data, error } = await supabase
     .from("player_reputation")
     .insert({
@@ -173,7 +189,16 @@ export const createPlayerReputation = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    // "Begin Journey" must be safe to retry. A previous attempt may already
+    // have created reputation before a later onboarding step failed.
+    if (error.code === "23505") {
+      const racedReputation = await fetchPlayerReputation(profileId);
+      if (racedReputation) return racedReputation;
+    }
+    throw error;
+  }
+
   return data as PlayerReputation;
 };
 
