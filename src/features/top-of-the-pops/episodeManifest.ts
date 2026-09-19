@@ -34,6 +34,9 @@ export interface TotpManifestAsset {
   kind: "song_audio" | "presenter_audio";
   url: string | null;
   duration_ms: number | null;
+  sha256: string | null;
+  version: number | null;
+  script_checksum: string | null;
 }
 
 export interface TotpManifestSegment {
@@ -83,7 +86,8 @@ export interface TotpManifestIssue {
     | "rights_not_cleared"
     | "rights_expired"
     | "no_segments"
-    | "missing_presenter_intro";
+    | "missing_presenter_intro"
+    | "missing_presenter_audio";
   performance_id?: string;
   message: string;
 }
@@ -92,8 +96,14 @@ export interface TotpManifestInput {
   episode: TotpEpisode;
   /** performance_id -> audio */
   songAudio: Record<string, { url: string | null; duration_ms: number | null }>;
-  /** performance_id -> recorded presenter link audio */
-  presenterAudio?: Record<string, { url: string | null; duration_ms: number | null }>;
+  /** performance_id -> immutable recorded presenter link audio */
+  presenterAudio?: Record<string, {
+    url: string | null;
+    duration_ms: number | null;
+    sha256: string | null;
+    version: number | null;
+    script_checksum: string | null;
+  }>;
   /** song_id -> rights record */
   rights: Record<string, TotpTrackRights>;
   /** Used only to evaluate licence expiry; defaults to the broadcast date. */
@@ -164,13 +174,23 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
       const song = songAudio[performance.performance_id] ?? { url: null, duration_ms: null };
       const link = presenterAudio[performance.performance_id] ?? null;
       const assets: TotpManifestAsset[] = [
-        { kind: "song_audio", url: song.url ?? null, duration_ms: song.duration_ms ?? null },
+        {
+          kind: "song_audio",
+          url: song.url ?? null,
+          duration_ms: song.duration_ms ?? null,
+          sha256: null,
+          version: null,
+          script_checksum: null,
+        },
       ];
       if (link) {
         assets.push({
           kind: "presenter_audio",
           url: link.url ?? null,
           duration_ms: link.duration_ms ?? null,
+          sha256: link.sha256 ?? null,
+          version: link.version ?? null,
+          script_checksum: link.script_checksum ?? null,
         });
       }
 
@@ -275,6 +295,24 @@ export function validateTotpEpisodeManifest(
         performance_id: segment.performance_id,
         message: `${segment.band_name} has no presenter introduction.`,
       });
+    } else {
+      const presenter = segment.assets.find((asset) => asset.kind === "presenter_audio");
+      const expectedScriptChecksum = manifestChecksum(canonicalise(segment.presenter_intro));
+      if (
+        !presenter?.url
+        || !presenter.duration_ms
+        || presenter.duration_ms <= 0
+        || !presenter.sha256
+        || !presenter.version
+        || presenter.script_checksum !== expectedScriptChecksum
+      ) {
+        issues.push({
+          severity: "blocking",
+          code: "missing_presenter_audio",
+          performance_id: segment.performance_id,
+          message: `${segment.band_name} needs a recorded presenter introduction matching the current script before external production.`,
+        });
+      }
     }
   }
 
