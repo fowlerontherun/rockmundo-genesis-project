@@ -96,10 +96,23 @@ export function TotpStageTransition({
           <Sparkles className="h-4 w-4" />
         </div>
 
-        <div className="mt-6 w-full max-w-xl">
+        <div className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-cyan-200" data-totp-transition-countdown>
+          Up next in
+          <span className="rounded bg-white/10 px-2 py-1 text-sm tabular-nums tracking-normal text-white">
+            {formatTotpCountdown(remainingMs)}
+          </span>
+        </div>
+
+        <div className="mt-4 w-full max-w-xl">
           <Progress value={progress} className="h-1.5 bg-white/10" />
         </div>
       </div>
+      <div
+        className="pointer-events-none absolute inset-0 z-20 bg-black transition-opacity duration-100"
+        style={{ opacity: dipOpacity }}
+        aria-hidden="true"
+        data-totp-transition-dip
+      />
     </div>
   );
 }
