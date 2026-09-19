@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.751",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Players can now give or withdraw permission for their band to appear in Top of the Pops shows published outside the game, on a new Broadcast permission page" },
+      { type: "feature", description: "The Top of the Pops control room has a new rights and safety panel that screens the episode for permission, wording, music rights and subtitle readability before publication" },
+      { type: "feature", description: "Admins can record a takedown to remove, replace or mute an act, with a reason kept on file; game results already awarded are left untouched" },
+      { type: "improvement", description: "An episode can no longer be exported or published until a clean screening report is saved for the current running sheet" },
+    ],
+  },
+  {
+
     version: "1.1.750",
     date: "2026-09-19",
     changes: [
