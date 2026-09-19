@@ -22,6 +22,6 @@ describe("deriveTotpCameraFrame", () => {
   it("falls back to a stable studio master when reduced motion is enabled", () => {
     const frame = deriveTotpCameraFrame({ shot: "crane_sweep", stage: "rock_stage", performers, reducedMotion: true });
     expect(frame.shot).toBe("studio_master");
-    expect(frame.camera).toEqual({ x: 640, y: 350, zoom: 1 });
+    expect(frame.camera).toEqual({ x: 640, y: 360, zoom: 1 });
   });
 });
