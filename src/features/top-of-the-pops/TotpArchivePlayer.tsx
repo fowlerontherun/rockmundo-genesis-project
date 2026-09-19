@@ -268,39 +268,28 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   }, [audioEnabled, playing, resolvedBroadcastAudio?.durationSeconds, source.id, source.payload.performanceDurationMs, source.payload.song.audioDurationSeconds]);
 
   useEffect(() => {
+    if (!voiceEnabled) {
+      setPresenterSpeaking(false);
+      cancelTotpPresenterSpeech();
+      return;
+    }
     if (!playing || cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
     spokenPresenterCueRef.current = cue.id;
-    const recordedUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro"));
-    let cancelled = false;
-
-    const speakFallback = () => {
-      if (cancelled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
-      const utterance = new SpeechSynthesisUtterance(cue.presenterText!);
-      utterance.rate = 1.22;
-      utterance.pitch = 1.12;
-      const voices = window.speechSynthesis.getVoices();
-      utterance.voice = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang)) ?? null;
-      window.speechSynthesis.speak(utterance);
-    };
-
-    void fetch(recordedUrl, { method: "HEAD" })
-      .then((response) => {
-        if (!response.ok || cancelled) { speakFallback(); return; }
-        const audio = new Audio(recordedUrl);
-        audio.volume = 0.95;
-        audio.playbackRate = 1.08;
-        presenterAudioRef.current = audio;
-        void audio.play().catch(speakFallback);
-      })
-      .catch(speakFallback);
+    const line = playTotpPresenterLine({
+      text: cue.presenterText,
+      presenterKey,
+      recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
+      volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
+      onSpeakingChange: setPresenterSpeaking,
+    });
+    presenterAudioRef.current = line.element;
 
     return () => {
-      cancelled = true;
-      presenterAudioRef.current?.pause();
+      line.stop();
       presenterAudioRef.current = null;
-      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      setPresenterSpeaking(false);
     };
-  }, [cue?.id, cue?.presenterText, cue?.type, playing, presenterKey]);
+  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, voiceEnabled]);
   useEffect(() => {
     if (!playing) return;
     let frame = 0, previous = performance.now();
