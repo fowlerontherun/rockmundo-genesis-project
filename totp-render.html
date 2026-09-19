@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, initial-scale=1.0" />
+    <title>Top of the Pops Offline Renderer</title>
+    <style>
+      html, body, #root { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      * { box-sizing: border-box; }
+      [data-totp-cue-dip] { display: none !important; }
+      *, *::before, *::after { transition: none !important; animation-delay: 0s !important; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/renderers/totpRenderMain.tsx"></script>
+  </body>
+</html>
