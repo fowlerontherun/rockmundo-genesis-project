@@ -11,6 +11,15 @@ const json = (status: number, body: unknown) =>
 
 const DRIVE_GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
 
+interface PublishGate {
+  episode_id: string;
+  manifest_checksum: string;
+  render_job_id: string;
+  master_url: string;
+  master_sha256: string;
+  master_filename: string | null;
+}
+
 /** Turn a Google Drive share link into a gateway download request, or pass a plain URL through. */
 async function fetchSource(sourceUrl: string): Promise<Response> {
   const driveId =
@@ -21,7 +30,7 @@ async function fetchSource(sourceUrl: string): Promise<Response> {
   if (driveId) {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     const driveKey = Deno.env.get("GOOGLE_DRIVE_API_KEY");
-    if (!lovableKey || !driveKey) throw new Error("Google Drive is not connected, so the master cannot be read.");
+    if (!lovableKey || !driveKey) throw new Error("Google Drive is not connected, so the approved master cannot be read.");
     return await fetch(`${DRIVE_GATEWAY}/files/${driveId}?alt=media`, {
       headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": driveKey },
     });
@@ -56,6 +65,22 @@ async function youtubeAccessToken(): Promise<string> {
   const parsed = JSON.parse(body) as { access_token?: string };
   if (!parsed.access_token) throw new Error("YouTube did not return an access token.");
   return parsed.access_token;
+}
+
+async function getProcessingStatus(accessToken: string, videoId: string): Promise<string | null> {
+  const response = await fetch(
+    `https://www.googleapis.com/youtube/v3/videos?part=processingDetails&id=${encodeURIComponent(videoId)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!response.ok) {
+    const detail = await response.text();
+    console.warn(`[TOTP-YOUTUBE] Processing check failed [${response.status}]: ${detail}`);
+    return null;
+  }
+  const body = await response.json() as {
+    items?: Array<{ processingDetails?: { processingStatus?: string } }>;
+  };
+  return body.items?.[0]?.processingDetails?.processingStatus ?? null;
 }
 
 serve(async (req) => {
@@ -93,31 +118,44 @@ serve(async (req) => {
     if (publication.state === "published" || publication.state === "scheduled") {
       return json(409, { error: "That episode has already been sent to YouTube." });
     }
-    if (!publication.source_url) return json(400, { error: "Add the finished video link before uploading." });
+    if (!publication.manifest_checksum) {
+      return json(409, { error: "Save the upload against the current frozen running sheet before publishing." });
+    }
+
+    // Server-side release gate: the client cannot supply an arbitrary video URL.
+    const { data: gateData, error: gateError } = await service.rpc("totp_assert_publishable_episode", {
+      p_episode_id: publication.episode_id,
+      p_manifest_checksum: publication.manifest_checksum,
+    });
+    if (gateError) return json(409, { error: gateError.message });
+    const gate = gateData as PublishGate | null;
+    if (!gate?.master_url || !gate.master_sha256) {
+      return json(409, { error: "The approved render has no verifiable master artifact." });
+    }
 
     await service.from("totp_youtube_publications").update({
       state: "uploading",
+      source_url: gate.master_url,
       error_message: null,
       updated_at: new Date().toISOString(),
     }).eq("id", publicationId);
 
     const accessToken = await youtubeAccessToken();
 
-    const source = await fetchSource(publication.source_url);
+    const source = await fetchSource(gate.master_url);
     if (!source.ok || !source.body) {
       const detail = source.ok ? "empty response" : await source.text();
-      throw new Error(`The finished video could not be read (${source.status}): ${detail}`);
+      throw new Error(`The approved master could not be read (${source.status}): ${detail}`);
     }
     const contentType = source.headers.get("content-type") ?? "video/*";
     const contentLength = source.headers.get("content-length");
 
-    // A scheduled premiere is a private video with a publishAt time.
     const scheduled = Boolean(publication.publish_at);
     const snippet = {
       title: publication.title.slice(0, 100),
       description: String(publication.description ?? "").slice(0, 5000),
       tags: Array.isArray(publication.tags) ? publication.tags.slice(0, 30) : [],
-      categoryId: "10", // Music
+      categoryId: "10",
     };
     const status = scheduled
       ? { privacyStatus: "private", publishAt: new Date(publication.publish_at as string).toISOString(), selfDeclaredMadeForKids: false }
@@ -156,12 +194,18 @@ serve(async (req) => {
 
     const video = JSON.parse(uploadBody) as { id?: string };
     const videoId = video.id ?? null;
-    const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+    if (!videoId) throw new Error("YouTube accepted the upload but returned no video ID.");
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const processingStatus = await getProcessingStatus(accessToken, videoId);
+    if (processingStatus === "failed") {
+      throw new Error("YouTube accepted the file but failed while processing it.");
+    }
 
     const { data: finished, error: finishError } = await service
       .from("totp_youtube_publications")
       .update({
         state: scheduled ? "scheduled" : "published",
+        source_url: gate.master_url,
         video_id: videoId,
         watch_url: watchUrl,
         error_message: null,
@@ -175,14 +219,22 @@ serve(async (req) => {
     await service.from("totp_production_audit").insert({
       episode_id: publication.episode_id,
       event_kind: "publish",
-      headline: scheduled ? "Episode scheduled as a YouTube premiere" : "Episode published to YouTube",
-      detail: { video_id: videoId, watch_url: watchUrl, publish_at: publication.publish_at },
-      passed: true,
+      headline: scheduled ? "Episode scheduled for YouTube publication" : "Episode published to YouTube",
+      detail: {
+        video_id: videoId,
+        watch_url: watchUrl,
+        publish_at: publication.publish_at,
+        processing_status: processingStatus,
+        render_job_id: gate.render_job_id,
+        master_filename: gate.master_filename,
+        master_sha256: gate.master_sha256,
+      },
+      passed: processingStatus !== "failed",
       manifest_checksum: publication.manifest_checksum,
       actor_id: user.id,
     });
 
-    return json(200, { publication: finished, videoId, watchUrl, scheduled });
+    return json(200, { publication: finished, videoId, watchUrl, scheduled, processingStatus });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     console.error("[TOTP-YOUTUBE] Failed:", message);
