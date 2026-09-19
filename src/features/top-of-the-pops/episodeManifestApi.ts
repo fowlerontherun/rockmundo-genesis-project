@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { getTotpPerformanceAudio, type TotpEpisode } from "./api";
 import {
   buildTotpEpisodeManifest,
@@ -8,7 +9,7 @@ import {
   type TotpTrackRights,
 } from "./episodeManifest";
 import { totpRpc } from "./rpc";
-import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
+import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 
 export interface StoredTotpEpisodeManifest {
   episode_id: string;
@@ -47,7 +48,13 @@ export async function buildTotpEpisodeManifestFromEpisode(
   const songAudio: Record<string, { url: string | null; duration_ms: number | null }> = {};
   const presenterAudio: Record<string, { url: string | null; duration_ms: number | null }> = {};
   const rights: Record<string, TotpTrackRights> = {};
-  const presenterActIntro = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(episode.presenter_key, "act-intro"));
+  const presenterPath = TOTP_MEDIA_PATHS.presenter(episode.presenter_key, "act-intro");
+  const presenterDirectory = presenterPath.slice(0, presenterPath.lastIndexOf("/"));
+  const presenterFileName = presenterPath.slice(presenterPath.lastIndexOf("/") + 1);
+  const presenterListing = await supabase.storage.from(TOTP_MEDIA_BUCKET).list(presenterDirectory, { limit: 100, search: presenterFileName });
+  const presenterActIntro = !presenterListing.error && (presenterListing.data ?? []).some((item) => item.name === presenterFileName)
+    ? totpMediaPublicUrl(presenterPath)
+    : null;
 
   /**
    * Phase 5: an act removed by a takedown is dropped from the broadcast only.
