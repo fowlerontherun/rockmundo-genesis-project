@@ -145,7 +145,9 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">
-              {showCredits
+              {showClock
+                ? "Counting down"
+                : showCredits
                 ? "End credits"
                 : showIntro
                 ? "Programme intro"
