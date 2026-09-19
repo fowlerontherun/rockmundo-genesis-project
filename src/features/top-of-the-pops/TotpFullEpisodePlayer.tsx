@@ -29,6 +29,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const ordered = useMemo(() => orderTotpEpisodeReplays(replays), [replays]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [continuous, setContinuous] = useState(false);
+  const [showClock, setShowClock] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [showChartRundown, setShowChartRundown] = useState(false);
   const [showStageTransition, setShowStageTransition] = useState(false);
