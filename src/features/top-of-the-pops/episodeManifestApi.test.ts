@@ -7,6 +7,10 @@ vi.mock("./rpc", () => ({ totpRpc: (...args: unknown[]) => totpRpc(...args) }));
 vi.mock("./api", () => ({
   getTotpPerformanceAudio: (...args: unknown[]) => getTotpPerformanceAudio(...args),
 }));
+vi.mock("./totpMedia", () => ({
+  TOTP_MEDIA_PATHS: { presenter: (key: string, slot: string) => `presenters/${key}/${slot}` },
+  totpMediaPublicUrl: (path: string) => `https://media.example/${path}`,
+}));
 
 import {
   buildTotpEpisodeManifestFromEpisode,
@@ -59,6 +63,11 @@ describe("TOTP stored running sheet", () => {
     expect(manifest.segments).toHaveLength(1);
     expect(manifest.total_runtime_ms).toBe(182_000);
     expect(manifest.segments[0].rights.status).toBe("cleared");
+    expect(manifest.segments[0].assets).toContainEqual({
+      kind: "presenter_audio",
+      url: "https://media.example/presenters/presenter_a/act-intro",
+      duration_ms: 8_000,
+    });
     expect(issues).toEqual([]);
     expect(inGameTrackRights().youtube_live_permitted).toBe(true);
   });
