@@ -75,7 +75,7 @@ function findBroadcastCanvas(container: HTMLElement): HTMLCanvasElement {
 export async function recordTotpBroadcast(options: TotpExportOptions & { shouldStop?: () => boolean }): Promise<Blob> {
   const mimeType = totpExportMimeType();
   const canvas = findBroadcastCanvas(options.container);
-  const videoStream = canvas.captureStream(30);
+  const videoStream = canvas.captureStream(TOTP_EXPORT_PROFILE.frameRate);
 
   // Mix whatever audio elements exist into a single track. If audio routing
   // fails (e.g. cross-origin restrictions) we still export the picture.
@@ -103,7 +103,11 @@ export async function recordTotpBroadcast(options: TotpExportOptions & { shouldS
     audioContext = null;
   }
 
-  const recorder = new MediaRecorder(videoStream, { mimeType, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 192_000 });
+  const recorder = new MediaRecorder(videoStream, {
+    mimeType,
+    videoBitsPerSecond: TOTP_EXPORT_PROFILE.videoBitsPerSecond,
+    audioBitsPerSecond: TOTP_EXPORT_PROFILE.audioBitsPerSecond,
+  });
   const chunks: BlobPart[] = [];
   recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
 

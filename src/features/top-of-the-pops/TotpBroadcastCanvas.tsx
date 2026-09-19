@@ -58,6 +58,12 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
 
   return <div className={className ?? "relative h-full min-h-[28rem] w-full overflow-hidden bg-slate-950"} data-totp-broadcast data-totp-cue={cue?.type ?? "performance"} data-totp-shot={directedShot} data-totp-stage={directedStage} data-totp-presenter={presenter.key} data-totp-show-variant={showVariant ?? "regular"} data-totp-audience-reaction={lockedAudienceReaction} data-totp-audience-label={audienceLabel.toLowerCase()} data-totp-visual-source={playerModelsSnapshot ? "archive" : "live"}>
     <GigCanvas replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} pyrotechnics crowdTuning={crowdTuning} fill immersive cameraMode="auto" performancePreference={performancePreference} presentationMode="totp" totpCameraShot={directedShot} totpStage={directedStage} totpPresenterKey={presenter.key} totpShowVariant={showVariant} totpAudienceReaction={lockedAudienceReaction} totpCueType={cue?.type ?? "performance"} totpMonitorPrimary={monitorPrimary} totpMonitorSecondary={monitorSecondary} playerModelsSnapshot={playerModelsSnapshot} capability={{ audience: "player", subjectId: `totp:${replay.id}` }} />
+    <div
+      key={`dip:${cue?.id ?? "default"}`}
+      className="pointer-events-none absolute inset-0 z-30 bg-black animate-out fade-out fill-mode-forwards duration-500 ease-out motion-reduce:hidden"
+      aria-hidden="true"
+      data-totp-cue-dip
+    />
     <div key={cue?.id ?? "default"} className="pointer-events-none absolute inset-0 z-10" aria-hidden="true">
       <div className="absolute inset-0 animate-in fade-in duration-150 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,.10),transparent_42%)]" />
       {cue?.type === "audience" ? <div className="absolute inset-0 animate-in fade-in duration-300 bg-[radial-gradient(circle_at_50%_65%,rgba(244,114,182,.16),transparent_48%)]" /> : null}
