@@ -8,6 +8,10 @@
   - [x] Store the running sheet against the episode in the database (admin save/read RPCs, immutable once rendered/published) with API tests.
   - [x] Page-level player/admin render tests for the Top of the Pops pages.
 - [ ] Phase 1: in-game television presentation polish and accessibility.
+  - [x] Widescreen 16:9 programme frame with action/title safe areas for all overlay graphics.
+  - [x] Deterministic caption track (presenter, chart graphics, audience) with WebVTT export and a subtitles toggle.
+  - [ ] Broadcast audio mix balance (song bed, presenter, audience) and end credits sequence.
+  - [ ] Loading/recovery states for the in-app broadcast viewer.
 - [ ] Phase 2: deterministic offline rendering and MP4 export.
 - [ ] Phase 3: production control room, rehearsal and release gates.
 - [ ] Phase 4: YouTube upload and scheduled Premiere.
