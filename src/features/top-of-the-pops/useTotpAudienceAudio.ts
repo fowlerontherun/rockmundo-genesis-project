@@ -8,10 +8,12 @@ export function useTotpAudienceAudio({
   playbackState,
   cue,
   audienceReaction,
+  enabled = true,
 }: {
   playbackState: DerivedPlaybackState;
   cue?: TotpBroadcastCue | null;
   audienceReaction: number;
+  enabled?: boolean;
 }) {
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
@@ -22,16 +24,16 @@ export function useTotpAudienceAudio({
   const clipRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!enabled || typeof window === "undefined") return;
     let cancelled = false;
     void loadTotpCrowdSounds()
       .then((sounds) => { if (!cancelled) libraryRef.current = sounds; })
       .catch(() => { if (!cancelled) libraryRef.current = []; });
     return () => { cancelled = true; };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
-    if (!playbackState.isPlaying || typeof window === "undefined") return;
+    if (!enabled || !playbackState.isPlaying || typeof window === "undefined") return;
     const AC = window.AudioContext || (window as any).webkitAudioContext;
     if (!AC) return;
 
@@ -119,7 +121,7 @@ export function useTotpAudienceAudio({
         .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
       if (!clip) playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
     }
-  }, [audienceReaction, cue?.id, cue?.type, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
+  }, [audienceReaction, cue?.id, cue?.type, enabled, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
 
   useEffect(() => () => {
     clipRef.current?.pause();
