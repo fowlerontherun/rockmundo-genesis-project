@@ -27,7 +27,7 @@ export interface TotpReleaseHealth {
 }
 
 export async function getTotpReleaseHealth(): Promise<TotpReleaseHealth> {
-  const { data, error } = await totpRpc<"totp_release_health", TotpReleaseHealth>("totp_release_health");
+  const { data, error } = await totpRpc<TotpReleaseHealth>("totp_release_health");
   if (error) throw new Error(error.message || "Could not check Top of the Pops production health.");
   if (!data) throw new Error("Top of the Pops returned no production health report.");
   return data;

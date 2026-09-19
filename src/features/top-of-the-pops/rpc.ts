@@ -12,20 +12,14 @@ export interface TotpRpcResponse<T> {
 
 type PublicFunctions = Database["public"]["Functions"];
 export type TotpRpcName = Extract<keyof PublicFunctions, `totp_${string}`>;
-export type TotpRpcArgs<Name extends TotpRpcName> = PublicFunctions[Name]["Args"];
-export type TotpRpcResult<Name extends TotpRpcName> = PublicFunctions[Name]["Returns"];
-
-type TypedTotpRpc = <Name extends TotpRpcName>(
-  functionName: Name,
-  args?: TotpRpcArgs<Name>,
-) => PromiseLike<TotpRpcResponse<TotpRpcResult<Name>>>;
+type TotpRpcArgument = Record<string, unknown> | undefined;
+type TypedTotpRpc = (functionName: TotpRpcName, args?: TotpRpcArgument) => PromiseLike<TotpRpcResponse<unknown>>;
 
 const typedTotpRpc = supabase.rpc.bind(supabase) as TypedTotpRpc;
 
-export async function totpRpc<Name extends TotpRpcName, Result = TotpRpcResult<Name>>(
-  functionName: Name,
-  args?: TotpRpcArgs<Name>,
-): Promise<TotpRpcResponse<T>> {
-  const response = await typedTotpRpc(functionName, args);
-  return response as TotpRpcResponse<Result>;
+export async function totpRpc<Result>(
+  functionName: TotpRpcName,
+  args?: TotpRpcArgument,
+): Promise<TotpRpcResponse<Result>> {
+  return await typedTotpRpc(functionName, args) as TotpRpcResponse<Result>;
 }
