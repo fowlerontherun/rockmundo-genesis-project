@@ -44,7 +44,6 @@ describe("TotpBroadcastRecoveryBoundary", () => {
     );
 
     broken = false;
-    fireEvent.click(screen.getByRole("button", { name: /retry studio picture/i }));
     rerender(
       <TotpBroadcastRecoveryBoundary
         resetKey="act-1"
@@ -54,6 +53,7 @@ describe("TotpBroadcastRecoveryBoundary", () => {
         <BrokenPicture broken={broken} />
       </TotpBroadcastRecoveryBoundary>,
     );
+    fireEvent.click(screen.getByRole("button", { name: /retry studio picture/i }));
 
     expect(screen.getByTestId("picture")).toHaveTextContent("studio picture");
     consoleSpy.mockRestore();
