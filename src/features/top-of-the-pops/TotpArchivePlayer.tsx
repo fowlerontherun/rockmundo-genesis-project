@@ -169,6 +169,8 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const [driveLink, setDriveLink] = useState<string | null>(null);
   const [driveError, setDriveError] = useState<string | null>(null);
   const [exportLeadIn, setExportLeadIn] = useState(0);
+  const [presenterSpeaking, setPresenterSpeaking] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const spokenPresenterCueRef = useRef<string | null>(null);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
   const cue = useMemo(() => activeCue(source.payload.cues, positionMs), [source.payload.cues, positionMs]);
@@ -228,8 +230,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   useEffect(() => {
     const audio = songAudioRef.current;
     if (!audio) return;
-    audio.volume = clampTotpGain(totpMixLevels(cue?.type, audienceReaction).songBed);
-  }, [cue?.type, audienceReaction]);
+    const bed = totpMixLevels(cue?.type, audienceReaction).songBed;
+    // Extra duck while the presenter is actually talking, so the link is never buried.
+    audio.volume = clampTotpGain(presenterSpeaking ? bed * 0.45 : bed);
+  }, [cue?.type, audienceReaction, presenterSpeaking]);
 
   useEffect(() => {
     if (!playing) {
