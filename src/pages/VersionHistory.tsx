@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.741",
+    date: "2026-09-19",
+    changes: [
+      { type: "improvement", description: "Added automated checks that the Top of the Pops player and admin pages load with invitations, episode details and the running sheet" },
+    ],
+  },
+  {
     version: "1.1.740",
     date: "2026-09-19",
     changes: [
