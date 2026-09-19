@@ -190,6 +190,23 @@ export function latestSucceededTotpRender(jobs: TotpRenderJob[], manifestChecksu
   );
 }
 
+export function totpRenderJobLabel(job: TotpRenderJob): string {
+  const purpose = totpRenderPurpose(job);
+  if (purpose === "rehearsal") {
+    if (job.state === "succeeded") return "Rehearsal passed";
+    if (job.state === "failed") return "Rehearsal failed";
+    if (job.state === "cancelled") return "Rehearsal cancelled";
+    return job.state === "rendering" ? "Rehearsal rendering" : "Rehearsal queued";
+  }
+  if (purpose === "segment_preview") {
+    if (job.state === "succeeded") return "Preview ready";
+    if (job.state === "failed") return "Preview failed";
+    if (job.state === "cancelled") return "Preview cancelled";
+    return job.state === "rendering" ? "Preview rendering" : "Preview queued";
+  }
+  return totpRenderStateLabel(job.state);
+}
+
 export function totpRenderStateLabel(state: TotpRenderJobState): string {
   switch (state) {
     case "queued":
