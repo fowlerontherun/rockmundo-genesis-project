@@ -149,6 +149,9 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     [source],
   );
   const [resolvedBroadcastAudio, setResolvedBroadcastAudio] = useState<{ url: string | null; durationSeconds: number | null } | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioLoadFailed, setAudioLoadFailed] = useState(false);
+  const [audioAttempt, setAudioAttempt] = useState(0);
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
   const presenterAudioRef = useRef<HTMLAudioElement | null>(null);
