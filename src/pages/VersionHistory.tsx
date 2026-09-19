@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.738",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Added a Top of the Pops production-health panel covering charts, scheduling, automation and notifications" },
+      { type: "improvement", description: "Restricted Top of the Pops database calls to the generated show-function contract and added release-health checks" },
+    ],
+  },
+  {
     version: "1.1.737",
     date: "2026-09-08",
     changes: [
