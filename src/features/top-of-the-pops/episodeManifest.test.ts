@@ -61,6 +61,10 @@ function input(overrides: Partial<TotpManifestInput> = {}): TotpManifestInput {
       p1: { url: "https://cdn/p1.mp3", duration_ms: 180_000 },
       p2: { url: "https://cdn/p2.mp3", duration_ms: 200_000 },
     },
+    presenterAudio: {
+      p1: { url: "https://cdn/presenter.mp3", duration_ms: 8_000 },
+      p2: { url: "https://cdn/presenter.mp3", duration_ms: 8_000 },
+    },
     rights: { s1: cleared, s2: cleared },
     ...overrides,
   };
@@ -74,7 +78,7 @@ describe("TOTP episode manifest", () => {
     expect(first.segments.map((segment) => segment.performance_id)).toEqual(["p1", "p2"]);
     expect(first.checksum).toBe(second.checksum);
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    expect(first.total_runtime_ms).toBe(380_000);
+    expect(first.total_runtime_ms).toBe(396_000);
     expect(first.production_state).toBe("gameplay");
   });
 
@@ -98,6 +102,12 @@ describe("TOTP episode manifest", () => {
     expect(codes).toContain("missing_song_audio");
     expect(codes).toContain("missing_duration");
     expect(codes).toContain("rights_not_cleared");
+  });
+
+  it("blocks an approved master when recorded presenter audio is missing", () => {
+    const manifest = buildTotpEpisodeManifest(input({ presenterAudio: {} }));
+    expect(validateTotpEpisodeManifest(manifest).map((issue) => issue.code)).toContain("missing_presenter_audio");
+    expect(promoteTotpManifest(manifest, "production_ready").manifest.production_state).toBe("gameplay");
   });
 
   it("flags expired licences against the evaluation date", () => {
