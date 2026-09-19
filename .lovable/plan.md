@@ -34,22 +34,27 @@ approved master → redundant playout/encoder → YouTube test → live → arch
 
 ## Phase 0 — Define the broadcast contract
 
+- Replace the temporary untyped RPC bridge with generated database types and resolve the duplicate TOTP migration timestamp before adding more production dependencies.
+- Add database tests for episode preparation, running-order locking, broadcast transitions, settlement idempotency and replay visibility.
+- Surface the existing release-health check in the admin area and send proactive alerts when charts are stale, a scheduled job stops or an episode is missing.
 - Create one immutable episode manifest containing every act, duration, audio source, presenter line, camera cue, graphic, outfit snapshot, rights status and checksum.
 - Separate four states: gameplay episode, production-ready, rendered master and externally published.
 - Record music ownership/licence, territories, expiry, Content ID allowlisting and explicit YouTube-live permission per track.
 - Define programme specifications: initially 1920×1080, 30 fps, H.264, AAC, fixed 16:9 safe areas and stereo delivery.
 - Replace device speech synthesis in approved masters with uploaded or generated, versioned presenter audio.
 
-**Gate:** the same manifest generated twice is byte-identical; every item has valid media, duration, rights and checksum; no uncleared track can enter production.
+**Gate:** lifecycle database tests and route-level player/admin tests pass; the same manifest generated twice is byte-identical; every item has valid media, duration, rights and checksum; no uncleared track can enter production.
 
 ## Phase 1 — Presentation polish inside the game
 
 - Establish one broadcast graphics package for opening titles, logo bug, lower thirds, chart rundown, transitions, credits and special episodes.
 - Replace the current app-panel look during programme playback with a clean, full-frame television output; player controls remain outside that frame.
+- Add a show-local recovery screen so a 3D rendering fault falls back to audio, graphics and programme text instead of taking down the full page.
 - Improve direction from fixed repeating cuts to musical-section cues, shot variety rules, continuity limits and collision/occlusion checks.
 - Add visible presenter staging, branded studio surfaces, better lighting contrast, audience wardrobe/pose variety and more deliberate stage identities.
 - Add a proper audio mix: song, presenter, applause, crowd bed, stings and transitions with ducking and peak protection.
 - Add opening and closing credits, accessibility-safe typography and broadcast title/action safe areas.
+- Improve countdown and status announcements for assistive technology, label every invitation time as London time, and replace text-only loading messages with stable programme-shaped placeholders.
 
 **Gate:** creative review at representative frames from every segment; no clipped text, camera intersections, obstructed performers, repeated-shot fatigue, silence gaps or abrupt cuts; mobile playback remains usable without changing the broadcast frame.
 
