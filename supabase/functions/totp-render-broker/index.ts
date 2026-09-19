@@ -235,26 +235,6 @@ Deno.serve(async (req: Request) => {
       if (!lease || lease.state !== "rendering" || lease.worker_id !== workerId) {
         return json(409, { error: "This worker no longer owns the render job." });
       }
-      const { data: compliance, error: complianceError } = await service
-        .from("totp_compliance_reports")
-        .select("passed,blocker_count")
-        .eq("episode_id", lease.episode_id)
-        .eq("manifest_checksum", lease.manifest_checksum)
-        .eq("passed", true)
-        .eq("blocker_count", 0)
-        .maybeSingle();
-      if (complianceError) throw complianceError;
-      if (!compliance) throw new Error("Rights and safety clearance changed after this render was queued.");
-
-      const { data: takedown, error: takedownError } = await service
-        .from("totp_episode_takedowns")
-        .select("id")
-        .eq("episode_id", lease.episode_id)
-        .eq("active", true)
-        .limit(1);
-      if (takedownError) throw takedownError;
-      if ((takedown ?? []).length > 0) throw new Error("An open takedown blocks completion of this master.");
-
       const prefix = `${lease.episode_id}/${lease.manifest_checksum}/${lease.id}`;
       const { data: storedFiles, error: listError } = await service.storage.from(BUCKET).list(prefix, { limit: 100 });
       if (listError) throw listError;

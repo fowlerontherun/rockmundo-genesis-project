@@ -460,7 +460,7 @@ async function uploadArtifacts({ token, workerId, jobId, files }) {
       kind: file.kind,
       filename: slot.filename,
       storage_path: slot.path,
-      url: `supabase://totp-broadcast-masters/${slot.path}`,
+      url: null,
       bytes: (await fsp.stat(file.path)).size,
       sha256: await fileSha256(file.path),
     });
