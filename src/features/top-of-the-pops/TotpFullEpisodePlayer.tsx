@@ -169,7 +169,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
             </Button>
           </div>
         </div>
-        <Progress value={showIntro ? 0 : programmeProgress} className="mt-3 h-1.5" />
+        <Progress value={showClock || showIntro ? 0 : programmeProgress} className="mt-3 h-1.5" />
         <div className="mt-3 flex flex-wrap gap-2">
           {ordered.map((replay, index) => (
             <Button
