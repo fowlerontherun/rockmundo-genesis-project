@@ -1,28 +1,25 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/lib/supabase-types";
 
 interface TotpRpcError {
   message: string;
 }
 
-interface TotpRpcResponse<T> {
+export interface TotpRpcResponse<T> {
   data: T | null;
   error: TotpRpcError | null;
 }
 
-type DynamicRpc = <T>(
-  functionName: string,
-  args?: Record<string, unknown>,
-) => PromiseLike<TotpRpcResponse<T>>;
+type PublicFunctions = Database["public"]["Functions"];
+export type TotpRpcName = Extract<keyof PublicFunctions, `totp_${string}`>;
+type TotpRpcArgument = Record<string, unknown> | undefined;
+type TypedTotpRpc = (functionName: TotpRpcName, args?: TotpRpcArgument) => PromiseLike<TotpRpcResponse<unknown>>;
 
-const dynamicRpc = supabase.rpc.bind(supabase) as unknown as DynamicRpc;
+const typedTotpRpc = supabase.rpc.bind(supabase) as TypedTotpRpc;
 
-/**
- * Temporary strongly-typed bridge for TOTP RPCs until the generated Supabase
- * database types include the migrations in this branch.
- */
-export async function totpRpc<T>(
-  functionName: string,
-  args?: Record<string, unknown>,
-): Promise<TotpRpcResponse<T>> {
-  return await dynamicRpc<T>(functionName, args);
+export async function totpRpc<Result>(
+  functionName: TotpRpcName,
+  args?: TotpRpcArgument,
+): Promise<TotpRpcResponse<Result>> {
+  return await typedTotpRpc(functionName, args) as TotpRpcResponse<Result>;
 }
