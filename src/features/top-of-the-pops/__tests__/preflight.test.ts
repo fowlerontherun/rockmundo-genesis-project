@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { buildTotpPreflight } from "../preflight";
-import type { TotpEpisodeManifest, TotpManifestSegment } from "../episodeManifest";
-import { inGameTrackRights } from "../episodeManifestApi";
+import { canonicalise, manifestChecksum, type TotpEpisodeManifest, type TotpManifestSegment, type TotpTrackRights } from "../episodeManifest";
+
+const rights: TotpTrackRights = {
+  owner: "Example Master Owner",
+  licence: "broadcast-agreement-1",
+  territories: ["WORLD"],
+  expires_on: null,
+  content_id_allowlisted: true,
+  youtube_live_permitted: true,
+  status: "cleared",
+};
 
 function segment(overrides: Partial<TotpManifestSegment> = {}): TotpManifestSegment {
+  const intro = "Here they are!";
   return {
     index: 1,
     performance_id: "perf-1",
@@ -13,9 +23,12 @@ function segment(overrides: Partial<TotpManifestSegment> = {}): TotpManifestSegm
     song_title: "Test Song",
     stage_key: "main",
     qualifying_rank: 1,
-    presenter_intro: "Here they are!",
-    assets: [{ kind: "song_audio", url: "https://example.com/a.mp3", duration_ms: 210_000 }],
-    rights: inGameTrackRights(),
+    presenter_intro: intro,
+    assets: [
+      { kind: "song_audio", url: "https://example.com/a.mp3", duration_ms: 210_000, sha256: null, version: null, script_checksum: null },
+      { kind: "presenter_audio", url: "https://example.com/p.wav", duration_ms: 2_000, sha256: "a".repeat(64), version: 1, script_checksum: manifestChecksum(canonicalise(intro)) },
+    ],
+    rights,
     ...overrides,
   };
 }
@@ -30,11 +43,21 @@ function manifest(segments: TotpManifestSegment[]): TotpEpisodeManifest {
     check_in_at: "2026-09-25T18:00:00Z",
     presenter_key: "alex_rayne",
     show_variant: "regular",
-    chart_snapshot_date: "2026-09-24",
+    broadcast_profile: "standard",
+    programme_spec: {
+      width: 1920,
+      height: 1080,
+      frame_rate: 30,
+      video_codec: "h264",
+      audio_codec: "aac",
+      audio_channels: 2,
+      aspect_ratio: "16:9",
+    },
     segments,
-    total_runtime_ms: segments.length * 210_000,
+    total_runtime_ms: segments.length * 212_000,
+    production_state: "gameplay",
     checksum: "abc123def456",
-  } as unknown as TotpEpisodeManifest;
+  };
 }
 
 describe("buildTotpPreflight", () => {
@@ -67,7 +90,11 @@ describe("buildTotpPreflight", () => {
   });
 
   it("flags missing song audio as a blocker", () => {
-    const live = manifest([segment({ assets: [{ kind: "song_audio", url: null, duration_ms: null }] })]);
+    const live = manifest([segment({
+      assets: [
+        { kind: "song_audio", url: null, duration_ms: null, sha256: null, version: null, script_checksum: null },
+      ],
+    })]);
     const report = buildTotpPreflight({ manifest: live, stored: { checksum: live.checksum, production_state: "gameplay" } as never });
     expect(report.blockers.map((item) => item.code)).toContain("song_audio");
     expect(report.rehearsalReady).toBe(false);
