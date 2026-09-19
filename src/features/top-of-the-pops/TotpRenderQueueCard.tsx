@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Clapperboard, Download, RefreshCw, XCircle } from "lucide-react";
@@ -44,11 +45,13 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
   const manifest = stored.data?.manifest ?? live.data?.manifest ?? null;
   const plan = manifest ? buildTotpRenderPlan(manifest) : null;
   const savedAndCurrent = Boolean(stored.data && live.data && stored.data.checksum === live.data.manifest.checksum);
+  const productionCleared = stored.data?.production_state === "production_ready" || stored.data?.production_state === "rendered_master";
 
   const queue = useMutation({
     mutationFn: async () => {
       if (!stored.data) throw new Error("Save the episode running sheet first.");
       if (!savedAndCurrent) throw new Error("The running sheet has changed — save it again before rendering.");
+      if (!productionCleared) throw new Error("Sign off the episode in the control room before rendering the broadcast master.");
       return await enqueueTotpRender(stored.data.manifest);
     },
     onSuccess: () => {
@@ -85,7 +88,7 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={active ? "secondary" : savedAndCurrent ? "default" : "outline"}>
-              {active ? totpRenderStateLabel(active.state) : savedAndCurrent ? "Ready to render" : "Running sheet not saved"}
+              {active ? totpRenderStateLabel(active.state) : savedAndCurrent && productionCleared ? "Ready to render" : savedAndCurrent ? "Needs sign-off" : "Running sheet not saved"}
             </Badge>
             <Button size="sm" variant="outline" onClick={() => void jobs.refetch()} disabled={jobs.isFetching}>
               <RefreshCw className={`h-4 w-4 ${jobs.isFetching ? "animate-spin" : ""}`} />
@@ -114,7 +117,7 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => queue.mutate()} disabled={queue.isPending || Boolean(active) || !savedAndCurrent}>
+          <Button size="sm" onClick={() => queue.mutate()} disabled={queue.isPending || Boolean(active) || !savedAndCurrent || !productionCleared}>
             <Clapperboard className="mr-2 h-4 w-4" /> Render episode file
           </Button>
           {active ? (
@@ -136,6 +139,14 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
                     Attempt {job.attempts} · {new Date(job.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })}
                   </span>
                 </div>
+                {job.state === "rendering" ? (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>Deterministic render</span><span>{job.progress_percent}%</span>
+                    </div>
+                    <Progress value={job.progress_percent} className="h-1.5" />
+                  </div>
+                ) : null}
                 {job.error_message ? <p className="mt-1 text-[11px] text-destructive">{job.error_message}</p> : null}
                 {job.qc && "failures" in job.qc && job.qc.failures?.length ? (
                   <ul className="mt-1 list-disc pl-4 text-[11px] text-destructive">
