@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { derivePlaybackState } from "@/features/gig-experience/viewer/engine/PlaybackController";
 import {
-  activeCue,
+  activeTotpCue,
   archivedExperience,
   archivedPlayerModels,
   archivedReplay,
@@ -101,7 +101,7 @@ function BroadcastReplayItem({ item, localMs, source }: { item: TotpRenderItem; 
       : clamp(performanceStart + source.payload.performanceDurationMs + localMs, 0, Math.max(0, source.payload.totalDurationMs - 1));
   } else {
     positionMs = performanceStart + clamp(localMs, 0, Math.max(0, source.payload.performanceDurationMs - 1));
-    cue = activeCue(source.payload.cues, positionMs);
+    cue = activeTotpCue(source.payload.cues, positionMs);
   }
 
   const playback = derivePlaybackState(replay, positionMs, false);
@@ -123,7 +123,6 @@ function BroadcastReplayItem({ item, localMs, source }: { item: TotpRenderItem; 
       captions={captions}
       showCaptions
       showSafeAreaGuides={false}
-      enableAudienceAudio={false}
     />
   );
 }
