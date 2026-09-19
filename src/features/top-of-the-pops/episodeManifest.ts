@@ -85,6 +85,9 @@ export interface TotpManifestIssue {
     | "missing_duration"
     | "rights_not_cleared"
     | "rights_expired"
+    | "rights_incomplete"
+    | "content_id_not_allowlisted"
+    | "youtube_not_permitted"
     | "no_segments"
     | "missing_presenter_intro"
     | "missing_presenter_audio";
@@ -279,13 +282,43 @@ export function validateTotpEpisodeManifest(
         performance_id: segment.performance_id,
         message: `Rights for “${segment.song_title}” are ${segment.rights.status}.`,
       });
-    } else if (segment.rights.expires_on && segment.rights.expires_on < evaluatedOn) {
-      issues.push({
-        severity: "blocking",
-        code: "rights_expired",
-        performance_id: segment.performance_id,
-        message: `The licence for “${segment.song_title}” expired on ${segment.rights.expires_on}.`,
-      });
+    } else {
+      if (
+        !segment.rights.owner.trim()
+        || !segment.rights.licence.trim()
+        || segment.rights.territories.length === 0
+      ) {
+        issues.push({
+          severity: "blocking",
+          code: "rights_incomplete",
+          performance_id: segment.performance_id,
+          message: `The external rights record for “${segment.song_title}” is incomplete.`,
+        });
+      }
+      if (!segment.rights.content_id_allowlisted) {
+        issues.push({
+          severity: "blocking",
+          code: "content_id_not_allowlisted",
+          performance_id: segment.performance_id,
+          message: `Content ID allowlisting has not been confirmed for “${segment.song_title}”.`,
+        });
+      }
+      if (!segment.rights.youtube_live_permitted) {
+        issues.push({
+          severity: "blocking",
+          code: "youtube_not_permitted",
+          performance_id: segment.performance_id,
+          message: `YouTube publication/live permission has not been confirmed for “${segment.song_title}”.`,
+        });
+      }
+      if (segment.rights.expires_on && segment.rights.expires_on < evaluatedOn) {
+        issues.push({
+          severity: "blocking",
+          code: "rights_expired",
+          performance_id: segment.performance_id,
+          message: `The licence for “${segment.song_title}” expired on ${segment.rights.expires_on}.`,
+        });
+      }
     }
 
     if (!segment.presenter_intro) {
