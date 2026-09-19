@@ -7,7 +7,7 @@
   - [x] Fixed episode running sheet with deterministic checksum, rights record and production states.
   - [x] Store the running sheet against the episode in the database (admin save/read RPCs, immutable once rendered/published) with API tests.
   - [x] Page-level player/admin render tests for the Top of the Pops pages.
-- [ ] Phase 1: in-game television presentation polish and accessibility.
+- [x] Phase 1: in-game television presentation polish and accessibility.
   - [x] Widescreen 16:9 programme frame with action/title safe areas for all overlay graphics.
   - [x] Deterministic caption track (presenter, chart graphics, audience) with WebVTT export and a subtitles toggle.
   - [x] Broadcast audio mix balance (song bed, presenter, audience) and end credits sequence.
@@ -23,7 +23,11 @@
   - [x] Graded preflight report (blockers, warnings, notes) across running sheet, acts, audio, rights, runtime, export and automation.
   - [x] Control room page and card with rehearsal pass, sign-off and render/publish gates.
   - [x] Production audit log per episode (checks, rehearsals, sign-offs) with admin-only access.
-- [ ] Phase 4: YouTube upload and scheduled Premiere.
+- [x] Phase 4: YouTube upload and scheduled Premiere.
+  - [x] Episode publication records (title, description, tags, visibility, premiere time, source master, YouTube video id, state).
+  - [x] Server-side upload function with resumable upload, Drive master reading and scheduled premiere support.
+  - [x] Control room publishing panel with prefilled listing, publish now or schedule premiere, and failure reporting.
+  - [ ] Add the YouTube channel credentials (client id, client secret, refresh token) so real uploads can run.
 - [ ] Phase 5: rights, moderation, safety and accessibility hardening.
 - [ ] Phase 6: redundant RTMPS live transmission.
 - [ ] Phase 7: production operations, analytics and audience growth.
