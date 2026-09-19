@@ -102,7 +102,7 @@ function pickSound(sounds, types, intensity, seed) {
   return nearest[hashSeed(seed) % nearest.length] ?? nearest[0];
 }
 
-async function renderFrames({ plan, manifest, replays, token, workerId, jobId, workDir }) {
+async function renderFrames({ plan, replays, token, workerId, jobId, workDir }) {
   const framesDir = path.join(workDir, "frames");
   await fsp.mkdir(framesDir, { recursive: true });
   const browser = await chromium.launch({
@@ -163,7 +163,7 @@ async function renderFrames({ plan, manifest, replays, token, workerId, jobId, w
   }
 }
 
-async function buildAudio({ plan, manifest, replays, crowdSounds, workDir }) {
+async function buildAudio({ plan, replays, crowdSounds, workDir }) {
   const cache = new Map();
   const audioDir = path.join(workDir, "audio");
   await fsp.mkdir(audioDir, { recursive: true });
@@ -389,6 +389,7 @@ async function tusUpload({ endpoint, apikey, slot, file }) {
         cacheControl: "3600",
       }),
       "x-signature": slot.token,
+      "x-upsert": "true",
       ...(apikey ? { apikey } : {}),
     },
   });
@@ -412,6 +413,7 @@ async function tusUpload({ endpoint, apikey, slot, file }) {
           "Content-Type": "application/offset+octet-stream",
           "Content-Length": String(bytesRead),
           "x-signature": slot.token,
+          "x-upsert": "true",
           ...(apikey ? { apikey } : {}),
         },
         body: buffer.subarray(0, bytesRead),
@@ -482,10 +484,10 @@ async function renderJob(claim, token) {
   console.log(`[TOTP] rendering episode ${plan.episode_number} job ${job.id} in ${workDir}`);
   try {
     const timelineSha256 = sha256Text(stableStringify(plan));
-    const framesDir = await renderFrames({ plan, manifest, replays, token, workerId, jobId: job.id, workDir });
+    const framesDir = await renderFrames({ plan, replays, token, workerId, jobId: job.id, workDir });
     await broker(token, { operation: "heartbeat", workerId, jobId: job.id, progress: 72 });
 
-    const mixedAudio = await buildAudio({ plan, manifest, replays, crowdSounds: crowdSounds ?? [], workDir });
+    const mixedAudio = await buildAudio({ plan, replays, crowdSounds: crowdSounds ?? [], workDir });
     const inputSha256 = await inputFingerprint(workDir, manifest, replays);
     const { master, proxy } = await encode({ plan, framesDir, mixedAudio, workDir });
     await broker(token, { operation: "heartbeat", workerId, jobId: job.id, progress: 82 });
