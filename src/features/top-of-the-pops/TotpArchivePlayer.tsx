@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Captions, CaptionsOff, CloudUpload, Download, Pause, Play, RotateCcw, Video, Volume2, VolumeX } from "lucide-react";
+import { Captions, CaptionsOff, CloudUpload, Download, Mic, Pause, Play, RotateCcw, Video, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -19,6 +19,7 @@ import { totpAudienceReactionLabel } from "./studioAudience";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import { downloadTotpExport, recordTotpBroadcast, TOTP_EXPORT_PROFILE, totpExportFileName, TotpExportUnsupportedError } from "./exportBroadcast";
 import { TOTP_EXPORT_LEAD_IN_MS, totpCountdownSeconds } from "./broadcastCountdown";
+import { cancelTotpPresenterSpeech, playTotpPresenterLine, type TotpPresenterLineHandle } from "./presenterVoice";
 
 const metric = <T,>(value: T) => ({ status: "available" as const, value, source: "authoritative" as const });
 const unavailable = (reason: string) => ({ status: "not_applicable" as const, reason });
@@ -169,6 +170,8 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const [driveLink, setDriveLink] = useState<string | null>(null);
   const [driveError, setDriveError] = useState<string | null>(null);
   const [exportLeadIn, setExportLeadIn] = useState(0);
+  const [presenterSpeaking, setPresenterSpeaking] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const spokenPresenterCueRef = useRef<string | null>(null);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
   const cue = useMemo(() => activeCue(source.payload.cues, positionMs), [source.payload.cues, positionMs]);
@@ -228,8 +231,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   useEffect(() => {
     const audio = songAudioRef.current;
     if (!audio) return;
-    audio.volume = clampTotpGain(totpMixLevels(cue?.type, audienceReaction).songBed);
-  }, [cue?.type, audienceReaction]);
+    const bed = totpMixLevels(cue?.type, audienceReaction).songBed;
+    // Extra duck while the presenter is actually talking, so the link is never buried.
+    audio.volume = clampTotpGain(presenterSpeaking ? bed * 0.45 : bed);
+  }, [cue?.type, audienceReaction, presenterSpeaking]);
 
   useEffect(() => {
     if (!playing) {
@@ -264,39 +269,34 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   }, [audioEnabled, playing, resolvedBroadcastAudio?.durationSeconds, source.id, source.payload.performanceDurationMs, source.payload.song.audioDurationSeconds]);
 
   useEffect(() => {
+    if (!voiceEnabled) {
+      setPresenterSpeaking(false);
+      cancelTotpPresenterSpeech();
+      return;
+    }
     if (!playing || cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
     spokenPresenterCueRef.current = cue.id;
-    const recordedUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro"));
-    let cancelled = false;
+    const holder: { current: TotpPresenterLineHandle | null } = { current: null };
+    const line = playTotpPresenterLine({
+      text: cue.presenterText,
+      presenterKey,
+      recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
+      volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
+      onSpeakingChange: (speaking) => {
+        setPresenterSpeaking(speaking);
+        // Keep the export mixer pointed at the live presenter element.
+        presenterAudioRef.current = speaking ? holder.current?.element ?? null : null;
+      },
+    });
+    holder.current = line;
 
-    const speakFallback = () => {
-      if (cancelled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
-      const utterance = new SpeechSynthesisUtterance(cue.presenterText!);
-      utterance.rate = 1.22;
-      utterance.pitch = 1.12;
-      const voices = window.speechSynthesis.getVoices();
-      utterance.voice = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang)) ?? null;
-      window.speechSynthesis.speak(utterance);
-    };
-
-    void fetch(recordedUrl, { method: "HEAD" })
-      .then((response) => {
-        if (!response.ok || cancelled) { speakFallback(); return; }
-        const audio = new Audio(recordedUrl);
-        audio.volume = 0.95;
-        audio.playbackRate = 1.08;
-        presenterAudioRef.current = audio;
-        void audio.play().catch(speakFallback);
-      })
-      .catch(speakFallback);
 
     return () => {
-      cancelled = true;
-      presenterAudioRef.current?.pause();
+      line.stop();
       presenterAudioRef.current = null;
-      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      setPresenterSpeaking(false);
     };
-  }, [cue?.id, cue?.presenterText, cue?.type, playing, presenterKey]);
+  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, voiceEnabled]);
   useEffect(() => {
     if (!playing) return;
     let frame = 0, previous = performance.now();
@@ -419,7 +419,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
         </div>
       ) : null}
     </div>
-    <div className="space-y-2"><Progress value={progress} className="h-1.5" /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{playing ? "Pause" : "Play"}</Button><Button size="sm" variant="outline" onClick={restart}><RotateCcw className="mr-2 h-4 w-4" /> Restart</Button><Button size="sm" variant="outline" onClick={() => setCaptionsEnabled((value) => !value)} aria-pressed={captionsEnabled} data-totp-captions-toggle>{captionsEnabled ? <Captions className="mr-2 h-4 w-4" /> : <CaptionsOff className="mr-2 h-4 w-4" />}{captionsEnabled ? "Subtitles on" : "Subtitles off"}</Button><Button size="sm" variant="outline" onClick={() => void startExport()} disabled={exportState === "recording" || exportState === "finishing" || exportLeadIn > 0} data-totp-export>{exportState === "recording" || exportState === "finishing" ? <Video className="mr-2 h-4 w-4 animate-pulse" /> : <Download className="mr-2 h-4 w-4" />}{exportState === "recording" ? `Recording… ${exportPercent}%` : exportState === "finishing" ? "Finishing…" : exportLeadIn > 0 ? `Recording in ${exportLeadIn}…` : "Export broadcast master"}</Button>{lastExport ? <Button size="sm" variant="outline" onClick={() => void uploadToDrive()} disabled={driveState === "uploading"} data-totp-drive-upload><CloudUpload className="mr-2 h-4 w-4" />{driveState === "uploading" ? "Saving to Drive…" : driveState === "done" ? "Saved to Drive" : "Save to Google Drive"}</Button> : null}{(source.payload.song.audioUrl || resolvedBroadcastAudio?.url) ? <Button size="sm" variant={audioBlocked ? "default" : "outline"} onClick={audioBlocked ? enableBlockedAudio : toggleAudio}>{audioEnabled ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}{audioBlocked ? "Enable song audio" : audioEnabled ? "Song audio on" : "Song audio off"}</Button> : <span className="self-center text-xs text-muted-foreground">No recording attached to this song</span>}</div><div className="text-xs text-muted-foreground">{presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · {playerModelsSnapshot ? "historical outfits locked" : "legacy outfit fallback"} · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}</div></div></div>
+    <div className="space-y-2"><Progress value={progress} className="h-1.5" /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{playing ? "Pause" : "Play"}</Button><Button size="sm" variant="outline" onClick={restart}><RotateCcw className="mr-2 h-4 w-4" /> Restart</Button><Button size="sm" variant="outline" onClick={() => setCaptionsEnabled((value) => !value)} aria-pressed={captionsEnabled} data-totp-captions-toggle>{captionsEnabled ? <Captions className="mr-2 h-4 w-4" /> : <CaptionsOff className="mr-2 h-4 w-4" />}{captionsEnabled ? "Subtitles on" : "Subtitles off"}</Button><Button size="sm" variant={presenterSpeaking ? "default" : "outline"} onClick={() => setVoiceEnabled((value) => !value)} aria-pressed={voiceEnabled} data-totp-voice-toggle><Mic className={`mr-2 h-4 w-4 ${presenterSpeaking ? "animate-pulse" : ""}`} />{voiceEnabled ? (presenterSpeaking ? "Presenter on air" : "Presenter voice on") : "Presenter voice off"}</Button><Button size="sm" variant="outline" onClick={() => void startExport()} disabled={exportState === "recording" || exportState === "finishing" || exportLeadIn > 0} data-totp-export>{exportState === "recording" || exportState === "finishing" ? <Video className="mr-2 h-4 w-4 animate-pulse" /> : <Download className="mr-2 h-4 w-4" />}{exportState === "recording" ? `Recording… ${exportPercent}%` : exportState === "finishing" ? "Finishing…" : exportLeadIn > 0 ? `Recording in ${exportLeadIn}…` : "Export broadcast master"}</Button>{lastExport ? <Button size="sm" variant="outline" onClick={() => void uploadToDrive()} disabled={driveState === "uploading"} data-totp-drive-upload><CloudUpload className="mr-2 h-4 w-4" />{driveState === "uploading" ? "Saving to Drive…" : driveState === "done" ? "Saved to Drive" : "Save to Google Drive"}</Button> : null}{(source.payload.song.audioUrl || resolvedBroadcastAudio?.url) ? <Button size="sm" variant={audioBlocked ? "default" : "outline"} onClick={audioBlocked ? enableBlockedAudio : toggleAudio}>{audioEnabled ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}{audioBlocked ? "Enable song audio" : audioEnabled ? "Song audio on" : "Song audio off"}</Button> : <span className="self-center text-xs text-muted-foreground">No recording attached to this song</span>}</div><div className="text-xs text-muted-foreground">{presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · {playerModelsSnapshot ? "historical outfits locked" : "legacy outfit fallback"} · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}</div></div></div>
     {exportState === "error" && exportError ? <p className="text-xs font-medium text-destructive" data-totp-export-error>{exportError}</p> : null}
     {exportState === "recording" ? <p className="text-xs text-muted-foreground" data-totp-export-profile>Recording a broadcast master ({TOTP_EXPORT_PROFILE.label}). Exporting plays the episode through once at normal speed — leave this tab open until the download starts.</p> : null}{driveState === "done" ? <p className="text-xs text-muted-foreground" data-totp-drive-done>Saved to your Google Drive.{driveLink ? <> <a className="underline" href={driveLink} target="_blank" rel="noreferrer">Open in Drive</a></> : null}</p> : null}{driveState === "error" && driveError ? <p className="text-xs font-medium text-destructive" data-totp-drive-error>{driveError}</p> : null}
   </div>;

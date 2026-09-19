@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
+import { playTotpPresenterLine } from "./presenterVoice";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl, type TotpPresenterAudioSlot } from "./totpMedia";
 import {
   buildTotpContinuityCopy,
@@ -40,45 +41,23 @@ export function TotpProgrammeContinuity({
   const variantLabel = totpVariantLabel(orderedFirst?.payload.showVariant ?? "regular");
   const durationMs = CONTINUITY_DURATION_MS[kind];
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
     if (!autoPlay || typeof window === "undefined") return;
     const speech = `${copy.headline}. ${copy.body}`;
     const slot: TotpPresenterAudioSlot = kind === "opening" ? "opening" : kind === "closing" ? "closing" : "between";
-    const recordedUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot));
-    let cancelled = false;
-    let recorded: HTMLAudioElement | null = null;
-
-    const speakFallback = () => {
-      if (cancelled || !("speechSynthesis" in window)) return;
-      const utterance = new SpeechSynthesisUtterance(speech);
-      utterance.rate = 1.22;
-      utterance.pitch = 1.12;
-      utterance.volume = 0.9;
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
-      if (preferred) utterance.voice = preferred;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    };
-
-    void fetch(recordedUrl, { method: "HEAD" })
-      .then((response) => {
-        if (!response.ok || cancelled) {
-          speakFallback();
-          return;
-        }
-        recorded = new Audio(recordedUrl);
-        recorded.volume = 0.95;
-        recorded.playbackRate = 1.08;
-        void recorded.play().catch(speakFallback);
-      })
-      .catch(speakFallback);
+    const line = playTotpPresenterLine({
+      text: speech,
+      presenterKey: presenter.key,
+      recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
+      volume: 0.95,
+      onSpeakingChange: setSpeaking,
+    });
 
     return () => {
-      cancelled = true;
-      recorded?.pause();
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      line.stop();
+      setSpeaking(false);
     };
   }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key]);
 
@@ -131,7 +110,12 @@ export function TotpProgrammeContinuity({
           <h3 className="mt-3 max-w-4xl text-3xl font-black tracking-tight md:text-5xl">{copy.headline}</h3>
           <div className="mt-5 max-w-3xl rounded-2xl border border-white/15 bg-black/35 p-4 shadow-xl backdrop-blur">
             <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-fuchsia-200">
-              <Volume2 className="h-4 w-4" /> {presenter.displayName}
+              <Volume2 className={`h-4 w-4 ${speaking ? "animate-pulse" : ""}`} /> {presenter.displayName}
+              {speaking ? (
+                <span className="flex items-center gap-1 rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] tracking-[0.22em] text-white" data-totp-continuity-mic>
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> MIC LIVE
+                </span>
+              ) : null}
             </div>
             <p className="text-sm leading-6 text-white/85 md:text-base">{copy.body}</p>
           </div>

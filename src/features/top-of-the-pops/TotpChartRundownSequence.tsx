@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import type { TotpChartRundown, TotpChartRundownEntry } from "./chartRundownApi";
 import { buildTotpChartRundownPages } from "./chartRundown";
 import { resolveTotpPresenter } from "./presenters";
+import { playTotpPresenterLine } from "./presenterVoice";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 
 const PAGE_DURATION_MS = 5_000;
@@ -51,32 +52,13 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
 
   useEffect(() => {
     if (!autoPlay || !page || pageIndex !== 0 || typeof window === "undefined") return;
-    const recordedUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart"));
-    let cancelled = false;
-    let recorded: HTMLAudioElement | null = null;
-    const fallback = () => {
-      if (cancelled || !("speechSynthesis" in window)) return;
-      const utterance = new SpeechSynthesisUtterance("And now, let's take a look at this week's UK charts.");
-      utterance.rate = 1.22;
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find((voice) => /en-GB/i.test(voice.lang)) ?? voices.find((voice) => /^en/i.test(voice.lang));
-      if (preferred) utterance.voice = preferred;
-      window.speechSynthesis.speak(utterance);
-    };
-    void fetch(recordedUrl, { method: "HEAD" })
-      .then((response) => {
-        if (!response.ok || cancelled) { fallback(); return; }
-        recorded = new Audio(recordedUrl);
-        recorded.volume = 0.95;
-        recorded.playbackRate = 1.08;
-        void recorded.play().catch(fallback);
-      })
-      .catch(fallback);
-    return () => {
-      cancelled = true;
-      recorded?.pause();
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-    };
+    const line = playTotpPresenterLine({
+      text: "And now, let's take a look at this week's UK charts.",
+      presenterKey: presenter.key,
+      recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart")),
+      volume: 0.95,
+    });
+    return () => line.stop();
   }, [autoPlay, page, pageIndex, presenter.key]);
 
   useEffect(() => {
