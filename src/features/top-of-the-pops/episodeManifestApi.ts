@@ -8,6 +8,7 @@ import {
   type TotpTrackRights,
 } from "./episodeManifest";
 import { totpRpc } from "./rpc";
+import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 
 export interface StoredTotpEpisodeManifest {
   episode_id: string;
@@ -44,7 +45,9 @@ export async function buildTotpEpisodeManifestFromEpisode(
   options: { excludePerformanceIds?: string[] } = {},
 ): Promise<{ manifest: TotpEpisodeManifest; issues: TotpManifestIssue[] }> {
   const songAudio: Record<string, { url: string | null; duration_ms: number | null }> = {};
+  const presenterAudio: Record<string, { url: string | null; duration_ms: number | null }> = {};
   const rights: Record<string, TotpTrackRights> = {};
+  const presenterActIntro = totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(episode.presenter_key, "act-intro"));
 
   /**
    * Phase 5: an act removed by a takedown is dropped from the broadcast only.
@@ -61,10 +64,14 @@ export async function buildTotpEpisodeManifestFromEpisode(
       url: audio?.audio_url ?? null,
       duration_ms: seconds && seconds > 0 ? Math.round(seconds * 1000) : null,
     };
+    presenterAudio[performance.performance_id] = {
+      url: presenterActIntro,
+      duration_ms: 8_000,
+    };
     rights[performance.song_id] = inGameTrackRights();
   }
 
-  const manifest = buildTotpEpisodeManifest({ episode: broadcastEpisode, songAudio, rights });
+  const manifest = buildTotpEpisodeManifest({ episode: broadcastEpisode, songAudio, presenterAudio, rights });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };
 }
 
