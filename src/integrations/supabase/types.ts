@@ -57249,6 +57249,65 @@ export type Database = {
           },
         ]
       }
+      totp_render_jobs: {
+        Row: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          manifest_checksum: string
+          plan: Json
+          qc: Json
+          requested_by: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          artifacts?: Json
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          episode_id: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          manifest_checksum: string
+          plan?: Json
+          qc?: Json
+          requested_by?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          artifacts?: Json
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          episode_id?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          manifest_checksum?: string
+          plan?: Json
+          qc?: Json
+          requested_by?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_render_jobs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tour_budget_ledger: {
         Row: {
           amount: number
@@ -70889,6 +70948,60 @@ export type Database = {
         Args: { p_contract_id: string; p_reason?: string }
         Returns: Json
       }
+      totp_admin_cancel_render: {
+        Args: { p_job_id: string }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          manifest_checksum: string
+          plan: Json
+          qc: Json
+          requested_by: string | null
+          state: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      totp_admin_enqueue_render: {
+        Args: {
+          p_episode_id: string
+          p_manifest_checksum: string
+          p_plan?: Json
+        }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          manifest_checksum: string
+          plan: Json
+          qc: Json
+          requested_by: string | null
+          state: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_admin_lock_running_order: {
         Args: { p_episode_id: string }
         Returns: number
@@ -70952,11 +71065,111 @@ export type Database = {
         Args: { p_choice: string; p_interaction_id: string }
         Returns: Json
       }
+      totp_claim_render_job: {
+        Args: never
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          manifest_checksum: string
+          plan: Json
+          qc: Json
+          requested_by: string | null
+          state: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_complete_performance: {
         Args: { p_performance_id: string; p_performance_score?: number }
         Returns: Json
       }
+      totp_complete_render_job: {
+        Args: { p_artifacts: Json; p_job_id: string; p_qc: Json }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          manifest_checksum: string
+          plan: Json
+          qc: Json
+          requested_by: string | null
+          state: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
+      totp_episode_render_jobs: {
+        Args: { p_episode_id?: string }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          manifest_checksum: string
+          plan: Json
+          qc: Json
+          requested_by: string | null
+          state: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      totp_fail_render_job: {
+        Args: { p_error: string; p_job_id: string }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          manifest_checksum: string
+          plan: Json
+          qc: Json
+          requested_by: string | null
+          state: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_is_anniversary_special_date: {
         Args: { p_episode_date: string }
         Returns: boolean
