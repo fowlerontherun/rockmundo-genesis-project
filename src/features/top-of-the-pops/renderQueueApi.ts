@@ -24,7 +24,7 @@ export interface TotpRenderJob {
   error_message: string | null;
   requested_by: string | null;
   claimed_at: string | null;
-  finished_at: string | null
+  finished_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -50,23 +50,32 @@ function normaliseJob(row: unknown): TotpRenderJob {
 }
 
 export async function getTotpRenderJobs(episodeId?: string | null): Promise<TotpRenderJob[]> {
-  const rows = await totpRpc<unknown[]>("totp_episode_render_jobs", { p_episode_id: episodeId ?? null });
-  return (Array.isArray(rows) ? rows : []).map(normaliseJob);
+  const { data, error } = await totpRpc<unknown[]>("totp_episode_render_jobs", {
+    p_episode_id: episodeId ?? null,
+  });
+  if (error) throw new Error(error.message || "Could not load Top of the Pops render jobs.");
+  return (Array.isArray(data) ? data : []).map(normaliseJob);
 }
 
 export async function enqueueTotpRender(manifest: TotpEpisodeManifest): Promise<TotpRenderJob> {
   const plan = buildTotpRenderPlan(manifest);
-  const row = await totpRpc<unknown>("totp_admin_enqueue_render", {
+  const { data, error } = await totpRpc<unknown>("totp_admin_enqueue_render", {
     p_episode_id: manifest.episode_id,
     p_manifest_checksum: manifest.checksum,
     p_plan: plan as unknown as Record<string, unknown>,
   });
-  return normaliseJob(Array.isArray(row) ? row[0] : row);
+  if (error) throw new Error(error.message || "Could not queue the Top of the Pops render.");
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error("Top of the Pops returned no render job.");
+  return normaliseJob(row);
 }
 
 export async function cancelTotpRender(jobId: string): Promise<TotpRenderJob> {
-  const row = await totpRpc<unknown>("totp_admin_cancel_render", { p_job_id: jobId });
-  return normaliseJob(Array.isArray(row) ? row[0] : row);
+  const { data, error } = await totpRpc<unknown>("totp_admin_cancel_render", { p_job_id: jobId });
+  if (error) throw new Error(error.message || "Could not cancel the Top of the Pops render.");
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error("Top of the Pops returned no cancelled render job.");
+  return normaliseJob(row);
 }
 
 export function activeTotpRenderJob(jobs: TotpRenderJob[]): TotpRenderJob | null {
