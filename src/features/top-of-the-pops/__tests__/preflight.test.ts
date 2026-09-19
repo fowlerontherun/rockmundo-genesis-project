@@ -59,6 +59,7 @@ describe("buildTotpPreflight", () => {
       manifest: live,
       stored: { checksum: live.checksum, production_state: "production_ready" } as never,
       automationHealthy: true,
+      compliance: { passed: true, blockerCount: 0, warningCount: 0, manifestChecksum: live.checksum },
     });
     expect(report.blockers).toHaveLength(0);
     expect(report.renderReady).toBe(true);
@@ -80,7 +81,35 @@ describe("buildTotpPreflight", () => {
       renderJobs: [{ state: "succeeded", manifest_checksum: live.checksum, error_message: null } as never],
       rehearsalCheckedAt: "2026-09-24T10:00:00Z",
       automationHealthy: true,
+      compliance: { passed: true, blockerCount: 0, warningCount: 0, manifestChecksum: live.checksum },
     });
     expect(report.publishReady).toBe(true);
+  });
+
+  it("blocks publication until the rights and safety screening is clear", () => {
+    const live = manifest([segment(), segment({ index: 2, performance_id: "perf-2" }), segment({ index: 3, performance_id: "perf-3" })]);
+    const base = {
+      manifest: live,
+      stored: { checksum: live.checksum, production_state: "rendered_master" } as never,
+      renderJobs: [{ state: "succeeded", manifest_checksum: live.checksum, error_message: null } as never],
+      rehearsalCheckedAt: "2026-09-24T10:00:00Z",
+      automationHealthy: true,
+    };
+
+    const unscreened = buildTotpPreflight(base);
+    expect(unscreened.blockers.map((item) => item.code)).toContain("compliance_screened");
+    expect(unscreened.publishReady).toBe(false);
+
+    const stale = buildTotpPreflight({
+      ...base,
+      compliance: { passed: true, blockerCount: 0, warningCount: 0, manifestChecksum: "older-sheet" },
+    });
+    expect(stale.blockers.map((item) => item.code)).toContain("compliance_screened");
+
+    const failed = buildTotpPreflight({
+      ...base,
+      compliance: { passed: false, blockerCount: 2, warningCount: 1, manifestChecksum: live.checksum },
+    });
+    expect(failed.blockers.map((item) => item.code)).toContain("compliance_clear");
   });
 });
