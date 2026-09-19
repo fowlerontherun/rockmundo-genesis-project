@@ -15,6 +15,7 @@ import { buildTotpCaptionCues } from "./broadcastCaptions";
 import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
+import { TotpBroadcastRecoveryBoundary } from "./TotpBroadcastRecoveryBoundary";
 import { totpAudienceReactionLabel } from "./studioAudience";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import { downloadTotpExport, recordTotpBroadcast, TOTP_EXPORT_PROFILE, totpExportFileName, TotpExportUnsupportedError } from "./exportBroadcast";
@@ -400,7 +401,16 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   };
   return <div ref={containerRef} className="space-y-3 rounded-xl border bg-card p-3" data-totp-archive-player data-visual-snapshot={playerModelsSnapshot ? "locked" : "legacy-fallback"}>
     <div className="relative mx-auto aspect-video min-h-[20rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10">
-      <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
+      <TotpBroadcastRecoveryBoundary
+        resetKey={`${source.id}:${cue?.id ?? "programme"}`}
+        bandName={source.payload.band.name}
+        songTitle={source.payload.song.title}
+        chartRank={source.payload.song.qualifyingRank}
+        presenterName={presenter.displayName}
+        presenterText={cue?.type === "presenter" ? cue.presenterText : null}
+      >
+        <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
+      </TotpBroadcastRecoveryBoundary>
       {audioLoading ? (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 text-center text-sm font-semibold text-white" data-totp-audio-loading>
           <span className="animate-pulse tracking-[0.18em]">PREPARING BROADCAST AUDIO…</span>
