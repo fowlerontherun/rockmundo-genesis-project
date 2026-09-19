@@ -1,6 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { totpRpc } from "./rpc";
-import { buildTotpRenderPlan, type TotpRenderPlan } from "./renderSpec";
+import {
+  buildTotpRenderPlan,
+  buildTotpRehearsalRenderPlan,
+  buildTotpSegmentPreviewRenderPlan,
+  type TotpRenderPlan,
+  type TotpRenderPurpose,
+} from "./renderSpec";
 import type { TotpEpisodeManifest } from "./episodeManifest";
 
 export type TotpRenderJobState = "queued" | "rendering" | "succeeded" | "failed" | "cancelled";
@@ -88,9 +94,12 @@ export async function getTotpRenderJobs(episodeId?: string | null): Promise<Totp
   return (Array.isArray(data) ? data : []).map(normaliseJob);
 }
 
-export async function enqueueTotpRender(manifest: TotpEpisodeManifest): Promise<TotpRenderJob> {
-  const plan = buildTotpRenderPlan(manifest);
-  const { data, error } = await totpRpc<unknown>("totp_admin_enqueue_render", {
+async function enqueuePlan(
+  manifest: TotpEpisodeManifest,
+  plan: TotpRenderPlan,
+  rpcName: "totp_admin_enqueue_render" | "totp_admin_enqueue_rehearsal_render",
+): Promise<TotpRenderJob> {
+  const { data, error } = await totpRpc<unknown>(rpcName, {
     p_episode_id: manifest.episode_id,
     p_manifest_checksum: manifest.checksum,
     p_plan: plan as unknown as Record<string, unknown>,
@@ -101,12 +110,69 @@ export async function enqueueTotpRender(manifest: TotpEpisodeManifest): Promise<
   return normaliseJob(row);
 }
 
+export async function enqueueTotpRender(manifest: TotpEpisodeManifest): Promise<TotpRenderJob> {
+  return enqueuePlan(manifest, buildTotpRenderPlan(manifest), "totp_admin_enqueue_render");
+}
+
+export async function enqueueTotpRehearsalRender(manifest: TotpEpisodeManifest): Promise<TotpRenderJob> {
+  return enqueuePlan(manifest, buildTotpRehearsalRenderPlan(manifest), "totp_admin_enqueue_rehearsal_render");
+}
+
+export async function enqueueTotpSegmentPreview(
+  manifest: TotpEpisodeManifest,
+  performanceId: string,
+): Promise<TotpRenderJob> {
+  return enqueuePlan(
+    manifest,
+    buildTotpSegmentPreviewRenderPlan(manifest, performanceId),
+    "totp_admin_enqueue_rehearsal_render",
+  );
+}
+
 export async function cancelTotpRender(jobId: string): Promise<TotpRenderJob> {
   const { data, error } = await totpRpc<unknown>("totp_admin_cancel_render", { p_job_id: jobId });
   if (error) throw new Error(error.message || "Could not cancel the Top of the Pops render.");
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) throw new Error("Top of the Pops returned no cancelled render job.");
   return normaliseJob(row);
+}
+
+
+export function totpRenderPurpose(job: TotpRenderJob): TotpRenderPurpose {
+  const plan = job.plan as Partial<TotpRenderPlan>;
+  const purpose = plan?.purpose;
+  return purpose === "rehearsal" || purpose === "segment_preview" ? purpose : "master";
+}
+
+export function totpRenderSourcePerformanceId(job: TotpRenderJob): string | null {
+  const plan = job.plan as Partial<TotpRenderPlan>;
+  return typeof plan?.source_performance_id === "string" ? plan.source_performance_id : null;
+}
+
+export function latestSucceededTotpRehearsal(
+  jobs: TotpRenderJob[],
+  manifestChecksum?: string | null,
+): TotpRenderJob | null {
+  return jobs.find((job) =>
+    job.state === "succeeded"
+    && job.qc?.passed === true
+    && totpRenderPurpose(job) === "rehearsal"
+    && (!manifestChecksum || job.manifest_checksum === manifestChecksum)
+  ) ?? null;
+}
+
+export function latestSucceededTotpSegmentPreview(
+  jobs: TotpRenderJob[],
+  performanceId: string,
+  manifestChecksum?: string | null,
+): TotpRenderJob | null {
+  return jobs.find((job) =>
+    job.state === "succeeded"
+    && job.qc?.passed === true
+    && totpRenderPurpose(job) === "segment_preview"
+    && totpRenderSourcePerformanceId(job) === performanceId
+    && (!manifestChecksum || job.manifest_checksum === manifestChecksum)
+  ) ?? null;
 }
 
 export function activeTotpRenderJob(jobs: TotpRenderJob[]): TotpRenderJob | null {
@@ -116,7 +182,10 @@ export function activeTotpRenderJob(jobs: TotpRenderJob[]): TotpRenderJob | null
 export function latestSucceededTotpRender(jobs: TotpRenderJob[], manifestChecksum?: string | null): TotpRenderJob | null {
   return (
     jobs.find(
-      (job) => job.state === "succeeded" && (!manifestChecksum || job.manifest_checksum === manifestChecksum),
+      (job) =>
+        job.state === "succeeded"
+        && totpRenderPurpose(job) === "master"
+        && (!manifestChecksum || job.manifest_checksum === manifestChecksum),
     ) ?? null
   );
 }
