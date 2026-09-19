@@ -157,6 +157,11 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
   const presenterAudioRef = useRef<HTMLAudioElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const exportStopRef = useRef(false);
+  const [exportState, setExportState] = useState<"idle" | "recording" | "finishing" | "error">("idle");
+  const [exportPercent, setExportPercent] = useState(0);
+  const [exportError, setExportError] = useState<string | null>(null);
   const spokenPresenterCueRef = useRef<string | null>(null);
   const playback = useMemo(() => derivePlaybackState(replay, positionMs, playing), [replay, positionMs, playing]);
   const cue = useMemo(() => activeCue(source.payload.cues, positionMs), [source.payload.cues, positionMs]);
@@ -199,6 +204,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     songAudioRef.current = null;
     if (!url) return;
     const audio = new Audio(url);
+    audio.crossOrigin = "anonymous";
     audio.preload = "auto";
     audio.volume = clampTotpGain(totpMixLevels("performance", audienceReaction).songBed);
     audio.onerror = () => setAudioLoadFailed(true);
