@@ -110,7 +110,12 @@ export function TotpProgrammeContinuity({
           <h3 className="mt-3 max-w-4xl text-3xl font-black tracking-tight md:text-5xl">{copy.headline}</h3>
           <div className="mt-5 max-w-3xl rounded-2xl border border-white/15 bg-black/35 p-4 shadow-xl backdrop-blur">
             <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-fuchsia-200">
-              <Volume2 className="h-4 w-4" /> {presenter.displayName}
+              <Volume2 className={`h-4 w-4 ${speaking ? "animate-pulse" : ""}`} /> {presenter.displayName}
+              {speaking ? (
+                <span className="flex items-center gap-1 rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] tracking-[0.22em] text-white" data-totp-continuity-mic>
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> MIC LIVE
+                </span>
+              ) : null}
             </div>
             <p className="text-sm leading-6 text-white/85 md:text-base">{copy.body}</p>
           </div>
