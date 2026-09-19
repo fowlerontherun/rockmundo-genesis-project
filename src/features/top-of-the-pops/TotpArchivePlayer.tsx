@@ -370,6 +370,26 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
       setExportError(error instanceof TotpExportUnsupportedError || error instanceof Error ? error.message : "The export failed — please try again.");
     }
   };
+  const uploadToDrive = async () => {
+    if (!lastExport || driveState === "uploading") return;
+    setDriveState("uploading");
+    setDriveError(null);
+    try {
+      const formData = new FormData();
+      formData.append("fileName", lastExport.fileName);
+      formData.append("file", new File([lastExport.blob], lastExport.fileName, { type: lastExport.blob.type || "video/webm" }));
+      const { data, error } = await supabase.functions.invoke("totp-drive-upload", { body: formData });
+      if (error) {
+        const details = typeof error === "object" && error && "context" in error ? await (error as { context: Response }).context.text().catch(() => "") : "";
+        throw new Error(details || error.message || "The upload failed.");
+      }
+      setDriveLink(typeof data?.webViewLink === "string" ? data.webViewLink : null);
+      setDriveState("done");
+    } catch (error) {
+      setDriveState("error");
+      setDriveError(error instanceof Error ? error.message : "The upload to Google Drive failed — please try again.");
+    }
+  };
   return <div ref={containerRef} className="space-y-3 rounded-xl border bg-card p-3" data-totp-archive-player data-visual-snapshot={playerModelsSnapshot ? "locked" : "legacy-fallback"}>
     <div className="relative mx-auto aspect-video min-h-[20rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10">
       <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
