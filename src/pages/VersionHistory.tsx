@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.747",
+    date: "2026-09-19",
+    changes: [
+      { type: "improvement", description: "Each Top of the Pops presenter now has their own British voice instead of whichever voice the device picked" },
+      { type: "improvement", description: "Presenter links are read more naturally, with shorthand spoken properly and a breath between sentences" },
+      { type: "improvement", description: "The music dips further while the presenter is talking, so links are never buried under the song" },
+      { type: "feature", description: "A presenter voice button lets you mute the talking, and a MIC LIVE badge shows when the presenter is on air" },
+    ],
+  },
+  {
     version: "1.1.746",
     date: "2026-09-19",
     changes: [
