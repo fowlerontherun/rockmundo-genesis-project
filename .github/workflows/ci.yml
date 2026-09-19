@@ -29,8 +29,8 @@ jobs:
         run: npm ci
       - name: Verify dependency tree
         run: npm run verify:dependencies
-      - name: Verify migration timestamps
-        run: npm run verify:migration-timestamps
+      - name: Verify Top of the Pops migration timestamps
+        run: npm run verify:totp-migration-timestamps
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
