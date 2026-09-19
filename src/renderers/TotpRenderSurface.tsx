@@ -92,13 +92,13 @@ function BroadcastReplayItem({ item, localMs, source }: { item: TotpRenderItem; 
   if (item.kind === "presenter_link") {
     cue = presenterCue;
     positionMs = presenterCue
-      ? presenterCue.offsetMs + clamp(localMs, 0, Math.max(0, presenterCue.durationMs - 1))
-      : 0;
+      ? clamp(presenterCue.offsetMs + localMs, 0, Math.max(0, source.payload.totalDurationMs - 1))
+      : clamp(localMs, 0, Math.max(0, source.payload.totalDurationMs - 1));
   } else if (item.kind === "applause") {
     cue = applauseCue;
     positionMs = applauseCue
-      ? applauseCue.offsetMs + clamp(localMs, 0, Math.max(0, applauseCue.durationMs - 1))
-      : performanceStart + source.payload.performanceDurationMs;
+      ? clamp(applauseCue.offsetMs + localMs, 0, Math.max(0, source.payload.totalDurationMs - 1))
+      : clamp(performanceStart + source.payload.performanceDurationMs + localMs, 0, Math.max(0, source.payload.totalDurationMs - 1));
   } else {
     positionMs = performanceStart + clamp(localMs, 0, Math.max(0, source.payload.performanceDurationMs - 1));
     cue = activeCue(source.payload.cues, positionMs);
@@ -123,6 +123,7 @@ function BroadcastReplayItem({ item, localMs, source }: { item: TotpRenderItem; 
       captions={captions}
       showCaptions
       showSafeAreaGuides={false}
+      enableAudienceAudio={false}
     />
   );
 }
