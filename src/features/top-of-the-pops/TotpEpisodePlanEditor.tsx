@@ -68,6 +68,9 @@ export function TotpEpisodePlanEditor({
         closing_link: closingLink,
         notes,
         segments,
+        broadcast_rights: plan.data?.broadcast_rights ?? {},
+        presenter_audio: plan.data?.presenter_audio ?? {},
+        updated_at: plan.data?.updated_at,
       }),
     onSuccess: () => {
       toast({ title: "Plan saved", description: "The running sheet notes are stored for this episode." });
