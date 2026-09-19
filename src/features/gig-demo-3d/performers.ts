@@ -7,6 +7,9 @@ import { microphone } from './stage';
 import { buildInstrument, type InstrumentRig } from './instruments';
 import { stageAssignment, type InstrumentId, type VocalRole } from './instrumentCatalog';
 import { crowdAppearances, crowdMaterial, crowdMotion, CROWD_LIMIT, CROWD_VARIANTS } from './crowdAnimation';
+import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreography';
+import { singerGesture, vocalPhrase } from './performanceMotion';
+import { createVocalMouth } from './vocalFace';
 import { seededRandom } from './config';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import type { ModelLibrary } from '@/features/player-model/model';
@@ -58,13 +61,15 @@ export class Musician {
     instrumentRig: InstrumentRig | null = null;
     equipment: T.Group | null = null;
     private equipmentStageAnchor: T.Vector3 | null = null;
-    fanPose: 'idle' | 'raised' | 'clapOpen' | 'clapClosed' | 'danceLeft' | 'danceRight' = 'idle';
+    fanPose: 'idle' | 'raised' | 'clapOpen' | 'clapClosed' | 'danceLeft' | 'danceRight' | 'runLeft' | 'runRight' = 'idle';
     id = '';
+    performing = true;
     walking = false;
     action: string | null = null;
     private scale: number;
     private bodyBuild = 1;
     private vocalRole: VocalRole = null;
+    private mouth: T.Mesh | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -137,6 +142,9 @@ export class Musician {
                 }
                 garment.removeFromParent();
             }
+        }
+        if (this.hasVocals() && this.bones.has('Head')) {
+            this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
         if (appearance) {
             this.bodyBuild = appearance.body.build;
@@ -217,17 +225,22 @@ export class Musician {
     }
     update(seconds: number, energy: number, reduced: boolean) {
         const t = reduced ? 0 : seconds, beat = t * Math.PI * 4;
+        const performing = this.performing && !this.walking;
+        const motionEnergy = reduced ? 0 : energy;
         const performanceScale = this.role === 'fan' ? 1 : this.role === 'drums' ? .7 : this.role === 'vocals' ? 1.5 : this.role === 'guitar' || this.role === 'bass' ? 1.2 : 1.1;
         const sway = Math.sin(t * (this.role === 'vocals' ? 1.05 : 1.6) + this.phase) * 0.026 * energy * performanceScale;
         this.rest.forEach(({ bone, quaternion, position }) => { bone.quaternion.copy(quaternion); bone.position.copy(position); });
-        const vocalActive = !!this.vocalRole || this.role === 'vocals' || this.instrumentRig?.family === 'voice';
+        const vocalActive = this.hasVocals() && performing;
+        const vocals = vocalPhrase(t, this.phase);
         const phrase = Math.sin(t * .54 + this.phase);
         const vocalAccent = vocalActive ? Math.max(0, Math.sin(t * 1.08 + this.phase)) : 0;
+        const emphasis = performing && !reduced ? Math.pow(Math.max(0, Math.sin(t * .71 + this.phase)), 3) * energy : 0;
         const torso = this.bones.get('Torso');
         if (torso)
             torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
                 Math.sin(beat / 2 + this.phase) * 0.032 * energy * performanceScale
-                  + (this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.032 - vocalAccent * .016 : 0),
+                  + (this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.032 - vocalAccent * .016 : 0)
+                  + (this.role === 'guitar' || this.role === 'bass' ? emphasis * .06 : 0),
                 sway + (vocalActive ? phrase * .018 * energy : 0),
                 Math.sin(t * 2.2 + this.phase) * 0.018 * energy * performanceScale,
             )));
@@ -235,14 +248,21 @@ export class Musician {
         if (head) {
             const singingLean = this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.075 : vocalActive ? -0.025 : 0;
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025,
+                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07),
                 Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11),
                 vocalActive ? Math.sin(t * .42 + this.phase) * .018 : 0,
             )));
         }
         const jaw = this.bones.get('Jaw') ?? this.bones.get('jaw') ?? this.bones.get('Mouth');
         if (jaw && vocalActive && !reduced) {
-            jaw.rotation.x += .035 + Math.abs(Math.sin(t * 5.2 + this.phase)) * .075 * energy;
+            jaw.rotation.x += vocals.opening * .13 * energy;
+        }
+        if (this.mouth) {
+            const restScale = this.mouth.userData.restScale as T.Vector3;
+            this.mouth.visible = vocalActive && !reduced && vocals.opening > .04;
+            this.mouth.scale.copy(restScale);
+            this.mouth.scale.y *= .35 + vocals.opening * 2.4;
+            this.mouth.scale.x *= 1 - vocals.opening * .22;
         }
         const hips = this.bones.get('Hips');
         if (hips && this.role !== 'fan' && this.role !== 'drums' && !this.walking && !reduced) {
@@ -258,7 +278,14 @@ export class Musician {
         const rig = this.instrumentRig;
         rig?.tools.forEach(tool => { tool.visible = this.root.visible && !this.walking; });
         if (rig && (!this.walking || !rig.stationary)) {
-            rig.animate(t, energy, reduced);
+            rig.animate(t + (reduced ? 0 : this.phase * .13), performing ? energy : 0, reduced || !performing);
+            if (rig.family === 'voice' && this.mouth) {
+                const target = this.mouth.getWorldPosition(new T.Vector3());
+                const offset = new T.Vector3(-.015, -.025 - (vocalActive ? vocals.breath * .08 * motionEnergy : .25), .14);
+                offset.applyQuaternion(this.root.getWorldQuaternion(new T.Quaternion()));
+                rig.right.position.copy(rig.root.worldToLocal(target.add(offset)));
+                rig.root.updateWorldMatrix(true, true);
+            }
             if (rig.seated && !this.walking) {
                 const hips = this.bones.get('Hips');
                 if (hips) {
@@ -276,27 +303,8 @@ export class Musician {
             const poleForward = rig.family === 'strum' || rig.family === 'bow' || rig.family === 'upright' ? .22 : .15;
             this.hand('L', rig.left.getWorldPosition(new T.Vector3()), this.point(poleSpread, .96, poleForward));
             this.hand('R', rig.right.getWorldPosition(new T.Vector3()), this.point(-poleSpread, .96, poleForward));
-            if (this.vocalRole && rig.family !== 'voice' && !reduced && !this.walking) {
-                // Singer-instrumentalists keep both hands on the instrument, but
-                // lean into the stand mic on vocal phrases rather than abandoning
-                // the guitar/bass pose.
-                const shoulder = this.bones.get('Torso');
-                if (shoulder) shoulder.rotation.x -= .012 + vocalAccent * .018;
-            }
-            if (rig.family === 'voice' && !reduced) {
-                // Cycle through TV-friendly singer gestures rather than repeating one
-                // arm raise: open palm, point to crowd, hand-to-chest, then low sweep.
-                const gesture = Math.floor((t + this.phase) / 3.6) % 5;
-                const target: [number, number, number] = gesture === 0
-                    ? [.42, 1.28, .24]
-                    : gesture === 1
-                        ? [.52, 1.52, .16]
-                        : gesture === 2
-                            ? [.16, 1.22, .31]
-                            : gesture === 3
-                                ? [.32, 1.05, .30]
-                                : [.12, 1.38, .26];
-                this.hand('L', this.point(...target), this.point(.68, 1.18, .12));
+            if (rig.family === 'voice' && !reduced && performing) {
+                this.hand('L', this.point(...singerGesture(t, this.phase)), this.point(.68, 1.18, .12));
             }
         }
         else {
@@ -317,6 +325,12 @@ export class Musician {
                     if (this.fanPose === 'danceLeft' || this.fanPose === 'danceRight') {
                         const d = this.fanPose === 'danceLeft' ? 1 : -1;
                         target = [sign * .27 + d * .12, 1.04 + sign * d * .13, .25];
+                    }
+                    if (this.fanPose === 'runLeft' || this.fanPose === 'runRight') {
+                        const stride = this.fanPose === 'runLeft' ? 1 : -1;
+                        target = [sign * .27, 1.14, .18 + sign * stride * .22];
+                        reach(this.bones.get(`UpperLeg.${side}`), this.bones.get(`LowerLeg.${side}`), this.bones.get(`Foot.${side}`),
+                            this.point(sign * .12, .06 + (sign * stride > 0 ? .14 : 0), sign * stride * .25), this.point(sign * .17, .52, .5));
                     }
                 }
                 this.hand(side, this.point(...target), this.point(sign * .55, this.fanPose === 'raised' ? 1.58 : 1.1, .1));
@@ -348,13 +362,31 @@ export class Musician {
             this.hand('L', this.point(.28, .94, .12 + armSwing), this.point(.58, 1.12, .18));
             this.hand('R', this.point(-.28, .94, .12 - armSwing), this.point(-.58, 1.12, .18));
         }
-        if (this.action && /wave|singalong|crowd_interaction|storytelling|mic_trick/.test(this.action))
+        if (this.action && !reduced && (!rig || rig.family === 'voice') && /wave|singalong|crowd_interaction|storytelling|mic_trick/.test(this.action))
             this.hand('L', this.point(.3, 1.85, .2), this.point(.65, 1.4, .2));
         // Gently curl fingers around instrument necks, sticks and the microphone.
         for (const [name, bone] of this.bones)
             if (/^(Index|Middle|Ring|Pinky)[34]\./.test(name))
-                bone.rotateX(this.role === 'fan' ? 0.2 : 0.58);
+                bone.rotateX(this.role === 'fan' ? 0.2 : rig?.family === 'keys' ? .24 + Math.max(0, Math.sin(t * 11 + name.charCodeAt(0))) * .18 * motionEnergy : .58);
         this.root.updateMatrixWorld(true);
+        // Imported wrist axes differ between avatars. Keep the grille pointing
+        // towards the face instead of inheriting an arbitrary wrist orientation.
+        const mic = rig?.family === 'voice' ? this.bones.get('Hand.R')?.getObjectByName('playing-handheld-microphone') : null;
+        if (mic?.parent) {
+            mic.position.set(0, 0, 0);
+            mic.quaternion.copy(mic.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(this.root.getWorldQuaternion(new T.Quaternion())));
+            mic.updateWorldMatrix(false, true);
+        }
+        if (rig?.family === 'kit' && !this.walking) {
+            for (const stick of rig.tools) {
+                const target = stick.userData.strikeTarget as T.Vector3 | undefined;
+                if (!target || !stick.parent) continue;
+                const direction = rig.root.localToWorld(target.clone()).sub(stick.getWorldPosition(new T.Vector3())).normalize();
+                const orientation = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, -.19, .31).normalize(), direction);
+                stick.quaternion.copy(stick.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(orientation));
+                stick.updateWorldMatrix(false, true);
+            }
+        }
     }
 }
 /** Bake a posed rig once; the audience then uses inexpensive GPU instances. */
@@ -416,12 +448,14 @@ export class DemoCrowd {
         phone: T.Vector3;
     }[] = [];
     private transform = new T.Object3D();
+    private allFans: Fan[] = [];
     private phones: T.InstancedMesh;
     private time = { value: 0 };
     private televisionStage: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor' = 'main_stage';
     setTelevisionStage(stage: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor') { this.televisionStage = stage; }
     constructor(sources: T.Object3D[], scene: T.Scene, seed = 85043, private venue?: VenueProfile, library?: ModelLibrary) {
         const random = seededRandom(seed), material = crowdMaterial(this.time), appearances = crowdAppearances(seed);
+        this.transform.rotation.order = 'YXZ';
         this.phones = new T.InstancedMesh(new T.BoxGeometry(.075, .13, .012), new T.MeshBasicMaterial({ color: '#b5e6ff', toneMapped: false }), CROWD_LIMIT);
         this.phones.name = 'crowd-phone-screens';
         this.phones.count = 0;
@@ -440,7 +474,7 @@ export class DemoCrowd {
             actor.update(0, 0, true);
             const geometry = crowdGeometry(actor);
             let phone = new T.Vector3();
-            for (const [pose, attribute] of [['raised', 'poseRaised'], ['clapOpen', 'poseClapOpen'], ['clapClosed', 'poseClapClosed'], ['danceLeft', 'poseDanceLeft'], ['danceRight', 'poseDanceRight']] as const) {
+            for (const [pose, attribute] of [['raised', 'poseRaised'], ['clapOpen', 'poseClapOpen'], ['clapClosed', 'poseClapClosed'], ['danceLeft', 'poseDanceLeft'], ['danceRight', 'poseDanceRight'], ['runLeft', 'poseRunLeft'], ['runRight', 'poseRunRight']] as const) {
                 actor.fanPose = pose;
                 actor.update(0, 0, true);
                 const posed = crowdGeometry(actor);
@@ -463,21 +497,37 @@ export class DemoCrowd {
                 fans.push({ rank, x: ((spot % 16) - 7.5) * .82 + (random() - .5) * .18, z: 2.15 + Math.floor(spot / 16) * 1.3 + random() * .35, scale: .92 + random() * .14, phase: random() * Math.PI * 2, yaw: Math.PI + (random() - .5) * .3, personality: random(), pace: .82 + random() * .4 });
             }
             scene.add(mesh);
+            this.allFans.push(...fans);
             this.batches.push({ mesh, motion, fans, phone });
         }
         this.update(0, .8, .7, false);
     }
-    update(seconds: number, density: number, energy: number, reduced: boolean, tuning: Partial<CrowdTuningOptions> = {}, reaction = 'bounce') {
+    update(seconds: number, density: number, energy: number, reduced: boolean, tuning: Partial<CrowdTuningOptions> = {}, reaction = 'bounce', cueProgress?: number) {
         const t = reduced ? 0 : seconds, target = Math.round(CROWD_LIMIT * T.MathUtils.clamp(density, 0, 1));
         this.time.value = t;
         let phoneCount = 0;
         const area = detailedCrowdArea(this.venue), width = area.width / 13, depth = area.depth / 13;
+        const eventArea = { ...area, width: area.width * Math.min(1.1, tuning.lateralSpread ?? 1), depth: area.depth * Math.min(1.1, tuning.depthSpread ?? 1) * (1 - (tuning.stagePull ?? 0) * .3) };
+        const event = crowdEventPlan(t, density, energy, reaction, reduced, eventArea, this.venue?.kind === 'tv_studio', cueProgress);
+        const basePosition = (fan: Fan) => ({
+            rank: fan.rank,
+            x: T.MathUtils.clamp(fan.x * Math.min(1.1, tuning.lateralSpread ?? 1) + Math.sin(fan.phase) * (tuning.randomness ?? 0) * .2, -7.5, 7.5) * width,
+            z: area.front + (fan.z - area.front) * eventArea.depth / 13,
+        });
+        const pitSlots = event.pit > 0 ? circlePitSlots(this.allFans.filter(fan => fan.rank < target).map(basePosition), event) : undefined;
+        const surfer = this.allFans.find(fan => fan.rank === event.surferRank);
+        const surfBaseX = surfer ? T.MathUtils.clamp(surfer.x * Math.min(1.1, tuning.lateralSpread ?? 1) + Math.sin(surfer.phase) * (tuning.randomness ?? 0) * .2, -7.5, 7.5) * width : 0;
+        const surfBaseZ = surfer ? 2.15 + (surfer.z - 2.15) * eventArea.depth / 13 : 0;
+        const surfX = surfBaseX + (eventArea.width * .25 - surfBaseX) * event.surf;
+        const surfZ = surfBaseZ + (area.front + 1.2 + (1 - event.surfProgress) * eventArea.depth * .42 - surfBaseZ) * event.surf;
+        const pivot = new T.Vector3();
         for (const { mesh, motion, fans, phone } of this.batches) {
             mesh.count = 0;
             for (const fan of fans) {
                 if (fan.rank >= target)
                     continue;
-                const mode = crowdMotion(reaction, energy, fan.personality, t), phase = t * fan.pace + fan.phase, active = !reduced && mode !== 0;
+                let mode: number = crowdMotion(reaction, energy, fan.personality, t);
+                const phase = t * fan.pace + fan.phase, active = !reduced && mode !== 0;
                 const bounce = active ? Math.max(0, Math.sin(phase * (mode === 6 ? 5.4 : 6.28))) * energy * (mode === 6 ? .15 : mode === 2 ? .035 : .012) : 0;
                 if (this.venue?.kind === 'tv_studio') {
                     const stage = resolveTotpStudioStageGeometry(this.televisionStage, this.venue);
@@ -515,9 +565,32 @@ export class DemoCrowd {
                 }
                 this.transform.rotation.set(active && mode === 7 ? Math.max(0, Math.sin(phase * 4)) * .1 : 0, fan.yaw + (active ? Math.sin(phase * 1.4) * .04 : 0), active ? Math.sin(phase * 1.7) * (mode === 1 ? .055 : .016) * energy : 0);
                 this.transform.scale.setScalar(fan.scale * Math.min(1.15, tuning.fanScale ?? 1));
+                let amount = Math.max(.3, energy);
+                const pit = circlePitPosition(this.transform.position.x, this.transform.position.z, fan.personality, event, pitSlots?.get(fan.rank));
+                this.transform.position.x = pit.x;
+                this.transform.position.z = pit.z;
+                if (pit.running > 0) {
+                    const turn = Math.atan2(Math.sin(pit.yaw - fan.yaw), Math.cos(pit.yaw - fan.yaw));
+                    this.transform.rotation.y = fan.yaw + turn * pit.running;
+                    this.transform.rotation.x = -.08 * pit.running;
+                    this.transform.position.y = Math.abs(Math.sin(phase * 7.2)) * .055 * pit.running;
+                    mode = 8;
+                    amount = pit.running;
+                }
+                if (event.surf > 0 && fan.rank === event.surferRank) {
+                    this.transform.position.set(surfX, .9 * this.transform.scale.y + event.surf * (1.23 + Math.sin(phase * 2) * .035), surfZ);
+                    this.transform.rotation.set(-Math.PI / 2 * event.surf, fan.yaw, Math.sin(phase * 1.5) * .04 * event.surf);
+                    // Tilt around the torso, not the feet, as nearby hands lift it.
+                    pivot.set(0, .9 * this.transform.scale.y, 0).applyEuler(this.transform.rotation);
+                    this.transform.position.sub(pivot);
+                    mode = 9;
+                    amount = event.surf;
+                } else if (event.surf > .1 && Math.hypot(this.transform.position.x - surfX, this.transform.position.z - surfZ) < 1.5 && !pit.running) {
+                    mode = 2;
+                }
                 this.transform.updateMatrix();
                 mesh.setMatrixAt(mesh.count, this.transform.matrix);
-                motion.setXYZW(mesh.count, mode, fan.phase, fan.pace, Math.max(.3, energy));
+                motion.setXYZW(mesh.count, mode, fan.phase, fan.pace, amount);
                 mesh.count++;
                 if (mode === 5) {
                     const screen = phone.clone().add(new T.Vector3(0, .045, .015)).applyMatrix4(this.transform.matrix);
@@ -533,7 +606,7 @@ export class DemoCrowd {
         this.phones.instanceMatrix.needsUpdate = true;
     }
     // Geometry/material ownership remains with the scene disposer (including shader pose attributes).
-    dispose() { this.batches = []; }
+    dispose() { this.batches = []; this.allFans = []; }
 }
 export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup?: ConcertPerformer[], seed?: number, venue?: VenueProfile) {
     const library = await loadModelLibrary(['casual.glb', 'punk.glb', 'suit.glb', ...requiredModelFiles([...(lineup?.map(p => p.appearance) ?? []), ...crowdAppearances(seed ?? 85043)])], manager);

@@ -26,8 +26,16 @@ query-free route continues to open the existing fixture/replay inspector.
 - Four stylised, rigged human performers. Procedural two-bone IK places hands
   on the guitar/bass and microphone; the drummer has seated legs and moving
   sticks. This is authored skeletal motion, not captured performance footage.
-- Three human crowd variants, baked into GPU instances with seeded spacing,
+- Sixteen human crowd variants, baked into GPU instances with seeded spacing,
   height/clothing variation, raised arms and independent movement phases.
+- Singers blend gestures and use stylised mouth articulation with breath breaks;
+  the microphone follows the face. This is procedural performance, not audio lip sync.
+  Guitarists hold chord positions and slide between them, drummers alternate
+  strokes and fills, and keyboard players depress keys under their hands.
+- Energetic crowds can open a local circle pit or carry an audience member above
+  nearby raised hands. Attendance is preserved. Quiet/sparse crowds, cramped
+  floors, runways, television studios and reduced motion suppress these events.
+  The crowd-reaction selector includes dedicated circle-pit and surfing previews.
 - Five views, including a camera sequence, plus three lighting palettes.
   Play/pause, restart, fullscreen, performance intensity, crowd density, haze,
   quality and reduced motion are available without rebuilding the renderer.
@@ -42,7 +50,7 @@ have a deliberately stylised shape; this is not a photorealistic avatar system.
 - No new dependencies, database reads/writes or avatar-service requests in the
   demo module. Normal application shell/authentication still applies.
 - Lazy loading keeps the 3D renderer off the default replay-inspector path.
-- Static equipment shares draws by material. The audience uses three instance
+- Static equipment shares draws by material. The audience uses sixteen instance
   batches, up to 160 people. Only two spotlights render 1024px shadow maps.
 - Pixel ratio is capped at 1.15 in Balanced mode and 1.75 in High detail.
 - Hidden tabs stop the frame loop. Leaving/retrying disposes the renderer,
@@ -64,6 +72,11 @@ The tests parse the actual shipped GLBs and check finite articulated poses,
 instrument contact, independent skeleton clones, reduced motion and crowd
 density. Component tests cover controls, retry, unsupported WebGL and disposal
 on unmount (with the renderer mocked).
+
+Crowd choreography is reconstructed from replay time and, for explicit mosh/surf
+performance items, the item's progress. Tests also cover a clear pit center,
+runner spacing, exact attendance while surfing, backwards seeks, singer gesture
+continuity, mouth/microphone alignment and reduced-motion suppression.
 
 Browser visual/performance QA was unavailable in the implementation environment
 because its browser URL policy blocked the app preview. These tests and the

@@ -76,7 +76,7 @@ export function crowdMaterial(time: {
     value: number;
 }) {
     const material = new T.MeshStandardMaterial({ vertexColors: true, roughness: .88, flatShading: true });
-    material.customProgramCacheKey = () => 'crowd-articulation-v1';
+    material.customProgramCacheKey = () => 'crowd-articulation-v2';
     material.onBeforeCompile = shader => {
         shader.uniforms.crowdTime = time;
         shader.vertexShader = `attribute vec3 poseRaised;
@@ -84,6 +84,8 @@ attribute vec3 poseClapOpen;
 attribute vec3 poseClapClosed;
 attribute vec3 poseDanceLeft;
 attribute vec3 poseDanceRight;
+attribute vec3 poseRunLeft;
+attribute vec3 poseRunRight;
 attribute vec4 crowdMotion;
 uniform float crowdTime;
 ${shader.vertexShader}`;
@@ -98,7 +100,9 @@ if (mode > 2.5 && mode < 3.5) transformed = mix(poseClapOpen, poseClapClosed, .5
 if (mode > 3.5 && mode < 4.5) transformed = mix(poseDanceLeft, poseRaised, .7+.3*sin(phase*2.3));
 if (mode > 4.5 && mode < 5.5) transformed = poseRaised;
 if (mode > 5.5 && mode < 6.5) transformed = mix(poseDanceRight, poseRaised, .75+.25*sin(phase*5.4));
-if (mode > 6.5) transformed = mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*4.0));
+if (mode > 6.5 && mode < 7.5) transformed = mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*4.0));
+if (mode > 7.5 && mode < 8.5) transformed = mix(position, mix(poseRunLeft, poseRunRight, .5+.5*sin(phase*7.2)), amount);
+if (mode > 8.5) transformed = mix(position, mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*1.6)), .35*amount);
 `);
     };
     return material;

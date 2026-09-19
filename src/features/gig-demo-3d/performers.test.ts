@@ -57,6 +57,37 @@ describe('performance poses using the shipped rigs', () => {
     expect(matrices(b)).toEqual(untouched);
   });
 
+  it('sings with the actual jawless model, keeps the microphone near the mouth and closes it between songs', () => {
+    const actor = new Musician(models[1], 'vocals', [0, 0, 0]);
+    const mouth = actor.root.getObjectByName('singing-mouth')!;
+    const mic = actor.root.getObjectByName('playing-handheld-microphone')!;
+    expect(mouth).toBeTruthy();
+    actor.update(2, .9, false);
+    expect(mouth.visible).toBe(true);
+    const pose = mouth.scale.toArray();
+    const grille = mic.localToWorld(new T.Vector3(0, 0, -.09));
+    expect(grille.distanceTo(mouth.getWorldPosition(new T.Vector3()))).toBeLessThan(.16);
+    actor.update(2.2, .9, false);
+    expect(mouth.scale.toArray()).not.toEqual(pose);
+    actor.update(2, .9, false);
+    expect(mouth.scale.toArray()).toEqual(pose);
+    actor.performing = false; actor.update(2, .9, false);
+    expect(mouth.visible).toBe(false);
+    actor.performing = true; actor.update(2, .9, true);
+    expect(mouth.visible).toBe(false);
+  });
+
+  it('blends singer gestures across phrase boundaries and keeps instrumentalists playing during crowd cues', () => {
+    const singer = new Musician(models[1], 'vocals', [0, 0, 0]);
+    singer.update(3.599, .9, false);
+    const before = singer.bones.get('Hand.L')!.getWorldPosition(new T.Vector3());
+    singer.update(3.601, .9, false);
+    expect(singer.bones.get('Hand.L')!.getWorldPosition(new T.Vector3()).distanceTo(before)).toBeLessThan(.005);
+    const guitarist = new Musician(models[0], 'guitar', [0, 0, 0]);
+    guitarist.action = 'singalong'; guitarist.update(2, .8, false);
+    expect(guitarist.bones.get('Hand.L')!.getWorldPosition(new T.Vector3()).distanceTo(guitarist.instrumentRig!.left.getWorldPosition(new T.Vector3()))).toBeLessThan(.08);
+  });
+
   it('bakes correctly sized humans into sixteen crowd batches and changes density independently of energy', () => {
     const scene = new T.Scene(), crowd = new DemoCrowd(models, scene);
     const meshes = scene.children.filter((object): object is T.InstancedMesh => object instanceof T.InstancedMesh && object.name !== 'crowd-phone-screens');
