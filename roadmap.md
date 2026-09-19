@@ -10,7 +10,8 @@
 - [ ] Phase 1: in-game television presentation polish and accessibility.
   - [x] Widescreen 16:9 programme frame with action/title safe areas for all overlay graphics.
   - [x] Deterministic caption track (presenter, chart graphics, audience) with WebVTT export and a subtitles toggle.
-  - [ ] Broadcast audio mix balance (song bed, presenter, audience) and end credits sequence.
+  - [x] Broadcast audio mix balance (song bed, presenter, audience) and end credits sequence.
+  - [x] Loading and recovery states for the in-app broadcast viewer (audio preparing, retry on failure).
   - [ ] Loading/recovery states for the in-app broadcast viewer.
 - [ ] Phase 2: deterministic offline rendering and MP4 export.
 - [ ] Phase 3: production control room, rehearsal and release gates.

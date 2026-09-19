@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.743",
+    date: "2026-09-19",
+    changes: [
+      { type: "improvement", description: "Top of the Pops now has a proper television sound balance: the song dips under the presenter and the studio audience sits behind the music" },
+      { type: "feature", description: "Episodes finish with a rolling end credits sequence listing the presenter and every act" },
+      { type: "improvement", description: "The show tells you when it is preparing a recording and offers a retry if an act's audio fails to load" },
+    ],
+  },
+  {
     version: "1.1.742",
     date: "2026-09-19",
     changes: [
