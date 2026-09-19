@@ -9,6 +9,7 @@ import { AlertTriangle, CheckCircle2, CircleDashed, ClipboardCheck, History, Rad
 import type { TotpEpisode } from "./api";
 import { buildTotpEpisodeManifestFromEpisode, getStoredTotpEpisodeManifest, saveTotpEpisodeManifest } from "./episodeManifestApi";
 import { getTotpRenderJobs } from "./renderQueueApi";
+import { getTotpComplianceReport } from "./complianceApi";
 import { getTotpEpisodePlan } from "./scheduleApi";
 import { getTotpReleaseHealth } from "./releaseHealthApi";
 import {
@@ -87,6 +88,10 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
     queryKey: ["totp", "production-audit", episode.id],
     queryFn: () => getTotpProductionAudit(episode.id, 30),
   });
+  const compliance = useQuery({
+    queryKey: ["totp", "compliance", episode.id],
+    queryFn: () => getTotpComplianceReport(episode.id),
+  });
 
   const lastRehearsal = useMemo(
     () => (audit.data ?? []).find((entry) => entry.event_kind === "rehearsal")?.created_at ?? null,
@@ -103,8 +108,17 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
         renderJobs: renders.data ?? [],
         automationHealthy: health.data?.healthy ?? null,
         rehearsalCheckedAt: lastRehearsal,
+        compliance: compliance.data
+          ? {
+              passed: compliance.data.passed,
+              blockerCount: compliance.data.blocker_count,
+              warningCount: compliance.data.warning_count,
+              manifestChecksum: compliance.data.manifest_checksum,
+              screenedAt: compliance.data.updated_at,
+            }
+          : null,
       }),
-    [live.data, stored.data, plan.data, renders.data, health.data, lastRehearsal],
+    [live.data, stored.data, plan.data, renders.data, health.data, lastRehearsal, compliance.data],
   );
 
   const logEvent = useMutation({

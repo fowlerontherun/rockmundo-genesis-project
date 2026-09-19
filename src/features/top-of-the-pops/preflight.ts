@@ -20,7 +20,8 @@ export type TotpPreflightArea =
   | "rights"
   | "runtime"
   | "render"
-  | "automation";
+  | "automation"
+  | "compliance";
 
 export interface TotpPreflightCheck {
   code: string;
@@ -50,6 +51,14 @@ export interface TotpPreflightInput {
   renderJobs?: TotpRenderJob[];
   automationHealthy?: boolean | null;
   rehearsalCheckedAt?: string | null;
+  /** Phase 5 screening: rights, player permission, content review and accessibility. */
+  compliance?: {
+    passed: boolean;
+    blockerCount: number;
+    warningCount: number;
+    manifestChecksum?: string | null;
+    screenedAt?: string | null;
+  } | null;
 }
 
 export const TOTP_PREFLIGHT_AREA_LABELS: Record<TotpPreflightArea, string> = {
@@ -60,6 +69,7 @@ export const TOTP_PREFLIGHT_AREA_LABELS: Record<TotpPreflightArea, string> = {
   runtime: "Running time",
   render: "Export",
   automation: "Automation",
+  compliance: "Rights and safety",
 };
 
 function check(
@@ -294,6 +304,53 @@ export function buildTotpPreflight(input: TotpPreflightInput): TotpPreflightRepo
       ),
     );
   }
+
+  const compliance = input.compliance ?? null;
+  const complianceCurrent =
+    !!compliance && (!manifest || !compliance.manifestChecksum || compliance.manifestChecksum === manifest.checksum);
+  checks.push(
+    check(
+      "compliance_screened",
+      "compliance",
+      "blocker",
+      complianceCurrent,
+      "Rights and safety screening done",
+      complianceCurrent
+        ? "This running sheet has been screened for permission, content and accessibility."
+        : compliance
+          ? "The screening was run on an older running sheet — screen it again."
+          : "The episode has not been screened for permission, content and accessibility yet.",
+    ),
+  );
+  checks.push(
+    check(
+      "compliance_clear",
+      "compliance",
+      "blocker",
+      !!compliance && compliance.passed,
+      "Nothing blocking external use",
+      compliance
+        ? compliance.passed
+          ? "Player permission, content review, music rights and subtitles are all clear."
+          : `The screening found ${compliance.blockerCount} item${compliance.blockerCount === 1 ? "" : "s"} that must be fixed.`
+        : "Run the screening to see whether the episode can be published.",
+    ),
+  );
+  checks.push(
+    check(
+      "compliance_warnings",
+      "compliance",
+      "warning",
+      !compliance || compliance.warningCount === 0,
+      "No screening warnings",
+      !compliance
+        ? "The episode has not been screened yet."
+        : compliance.warningCount === 0
+          ? "The screening raised no warnings."
+          : `${compliance.warningCount} screening warning${compliance.warningCount === 1 ? "" : "s"} are worth a look.`,
+    ),
+  );
+
 
   const blockers = checks.filter((item) => item.severity === "blocker" && !item.passed);
   const warnings = checks.filter((item) => item.severity === "warning" && !item.passed);

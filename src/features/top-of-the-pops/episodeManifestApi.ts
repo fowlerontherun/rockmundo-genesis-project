@@ -41,11 +41,20 @@ export function inGameTrackRights(): TotpTrackRights {
 
 export async function buildTotpEpisodeManifestFromEpisode(
   episode: TotpEpisode,
+  options: { excludePerformanceIds?: string[] } = {},
 ): Promise<{ manifest: TotpEpisodeManifest; issues: TotpManifestIssue[] }> {
   const songAudio: Record<string, { url: string | null; duration_ms: number | null }> = {};
   const rights: Record<string, TotpTrackRights> = {};
 
-  for (const performance of episode.performances) {
+  /**
+   * Phase 5: an act removed by a takedown is dropped from the broadcast only.
+   * The game's performances, fame and settlement rows are never touched.
+   */
+  const excluded = new Set(options.excludePerformanceIds ?? []);
+  const performances = episode.performances.filter((performance) => !excluded.has(performance.performance_id));
+  const broadcastEpisode = excluded.size > 0 ? { ...episode, performances } : episode;
+
+  for (const performance of performances) {
     const audio = await getTotpPerformanceAudio(performance.performance_id);
     const seconds = audio?.duration_seconds ?? null;
     songAudio[performance.performance_id] = {
@@ -55,7 +64,7 @@ export async function buildTotpEpisodeManifestFromEpisode(
     rights[performance.song_id] = inGameTrackRights();
   }
 
-  const manifest = buildTotpEpisodeManifest({ episode, songAudio, rights });
+  const manifest = buildTotpEpisodeManifest({ episode: broadcastEpisode, songAudio, rights });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };
 }
 
