@@ -17,7 +17,8 @@ import { TotpMediaManager } from "@/features/top-of-the-pops/TotpMediaManager";
 import { TotpProductionHealthCard } from "@/features/top-of-the-pops/TotpProductionHealthCard";
 import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningSheetCard";
 import { TotpRenderQueueCard } from "@/features/top-of-the-pops/TotpRenderQueueCard";
-import { Archive, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Archive, CalendarDays, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -116,9 +117,14 @@ export default function TopOfThePopsAdmin() {
           <h1 className="text-3xl font-bold">Top of the Pops</h1>
           <p className="text-muted-foreground">Episode #{current.episode_number} · {formatDateTime(current.broadcast_at)} · {presenter.displayName}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {variantLabel && <Badge variant="outline">{variantLabel}</Badge>}
           <Badge variant="secondary">{current.status}</Badge>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/admin/top-of-the-pops/schedule">
+              <CalendarDays className="mr-1 h-4 w-4" /> Broadcast schedule
+            </Link>
+          </Button>
         </div>
       </div>
 

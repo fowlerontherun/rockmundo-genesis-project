@@ -148,6 +148,7 @@ const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const AdminGigViewerDemo = lazyWithRetry(() => import("./pages/admin/GigViewerDemo"));
 const AdminGigViewerReplayAudit = lazyWithRetry(() => import("./pages/admin/GigViewerReplayAudit"));
 const TopOfThePopsAdmin = lazyWithRetry(() => import("./pages/admin/TopOfThePopsAdmin"));
+const TopOfThePopsSchedule = lazyWithRetry(() => import("./pages/admin/TopOfThePopsSchedule"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const TwaaterProfileView = lazyWithRetry(() => import("./pages/TwaaterProfileView"));
 const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagView"));
@@ -422,6 +423,7 @@ const ROUTE_TITLES = new Map<string, string>([
   ["/recording-studio-business/:studioId", "Recording Studio Business"],
   ["/family/child/:childId", "Child Detail"],
   ["/admin/top-of-the-pops", "Top of the Pops Admin"],
+  ["/admin/top-of-the-pops/schedule", "Top of the Pops Schedule"],
 ]);
 
 for (const module of FM_MODULES) {
@@ -957,6 +959,7 @@ function App() {
                     <Route path="admin/gig-viewer-demo" element={<AdminGigViewerDemo />} />
                     <Route path="admin/gig-viewer-replays" element={<AdminGigViewerReplayAudit />} />
                     <Route path="admin/top-of-the-pops" element={<TopOfThePopsAdmin />} />
+                    <Route path="admin/top-of-the-pops/schedule" element={<TopOfThePopsSchedule />} />
                     
                     <Route path="admin/charts" element={<ChartsAdmin />} />
                     <Route path="admin/twaater" element={<TwaaterAdmin />} />

@@ -12,6 +12,8 @@ import {
   storedManifestMatchesLive,
 } from "./episodeManifestApi";
 import type { TotpProductionState } from "./episodeManifest";
+import { getTotpEpisodePlan } from "./scheduleApi";
+import { formatPlannedRuntime, plannedRuntimeSeconds } from "./scheduleWeeks";
 
 const STATE_LABELS: Record<TotpProductionState, string> = {
   gameplay: "In-game only",
@@ -40,6 +42,13 @@ export function TotpRunningSheetCard({ episode }: { episode: TotpEpisode }) {
     queryKey: ["totp", "running-sheet", "stored", episode.id],
     queryFn: () => getStoredTotpEpisodeManifest(episode.id),
   });
+
+  const plan = useQuery({
+    queryKey: ["totp", "episode-plan", episode.id],
+    queryFn: () => getTotpEpisodePlan(episode.id),
+  });
+
+
 
   const save = useMutation({
     mutationFn: async (productionState: TotpProductionState) => {
@@ -125,6 +134,23 @@ export function TotpRunningSheetCard({ episode }: { episode: TotpEpisode }) {
                 ))}
               </ul>
             )}
+
+            {plan.data && (
+              <div className="space-y-1 rounded-md border border-dashed p-2 text-xs" data-totp-sheet-plan>
+                <p className="font-medium">Planned in advance{plan.data.theme ? `: ${plan.data.theme}` : ""}</p>
+                {plan.data.opening_link && <p className="text-muted-foreground">Opening link: {plan.data.opening_link}</p>}
+                {plan.data.closing_link && <p className="text-muted-foreground">Closing link: {plan.data.closing_link}</p>}
+                {plan.data.segments.length > 0 && (
+                  <p className="text-muted-foreground">
+                    {plan.data.segments.length} planned segment{plan.data.segments.length === 1 ? "" : "s"} ·{" "}
+                    {formatPlannedRuntime(plannedRuntimeSeconds(plan.data.segments))} planned runtime
+                  </p>
+                )}
+                {plan.data.notes && <p className="text-muted-foreground">Notes: {plan.data.notes}</p>}
+              </div>
+            )}
+
+
 
             <div className="flex flex-wrap gap-2 pt-1">
               <Button size="sm" variant="outline" onClick={() => void live.refetch()} disabled={live.isFetching}>
