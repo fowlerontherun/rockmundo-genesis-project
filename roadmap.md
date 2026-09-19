@@ -19,7 +19,10 @@
   - [x] Admin render panel with planned length, chapters, progress, downloads and failed checks.
   - [x] Render worker contract documented (`docs/totp-render-worker.md`).
   - [ ] Build and host the headless render worker that produces the actual MP4, poster, captions and chapter files.
-- [ ] Phase 3: production control room, rehearsal and release gates.
+- [x] Phase 3: production control room, rehearsal and release gates.
+  - [x] Graded preflight report (blockers, warnings, notes) across running sheet, acts, audio, rights, runtime, export and automation.
+  - [x] Control room page and card with rehearsal pass, sign-off and render/publish gates.
+  - [x] Production audit log per episode (checks, rehearsals, sign-offs) with admin-only access.
 - [ ] Phase 4: YouTube upload and scheduled Premiere.
 - [ ] Phase 5: rights, moderation, safety and accessibility hardening.
 - [ ] Phase 6: redundant RTMPS live transmission.
