@@ -1,0 +1,91 @@
+name: TOTP deterministic render worker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: totp-render-worker
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Claim one render job
+        id: claim
+        run: node workers/totp-render/claim.mjs
+
+      - name: Install application dependencies
+        if: steps.claim.outputs.has_job == 'true'
+        run: npm ci
+
+      - name: Refresh render lease
+        if: steps.claim.outputs.has_job == 'true'
+        env:
+          TOTP_RENDER_CLAIM_FILE: ${{ steps.claim.outputs.claim_file }}
+          TOTP_RENDER_SETUP_PROGRESS: "1"
+        run: node workers/totp-render/heartbeat.mjs
+
+      - name: Install Chromium and FFmpeg
+        if: steps.claim.outputs.has_job == 'true'
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Refresh render lease after tool setup
+        if: steps.claim.outputs.has_job == 'true'
+        env:
+          TOTP_RENDER_CLAIM_FILE: ${{ steps.claim.outputs.claim_file }}
+          TOTP_RENDER_SETUP_PROGRESS: "1"
+        run: node workers/totp-render/heartbeat.mjs
+
+      - name: Run TOTP release tests
+        if: steps.claim.outputs.has_job == 'true'
+        run: npm run test:totp:release
+
+      - name: Build exact render surface
+        if: steps.claim.outputs.has_job == 'true'
+        env:
+          VITE_SUPABASE_URL: "https://yztogmdixmchsmimtent.supabase.co"
+          VITE_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dG9nbWRpeG1jaHNtaW10ZW50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5ODU0ODcsImV4cCI6MjA3MzU2MTQ4N30.vqfz_ZIvCIEXAuoSYmydg-XA6oUiPbcCc6yjfb2zL0g"
+        run: npm run build
+
+      - name: Refresh render lease after build
+        if: steps.claim.outputs.has_job == 'true'
+        env:
+          TOTP_RENDER_CLAIM_FILE: ${{ steps.claim.outputs.claim_file }}
+          TOTP_RENDER_SETUP_PROGRESS: "2"
+        run: node workers/totp-render/heartbeat.mjs
+
+      - name: Start local render surface
+        if: steps.claim.outputs.has_job == 'true'
+        run: |
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 > "${RUNNER_TEMP}/totp-preview.log" 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "${RUNNER_TEMP}/totp-preview.log"
+          exit 1
+
+      - name: Render and QC master
+        if: steps.claim.outputs.has_job == 'true'
+        env:
+          TOTP_RENDER_CLAIM_FILE: ${{ steps.claim.outputs.claim_file }}
+          ROCKMUNDO_APP_ORIGIN: "http://127.0.0.1:4173"
+        run: npm run worker:totp-render
