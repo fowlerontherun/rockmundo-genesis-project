@@ -30,7 +30,8 @@ describe('complete stage instrument coverage', () => {
             const spec = STAGE_INSTRUMENTS[id], actor = new Musician(model, spec.role, [0, 0, 0], 0, undefined, undefined, id);
             const rig = actor.instrumentRig!;
             expect(rig.root.userData.instrumentId).toBe(id);
-            const bounds = new T.Box3().setFromObject(rig.root);
+            // Handheld microphones belong to the wrist after the musician is rigged.
+            const bounds = new T.Box3().setFromObject(spec.family === 'voice' ? actor.root.getObjectByName('playing-handheld-microphone')! : rig.root);
             expect(bounds.isEmpty()).toBe(false);
             expect(bounds.getSize(new T.Vector3()).length()).toBeLessThan(4.5);
             for (const t of [0, 2.17, 18.4]) {

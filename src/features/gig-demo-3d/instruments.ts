@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { batchStaticMeshes, box, cylinder, rod, matte, metal, buildGuitar, buildHandInstrument } from './stage';
 import { STAGE_INSTRUMENTS, type InstrumentId, type PlayingStyle } from './instrumentCatalog';
+import { fretPosition, smoothMotion } from './performanceMotion';
 type Point = [
     number,
     number,
@@ -57,7 +58,17 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
     };
     const keys = (g: T.Object3D, width: number, y: number, z: number, n = 28) => { for (let i = 0; i < n; i++) {
         const x = -width / 2 + (i + .5) * width / n;
-        box(g, [width / n * .94, .026, .22], [x, y, z], ivory);
+        const key = box(g, [width / n * .94, .026, .22], [x, y, z], ivory);
+        if (spec.family === 'keys') {
+            key.userData.animated = true;
+            key.name = `playing-key-${i}`;
+            moving.push((t, e) => {
+                const leftX = .24 + Math.sin(t * .73) * .11 * e;
+                const rightX = -.24 + Math.sin(t * 1.1 + .6) * .13 * e;
+                const contact = Math.min(Math.abs(x - leftX), Math.abs(x - rightX)) < width / n * .9;
+                key.position.y = y - (contact ? Math.pow(Math.max(0, Math.sin(t * 9 + (x > 0 ? 0 : 1.7))), 2) * .011 * e : 0);
+            });
+        }
         if (![2, 6].includes(i % 7))
             box(g, [width / n * .6, .034, .13], [x + width / n * .5, y + .029, z + .045], black);
     } };
@@ -145,18 +156,17 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
         }
         // Keep the instrument body in front of the torso. The previous .16 depth
         // could put acoustic/electric bodies inside broader player-model chests.
-        g.position.set(-.07, 1.03, .29);
+        g.position.set(-.07, 1.10, .25);
         g.rotation.set(.035, -.045, -1.01);
         root.add(g);
-        const left = marker(g, 'grip-left', [.015, .71, .12]), right = marker(g, 'grip-right', [0, .03, .22]);
+        const left = marker(g, 'grip-left', [.015, .71, .12]), right = marker(g, 'grip-right', [0, .03, .18]);
         moving.push((t, e) => {
-            const phrase = Math.sin(t * .43);
             const subdivision = id === 'bass_guitar' ? 4.2 : 7.6;
-            left.position.y = .71 + Math.sin(t * 1.35) * .055 * e + phrase * .025 * e;
+            left.position.y = .71 + (fretPosition(t, id === 'bass_guitar') - .71) * e;
             left.position.x = .015 + Math.cos(t * .72) * .012 * e;
             right.position.x = Math.sin(t * Math.PI * subdivision) * (id === 'bass_guitar' ? .052 : .092) * e;
             right.position.y = .03 + Math.cos(t * Math.PI * subdivision) * .022 * e;
-            right.position.z = .22 + Math.sin(t * .9) * .012 * e;
+            right.position.z = .18 + Math.sin(t * .9) * .008 * e;
             g.rotation.y = -.045 + Math.sin(t * .55) * .025 * e;
             g.rotation.x = .035 + Math.cos(t * .7) * .012 * e;
         });
@@ -535,24 +545,32 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
             moving.push((t, e) => {
                 const base = sign === 1 ? l[1] : r[1];
-                const phrase = Math.floor(t / 4) % 4;
-                const rate = phrase === 3 ? 16.2 : 12.56;
-                const accent = spec.family === 'kit' ? (phrase === 2 ? .16 : .12) : (phrase === 2 ? .085 : .06);
-                const hit = Math.max(0, Math.sin(t * rate + (sign === 1 ? 0 : Math.PI)));
+                const fill = smoothMotion(((t % 8) - 6.5) / .4) * (1 - smoothMotion(((t % 8) - 7.7) / .3));
+                const stroke = t * Math.PI * 4 + (sign === 1 ? 0 : Math.PI);
+                const hit = Math.pow(Math.max(0, Math.sin(stroke)), .65);
+                const accent = spec.family === 'kit' ? .14 + fill * .045 : .06 + fill * .025;
                 grip.position.y = base + hit * accent * e;
                 grip.position.x = (sign === 1 ? l[0] : r[0]) + Math.sin(t * 3.1 + sign) * (spec.family === 'kit' ? .055 : .022) * e;
                 if (spec.family === 'kit') {
-                    grip.position.z = (sign === 1 ? l[2] : r[2]) + Math.cos(t * (phrase === 1 ? 5.4 : 3.8) + sign) * .08 * e;
+                    const target = sign === 1 ? new T.Vector3(.29 + fill * .16, 1.12 - fill * .08, .8) : new T.Vector3(-.39 - fill * .10, .94 + fill * .12, .43);
+                    stick.userData.strikeTarget = target;
+                    grip.position.set(target.x * .72, target.y + .10 + hit * accent * e, target.z - .37);
                     stick.rotation.x = -.18 + hit * .34 * e;
-                    stick.rotation.z = sign * (.08 + Math.sin(t * 2.6) * .05 * e);
+                    stick.rotation.z = sign * .08;
                 }
             });
         }
     else if (!['voice', 'strum'].includes(spec.family))
         moving.push((t, e) => {
-            const amount = spec.family === 'handDrum' ? .065 : spec.family === 'brass' ? .007 : .025;
+            const amount = spec.family === 'handDrum' ? .065 : spec.family === 'brass' ? .007 : spec.family === 'keys' ? .009 : .025;
             left.position.y = l[1] + Math.sin(t * 4) * amount * e;
             right.position.y = r[1] + Math.cos(t * 4) * amount * e;
+            if (spec.family === 'keys') {
+                left.position.x = l[0] + Math.sin(t * .73) * .11 * e;
+                right.position.x = r[0] + Math.sin(t * 1.1 + .6) * .13 * e;
+                left.position.y = l[1] - Math.pow(Math.max(0, Math.sin(t * 9)), 2) * .012 * e;
+                right.position.y = r[1] - Math.pow(Math.max(0, Math.sin(t * 9 + 1.7)), 2) * .012 * e;
+            }
             if (spec.family === 'bow' || spec.family === 'upright')
                 right.position.x = r[0] + Math.sin(t * 3) * .09 * e;
             if (id === 'trombone')

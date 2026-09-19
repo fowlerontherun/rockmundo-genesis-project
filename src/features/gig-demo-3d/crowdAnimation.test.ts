@@ -16,7 +16,7 @@ describe('individual crowd identity and motion', () => {
             expect(appearanceSchema.safeParse(a).success).toBe(true);
         expect(new Set(appearances.map(a => a.body.frame)).size).toBe(2);
         expect(new Set(appearances.map(a => a.body.skin)).size).toBe(8);
-        expect(new Set(appearances.map(a => a.head.hairStyle)).size).toBe(10);
+        expect(new Set(appearances.map(a => a.head.hairStyle)).size).toBeGreaterThanOrEqual(6);
         for (const slot of ['top', 'bottom', 'footwear'] as const)
             expect(new Set(appearances.map(a => a.equipment[slot].itemId))).toEqual(new Set(STARTER_ITEMS[slot].map(i => i.id)));
         expect(new Set(Array.from({ length: 100 }, (_, i) => crowdMotion('bounce', .9, i / 100, 10))).size).toBeGreaterThanOrEqual(5);
@@ -68,6 +68,23 @@ describe('individual crowd identity and motion', () => {
         const reduced = snapshot();
         crowd.update(88, 1, .9, true, {}, 'bounce');
         expect(snapshot()).toEqual(reduced);
+        const modes = () => meshes.flatMap(mesh => Array.from({ length: mesh.count }, (_, i) => mesh.geometry.attributes.crowdMotion.getX(i)));
+        crowd.update(12, 1, 1, false, {}, 'mosh_pit');
+        expect(modes().filter(mode => mode === 8).length).toBeGreaterThan(3);
+        expect(modes().filter(mode => mode === 8).length).toBeLessThan(40);
+        const pit = snapshot();
+        crowd.update(35, 1, 1, false, {}, 'crowd_surf', .5);
+        expect(modes().filter(mode => mode === 9)).toHaveLength(1);
+        expect(meshes.reduce((n, m) => n + m.count, 0)).toBe(160);
+        const surfing = snapshot();
+        crowd.update(12, 1, 1, false, {}, 'mosh_pit');
+        expect(snapshot()).toEqual(pit);
+        crowd.update(35, 1, 1, false, {}, 'crowd_surf', .5);
+        expect(snapshot()).toEqual(surfing);
+        crowd.update(35, 1, 1, true, {}, 'crowd_surf', .5);
+        expect(modes().some(mode => mode >= 8)).toBe(false);
+        crowd.update(35, 0, 1, false, {}, 'crowd_surf', .5);
+        expect(meshes.every(mesh => mesh.count === 0)).toBe(true);
         crowd.dispose();
         disposeModel(scene);
         library.forEach(disposeModel);

@@ -32,6 +32,7 @@ export interface ConcertFrame {
   crowd: number;
   occupancy?: number;
   crowdReaction: string;
+  crowdCueProgress?: number;
   performing: boolean;
   look: 'electric' | 'amber' | 'encore';
   lightLevel: number;

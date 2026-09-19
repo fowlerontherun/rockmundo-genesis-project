@@ -390,10 +390,11 @@ export class ConcertScene {
         if (!this.settings.reducedMotion && /stage_dive|crowd_surf/.test(state.action ?? '')) { const arc = Math.sin(state.actionProgress * Math.PI); actor.root.position.z += arc * 2.3; actor.root.position.y += arc * .55; actor.root.rotation.x = -arc * Math.PI / 2; }
       }
       actor.restoreEquipmentAnchor();
+      actor.performing = this.playback?.performing ?? true;
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
     });
     if (this.options?.television?.stageKey) this.crowd?.setTelevisionStage(this.options.television.stageKey);
-    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction));
+    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction), this.playback?.crowdCueProgress);
     if (this.distantAudience) {
       const occupancy = this.playback?.occupancy ?? this.settings.crowd;
       updateVenueAudience(this.distantAudience, occupancy, t, this.settings.reducedMotion, energy, Math.round(160 * (this.playback?.crowd ?? this.settings.crowd)));
