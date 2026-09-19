@@ -166,20 +166,27 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
 
   useEffect(() => {
     setResolvedBroadcastAudio(null);
+    setAudioLoadFailed(false);
     if (source.payload.song.audioUrl || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(source.performance_id)) return;
     let cancelled = false;
+    setAudioLoading(true);
     void getTotpPerformanceAudio(source.performance_id)
       .then((audio) => {
-        if (!cancelled) setResolvedBroadcastAudio({
+        if (cancelled) return;
+        setResolvedBroadcastAudio({
           url: audio?.audio_url?.trim() || null,
           durationSeconds: audio?.duration_seconds ?? null,
         });
+        setAudioLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setResolvedBroadcastAudio({ url: null, durationSeconds: null });
+        if (cancelled) return;
+        setResolvedBroadcastAudio({ url: null, durationSeconds: null });
+        setAudioLoadFailed(true);
+        setAudioLoading(false);
       });
     return () => { cancelled = true; };
-  }, [source.performance_id, source.payload.song.audioUrl]);
+  }, [source.performance_id, source.payload.song.audioUrl, audioAttempt]);
 
   useEffect(() => {
     const url = source.payload.song.audioUrl?.trim() || resolvedBroadcastAudio?.url || "";
@@ -188,7 +195,8 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     if (!url) return;
     const audio = new Audio(url);
     audio.preload = "auto";
-    audio.volume = 0.9;
+    audio.volume = clampTotpGain(totpMixLevels("performance", audienceReaction).songBed);
+    audio.onerror = () => setAudioLoadFailed(true);
     songAudioRef.current = audio;
     return () => {
       audio.pause();
@@ -196,7 +204,14 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
       audio.load();
       if (songAudioRef.current === audio) songAudioRef.current = null;
     };
-  }, [resolvedBroadcastAudio?.url, source.id, source.payload.song.audioUrl]);
+  }, [resolvedBroadcastAudio?.url, source.id, source.payload.song.audioUrl, audienceReaction]);
+
+  // Broadcast mix: duck the song bed under presenter links and audience reactions.
+  useEffect(() => {
+    const audio = songAudioRef.current;
+    if (!audio) return;
+    audio.volume = clampTotpGain(totpMixLevels(cue?.type, audienceReaction).songBed);
+  }, [cue?.type, audienceReaction]);
 
   useEffect(() => {
     if (!playing) {
