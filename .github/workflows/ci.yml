@@ -37,6 +37,8 @@ jobs:
         run: npm run test:critical-journeys -- --reporter=default
       - name: Unit tests
         run: npm run test:unit -- --reporter=default
+      - name: Top of the Pops render-worker contract
+        run: npm run test:totp-render-worker
       - name: Balance validation gate
         run: npm run validate:balance
       - name: Progression programme validation gate
