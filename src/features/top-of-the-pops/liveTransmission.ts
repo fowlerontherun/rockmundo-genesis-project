@@ -193,7 +193,7 @@ export function gradeTotpLiveHealth(
   if (status && !["active", "good", "ok"].includes(status)) {
     findings.push({
       code: "stream_status",
-      grade: status === "noData" .toLowerCase() || status === "no_data" || status === "error" ? "failing" : "degraded",
+      grade: ["nodata", "no_data", "error", "revoked", "inactive"].includes(status) ? "failing" : "degraded",
       detail: `YouTube reports the stream as "${sample.stream_status}".`,
     });
   }
