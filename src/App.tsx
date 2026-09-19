@@ -149,6 +149,7 @@ const AdminGigViewerDemo = lazyWithRetry(() => import("./pages/admin/GigViewerDe
 const AdminGigViewerReplayAudit = lazyWithRetry(() => import("./pages/admin/GigViewerReplayAudit"));
 const TopOfThePopsAdmin = lazyWithRetry(() => import("./pages/admin/TopOfThePopsAdmin"));
 const TopOfThePopsSchedule = lazyWithRetry(() => import("./pages/admin/TopOfThePopsSchedule"));
+const TopOfThePopsControlRoom = lazyWithRetry(() => import("./pages/admin/TopOfThePopsControlRoom"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const TwaaterProfileView = lazyWithRetry(() => import("./pages/TwaaterProfileView"));
 const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagView"));
