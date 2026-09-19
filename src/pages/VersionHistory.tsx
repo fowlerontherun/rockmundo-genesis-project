@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.740",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Top of the Pops running sheets are now saved with the episode, so the order of acts, songs and audio stays fixed" },
+      { type: "feature", description: "New admin panel shows the episode running sheet, total runtime and anything blocking production, with a Mark production ready control" },
+      { type: "improvement", description: "Once an episode has been recorded or published its running sheet can no longer be changed" },
+    ],
+  },
+  {
     version: "1.1.739",
     date: "2026-09-19",
     changes: [

@@ -15,6 +15,7 @@ import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-po
 import { TotpTestEpisodeCard } from "@/features/top-of-the-pops/TotpTestEpisodeCard";
 import { TotpMediaManager } from "@/features/top-of-the-pops/TotpMediaManager";
 import { TotpProductionHealthCard } from "@/features/top-of-the-pops/TotpProductionHealthCard";
+import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningSheetCard";
 import { Archive, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
 
 function formatDateTime(value: string) {
@@ -121,6 +122,8 @@ export default function TopOfThePopsAdmin() {
       </div>
 
       <TotpProductionHealthCard />
+
+      <TotpRunningSheetCard episode={current} />
 
       <TotpMediaManager presenterKey={(current as any).presenter_key ?? "alex_rayne"} />
 
