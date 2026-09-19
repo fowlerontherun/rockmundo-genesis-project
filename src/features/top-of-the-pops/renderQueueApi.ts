@@ -27,7 +27,7 @@ export interface TotpRenderJob {
   error_message: string | null;
   requested_by: string | null;
   claimed_at: string | null;
-  started_at: string | null;
+  started_at?: string | null;
   finished_at: string | null;
   created_at: string;
   updated_at: string;
@@ -37,10 +37,10 @@ export interface TotpRenderJob {
   heartbeat_at: string | null;
   max_attempts: number;
   output_metadata: Record<string, unknown>;
-  probe: Record<string, unknown>;
-  timeline_sha256: string | null;
-  master_sha256: string | null;
-  input_sha256: string | null;
+  probe?: Record<string, unknown>;
+  timeline_sha256?: string | null;
+  master_sha256?: string | null;
+  input_sha256?: string | null;
 }
 
 function normaliseJob(row: unknown): TotpRenderJob {
