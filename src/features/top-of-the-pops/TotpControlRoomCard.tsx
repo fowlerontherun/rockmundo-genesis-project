@@ -93,11 +93,6 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
     queryFn: () => getTotpComplianceReport(episode.id),
   });
 
-  const lastRehearsal = useMemo(
-    () => (audit.data ?? []).find((entry) => entry.event_kind === "rehearsal")?.created_at ?? null,
-    [audit.data],
-  );
-
   const report = useMemo(
     () =>
       buildTotpPreflight({
@@ -107,7 +102,6 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
         plan: plan.data ?? null,
         renderJobs: renders.data ?? [],
         automationHealthy: health.data?.healthy ?? null,
-        rehearsalCheckedAt: lastRehearsal,
         compliance: compliance.data
           ? {
               passed: compliance.data.passed,
@@ -118,7 +112,7 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
             }
           : null,
       }),
-    [live.data, stored.data, plan.data, renders.data, health.data, lastRehearsal, compliance.data],
+    [live.data, stored.data, plan.data, renders.data, health.data, compliance.data],
   );
 
   const logEvent = useMutation({
@@ -138,16 +132,6 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
           headline: "Episode signed off for broadcast",
           detail: preflightAuditDetail(report),
           passed: true,
-          manifestChecksum: live.data?.manifest.checksum ?? null,
-        });
-      }
-      if (kind === "rehearsal") {
-        return await logTotpProductionEvent({
-          episodeId: episode.id,
-          eventKind: "rehearsal",
-          headline: `Rehearsal pass over ${report.checks.length} checks`,
-          detail: preflightAuditDetail(report),
-          passed: report.blockers.length === 0,
           manifestChecksum: live.data?.manifest.checksum ?? null,
         });
       }
@@ -220,15 +204,6 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
               </Button>
               <Button
                 size="sm"
-                variant="secondary"
-                onClick={() => logEvent.mutate("rehearsal")}
-                disabled={logEvent.isPending || !report.rehearsalReady}
-                data-totp-log-rehearsal
-              >
-                <Radio className="mr-1.5 h-3.5 w-3.5" /> Log rehearsal pass
-              </Button>
-              <Button
-                size="sm"
                 onClick={() => logEvent.mutate("approval")}
                 disabled={logEvent.isPending || !report.renderReady}
                 data-totp-sign-off
@@ -236,9 +211,9 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
                 <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Sign off for broadcast
               </Button>
             </div>
-            {!report.rehearsalReady && (
+            {!report.renderReady && (
               <p className="text-xs text-muted-foreground">
-                A rehearsal needs at least one act with a playable recording.
+                Broadcast sign-off stays locked until the exact frozen running sheet completes a QC rehearsal render.
               </p>
             )}
 
