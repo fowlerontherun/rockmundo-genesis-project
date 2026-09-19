@@ -12,6 +12,8 @@ import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
 import { TotpEndCredits } from "./TotpEndCredits";
 import { TotpStageTransition } from "./TotpStageTransition";
+import { TotpCountdownClock } from "./TotpCountdownClock";
+import { TotpSegmentFade } from "./TotpSegmentFade";
 import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
 
 export interface TotpFullEpisodePlayerProps {
@@ -27,6 +29,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const ordered = useMemo(() => orderTotpEpisodeReplays(replays), [replays]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [continuous, setContinuous] = useState(false);
+  const [showClock, setShowClock] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [showChartRundown, setShowChartRundown] = useState(false);
   const [showStageTransition, setShowStageTransition] = useState(false);
@@ -39,9 +42,23 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
-  const fullEpisodeRunning = showIntro || showChartRundown || showStageTransition || showCredits || continuityKind !== null || continuous;
+  const fullEpisodeRunning = showClock || showIntro || showChartRundown || showStageTransition || showCredits || continuityKind !== null || continuous;
+  const segmentKey = showClock
+    ? "clock"
+    : showIntro
+      ? "intro"
+      : showStageTransition
+        ? `transition:${currentIndex}`
+        : continuityKind
+          ? `continuity:${continuityKind}:${currentIndex}`
+          : showChartRundown
+            ? "chart-rundown"
+            : showCredits
+              ? "credits"
+              : `act:${current.id}`;
 
   const goTo = (index: number) => {
+    setShowClock(false);
     setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
@@ -53,15 +70,17 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
 
   const startFullEpisode = () => {
     setCurrentIndex(0);
+    setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
     setShowCredits(false);
     setContinuityKind(null);
     setContinuous(false);
-    setShowIntro(true);
+    setShowClock(true);
   };
 
   const stopFullEpisode = () => {
+    setShowClock(false);
     setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
@@ -70,6 +89,10 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     setContinuous(false);
   };
 
+  const finishClock = () => {
+    setShowClock(false);
+    setShowIntro(true);
+  };
 
   const finishIntro = () => {
     setShowIntro(false);
@@ -135,7 +158,9 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">
-              {showCredits
+              {showClock
+                ? "Counting down"
+                : showCredits
                 ? "End credits"
                 : showIntro
                 ? "Programme intro"
@@ -157,7 +182,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
             </Button>
           </div>
         </div>
-        <Progress value={showIntro ? 0 : programmeProgress} className="mt-3 h-1.5" />
+        <Progress value={showClock || showIntro ? 0 : programmeProgress} className="mt-3 h-1.5" />
         <div className="mt-3 flex flex-wrap gap-2">
           {ordered.map((replay, index) => (
             <Button
@@ -173,37 +198,41 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
         </div>
       </div>
 
-      {showIntro ? (
-        <TotpShowIntro playing onEnded={finishIntro} />
-      ) : showStageTransition && ordered[currentIndex + 1] ? (
-        <TotpStageTransition
-          from={current}
-          to={ordered[currentIndex + 1]}
-          autoPlay={continuous}
-          onEnded={finishStageTransition}
-        />
-      ) : continuityKind ? (
-        <TotpProgrammeContinuity
-          kind={continuityKind}
-          replays={ordered}
-          currentIndex={currentIndex}
-          autoPlay={continuous}
-          onEnded={finishContinuity}
-        />
-      ) : showChartRundown && chartRundown ? (
-        <TotpChartRundownSequence rundown={chartRundown} autoPlay={continuous} onEnded={finishChartRundown} />
-      ) : showCredits ? (
-        <TotpEndCredits replays={ordered} autoPlay onEnded={finishCredits} />
-      ) : (
-        <TotpArchivePlayer
-          key={`${current.id}:${continuous ? "auto" : "manual"}`}
-          replay={current}
-          autoPlay={continuous}
-          onEnded={continuous ? finishAct : undefined}
-        />
-      )}
+      <TotpSegmentFade segmentKey={segmentKey}>
+        {showClock ? (
+          <TotpCountdownClock onEnded={finishClock} />
+        ) : showIntro ? (
+          <TotpShowIntro playing onEnded={finishIntro} />
+        ) : showStageTransition && ordered[currentIndex + 1] ? (
+          <TotpStageTransition
+            from={current}
+            to={ordered[currentIndex + 1]}
+            autoPlay={continuous}
+            onEnded={finishStageTransition}
+          />
+        ) : continuityKind ? (
+          <TotpProgrammeContinuity
+            kind={continuityKind}
+            replays={ordered}
+            currentIndex={currentIndex}
+            autoPlay={continuous}
+            onEnded={finishContinuity}
+          />
+        ) : showChartRundown && chartRundown ? (
+          <TotpChartRundownSequence rundown={chartRundown} autoPlay={continuous} onEnded={finishChartRundown} />
+        ) : showCredits ? (
+          <TotpEndCredits replays={ordered} autoPlay onEnded={finishCredits} />
+        ) : (
+          <TotpArchivePlayer
+            key={`${current.id}:${continuous ? "auto" : "manual"}`}
+            replay={current}
+            autoPlay={continuous}
+            onEnded={continuous ? finishAct : undefined}
+          />
+        )}
+      </TotpSegmentFade>
 
-      {!showIntro && !showChartRundown && !showStageTransition && !showCredits && continuityKind === null && !continuous ? (
+      {!showClock && !showIntro && !showChartRundown && !showStageTransition && !showCredits && continuityKind === null && !continuous ? (
         <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={() => goTo(currentIndex - 1)} disabled={currentIndex === 0}>
             <SkipBack className="mr-2 h-4 w-4" /> Previous act

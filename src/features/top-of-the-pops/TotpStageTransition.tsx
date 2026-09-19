@@ -3,6 +3,7 @@ import { Camera, RadioTower, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
+import { formatTotpCountdown, totpCountdownRemainingMs, totpEasedProgress, totpTransitionDipOpacity } from "./broadcastCountdown";
 
 const DURATION_MS = 2_800;
 
@@ -30,7 +31,10 @@ export function TotpStageTransition({
   const fromStage = from.payload.stage;
   const toStage = to.payload.stage;
   const sameStage = fromStage === toStage;
-  const progress = Math.min(100, elapsedMs / DURATION_MS * 100);
+  const eased = totpEasedProgress(DURATION_MS, elapsedMs);
+  const progress = eased * 100;
+  const remainingMs = totpCountdownRemainingMs(DURATION_MS, elapsedMs);
+  const dipOpacity = autoPlay ? totpTransitionDipOpacity(DURATION_MS, elapsedMs) : 0;
   const copy = useMemo(() => {
     if (sameStage) {
       return {
@@ -92,10 +96,23 @@ export function TotpStageTransition({
           <Sparkles className="h-4 w-4" />
         </div>
 
-        <div className="mt-6 w-full max-w-xl">
+        <div className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-cyan-200" data-totp-transition-countdown>
+          Up next in
+          <span className="rounded bg-white/10 px-2 py-1 text-sm tabular-nums tracking-normal text-white">
+            {formatTotpCountdown(remainingMs)}
+          </span>
+        </div>
+
+        <div className="mt-4 w-full max-w-xl">
           <Progress value={progress} className="h-1.5 bg-white/10" />
         </div>
       </div>
+      <div
+        className="pointer-events-none absolute inset-0 z-20 bg-black transition-opacity duration-100"
+        style={{ opacity: dipOpacity }}
+        aria-hidden="true"
+        data-totp-transition-dip
+      />
     </div>
   );
 }
