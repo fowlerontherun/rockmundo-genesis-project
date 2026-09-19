@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, CheckCircle2, CircleDashed, ClipboardCheck, History, Radio, ShieldCheck } from "lucide-react";
 import type { TotpEpisode } from "./api";
@@ -22,6 +24,7 @@ import {
   getTotpProductionAudit,
   logTotpProductionEvent,
   preflightAuditDetail,
+  recordTotpPreflightOverride,
   totpAuditKindLabel,
   type TotpAuditEventKind,
 } from "./productionAuditApi";
@@ -35,7 +38,7 @@ function formatWhen(value: string) {
   }).format(new Date(value));
 }
 
-function CheckRow({ item }: { item: TotpPreflightCheck }) {
+function CheckRow({ item, onAcknowledge }: { item: TotpPreflightCheck; onAcknowledge?: () => void }) {
   const Icon = item.passed ? CheckCircle2 : item.severity === "blocker" ? AlertTriangle : CircleDashed;
   const tone = item.passed
     ? "text-emerald-500"
@@ -54,6 +57,11 @@ function CheckRow({ item }: { item: TotpPreflightCheck }) {
           </span>
         </p>
         <p className="text-[11px] text-muted-foreground">{item.detail}</p>
+        {!item.passed && item.severity !== "blocker" && onAcknowledge ? (
+          <Button type="button" size="sm" variant="ghost" className="mt-1 h-6 px-2 text-[10px]" onClick={onAcknowledge}>
+            Acknowledge in log
+          </Button>
+        ) : null}
       </div>
     </li>
   );
@@ -62,6 +70,8 @@ function CheckRow({ item }: { item: TotpPreflightCheck }) {
 export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [overrideCheck, setOverrideCheck] = useState<TotpPreflightCheck | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
 
   const live = useQuery({
     queryKey: ["totp", "running-sheet", "live", episode.id],
@@ -153,6 +163,32 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
       toast({ title: "Could not save to the production log", description: error.message, variant: "destructive" }),
   });
 
+
+  const acknowledge = useMutation({
+    mutationFn: async () => {
+      if (!overrideCheck || overrideCheck.severity === "blocker") {
+        throw new Error("Blocking preflight failures cannot be acknowledged away.");
+      }
+      const checksum = live.data?.manifest.checksum;
+      if (!checksum) throw new Error("Save the current running sheet first.");
+      return recordTotpPreflightOverride({
+        episodeId: episode.id,
+        manifestChecksum: checksum,
+        checkCode: overrideCheck.code,
+        severity: overrideCheck.severity,
+        reason: overrideReason,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Acknowledgement recorded", description: "The warning remains visible and the reason is now in the production audit log." });
+      setOverrideCheck(null);
+      setOverrideReason("");
+      void queryClient.invalidateQueries({ queryKey: ["totp", "production-audit", episode.id] });
+    },
+    onError: (error: Error) =>
+      toast({ title: "Could not record acknowledgement", description: error.message, variant: "destructive" }),
+  });
+
   const loading = live.isLoading || stored.isLoading;
 
   return (
@@ -188,7 +224,14 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
 
             <ul className="space-y-1">
               {report.checks.map((item) => (
-                <CheckRow key={item.code} item={item} />
+                <CheckRow
+                  key={item.code}
+                  item={item}
+                  onAcknowledge={!item.passed && item.severity !== "blocker" ? () => {
+                    setOverrideCheck(item);
+                    setOverrideReason("");
+                  } : undefined}
+                />
               ))}
             </ul>
 
@@ -246,6 +289,37 @@ export function TotpControlRoomCard({ episode }: { episode: TotpEpisode }) {
             </div>
           </>
         )}
+        <Dialog open={Boolean(overrideCheck)} onOpenChange={(open) => {
+          if (!open) {
+            setOverrideCheck(null);
+            setOverrideReason("");
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Acknowledge production warning</DialogTitle>
+              <DialogDescription>
+                This records an editorial decision; it does not clear the warning or bypass a blocking release gate.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{overrideCheck?.label}</p>
+              <p className="text-xs text-muted-foreground">{overrideCheck?.detail}</p>
+              <Textarea
+                value={overrideReason}
+                onChange={(event) => setOverrideReason(event.target.value)}
+                placeholder="Why is it acceptable to proceed with this warning?"
+                rows={4}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOverrideCheck(null)}>Cancel</Button>
+              <Button onClick={() => acknowledge.mutate()} disabled={acknowledge.isPending || overrideReason.trim().length < 8}>
+                Record acknowledgement
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
