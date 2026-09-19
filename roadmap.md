@@ -12,13 +12,13 @@
   - [x] Deterministic caption track (presenter, chart graphics, audience) with WebVTT export and a subtitles toggle.
   - [x] Broadcast audio mix balance (song bed, presenter, audience) and end credits sequence.
   - [x] Loading and recovery states for the in-app broadcast viewer (audio preparing, retry on failure).
-- [ ] Phase 2: deterministic offline rendering and MP4 export. (Partially superseded: browser-side Export video button + Google Drive upload shipped in v1.1.745; server render queue remains for hands-off rendering.)
+- [x] Phase 2: deterministic offline rendering and MP4 export.
   - [x] Deterministic render plan from the running sheet (shot list, chapters, poster/thumbnail marks, delivery filenames, loudness targets).
   - [x] Quality-control contract (duration, resolution, frame rate, codecs, loudness, true peak, chapters) with failure reporting.
   - [x] Render queue in the database (request, claim, complete, fail, cancel) with admin-only access and one active job per episode.
   - [x] Admin render panel with planned length, chapters, progress, downloads and failed checks.
   - [x] Render worker contract documented (`docs/totp-render-worker.md`).
-  - [ ] Build and host the headless render worker that produces the actual MP4, poster, captions and chapter files.
+  - [x] Headless GitHub Actions render worker produces the MP4, poster, captions and chapter files through an OIDC-authenticated Supabase broker.
 - [x] Phase 3: production control room, rehearsal and release gates.
   - [x] Graded preflight report (blockers, warnings, notes) across running sheet, acts, audio, rights, runtime, export and automation.
   - [x] Control room page and card with rehearsal pass, sign-off and render/publish gates.
