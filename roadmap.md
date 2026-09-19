@@ -3,6 +3,9 @@
 - [x] Review the existing Top of the Pops production and broadcast foundations.
 - [x] Approve the broadcast-quality roadmap and acceptance gates.
 - [ ] Phase 0: typed calls, lifecycle checks, health monitoring and immutable broadcast contract.
+  - [x] Typed show calls, production-health panel, lifecycle harness.
+  - [x] Fixed episode running sheet with deterministic checksum, rights record and production states.
+  - [ ] Store the running sheet against the episode in the database and add route-level player/admin tests.
 - [ ] Phase 1: in-game television presentation polish and accessibility.
 - [ ] Phase 2: deterministic offline rendering and MP4 export.
 - [ ] Phase 3: production control room, rehearsal and release gates.
