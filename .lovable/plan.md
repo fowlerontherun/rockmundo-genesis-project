@@ -1,98 +1,136 @@
-# PR1: Isolate Legacy Festivals & Define Replacement System
+# Top of the Pops: broadcast-quality roadmap
 
-Scope: architecture, inventory, isolation, and safeguards only. No destructive DB changes, no new gameplay, no client-authoritative logic.
+## Review summary
 
-## 1. Inventory (verified against current repo)
+The current feature is a strong **in-game television simulation**, not yet a broadcast production pipeline.
 
-Sweep the codebase and DB for every festival-related asset. Produce two artifacts:
+Already in place:
+- Deterministic UK-chart selection, invitations, London check-in, running order, stages and presenter copy.
+- Automated five-minute lifecycle checks that lock the show, open its broadcast window, settle performances and create immutable archives.
+- A reusable 3D studio with four performance zones, planned camera shots, audience reactions, chart graphics, continuity, intro media and archived outfits.
+- Full-episode playback, live-window spoiler gating, admin dry runs, production-media uploads and a release-health database check.
+- Unit coverage for running order, playback timing, camera pacing and several supporting rules.
 
-- `docs/festivals/FESTIVAL_CURRENT_INVENTORY.md` — human-readable audit grouped by layer (routes, pages, components, hooks, services, RPCs, edge functions, tables, views, enums, triggers, policies, realtime, cron, tests, seeds, admin, integrations, generated types).
-- `docs/festivals/festival-domain-inventory.json` — machine-readable list. Each item: `{path, kind, responsibility, authority, callers, dependencies, proposed_replacement, removal_phase, risk, disposition, notes}` where `disposition ∈ {remove, replace, reuse, adapt, archive, unknown_requires_investigation}`.
+Main gaps before external release:
+- The “live” programme is currently assembled and timed inside each viewer’s browser; no canonical video file is rendered.
+- Timing uses browser clocks and separate audio elements, so it is not suitable as an exact frame/audio master.
+- Presenter fallback speech varies by device and cannot be used in a final broadcast master.
+- There is no render queue, MP4 validation, captions, loudness mastering, thumbnail package, YouTube API connection, encoder, stream-health monitor or failover programme.
+- The existing health check is not surfaced as a full production control room, and there is no dedicated TOTP end-to-end/database release gate.
+- Public music playback exists, but external broadcast rights and Content ID clearance are not represented in the episode contract.
 
-Search terms: `festival`, `festivals`, `festival_edition`, `festival_stage_slot`, `festival_participation`, `festival_application`, `festival_offer`, `festival_contract`, `festival_performance`, `city_festival`, plus RPC prefixes (`admin_festival_`, `festival_edition_`, `apply_for_festival_`, `hire_festival_`, `purchase_festival_`, `generate_festival_`, `simulate_festival_`, `calculate_festival_`, `prepare_festival_`, `apply_festival_`, `transition_festival_`, `create_festival_`).
+## Recommended route
 
-## 2. Replacement architecture
-
-`docs/festivals/FESTIVAL_REPLACEMENT_ARCHITECTURE.md` covering: rationale, dependency map, bounded contexts, canonical route structure (`/world/festivals`, `/company/festival/*`, `/festival-company/*`), festival-company vs annual-edition ownership, authority boundaries, integration with companies/VIP/finance/bands/scheduling/gigs, immutable snapshot strategy, feature-flag rollout, legacy-data strategy, safe table-retirement process, full PR sequence (12 PRs), risks and mitigations.
-
-## 3. Feature boundary
-
-Add `src/features/festival-company/config/featureFlags.ts` exposing:
-
-- `legacyFestivalSystemEnabled`
-- `newFestivalSystemEnabled`
-- `festivalCreationEnabled`
-- `festivalApplicationsEnabled`
-- `festivalLivePerformanceEnabled`
-
-Flags resolved from `import.meta.env` following existing patterns; defaults preserve current behaviour (legacy on, new off). Add central `useFestivalFeatureFlags()` hook.
-
-Route all currently registered legacy festival routes through a `<LegacyFestivalGate>` wrapper that renders a "Festivals are being rebuilt" page (`src/features/festival-company/ui/FestivalRebuildingScreen.tsx`) when `legacyFestivalSystemEnabled === false`. Admin diagnostic path preserved at `/admin/festivals/diagnostic`.
-
-Do NOT delete legacy pages.
-
-## 4. New module skeleton
+Build **deterministic MP4 export first**, then release episodes as scheduled YouTube Premieres. Only move to RTMPS live transmission after several successful automated exports. This preserves the feeling of a live show while avoiding the operational risk of making the first external release a true live encode.
 
 ```text
-src/features/festival-company/
-  README.md
-  config/featureFlags.ts
-  domain/README.md              (types placeholders)
-  application/README.md         (service boundaries)
-  data/README.md
-  permissions/README.md
-  finance/README.md
-  scheduling/README.md
-  performance/README.md
-  history/README.md
-  ui/FestivalRebuildingScreen.tsx
-  index.ts
+Game state → frozen episode manifest → deterministic render → QC → YouTube Premiere
+                                                     ↓
+                                             archive + clips
+
+Later:
+approved master → redundant playout/encoder → YouTube test → live → archive
 ```
 
-No gameplay logic; only boundary definitions + README describing intent per bounded context.
+## Phase 0 — Define the broadcast contract
 
-## 5. ADRs
+- Create one immutable episode manifest containing every act, duration, audio source, presenter line, camera cue, graphic, outfit snapshot, rights status and checksum.
+- Separate four states: gameplay episode, production-ready, rendered master and externally published.
+- Record music ownership/licence, territories, expiry, Content ID allowlisting and explicit YouTube-live permission per track.
+- Define programme specifications: initially 1920×1080, 30 fps, H.264, AAC, fixed 16:9 safe areas and stereo delivery.
+- Replace device speech synthesis in approved masters with uploaded or generated, versioned presenter audio.
 
-`docs/architecture/decisions/` (create if absent):
+**Gate:** the same manifest generated twice is byte-identical; every item has valid media, duration, rights and checksum; no uncleared track can enter production.
 
-- `0001-festival-as-company-type.md`
-- `0002-festival-company-vs-edition.md`
-- `0003-server-authoritative-booking-and-performance.md`
-- `0004-immutable-settled-history.md`
-- `0005-delayed-destructive-db-removal.md`
+## Phase 1 — Presentation polish inside the game
 
-## 6. DB retirement plan
+- Establish one broadcast graphics package for opening titles, logo bug, lower thirds, chart rundown, transitions, credits and special episodes.
+- Replace the current app-panel look during programme playback with a clean, full-frame television output; player controls remain outside that frame.
+- Improve direction from fixed repeating cuts to musical-section cues, shot variety rules, continuity limits and collision/occlusion checks.
+- Add visible presenter staging, branded studio surfaces, better lighting contrast, audience wardrobe/pose variety and more deliberate stage identities.
+- Add a proper audio mix: song, presenter, applause, crowd bed, stings and transitions with ducking and peak protection.
+- Add opening and closing credits, accessibility-safe typography and broadcast title/action safe areas.
 
-`docs/festivals/FESTIVAL_DATABASE_RETIREMENT_PLAN.md`: every festival table/view/function/trigger/policy classified (retain/migrate/archive/drop-after/unknown) with FK map, callers, rollback, backup requirements, ordering. No destructive migration. Optional non-destructive migration limited to `COMMENT ON TABLE` markers tagging legacy tables (`'legacy_festival_domain: pending replacement per PR1'`) if it clarifies the plan.
+**Gate:** creative review at representative frames from every segment; no clipped text, camera intersections, obstructed performers, repeated-shot fatigue, silence gaps or abrupt cuts; mobile playback remains usable without changing the broadcast frame.
 
-## 7. Automated safeguards
+## Phase 2 — Deterministic offline render and MP4 export
 
-`src/features/festival-company/__tests__/`:
+- Build a server-side/headless renderer driven only by the frozen manifest, not browser wall-clock time.
+- Render every frame from an authoritative timeline and mix audio into the same master clock.
+- Add a render queue with progress, retries, cancellation, idempotency and immutable output metadata.
+- Produce a mezzanine/master MP4, YouTube delivery MP4, poster image, thumbnail candidates, chapter markers and WebVTT captions.
+- Store frame count, duration, codecs, resolution, bitrate, audio sample rate and hashes against the episode.
 
-- `featureFlags.test.ts` — flag resolution, defaults.
-- `legacyFestivalGate.test.tsx` — renders rebuilding screen when disabled; renders children when enabled.
-- `festivalRoutes.registry.test.ts` — enumerates all festival routes and asserts each is present in inventory JSON (fails CI if a new festival route is added without inventory update).
-- `worldNavigation.festivals.test.ts` — asserts World nav respects gate.
-- `nonFestivalSmoke.test.ts` — asserts a sample of company + gig routes still resolve.
+**Gate:** two renders have identical timeline/hash outcomes; audio/video drift is under one frame at programme end; automated probing confirms format and duration; black-frame, frozen-frame, missing-audio, clipping and caption-overflow checks pass.
 
-## 8. Version + history
+## Phase 3 — Production control room and rehearsal
 
-Bump banner to `v1.1.604`; add version-history entry summarising PR1.
+- Surface chart freshness, running-order lock, asset readiness, rights, presenter audio, render status and delivery status in one admin view.
+- Add preflight severity: blocking, warning and informational.
+- Add a rehearsal render using the exact production manifest, plus segment preview and replacement controls before final lock.
+- Add audit history for overrides, re-renders, approvals and publish actions.
+- Create a dedicated TOTP release suite: database lifecycle harness, browser journey, visual snapshots, audio lifecycle, render smoke test and failure recovery.
 
-## Out of scope (deferred to later PRs)
+**Gate:** a full shadow episode runs from chart snapshot to approved MP4 without manual database intervention; forced failures recover without duplicate rewards, archives or uploads; blocking preflight failures cannot be overridden silently.
 
-- New festival company type creation, $2M founding transaction, VIP server check.
-- Wizard, upgrades, stages, slots, applications, offers, contracts, NPC fallbacks, performance simulation, settlement, history schema.
-- Legacy table drops.
+## Phase 4 — YouTube upload and Premiere
 
-## Technical details
+- Connect a dedicated YouTube channel through server-side OAuth; keep refresh credentials and stream credentials out of the browser.
+- Create the video from episode metadata, upload the approved MP4 resumably, set title/description/tags/thumbnail/chapters/captions and schedule it as private or unlisted first.
+- Run automated post-upload checks before scheduling a public Premiere.
+- Synchronise the in-game “Watch live” destination with the YouTube watch URL while retaining the in-game archive.
+- Record YouTube IDs, processing status, publication time and failures on the production record.
 
-- Feature flags: read `import.meta.env.VITE_FEATURE_*` with safe defaults; matches how the repo already reads env.
-- Legacy gate: minimal HOC; wrap route element in `App.tsx` route registry. Zero behavioural change while `legacyFestivalSystemEnabled` defaults to `true`.
-- Inventory generation is manual for PR1 (script optional in PR2); focus on completeness over automation.
-- Tests use existing Vitest setup; no new frameworks.
-- No Supabase migrations required. If a `COMMENT ON` marker migration is included, it will be a single reversible statement batch.
+**Gate:** three consecutive unlisted episodes upload, process and play correctly on desktop, mobile and television; captions, thumbnail and metadata appear; retries never create duplicate videos; publication can be cancelled safely.
 
-## Acceptance
+## Phase 5 — Rights, safety and accessibility hardening
 
-Build passes, typecheck passes, lint passes, tests pass. Legacy routes still function (flag on). Toggling flag off renders rebuilding screen everywhere legacy festival lives. Inventory + architecture + retirement plan + ADRs committed. Next PR clearly identified: "secure festival-company type and founding transaction".
+- Require signed player consent for external use of band names, avatars, lyrics, recordings and generated likenesses.
+- Add moderation for names, lyrics, imagery, presenter scripts and user-generated audio before rendering.
+- Establish takedown, correction, replacement and archive-retention procedures.
+- Generate captions from the authoritative script/lyrics, then validate timing and readability.
+- Add flashing-pattern, high-contrast, loudness and true-peak checks; create a clean fallback for missing or rejected assets.
+
+**Gate:** rights and moderation reports are attached to every master; a simulated takedown can remove or replace an act without corrupting game settlement; accessibility checks pass before upload.
+
+## Phase 6 — True YouTube Live transmission
+
+- Use a controlled playout service to send the approved master to YouTube over RTMPS; never expose the stream key to the app.
+- Through the YouTube Live API: create the broadcast, create/reuse the stream, bind them, start a private test, confirm the stream is active, then transition to live and complete.
+- Add a slate, countdown, standby loop and a complete backup programme so the feed never drops to black.
+- Monitor encoder health, dropped frames, bitrate, audio level, YouTube stream status and end-to-end delay.
+- Keep automated public transition disabled until private/unlisted soak tests are consistently successful.
+
+**Gate:** at least five private/unlisted rehearsals run end-to-end; one rehearsal deliberately loses its primary encoder and switches to backup without ending the event; the operator can abort, hold on standby and complete safely.
+
+## Phase 7 — Operations and audience growth
+
+- Add a fortnightly production calendar with deadlines for selection, consent, assets, rights, rehearsal, approval, upload and transmission.
+- Add alerts for stale charts, missing acts, render delays, failed YouTube processing, stream degradation and unclosed broadcasts.
+- Create post-show clips and Shorts only from rights-cleared moments, with links back to the full programme and game.
+- Track concurrent viewers, average watch time, retention by segment, replay views, clip conversion and in-game participation.
+- Run quarterly disaster-recovery rehearsals and keep credentials, runbooks and responsibilities current.
+
+**Gate:** two production cycles complete without emergency database work; alerts arrive before viewer impact; post-show reports reconcile YouTube and game episode IDs.
+
+## Quality scorecard for every episode
+
+- **Editorial:** chart snapshot fresh, eligibility reproducible, no consecutive act breach, #1 closes where applicable.
+- **Visual:** no blank frames, clipping, unsafe text, camera collisions, missing models or unreadable graphics.
+- **Audio:** all sources present, speech intelligible, music/presenter/crowd balanced, no clipping, silence or end drift.
+- **Technical:** exact duration, expected frame count, H.264/AAC delivery, stable frame cadence, valid checksum and captions.
+- **Rights and safety:** every asset cleared, consent current, moderation passed, Content ID handling confirmed.
+- **Reliability:** retry-safe render/upload, no duplicate settlement, backup master available, operator abort tested.
+- **Audience:** watch page ready, metadata/thumbnail approved, captions published, archive and links verified.
+
+## Initial delivery target
+
+Aim first for a polished **12–20 minute prerecorded episode** published as an unlisted YouTube Premiere. Use 3–5 acts, one chart segment and fixed recorded presenter links. Do not attempt a public live broadcast until Phases 0–5 have passed repeatedly.
+
+## Technical notes
+
+- YouTube models a broadcast event separately from its ingest stream; they must be created and bound before transmission.
+- YouTube requires an active stream before transitioning a broadcast to testing or live.
+- YouTube recommends representative pre-show testing and live stream-health monitoring; 1080p30 H.264 is a practical initial target.
+- YouTube scans live streams for third-party copyrighted material, and even licensed content can be interrupted without Content ID allowlisting. Rights clearance is therefore a release blocker, not a later enhancement.
+- The render/encode worker must run outside the browser and outside short-lived request handling; the existing client app remains the control and viewing surface.
