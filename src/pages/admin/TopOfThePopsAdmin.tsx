@@ -16,6 +16,7 @@ import { TotpTestEpisodeCard } from "@/features/top-of-the-pops/TotpTestEpisodeC
 import { TotpMediaManager } from "@/features/top-of-the-pops/TotpMediaManager";
 import { TotpProductionHealthCard } from "@/features/top-of-the-pops/TotpProductionHealthCard";
 import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningSheetCard";
+import { TotpControlRoomCard } from "@/features/top-of-the-pops/TotpControlRoomCard";
 import { TotpRenderQueueCard } from "@/features/top-of-the-pops/TotpRenderQueueCard";
 import { Link } from "react-router-dom";
 import { Archive, CalendarDays, CheckCircle2, Clapperboard, LockKeyhole, Tv2 } from "lucide-react";
