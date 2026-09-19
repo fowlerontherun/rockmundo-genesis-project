@@ -215,3 +215,6 @@ verify_jwt = true
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.totp-render-broker]
+verify_jwt = false
