@@ -34,7 +34,7 @@ function manifest(segments: TotpManifestSegment[]): TotpEpisodeManifest {
     segments,
     total_runtime_ms: segments.length * 210_000,
     checksum: "abc123def456",
-  } as TotpEpisodeManifest;
+  } as unknown as TotpEpisodeManifest;
 }
 
 describe("buildTotpPreflight", () => {
