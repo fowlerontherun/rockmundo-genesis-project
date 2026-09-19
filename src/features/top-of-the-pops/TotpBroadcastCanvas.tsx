@@ -17,10 +17,10 @@ export interface TotpBroadcastCanvasProps {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; cue?: TotpBroadcastCue | null;
   audienceReaction?: number | null; presenterKey?: string | null; showVariant?: string | null; reducedMotion?: boolean;
   performancePreference?: PerformancePreference; className?: string; playerModelsSnapshot?: GigPlayerModelsData | null;
-  captions?: TotpCaptionCue[]; showCaptions?: boolean; showSafeAreaGuides?: boolean;
+  captions?: TotpCaptionCue[]; showCaptions?: boolean; showSafeAreaGuides?: boolean; enableAudienceAudio?: boolean;
 }
 
-export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null, captions, showCaptions = false, showSafeAreaGuides = false }: TotpBroadcastCanvasProps) {
+export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null, captions, showCaptions = false, showSafeAreaGuides = false, enableAudienceAudio = true }: TotpBroadcastCanvasProps) {
   const directedShot = reducedMotion ? "studio_master" : cue?.cameraShot ?? "studio_master";
   const directedStage = cue?.stage ?? "main_stage";
   const lowerThird = cue?.type === "graphic" ? cue.graphic : null;
@@ -53,7 +53,7 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
       : cue?.type === "audience"
         ? "MAKE SOME NOISE"
         : "LIVE PERFORMANCE";
-  useTotpAudienceAudio({ playbackState, cue, audienceReaction: lockedAudienceReaction });
+  useTotpAudienceAudio({ playbackState, cue, audienceReaction: lockedAudienceReaction, enabled: enableAudienceAudio });
   const activeCaption = showCaptions && captions?.length ? activeTotpCaption(captions, playbackState.positionMs) : null;
 
   return <div className={className ?? "relative h-full min-h-[28rem] w-full overflow-hidden bg-slate-950"} data-totp-broadcast data-totp-cue={cue?.type ?? "performance"} data-totp-shot={directedShot} data-totp-stage={directedStage} data-totp-presenter={presenter.key} data-totp-show-variant={showVariant ?? "regular"} data-totp-audience-reaction={lockedAudienceReaction} data-totp-audience-label={audienceLabel.toLowerCase()} data-totp-visual-source={playerModelsSnapshot ? "archive" : "live"}>
