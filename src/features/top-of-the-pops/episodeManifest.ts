@@ -79,6 +79,7 @@ export interface TotpManifestIssue {
   severity: "blocking" | "warning";
   code:
     | "missing_song_audio"
+    | "missing_presenter_audio"
     | "missing_duration"
     | "rights_not_cleared"
     | "rights_expired"
@@ -249,6 +250,16 @@ export function validateTotpEpisodeManifest(
         code: "missing_duration",
         performance_id: segment.performance_id,
         message: `${segment.band_name} — “${segment.song_title}” has no measured duration.`,
+      });
+    }
+
+    const presenterAudio = segment.assets.find((asset) => asset.kind === "presenter_audio");
+    if (!presenterAudio?.url) {
+      issues.push({
+        severity: "blocking",
+        code: "missing_presenter_audio",
+        performance_id: segment.performance_id,
+        message: `${segment.band_name} has no recorded presenter audio for the approved master.`,
       });
     }
 
