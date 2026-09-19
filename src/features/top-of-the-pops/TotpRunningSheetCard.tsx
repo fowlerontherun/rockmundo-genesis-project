@@ -43,6 +43,13 @@ export function TotpRunningSheetCard({ episode }: { episode: TotpEpisode }) {
     queryFn: () => getStoredTotpEpisodeManifest(episode.id),
   });
 
+  const plan = useQuery({
+    queryKey: ["totp", "episode-plan", episode.id],
+    queryFn: () => getTotpEpisodePlan(episode.id),
+  });
+
+
+
   const save = useMutation({
     mutationFn: async (productionState: TotpProductionState) => {
       if (!live.data) throw new Error("The running sheet has not been built yet.");
