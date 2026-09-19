@@ -58,7 +58,13 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
       {cue?.type === "audience" ? <div className="absolute inset-0 animate-in fade-in duration-300 bg-[radial-gradient(circle_at_50%_65%,rgba(244,114,182,.16),transparent_48%)]" /> : null}
       {cue?.type === "performance" && cue.id === "performance-1" ? <div className="absolute inset-x-0 top-0 h-1 animate-pulse bg-gradient-to-r from-cyan-300 via-white to-fuchsia-400" /> : null}
       <div className="absolute inset-0 opacity-[0.045] mix-blend-screen [background-image:repeating-linear-gradient(0deg,transparent_0,transparent_2px,rgba(255,255,255,.35)_3px)]" />
-      <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4 text-white">
+      {showSafeAreaGuides ? (
+        <>
+          <div className="absolute border border-dashed border-cyan-300/40" style={totpSafeAreaStyle("action")} data-totp-safe-area="action" />
+          <div className="absolute border border-dashed border-fuchsia-300/40" style={totpSafeAreaStyle("title")} data-totp-safe-area="title" />
+        </>
+      ) : null}
+      <div className="absolute flex items-start justify-between gap-3 text-white" style={{ ...totpSafeAreaStyle("title"), bottom: "auto" }} data-totp-branding>
         <div className="border-l-4 border-cyan-300 bg-fuchsia-700/90 px-3 py-2 text-xs font-black tracking-[0.18em] shadow-lg backdrop-blur">
           TOP OF THE POPS{variantLabel ? ` · ${variantLabel.toUpperCase()}` : ""}
         </div>
