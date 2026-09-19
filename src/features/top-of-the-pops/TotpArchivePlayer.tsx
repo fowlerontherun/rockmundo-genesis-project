@@ -10,6 +10,7 @@ import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel
 import { resolveEquippedClothingVisual } from "@/features/clothing-preview/equippedClothing";
 import { getTotpPerformanceAudio, type TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
+import { buildTotpCaptionCues } from "./broadcastCaptions";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
 import { totpAudienceReactionLabel } from "./studioAudience";
