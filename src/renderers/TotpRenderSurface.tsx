@@ -77,12 +77,7 @@ function replayForItem(item: TotpRenderItem, replays: TotpBroadcastReplay[]) {
   return replays.find((row) => row.performance_id === item.performance_id) ?? null;
 }
 
-function BroadcastItem({ item, localMs, replays }: { item: TotpRenderItem; localMs: number; replays: TotpBroadcastReplay[] }) {
-  const source = replayForItem(item, replays);
-  if (!source) {
-    return <div className="flex h-full w-full items-center justify-center bg-black text-4xl font-black text-white">PROGRAMME MATERIAL UNAVAILABLE</div>;
-  }
-
+function BroadcastReplayItem({ item, localMs, source }: { item: TotpRenderItem; localMs: number; source: TotpBroadcastReplay }) {
   const replay = useMemo(() => archivedReplay(source), [source]);
   const experience = useMemo(() => archivedExperience(source), [source]);
   const models = useMemo(() => archivedPlayerModels(source), [source]);
@@ -130,6 +125,13 @@ function BroadcastItem({ item, localMs, replays }: { item: TotpRenderItem; local
       showSafeAreaGuides={false}
     />
   );
+}
+
+function BroadcastItem({ item, localMs, replays }: { item: TotpRenderItem; localMs: number; replays: TotpBroadcastReplay[] }) {
+  const source = replayForItem(item, replays);
+  return source
+    ? <BroadcastReplayItem item={item} localMs={localMs} source={source} />
+    : <div className="flex h-full w-full items-center justify-center bg-black text-4xl font-black text-white">PROGRAMME MATERIAL UNAVAILABLE</div>;
 }
 
 export function TotpRenderSurface({ payload, frame }: { payload: TotpOfflineRenderPayload; frame: TotpOfflineRenderFrame }) {
