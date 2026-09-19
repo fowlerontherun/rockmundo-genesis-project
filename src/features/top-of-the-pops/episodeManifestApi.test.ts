@@ -118,6 +118,22 @@ describe("TOTP stored running sheet", () => {
     expect(issues.map((issue) => issue.code)).toContain("rights_not_cleared");
   });
 
+  it("blocks a nominally cleared track until Content ID and YouTube permission are confirmed", async () => {
+    const plan = clearedPlan();
+    plan.broadcast_rights.s1.content_id_allowlisted = false;
+    plan.broadcast_rights.s1.youtube_live_permitted = false;
+    getTotpEpisodePlan.mockResolvedValue(plan);
+    getTotpPerformanceAudio.mockResolvedValue({
+      audio_url: "https://cdn/p1.mp3",
+      audio_generation_status: "complete",
+      duration_seconds: 182,
+    });
+
+    const { issues } = await buildTotpEpisodeManifestFromEpisode(episode);
+    expect(issues.map((issue) => issue.code)).toContain("content_id_not_allowlisted");
+    expect(issues.map((issue) => issue.code)).toContain("youtube_not_permitted");
+  });
+
   it("blocks stale presenter audio when the script has changed", async () => {
     const plan = clearedPlan();
     plan.presenter_audio.p1.script_checksum = "old-script";
