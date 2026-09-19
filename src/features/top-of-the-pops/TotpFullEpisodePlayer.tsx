@@ -10,6 +10,7 @@ import { TotpArchivePlayer } from "./TotpArchivePlayer";
 import { TotpChartRundownSequence } from "./TotpChartRundownSequence";
 import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
+import { TotpEndCredits } from "./TotpEndCredits";
 import { TotpStageTransition } from "./TotpStageTransition";
 import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
 
@@ -29,6 +30,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const [showIntro, setShowIntro] = useState(false);
   const [showChartRundown, setShowChartRundown] = useState(false);
   const [showStageTransition, setShowStageTransition] = useState(false);
+  const [showCredits, setShowCredits] = useState(false);
   const [continuityKind, setContinuityKind] = useState<TotpContinuityKind | null>(null);
   const current = ordered[currentIndex] ?? null;
   const hasChartRundown = totpRundownHasRealPositions(chartRundown);
@@ -37,12 +39,13 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
-  const fullEpisodeRunning = showIntro || showChartRundown || showStageTransition || continuityKind !== null || continuous;
+  const fullEpisodeRunning = showIntro || showChartRundown || showStageTransition || showCredits || continuityKind !== null || continuous;
 
   const goTo = (index: number) => {
     setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
+    setShowCredits(false);
     setContinuityKind(null);
     setContinuous(false);
     setCurrentIndex(Math.max(0, Math.min(ordered.length - 1, index)));
@@ -52,6 +55,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     setCurrentIndex(0);
     setShowChartRundown(false);
     setShowStageTransition(false);
+    setShowCredits(false);
     setContinuityKind(null);
     setContinuous(false);
     setShowIntro(true);
@@ -61,9 +65,11 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     setShowIntro(false);
     setShowChartRundown(false);
     setShowStageTransition(false);
+    setShowCredits(false);
     setContinuityKind(null);
     setContinuous(false);
   };
+
 
   const finishIntro = () => {
     setShowIntro(false);
@@ -100,6 +106,11 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
       return;
     }
     setContinuityKind(null);
+    setShowCredits(true);
+  };
+
+  const finishCredits = () => {
+    setShowCredits(false);
     setContinuous(false);
   };
 
@@ -124,7 +135,9 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">
-              {showIntro
+              {showCredits
+                ? "End credits"
+                : showIntro
                 ? "Programme intro"
                 : showChartRundown
                   ? "Chart rundown"
@@ -179,6 +192,8 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
         />
       ) : showChartRundown && chartRundown ? (
         <TotpChartRundownSequence rundown={chartRundown} autoPlay={continuous} onEnded={finishChartRundown} />
+      ) : showCredits ? (
+        <TotpEndCredits replays={ordered} autoPlay onEnded={finishCredits} />
       ) : (
         <TotpArchivePlayer
           key={`${current.id}:${continuous ? "auto" : "manual"}`}
@@ -188,7 +203,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
         />
       )}
 
-      {!showIntro && !showChartRundown && !showStageTransition && continuityKind === null && !continuous ? (
+      {!showIntro && !showChartRundown && !showStageTransition && !showCredits && continuityKind === null && !continuous ? (
         <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={() => goTo(currentIndex - 1)} disabled={currentIndex === 0}>
             <SkipBack className="mr-2 h-4 w-4" /> Previous act

@@ -11,6 +11,7 @@ import { resolveEquippedClothingVisual } from "@/features/clothing-preview/equip
 import { getTotpPerformanceAudio, type TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { buildTotpCaptionCues } from "./broadcastCaptions";
+import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
 import { totpAudienceReactionLabel } from "./studioAudience";
@@ -149,6 +150,9 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     [source],
   );
   const [resolvedBroadcastAudio, setResolvedBroadcastAudio] = useState<{ url: string | null; durationSeconds: number | null } | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioLoadFailed, setAudioLoadFailed] = useState(false);
+  const [audioAttempt, setAudioAttempt] = useState(0);
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
   const presenterAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -166,20 +170,27 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
 
   useEffect(() => {
     setResolvedBroadcastAudio(null);
+    setAudioLoadFailed(false);
     if (source.payload.song.audioUrl || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(source.performance_id)) return;
     let cancelled = false;
+    setAudioLoading(true);
     void getTotpPerformanceAudio(source.performance_id)
       .then((audio) => {
-        if (!cancelled) setResolvedBroadcastAudio({
+        if (cancelled) return;
+        setResolvedBroadcastAudio({
           url: audio?.audio_url?.trim() || null,
           durationSeconds: audio?.duration_seconds ?? null,
         });
+        setAudioLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setResolvedBroadcastAudio({ url: null, durationSeconds: null });
+        if (cancelled) return;
+        setResolvedBroadcastAudio({ url: null, durationSeconds: null });
+        setAudioLoadFailed(true);
+        setAudioLoading(false);
       });
     return () => { cancelled = true; };
-  }, [source.performance_id, source.payload.song.audioUrl]);
+  }, [source.performance_id, source.payload.song.audioUrl, audioAttempt]);
 
   useEffect(() => {
     const url = source.payload.song.audioUrl?.trim() || resolvedBroadcastAudio?.url || "";
@@ -188,7 +199,8 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     if (!url) return;
     const audio = new Audio(url);
     audio.preload = "auto";
-    audio.volume = 0.9;
+    audio.volume = clampTotpGain(totpMixLevels("performance", audienceReaction).songBed);
+    audio.onerror = () => setAudioLoadFailed(true);
     songAudioRef.current = audio;
     return () => {
       audio.pause();
@@ -196,7 +208,14 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
       audio.load();
       if (songAudioRef.current === audio) songAudioRef.current = null;
     };
-  }, [resolvedBroadcastAudio?.url, source.id, source.payload.song.audioUrl]);
+  }, [resolvedBroadcastAudio?.url, source.id, source.payload.song.audioUrl, audienceReaction]);
+
+  // Broadcast mix: duck the song bed under presenter links and audience reactions.
+  useEffect(() => {
+    const audio = songAudioRef.current;
+    if (!audio) return;
+    audio.volume = clampTotpGain(totpMixLevels(cue?.type, audienceReaction).songBed);
+  }, [cue?.type, audienceReaction]);
 
   useEffect(() => {
     if (!playing) {
@@ -304,7 +323,20 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
   };
   const progress = Math.min(100, positionMs / Math.max(1, replay.durationMs) * 100);
   return <div className="space-y-3 rounded-xl border bg-card p-3" data-totp-archive-player data-visual-snapshot={playerModelsSnapshot ? "locked" : "legacy-fallback"}>
-    <div className="mx-auto aspect-video min-h-[20rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10"><TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" /></div>
+    <div className="relative mx-auto aspect-video min-h-[20rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10">
+      <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
+      {audioLoading ? (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 text-center text-sm font-semibold text-white" data-totp-audio-loading>
+          <span className="animate-pulse tracking-[0.18em]">PREPARING BROADCAST AUDIO…</span>
+        </div>
+      ) : null}
+      {audioLoadFailed && !audioLoading ? (
+        <div className="absolute inset-x-0 bottom-0 z-40 flex flex-wrap items-center justify-between gap-2 bg-red-900/85 px-4 py-2 text-xs font-semibold text-white" data-totp-audio-recovery>
+          <span>The recording for this act could not be loaded. The performance still plays without it.</span>
+          <Button size="sm" variant="secondary" onClick={() => { setAudioLoadFailed(false); setAudioAttempt((value) => value + 1); }}>Try audio again</Button>
+        </div>
+      ) : null}
+    </div>
     <div className="space-y-2"><Progress value={progress} className="h-1.5" /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => setPlaying((value) => !value)}>{playing ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}{playing ? "Pause" : "Play"}</Button><Button size="sm" variant="outline" onClick={restart}><RotateCcw className="mr-2 h-4 w-4" /> Restart</Button><Button size="sm" variant="outline" onClick={() => setCaptionsEnabled((value) => !value)} aria-pressed={captionsEnabled} data-totp-captions-toggle>{captionsEnabled ? <Captions className="mr-2 h-4 w-4" /> : <CaptionsOff className="mr-2 h-4 w-4" />}{captionsEnabled ? "Subtitles on" : "Subtitles off"}</Button>{(source.payload.song.audioUrl || resolvedBroadcastAudio?.url) ? <Button size="sm" variant={audioBlocked ? "default" : "outline"} onClick={audioBlocked ? enableBlockedAudio : toggleAudio}>{audioEnabled ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}{audioBlocked ? "Enable song audio" : audioEnabled ? "Song audio on" : "Song audio off"}</Button> : <span className="self-center text-xs text-muted-foreground">No recording attached to this song</span>}</div><div className="text-xs text-muted-foreground">{presenter.displayName}{variantLabel ? ` · ${variantLabel}` : ""} · {totpAudienceReactionLabel(audienceReaction)} audience · {playerModelsSnapshot ? "historical outfits locked" : "legacy outfit fallback"} · checksum {source.checksum.slice(0, 8)} · replay v{source.replay_version}</div></div></div>
   </div>;
 }
