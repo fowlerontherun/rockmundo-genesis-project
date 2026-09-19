@@ -86,7 +86,7 @@ export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerMode
   return frozen > 0 ? { appearances, richClothing } : null;
 }
 
-export export function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
+export function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
   const payload = source.payload, audienceReaction = lockedAudienceReaction(source);
   const baseCrowdEnergy = Math.max(28, Math.min(62, 44 + audienceReaction * 2));
   const performanceCrowdEnergy = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
@@ -116,7 +116,7 @@ export export function archivedReplay(source: TotpBroadcastReplay): GigViewerRep
   return { id: source.id, gigId: `totp:${payload.performanceId}`, gigOutcomeId: `totp:${payload.performanceId}`, viewerVersion: 1, eventSchemaVersion: 1, simulationSeed: source.checksum, durationMs: payload.totalDurationMs, generatedAt: source.generated_at, events, checksum: source.checksum, status: "ready", resultAvailable: false } as GigViewerReplay;
 }
 
-export export function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
+export function archivedExperience(source: TotpBroadcastReplay): GigExperienceDTO {
   const payload = source.payload, audienceReaction = lockedAudienceReaction(source), crowdPeak = Math.max(50, Math.min(92, 70 + audienceReaction * 3));
   return {
     schemaVersion: 1,
