@@ -62,6 +62,7 @@ export default function TopOfThePopsControlRoom() {
           <TotpControlRoomCard episode={current} />
           <TotpRunningSheetCard episode={current} />
           <TotpRenderQueueCard episode={current} />
+          <TotpYoutubePublishCard episode={current} />
         </>
       ) : (
         <Card>
