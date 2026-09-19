@@ -329,7 +329,38 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     void audio.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
   };
   const progress = Math.min(100, positionMs / Math.max(1, replay.durationMs) * 100);
-  return <div className="space-y-3 rounded-xl border bg-card p-3" data-totp-archive-player data-visual-snapshot={playerModelsSnapshot ? "locked" : "legacy-fallback"}>
+  const startExport = async () => {
+    const container = containerRef.current;
+    if (!container || exportState === "recording" || exportState === "finishing") return;
+    setExportError(null);
+    setExportPercent(0);
+    exportStopRef.current = false;
+    restart();
+    try {
+      const recording = recordTotpBroadcast({
+        container,
+        songAudio: songAudioRef.current,
+        presenterAudio: presenterAudioRef.current,
+        durationMs: replay.durationMs,
+        shouldStop: () => exportStopRef.current,
+        onProgress: (update) => {
+          setExportState(update.state === "recording" ? "recording" : "finishing");
+          setExportPercent(update.percent);
+        },
+      });
+      setExportState("recording");
+      setPlaying(true);
+      const blob = await recording;
+      setPlaying(false);
+      downloadTotpExport(blob, totpExportFileName(source.episode_number, source.payload.episodeDate, blob));
+      setExportState("idle");
+    } catch (error) {
+      setPlaying(false);
+      setExportState("error");
+      setExportError(error instanceof TotpExportUnsupportedError || error instanceof Error ? error.message : "The export failed — please try again.");
+    }
+  };
+  return <div ref={containerRef} className="space-y-3 rounded-xl border bg-card p-3" data-totp-archive-player data-visual-snapshot={playerModelsSnapshot ? "locked" : "legacy-fallback"}>
     <div className="relative mx-auto aspect-video min-h-[20rem] w-full max-w-5xl overflow-hidden rounded-lg bg-black shadow-2xl ring-1 ring-white/10">
       <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
       {audioLoading ? (
