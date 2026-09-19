@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Clapperboard, Download, RefreshCw, XCircle } from "lucide-react";
 import type { TotpEpisode } from "./api";
@@ -11,6 +12,7 @@ import {
   cancelTotpRender,
   enqueueTotpRender,
   getTotpRenderJobs,
+  resolveTotpRenderArtifactUrl,
   totpRenderStateLabel,
 } from "./renderQueueApi";
 import { buildTotpRenderPlan } from "./renderSpec";
@@ -57,6 +59,16 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
     },
     onError: (error: unknown) => {
       toast({ title: "Could not queue the render", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
+    },
+  });
+
+  const openArtifact = useMutation({
+    mutationFn: resolveTotpRenderArtifactUrl,
+    onSuccess: (url) => {
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+    },
+    onError: (error: unknown) => {
+      toast({ title: "Could not open render file", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
     },
   });
 
@@ -136,6 +148,15 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
                     Attempt {job.attempts} · {new Date(job.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })}
                   </span>
                 </div>
+                {job.state === "queued" || job.state === "rendering" ? (
+                  <div className="mt-2 space-y-1">
+                    <Progress value={job.progress_percent} className="h-1.5" />
+                    <p className="text-[11px] text-muted-foreground">
+                      {job.progress_percent}%{job.progress_stage ? ` · ${job.progress_stage.replaceAll("_", " ")}` : ""}
+                      {job.attempts > 0 ? ` · attempt ${job.attempts}/${job.max_attempts}` : ""}
+                    </p>
+                  </div>
+                ) : null}
                 {job.error_message ? <p className="mt-1 text-[11px] text-destructive">{job.error_message}</p> : null}
                 {job.qc && "failures" in job.qc && job.qc.failures?.length ? (
                   <ul className="mt-1 list-disc pl-4 text-[11px] text-destructive">
@@ -146,15 +167,15 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
                 ) : null}
                 {job.artifacts.length ? (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {job.artifacts.map((artifact) => (
-                      <Button key={artifact.kind} size="sm" variant="outline" asChild={Boolean(artifact.url)} disabled={!artifact.url}>
-                        {artifact.url ? (
-                          <a href={artifact.url} target="_blank" rel="noreferrer">
-                            <Download className="mr-2 h-3.5 w-3.5" /> {artifact.kind}
-                          </a>
-                        ) : (
-                          <span>{artifact.kind}</span>
-                        )}
+                    {job.artifacts.map((artifact, index) => (
+                      <Button
+                        key={`${artifact.kind}-${artifact.filename}-${index}`}
+                        size="sm"
+                        variant="outline"
+                        disabled={!artifact.url || openArtifact.isPending}
+                        onClick={() => openArtifact.mutate(artifact)}
+                      >
+                        <Download className="mr-2 h-3.5 w-3.5" /> {artifact.kind}
                       </Button>
                     ))}
                   </div>
