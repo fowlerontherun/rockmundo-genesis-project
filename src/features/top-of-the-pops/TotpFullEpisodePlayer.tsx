@@ -10,6 +10,7 @@ import { TotpArchivePlayer } from "./TotpArchivePlayer";
 import { TotpChartRundownSequence } from "./TotpChartRundownSequence";
 import { TotpProgrammeContinuity } from "./TotpProgrammeContinuity";
 import { TotpShowIntro } from "./TotpShowIntro";
+import { TotpEndCredits } from "./TotpEndCredits";
 import { TotpStageTransition } from "./TotpStageTransition";
 import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
 
@@ -185,6 +186,8 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
         />
       ) : showChartRundown && chartRundown ? (
         <TotpChartRundownSequence rundown={chartRundown} autoPlay={continuous} onEnded={finishChartRundown} />
+      ) : showCredits ? (
+        <TotpEndCredits replays={ordered} autoPlay onEnded={finishCredits} />
       ) : (
         <TotpArchivePlayer
           key={`${current.id}:${continuous ? "auto" : "manual"}`}
