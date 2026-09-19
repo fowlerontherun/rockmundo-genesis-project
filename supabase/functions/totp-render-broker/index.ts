@@ -90,6 +90,29 @@ Deno.serve(async (req: Request) => {
   const workerId = String(body.workerId ?? `github-${claims.run_id ?? "unknown"}-${claims.run_attempt ?? "1"}`).slice(0, 180);
 
   try {
+    if (operation === "peek") {
+      const { data: queued, error: queuedError } = await service
+        .from("totp_render_jobs")
+        .select("id")
+        .eq("state", "queued")
+        .limit(1);
+      if (queuedError) throw queuedError;
+      if ((queued ?? []).length > 0) return json(200, { hasWork: true });
+
+      const { data: rendering, error: renderingError } = await service
+        .from("totp_render_jobs")
+        .select("id,attempts,heartbeat_at,claimed_at,created_at")
+        .eq("state", "rendering")
+        .limit(20);
+      if (renderingError) throw renderingError;
+      const staleBefore = Date.now() - 15 * 60 * 1000;
+      const hasStaleLease = (rendering ?? []).some((row) => {
+        const leaseAt = row.heartbeat_at ?? row.claimed_at ?? row.created_at;
+        return leaseAt ? new Date(leaseAt).getTime() < staleBefore : true;
+      });
+      return json(200, { hasWork: hasStaleLease });
+    }
+
     if (operation === "claim") {
       const { data: job, error: claimError } = await service.rpc("totp_claim_render_job_v2", {
         p_worker_id: workerId,
