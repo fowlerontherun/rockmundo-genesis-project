@@ -7,6 +7,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { once } from "node:events";
 import {
   FPS,
   FRAME_MS,
@@ -102,9 +103,28 @@ function pickSound(sounds, types, intensity, seed) {
   return nearest[hashSeed(seed) % nearest.length] ?? nearest[0];
 }
 
-async function renderFrames({ plan, replays, token, workerId, jobId, workDir }) {
-  const framesDir = path.join(workDir, "frames");
-  await fsp.mkdir(framesDir, { recursive: true });
+async function renderVideo({ plan, replays, token, workerId, jobId, workDir }) {
+  const videoOnly = path.join(workDir, "video-only.mp4");
+  const totalFrames = frameCount(plan);
+  const encoderArgs = [
+    "-hide_banner", "-loglevel", "error", "-y",
+    "-f", "image2pipe", "-framerate", String(FPS), "-vcodec", "mjpeg", "-i", "pipe:0",
+    "-frames:v", String(totalFrames),
+    "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+    "-pix_fmt", "yuv420p", "-r", String(FPS),
+    "-movflags", "+faststart", "-map_metadata", "-1",
+    videoOnly,
+  ];
+  const encoder = spawn("ffmpeg", encoderArgs, { stdio: ["pipe", "pipe", "pipe"] });
+  let encoderError = "";
+  encoder.stderr.on("data", (chunk) => { encoderError += chunk; });
+  const encoderDone = new Promise((resolve, reject) => {
+    encoder.on("error", reject);
+    encoder.on("close", (code) => code === 0
+      ? resolve()
+      : reject(new Error(`Frame encoder exited ${code}: ${encoderError.slice(-5000)}`)));
+  });
+
   const browser = await chromium.launch({
     headless: true,
     args: [
@@ -115,6 +135,7 @@ async function renderFrames({ plan, replays, token, workerId, jobId, workDir }) 
       "--force-device-scale-factor=1",
     ],
   });
+
   try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
     page.on("console", (message) => {
@@ -125,7 +146,7 @@ async function renderFrames({ plan, replays, token, workerId, jobId, workDir }) 
     await page.evaluate(({ plan, replays }) => window.__totpRenderBootstrap({ plan, replays }), { plan, replays });
     await page.waitForFunction(() => window.__totpRenderReady === true, null, { timeout: 60_000 });
 
-    const totalFrames = frameCount(plan);
+    const surface = page.locator("[data-totp-offline-render]");
     let previousItem = -1;
     let lastHeartbeat = Date.now();
 
@@ -142,22 +163,28 @@ async function renderFrames({ plan, replays, token, workerId, jobId, workDir }) 
         previousItem = frame.itemIndex;
       }
 
-      const target = path.join(framesDir, `frame-${String(frameIndex + 1).padStart(8, "0")}.jpg`);
-      await page.locator("[data-totp-offline-render]").screenshot({
-        path: target,
+      const jpeg = await surface.screenshot({
         type: "jpeg",
-        quality: 92,
+        quality: 90,
         animations: "disabled",
       });
+      if (!encoder.stdin.write(jpeg)) await once(encoder.stdin, "drain");
 
       if (Date.now() - lastHeartbeat > 12_000 || frameIndex === totalFrames - 1) {
         const progress = Math.min(70, Math.max(1, Math.round(((frameIndex + 1) / totalFrames) * 70)));
         await broker(token, { operation: "heartbeat", workerId, jobId, progress });
         lastHeartbeat = Date.now();
-        console.log(`[TOTP] captured ${frameIndex + 1}/${totalFrames} frames (${progress}%)`);
+        console.log(`[TOTP] rendered ${frameIndex + 1}/${totalFrames} frames (${progress}%)`);
       }
     }
-    return framesDir;
+
+    encoder.stdin.end();
+    await encoderDone;
+    return videoOnly;
+  } catch (error) {
+    encoder.stdin.destroy();
+    encoder.kill("SIGKILL");
+    throw error;
   } finally {
     await browser.close();
   }
@@ -259,23 +286,10 @@ async function masterAudio(input) {
   };
 }
 
-async function encode({ plan, framesDir, mixedAudio, workDir }) {
-  const videoOnly = path.join(workDir, "video-only.mp4");
+async function encode({ plan, videoOnly, mixedAudio, workDir }) {
   const master = path.join(workDir, plan.delivery.master);
   const proxy = path.join(workDir, plan.delivery.proxy);
   const totalSeconds = (plan.total_duration_ms / 1000).toFixed(3);
-
-  await run("ffmpeg", [
-    "-hide_banner", "-loglevel", "error", "-y",
-    "-framerate", String(FPS),
-    "-i", path.join(framesDir, "frame-%08d.jpg"),
-    "-t", totalSeconds,
-    "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-    "-pix_fmt", "yuv420p", "-r", String(FPS),
-    "-movflags", "+faststart",
-    "-map_metadata", "-1",
-    videoOnly,
-  ]);
 
   const mastered = await masterAudio(mixedAudio);
   await run("ffmpeg", [
@@ -484,12 +498,12 @@ async function renderJob(claim, token) {
   console.log(`[TOTP] rendering episode ${plan.episode_number} job ${job.id} in ${workDir}`);
   try {
     const timelineSha256 = sha256Text(stableStringify(plan));
-    const framesDir = await renderFrames({ plan, replays, token, workerId, jobId: job.id, workDir });
+    const videoOnly = await renderVideo({ plan, replays, token, workerId, jobId: job.id, workDir });
     await broker(token, { operation: "heartbeat", workerId, jobId: job.id, progress: 72 });
 
     const mixedAudio = await buildAudio({ plan, replays, crowdSounds: crowdSounds ?? [], workDir });
     const inputSha256 = await inputFingerprint(workDir, manifest, replays);
-    const { master, proxy } = await encode({ plan, framesDir, mixedAudio, workDir });
+    const { master, proxy } = await encode({ plan, videoOnly, mixedAudio, workDir });
     await broker(token, { operation: "heartbeat", workerId, jobId: job.id, progress: 82 });
 
     const poster = path.join(workDir, plan.delivery.poster);
