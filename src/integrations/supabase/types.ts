@@ -57296,6 +57296,50 @@ export type Database = {
           },
         ]
       }
+      totp_production_audit: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          episode_id: string
+          event_kind: string
+          headline: string
+          id: string
+          manifest_checksum: string | null
+          passed: boolean | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          episode_id: string
+          event_kind: string
+          headline: string
+          id?: string
+          manifest_checksum?: string | null
+          passed?: boolean | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          episode_id?: string
+          event_kind?: string
+          headline?: string
+          id?: string
+          manifest_checksum?: string | null
+          passed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_production_audit_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totp_render_jobs: {
         Row: {
           artifacts: Json
@@ -71061,6 +71105,33 @@ export type Database = {
         Args: { p_episode_id: string }
         Returns: number
       }
+      totp_admin_log_production_event: {
+        Args: {
+          p_detail?: Json
+          p_episode_id: string
+          p_event_kind: string
+          p_headline: string
+          p_manifest_checksum?: string
+          p_passed?: boolean
+        }
+        Returns: {
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          episode_id: string
+          event_kind: string
+          headline: string
+          id: string
+          manifest_checksum: string | null
+          passed: boolean | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_production_audit"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_admin_save_episode_manifest: {
         Args: {
           p_episode_id: string
@@ -71194,6 +71265,26 @@ export type Database = {
       }
       totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
       totp_episode_plan: { Args: { p_episode_id: string }; Returns: Json }
+      totp_episode_production_audit: {
+        Args: { p_episode_id: string; p_limit?: number }
+        Returns: {
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          episode_id: string
+          event_kind: string
+          headline: string
+          id: string
+          manifest_checksum: string | null
+          passed: boolean | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "totp_production_audit"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       totp_episode_render_jobs: {
         Args: { p_episode_id?: string }
         Returns: {

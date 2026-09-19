@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.749",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "New Top of the Pops control room page with a graded pre-show check list for the current episode" },
+      { type: "feature", description: "Checks cover acts, songs, presenter links, music permissions, running time, saved running sheet, finished master and show automation, split into must fix and should fix" },
+      { type: "feature", description: "Log a rehearsal pass or sign the episode off for broadcast, and sign-off also saves the running sheet as production ready" },
+      { type: "feature", description: "Every episode now keeps a production log of checks, rehearsals and sign-offs with who did it and when" },
+    ],
+  },
+  {
     version: "1.1.748",
     date: "2026-09-19",
     changes: [
