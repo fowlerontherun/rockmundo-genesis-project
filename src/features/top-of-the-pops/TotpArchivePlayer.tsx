@@ -275,14 +275,20 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     }
     if (!playing || cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
     spokenPresenterCueRef.current = cue.id;
+    const holder: { current: TotpPresenterLineHandle | null } = { current: null };
     const line = playTotpPresenterLine({
       text: cue.presenterText,
       presenterKey,
       recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
       volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
-      onSpeakingChange: setPresenterSpeaking,
+      onSpeakingChange: (speaking) => {
+        setPresenterSpeaking(speaking);
+        // Keep the export mixer pointed at the live presenter element.
+        presenterAudioRef.current = speaking ? holder.current?.element ?? null : null;
+      },
     });
-    presenterAudioRef.current = line.element;
+    holder.current = line;
+
 
     return () => {
       line.stop();
