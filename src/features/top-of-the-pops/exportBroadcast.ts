@@ -7,6 +7,14 @@
  * download or upload to Google Drive.
  */
 
+/** Delivery profile the browser export aims at. */
+export const TOTP_EXPORT_PROFILE = {
+  frameRate: 30,
+  videoBitsPerSecond: 8_000_000,
+  audioBitsPerSecond: 192_000,
+  label: "1080p · 30 fps · 8 Mbps · stereo",
+} as const;
+
 export interface TotpExportProgress {
   state: "recording" | "finishing";
   /** 0-100 progress through the episode while recording. */
