@@ -114,8 +114,8 @@ Deno.serve(async (req: Request) => {
       if (manifestError) await failClaim(manifestError.message);
       if (!stored) await failClaim("The frozen episode manifest no longer exists.");
       if (stored.checksum !== job.manifest_checksum) await failClaim("The frozen manifest checksum changed after this render was queued.");
-      if (stored.production_state !== "production_ready") {
-        await failClaim(`Episode is ${stored.production_state}; it must be signed off as production_ready before rendering.`);
+      if (!["production_ready", "rendered_master"].includes(String(stored.production_state))) {
+        await failClaim(`Episode is ${stored.production_state}; it must be signed off before rendering.`);
       }
 
       const { data: replayRows, error: replayError } = await service
