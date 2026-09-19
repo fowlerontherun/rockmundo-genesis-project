@@ -11,7 +11,10 @@ export interface TotpRpcResponse<T> {
 }
 
 type PublicFunctions = Database["public"]["Functions"];
-export type TotpRpcName = Extract<keyof PublicFunctions, `totp_${string}`>;
+export type TotpRpcName =
+  | Extract<keyof PublicFunctions, `totp_${string}`>
+  | "totp_admin_enqueue_rehearsal_render"
+  | "totp_admin_record_preflight_override";
 type TotpRpcArgument = Record<string, unknown> | undefined;
 type TypedTotpRpc = (functionName: TotpRpcName, args?: TotpRpcArgument) => PromiseLike<TotpRpcResponse<unknown>>;
 
