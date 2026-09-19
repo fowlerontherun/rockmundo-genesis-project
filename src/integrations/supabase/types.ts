@@ -57081,6 +57081,165 @@ export type Database = {
           },
         ]
       }
+      totp_live_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          headline: string
+          id: string
+          kind: string
+          session_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          headline: string
+          id?: string
+          kind: string
+          session_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          headline?: string
+          id?: string
+          kind?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_live_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "totp_live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_live_health_samples: {
+        Row: {
+          audio_peak_dbfs: number | null
+          bitrate_kbps: number | null
+          created_at: string
+          delay_ms: number | null
+          dropped_frame_ratio: number | null
+          id: string
+          sampled_at: string
+          session_id: string
+          source: string
+          stream_status: string | null
+        }
+        Insert: {
+          audio_peak_dbfs?: number | null
+          bitrate_kbps?: number | null
+          created_at?: string
+          delay_ms?: number | null
+          dropped_frame_ratio?: number | null
+          id?: string
+          sampled_at?: string
+          session_id: string
+          source?: string
+          stream_status?: string | null
+        }
+        Update: {
+          audio_peak_dbfs?: number | null
+          bitrate_kbps?: number | null
+          created_at?: string
+          delay_ms?: number | null
+          dropped_frame_ratio?: number | null
+          id?: string
+          sampled_at?: string
+          session_id?: string
+          source?: string
+          stream_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_live_health_samples_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "totp_live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_live_sessions: {
+        Row: {
+          active_source: string
+          backup_source_label: string
+          created_at: string
+          created_by: string | null
+          ended_at: string | null
+          episode_id: string
+          failover_count: number
+          id: string
+          live_at: string | null
+          manifest_checksum: string | null
+          mode: string
+          notes: string | null
+          primary_source_label: string
+          standby_at: string | null
+          state: string
+          stream_key_label: string | null
+          test_started_at: string | null
+          updated_at: string
+          youtube_broadcast_id: string | null
+        }
+        Insert: {
+          active_source?: string
+          backup_source_label?: string
+          created_at?: string
+          created_by?: string | null
+          ended_at?: string | null
+          episode_id: string
+          failover_count?: number
+          id?: string
+          live_at?: string | null
+          manifest_checksum?: string | null
+          mode?: string
+          notes?: string | null
+          primary_source_label?: string
+          standby_at?: string | null
+          state?: string
+          stream_key_label?: string | null
+          test_started_at?: string | null
+          updated_at?: string
+          youtube_broadcast_id?: string | null
+        }
+        Update: {
+          active_source?: string
+          backup_source_label?: string
+          created_at?: string
+          created_by?: string | null
+          ended_at?: string | null
+          episode_id?: string
+          failover_count?: number
+          id?: string
+          live_at?: string | null
+          manifest_checksum?: string | null
+          mode?: string
+          notes?: string | null
+          primary_source_label?: string
+          standby_at?: string | null
+          state?: string
+          stream_key_label?: string | null
+          test_started_at?: string | null
+          updated_at?: string
+          youtube_broadcast_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_live_sessions_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totp_live_tv_events: {
         Row: {
           audience_reaction: number
@@ -71343,6 +71502,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      totp_admin_record_live_health: {
+        Args: {
+          p_audio_peak_dbfs?: number
+          p_bitrate_kbps?: number
+          p_delay_ms?: number
+          p_dropped_frame_ratio?: number
+          p_session_id: string
+          p_source?: string
+          p_stream_status?: string
+        }
+        Returns: {
+          audio_peak_dbfs: number | null
+          bitrate_kbps: number | null
+          created_at: string
+          delay_ms: number | null
+          dropped_frame_ratio: number | null
+          id: string
+          sampled_at: string
+          session_id: string
+          source: string
+          stream_status: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_health_samples"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_admin_record_takedown: {
         Args: {
           p_action: string
@@ -71414,6 +71602,74 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      totp_admin_start_live_session: {
+        Args: {
+          p_backup_label?: string
+          p_episode_id: string
+          p_manifest_checksum?: string
+          p_mode?: string
+          p_primary_label?: string
+          p_stream_key_label?: string
+          p_youtube_broadcast_id?: string
+        }
+        Returns: {
+          active_source: string
+          backup_source_label: string
+          created_at: string
+          created_by: string | null
+          ended_at: string | null
+          episode_id: string
+          failover_count: number
+          id: string
+          live_at: string | null
+          manifest_checksum: string | null
+          mode: string
+          notes: string | null
+          primary_source_label: string
+          standby_at: string | null
+          state: string
+          stream_key_label: string | null
+          test_started_at: string | null
+          updated_at: string
+          youtube_broadcast_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      totp_admin_switch_live_source: {
+        Args: { p_reason?: string; p_session_id: string; p_source: string }
+        Returns: {
+          active_source: string
+          backup_source_label: string
+          created_at: string
+          created_by: string | null
+          ended_at: string | null
+          episode_id: string
+          failover_count: number
+          id: string
+          live_at: string | null
+          manifest_checksum: string | null
+          mode: string
+          notes: string | null
+          primary_source_label: string
+          standby_at: string | null
+          state: string
+          stream_key_label: string | null
+          test_started_at: string | null
+          updated_at: string
+          youtube_broadcast_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_admin_test_band_lineups: {
         Args: { p_band_ids: string[] }
         Returns: Json
@@ -71425,6 +71681,36 @@ export type Database = {
       totp_admin_test_song_audio: {
         Args: { p_song_ids: string[] }
         Returns: Json
+      }
+      totp_admin_transition_live_session: {
+        Args: { p_note?: string; p_session_id: string; p_state: string }
+        Returns: {
+          active_source: string
+          backup_source_label: string
+          created_at: string
+          created_by: string | null
+          ended_at: string | null
+          episode_id: string
+          failover_count: number
+          id: string
+          live_at: string | null
+          manifest_checksum: string | null
+          mode: string
+          notes: string | null
+          primary_source_label: string
+          standby_at: string | null
+          state: string
+          stream_key_label: string | null
+          test_started_at: string | null
+          updated_at: string
+          youtube_broadcast_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       totp_admin_upsert_episode: {
         Args: {
@@ -71563,6 +71849,36 @@ export type Database = {
         Args: { p_episode_id: string }
         Returns: Json
       }
+      totp_episode_live_sessions: {
+        Args: { p_episode_id: string }
+        Returns: {
+          active_source: string
+          backup_source_label: string
+          created_at: string
+          created_by: string | null
+          ended_at: string | null
+          episode_id: string
+          failover_count: number
+          id: string
+          live_at: string | null
+          manifest_checksum: string | null
+          mode: string
+          notes: string | null
+          primary_source_label: string
+          standby_at: string | null
+          state: string
+          stream_key_label: string | null
+          test_started_at: string | null
+          updated_at: string
+          youtube_broadcast_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
       totp_episode_plan: { Args: { p_episode_id: string }; Returns: Json }
       totp_episode_production_audit: {
@@ -71648,6 +71964,75 @@ export type Database = {
         Returns: boolean
       }
       totp_is_episode_date: { Args: { p_date: string }; Returns: boolean }
+      totp_live_recent_sessions: {
+        Args: { p_limit?: number }
+        Returns: {
+          active_source: string
+          backup_source_label: string
+          created_at: string
+          created_by: string | null
+          ended_at: string | null
+          episode_id: string
+          failover_count: number
+          id: string
+          live_at: string | null
+          manifest_checksum: string | null
+          mode: string
+          notes: string | null
+          primary_source_label: string
+          standby_at: string | null
+          state: string
+          stream_key_label: string | null
+          test_started_at: string | null
+          updated_at: string
+          youtube_broadcast_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      totp_live_session_events: {
+        Args: { p_limit?: number; p_session_id: string }
+        Returns: {
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          headline: string
+          id: string
+          kind: string
+          session_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      totp_live_session_health: {
+        Args: { p_limit?: number; p_session_id: string }
+        Returns: {
+          audio_peak_dbfs: number | null
+          bitrate_kbps: number | null
+          created_at: string
+          delay_ms: number | null
+          dropped_frame_ratio: number | null
+          id: string
+          sampled_at: string
+          session_id: string
+          source: string
+          stream_status: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "totp_live_health_samples"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       totp_my_backstage_interactions: { Args: never; Returns: Json }
       totp_my_broadcast_consent: { Args: never; Returns: Json }
       totp_my_invitations: {
