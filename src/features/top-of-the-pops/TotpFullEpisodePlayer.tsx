@@ -43,6 +43,19 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
   const fullEpisodeRunning = showClock || showIntro || showChartRundown || showStageTransition || showCredits || continuityKind !== null || continuous;
+  const segmentKey = showClock
+    ? "clock"
+    : showIntro
+      ? "intro"
+      : showStageTransition
+        ? `transition:${currentIndex}`
+        : continuityKind
+          ? `continuity:${continuityKind}:${currentIndex}`
+          : showChartRundown
+            ? "chart-rundown"
+            : showCredits
+              ? "credits"
+              : `act:${current.id}`;
 
   const goTo = (index: number) => {
     setShowClock(false);
