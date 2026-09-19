@@ -32,7 +32,7 @@ export function useTotpAudienceAudio({
 
   useEffect(() => {
     if (!playbackState.isPlaying || typeof window === "undefined") return;
-    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
 
     let ctx = ctxRef.current;
