@@ -54,6 +54,7 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
         ? "MAKE SOME NOISE"
         : "LIVE PERFORMANCE";
   useTotpAudienceAudio({ playbackState, cue, audienceReaction: lockedAudienceReaction });
+  const activeCaption = showCaptions && captions?.length ? activeTotpCaption(captions, playbackState.positionMs) : null;
 
   return <div className={className ?? "relative h-full min-h-[28rem] w-full overflow-hidden bg-slate-950"} data-totp-broadcast data-totp-cue={cue?.type ?? "performance"} data-totp-shot={directedShot} data-totp-stage={directedStage} data-totp-presenter={presenter.key} data-totp-show-variant={showVariant ?? "regular"} data-totp-audience-reaction={lockedAudienceReaction} data-totp-audience-label={audienceLabel.toLowerCase()} data-totp-visual-source={playerModelsSnapshot ? "archive" : "live"}>
     <GigCanvas replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} pyrotechnics crowdTuning={crowdTuning} fill immersive cameraMode="auto" performancePreference={performancePreference} presentationMode="totp" totpCameraShot={directedShot} totpStage={directedStage} totpPresenterKey={presenter.key} totpShowVariant={showVariant} totpAudienceReaction={lockedAudienceReaction} totpCueType={cue?.type ?? "performance"} totpMonitorPrimary={monitorPrimary} totpMonitorSecondary={monitorSecondary} playerModelsSnapshot={playerModelsSnapshot} capability={{ audience: "player", subjectId: `totp:${replay.id}` }} />
