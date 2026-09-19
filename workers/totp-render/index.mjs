@@ -241,7 +241,7 @@ function formatVttTimestamp(ms) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(x).padStart(3, "0")}`;
 }
 
-function splitCaption(text, max = 72) {
+function splitCaption(text, max = 52) {
   const words = String(text || "").trim().split(/\s+/).filter(Boolean);
   const lines = [];
   let current = "";
@@ -271,7 +271,7 @@ export function buildWorkerCaptions(manifest, plan) {
         id: ++id,
         startMs: Math.round(item.start_ms + index * chunkMs),
         endMs: Math.round(item.start_ms + (index + 1) * chunkMs),
-        text: `${manifest.presenter_key || "Presenter"}: ${text}`,
+        text,
       }));
     } else if (item.kind === "performance") {
       const segment = segments.get(item.performance_id);
