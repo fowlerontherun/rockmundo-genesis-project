@@ -71,7 +71,8 @@ export function useTotpAudienceAudio({
     void ctx.resume().catch(() => undefined);
     const reaction = Math.max(-10, Math.min(10, audienceReaction));
     const performing = cue?.type === "performance" || playbackState.activePhase.includes("performance");
-    ambience.gain.setTargetAtTime(performing ? 0.06 + Math.max(0, reaction) * 0.004 : 0.025, ctx.currentTime, 0.25);
+    const mix = totpMixLevels(cue?.type, reaction);
+    ambience.gain.setTargetAtTime(mix.audienceAmbience, ctx.currentTime, 0.25);
 
     const cueId = cue?.id ?? null;
     if (cueId && cueId !== lastCueRef.current) {
