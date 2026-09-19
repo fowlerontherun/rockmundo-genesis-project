@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.748",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "New weekly broadcast schedule page for planning Top of the Pops episodes weeks in advance" },
+      { type: "feature", description: "Add, edit or cancel a future episode with its air night, on air time, chart week, host city, presenter, show type and act limit" },
+      { type: "feature", description: "Each planned episode gets running sheet notes: show theme, opening and closing links, planned segments with durations and a running time total" },
+      { type: "improvement", description: "Saved planning notes now appear on the episode running sheet so the sheet is half written before the acts are confirmed" },
+    ],
+  },
+  {
     version: "1.1.747",
     date: "2026-09-19",
     changes: [
