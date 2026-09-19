@@ -25,6 +25,7 @@ export type Database = {
           rarity: string | null
           requirements: Json | null
           rewards: Json | null
+          slug: string | null
         }
         Insert: {
           category?: string | null
@@ -36,6 +37,7 @@ export type Database = {
           rarity?: string | null
           requirements?: Json | null
           rewards?: Json | null
+          slug?: string | null
         }
         Update: {
           category?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           rarity?: string | null
           requirements?: Json | null
           rewards?: Json | null
+          slug?: string | null
         }
         Relationships: []
       }
@@ -12265,6 +12268,78 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      debt_records: {
+        Row: {
+          collection_stage: Database["public"]["Enums"]["debt_collection_stage"]
+          created_at: string
+          currency_code: string
+          fees_minor: number
+          id: string
+          interest_minor: number
+          metadata: Json
+          obligation_id: string | null
+          original_amount_minor: number
+          outstanding_balance_minor: number
+          owner_id: string
+          owner_type: string
+          schedule_id: string | null
+          stage_entered_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collection_stage?: Database["public"]["Enums"]["debt_collection_stage"]
+          created_at?: string
+          currency_code: string
+          fees_minor?: number
+          id?: string
+          interest_minor?: number
+          metadata?: Json
+          obligation_id?: string | null
+          original_amount_minor: number
+          outstanding_balance_minor: number
+          owner_id: string
+          owner_type: string
+          schedule_id?: string | null
+          stage_entered_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collection_stage?: Database["public"]["Enums"]["debt_collection_stage"]
+          created_at?: string
+          currency_code?: string
+          fees_minor?: number
+          id?: string
+          interest_minor?: number
+          metadata?: Json
+          obligation_id?: string | null
+          original_amount_minor?: number
+          outstanding_balance_minor?: number
+          owner_id?: string
+          owner_type?: string
+          schedule_id?: string | null
+          stage_entered_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_records_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "financial_obligations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debt_records_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "financial_obligation_schedule"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demo_submissions: {
         Row: {
@@ -27344,6 +27419,202 @@ export type Database = {
           },
         ]
       }
+      financial_obligation_schedule: {
+        Row: {
+          amount_minor: number
+          business_key: string | null
+          created_at: string
+          due_date: string
+          fees_minor: number
+          first_missed_at: string | null
+          grace_expires_at: string
+          id: string
+          idempotency_key: string | null
+          instalment_number: number
+          interest_minor: number
+          last_attempted_at: string | null
+          next_retry_at: string | null
+          obligation_id: string
+          paid_at: string | null
+          principal_minor: number
+          resolved_at: string | null
+          source_schedule_id: string | null
+          source_schedule_type: string | null
+          source_schedule_version: number | null
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          business_key?: string | null
+          created_at?: string
+          due_date: string
+          fees_minor?: number
+          first_missed_at?: string | null
+          grace_expires_at: string
+          id?: string
+          idempotency_key?: string | null
+          instalment_number: number
+          interest_minor?: number
+          last_attempted_at?: string | null
+          next_retry_at?: string | null
+          obligation_id: string
+          paid_at?: string | null
+          principal_minor?: number
+          resolved_at?: string | null
+          source_schedule_id?: string | null
+          source_schedule_type?: string | null
+          source_schedule_version?: number | null
+          status?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          business_key?: string | null
+          created_at?: string
+          due_date?: string
+          fees_minor?: number
+          first_missed_at?: string | null
+          grace_expires_at?: string
+          id?: string
+          idempotency_key?: string | null
+          instalment_number?: number
+          interest_minor?: number
+          last_attempted_at?: string | null
+          next_retry_at?: string | null
+          obligation_id?: string
+          paid_at?: string | null
+          principal_minor?: number
+          resolved_at?: string | null
+          source_schedule_id?: string | null
+          source_schedule_type?: string | null
+          source_schedule_version?: number | null
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_obligation_schedule_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "financial_obligations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_obligation_schedule_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_obligations: {
+        Row: {
+          amount_minor: number
+          completed_at: string | null
+          created_at: string
+          currency_code: string
+          custom_interval_days: number | null
+          frequency: Database["public"]["Enums"]["financial_obligation_frequency"]
+          grace_period_days: number
+          id: string
+          legacy_recurring_obligation_id: string | null
+          linked_asset_id: string | null
+          linked_asset_type: string | null
+          linked_finance_transaction_id: string | null
+          max_attempts: number
+          metadata: Json
+          missed_payment_count: number
+          next_due_date: string
+          obligation_type: string
+          outstanding_balance_minor: number
+          owner_id: string
+          owner_type: string
+          payment_account_id: string | null
+          recipient_account_id: string | null
+          retry_interval_days: number
+          status: Database["public"]["Enums"]["financial_obligation_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          completed_at?: string | null
+          created_at?: string
+          currency_code: string
+          custom_interval_days?: number | null
+          frequency: Database["public"]["Enums"]["financial_obligation_frequency"]
+          grace_period_days?: number
+          id?: string
+          legacy_recurring_obligation_id?: string | null
+          linked_asset_id?: string | null
+          linked_asset_type?: string | null
+          linked_finance_transaction_id?: string | null
+          max_attempts?: number
+          metadata?: Json
+          missed_payment_count?: number
+          next_due_date: string
+          obligation_type: string
+          outstanding_balance_minor?: number
+          owner_id: string
+          owner_type: string
+          payment_account_id?: string | null
+          recipient_account_id?: string | null
+          retry_interval_days?: number
+          status?: Database["public"]["Enums"]["financial_obligation_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          completed_at?: string | null
+          created_at?: string
+          currency_code?: string
+          custom_interval_days?: number | null
+          frequency?: Database["public"]["Enums"]["financial_obligation_frequency"]
+          grace_period_days?: number
+          id?: string
+          legacy_recurring_obligation_id?: string | null
+          linked_asset_id?: string | null
+          linked_asset_type?: string | null
+          linked_finance_transaction_id?: string | null
+          max_attempts?: number
+          metadata?: Json
+          missed_payment_count?: number
+          next_due_date?: string
+          obligation_type?: string
+          outstanding_balance_minor?: number
+          owner_id?: string
+          owner_type?: string
+          payment_account_id?: string | null
+          recipient_account_id?: string | null
+          retry_interval_days?: number
+          status?: Database["public"]["Enums"]["financial_obligation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_obligations_linked_finance_transaction_id_fkey"
+            columns: ["linked_finance_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_obligations_payment_account_id_fkey"
+            columns: ["payment_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_obligations_recipient_account_id_fkey"
+            columns: ["recipient_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           completed_at: string | null
@@ -28817,34 +29088,67 @@ export type Database = {
       }
       gig_commerce_settlements: {
         Row: {
+          band_bar_revenue: number | null
           bar_band_entitlement: number
+          bar_drinks_served: number | null
+          bar_gross: number | null
+          booking_id: string | null
           commerce_snapshot: Json
+          formula_version: string | null
           gig_id: string
+          gig_outcome_id: string | null
           id: string
           merch_cost: number
           merch_gross_revenue: number
           merch_items_sold: number
+          merchandise_cost: number | null
+          merchandise_gross: number | null
+          merchandise_items: number | null
           settled_at: string
+          venue_bar_revenue: number | null
+          venue_transaction_id: string | null
         }
         Insert: {
+          band_bar_revenue?: number | null
           bar_band_entitlement?: number
+          bar_drinks_served?: number | null
+          bar_gross?: number | null
+          booking_id?: string | null
           commerce_snapshot?: Json
+          formula_version?: string | null
           gig_id: string
+          gig_outcome_id?: string | null
           id?: string
           merch_cost?: number
           merch_gross_revenue?: number
           merch_items_sold?: number
+          merchandise_cost?: number | null
+          merchandise_gross?: number | null
+          merchandise_items?: number | null
           settled_at?: string
+          venue_bar_revenue?: number | null
+          venue_transaction_id?: string | null
         }
         Update: {
+          band_bar_revenue?: number | null
           bar_band_entitlement?: number
+          bar_drinks_served?: number | null
+          bar_gross?: number | null
+          booking_id?: string | null
           commerce_snapshot?: Json
+          formula_version?: string | null
           gig_id?: string
+          gig_outcome_id?: string | null
           id?: string
           merch_cost?: number
           merch_gross_revenue?: number
           merch_items_sold?: number
+          merchandise_cost?: number | null
+          merchandise_gross?: number | null
+          merchandise_items?: number | null
           settled_at?: string
+          venue_bar_revenue?: number | null
+          venue_transaction_id?: string | null
         }
         Relationships: [
           {
@@ -40523,6 +40827,122 @@ export type Database = {
           },
         ]
       }
+      player_credit_history: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          currency_code: string | null
+          debt_id: string | null
+          event_date: string
+          event_type: Database["public"]["Enums"]["player_credit_event_type"]
+          id: string
+          obligation_id: string | null
+          private_metadata: Json
+          profile_id: string
+          score_delta: number
+        }
+        Insert: {
+          amount_minor?: number
+          created_at?: string
+          currency_code?: string | null
+          debt_id?: string | null
+          event_date?: string
+          event_type: Database["public"]["Enums"]["player_credit_event_type"]
+          id?: string
+          obligation_id?: string | null
+          private_metadata?: Json
+          profile_id: string
+          score_delta?: number
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          currency_code?: string | null
+          debt_id?: string | null
+          event_date?: string
+          event_type?: Database["public"]["Enums"]["player_credit_event_type"]
+          id?: string
+          obligation_id?: string | null
+          private_metadata?: Json
+          profile_id?: string
+          score_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_credit_history_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debt_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_credit_history_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "financial_obligations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_credit_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_credit_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_credit_scores: {
+        Row: {
+          calculated_at: string
+          credit_band: string
+          credit_score: number
+          negative_factors: Json
+          positive_factors: Json
+          profile_id: string
+          significant_change_notified_at: string | null
+        }
+        Insert: {
+          calculated_at?: string
+          credit_band?: string
+          credit_score?: number
+          negative_factors?: Json
+          positive_factors?: Json
+          profile_id: string
+          significant_change_notified_at?: string | null
+        }
+        Update: {
+          calculated_at?: string
+          credit_band?: string
+          credit_score?: number
+          negative_factors?: Json
+          positive_factors?: Json
+          profile_id?: string
+          significant_change_notified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_credit_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_credit_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_criminal_record: {
         Row: {
           behavior_rating: string
@@ -41112,6 +41532,9 @@ export type Database = {
       }
       player_events: {
         Row: {
+          available_at: string | null
+          chain_instance_id: string | null
+          chain_key: string | null
           choice_made: string | null
           choice_made_at: string | null
           created_at: string
@@ -41121,12 +41544,17 @@ export type Database = {
           outcome_applied_at: string | null
           outcome_effects: Json | null
           outcome_message: string | null
+          parent_player_event_id: string | null
           profile_id: string | null
           status: string
+          target_release_id: string | null
           triggered_at: string
           user_id: string
         }
         Insert: {
+          available_at?: string | null
+          chain_instance_id?: string | null
+          chain_key?: string | null
           choice_made?: string | null
           choice_made_at?: string | null
           created_at?: string
@@ -41136,12 +41564,17 @@ export type Database = {
           outcome_applied_at?: string | null
           outcome_effects?: Json | null
           outcome_message?: string | null
+          parent_player_event_id?: string | null
           profile_id?: string | null
           status?: string
+          target_release_id?: string | null
           triggered_at?: string
           user_id: string
         }
         Update: {
+          available_at?: string | null
+          chain_instance_id?: string | null
+          chain_key?: string | null
           choice_made?: string | null
           choice_made_at?: string | null
           created_at?: string
@@ -41151,8 +41584,10 @@ export type Database = {
           outcome_applied_at?: string | null
           outcome_effects?: Json | null
           outcome_message?: string | null
+          parent_player_event_id?: string | null
           profile_id?: string | null
           status?: string
+          target_release_id?: string | null
           triggered_at?: string
           user_id?: string
         }
@@ -41162,6 +41597,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "random_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_events_parent_player_event_id_fkey"
+            columns: ["parent_player_event_id"]
+            isOneToOne: false
+            referencedRelation: "player_events"
             referencedColumns: ["id"]
           },
           {
@@ -41176,6 +41618,20 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_events_target_release_id_fkey"
+            columns: ["target_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "player_events_target_release_id_fkey"
+            columns: ["target_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
         ]
@@ -47221,59 +47677,110 @@ export type Database = {
       }
       random_events: {
         Row: {
+          band_fame_max: number | null
+          band_fame_min: number | null
+          band_fans_max: number | null
+          band_fans_min: number | null
           category: string
+          chain_key: string | null
+          chain_only: boolean
+          chain_step: number | null
+          combination_conditions: Json
           created_at: string
           description: string
+          event_weight: number
           health_max: number | null
           health_min: number | null
           id: string
           is_active: boolean
           is_common: boolean
+          next_event_delay_hours_a: number
+          next_event_delay_hours_b: number
+          next_event_title_a: string | null
+          next_event_title_b: string | null
           option_a_effects: Json
           option_a_outcome_text: string
           option_a_text: string
           option_b_effects: Json
           option_b_outcome_text: string
           option_b_text: string
+          release_age_max_days: number | null
+          release_age_min_days: number | null
+          requires_released_music: boolean
           season: string | null
+          target_release_type: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          band_fame_max?: number | null
+          band_fame_min?: number | null
+          band_fans_max?: number | null
+          band_fans_min?: number | null
           category?: string
+          chain_key?: string | null
+          chain_only?: boolean
+          chain_step?: number | null
+          combination_conditions?: Json
           created_at?: string
           description: string
+          event_weight?: number
           health_max?: number | null
           health_min?: number | null
           id?: string
           is_active?: boolean
           is_common?: boolean
+          next_event_delay_hours_a?: number
+          next_event_delay_hours_b?: number
+          next_event_title_a?: string | null
+          next_event_title_b?: string | null
           option_a_effects?: Json
           option_a_outcome_text: string
           option_a_text: string
           option_b_effects?: Json
           option_b_outcome_text: string
           option_b_text: string
+          release_age_max_days?: number | null
+          release_age_min_days?: number | null
+          requires_released_music?: boolean
           season?: string | null
+          target_release_type?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          band_fame_max?: number | null
+          band_fame_min?: number | null
+          band_fans_max?: number | null
+          band_fans_min?: number | null
           category?: string
+          chain_key?: string | null
+          chain_only?: boolean
+          chain_step?: number | null
+          combination_conditions?: Json
           created_at?: string
           description?: string
+          event_weight?: number
           health_max?: number | null
           health_min?: number | null
           id?: string
           is_active?: boolean
           is_common?: boolean
+          next_event_delay_hours_a?: number
+          next_event_delay_hours_b?: number
+          next_event_title_a?: string | null
+          next_event_title_b?: string | null
           option_a_effects?: Json
           option_a_outcome_text?: string
           option_a_text?: string
           option_b_effects?: Json
           option_b_outcome_text?: string
           option_b_text?: string
+          release_age_max_days?: number | null
+          release_age_min_days?: number | null
+          requires_released_music?: boolean
           season?: string | null
+          target_release_type?: string | null
           title?: string
           updated_at?: string
         }
@@ -55736,6 +56243,962 @@ export type Database = {
           },
         ]
       }
+      totp_achievement_settlements: {
+        Row: {
+          achievement_slug: string
+          awarded_at: string
+          id: string
+          performance_id: string
+          profile_id: string
+        }
+        Insert: {
+          achievement_slug: string
+          awarded_at?: string
+          id?: string
+          performance_id: string
+          profile_id: string
+        }
+        Update: {
+          achievement_slug?: string
+          awarded_at?: string
+          id?: string
+          performance_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_achievement_settlements_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: false
+            referencedRelation: "totp_performances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_achievement_settlements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_achievement_settlements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_appearance_history: {
+        Row: {
+          appearance_number: number
+          band_id: string
+          completed_at: string
+          created_at: string
+          episode_date: string
+          episode_id: string
+          episode_number: number
+          fame_awarded: number
+          id: string
+          performance_id: string
+          presenter_intro: string | null
+          qualifying_rank: number
+          raw_fame_reward: number
+          running_order: number
+          song_id: string
+          stage_key: string
+        }
+        Insert: {
+          appearance_number: number
+          band_id: string
+          completed_at: string
+          created_at?: string
+          episode_date: string
+          episode_id: string
+          episode_number: number
+          fame_awarded?: number
+          id?: string
+          performance_id: string
+          presenter_intro?: string | null
+          qualifying_rank: number
+          raw_fame_reward?: number
+          running_order: number
+          song_id: string
+          stage_key: string
+        }
+        Update: {
+          appearance_number?: number
+          band_id?: string
+          completed_at?: string
+          created_at?: string
+          episode_date?: string
+          episode_id?: string
+          episode_number?: number
+          fame_awarded?: number
+          id?: string
+          performance_id?: string
+          presenter_intro?: string | null
+          qualifying_rank?: number
+          raw_fame_reward?: number
+          running_order?: number
+          song_id?: string
+          stage_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_appearance_history_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_appearance_history_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_appearance_history_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: true
+            referencedRelation: "totp_performances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_appearance_history_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_appearance_history_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_appearance_history_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_appearance_history_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_backstage_interactions: {
+        Row: {
+          band_id: string
+          created_at: string
+          effects: Json
+          episode_id: string
+          id: string
+          invitation_id: string
+          prompt_key: string
+          resolved_at: string | null
+          selected_choice: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          effects?: Json
+          episode_id: string
+          id?: string
+          invitation_id: string
+          prompt_key: string
+          resolved_at?: string | null
+          selected_choice?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          effects?: Json
+          episode_id?: string
+          id?: string
+          invitation_id?: string
+          prompt_key?: string
+          resolved_at?: string | null
+          selected_choice?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_backstage_interactions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_backstage_interactions_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_backstage_interactions_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "totp_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_broadcast_replays: {
+        Row: {
+          checksum: string
+          created_at: string
+          duration_ms: number
+          episode_id: string
+          generated_at: string
+          id: string
+          locked_at: string
+          payload: Json
+          performance_id: string
+          presenter_key: string
+          replay_version: number
+          stage_key: string
+        }
+        Insert: {
+          checksum: string
+          created_at?: string
+          duration_ms: number
+          episode_id: string
+          generated_at?: string
+          id?: string
+          locked_at?: string
+          payload: Json
+          performance_id: string
+          presenter_key?: string
+          replay_version?: number
+          stage_key: string
+        }
+        Update: {
+          checksum?: string
+          created_at?: string
+          duration_ms?: number
+          episode_id?: string
+          generated_at?: string
+          id?: string
+          locked_at?: string
+          payload?: Json
+          performance_id?: string
+          presenter_key?: string
+          replay_version?: number
+          stage_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_broadcast_replays_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_broadcast_replays_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: true
+            referencedRelation: "totp_performances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_candidates: {
+        Row: {
+          band_id: string
+          chart_rank: number
+          chart_snapshot_date: string
+          created_at: string
+          episode_id: string
+          id: string
+          ineligible_reason: string | null
+          qualifying_chart: string
+          selected: boolean
+          selection_bucket: string
+          song_id: string
+        }
+        Insert: {
+          band_id: string
+          chart_rank: number
+          chart_snapshot_date: string
+          created_at?: string
+          episode_id: string
+          id?: string
+          ineligible_reason?: string | null
+          qualifying_chart: string
+          selected?: boolean
+          selection_bucket: string
+          song_id: string
+        }
+        Update: {
+          band_id?: string
+          chart_rank?: number
+          chart_snapshot_date?: string
+          created_at?: string
+          episode_id?: string
+          id?: string
+          ineligible_reason?: string | null
+          qualifying_chart?: string
+          selected?: boolean
+          selection_bucket?: string
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_candidates_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_candidates_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_candidates_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_candidates_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_candidates_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_candidates_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_chart_rundown_snapshots: {
+        Row: {
+          artist_name: string
+          band_id: string | null
+          chart_rank: number
+          chart_snapshot_date: string
+          chart_type: string
+          created_at: string
+          episode_id: string
+          id: string
+          song_id: string | null
+          song_title: string
+          trend: string | null
+          trend_change: number | null
+          weekly_plays: number
+        }
+        Insert: {
+          artist_name: string
+          band_id?: string | null
+          chart_rank: number
+          chart_snapshot_date: string
+          chart_type: string
+          created_at?: string
+          episode_id: string
+          id?: string
+          song_id?: string | null
+          song_title: string
+          trend?: string | null
+          trend_change?: number | null
+          weekly_plays?: number
+        }
+        Update: {
+          artist_name?: string
+          band_id?: string | null
+          chart_rank?: number
+          chart_snapshot_date?: string
+          chart_type?: string
+          created_at?: string
+          episode_id?: string
+          id?: string
+          song_id?: string | null
+          song_title?: string
+          trend?: string | null
+          trend_change?: number | null
+          weekly_plays?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_chart_rundown_snapshots_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_chart_rundown_snapshots_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_chart_rundown_snapshots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_chart_rundown_snapshots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_chart_rundown_snapshots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_chart_rundown_snapshots_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_episodes: {
+        Row: {
+          broadcast_at: string
+          broadcast_profile: string
+          chart_snapshot_date: string
+          check_in_at: string
+          city_id: string
+          created_at: string
+          episode_date: string
+          episode_number: number
+          id: string
+          max_performances: number
+          presenter_key: string
+          show_variant: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          broadcast_at: string
+          broadcast_profile?: string
+          chart_snapshot_date: string
+          check_in_at: string
+          city_id: string
+          created_at?: string
+          episode_date: string
+          episode_number?: number
+          id?: string
+          max_performances?: number
+          presenter_key?: string
+          show_variant?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          broadcast_at?: string
+          broadcast_profile?: string
+          chart_snapshot_date?: string
+          check_in_at?: string
+          city_id?: string
+          created_at?: string
+          episode_date?: string
+          episode_number?: number
+          id?: string
+          max_performances?: number
+          presenter_key?: string
+          show_variant?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_episodes_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_invitations: {
+        Row: {
+          band_id: string
+          candidate_id: string
+          checked_in_at: string | null
+          created_at: string
+          episode_id: string
+          id: string
+          invited_at: string
+          missed_reason: string | null
+          qualifying_rank: number
+          responded_at: string | null
+          response_deadline: string
+          song_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          band_id: string
+          candidate_id: string
+          checked_in_at?: string | null
+          created_at?: string
+          episode_id: string
+          id?: string
+          invited_at?: string
+          missed_reason?: string | null
+          qualifying_rank: number
+          responded_at?: string | null
+          response_deadline: string
+          song_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string
+          candidate_id?: string
+          checked_in_at?: string | null
+          created_at?: string
+          episode_id?: string
+          id?: string
+          invited_at?: string
+          missed_reason?: string | null
+          qualifying_rank?: number
+          responded_at?: string | null
+          response_deadline?: string
+          song_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_invitations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_invitations_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "totp_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_invitations_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_invitations_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_invitations_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_invitations_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_invitations_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_live_tv_events: {
+        Row: {
+          audience_reaction: number
+          band_id: string
+          created_at: string
+          description: string
+          effects: Json
+          episode_id: string
+          event_key: string
+          id: string
+          invitation_id: string
+          recovered_at: string | null
+          recovery_choice: string | null
+          recovery_effects: Json
+          resolved_at: string
+          title: string
+        }
+        Insert: {
+          audience_reaction?: number
+          band_id: string
+          created_at?: string
+          description: string
+          effects?: Json
+          episode_id: string
+          event_key: string
+          id?: string
+          invitation_id: string
+          recovered_at?: string | null
+          recovery_choice?: string | null
+          recovery_effects?: Json
+          resolved_at?: string
+          title: string
+        }
+        Update: {
+          audience_reaction?: number
+          band_id?: string
+          created_at?: string
+          description?: string
+          effects?: Json
+          episode_id?: string
+          event_key?: string
+          id?: string
+          invitation_id?: string
+          recovered_at?: string | null
+          recovery_choice?: string | null
+          recovery_effects?: Json
+          resolved_at?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_live_tv_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_live_tv_events_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_live_tv_events_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "totp_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_media_posts: {
+        Row: {
+          account_id: string
+          appearance_history_id: string
+          created_at: string
+          id: string
+          performance_id: string
+          twaat_id: string
+        }
+        Insert: {
+          account_id: string
+          appearance_history_id: string
+          created_at?: string
+          id?: string
+          performance_id: string
+          twaat_id: string
+        }
+        Update: {
+          account_id?: string
+          appearance_history_id?: string
+          created_at?: string
+          id?: string
+          performance_id?: string
+          twaat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_media_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_media_posts_appearance_history_id_fkey"
+            columns: ["appearance_history_id"]
+            isOneToOne: true
+            referencedRelation: "totp_appearance_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_media_posts_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: true
+            referencedRelation: "totp_performances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_media_posts_twaat_id_fkey"
+            columns: ["twaat_id"]
+            isOneToOne: true
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_performance_styles: {
+        Row: {
+          applied_at: string | null
+          audience_reaction: number
+          band_id: string
+          created_at: string
+          effects: Json
+          episode_id: string
+          fame_multiplier: number
+          id: string
+          invitation_id: string
+          selected_at: string | null
+          selected_style: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          audience_reaction?: number
+          band_id: string
+          created_at?: string
+          effects?: Json
+          episode_id: string
+          fame_multiplier?: number
+          id?: string
+          invitation_id: string
+          selected_at?: string | null
+          selected_style?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          audience_reaction?: number
+          band_id?: string
+          created_at?: string
+          effects?: Json
+          episode_id?: string
+          fame_multiplier?: number
+          id?: string
+          invitation_id?: string
+          selected_at?: string | null
+          selected_style?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_performance_styles_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_performance_styles_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_performance_styles_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "totp_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_performances: {
+        Row: {
+          band_id: string
+          camera_profile: string
+          completed_at: string | null
+          created_at: string
+          episode_id: string
+          fame_awarded: number
+          id: string
+          invitation_id: string
+          performance_score: number | null
+          presenter_intro: string | null
+          running_order: number | null
+          song_id: string
+          stage_key: string
+        }
+        Insert: {
+          band_id: string
+          camera_profile?: string
+          completed_at?: string | null
+          created_at?: string
+          episode_id: string
+          fame_awarded?: number
+          id?: string
+          invitation_id: string
+          performance_score?: number | null
+          presenter_intro?: string | null
+          running_order?: number | null
+          song_id: string
+          stage_key?: string
+        }
+        Update: {
+          band_id?: string
+          camera_profile?: string
+          completed_at?: string | null
+          created_at?: string
+          episode_id?: string
+          fame_awarded?: number
+          id?: string
+          invitation_id?: string
+          performance_score?: number | null
+          presenter_intro?: string | null
+          running_order?: number | null
+          song_id?: string
+          stage_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_performances_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_performances_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_performances_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "totp_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "totp_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      totp_postshow_interactions: {
+        Row: {
+          band_id: string
+          created_at: string
+          effects: Json
+          episode_id: string
+          id: string
+          performance_id: string
+          prompt_key: string
+          resolved_at: string | null
+          selected_choice: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          effects?: Json
+          episode_id: string
+          id?: string
+          performance_id: string
+          prompt_key: string
+          resolved_at?: string | null
+          selected_choice?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          effects?: Json
+          episode_id?: string
+          id?: string
+          performance_id?: string
+          prompt_key?: string
+          resolved_at?: string | null
+          selected_choice?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_postshow_interactions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_postshow_interactions_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_postshow_interactions_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: true
+            referencedRelation: "totp_performances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tour_budget_ledger: {
         Row: {
           amount: number
@@ -59033,7 +60496,7 @@ export type Database = {
           monthly_rent: number | null
           name: string
           parking_spaces: number | null
-          prestige_level: number | null
+          prestige_level: number
           private_event_rate: number | null
           reputation: number | null
           reputation_score: number | null
@@ -59082,7 +60545,7 @@ export type Database = {
           monthly_rent?: number | null
           name: string
           parking_spaces?: number | null
-          prestige_level?: number | null
+          prestige_level?: number
           private_event_rate?: number | null
           reputation?: number | null
           reputation_score?: number | null
@@ -59131,7 +60594,7 @@ export type Database = {
           monthly_rent?: number | null
           name?: string
           parking_spaces?: number | null
-          prestige_level?: number | null
+          prestige_level?: number
           private_event_rate?: number | null
           reputation?: number | null
           reputation_score?: number | null
@@ -63998,6 +65461,8 @@ export type Database = {
         }
         Returns: Json
       }
+      current_active_player_profile_id: { Args: never; Returns: string }
+      current_player_profile_id: { Args: never; Returns: string }
       current_profile_id: { Args: never; Returns: string }
       current_profile_id_safe: { Args: never; Returns: string }
       current_user_is_platform_admin: { Args: never; Returns: boolean }
@@ -65476,11 +66941,13 @@ export type Database = {
         Args: { p_transaction_limit?: number }
         Returns: Json
       }
+      get_my_financial_obligations_dashboard: { Args: never; Returns: Json }
       get_my_music_collaboration_contracts: { Args: never; Returns: Json }
       get_my_player_education_classes: {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      get_my_private_credit_profile: { Args: never; Returns: Json }
       get_my_social_band_rivalries: {
         Args: { p_profile_id: string }
         Returns: {
@@ -65956,6 +67423,10 @@ export type Database = {
       gift_underworld_item: {
         Args: { _purchase_id: string; _recipient_profile_id: string }
         Returns: string
+      }
+      gig_ticket_prestige_tier: {
+        Args: { p_prestige: number }
+        Returns: number
       }
       grant_starter_crafting_blueprints: {
         Args: { _profile_id: string }
@@ -66868,6 +68339,10 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      progression_skill_max_level: {
+        Args: { p_skill_slug: string }
+        Returns: number
+      }
       progression_skill_required_xp: {
         Args: { p_level: number }
         Returns: number
@@ -67121,6 +68596,10 @@ export type Database = {
       receive_festival_settlement_receivable: {
         Args: { p_idempotency_key: string; p_line_id: string }
         Returns: Json
+      }
+      recommended_gig_ticket_price: {
+        Args: { p_capacity: number; p_prestige: number }
+        Returns: number
       }
       recompute_candidate_endorsement_bonus: {
         Args: { p_candidate_id: string }
@@ -68847,6 +70326,10 @@ export type Database = {
         }
         Returns: string
       }
+      stage_performer_duties: {
+        Args: { instrument: string; vocal: string }
+        Returns: string
+      }
       start_addiction_recovery: {
         Args: {
           p_addiction_id: string
@@ -69347,9 +70830,165 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: number
       }
+      sync_tour_summary_from_gig: {
+        Args: { p_tour_id: string }
+        Returns: undefined
+      }
       sync_twaater_fame_scores: { Args: never; Returns: undefined }
       terminate_company_employment_contract: {
         Args: { p_contract_id: string; p_reason?: string }
+        Returns: Json
+      }
+      totp_admin_lock_running_order: {
+        Args: { p_episode_id: string }
+        Returns: number
+      }
+      totp_admin_test_band_lineups: {
+        Args: { p_band_ids: string[] }
+        Returns: Json
+      }
+      totp_admin_test_episode_preview: {
+        Args: { p_max_performances?: number; p_seed?: string }
+        Returns: Json
+      }
+      totp_admin_test_song_audio: {
+        Args: { p_song_ids: string[] }
+        Returns: Json
+      }
+      totp_award_achievement: {
+        Args: {
+          p_achievement_slug: string
+          p_performance_id: string
+          p_profile_id: string
+        }
+        Returns: boolean
+      }
+      totp_band_stats: { Args: { p_band_id: string }; Returns: Json }
+      totp_build_broadcast_replay: {
+        Args: { p_performance_id: string }
+        Returns: string
+      }
+      totp_build_episode_broadcast_replays: {
+        Args: { p_episode_id: string }
+        Returns: number
+      }
+      totp_capture_chart_rundown_for_episode: {
+        Args: { p_episode_id: string }
+        Returns: number
+      }
+      totp_check_in: { Args: { p_invitation_id: string }; Returns: Json }
+      totp_choose_backstage_interview: {
+        Args: { p_choice: string; p_interaction_id: string }
+        Returns: Json
+      }
+      totp_choose_incident_recovery: {
+        Args: { p_choice: string; p_event_id: string }
+        Returns: Json
+      }
+      totp_choose_performance_style: {
+        Args: { p_style: string; p_style_id: string }
+        Returns: Json
+      }
+      totp_choose_postshow_interaction: {
+        Args: { p_choice: string; p_interaction_id: string }
+        Returns: Json
+      }
+      totp_complete_performance: {
+        Args: { p_performance_id: string; p_performance_score?: number }
+        Returns: Json
+      }
+      totp_is_anniversary_special_date: {
+        Args: { p_episode_date: string }
+        Returns: boolean
+      }
+      totp_is_christmas_special_date: {
+        Args: { p_episode_date: string }
+        Returns: boolean
+      }
+      totp_is_episode_date: { Args: { p_date: string }; Returns: boolean }
+      totp_my_backstage_interactions: { Args: never; Returns: Json }
+      totp_my_invitations: {
+        Args: never
+        Returns: {
+          band_id: string
+          band_name: string
+          broadcast_at: string
+          check_in_at: string
+          episode_date: string
+          episode_id: string
+          invitation_id: string
+          london_city_id: string
+          london_city_name: string
+          qualifying_rank: number
+          response_deadline: string
+          song_id: string
+          song_title: string
+          status: string
+        }[]
+      }
+      totp_my_live_tv_extras: { Args: never; Returns: Json }
+      totp_my_postshow_interactions: { Args: never; Returns: Json }
+      totp_prepare_episode: {
+        Args: { p_episode_date: string }
+        Returns: string
+      }
+      totp_prepare_next_episode: { Args: never; Returns: string }
+      totp_presenter_display_name: {
+        Args: { p_presenter_key: string }
+        Returns: string
+      }
+      totp_presenter_intro: {
+        Args: {
+          p_band_name: string
+          p_presenter_key: string
+          p_rank: number
+          p_show_variant: string
+          p_song_title: string
+        }
+        Returns: string
+      }
+      totp_presenter_key_for_episode:
+        | { Args: { p_episode_number: number }; Returns: string }
+        | {
+            Args: { p_episode_date: string; p_episode_number: number }
+            Returns: string
+          }
+      totp_public_broadcast_archive: {
+        Args: { p_episode_id?: string }
+        Returns: Json
+      }
+      totp_public_chart_rundown: {
+        Args: { p_episode_id?: string }
+        Returns: Json
+      }
+      totp_public_episode: { Args: { p_episode_id?: string }; Returns: Json }
+      totp_public_history: {
+        Args: { p_band_id?: string; p_limit?: number }
+        Returns: Json
+      }
+      totp_public_performance_audio: {
+        Args: { p_performance_id: string }
+        Returns: Json
+      }
+      totp_raw_fame_for_rank: { Args: { p_rank: number }; Returns: number }
+      totp_refresh_uk_chart_snapshot: {
+        Args: { p_chart_date?: string }
+        Returns: Json
+      }
+      totp_release_health: { Args: never; Returns: Json }
+      totp_respond_to_invitation: {
+        Args: { p_invitation_id: string; p_response: string }
+        Returns: string
+      }
+      totp_run_broadcast_cycle: { Args: { p_now?: string }; Returns: Json }
+      totp_show_variant_for_episode:
+        | { Args: { p_episode_number: number }; Returns: string }
+        | {
+            Args: { p_episode_date: string; p_episode_number: number }
+            Returns: string
+          }
+      totp_studio_readiness: {
+        Args: { p_invitation_id: string }
         Returns: Json
       }
       trade_crypto_token: {
@@ -69854,6 +71493,15 @@ export type Database = {
       chat_participant_status: "online" | "offline" | "typing" | "away"
       collaboration_compensation_type: "none" | "flat_fee" | "royalty"
       collaboration_status: "pending" | "accepted" | "declined" | "expired"
+      debt_collection_stage:
+        | "friendly_reminder"
+        | "late_notice"
+        | "final_notice"
+        | "collections"
+        | "legal_action"
+        | "asset_recovery"
+        | "settled"
+        | "written_off"
       drug_policy_status:
         | "prohibited"
         | "medical_only"
@@ -70013,6 +71661,24 @@ export type Database = {
         | "expired"
       financial_account_status: "active" | "suspended" | "archived"
       financial_entry_direction: "debit" | "credit"
+      financial_obligation_frequency:
+        | "daily"
+        | "weekly"
+        | "fortnightly"
+        | "monthly"
+        | "quarterly"
+        | "annual"
+        | "custom_interval"
+      financial_obligation_status:
+        | "active"
+        | "grace_period"
+        | "retrying"
+        | "failed"
+        | "collections"
+        | "paused"
+        | "cancelled"
+        | "completed"
+        | "written_off"
       financial_owner_type:
         | "player"
         | "band"
@@ -70065,6 +71731,15 @@ export type Database = {
         | "achievement"
         | "system"
       inbox_priority: "low" | "normal" | "high" | "urgent"
+      player_credit_event_type:
+        | "successful_payment"
+        | "missed_payment"
+        | "default"
+        | "collection"
+        | "mortgage_completion"
+        | "debt_settlement"
+        | "bankruptcy"
+        | "score_adjustment"
       show_type_enum: "concert" | "festival" | "private" | "street"
       social_invite_kind:
         | "gig"
@@ -70225,6 +71900,16 @@ export const Constants = {
       chat_participant_status: ["online", "offline", "typing", "away"],
       collaboration_compensation_type: ["none", "flat_fee", "royalty"],
       collaboration_status: ["pending", "accepted", "declined", "expired"],
+      debt_collection_stage: [
+        "friendly_reminder",
+        "late_notice",
+        "final_notice",
+        "collections",
+        "legal_action",
+        "asset_recovery",
+        "settled",
+        "written_off",
+      ],
       drug_policy_status: [
         "prohibited",
         "medical_only",
@@ -70399,6 +72084,26 @@ export const Constants = {
       ],
       financial_account_status: ["active", "suspended", "archived"],
       financial_entry_direction: ["debit", "credit"],
+      financial_obligation_frequency: [
+        "daily",
+        "weekly",
+        "fortnightly",
+        "monthly",
+        "quarterly",
+        "annual",
+        "custom_interval",
+      ],
+      financial_obligation_status: [
+        "active",
+        "grace_period",
+        "retrying",
+        "failed",
+        "collections",
+        "paused",
+        "cancelled",
+        "completed",
+        "written_off",
+      ],
       financial_owner_type: [
         "player",
         "band",
@@ -70455,6 +72160,16 @@ export const Constants = {
         "system",
       ],
       inbox_priority: ["low", "normal", "high", "urgent"],
+      player_credit_event_type: [
+        "successful_payment",
+        "missed_payment",
+        "default",
+        "collection",
+        "mortgage_completion",
+        "debt_settlement",
+        "bankruptcy",
+        "score_adjustment",
+      ],
       show_type_enum: ["concert", "festival", "private", "street"],
       social_invite_kind: [
         "gig",
