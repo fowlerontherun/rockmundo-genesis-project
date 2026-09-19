@@ -124,12 +124,16 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
   chapters.push({ title: "Opening titles", start_ms: titles.start_ms, end_ms: cursor });
 
   manifest.segments.forEach((segment, position) => {
+    const presenterAsset = segment.assets.find((asset) => asset.kind === "presenter_audio") ?? null;
     const link = push({
       kind: "presenter_link",
       label: `Presenter link ${position + 1}`,
-      duration_ms: TOTP_RENDER_TIMING.presenterLinkMs,
+      duration_ms:
+        presenterAsset?.duration_ms && presenterAsset.duration_ms > 0
+          ? presenterAsset.duration_ms
+          : TOTP_RENDER_TIMING.presenterLinkMs,
       performance_id: segment.performance_id,
-      audio_url: segment.assets.find((asset) => asset.kind === "presenter_audio")?.url ?? null,
+      audio_url: presenterAsset?.url ?? null,
     });
 
     const songAsset = segment.assets.find((asset) => asset.kind === "song_audio") ?? null;
