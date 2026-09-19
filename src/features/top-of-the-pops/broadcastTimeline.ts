@@ -134,7 +134,9 @@ function pickDirectedShot(params: {
   if (params.finalCut) return "finale_wide";
 
   const library = candidateLibrary(params.input, params.section);
-  const rotated = library.map((_, index) => library[(index + params.cutIndex) % library.length]);
+  const nonFinaleLibrary = library.filter((shot) => shot !== "finale_wide");
+  const usable = nonFinaleLibrary.length ? nonFinaleLibrary : ["studio_master", "lead_medium"];
+  const rotated = usable.map((_, index) => usable[(index + params.cutIndex) % usable.length]);
   const candidate = rotated.find((shot) =>
     shot !== params.previous
     && !(params.closeStreak >= 2 && CLOSE_SHOTS.has(shot)),
