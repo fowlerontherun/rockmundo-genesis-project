@@ -76,7 +76,7 @@ describe("buildTotpPreflight", () => {
     expect(report.blockers.map((item) => item.code)).toContain("sheet_saved");
   });
 
-  it("clears every blocker for a complete, saved episode", () => {
+  it("clears content blockers but keeps sign-off locked until rehearsal QC passes", () => {
     const live = manifest([segment(), segment({ index: 2, performance_id: "perf-2" }), segment({ index: 3, performance_id: "perf-3" })]);
     const report = buildTotpPreflight({
       manifest: live,
@@ -85,7 +85,7 @@ describe("buildTotpPreflight", () => {
       compliance: { passed: true, blockerCount: 0, warningCount: 0, manifestChecksum: live.checksum },
     });
     expect(report.blockers).toHaveLength(0);
-    expect(report.renderReady).toBe(true);
+    expect(report.renderReady).toBe(false);
     expect(report.publishReady).toBe(false);
   });
 
@@ -105,8 +105,10 @@ describe("buildTotpPreflight", () => {
     const report = buildTotpPreflight({
       manifest: live,
       stored: { checksum: live.checksum, production_state: "rendered_master" } as never,
-      renderJobs: [{ state: "succeeded", manifest_checksum: live.checksum, error_message: null } as never],
-      rehearsalCheckedAt: "2026-09-24T10:00:00Z",
+      renderJobs: [
+        { state: "succeeded", manifest_checksum: live.checksum, error_message: null, qc: { passed: true }, plan: { purpose: "rehearsal" } } as never,
+        { state: "succeeded", manifest_checksum: live.checksum, error_message: null, qc: { passed: true }, plan: { purpose: "master" } } as never,
+      ],
       automationHealthy: true,
       compliance: { passed: true, blockerCount: 0, warningCount: 0, manifestChecksum: live.checksum },
     });
@@ -118,8 +120,10 @@ describe("buildTotpPreflight", () => {
     const base = {
       manifest: live,
       stored: { checksum: live.checksum, production_state: "rendered_master" } as never,
-      renderJobs: [{ state: "succeeded", manifest_checksum: live.checksum, error_message: null } as never],
-      rehearsalCheckedAt: "2026-09-24T10:00:00Z",
+      renderJobs: [
+        { state: "succeeded", manifest_checksum: live.checksum, error_message: null, qc: { passed: true }, plan: { purpose: "rehearsal" } } as never,
+        { state: "succeeded", manifest_checksum: live.checksum, error_message: null, qc: { passed: true }, plan: { purpose: "master" } } as never,
+      ],
       automationHealthy: true,
     };
 
@@ -139,4 +143,29 @@ describe("buildTotpPreflight", () => {
     });
     expect(failed.blockers.map((item) => item.code)).toContain("compliance_clear");
   });
+
+  it("only unlocks broadcast sign-off after a QC-approved full rehearsal for this checksum", () => {
+    const live = manifest([segment(), segment({ index: 2, performance_id: "perf-2" }), segment({ index: 3, performance_id: "perf-3" })]);
+    const base = {
+      manifest: live,
+      stored: { checksum: live.checksum, production_state: "gameplay" } as never,
+      automationHealthy: true,
+      compliance: { passed: true, blockerCount: 0, warningCount: 0, manifestChecksum: live.checksum },
+    };
+    const withoutRehearsal = buildTotpPreflight(base);
+    expect(withoutRehearsal.renderReady).toBe(false);
+
+    const staleRehearsal = buildTotpPreflight({
+      ...base,
+      renderJobs: [{ state: "succeeded", manifest_checksum: "old", qc: { passed: true }, plan: { purpose: "rehearsal" } } as never],
+    });
+    expect(staleRehearsal.renderReady).toBe(false);
+
+    const passed = buildTotpPreflight({
+      ...base,
+      renderJobs: [{ state: "succeeded", manifest_checksum: live.checksum, qc: { passed: true }, plan: { purpose: "rehearsal" } } as never],
+    });
+    expect(passed.renderReady).toBe(true);
+  });
+
 });
