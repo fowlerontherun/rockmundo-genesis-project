@@ -128,7 +128,9 @@ describe("Top of the Pops pages", () => {
 
     await waitFor(() => expect(container.querySelector("[data-totp-running-sheet]")).not.toBeNull());
     expect(screen.getByText(/Episode running sheet/i)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText(/Not saved/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText(/Not saved/i).length).toBeGreaterThan(0));
     await waitFor(() => expect(screen.getByRole("button", { name: /Mark production ready/i })).toBeEnabled());
+    await waitFor(() => expect(container.querySelector("[data-totp-render-queue]")).not.toBeNull());
+    expect(screen.getByRole("button", { name: /Render episode file/i })).toBeDisabled();
   });
 });
