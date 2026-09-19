@@ -8,6 +8,7 @@ import { TotpControlRoomCard } from "@/features/top-of-the-pops/TotpControlRoomC
 import { TotpProductionHealthCard } from "@/features/top-of-the-pops/TotpProductionHealthCard";
 import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningSheetCard";
 import { TotpRenderQueueCard } from "@/features/top-of-the-pops/TotpRenderQueueCard";
+import { TotpYoutubePublishCard } from "@/features/top-of-the-pops/TotpYoutubePublishCard";
 import { resolveTotpPresenter } from "@/features/top-of-the-pops/presenters";
 
 export default function TopOfThePopsControlRoom() {
