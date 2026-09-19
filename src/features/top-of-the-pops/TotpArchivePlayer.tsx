@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Captions, CaptionsOff, Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Captions, CaptionsOff, Download, Pause, Play, RotateCcw, Video, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { GigViewerReplay } from "@/features/gig-experience/events/types";
@@ -16,6 +16,7 @@ import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { TotpBroadcastCanvas } from "./TotpBroadcastCanvas";
 import { totpAudienceReactionLabel } from "./studioAudience";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
+import { downloadTotpExport, recordTotpBroadcast, totpExportFileName, TotpExportUnsupportedError } from "./exportBroadcast";
 
 const metric = <T,>(value: T) => ({ status: "available" as const, value, source: "authoritative" as const });
 const unavailable = (reason: string) => ({ status: "not_applicable" as const, reason });
