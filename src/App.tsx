@@ -150,6 +150,7 @@ const AdminGigViewerReplayAudit = lazyWithRetry(() => import("./pages/admin/GigV
 const TopOfThePopsAdmin = lazyWithRetry(() => import("./pages/admin/TopOfThePopsAdmin"));
 const TopOfThePopsSchedule = lazyWithRetry(() => import("./pages/admin/TopOfThePopsSchedule"));
 const TopOfThePopsControlRoom = lazyWithRetry(() => import("./pages/admin/TopOfThePopsControlRoom"));
+const BroadcastConsentPage = lazyWithRetry(() => import("./pages/BroadcastConsent"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const TwaaterProfileView = lazyWithRetry(() => import("./pages/TwaaterProfileView"));
 const TwaaterHashtagView = lazyWithRetry(() => import("./pages/TwaaterHashtagView"));
@@ -426,6 +427,7 @@ const ROUTE_TITLES = new Map<string, string>([
   ["/admin/top-of-the-pops", "Top of the Pops Admin"],
   ["/admin/top-of-the-pops/schedule", "Top of the Pops Schedule"],
   ["/admin/top-of-the-pops/control-room", "Top of the Pops Control Room"],
+  ["/broadcast-consent", "Broadcast Permission"],
 ]);
 
 for (const module of FM_MODULES) {
@@ -535,6 +537,7 @@ function App() {
                     <Route path="home" element={<Dashboard />} />
                     <Route path="inbox" element={<Inbox />} />
                     <Route path="my-bug-reports" element={<MyBugReportsPage />} />
+                    <Route path="broadcast-consent" element={<BroadcastConsentPage />} />
 
 
                     <Route path="todays-news" element={<TodaysNewsPage />} />

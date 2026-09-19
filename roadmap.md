@@ -27,7 +27,11 @@
   - [x] Episode publication records (title, description, tags, visibility, premiere time, source master, YouTube video id, state).
   - [x] Server-side upload function with resumable upload, Drive master reading and scheduled premiere support.
   - [x] Control room publishing panel with prefilled listing, publish now or schedule premiere, and failure reporting.
-  - [ ] Add the YouTube channel credentials (client id, client secret, refresh token) so real uploads can run.
-- [ ] Phase 5: rights, moderation, safety and accessibility hardening.
+  - [x] Uploads handled manually by the user; stored channel credentials not required.
+- [x] Phase 5: rights, moderation, safety and accessibility hardening.
+  - [x] Player broadcast permission page with scopes, plus withdrawal.
+  - [x] Deterministic screening report (permission, wording, music rights, subtitle readability, takedowns) saved per episode.
+  - [x] Takedown records (remove / replace / mute) that never alter game settlement.
+  - [x] Export and publish gated on a clean screening report matching the current running sheet.
 - [ ] Phase 6: redundant RTMPS live transmission.
 - [ ] Phase 7: production operations, analytics and audience growth.

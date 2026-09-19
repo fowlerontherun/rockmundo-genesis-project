@@ -56690,6 +56690,50 @@ export type Database = {
           },
         ]
       }
+      totp_compliance_reports: {
+        Row: {
+          blocker_count: number
+          created_at: string
+          episode_id: string
+          manifest_checksum: string | null
+          passed: boolean
+          report: Json
+          screened_by: string | null
+          updated_at: string
+          warning_count: number
+        }
+        Insert: {
+          blocker_count?: number
+          created_at?: string
+          episode_id: string
+          manifest_checksum?: string | null
+          passed?: boolean
+          report?: Json
+          screened_by?: string | null
+          updated_at?: string
+          warning_count?: number
+        }
+        Update: {
+          blocker_count?: number
+          created_at?: string
+          episode_id?: string
+          manifest_checksum?: string | null
+          passed?: boolean
+          report?: Json
+          screened_by?: string | null
+          updated_at?: string
+          warning_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_compliance_reports_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: true
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totp_episode_manifests: {
         Row: {
           checksum: string
@@ -56787,6 +56831,63 @@ export type Database = {
           },
         ]
       }
+      totp_episode_takedowns: {
+        Row: {
+          action: string
+          active: boolean
+          cleared_at: string | null
+          cleared_by: string | null
+          created_at: string
+          episode_id: string
+          id: string
+          performance_id: string | null
+          raised_by: string | null
+          reason: string
+          replacement_note: string | null
+        }
+        Insert: {
+          action?: string
+          active?: boolean
+          cleared_at?: string | null
+          cleared_by?: string | null
+          created_at?: string
+          episode_id: string
+          id?: string
+          performance_id?: string | null
+          raised_by?: string | null
+          reason: string
+          replacement_note?: string | null
+        }
+        Update: {
+          action?: string
+          active?: boolean
+          cleared_at?: string | null
+          cleared_by?: string | null
+          created_at?: string
+          episode_id?: string
+          id?: string
+          performance_id?: string | null
+          raised_by?: string | null
+          reason?: string
+          replacement_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_episode_takedowns_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "totp_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totp_episode_takedowns_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: false
+            referencedRelation: "totp_performances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totp_episodes: {
         Row: {
           broadcast_at: string
@@ -56845,6 +56946,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      totp_external_use_consents: {
+        Row: {
+          consent_version: number
+          created_at: string
+          granted: boolean
+          granted_at: string | null
+          scopes: string[]
+          updated_at: string
+          user_id: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          consent_version?: number
+          created_at?: string
+          granted?: boolean
+          granted_at?: string | null
+          scopes?: string[]
+          updated_at?: string
+          user_id: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          consent_version?: number
+          created_at?: string
+          granted?: boolean
+          granted_at?: string | null
+          scopes?: string[]
+          updated_at?: string
+          user_id?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: []
       }
       totp_invitations: {
         Row: {
@@ -71137,6 +71271,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      totp_admin_clear_takedown: {
+        Args: { p_takedown_id: string }
+        Returns: Json
+      }
       totp_admin_delete_youtube_publication: {
         Args: { p_id: string }
         Returns: boolean
@@ -71170,6 +71308,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      totp_admin_episode_consents: {
+        Args: { p_episode_id: string }
+        Returns: Json
+      }
       totp_admin_lock_running_order: {
         Args: { p_episode_id: string }
         Returns: number
@@ -71200,6 +71342,27 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      totp_admin_record_takedown: {
+        Args: {
+          p_action: string
+          p_episode_id: string
+          p_performance_id: string
+          p_reason: string
+          p_replacement_note?: string
+        }
+        Returns: Json
+      }
+      totp_admin_save_compliance_report: {
+        Args: {
+          p_blocker_count?: number
+          p_episode_id: string
+          p_manifest_checksum?: string
+          p_passed: boolean
+          p_report: Json
+          p_warning_count?: number
+        }
+        Returns: Json
       }
       totp_admin_save_episode_manifest: {
         Args: {
@@ -71396,6 +71559,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      totp_episode_compliance_report: {
+        Args: { p_episode_id: string }
+        Returns: Json
+      }
       totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
       totp_episode_plan: { Args: { p_episode_id: string }; Returns: Json }
       totp_episode_production_audit: {
@@ -71443,6 +71610,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      totp_episode_takedowns: {
+        Args: { p_active_only?: boolean; p_episode_id: string }
+        Returns: Json
+      }
       totp_fail_render_job: {
         Args: { p_error: string; p_job_id: string }
         Returns: {
@@ -71478,6 +71649,7 @@ export type Database = {
       }
       totp_is_episode_date: { Args: { p_date: string }; Returns: boolean }
       totp_my_backstage_interactions: { Args: never; Returns: Json }
+      totp_my_broadcast_consent: { Args: never; Returns: Json }
       totp_my_invitations: {
         Args: never
         Returns: {
@@ -71552,6 +71724,10 @@ export type Database = {
         Returns: string
       }
       totp_run_broadcast_cycle: { Args: { p_now?: string }; Returns: Json }
+      totp_set_broadcast_consent: {
+        Args: { p_granted: boolean; p_scopes?: string[] }
+        Returns: Json
+      }
       totp_set_youtube_publication_state: {
         Args: {
           p_error_message?: string
