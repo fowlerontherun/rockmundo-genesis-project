@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.744",
+    date: "2026-09-19",
+    changes: [
+      { type: "feature", description: "Top of the Pops episodes can now be queued as a finished widescreen episode file, with poster, subtitles and chapter list planned automatically" },
+      { type: "feature", description: "The admin panel shows the render queue: planned length, chapters, progress, downloads and any quality checks that failed" },
+      { type: "improvement", description: "An episode can only be rendered from a saved, unchanged running sheet, and a passing render locks the episode as a finished master" },
+    ],
+  },
+  {
     version: "1.1.743",
     date: "2026-09-19",
     changes: [

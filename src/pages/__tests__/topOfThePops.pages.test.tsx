@@ -87,6 +87,17 @@ vi.mock("@/features/top-of-the-pops/episodeManifestApi", async (importOriginal) 
   };
 });
 
+vi.mock("@/features/top-of-the-pops/renderQueueApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/top-of-the-pops/renderQueueApi")>();
+  return {
+    ...actual,
+    getTotpRenderJobs: vi.fn().mockResolvedValue([]),
+    enqueueTotpRender: vi.fn(),
+    cancelTotpRender: vi.fn(),
+  };
+});
+
+
 vi.mock("@/features/top-of-the-pops/TotpArchivePlayer", () => ({ TotpArchivePlayer: () => <div /> }));
 vi.mock("@/features/top-of-the-pops/TotpFullEpisodePlayer", () => ({ TotpFullEpisodePlayer: () => <div /> }));
 vi.mock("@/features/top-of-the-pops/TotpBroadcastStatusCard", () => ({ TotpBroadcastStatusCard: () => <div /> }));
