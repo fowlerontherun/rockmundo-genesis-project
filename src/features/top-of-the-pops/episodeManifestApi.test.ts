@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const totpRpc = vi.fn();
 const getTotpPerformanceAudio = vi.fn();
+const listPresenterMedia = vi.fn();
 
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { storage: { from: () => ({ list: (...args: unknown[]) => listPresenterMedia(...args) }) } },
+}));
 vi.mock("./rpc", () => ({ totpRpc: (...args: unknown[]) => totpRpc(...args) }));
 vi.mock("./api", () => ({
   getTotpPerformanceAudio: (...args: unknown[]) => getTotpPerformanceAudio(...args),
 }));
 vi.mock("./totpMedia", () => ({
+  TOTP_MEDIA_BUCKET: "totp-media",
   TOTP_MEDIA_PATHS: { presenter: (key: string, slot: string) => `presenters/${key}/${slot}` },
   totpMediaPublicUrl: (path: string) => `https://media.example/${path}`,
 }));
@@ -48,6 +53,8 @@ const episode: TotpEpisode = {
 beforeEach(() => {
   totpRpc.mockReset();
   getTotpPerformanceAudio.mockReset();
+  listPresenterMedia.mockReset();
+  listPresenterMedia.mockResolvedValue({ data: [{ name: "act-intro" }], error: null });
 });
 
 describe("TOTP stored running sheet", () => {
@@ -61,7 +68,7 @@ describe("TOTP stored running sheet", () => {
     const { manifest, issues } = await buildTotpEpisodeManifestFromEpisode(episode);
 
     expect(manifest.segments).toHaveLength(1);
-    expect(manifest.total_runtime_ms).toBe(182_000);
+    expect(manifest.total_runtime_ms).toBe(190_000);
     expect(manifest.segments[0].rights.status).toBe("cleared");
     expect(manifest.segments[0].assets).toContainEqual({
       kind: "presenter_audio",
@@ -70,6 +77,13 @@ describe("TOTP stored running sheet", () => {
     });
     expect(issues).toEqual([]);
     expect(inGameTrackRights().youtube_live_permitted).toBe(true);
+  });
+
+  it("reports a blocking issue when recorded presenter media is missing", async () => {
+    listPresenterMedia.mockResolvedValue({ data: [], error: null });
+    getTotpPerformanceAudio.mockResolvedValue({ audio_url: "https://cdn/p1.mp3", audio_generation_status: "complete", duration_seconds: 182 });
+    const { issues } = await buildTotpEpisodeManifestFromEpisode(episode);
+    expect(issues.map((issue) => issue.code)).toContain("missing_presenter_audio");
   });
 
   it("reports blocking issues when a performance has no audio", async () => {
