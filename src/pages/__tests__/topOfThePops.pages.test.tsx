@@ -121,6 +121,7 @@ describe("Top of the Pops pages", () => {
 
     await waitFor(() => expect(screen.getAllByText(/The Kestrels/i).length).toBeGreaterThan(0));
     expect(screen.getAllByText(/Opening Night/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/London time/i).length).toBeGreaterThanOrEqual(3);
   });
 
   it("renders the admin episode with the stored running sheet panel", async () => {
