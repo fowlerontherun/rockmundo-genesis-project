@@ -137,8 +137,17 @@ Deno.serve(async (req: Request) => {
       if (manifestError) await failClaim(manifestError.message);
       if (!stored) await failClaim("The frozen episode manifest no longer exists.");
       if (stored.checksum !== job.manifest_checksum) await failClaim("The frozen manifest checksum changed after this render was queued.");
-      if (!["production_ready", "rendered_master"].includes(String(stored.production_state))) {
-        await failClaim(`Episode is ${stored.production_state}; it must be signed off before rendering.`);
+
+      const renderPurpose = String(job.plan?.purpose ?? "master");
+      const sourcePerformanceId = String(job.plan?.source_performance_id ?? "").trim() || null;
+      if (!["master", "rehearsal", "segment_preview"].includes(renderPurpose)) {
+        await failClaim(`Unknown render purpose: ${renderPurpose}`);
+      }
+      if (renderPurpose === "master" && !["production_ready", "rendered_master"].includes(String(stored.production_state))) {
+        await failClaim(`Episode is ${stored.production_state}; it must be signed off before rendering the master.`);
+      }
+      if (renderPurpose === "segment_preview" && !sourcePerformanceId) {
+        await failClaim("Segment preview render is missing its source performance.");
       }
 
       const { data: replayRows, error: replayError } = await service
@@ -149,10 +158,26 @@ Deno.serve(async (req: Request) => {
       const replays = [...(replayRows ?? [])].sort(
         (a, b) => Number(a.payload?.runningOrder ?? 0) - Number(b.payload?.runningOrder ?? 0),
       );
-      const expectedIds = new Set((stored.manifest?.segments ?? []).map((row: { performance_id?: string }) => row.performance_id).filter(Boolean));
+      const allExpectedIds = (stored.manifest?.segments ?? [])
+        .map((row: { performance_id?: string }) => row.performance_id)
+        .filter((id: string | undefined): id is string => Boolean(id));
+      const expectedIds = new Set(
+        renderPurpose === "segment_preview" && sourcePerformanceId
+          ? allExpectedIds.filter((id: string) => id === sourcePerformanceId)
+          : allExpectedIds,
+      );
+      if (renderPurpose === "segment_preview" && sourcePerformanceId && !expectedIds.has(sourcePerformanceId)) {
+        await failClaim("The requested segment is no longer in the frozen running sheet.");
+      }
       const receivedIds = new Set(replays.map((row) => row.performance_id));
       const missing = [...expectedIds].filter((id) => !receivedIds.has(id));
-      if (missing.length) await failClaim(`Broadcast archive is missing ${missing.length} frozen performance replay(s).`);
+      if (missing.length) {
+        await failClaim(
+          renderPurpose === "segment_preview"
+            ? "The selected segment has no frozen broadcast replay."
+            : `Broadcast archive is missing ${missing.length} frozen performance replay(s).`,
+        );
+      }
 
       const { data: crowdSounds, error: crowdError } = await service
         .from("gig_crowd_sounds")

@@ -12,7 +12,9 @@ import {
   cancelTotpRender,
   enqueueTotpRender,
   getTotpRenderJobs,
+  latestSucceededTotpRehearsal,
   resolveTotpRenderArtifactUrl,
+  totpRenderJobLabel,
   totpRenderStateLabel,
 } from "./renderQueueApi";
 import { buildTotpRenderPlan } from "./renderSpec";
@@ -47,11 +49,13 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
   const plan = manifest ? buildTotpRenderPlan(manifest) : null;
   const savedAndCurrent = Boolean(stored.data && live.data && stored.data.checksum === live.data.manifest.checksum);
   const productionCleared = stored.data?.production_state === "production_ready" || stored.data?.production_state === "rendered_master";
+  const rehearsalPassed = Boolean(latestSucceededTotpRehearsal(jobs.data ?? [], stored.data?.checksum));
 
   const queue = useMutation({
     mutationFn: async () => {
       if (!stored.data) throw new Error("Save the episode running sheet first.");
       if (!savedAndCurrent) throw new Error("The running sheet has changed — save it again before rendering.");
+      if (!rehearsalPassed) throw new Error("A QC-approved rehearsal render is required before the broadcast master.");
       if (!productionCleared) throw new Error("Sign off the episode in the control room before rendering the broadcast master.");
       return await enqueueTotpRender(stored.data.manifest);
     },
@@ -99,7 +103,15 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={active ? "secondary" : savedAndCurrent ? "default" : "outline"}>
-              {active ? totpRenderStateLabel(active.state) : savedAndCurrent && productionCleared ? "Ready to render" : savedAndCurrent ? "Needs sign-off" : "Running sheet not saved"}
+              {active
+                ? totpRenderStateLabel(active.state)
+                : savedAndCurrent && productionCleared && rehearsalPassed
+                  ? "Ready to render"
+                  : savedAndCurrent && !rehearsalPassed
+                    ? "Needs rehearsal"
+                    : savedAndCurrent
+                      ? "Needs sign-off"
+                      : "Running sheet not saved"}
             </Badge>
             <Button size="sm" variant="outline" onClick={() => void jobs.refetch()} disabled={jobs.isFetching}>
               <RefreshCw className={`h-4 w-4 ${jobs.isFetching ? "animate-spin" : ""}`} />
@@ -128,7 +140,7 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => queue.mutate()} disabled={queue.isPending || Boolean(active) || !savedAndCurrent || !productionCleared}>
+          <Button size="sm" onClick={() => queue.mutate()} disabled={queue.isPending || Boolean(active) || !savedAndCurrent || !productionCleared || !rehearsalPassed}>
             <Clapperboard className="mr-2 h-4 w-4" /> Render episode file
           </Button>
           {active ? (
@@ -145,7 +157,7 @@ export function TotpRenderQueueCard({ episode }: { episode: TotpEpisode }) {
             (jobs.data ?? []).map((job) => (
               <div key={job.id} className="rounded-lg border p-2" data-totp-render-job>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-semibold">{totpRenderStateLabel(job.state)}</span>
+                  <span className="text-xs font-semibold">{totpRenderJobLabel(job)}</span>
                   <span className="text-[11px] text-muted-foreground">
                     Attempt {job.attempts} · {new Date(job.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })}
                   </span>

@@ -1,6 +1,11 @@
 import type { TotpEpisodeManifest, TotpManifestIssue, TotpProductionState } from "./episodeManifest";
 import type { StoredTotpEpisodeManifest } from "./episodeManifestApi";
-import type { TotpRenderJob } from "./renderQueueApi";
+import {
+  latestSucceededTotpRehearsal,
+  latestSucceededTotpRender,
+  totpRenderPurpose,
+  type TotpRenderJob,
+} from "./renderQueueApi";
 import type { TotpEpisodePlan } from "./scheduleApi";
 import { TOTP_TARGET_RUNTIME_SECONDS, plannedRuntimeSeconds } from "./scheduleWeeks";
 
@@ -50,7 +55,6 @@ export interface TotpPreflightInput {
   plan?: TotpEpisodePlan | null;
   renderJobs?: TotpRenderJob[];
   automationHealthy?: boolean | null;
-  rehearsalCheckedAt?: string | null;
   /** Phase 5 screening: rights, player permission, content review and accessibility. */
   compliance?: {
     passed: boolean;
@@ -261,8 +265,11 @@ export function buildTotpPreflight(input: TotpPreflightInput): TotpPreflightRepo
     ),
   );
 
-  const succeeded = renderJobs.find((job) => job.state === "succeeded" && (!manifest || job.manifest_checksum === manifest.checksum));
-  const failed = renderJobs.find((job) => job.state === "failed");
+  const checksum = manifest?.checksum ?? null;
+  const succeeded = latestSucceededTotpRender(renderJobs, checksum);
+  const rehearsal = latestSucceededTotpRehearsal(renderJobs, checksum);
+  const failedMaster = renderJobs.find((job) => job.state === "failed" && totpRenderPurpose(job) === "master");
+  const failedRehearsal = renderJobs.find((job) => job.state === "failed" && totpRenderPurpose(job) === "rehearsal");
   checks.push(
     check(
       "render_master",
@@ -271,22 +278,25 @@ export function buildTotpPreflight(input: TotpPreflightInput): TotpPreflightRepo
       !!succeeded,
       "Finished master available",
       succeeded
-        ? "A finished master for this running sheet is ready."
-        : failed
-          ? `The last export failed: ${failed.error_message ?? "no reason given"}.`
+        ? "A finished QC-approved master for this running sheet is ready."
+        : failedMaster
+          ? `The last master export failed: ${failedMaster.error_message ?? "no reason given"}.`
           : "No finished master has been produced yet.",
     ),
   );
 
-  const rehearsed = !!input.rehearsalCheckedAt;
   checks.push(
     check(
       "rehearsal_done",
       "render",
       "warning",
-      rehearsed,
-      "Rehearsal pass logged",
-      rehearsed ? "A rehearsal pass has been logged for this episode." : "No rehearsal pass has been logged yet.",
+      !!rehearsal,
+      "QC rehearsal render passed",
+      rehearsal
+        ? "The exact frozen running sheet has completed a QC-approved rehearsal render."
+        : failedRehearsal
+          ? `The last rehearsal render failed: ${failedRehearsal.error_message ?? "no reason given"}.`
+          : "Run the full rehearsal render before broadcast sign-off.",
     ),
   );
 
@@ -361,9 +371,9 @@ export function buildTotpPreflight(input: TotpPreflightInput): TotpPreflightRepo
     blockers,
     warnings,
     passedCount: checks.filter((item) => item.passed).length,
-    rehearsalReady: segments.length > 0 && missingAudio.length === 0,
-    renderReady: blockers.length === 0,
-    publishReady: blockers.length === 0 && !!succeeded && rehearsed,
+    rehearsalReady: inSync && segments.length > 0 && missingAudio.length === 0,
+    renderReady: blockers.length === 0 && !!rehearsal,
+    publishReady: blockers.length === 0 && !!succeeded && !!rehearsal,
     productionState,
   };
 }

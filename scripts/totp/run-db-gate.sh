@@ -30,3 +30,4 @@ festival_assert_safe_test_database "$DB_URL"
 
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/totp_release_health_harness.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/totp_phase0_broadcast_contract_harness.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/totp_phase3_control_room_harness.sql

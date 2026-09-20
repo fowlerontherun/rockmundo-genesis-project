@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTotpRenderPlan,
+  buildTotpRehearsalRenderPlan,
+  buildTotpSegmentPreviewRenderPlan,
   evaluateTotpRenderQc,
   toTotpChapterFile,
   type TotpRenderProbe,
@@ -100,6 +102,8 @@ describe("Top of the Pops render plan", () => {
     const a = buildTotpRenderPlan(manifest);
     const b = buildTotpRenderPlan(manifest);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(a.purpose).toBe("master");
+    expect(a.source_performance_id).toBeNull();
     expect(a.delivery.master).toBe("totp-episode-007-2026-09-19-master.mp4");
     expect(a.delivery.youtube).toBe("totp-episode-007-2026-09-19-youtube.mp4");
     expect(a.delivery.thumbnails).toHaveLength(2);
@@ -183,4 +187,27 @@ describe("Top of the Pops render plan", () => {
       "chapters_present",
     ]);
   });
+
+  it("builds a full rehearsal with the exact master timeline but separate artifacts", () => {
+    const master = buildTotpRenderPlan(manifest);
+    const rehearsal = buildTotpRehearsalRenderPlan(manifest);
+    expect(rehearsal.purpose).toBe("rehearsal");
+    expect(rehearsal.items).toEqual(master.items);
+    expect(rehearsal.total_duration_ms).toBe(master.total_duration_ms);
+    expect(rehearsal.expected_frame_count).toBe(master.expected_frame_count);
+    expect(rehearsal.delivery.master).toContain("-rehearsal.mp4");
+    expect(rehearsal.delivery.master).not.toBe(master.delivery.master);
+  });
+
+  it("builds a segment preview containing only the selected act", () => {
+    const preview = buildTotpSegmentPreviewRenderPlan(manifest, "perf-1");
+    expect(preview.purpose).toBe("segment_preview");
+    expect(preview.source_performance_id).toBe("perf-1");
+    expect(preview.items.every((item) => item.performance_id === "perf-1")).toBe(true);
+    expect(preview.items[0].start_ms).toBe(0);
+    expect(preview.items.filter((item) => item.kind === "performance")).toHaveLength(1);
+    expect(preview.chapters).toHaveLength(1);
+    expect(preview.delivery.master).toContain("-segment-preview-perf-1");
+  });
+
 });

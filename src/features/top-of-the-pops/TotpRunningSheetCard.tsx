@@ -159,19 +159,10 @@ export function TotpRunningSheetCard({ episode }: { episode: TotpEpisode }) {
               <Button size="sm" variant="secondary" onClick={() => save.mutate("gameplay")} disabled={save.isPending}>
                 <Save className="mr-1.5 h-3.5 w-3.5" /> Save sheet
               </Button>
-              <Button
-                size="sm"
-                onClick={() => save.mutate("production_ready")}
-                disabled={save.isPending || blocking.length > 0 || live.data.manifest.segments.length === 0}
-              >
-                Mark production ready
-              </Button>
             </div>
-            {blocking.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Clear the problems above before this episode can go into production.
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Final production sign-off happens in the control room after a QC-approved rehearsal render.
+            </p>
           </>
         ) : null}
       </CardContent>

@@ -20,6 +20,7 @@ import {
 } from "./scheduleApi";
 import { TOTP_MEDIA_BUCKET, detectTotpUploadMime, totpMediaPublicUrl } from "./totpMedia";
 import { supabase } from "@/integrations/supabase/client";
+import { logTotpProductionEvent } from "./productionAuditApi";
 
 type RightsDraft = TotpTrackBroadcastRightsPlan;
 
@@ -186,6 +187,12 @@ export function TotpBroadcastContractCard({ episode }: { episode: TotpEpisode })
     },
     onSuccess: () => {
       toast({ title: "Broadcast rights saved", description: "The episode manifest will now use these explicit clearance records." });
+      void logTotpProductionEvent({
+        episodeId: episode.id,
+        eventKind: "replacement",
+        headline: "Broadcast rights contract updated",
+        detail: { area: "rights", songs: Object.keys(rightsDrafts) },
+      }).then(() => queryClient.invalidateQueries({ queryKey: ["totp", "production-audit", episode.id] }));
       void queryClient.invalidateQueries({ queryKey: ["totp", "episode-plan", episode.id] });
       void queryClient.invalidateQueries({ queryKey: ["totp", "running-sheet"] });
     },
@@ -251,9 +258,15 @@ export function TotpBroadcastContractCard({ episode }: { episode: TotpEpisode })
       });
     },
     onMutate: ({ performance }) => setUploadingPerformance(performance.performance_id),
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       setUploadingPerformance(null);
       toast({ title: "Presenter recording saved", description: "This exact recording is now versioned against the current script." });
+      void logTotpProductionEvent({
+        episodeId: episode.id,
+        eventKind: "replacement",
+        headline: "Presenter recording replaced",
+        detail: { area: "presenter_audio", performance_id: variables.performance.performance_id },
+      }).then(() => queryClient.invalidateQueries({ queryKey: ["totp", "production-audit", episode.id] }));
       void queryClient.invalidateQueries({ queryKey: ["totp", "episode-plan", episode.id] });
       void queryClient.invalidateQueries({ queryKey: ["totp", "running-sheet"] });
     },
@@ -284,7 +297,7 @@ export function TotpBroadcastContractCard({ episode }: { episode: TotpEpisode })
     && episode.performances.length > 0;
 
   return (
-    <Card data-totp-broadcast-contract>
+    <Card id="totp-broadcast-contract" data-totp-broadcast-contract>
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

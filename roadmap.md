@@ -20,9 +20,13 @@
   - [x] Render worker contract documented (`docs/totp-render-worker.md`).
   - [x] Headless GitHub Actions render worker produces the MP4, poster, captions and chapter files through an OIDC-authenticated Supabase broker.
 - [x] Phase 3: production control room, rehearsal and release gates.
-  - [x] Graded preflight report (blockers, warnings, notes) across running sheet, acts, audio, rights, runtime, export and automation.
-  - [x] Control room page and card with rehearsal pass, sign-off and render/publish gates.
-  - [x] Production audit log per episode (checks, rehearsals, sign-offs) with admin-only access.
+  - [x] Graded preflight report (blockers, warnings and notes) across running sheet, acts, audio, rights, runtime, export, automation and compliance.
+  - [x] Deterministic full rehearsal render uses the exact frozen manifest; QC pass is required before production sign-off, master render and external publishing.
+  - [x] Per-act segment preview/re-render controls support editorial review after replacing rights or presenter assets.
+  - [x] Single control-room surface combines health, running sheet, contract assets, compliance, rehearsal, render and delivery status.
+  - [x] Audit history covers checks, worker-owned rehearsals/renders, sign-offs, warning acknowledgements, replacements, re-renders and publication actions.
+  - [x] Blocking preflight failures cannot be overridden; non-blocking acknowledgements require a reason and remain visible.
+  - [x] Dedicated Phase 3 release suite covers database gates, admin journey, renderer/failure recovery, production build and browser visual render smoke.
 - [x] Phase 4: YouTube upload and scheduled Premiere.
   - [x] Episode publication records (title, description, tags, visibility, premiere time, source master, YouTube video id, state).
   - [x] Server-side upload function with resumable upload, Drive master reading and scheduled premiere support.

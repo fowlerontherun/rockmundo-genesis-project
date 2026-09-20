@@ -30,6 +30,8 @@ export type TotpRenderItemKind =
   | "applause"
   | "end_credits";
 
+export type TotpRenderPurpose = "master" | "rehearsal" | "segment_preview";
+
 export interface TotpRenderItem {
   index: number;
   kind: TotpRenderItemKind;
@@ -82,6 +84,8 @@ export interface TotpRenderPlan {
   episode_id: string;
   episode_number: number;
   manifest_checksum: string;
+  purpose: TotpRenderPurpose;
+  source_performance_id: string | null;
   programme_spec: TotpEpisodeManifest["programme_spec"];
   audio_sample_rate: typeof TOTP_RENDER_AUDIO_SAMPLE_RATE;
   items: TotpRenderItem[];
@@ -250,6 +254,8 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     episode_id: manifest.episode_id,
     episode_number: manifest.episode_number,
     manifest_checksum: manifest.checksum,
+    purpose: "master",
+    source_performance_id: null,
     programme_spec: manifest.programme_spec,
     audio_sample_rate: TOTP_RENDER_AUDIO_SAMPLE_RATE,
     items,
@@ -270,6 +276,79 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     },
     loudness_target: TOTP_MIX_TARGET,
     qc_checks: QC_CHECKS,
+  };
+}
+
+
+function deliveryForPurpose(
+  plan: TotpRenderPlan,
+  purpose: Exclude<TotpRenderPurpose, "master">,
+  performanceId?: string | null,
+): TotpRenderDelivery {
+  const base = plan.delivery.master.replace(/-master\.mp4$/, "");
+  const segmentSuffix = performanceId ? `-${performanceId.slice(0, 8)}` : "";
+  const suffix = purpose === "rehearsal" ? "rehearsal" : `segment-preview${segmentSuffix}`;
+  return {
+    master: `${base}-${suffix}.mp4`,
+    youtube: `${base}-${suffix}-delivery.mp4`,
+    proxy: `${base}-${suffix}-proxy.mp4`,
+    poster: `${base}-${suffix}-poster.jpg`,
+    thumbnails: plan.thumbnail_at_ms.map((_, index) => `${base}-${suffix}-thumb-${String(index + 1).padStart(2, "0")}.jpg`),
+    captions: `${base}-${suffix}.vtt`,
+    chapters: `${base}-${suffix}-chapters.txt`,
+  };
+}
+
+/** Full dress rehearsal: exactly the production timeline, with separate artifacts. */
+export function buildTotpRehearsalRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPlan {
+  const plan = buildTotpRenderPlan(manifest);
+  return {
+    ...plan,
+    purpose: "rehearsal",
+    delivery: deliveryForPurpose(plan, "rehearsal"),
+  };
+}
+
+/** Render one act's presenter link, performance and applause for editorial review. */
+export function buildTotpSegmentPreviewRenderPlan(
+  manifest: TotpEpisodeManifest,
+  performanceId: string,
+): TotpRenderPlan {
+  const master = buildTotpRenderPlan(manifest);
+  const segment = manifest.segments.find((item) => item.performance_id === performanceId);
+  if (!segment) throw new Error("That performance is not in the frozen running sheet.");
+
+  let cursor = 0;
+  const items = master.items
+    .filter((item) => item.performance_id === performanceId)
+    .map((item, index) => {
+      const next = { ...item, index, start_ms: cursor };
+      cursor += item.duration_ms;
+      return next;
+    });
+  if (!items.length) throw new Error("That performance has no renderable programme items.");
+
+  const performance = items.find((item) => item.kind === "performance") ?? items[0];
+  const thumbnailAt = [performance.start_ms + Math.floor(performance.duration_ms / 3)];
+  const previewBase: TotpRenderPlan = {
+    ...master,
+    purpose: "segment_preview",
+    source_performance_id: performanceId,
+    items,
+    chapters: [{
+      title: `${segment.band_name} — ${segment.song_title}`,
+      start_ms: 0,
+      end_ms: cursor,
+    }],
+    total_duration_ms: cursor,
+    expected_frame_count: Math.round((cursor / 1_000) * manifest.programme_spec.frame_rate),
+    poster_at_ms: performance.start_ms + Math.floor(performance.duration_ms / 2),
+    thumbnail_at_ms: thumbnailAt,
+    captions_vtt: toTotpWebVtt(manifestCaptionTrack({ ...manifest, segments: [segment] }, items)),
+  };
+  return {
+    ...previewBase,
+    delivery: deliveryForPurpose(previewBase, "segment_preview", performanceId),
   };
 }
 
