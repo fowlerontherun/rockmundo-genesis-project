@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.752",
+    date: "2026-09-20",
+    changes: [
+      { type: "fix", description: "Fixed a fault that stopped the app from building and blocked publishing, caused by a wrongly named subtitle helper in the Top of the Pops video render screen" },
+    ],
+  },
+  {
+
     version: "1.1.751",
     date: "2026-09-19",
     changes: [
