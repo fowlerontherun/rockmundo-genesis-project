@@ -123,7 +123,7 @@ function BroadcastReplayItem({ item, localMs, source }: { item: TotpRenderItem; 
       captions={captions}
       showCaptions
       showSafeAreaGuides={false}
-      enableAudienceAudio={false}
+
     />
   );
 }
