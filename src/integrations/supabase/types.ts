@@ -57642,13 +57642,21 @@ export type Database = {
           episode_id: string
           error_message: string | null
           finished_at: string | null
+          heartbeat_at: string | null
           id: string
+          input_sha256: string | null
           manifest_checksum: string
+          master_sha256: string | null
           plan: Json
+          probe: Json
+          progress_percent: number
           qc: Json
           requested_by: string | null
+          started_at: string | null
           state: string
+          timeline_sha256: string | null
           updated_at: string
+          worker_id: string | null
         }
         Insert: {
           artifacts?: Json
@@ -57658,13 +57666,21 @@ export type Database = {
           episode_id: string
           error_message?: string | null
           finished_at?: string | null
+          heartbeat_at?: string | null
           id?: string
+          input_sha256?: string | null
           manifest_checksum: string
+          master_sha256?: string | null
           plan?: Json
+          probe?: Json
+          progress_percent?: number
           qc?: Json
           requested_by?: string | null
+          started_at?: string | null
           state?: string
+          timeline_sha256?: string | null
           updated_at?: string
+          worker_id?: string | null
         }
         Update: {
           artifacts?: Json
@@ -57674,13 +57690,21 @@ export type Database = {
           episode_id?: string
           error_message?: string | null
           finished_at?: string | null
+          heartbeat_at?: string | null
           id?: string
+          input_sha256?: string | null
           manifest_checksum?: string
+          master_sha256?: string | null
           plan?: Json
+          probe?: Json
+          progress_percent?: number
           qc?: Json
           requested_by?: string | null
+          started_at?: string | null
           state?: string
+          timeline_sha256?: string | null
           updated_at?: string
+          worker_id?: string | null
         }
         Relationships: [
           {
@@ -71415,13 +71439,21 @@ export type Database = {
           episode_id: string
           error_message: string | null
           finished_at: string | null
+          heartbeat_at: string | null
           id: string
+          input_sha256: string | null
           manifest_checksum: string
+          master_sha256: string | null
           plan: Json
+          probe: Json
+          progress_percent: number
           qc: Json
           requested_by: string | null
+          started_at: string | null
           state: string
+          timeline_sha256: string | null
           updated_at: string
+          worker_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -71438,6 +71470,43 @@ export type Database = {
         Args: { p_id: string }
         Returns: boolean
       }
+      totp_admin_enqueue_rehearsal_render: {
+        Args: {
+          p_episode_id: string
+          p_manifest_checksum: string
+          p_plan: Json
+        }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          input_sha256: string | null
+          manifest_checksum: string
+          master_sha256: string | null
+          plan: Json
+          probe: Json
+          progress_percent: number
+          qc: Json
+          requested_by: string | null
+          started_at: string | null
+          state: string
+          timeline_sha256: string | null
+          updated_at: string
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       totp_admin_enqueue_render: {
         Args: {
           p_episode_id: string
@@ -71452,13 +71521,21 @@ export type Database = {
           episode_id: string
           error_message: string | null
           finished_at: string | null
+          heartbeat_at: string | null
           id: string
+          input_sha256: string | null
           manifest_checksum: string
+          master_sha256: string | null
           plan: Json
+          probe: Json
+          progress_percent: number
           qc: Json
           requested_by: string | null
+          started_at: string | null
           state: string
+          timeline_sha256: string | null
           updated_at: string
+          worker_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -71527,6 +71604,32 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "totp_live_health_samples"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      totp_admin_record_preflight_override: {
+        Args: {
+          p_check_code: string
+          p_episode_id: string
+          p_manifest_checksum: string
+          p_reason: string
+          p_severity: string
+        }
+        Returns: {
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          episode_id: string
+          event_kind: string
+          headline: string
+          id: string
+          manifest_checksum: string | null
+          passed: boolean | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_production_audit"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -71753,6 +71856,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      totp_assert_publishable_episode: {
+        Args: { p_episode_id: string; p_manifest_checksum: string }
+        Returns: Json
+      }
       totp_award_achievement: {
         Args: {
           p_achievement_slug: string
@@ -71801,13 +71908,54 @@ export type Database = {
           episode_id: string
           error_message: string | null
           finished_at: string | null
+          heartbeat_at: string | null
           id: string
+          input_sha256: string | null
           manifest_checksum: string
+          master_sha256: string | null
           plan: Json
+          probe: Json
+          progress_percent: number
           qc: Json
           requested_by: string | null
+          started_at: string | null
           state: string
+          timeline_sha256: string | null
           updated_at: string
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      totp_claim_render_job_v2: {
+        Args: { p_worker_id: string }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          input_sha256: string | null
+          manifest_checksum: string
+          master_sha256: string | null
+          plan: Json
+          probe: Json
+          progress_percent: number
+          qc: Json
+          requested_by: string | null
+          started_at: string | null
+          state: string
+          timeline_sha256: string | null
+          updated_at: string
+          worker_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -71830,13 +71978,63 @@ export type Database = {
           episode_id: string
           error_message: string | null
           finished_at: string | null
+          heartbeat_at: string | null
           id: string
+          input_sha256: string | null
           manifest_checksum: string
+          master_sha256: string | null
           plan: Json
+          probe: Json
+          progress_percent: number
           qc: Json
           requested_by: string | null
+          started_at: string | null
           state: string
+          timeline_sha256: string | null
           updated_at: string
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      totp_complete_render_job_v2: {
+        Args: {
+          p_artifacts: Json
+          p_input_sha256: string
+          p_job_id: string
+          p_master_sha256: string
+          p_probe: Json
+          p_qc: Json
+          p_timeline_sha256: string
+          p_worker_id: string
+        }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          input_sha256: string | null
+          manifest_checksum: string
+          master_sha256: string | null
+          plan: Json
+          probe: Json
+          progress_percent: number
+          qc: Json
+          requested_by: string | null
+          started_at: string | null
+          state: string
+          timeline_sha256: string | null
+          updated_at: string
+          worker_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -71911,13 +72109,21 @@ export type Database = {
           episode_id: string
           error_message: string | null
           finished_at: string | null
+          heartbeat_at: string | null
           id: string
+          input_sha256: string | null
           manifest_checksum: string
+          master_sha256: string | null
           plan: Json
+          probe: Json
+          progress_percent: number
           qc: Json
           requested_by: string | null
+          started_at: string | null
           state: string
+          timeline_sha256: string | null
           updated_at: string
+          worker_id: string | null
         }[]
         SetofOptions: {
           from: "*"
@@ -71940,13 +72146,91 @@ export type Database = {
           episode_id: string
           error_message: string | null
           finished_at: string | null
+          heartbeat_at: string | null
           id: string
+          input_sha256: string | null
           manifest_checksum: string
+          master_sha256: string | null
           plan: Json
+          probe: Json
+          progress_percent: number
           qc: Json
           requested_by: string | null
+          started_at: string | null
           state: string
+          timeline_sha256: string | null
           updated_at: string
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      totp_fail_render_job_v2: {
+        Args: { p_error: string; p_job_id: string; p_worker_id: string }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          input_sha256: string | null
+          manifest_checksum: string
+          master_sha256: string | null
+          plan: Json
+          probe: Json
+          progress_percent: number
+          qc: Json
+          requested_by: string | null
+          started_at: string | null
+          state: string
+          timeline_sha256: string | null
+          updated_at: string
+          worker_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "totp_render_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      totp_heartbeat_render_job: {
+        Args: {
+          p_job_id: string
+          p_progress_percent?: number
+          p_worker_id: string
+        }
+        Returns: {
+          artifacts: Json
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          episode_id: string
+          error_message: string | null
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          input_sha256: string | null
+          manifest_checksum: string
+          master_sha256: string | null
+          plan: Json
+          probe: Json
+          progress_percent: number
+          qc: Json
+          requested_by: string | null
+          started_at: string | null
+          state: string
+          timeline_sha256: string | null
+          updated_at: string
+          worker_id: string | null
         }
         SetofOptions: {
           from: "*"
