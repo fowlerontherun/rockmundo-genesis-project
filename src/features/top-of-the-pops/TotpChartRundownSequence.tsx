@@ -15,6 +15,7 @@ export interface TotpChartRundownSequenceProps {
   rundown: TotpChartRundown;
   autoPlay?: boolean;
   presenterKey?: string | null;
+  recordedUrl?: string | null;
   onEnded?: () => void;
 }
 
@@ -34,7 +35,7 @@ function formatActivity(value: number) {
   return new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
 }
 
-export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterKey = "alex_rayne", onEnded }: TotpChartRundownSequenceProps) {
+export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterKey = "alex_rayne", recordedUrl = null, onEnded }: TotpChartRundownSequenceProps) {
   const pages = useMemo(() => buildTotpChartRundownPages(rundown), [rundown]);
   const [pageIndex, setPageIndex] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -55,11 +56,11 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
     const line = playTotpPresenterLine({
       text: "And now, let's take a look at this week's UK charts.",
       presenterKey: presenter.key,
-      recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart")),
+      recordedUrl: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart")),
       volume: 0.95,
     });
     return () => line.stop();
-  }, [autoPlay, page, pageIndex, presenter.key]);
+  }, [autoPlay, page, pageIndex, presenter.key, recordedUrl]);
 
   useEffect(() => {
     if (!autoPlay || !page) return;

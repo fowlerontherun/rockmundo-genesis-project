@@ -9,6 +9,7 @@ import {
 } from "./episodeManifest";
 import { totpRpc } from "./rpc";
 import { getTotpEpisodePlan } from "./scheduleApi";
+import { buildTotpPresenterDialogue } from "./presenterDialogue";
 
 export interface StoredTotpEpisodeManifest {
   episode_id: string;
@@ -91,10 +92,30 @@ export async function buildTotpEpisodeManifestFromEpisode(
     }
   }
 
+  const presenterDialogue = buildTotpPresenterDialogue(broadcastEpisode).map((line) => {
+    const planned = plan?.presenter_audio?.[line.planKey];
+    return {
+      cue_id: line.id,
+      kind: line.kind,
+      performance_id: line.performanceId,
+      script_text: line.script,
+      audio: planned
+        ? {
+            url: planned.audio_url,
+            duration_ms: planned.duration_ms,
+            sha256: planned.sha256,
+            version: planned.version,
+            script_checksum: planned.script_checksum,
+          }
+        : null,
+    };
+  });
+
   const manifest = buildTotpEpisodeManifest({
     episode: broadcastEpisode,
     songAudio,
     presenterAudio,
+    presenterDialogue,
     rights,
   });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };

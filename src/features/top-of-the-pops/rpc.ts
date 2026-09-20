@@ -14,7 +14,10 @@ type PublicFunctions = Database["public"]["Functions"];
 export type TotpRpcName =
   | Extract<keyof PublicFunctions, `totp_${string}`>
   | "totp_admin_enqueue_rehearsal_render"
-  | "totp_admin_record_preflight_override";
+  | "totp_admin_record_preflight_override"
+  | "totp_admin_band_name_audio_catalog"
+  | "totp_admin_save_band_name_audio"
+  | "totp_episode_presenter_audio";
 type TotpRpcArgument = Record<string, unknown> | undefined;
 type TypedTotpRpc = (functionName: TotpRpcName, args?: TotpRpcArgument) => PromiseLike<TotpRpcResponse<unknown>>;
 

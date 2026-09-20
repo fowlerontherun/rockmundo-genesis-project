@@ -49,7 +49,9 @@ export interface TotpTrackBroadcastRightsPlan {
 }
 
 export interface TotpPresenterAudioPlan {
-  performance_id: string;
+  cue_id?: string;
+  kind?: "opening" | "act_intro" | "between" | "chart" | "closing";
+  performance_id: string | null;
   presenter_key: string;
   script_text: string;
   script_checksum: string;

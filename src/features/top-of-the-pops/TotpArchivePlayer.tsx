@@ -136,9 +136,9 @@ export function activeTotpCue(cues: TotpBroadcastCue[], positionMs: number): Tot
   return active.at(-1) ?? cues.filter((cue) => cue.offsetMs <= positionMs).at(-1) ?? cues[0] ?? null;
 }
 
-export interface TotpArchivePlayerProps { replay: TotpBroadcastReplay; autoPlay?: boolean; onEnded?: () => void; }
+export interface TotpArchivePlayerProps { replay: TotpBroadcastReplay; autoPlay?: boolean; presenterRecordedUrl?: string | null; onEnded?: () => void; }
 
-export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }: TotpArchivePlayerProps) {
+export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterRecordedUrl = null, onEnded }: TotpArchivePlayerProps) {
   const replay = useMemo(() => archivedReplay(source), [source]);
   const experience = useMemo(() => archivedExperience(source), [source]);
   const playerModelsSnapshot = useMemo(() => archivedPlayerModels(source), [source]);
@@ -281,7 +281,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
     const line = playTotpPresenterLine({
       text: cue.presenterText,
       presenterKey,
-      recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
+      recordedUrl: presenterRecordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
       volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
       onSpeakingChange: (speaking) => {
         setPresenterSpeaking(speaking);
@@ -297,7 +297,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, onEnded }:
       presenterAudioRef.current = null;
       setPresenterSpeaking(false);
     };
-  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, voiceEnabled]);
+  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedUrl, voiceEnabled]);
   useEffect(() => {
     if (!playing) return;
     let frame = 0, previous = performance.now();

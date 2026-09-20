@@ -10,6 +10,7 @@ import { TOTP_MEDIA_PATHS, totpMediaPublicUrl, type TotpPresenterAudioSlot } fro
 import {
   buildTotpContinuityCopy,
   buildTotpProgrammeRundown,
+  totpContinuitySpeech,
   type TotpContinuityKind,
 } from "./programmeContinuity";
 
@@ -24,6 +25,7 @@ export interface TotpProgrammeContinuityProps {
   replays: TotpBroadcastReplay[];
   currentIndex?: number;
   autoPlay?: boolean;
+  recordedUrl?: string | null;
   onEnded?: () => void;
 }
 
@@ -32,6 +34,7 @@ export function TotpProgrammeContinuity({
   replays,
   currentIndex = 0,
   autoPlay = false,
+  recordedUrl = null,
   onEnded,
 }: TotpProgrammeContinuityProps) {
   const orderedFirst = replays[0] ?? null;
@@ -45,12 +48,12 @@ export function TotpProgrammeContinuity({
 
   useEffect(() => {
     if (!autoPlay || typeof window === "undefined") return;
-    const speech = `${copy.headline}. ${copy.body}`;
+    const speech = totpContinuitySpeech(copy);
     const slot: TotpPresenterAudioSlot = kind === "opening" ? "opening" : kind === "closing" ? "closing" : "between";
     const line = playTotpPresenterLine({
       text: speech,
       presenterKey: presenter.key,
-      recordedUrl: totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
+      recordedUrl: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
       volume: 0.95,
       onSpeakingChange: setSpeaking,
     });
@@ -59,7 +62,7 @@ export function TotpProgrammeContinuity({
       line.stop();
       setSpeaking(false);
     };
-  }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key]);
+  }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key, recordedUrl]);
 
   useEffect(() => {
     if (!autoPlay) return;
