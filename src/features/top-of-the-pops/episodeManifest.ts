@@ -39,6 +39,14 @@ export interface TotpManifestAsset {
   script_checksum: string | null;
 }
 
+export interface TotpManifestPresenterDialogue {
+  cue_id: string;
+  kind: "opening" | "act_intro" | "between" | "chart" | "closing";
+  performance_id: string | null;
+  script_text: string;
+  asset: TotpManifestAsset | null;
+}
+
 export interface TotpManifestSegment {
   index: number;
   performance_id: string;
@@ -73,6 +81,8 @@ export interface TotpEpisodeManifest {
     aspect_ratio: "16:9";
   };
   segments: TotpManifestSegment[];
+  /** Complete presenter recording sheet, including programme continuity outside act segments. */
+  presenter_dialogue?: TotpManifestPresenterDialogue[];
   total_runtime_ms: number;
   production_state: TotpProductionState;
   checksum: string;
@@ -106,6 +116,20 @@ export interface TotpManifestInput {
     sha256: string | null;
     version: number | null;
     script_checksum: string | null;
+  }>;
+  /** Complete presenter cue sheet in programme order. */
+  presenterDialogue?: Array<{
+    cue_id: string;
+    kind: "opening" | "act_intro" | "between" | "chart" | "closing";
+    performance_id: string | null;
+    script_text: string;
+    audio?: {
+      url: string | null;
+      duration_ms: number | null;
+      sha256: string | null;
+      version: number | null;
+      script_checksum: string | null;
+    } | null;
   }>;
   /** song_id -> rights record */
   rights: Record<string, TotpTrackRights>;
@@ -170,7 +194,7 @@ function sortPerformances(performances: TotpPerformance[]): TotpPerformance[] {
 }
 
 export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeManifest {
-  const { episode, songAudio, presenterAudio = {}, rights } = input;
+  const { episode, songAudio, presenterAudio = {}, presenterDialogue = [], rights } = input;
 
   const segments: TotpManifestSegment[] = sortPerformances(episode.performances).map(
     (performance, position) => {
@@ -213,6 +237,23 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     },
   );
 
+  const presenterDialogueManifest: TotpManifestPresenterDialogue[] = presenterDialogue.map((line) => ({
+    cue_id: line.cue_id,
+    kind: line.kind,
+    performance_id: line.performance_id,
+    script_text: line.script_text,
+    asset: line.audio
+      ? {
+          kind: "presenter_audio",
+          url: line.audio.url ?? null,
+          duration_ms: line.audio.duration_ms ?? null,
+          sha256: line.audio.sha256 ?? null,
+          version: line.audio.version ?? null,
+          script_checksum: line.audio.script_checksum ?? null,
+        }
+      : null,
+  }));
+
   const totalRuntimeMs = segments.reduce((total, segment) => {
     const segmentMs = segment.assets.reduce(
       (sum, asset) => sum + (asset.duration_ms ?? 0),
@@ -233,6 +274,7 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     broadcast_profile: episode.broadcast_profile,
     programme_spec: PROGRAMME_SPEC,
     segments,
+    presenter_dialogue: presenterDialogueManifest,
     total_runtime_ms: totalRuntimeMs,
   };
 
