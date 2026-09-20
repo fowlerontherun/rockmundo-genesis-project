@@ -478,7 +478,7 @@ export const it = {
     availableSkillXp: "XP abilità disponibili",
     amountToSpend: "Quantità da spendere",
     nextLevel: "Livello successivo",
-    max: "Max",
+    max: "Massimo",
     confirmSpend: "Conferma spesa",
     xpToNextLevel: "XP al livello successivo",
     xpToMaximum: "XP al livello massimo",
