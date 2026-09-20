@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ListVideo, PauseCircle, PlayCircle, SkipBack, SkipForward } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import type { TotpBroadcastReplay } from "./api";
+import { getTotpEpisodePresenterAudio, type TotpBroadcastReplay } from "./api";
 import type { TotpChartRundown } from "./chartRundownApi";
 import { totpRundownHasRealPositions } from "./chartRundown";
 import { TotpArchivePlayer } from "./TotpArchivePlayer";
@@ -14,7 +15,14 @@ import { TotpEndCredits } from "./TotpEndCredits";
 import { TotpStageTransition } from "./TotpStageTransition";
 import { TotpCountdownClock } from "./TotpCountdownClock";
 import { TotpSegmentFade } from "./TotpSegmentFade";
-import { orderTotpProgrammeReplays, type TotpContinuityKind } from "./programmeContinuity";
+import {
+  buildTotpContinuityCopy,
+  orderTotpProgrammeReplays,
+  totpContinuitySpeech,
+  type TotpContinuityKind,
+} from "./programmeContinuity";
+import { canonicalise, manifestChecksum } from "./episodeManifest";
+import { TOTP_CHART_PRESENTER_LINE } from "./presenterDialogue";
 
 export interface TotpFullEpisodePlayerProps {
   replays: TotpBroadcastReplay[];
@@ -37,8 +45,36 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const [continuityKind, setContinuityKind] = useState<TotpContinuityKind | null>(null);
   const current = ordered[currentIndex] ?? null;
   const hasChartRundown = totpRundownHasRealPositions(chartRundown);
+  const episodeId = ordered[0]?.payload.episodeId ?? null;
+  const presenterAudioQuery = useQuery({
+    queryKey: ["totp", "presenter-audio", episodeId],
+    queryFn: () => getTotpEpisodePresenterAudio(episodeId!),
+    enabled: !!episodeId,
+    staleTime: 60_000,
+  });
+  const presenterAudio = presenterAudioQuery.data ?? {};
+
+  const exactPresenterUrl = (key: string, script: string): string | null => {
+    if (!script.trim()) return null;
+    const asset = presenterAudio[key];
+    if (!asset?.audio_url) return null;
+    const expected = manifestChecksum(canonicalise(script));
+    return asset.script_checksum === expected ? asset.audio_url : null;
+  };
 
   if (!current) return null;
+
+  const continuityScript = continuityKind
+    ? totpContinuitySpeech(buildTotpContinuityCopy(continuityKind, ordered, currentIndex))
+    : "";
+  const continuityPlanKey = continuityKind === "opening"
+    ? "cue:opening"
+    : continuityKind === "closing"
+      ? "cue:closing"
+      : `cue:between:${current.performance_id}`;
+  const actPresenterScript = current.payload.cues.find(
+    (cue) => cue.type === "presenter" && !!cue.presenterText,
+  )?.presenterText ?? "";
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
@@ -216,10 +252,17 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
             replays={ordered}
             currentIndex={currentIndex}
             autoPlay={continuous}
+            recordedUrl={exactPresenterUrl(continuityPlanKey, continuityScript)}
             onEnded={finishContinuity}
           />
         ) : showChartRundown && chartRundown ? (
-          <TotpChartRundownSequence rundown={chartRundown} autoPlay={continuous} onEnded={finishChartRundown} />
+          <TotpChartRundownSequence
+            rundown={chartRundown}
+            autoPlay={continuous}
+            presenterKey={current.payload.presenterKey ?? current.presenter_key}
+            recordedUrl={exactPresenterUrl("cue:chart", TOTP_CHART_PRESENTER_LINE)}
+            onEnded={finishChartRundown}
+          />
         ) : showCredits ? (
           <TotpEndCredits replays={ordered} autoPlay onEnded={finishCredits} />
         ) : (
@@ -227,6 +270,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
             key={`${current.id}:${continuous ? "auto" : "manual"}`}
             replay={current}
             autoPlay={continuous}
+            presenterRecordedUrl={exactPresenterUrl(current.performance_id, actPresenterScript)}
             onEnded={continuous ? finishAct : undefined}
           />
         )}
