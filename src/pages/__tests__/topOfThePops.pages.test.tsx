@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import type { TotpEpisode, TotpInvitation } from "@/features/top-of-the-pops/api";
 
 const { episode, invitation } = vi.hoisted(() => {
@@ -112,7 +113,11 @@ import TopOfThePopsAdmin from "@/pages/admin/TopOfThePopsAdmin";
 
 function renderPage(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 describe("Top of the Pops pages", () => {
