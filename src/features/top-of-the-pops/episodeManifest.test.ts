@@ -5,6 +5,8 @@ import {
   validateTotpEpisodeManifest,
   type TotpManifestInput,
   type TotpTrackRights,
+  canonicalise,
+  manifestChecksum,
 } from "./episodeManifest";
 import type { TotpEpisode } from "./api";
 
@@ -61,6 +63,22 @@ function input(overrides: Partial<TotpManifestInput> = {}): TotpManifestInput {
       p1: { url: "https://cdn/p1.mp3", duration_ms: 180_000 },
       p2: { url: "https://cdn/p2.mp3", duration_ms: 200_000 },
     },
+    presenterAudio: {
+      p1: {
+        url: "https://cdn/presenter-p1.wav",
+        duration_ms: 1_000,
+        sha256: "a".repeat(64),
+        version: 1,
+        script_checksum: manifestChecksum(canonicalise("Welcome!")),
+      },
+      p2: {
+        url: "https://cdn/presenter-p2.wav",
+        duration_ms: 1_000,
+        sha256: "b".repeat(64),
+        version: 1,
+        script_checksum: manifestChecksum(canonicalise("Next up...")),
+      },
+    },
     rights: { s1: cleared, s2: cleared },
     ...overrides,
   };
@@ -74,7 +92,7 @@ describe("TOTP episode manifest", () => {
     expect(first.segments.map((segment) => segment.performance_id)).toEqual(["p1", "p2"]);
     expect(first.checksum).toBe(second.checksum);
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    expect(first.total_runtime_ms).toBe(380_000);
+    expect(first.total_runtime_ms).toBe(382_000);
     expect(first.production_state).toBe("gameplay");
   });
 
