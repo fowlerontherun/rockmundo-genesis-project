@@ -140,11 +140,17 @@ describe("Top of the Pops render queue api", () => {
     rpc.mockResolvedValue({ data: { id: "rehearsal-1", episode_id: "episode-1", state: "queued", manifest_checksum: "check-1", plan: {} }, error: null });
     await enqueueTotpRehearsalRender(rehearsalManifest);
     expect(rpc.mock.calls.at(-1)?.[0]).toBe("totp_admin_enqueue_rehearsal_render");
-    expect((rpc.mock.calls.at(-1)?.[1] as any).p_plan.purpose).toBe("rehearsal");
+    const rehearsalArgs = rpc.mock.calls.at(-1)?.[1] as {
+      p_plan: { purpose: string; source_performance_id?: string | null };
+    };
+    expect(rehearsalArgs.p_plan.purpose).toBe("rehearsal");
 
     await enqueueTotpSegmentPreview(rehearsalManifest, "perf-1");
-    expect((rpc.mock.calls.at(-1)?.[1] as any).p_plan.purpose).toBe("segment_preview");
-    expect((rpc.mock.calls.at(-1)?.[1] as any).p_plan.source_performance_id).toBe("perf-1");
+    const previewArgs = rpc.mock.calls.at(-1)?.[1] as {
+      p_plan: { purpose: string; source_performance_id?: string | null };
+    };
+    expect(previewArgs.p_plan.purpose).toBe("segment_preview");
+    expect(previewArgs.p_plan.source_performance_id).toBe("perf-1");
   });
 
   it("distinguishes master, rehearsal and segment-preview successes", () => {
