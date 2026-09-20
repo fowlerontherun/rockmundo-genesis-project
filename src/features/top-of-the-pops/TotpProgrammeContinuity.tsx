@@ -10,6 +10,7 @@ import { TOTP_MEDIA_PATHS, totpMediaPublicUrl, type TotpPresenterAudioSlot } fro
 import {
   buildTotpContinuityCopy,
   buildTotpProgrammeRundown,
+  totpContinuitySpeech,
   type TotpContinuityKind,
 } from "./programmeContinuity";
 
@@ -45,7 +46,7 @@ export function TotpProgrammeContinuity({
 
   useEffect(() => {
     if (!autoPlay || typeof window === "undefined") return;
-    const speech = `${copy.headline}. ${copy.body}`;
+    const speech = totpContinuitySpeech(copy);
     const slot: TotpPresenterAudioSlot = kind === "opening" ? "opening" : kind === "closing" ? "closing" : "between";
     const line = playTotpPresenterLine({
       text: speech,
