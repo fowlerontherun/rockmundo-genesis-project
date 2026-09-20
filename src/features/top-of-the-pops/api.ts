@@ -131,6 +131,20 @@ export interface TotpPerformanceAudio {
   duration_seconds: number | null;
 }
 
+export interface TotpPresenterPlaybackAsset {
+  cue_id?: string;
+  kind?: string;
+  performance_id?: string | null;
+  presenter_key: string;
+  script_text: string;
+  script_checksum: string;
+  audio_url: string;
+  duration_ms: number;
+  sha256: string;
+  version: number;
+  uploaded_at: string;
+}
+
 export interface TotpCheckInResult {
   status: "checked_in";
   already_checked_in?: boolean;
@@ -250,6 +264,17 @@ export async function getTotpEpisode(id?: string | null): Promise<TotpEpisode | 
   });
   if (error) throw new Error(error.message || "Could not load the Top of the Pops episode.");
   return data;
+}
+
+export async function getTotpEpisodePresenterAudio(
+  episodeId: string,
+): Promise<Record<string, TotpPresenterPlaybackAsset>> {
+  const { data, error } = await totpRpc<Record<string, TotpPresenterPlaybackAsset>>(
+    "totp_episode_presenter_audio",
+    { p_episode_id: invitationId(episodeId) },
+  );
+  if (error) throw new Error(error.message || "Could not load presenter recordings.");
+  return data && typeof data === "object" && !Array.isArray(data) ? data : {};
 }
 
 export async function getTotpBroadcastArchive(episodeId?: string | null): Promise<TotpBroadcastArchive> {
