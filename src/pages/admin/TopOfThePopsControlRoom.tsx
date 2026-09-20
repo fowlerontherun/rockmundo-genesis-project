@@ -12,6 +12,7 @@ import { TotpRehearsalCard } from "@/features/top-of-the-pops/TotpRehearsalCard"
 import { TotpComplianceCard } from "@/features/top-of-the-pops/TotpComplianceCard";
 import { TotpYoutubePublishCard } from "@/features/top-of-the-pops/TotpYoutubePublishCard";
 import { TotpBroadcastContractCard } from "@/features/top-of-the-pops/TotpBroadcastContractCard";
+import { TotpAudioStudio } from "@/features/top-of-the-pops/TotpAudioStudio";
 import { resolveTotpPresenter } from "@/features/top-of-the-pops/presenters";
 
 export default function TopOfThePopsControlRoom() {
@@ -65,6 +66,7 @@ export default function TopOfThePopsControlRoom() {
         <>
           <TotpControlRoomCard episode={current} />
           <TotpRunningSheetCard episode={current} />
+          <TotpAudioStudio episode={current} />
           <TotpBroadcastContractCard episode={current} />
           <TotpComplianceCard episode={current} />
           <TotpRehearsalCard episode={current} />
