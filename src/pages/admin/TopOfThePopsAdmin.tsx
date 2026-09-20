@@ -14,6 +14,7 @@ import {
 import { resolveTotpPresenter, totpVariantLabel } from "@/features/top-of-the-pops/presenters";
 import { TotpTestEpisodeCard } from "@/features/top-of-the-pops/TotpTestEpisodeCard";
 import { TotpMediaManager } from "@/features/top-of-the-pops/TotpMediaManager";
+import { TotpAudioStudio } from "@/features/top-of-the-pops/TotpAudioStudio";
 import { TotpProductionHealthCard } from "@/features/top-of-the-pops/TotpProductionHealthCard";
 import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningSheetCard";
 import { TotpControlRoomCard } from "@/features/top-of-the-pops/TotpControlRoomCard";
@@ -97,6 +98,7 @@ export default function TopOfThePopsAdmin() {
           <p className="text-muted-foreground">No real episode is currently scheduled. You can still run the safe test harness below.</p>
         </div>
         <TotpProductionHealthCard />
+        <TotpAudioStudio episode={null} />
         <TotpMediaManager presenterKey="alex_rayne" />
         <TotpTestEpisodeCard />
         <Card><CardContent className="p-6">No scheduled Top of the Pops episode found.</CardContent></Card>
@@ -144,6 +146,8 @@ export default function TopOfThePopsAdmin() {
       <TotpRehearsalCard episode={current} />
 
       <TotpRenderQueueCard episode={current} />
+
+      <TotpAudioStudio episode={current} />
 
       <TotpMediaManager presenterKey={(current as any).presenter_key ?? "alex_rayne"} />
 
