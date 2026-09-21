@@ -52,6 +52,37 @@ export function totpReusablePresenterPhrase(id: string): TotpReusablePresenterPh
   return TOTP_REUSABLE_PRESENTER_PHRASES.find((phrase) => phrase.id === id);
 }
 
+/**
+ * Matches an already-authored presenter line back to a reusable phrase.
+ * The database remains authoritative for the actual wording; this only
+ * identifies whether its prefix can be assembled from the reusable phrase
+ * library plus the current recorded band name.
+ */
+export function matchTotpReusablePresenterPhrase(
+  script: string,
+  bandName: string,
+): TotpReusablePresenterPhrase | null {
+  const normalizedScript = script.replace(/\s+/g, " ").trim();
+  const normalizedBand = bandName.replace(/\s+/g, " ").trim();
+  if (!normalizedScript || !normalizedBand) return null;
+
+  const suffixes = [
+    ` ${normalizedBand}!`,
+    ` ${normalizedBand}.`,
+    ` ${normalizedBand}`,
+  ];
+
+  const prefix = suffixes
+    .filter((suffix) => normalizedScript.endsWith(suffix))
+    .map((suffix) => normalizedScript.slice(0, -suffix.length).trim())
+    .find(Boolean);
+
+  if (!prefix) return null;
+  return TOTP_REUSABLE_PRESENTER_PHRASES.find(
+    (phrase) => phrase.script.replace(/\s+/g, " ").trim() === prefix,
+  ) ?? null;
+}
+
 
 export interface TotpPresenterPhraseContext {
   rank: number;
