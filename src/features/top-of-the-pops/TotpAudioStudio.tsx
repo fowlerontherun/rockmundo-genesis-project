@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -95,6 +95,7 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingRequestIdRef = useRef(0);
   const presenterKey = episode?.presenter_key ?? "alex_rayne";
 
   const planQuery = useQuery({
@@ -111,14 +112,27 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
   const chartPositionAssets = useQuery({
     queryKey: ["totp", "chart-position-audio", presenterKey],
     queryFn: async () => {
+      const folder = TOTP_MEDIA_PATHS.chartPositionFolder(presenterKey);
       const { data, error } = await supabase.storage
         .from(TOTP_MEDIA_BUCKET)
-        .list(TOTP_MEDIA_PATHS.chartPositionFolder(presenterKey), { limit: 100 });
+        .list(folder, { limit: 200 });
       if (error) throw new Error(error.message);
-      return new Set(
-        (data ?? [])
-          .map((item) => Number(item.name))
-          .filter((rank) => Number.isInteger(rank) && rank >= 1 && rank <= 40),
+
+      const newestByRank = new Map<number, { path: string; createdAt: number }>();
+      for (const item of data ?? []) {
+        const match = /^(\d+)-([a-f0-9]{8,64})\.(mp3|wav|ogg|webm|m4a|mp4)$/i.exec(item.name);
+        if (!match) continue;
+        const rank = Number(match[1]);
+        if (!Number.isInteger(rank) || rank < 1 || rank > 40) continue;
+        const createdAt = Date.parse(item.created_at ?? item.updated_at ?? "") || 0;
+        const current = newestByRank.get(rank);
+        if (!current || createdAt >= current.createdAt) {
+          newestByRank.set(rank, { path: `${folder}/${item.name}`, createdAt });
+        }
+      }
+
+      return new Map(
+        [...newestByRank.entries()].map(([rank, asset]) => [rank, asset.path] as const),
       );
     },
   });
@@ -254,12 +268,14 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
 
   const chartPositionUpload = useMutation({
     mutationFn: async ({ rank, file }: { rank: number; file: File }) => {
-      const { mime } = await validateAndMeasure(file);
-      const path = TOTP_MEDIA_PATHS.chartPosition(presenterKey, rank);
+      const { mime, sha256 } = await validateAndMeasure(file);
+      const revision = sha256.slice(0, 16);
+      const extension = totpAudioFileExtension(mime);
+      const path = TOTP_MEDIA_PATHS.chartPosition(presenterKey, rank, revision, extension);
       const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(path, file, {
         upsert: true,
         contentType: mime,
-        cacheControl: "3600",
+        cacheControl: "31536000",
       });
       if (error) throw new Error(error.message);
       return rank;
@@ -286,6 +302,7 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
 
   const startChartPositionRecording = async (rank: number) => {
     if (recordingRank !== null) return;
+    const requestId = ++recordingRequestIdRef.current;
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       toast({
         title: "Microphone recording unavailable",
@@ -297,6 +314,10 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (requestId !== recordingRequestIdRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
       const mimeType = candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate));
       const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
@@ -324,6 +345,7 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
         mediaRecorderRef.current = null;
         recordingChunksRef.current = [];
         setRecordingRank(null);
+        if (requestId !== recordingRequestIdRef.current) return;
         if (blob.size > 0) {
           const extension = finalMime.includes("ogg") ? "ogg" : "webm";
           chartPositionUpload.mutate({
@@ -347,6 +369,23 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
       });
     }
   };
+
+  useEffect(() => {
+    return () => {
+      recordingRequestIdRef.current += 1;
+      const recorder = mediaRecorderRef.current;
+      if (recorder) {
+        recorder.ondataavailable = null;
+        recorder.onerror = null;
+        recorder.onstop = null;
+        if (recorder.state !== "inactive") recorder.stop();
+      }
+      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+      mediaRecorderRef.current = null;
+      recordingChunksRef.current = [];
+    };
+  }, []);
 
   return (
     <Card id="totp-audio-studio">
@@ -505,10 +544,11 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
           ) : (
             <div className="grid gap-2 md:grid-cols-2">
               {TOTP_CHART_POSITIONS.map((rank) => {
-                const exists = chartPositionAssets.data?.has(rank) ?? false;
+                const assetPath = chartPositionAssets.data?.get(rank) ?? null;
+                const exists = Boolean(assetPath);
                 const isRecording = recordingRank === rank;
                 const isBusy = uploadingRank === rank;
-                const audioUrl = totpMediaPublicUrl(TOTP_MEDIA_PATHS.chartPosition(presenterKey, rank));
+                const audioUrl = assetPath ? totpMediaPublicUrl(assetPath) : null;
                 return (
                   <div key={rank} className="rounded-lg border p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -549,7 +589,7 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
                         />
                       </div>
                     </div>
-                    {exists ? <audio className="mt-3 h-8 w-full" controls preload="none" src={audioUrl} /> : null}
+                    {audioUrl ? <audio className="mt-3 h-8 w-full" controls preload="none" src={audioUrl} /> : null}
                   </div>
                 );
               })}
