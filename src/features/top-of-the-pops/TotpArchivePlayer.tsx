@@ -292,6 +292,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
     if (cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
 
     spokenPresenterCueRef.current = cue.id;
+    const holder: { current: TotpPresenterLineHandle | null } = { current: null };
     const line = playTotpPresenterLine({
       text: cue.presenterText,
       presenterKey,
@@ -309,12 +310,13 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
         setPresenterSpeaking(speaking);
         // The line may intentionally continue after the visual cue changes so a
         // longer recorded introduction is never chopped at the performance boundary.
-        if (!speaking && presenterLineRef.current === line) {
+        if (!speaking && presenterLineRef.current === holder.current) {
           presenterLineRef.current = null;
           presenterAudioRef.current = null;
         }
       },
     });
+    holder.current = line;
     presenterLineRef.current = line;
   }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedSequence, presenterRecordedUrl, voiceEnabled]);
 
