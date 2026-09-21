@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOTP_REUSABLE_PRESENTER_PHRASES, buildTotpReusablePresenterIntro, selectTotpReusablePresenterPhrase, totpReusablePresenterPhrase } from "./presenterPhraseAudio";
+import { TOTP_REUSABLE_PRESENTER_PHRASES, buildTotpReusablePresenterIntro, matchTotpReusablePresenterPhrase, selectTotpReusablePresenterPhrase, totpReusablePresenterPhrase } from "./presenterPhraseAudio";
 
 describe("TOTP reusable presenter phrase library", () => {
   it("provides a varied reusable phrase bank without song-title placeholders", () => {
@@ -35,6 +35,12 @@ describe("TOTP reusable presenter phrase library", () => {
     expect(selectTotpReusablePresenterPhrase({ rank: 22, stableKey: "demo", chartMovement: 12 }).category).toBe("climber");
     expect(selectTotpReusablePresenterPhrase({ rank: 4, stableKey: "demo", isReturning: true }).category).toBe("returning");
     expect(selectTotpReusablePresenterPhrase({ rank: 1, stableKey: "demo" }).id).toBe("number-one-its");
+  });
+
+  it("matches an authored band-led line back to its reusable phrase", () => {
+    expect(matchTotpReusablePresenterPhrase("And now, it's Shockmaster!", "Shockmaster")?.id).toBe("and-now-its");
+    expect(matchTotpReusablePresenterPhrase("At number one, it's Untitled Audio!", "Untitled Audio")?.id).toBe("number-one-its");
+    expect(matchTotpReusablePresenterPhrase("Christmas number one: Untitled Audio!", "Untitled Audio")).toBeNull();
   });
 
   it("is deterministic and keeps song titles out of the assembled line", () => {

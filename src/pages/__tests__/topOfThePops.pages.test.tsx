@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import type { TotpEpisode, TotpInvitation } from "@/features/top-of-the-pops/api";
@@ -111,10 +111,10 @@ vi.mock("@/features/top-of-the-pops/TotpMediaManager", () => ({ TotpMediaManager
 import TopOfThePops from "@/pages/TopOfThePops";
 import TopOfThePopsAdmin from "@/pages/admin/TopOfThePopsAdmin";
 
-function renderPage(ui: React.ReactElement) {
+function renderPage(ui: React.ReactElement, initialEntry = "/") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <QueryClientProvider client={client}>{ui}</QueryClientProvider>
     </MemoryRouter>,
   );
@@ -130,11 +130,9 @@ describe("Top of the Pops pages", () => {
   });
 
   it("renders the admin episode with the stored running sheet panel", async () => {
-    const { container } = renderPage(<TopOfThePopsAdmin />);
+    const { container } = renderPage(<TopOfThePopsAdmin />, "/admin/top-of-the-pops#production");
 
-    await waitFor(() => expect(screen.getByRole("tab", { name: /Production/i })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("tab", { name: /Production/i }));
-
+    await waitFor(() => expect(screen.getByRole("tab", { name: /Production/i })).toHaveAttribute("data-state", "active"));
     await waitFor(() => expect(container.querySelector("[data-totp-running-sheet]")).not.toBeNull());
     expect(screen.getByText(/Episode running sheet/i)).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText(/Not saved/i).length).toBeGreaterThan(0));

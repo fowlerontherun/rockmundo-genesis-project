@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TotpBroadcastReplay } from "./api";
-import { orderTotpEpisodeReplays } from "./TotpFullEpisodePlayer";
+import type { TotpBroadcastReplay, TotpPresenterFragmentBundle } from "./api";
+import { buildTotpActPresenterSequence, orderTotpEpisodeReplays } from "./TotpFullEpisodePlayer";
 
 function replay(id: string, runningOrder: number): TotpBroadcastReplay {
   return {
@@ -40,6 +40,62 @@ describe("Top of the Pops full episode ordering", () => {
     ]);
 
     expect(ordered.map((item) => item.id)).toEqual(["first", "second", "third"]);
+  });
+
+  it("assembles reusable phrase audio before the matching current band-name clip", () => {
+    const item = replay("first", 1);
+    item.payload.band = { id: "band-first", name: "Band first", members: [] };
+    const fragments: TotpPresenterFragmentBundle = {
+      presenter_key: "alex_rayne",
+      phrases: {
+        "and-now-its": {
+          storage_path: "presenters/alex_rayne/reusable-phrases/and-now-its-deadbeef.webm",
+          uploaded_at: "2026-09-21T12:00:00Z",
+        },
+      },
+      bands: {
+        "band-first": {
+          band_id: "band-first",
+          band_name: "Band first",
+          audio_url: "https://media.example/band-first.webm",
+          duration_ms: 800,
+          sha256: "a".repeat(64),
+          version: 2,
+        },
+      },
+    };
+
+    const sequence = buildTotpActPresenterSequence(item, "And now, it's Band first!", fragments);
+    expect(sequence).toHaveLength(2);
+    expect(sequence?.[0].url).toContain("and-now-its-deadbeef.webm");
+    expect(sequence?.[0].gapAfterMs).toBe(65);
+    expect(sequence?.[1].url).toBe("https://media.example/band-first.webm");
+  });
+
+  it("does not assemble fragments when the authored line or recorded band name does not match", () => {
+    const item = replay("first", 1);
+    const fragments: TotpPresenterFragmentBundle = {
+      presenter_key: "alex_rayne",
+      phrases: {
+        "and-now-its": {
+          storage_path: "presenters/alex_rayne/reusable-phrases/and-now-its-deadbeef.webm",
+          uploaded_at: null,
+        },
+      },
+      bands: {
+        "band-first": {
+          band_id: "band-first",
+          band_name: "Old Band Name",
+          audio_url: "https://media.example/band-first.webm",
+          duration_ms: 800,
+          sha256: "b".repeat(64),
+          version: 1,
+        },
+      },
+    };
+
+    expect(buildTotpActPresenterSequence(item, "Christmas number one: Band first!", fragments)).toBeNull();
+    expect(buildTotpActPresenterSequence(item, "And now, it's Band first!", fragments)).toBeNull();
   });
 
   it("uses replay id as a stable tie-breaker without mutating the source array", () => {

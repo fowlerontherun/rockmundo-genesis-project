@@ -17,7 +17,8 @@ export type TotpRpcName =
   | "totp_admin_record_preflight_override"
   | "totp_admin_band_name_audio_catalog"
   | "totp_admin_save_band_name_audio"
-  | "totp_episode_presenter_audio";
+  | "totp_episode_presenter_audio"
+  | "totp_episode_presenter_fragments";
 type TotpRpcArgument = Record<string, unknown> | undefined;
 type TypedTotpRpc = (functionName: TotpRpcName, args?: TotpRpcArgument) => PromiseLike<TotpRpcResponse<unknown>>;
 

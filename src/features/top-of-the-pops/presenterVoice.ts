@@ -171,16 +171,26 @@ export function cancelTotpPresenterSpeech(): void {
   window.speechSynthesis.cancel();
 }
 
+export interface TotpPresenterRecordedClip {
+  url: string;
+  /** Optional pause after this clip before the next fragment starts. */
+  gapAfterMs?: number;
+}
+
 export interface TotpPresenterLineOptions {
   /** Script to speak when no recorded read is available. */
   text: string;
   presenterKey?: string | null;
-  /** Optional pre-recorded presenter read, tried first. */
+  /** Optional complete pre-recorded presenter read, tried first. */
   recordedUrl?: string | null;
+  /** Optional reusable fragment sequence, tried after the complete take. */
+  recordedSequence?: TotpPresenterRecordedClip[] | null;
   /** Programme mix level for the presenter bus (0-1). */
   volume?: number;
   /** Fires when the line actually starts, so the music bed can duck. */
   onSpeakingChange?: (speaking: boolean) => void;
+  /** Fires whenever the active recorded fragment changes. */
+  onRecordedElementChange?: (element: HTMLAudioElement | null) => void;
   /** Fires once the whole line has been delivered. */
   onEnded?: () => void;
 }
@@ -202,6 +212,13 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
   const handle: TotpPresenterLineHandle = { stop: () => {}, element: null };
   let cancelled = false;
   let speaking = false;
+  let gapTimer = 0;
+  let resolveGap: (() => void) | null = null;
+
+  const setElement = (element: HTMLAudioElement | null) => {
+    handle.element = element;
+    options.onRecordedElementChange?.(element);
+  };
 
   const setSpeaking = (value: boolean) => {
     if (speaking === value) return;
@@ -210,11 +227,13 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
   };
 
   const finish = () => {
+    setElement(null);
     setSpeaking(false);
     if (!cancelled) options.onEnded?.();
   };
 
   const speakWithBrowserVoice = async () => {
+    setElement(null);
     if (cancelled || typeof window === "undefined" || !("speechSynthesis" in window)) {
       finish();
       return;
@@ -243,39 +262,120 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
     });
   };
 
-  if (options.recordedUrl) {
-    void fetch(options.recordedUrl, { method: "HEAD" })
-      .then((response) => {
+  const playable = async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const playRecordedElement = (url: string): Promise<void> => new Promise((resolve, reject) => {
+    if (cancelled) {
+      resolve();
+      return;
+    }
+    const audio = new Audio(url);
+    audio.volume = volume;
+    audio.playbackRate = profile.recordedRate;
+    audio.onended = () => {
+      if (handle.element === audio) setElement(null);
+      resolve();
+    };
+    audio.onerror = () => {
+      if (handle.element === audio) setElement(null);
+      reject(new Error("Recorded presenter fragment failed to play."));
+    };
+    setElement(audio);
+    void audio.play().catch((error) => {
+      if (handle.element === audio) setElement(null);
+      reject(error);
+    });
+  });
+
+  const playRecordedSequence = async (clips: TotpPresenterRecordedClip[]) => {
+    const normalized = clips.filter((clip) => clip.url?.trim()).map((clip) => ({
+      url: clip.url.trim(),
+      gapAfterMs: Math.max(0, Math.min(500, Math.round(clip.gapAfterMs ?? 70))),
+    }));
+    if (!normalized.length) {
+      await speakWithBrowserVoice();
+      return;
+    }
+
+    const availability = await Promise.all(normalized.map((clip) => playable(clip.url)));
+    if (cancelled) return;
+    if (availability.some((available) => !available)) {
+      await speakWithBrowserVoice();
+      return;
+    }
+
+    setSpeaking(true);
+    try {
+      for (let index = 0; index < normalized.length; index += 1) {
         if (cancelled) return;
-        if (!response.ok) {
-          void speakWithBrowserVoice();
-          return;
+        const clip = normalized[index];
+        await playRecordedElement(clip.url);
+        if (cancelled) return;
+        if (index < normalized.length - 1 && clip.gapAfterMs > 0) {
+          await new Promise<void>((resolve) => {
+            resolveGap = resolve;
+            gapTimer = window.setTimeout(() => {
+              gapTimer = 0;
+              resolveGap = null;
+              resolve();
+            }, clip.gapAfterMs);
+          });
         }
-        const audio = new Audio(options.recordedUrl!);
-        audio.volume = volume;
-        audio.playbackRate = profile.recordedRate;
-        audio.onended = finish;
-        handle.element = audio;
+      }
+      finish();
+    } catch {
+      if (!cancelled) await speakWithBrowserVoice();
+    }
+  };
+
+  const startPlayback = async () => {
+    if (options.recordedUrl) {
+      const available = await playable(options.recordedUrl);
+      if (cancelled) return;
+      if (available) {
         setSpeaking(true);
-        void audio.play().catch(() => {
-          setSpeaking(false);
-          void speakWithBrowserVoice();
-        });
-      })
-      .catch(() => {
-        if (!cancelled) void speakWithBrowserVoice();
-      });
-  } else {
-    void speakWithBrowserVoice();
-  }
+        try {
+          await playRecordedElement(options.recordedUrl);
+          if (!cancelled) finish();
+          return;
+        } catch {
+          // Fall through to fragments/browser voice.
+        }
+      }
+    }
+
+    const sequence = options.recordedSequence?.filter((clip) => clip.url?.trim()) ?? [];
+    if (sequence.length) {
+      await playRecordedSequence(sequence);
+      return;
+    }
+
+    await speakWithBrowserVoice();
+  };
+
+  void startPlayback();
 
   handle.stop = () => {
     cancelled = true;
+    if (gapTimer && typeof window !== "undefined") window.clearTimeout(gapTimer);
+    gapTimer = 0;
+    resolveGap?.();
+    resolveGap = null;
     setSpeaking(false);
     if (handle.element) {
       handle.element.pause();
       handle.element.onended = null;
-      handle.element = null;
+      handle.element.onerror = null;
+      setElement(null);
+    } else {
+      setElement(null);
     }
     cancelTotpPresenterSpeech();
   };

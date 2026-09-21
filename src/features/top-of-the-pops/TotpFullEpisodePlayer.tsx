@@ -4,7 +4,7 @@ import { ListVideo, PauseCircle, PlayCircle, SkipBack, SkipForward } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { getTotpEpisodePresenterAudio, type TotpBroadcastReplay } from "./api";
+import { getTotpEpisodePresenterAudio, getTotpEpisodePresenterFragments, type TotpBroadcastReplay, type TotpPresenterFragmentBundle } from "./api";
 import type { TotpChartRundown } from "./chartRundownApi";
 import { totpRundownHasRealPositions } from "./chartRundown";
 import { TotpArchivePlayer } from "./TotpArchivePlayer";
@@ -23,6 +23,9 @@ import {
 } from "./programmeContinuity";
 import { canonicalise, manifestChecksum } from "./episodeManifest";
 import { TOTP_CHART_PRESENTER_LINE } from "./presenterDialogue";
+import { matchTotpReusablePresenterPhrase } from "./presenterPhraseAudio";
+import { totpMediaPublicUrl } from "./totpMedia";
+import type { TotpPresenterRecordedClip } from "./presenterVoice";
 
 export interface TotpFullEpisodePlayerProps {
   replays: TotpBroadcastReplay[];
@@ -32,6 +35,27 @@ export interface TotpFullEpisodePlayerProps {
 export function orderTotpEpisodeReplays(replays: TotpBroadcastReplay[]): TotpBroadcastReplay[] {
   return orderTotpProgrammeReplays(replays);
 }
+
+export function buildTotpActPresenterSequence(
+  replay: TotpBroadcastReplay,
+  script: string,
+  fragments: TotpPresenterFragmentBundle | null | undefined,
+): TotpPresenterRecordedClip[] | null {
+  if (!fragments || !script.trim()) return null;
+  const phrase = matchTotpReusablePresenterPhrase(script, replay.payload.band.name);
+  if (!phrase) return null;
+
+  const phraseAsset = fragments.phrases?.[phrase.id];
+  const bandAsset = fragments.bands?.[replay.payload.band.id];
+  if (!phraseAsset?.storage_path || !bandAsset?.audio_url) return null;
+  if (bandAsset.band_name !== replay.payload.band.name) return null;
+
+  return [
+    { url: totpMediaPublicUrl(phraseAsset.storage_path), gapAfterMs: 65 },
+    { url: bandAsset.audio_url, gapAfterMs: 0 },
+  ];
+}
+
 
 export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFullEpisodePlayerProps) {
   const ordered = useMemo(() => orderTotpEpisodeReplays(replays), [replays]);
@@ -54,6 +78,13 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     staleTime: 60_000,
   });
   const presenterAudio = presenterAudioQuery.data ?? {};
+  const presenterFragmentsQuery = useQuery({
+    queryKey: ["totp", "presenter-fragments", episodeId],
+    queryFn: () => getTotpEpisodePresenterFragments(episodeId!),
+    enabled: episodeIdIsPersisted,
+    staleTime: 60_000,
+  });
+  const presenterFragments = presenterFragmentsQuery.data ?? null;
 
   const exactPresenterUrl = (key: string, script: string): string | null => {
     if (!script.trim()) return null;
@@ -76,6 +107,10 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const actPresenterScript = current.payload.cues.find(
     (cue) => cue.type === "presenter" && !!cue.presenterText,
   )?.presenterText ?? "";
+  const actPresenterSequence = useMemo(
+    () => buildTotpActPresenterSequence(current, actPresenterScript, presenterFragments),
+    [actPresenterScript, current, presenterFragments],
+  );
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;
@@ -272,6 +307,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
             replay={current}
             autoPlay={continuous}
             presenterRecordedUrl={exactPresenterUrl(current.performance_id, actPresenterScript)}
+            presenterRecordedSequence={actPresenterSequence}
             onEnded={continuous ? finishAct : undefined}
           />
         )}

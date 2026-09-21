@@ -20,7 +20,7 @@ import { totpAudienceReactionLabel } from "./studioAudience";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import { downloadTotpExport, recordTotpBroadcast, TOTP_EXPORT_PROFILE, totpExportFileName, TotpExportUnsupportedError } from "./exportBroadcast";
 import { TOTP_EXPORT_LEAD_IN_MS, totpCountdownSeconds } from "./broadcastCountdown";
-import { cancelTotpPresenterSpeech, playTotpPresenterLine, type TotpPresenterLineHandle } from "./presenterVoice";
+import { cancelTotpPresenterSpeech, playTotpPresenterLine, type TotpPresenterLineHandle, type TotpPresenterRecordedClip } from "./presenterVoice";
 
 const metric = <T,>(value: T) => ({ status: "available" as const, value, source: "authoritative" as const });
 const unavailable = (reason: string) => ({ status: "not_applicable" as const, reason });
@@ -136,9 +136,9 @@ export function activeTotpCue(cues: TotpBroadcastCue[], positionMs: number): Tot
   return active.at(-1) ?? cues.filter((cue) => cue.offsetMs <= positionMs).at(-1) ?? cues[0] ?? null;
 }
 
-export interface TotpArchivePlayerProps { replay: TotpBroadcastReplay; autoPlay?: boolean; presenterRecordedUrl?: string | null; onEnded?: () => void; }
+export interface TotpArchivePlayerProps { replay: TotpBroadcastReplay; autoPlay?: boolean; presenterRecordedUrl?: string | null; presenterRecordedSequence?: TotpPresenterRecordedClip[] | null; onEnded?: () => void; }
 
-export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterRecordedUrl = null, onEnded }: TotpArchivePlayerProps) {
+export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterRecordedUrl = null, presenterRecordedSequence = null, onEnded }: TotpArchivePlayerProps) {
   const replay = useMemo(() => archivedReplay(source), [source]);
   const experience = useMemo(() => archivedExperience(source), [source]);
   const playerModelsSnapshot = useMemo(() => archivedPlayerModels(source), [source]);
@@ -161,6 +161,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
   const presenterAudioRef = useRef<HTMLAudioElement | null>(null);
+  const exportAudioRouterRef = useRef<((element: HTMLAudioElement | null) => void) | null>(null);
   const presenterLineRef = useRef<TotpPresenterLineHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const exportStopRef = useRef(false);
@@ -296,14 +297,22 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
     const line = playTotpPresenterLine({
       text: cue.presenterText,
       presenterKey,
-      recordedUrl: presenterRecordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
+      recordedUrl: presenterRecordedUrl
+        || (!presenterRecordedSequence?.length
+          ? totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro"))
+          : null),
+      recordedSequence: presenterRecordedUrl ? null : presenterRecordedSequence,
       volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
+      onRecordedElementChange: (element) => {
+        // Keep both normal playback state and any already-running browser export
+        // attached to whichever reusable presenter fragment is currently live.
+        presenterAudioRef.current = element;
+        exportAudioRouterRef.current?.(element);
+      },
       onSpeakingChange: (speaking) => {
         setPresenterSpeaking(speaking);
-        // Keep the export mixer pointed at the live presenter element. The line is
-        // intentionally allowed to finish after the visual cue changes so a long
-        // recorded introduction cannot be chopped at the performance boundary.
-        presenterAudioRef.current = speaking ? holder.current?.element ?? null : null;
+        // The line may intentionally continue after the visual cue changes so a
+        // longer recorded introduction is never chopped at the performance boundary.
         if (!speaking && presenterLineRef.current === holder.current) {
           presenterLineRef.current = null;
           presenterAudioRef.current = null;
@@ -312,7 +321,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
     });
     holder.current = line;
     presenterLineRef.current = line;
-  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedUrl, voiceEnabled]);
+  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedSequence, presenterRecordedUrl, voiceEnabled]);
 
   useEffect(() => {
     return () => {
@@ -379,6 +388,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
         container,
         songAudio: songAudioRef.current,
         presenterAudio: presenterAudioRef.current,
+        onAudioRouterReady: (route) => {
+          exportAudioRouterRef.current = route;
+          route?.(presenterAudioRef.current);
+        },
         durationMs: replay.durationMs,
         shouldStop: () => exportStopRef.current,
         onProgress: (update) => {
@@ -396,8 +409,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
       setDriveState("idle");
       setDriveLink(null);
       setDriveError(null);
+      exportAudioRouterRef.current = null;
       setExportState("idle");
     } catch (error) {
+      exportAudioRouterRef.current = null;
       setPlaying(false);
       setExportState("error");
       setExportError(error instanceof TotpExportUnsupportedError || error instanceof Error ? error.message : "The export failed — please try again.");
