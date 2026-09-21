@@ -158,7 +158,7 @@ Rich procedural garments now add small construction cues such as shoulder and he
 front folds, trouser creases and footwear soles. These reuse the existing rig anchors and
 materials, so they move with the same torso/limb bones and do not require extra downloads.
 
-Migration: `supabase/migrations/20260921195000_avatar_face_detail_phase_3.sql`.
+Migration: `supabase/migrations/20260921185858_avatar_face_detail_phase_3.sql`.
 Regression: `supabase/tests/avatar_face_detail_phase_3.sql`.
 
 ## Phase 4: unified tattoo/avatar polish
