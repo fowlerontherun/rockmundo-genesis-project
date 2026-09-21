@@ -347,7 +347,9 @@ export function concertOptions(
 ): ConcertOptions {
   const totp = presentationMode === 'totp';
   const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
-  const seed = stableTotpLayoutSeed(seedSource);
+  let seed = 0;
+  for (const c of seedSource) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const totpLayoutSeed = stableTotpLayoutSeed(seedSource);
   const venue: ConcertVenue = totp
     ? {
         name: 'RockMundo Television Centre',
@@ -370,7 +372,7 @@ export function concertOptions(
         displayName: p.displayName,
         ...stageAssignment(p.instrument, roleMap[p.role]),
         phase: p.idlePhase,
-        position: totp ? totpStagePoint(plan, p.id, profile, totpStage, 0, false, seed) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
+        position: totp ? totpStagePoint(plan, p.id, profile, totpStage, 0, false, totpLayoutSeed) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
         appearance: appearances[profileId] ?? defaultAppearance(profileId),
         richClothing: richClothing[profileId] ?? [],
       };
