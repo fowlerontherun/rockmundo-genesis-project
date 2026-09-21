@@ -213,6 +213,7 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
   let cancelled = false;
   let speaking = false;
   let gapTimer = 0;
+  let resolveGap: (() => void) | null = null;
 
   const setElement = (element: HTMLAudioElement | null) => {
     handle.element = element;
@@ -319,8 +320,10 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
         if (cancelled) return;
         if (index < normalized.length - 1 && clip.gapAfterMs > 0) {
           await new Promise<void>((resolve) => {
+            resolveGap = resolve;
             gapTimer = window.setTimeout(() => {
               gapTimer = 0;
+              resolveGap = null;
               resolve();
             }, clip.gapAfterMs);
           });
@@ -363,6 +366,8 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
     cancelled = true;
     if (gapTimer && typeof window !== "undefined") window.clearTimeout(gapTimer);
     gapTimer = 0;
+    resolveGap?.();
+    resolveGap = null;
     setSpeaking(false);
     if (handle.element) {
       handle.element.pause();
