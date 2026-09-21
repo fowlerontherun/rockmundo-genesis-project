@@ -22,18 +22,59 @@ test("deterministic render surface boots and produces a stable 1080p frame", asy
       aspect_ratio: "16:9",
     },
     audio_sample_rate: 48000,
-    items: [{
-      index: 0,
-      kind: "opening_titles",
-      label: "Opening titles",
-      start_ms: 0,
-      duration_ms: 2000,
-      performance_id: null,
-      audio_url: null,
-    }],
+    items: [
+      {
+        index: 0,
+        kind: "opening_titles",
+        label: "Opening titles",
+        start_ms: 0,
+        duration_ms: 2000,
+        performance_id: null,
+        audio_url: null,
+      },
+      {
+        index: 1,
+        kind: "programme_continuity",
+        label: "Programme opening",
+        start_ms: 2000,
+        duration_ms: 2000,
+        performance_id: null,
+        audio_url: null,
+        continuity_kind: "opening",
+        continuity_text: "The studio is packed, the cameras are rolling, and we're ready to go!",
+      },
+      {
+        index: 2,
+        kind: "chart_rundown",
+        label: "Digital Sales Top 40 10–1",
+        start_ms: 4000,
+        duration_ms: 2000,
+        performance_id: null,
+        audio_url: null,
+        chart_page: {
+          id: "digital_sales:10-1",
+          chartType: "digital_sales",
+          chartLabel: "Digital Sales Top 40",
+          rangeLabel: "10–1",
+          minRank: 1,
+          maxRank: 10,
+          sourceCount: 1,
+          entries: [{
+            rank: 1,
+            song_id: "song-1",
+            band_id: "band-1",
+            song_title: "Test Song",
+            artist_name: "Test Band",
+            trend: "up",
+            trend_change: 1,
+            weekly_plays: 12345,
+          }],
+        },
+      },
+    ],
     chapters: [{ title: "Opening titles", start_ms: 0, end_ms: 2000 }],
-    total_duration_ms: 2000,
-    expected_frame_count: 60,
+    total_duration_ms: 6000,
+    expected_frame_count: 180,
     poster_at_ms: 1000,
     thumbnail_at_ms: [],
     captions_vtt: "WEBVTT\n",
@@ -62,9 +103,16 @@ test("deterministic render surface boots and produces a stable 1080p frame", asy
   expect(first.byteLength).toBeGreaterThan(10_000);
 
   await page.evaluate(async () => {
-    await (window as any).__totpRenderSetFrame({ itemIndex: 0, localMs: 1000 });
+    await (window as any).__totpRenderSetFrame({ itemIndex: 1, localMs: 1000 });
   });
-  await expect(surface).toHaveAttribute("data-totp-render-local-ms", "1000");
+  await expect(surface).toHaveAttribute("data-totp-render-item", "programme_continuity");
   const second = await surface.screenshot({ type: "png" });
   expect(second.byteLength).toBeGreaterThan(10_000);
+
+  await page.evaluate(async () => {
+    await (window as any).__totpRenderSetFrame({ itemIndex: 2, localMs: 1000 });
+  });
+  await expect(surface).toHaveAttribute("data-totp-render-item", "chart_rundown");
+  const third = await surface.screenshot({ type: "png" });
+  expect(third.byteLength).toBeGreaterThan(10_000);
 });
