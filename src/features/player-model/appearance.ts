@@ -40,8 +40,10 @@ export const HAIR_STYLES = [
 export const FACIAL_HAIR_STYLES = ['none', 'stubble', 'moustache', 'goatee', 'short_beard', 'full_beard', 'long_beard', 'sideburns'] as const;
 export const HAT_STYLES = ['none', 'beanie', 'baseball_cap', 'bucket_hat', 'fedora'] as const;
 export const GLASSES_STYLES = ['none', 'round', 'square', 'aviator', 'sunglasses'] as const;
+export const EARRING_STYLES = ['none', 'studs', 'hoops', 'drops'] as const;
 export const HAT_LABELS: Record<typeof HAT_STYLES[number], string> = { none: 'No hat', beanie: 'Beanie', baseball_cap: 'Baseball cap', bucket_hat: 'Bucket hat', fedora: 'Fedora' };
 export const GLASSES_LABELS: Record<typeof GLASSES_STYLES[number], string> = { none: 'No glasses', round: 'Round glasses', square: 'Square glasses', aviator: 'Aviators', sunglasses: 'Sunglasses' };
+export const EARRING_LABELS: Record<typeof EARRING_STYLES[number], string> = { none: 'No earrings', studs: 'Studs', hoops: 'Hoops', drops: 'Drop earrings' };
 export const ACCESSORY_COLORS = [['Black', '#20232b'], ['Chalk', '#eee8db'], ['Red', '#bd3548'], ['Gold', '#d8ad49'], ['Green', '#3d795b'], ['Blue', '#426baa'], ['Purple', '#8055a2'], ['Pink', '#d376a1']] as const;
 export const HAIR_LABELS: Record<typeof HAIR_STYLES[number], string> = {
   original: 'Original haircut', bald: 'Bald', buzz: 'Buzz cut', quiff: 'Quiff', mohawk: 'Mohawk', bob: 'Bob',
@@ -68,6 +70,8 @@ export const appearanceSchema = z.object({
     hatColor: color,
     glasses: z.enum(GLASSES_STYLES),
     glassesColor: color,
+    earrings: z.enum(EARRING_STYLES).optional(),
+    earringColor: color.optional(),
   }).strict().optional(),
 }).strict();
 export type PlayerAppearance = z.infer<typeof appearanceSchema>;
@@ -85,15 +89,22 @@ export function defaultAppearance(seed = ''): PlayerAppearance {
       footwear: { itemId: `starter.footwear.${style}`, color: '#25232b' },
       instrument: { itemId: 'starter.instrument.standard', color: '#b97536' },
     },
-    accessories: { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b' },
+    accessories: { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', earringColor: '#d8ad49' },
   };
 }
 export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   const parsed = appearanceSchema.safeParse(value);
   if (!parsed.success) return defaultAppearance(seed);
-  return parsed.data.accessories ? parsed.data : {
+  return {
     ...parsed.data,
-    accessories: { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b' },
+    accessories: {
+      hat: parsed.data.accessories?.hat ?? 'none',
+      hatColor: parsed.data.accessories?.hatColor ?? '#20232b',
+      glasses: parsed.data.accessories?.glasses ?? 'none',
+      glassesColor: parsed.data.accessories?.glassesColor ?? '#20232b',
+      earrings: parsed.data.accessories?.earrings ?? 'none',
+      earringColor: parsed.data.accessories?.earringColor ?? '#d8ad49',
+    },
   };
 }
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
