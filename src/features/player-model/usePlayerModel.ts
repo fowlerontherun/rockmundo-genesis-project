@@ -3,14 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import { resolveEquippedClothingVisual, type ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import { BODY_SLOTS, TATTOO_CATEGORIES, type BodySlot, type TattooCategory } from '@/data/tattooDesigns';
 import { appearanceFromLegacy, appearanceSchema, resolveAppearance, type PlayerAppearance } from './appearance';
+import type { ResolvedTattooVisual } from './tattoos';
 
 export const playerModelKey = (profileId: string | null) => ['player-stage-appearance', profileId] as const;
 export const equippedRichClothingKey = (profileId: string | null) => ['equipped-rich-clothing', profileId] as const;
+export const playerStageTattoosKey = (profileId: string | null) => ['player-stage-tattoos', profileId] as const;
 
 export interface GigPlayerModelsData {
   appearances: Record<string, PlayerAppearance>;
   richClothing: Record<string, ResolvedEquippedClothing[]>;
+  /** Render-only tattoo projection. Older replay snapshots may omit this field. */
+  tattoos?: Record<string, ResolvedTattooVisual[]>;
 }
 
 interface EquippedClothingRow {
@@ -18,6 +23,38 @@ interface EquippedClothingRow {
   item_id: string;
   selected_variant_key?: string | null;
   customization_config?: Record<string, string> | null;
+}
+
+interface StageTattooRow {
+  id: string;
+  profile_id: string;
+  body_slot: string;
+  ink_color: string;
+  quality_score: number;
+  is_infected: boolean;
+  category: string | null;
+}
+
+const tattooSlots = new Set<BodySlot>(Object.keys(BODY_SLOTS) as BodySlot[]);
+const tattooCategories = new Set<TattooCategory>(TATTOO_CATEGORIES);
+
+function resolveTattooRows(rows: StageTattooRow[]) {
+  const result: Record<string, ResolvedTattooVisual[]> = {};
+  for (const row of rows) {
+    if (!row.profile_id || !tattooSlots.has(row.body_slot as BodySlot)) continue;
+    const category = tattooCategories.has(row.category as TattooCategory) ? row.category as TattooCategory : 'custom';
+    const ink = /^#[0-9a-fA-F]{6}$/.test(row.ink_color || '') ? row.ink_color.toLowerCase() : '#1d232d';
+    (result[row.profile_id] ??= []).push({
+      id: row.id,
+      profile_id: row.profile_id,
+      body_slot: row.body_slot as BodySlot,
+      ink_color: ink,
+      quality_score: Math.max(0, Math.min(100, Number(row.quality_score) || 0)),
+      is_infected: Boolean(row.is_infected),
+      category,
+    });
+  }
+  return result;
 }
 
 async function resolveRichClothingRows(rows: EquippedClothingRow[]) {
@@ -69,6 +106,19 @@ export function usePlayerModel() {
   return { ...active, query, save };
 }
 
+export function usePlayerStageTattoos(profileId: string | null | undefined) {
+  return useQuery({
+    queryKey: playerStageTattoosKey(profileId ?? null),
+    enabled: !!profileId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_stage_tattoo_visuals' as any, { p_profile_ids: [profileId] } as any);
+      if (error) throw error;
+      return resolveTattooRows((data || []) as StageTattooRow[])[profileId!] ?? [];
+    },
+  });
+}
+
 export function useEquippedRichClothing(profileId: string | null | undefined) {
   return useQuery({
     queryKey: equippedRichClothingKey(profileId ?? null),
@@ -92,13 +142,15 @@ export function useGigPlayerModels(profileIds: string[]) {
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceResult, clothingResult] = await Promise.all([
+      const [appearanceResult, clothingResult, tattooResult] = await Promise.all([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
         supabase.rpc('get_equipped_stage_clothing' as any, { p_profile_ids: ids } as any),
+        supabase.rpc('get_stage_tattoo_visuals' as any, { p_profile_ids: ids } as any),
       ]);
 
       if (appearanceResult.error) throw appearanceResult.error;
       if (clothingResult.error) console.warn('[gig-player-models] equipped rich clothing could not load', clothingResult.error);
+      if (tattooResult.error) console.warn('[gig-player-models] tattoo visuals could not load', tattooResult.error);
 
       const appearances = Object.fromEntries(
         (appearanceResult.data || []).map(row => [row.profile_id, resolveAppearance(row.appearance, row.profile_id)]),
@@ -113,7 +165,8 @@ export function useGigPlayerModels(profileIds: string[]) {
         }
       }
 
-      return { appearances, richClothing };
+      const tattoos = tattooResult.error ? {} : resolveTattooRows((tattooResult.data || []) as StageTattooRow[]);
+      return { appearances, richClothing, tattoos };
     },
   });
 }
