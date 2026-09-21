@@ -77,6 +77,28 @@ describe('shipped modular stage models', () => {
     expect(actor.root.getObjectByName('avatar-tattoo-tattoo-visual-1')).toBeTruthy();
     disposeModel(model); disposeModel(actor.root);
   });
+  it.each(['masculine', 'feminine'] as const)('renders detailed %s face choices on the same animated Head rig', frame => {
+    const appearance = defaultAppearance();
+    appearance.body.frame = frame;
+    appearance.head.faceShape = 'angular';
+    appearance.head.eyeColor = '#4f755a';
+    appearance.head.eyebrowStyle = 'arched';
+    appearance.head.eyebrowColor = '#854b32';
+    appearance.head.skinDetail = 'freckles';
+    const model = assemblePlayerModel(library, appearance);
+    const head = model.getObjectByName('Head') as T.Bone;
+    expect(head?.userData.avatarFaceShape).toBe('angular');
+    expect(model.getObjectByName('avatar-face-details')).toBeTruthy();
+    expect(model.getObjectByName('avatar-eyebrow-left')).toBeTruthy();
+    expect(model.getObjectByName('avatar-eyebrow-right')).toBeTruthy();
+    expect(model.getObjectByName('avatar-freckle-0')).toBeTruthy();
+    const actor = new Musician(model, 'vocals', [0, 0, 0], 0, undefined, appearance);
+    actor.update(7, .75, false);
+    expect(actor.root.getObjectByName('avatar-face-details')).toBeTruthy();
+    expect(actor.root.getObjectByName('avatar-eyebrow-left')).toBeTruthy();
+    expect(actor.root.getObjectByName('avatar-freckle-0')).toBeTruthy();
+    disposeModel(model); disposeModel(actor.root);
+  });
   it.each(['masculine', 'feminine'] as const)('renders %s stomach, thigh and calf catalogue tattoos', frame => {
     const appearance = defaultAppearance(); appearance.body.frame = frame;
     const tattoos = [
@@ -123,6 +145,10 @@ describe('appearance boundaries', () => {
       (a: ReturnType<typeof defaultAppearance>) => { a.accessories!.hat = 'crown' as never; },
       (a: ReturnType<typeof defaultAppearance>) => { a.accessories!.glassesColor = 'transparent'; },
       (a: ReturnType<typeof defaultAppearance>) => { a.accessories!.earrings = 'chains' as never; },
+      (a: ReturnType<typeof defaultAppearance>) => { a.head.faceShape = 'triangle' as never; },
+      (a: ReturnType<typeof defaultAppearance>) => { a.head.eyebrowStyle = 'zigzag' as never; },
+      (a: ReturnType<typeof defaultAppearance>) => { a.head.skinDetail = 'glitter' as never; },
+      (a: ReturnType<typeof defaultAppearance>) => { a.head.eyeColor = 'green'; },
     ]) { const value = defaultAppearance(); edit(value); expect(appearanceSchema.safeParse(value).success).toBe(false); expect(resolveAppearance(value, 'safe')).toEqual(defaultAppearance('safe')); }
     expect(appearanceSchema.safeParse({ ...defaultAppearance(), bonus: 100 }).success).toBe(false);
   });
