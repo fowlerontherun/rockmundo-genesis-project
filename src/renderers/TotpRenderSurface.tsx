@@ -73,6 +73,68 @@ function EndCredits({ replays, localMs, durationMs }: { replays: TotpBroadcastRe
   );
 }
 
+function ProgrammeContinuityFrame({ item, localMs }: { item: TotpRenderItem; localMs: number }) {
+  const progress = clamp(localMs / Math.max(1, item.duration_ms), 0, 1);
+  const kind = item.continuity_kind ?? "between";
+  const eyebrow = kind === "opening" ? "Tonight on Top of the Pops" : kind === "closing" ? "What a show" : "Back in the studio";
+  return (
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-slate-950 px-28 text-white" data-totp-offline-continuity={kind}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,.26),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,.22),transparent_32%)]" />
+      <div className="relative max-w-6xl text-center" style={{ opacity: Math.min(1, progress * 4) }}>
+        <div className="text-xl font-black uppercase tracking-[0.35em] text-fuchsia-200">{eyebrow}</div>
+        <div className="mx-auto mt-7 h-1.5 w-72 bg-gradient-to-r from-fuchsia-500 via-amber-300 to-cyan-400" />
+        <p className="mt-10 text-5xl font-black leading-tight tracking-tight">{item.continuity_text ?? "Top of the Pops"}</p>
+        <div className="mt-10 text-sm font-bold uppercase tracking-[0.28em] text-white/50">RockMundo Television Centre · London</div>
+      </div>
+    </div>
+  );
+}
+
+function StageTransitionFrame({ item, localMs, replays }: { item: TotpRenderItem; localMs: number; replays: TotpBroadcastReplay[] }) {
+  const progress = clamp(localMs / Math.max(1, item.duration_ms), 0, 1);
+  const from = replays.find((row) => row.performance_id === item.from_performance_id) ?? null;
+  const to = replays.find((row) => row.performance_id === item.to_performance_id) ?? null;
+  return (
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black text-white" data-totp-offline-stage-transition>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(34,211,238,.22),transparent_35%),radial-gradient(circle_at_80%_50%,rgba(244,114,182,.22),transparent_35%)]" />
+      <div className="absolute inset-y-0 left-[-35%] w-[42%] -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-cyan-200/20" style={{ transform: `translateX(${progress * 410}%) skewX(-12deg)` }} />
+      <div className="relative text-center">
+        <div className="text-xl font-black uppercase tracking-[0.32em] text-cyan-200">Across the studio</div>
+        <div className="mt-5 text-7xl font-black tracking-tight">TOP OF THE POPS</div>
+        <div className="mt-7 text-3xl font-semibold">{from?.payload.band.name ?? "Previous act"} → {to?.payload.band.name ?? "Next act"}</div>
+        <div className="mt-3 text-lg uppercase tracking-[0.2em] text-white/55">{from?.payload.stage?.replaceAll("_", " ") ?? "stage"} → {to?.payload.stage?.replaceAll("_", " ") ?? "stage"}</div>
+      </div>
+    </div>
+  );
+}
+
+function ChartRundownFrame({ item }: { item: TotpRenderItem }) {
+  const page = item.chart_page;
+  if (!page) return <div className="flex h-full w-full items-center justify-center bg-slate-950 text-4xl font-black text-white">CHART DATA UNAVAILABLE</div>;
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-slate-950 px-24 py-20 text-white" data-totp-offline-chart={page.chartType}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.22),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,.22),transparent_30%)]" />
+      <div className="relative">
+        <div className="text-lg font-black uppercase tracking-[0.3em] text-cyan-200">Top of the Pops chart rundown</div>
+        <div className="mt-3 text-6xl font-black tracking-tight">{page.chartLabel}</div>
+        <div className="mt-2 text-xl text-white/60">Positions {page.rangeLabel}</div>
+        <div className="mt-10 grid gap-3">
+          {page.entries.map((entry) => (
+            <div key={`${page.chartType}:${entry.rank}:${entry.song_id ?? entry.song_title}`} className="grid grid-cols-[110px_1fr_210px] items-center rounded-xl border border-white/10 bg-white/[.06] px-6 py-4">
+              <div className={`text-5xl font-black tabular-nums ${entry.rank === 1 ? "text-amber-200" : "text-white"}`}>#{entry.rank}</div>
+              <div className="min-w-0">
+                <div className="truncate text-3xl font-bold">{entry.artist_name}</div>
+                <div className="truncate text-xl text-white/55">{entry.song_title}</div>
+              </div>
+              <div className="text-right text-lg text-white/55">{Number(entry.weekly_plays ?? 0).toLocaleString("en-GB")} weekly</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function replayForItem(item: TotpRenderItem, replays: TotpBroadcastReplay[]) {
   return replays.find((row) => row.performance_id === item.performance_id) ?? null;
 }
@@ -149,6 +211,12 @@ export function TotpRenderSurface({ payload, frame }: { payload: TotpOfflineRend
     >
       {item.kind === "opening_titles" ? (
         <OpeningTitles localMs={frame.localMs} durationMs={item.duration_ms} />
+      ) : item.kind === "programme_continuity" ? (
+        <ProgrammeContinuityFrame item={item} localMs={frame.localMs} />
+      ) : item.kind === "stage_transition" ? (
+        <StageTransitionFrame item={item} localMs={frame.localMs} replays={payload.replays} />
+      ) : item.kind === "chart_rundown" ? (
+        <ChartRundownFrame item={item} />
       ) : item.kind === "end_credits" ? (
         <EndCredits replays={payload.replays} localMs={frame.localMs} durationMs={item.duration_ms} />
       ) : (
