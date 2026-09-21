@@ -1,4 +1,5 @@
 import { getTotpEpisodePresenterFragments, getTotpPerformanceAudio, type TotpEpisode, type TotpPresenterFragmentBundle } from "./api";
+import { getTotpChartRundown } from "./chartRundownApi";
 import {
   buildTotpEpisodeManifest,
   canonicalise,
@@ -82,9 +83,10 @@ export async function buildTotpEpisodeManifestFromEpisode(
   }> = {};
   const presenterSequences: NonNullable<Parameters<typeof buildTotpEpisodeManifest>[0]["presenterSequences"]> = {};
   const rights: Record<string, TotpTrackRights> = {};
-  const [plan, presenterFragments] = await Promise.all([
+  const [plan, presenterFragments, chartRundown] = await Promise.all([
     getTotpEpisodePlan(episode.id),
     getTotpEpisodePresenterFragments(episode.id).catch(() => emptyPresenterFragments()),
+    getTotpChartRundown(episode.id).catch(() => null),
   ]);
   const reusableDurationByPath = new Map<string, number>();
 
@@ -209,6 +211,7 @@ export async function buildTotpEpisodeManifestFromEpisode(
     presenterAudio,
     presenterSequences,
     presenterDialogue,
+    chartRundown,
     rights,
   });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };
