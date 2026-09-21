@@ -291,17 +291,9 @@ function BroadcastItem({ item, localMs, replays }: { item: TotpRenderItem; local
 
 export function TotpRenderSurface({ payload, frame }: { payload: TotpOfflineRenderPayload; frame: TotpOfflineRenderFrame }) {
   const item = payload.plan.items[frame.itemIndex] ?? payload.plan.items[0];
-  const frozenPerformanceIds = useMemo(
-    () => new Set(
-      payload.plan.items
-        .filter((entry) => entry.kind === "performance" && !!entry.performance_id)
-        .map((entry) => entry.performance_id!),
-    ),
-    [payload.plan.items],
-  );
   const programmeReplays = useMemo(
-    () => payload.replays.filter((replay) => frozenPerformanceIds.has(replay.performance_id)),
-    [frozenPerformanceIds, payload.replays],
+    () => filterTotpRenderReplays(payload.plan, payload.replays),
+    [payload.plan, payload.replays],
   );
   if (!item) return <div className="h-full w-full bg-black" />;
 
