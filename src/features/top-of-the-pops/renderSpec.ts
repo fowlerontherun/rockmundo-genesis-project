@@ -265,7 +265,10 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
   });
   chapters.push({ title: "Opening titles", start_ms: titles.start_ms, end_ms: cursor });
 
-  if (manifest.segments.length > 0) pushContinuity("opening", 0, null);
+  if (manifest.segments.length > 0) {
+    pushContinuity("opening", 0, null);
+    if (manifest.segments.length === 1) pushChartRundown();
+  }
 
   manifest.segments.forEach((segment, position) => {
     const presenterAsset = segment.assets.find((asset) => asset.kind === "presenter_audio") ?? null;
