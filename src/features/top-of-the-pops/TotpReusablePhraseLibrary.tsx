@@ -89,7 +89,7 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
     try {
       const { mime, sha256 } = await validateAudio(file);
       const extension = totpAudioFileExtension(mime);
-      const path = TOTP_MEDIA_PATHS.reusablePhrase(presenterKey, id, sha256.slice(0, 16), extension);
+      const path = TOTP_MEDIA_PATHS.reusablePhrase(presenterKey, id, sha256, extension);
       const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(path, file, {
         contentType: mime,
         cacheControl: "31536000",
