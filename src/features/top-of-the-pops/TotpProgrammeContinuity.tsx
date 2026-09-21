@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Radio, Tv, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,16 @@ export function TotpProgrammeContinuity({
   const durationMs = CONTINUITY_DURATION_MS[kind];
   const [elapsedMs, setElapsedMs] = useState(0);
   const [speaking, setSpeaking] = useState(false);
+  const [visualComplete, setVisualComplete] = useState(false);
+  const [narrationComplete, setNarrationComplete] = useState(false);
+  const endedRef = useRef(false);
+
+  useEffect(() => {
+    setElapsedMs(0);
+    setVisualComplete(false);
+    setNarrationComplete(false);
+    endedRef.current = false;
+  }, [autoPlay, currentIndex, kind]);
 
   useEffect(() => {
     if (!autoPlay || typeof window === "undefined") return;
@@ -56,9 +66,12 @@ export function TotpProgrammeContinuity({
       recordedUrl: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
       volume: 0.95,
       onSpeakingChange: setSpeaking,
+      onEnded: () => setNarrationComplete(true),
     });
+    const safety = window.setTimeout(() => setNarrationComplete(true), 20_000);
 
     return () => {
+      window.clearTimeout(safety);
       line.stop();
       setSpeaking(false);
     };
@@ -73,12 +86,18 @@ export function TotpProgrammeContinuity({
       setElapsedMs(nextElapsed);
       if (nextElapsed >= durationMs) {
         window.clearInterval(timer);
-        queueMicrotask(() => onEnded?.());
+        setVisualComplete(true);
       }
     }, 100);
 
     return () => window.clearInterval(timer);
-  }, [autoPlay, durationMs, kind, currentIndex, onEnded]);
+  }, [autoPlay, durationMs, kind, currentIndex]);
+
+  useEffect(() => {
+    if (!autoPlay || !visualComplete || !narrationComplete || endedRef.current) return;
+    endedRef.current = true;
+    queueMicrotask(() => onEnded?.());
+  }, [autoPlay, narrationComplete, onEnded, visualComplete]);
 
   const progress = Math.min(100, elapsedMs / Math.max(1, durationMs) * 100);
   const showRundown = kind === "opening" || kind === "closing";

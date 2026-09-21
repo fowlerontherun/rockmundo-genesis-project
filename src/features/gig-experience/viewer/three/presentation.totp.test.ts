@@ -80,6 +80,27 @@ describe("Top of the Pops television stage blocking", () => {
     }
   });
 
+  it("varies performer blocking deterministically without moving fixed anchors into unsafe positions", () => {
+    const classic = totpFormation(plan(), 0);
+    const mirrored = totpFormation(plan(), 1);
+    const diagonal = totpFormation(plan(), 2);
+
+    expect(mirrored).toEqual(totpFormation(plan(), 1));
+    expect(diagonal).toEqual(totpFormation(plan(), 2));
+
+    expect(mirrored.get("sable")).not.toEqual(classic.get("sable"));
+    expect(diagonal.get("sable")).not.toEqual(mirrored.get("sable"));
+
+    for (const formation of [mirrored, diagonal]) {
+      const singer = formation.get("big-fowler")!;
+      const drummer = formation.get("luna")!;
+      expect(singer.u).toBeGreaterThanOrEqual(.22);
+      expect(singer.u).toBeLessThanOrEqual(.78);
+      expect(drummer.v).toBeLessThan(.5);
+      expect(Math.abs(singer.v - drummer.v)).toBeGreaterThan(.35);
+    }
+  });
+
   it("maps each TOTP stage to its real physical deck centre and height", () => {
     const venue = resolveVenueProfile({ type: "tv_studio", seed: 42 });
 
