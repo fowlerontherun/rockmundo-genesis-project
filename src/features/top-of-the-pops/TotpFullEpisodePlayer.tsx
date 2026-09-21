@@ -94,23 +94,23 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     return asset.script_checksum === expected ? asset.audio_url : null;
   };
 
-  if (!current) return null;
-
-  const continuityScript = continuityKind
+  const continuityScript = current && continuityKind
     ? totpContinuitySpeech(buildTotpContinuityCopy(continuityKind, ordered, currentIndex))
     : "";
   const continuityPlanKey = continuityKind === "opening"
     ? "cue:opening"
     : continuityKind === "closing"
       ? "cue:closing"
-      : `cue:between:${current.performance_id}`;
-  const actPresenterScript = current.payload.cues.find(
+      : `cue:between:${current?.performance_id ?? "none"}`;
+  const actPresenterScript = current?.payload.cues.find(
     (cue) => cue.type === "presenter" && !!cue.presenterText,
   )?.presenterText ?? "";
   const actPresenterSequence = useMemo(
-    () => buildTotpActPresenterSequence(current, actPresenterScript, presenterFragments),
+    () => current ? buildTotpActPresenterSequence(current, actPresenterScript, presenterFragments) : null,
     [actPresenterScript, current, presenterFragments],
   );
+
+  if (!current) return null;
 
   const completedActs = currentIndex;
   const programmeProgress = ordered.length > 0 ? (completedActs / ordered.length) * 100 : 0;

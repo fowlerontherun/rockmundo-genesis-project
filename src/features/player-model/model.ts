@@ -5,6 +5,8 @@ import { demoAssetUrl } from '@/features/gig-demo-3d/assets';
 import { headModelStyle, equipmentItem, equipmentStyle, modelFile, type PlayerAppearance } from './appearance';
 
 import { addHair, isScalpHair } from './hair';
+import { addAccessories } from './accessories';
+import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
 
 export type ModelLibrary = Map<string, T.Object3D>;
@@ -22,7 +24,7 @@ export async function loadModelLibrary(files: string[], manager?: T.LoadingManag
 
 /** Each part keeps its donor inverse binds and local transform. This matters for
  * the small body offset in the original casual/suit assets. Rig families never mix. */
-export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerAppearance): T.Object3D {
+export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerAppearance, tattoos: ResolvedTattooVisual[] = []): T.Object3D {
   const source = (style: Parameters<typeof modelFile>[1]) => {
     const model = library.get(modelFile(appearance.body.frame, style));
     if (!model) throw new Error('The selected character model could not load.');
@@ -114,7 +116,11 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
     }
   }
   const headBone = bones.get('Head');
-  if (headBone) addHair(result, appearance, headBone);
+  if (headBone) {
+    addHair(result, appearance, headBone);
+    addAccessories(result, appearance, headBone);
+  }
+  addTattoos(result, tattoos, bones);
   result.updateMatrixWorld(true);
   return result;
 }

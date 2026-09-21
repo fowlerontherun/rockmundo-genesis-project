@@ -2,9 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PlayerModelEditor from './PlayerModelEditor';
 import { defaultAppearance, SLOTS, SLOT_LABELS, STARTER_ITEMS } from './appearance';
-import { useEquippedRichClothing, usePlayerModel } from './usePlayerModel';
+import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 
-vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn() }));
+vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn(), usePlayerStageTattoos: vi.fn() }));
 const preview = vi.fn();
 vi.mock('./PlayerModelPreview', () => ({ PlayerModelPreview: (props: unknown) => { preview(props); return <div>Model preview</div>; } }));
 const save = vi.fn();
@@ -21,6 +21,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usePlayerModel).mockReturnValue(model());
   vi.mocked(useEquippedRichClothing).mockReturnValue(clothing());
+  vi.mocked(usePlayerStageTattoos).mockReturnValue(clothing() as ReturnType<typeof usePlayerStageTattoos>);
   save.mockImplementation(async args => ({ appearance: args.appearance, revision: 1 }));
 });
 afterEach(cleanup);
@@ -75,4 +76,36 @@ it('passes currently equipped rich clothing into the shared animated preview', (
   render(<PlayerModelEditor />);
   expect(preview).toHaveBeenCalledWith(expect.objectContaining({ richClothing: rich }));
   expect(screen.getByText(/currently equipped Skin Store clothing/i)).toBeVisible();
+});
+
+
+it('saves hats, glasses and earrings as one shared stage appearance', async () => {
+  render(<PlayerModelEditor />);
+  fireEvent.change(screen.getByLabelText('Hat'), { target: { value: 'bucket_hat' } });
+  fireEvent.change(screen.getByLabelText('Glasses'), { target: { value: 'aviator' } });
+  fireEvent.change(screen.getByLabelText('Earrings'), { target: { value: 'drops' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Hat colour: Red' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Glasses colour: Gold' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Earrings colour: Purple' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
+  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
+    appearance: expect.objectContaining({
+      accessories: {
+        hat: 'bucket_hat',
+        hatColor: '#bd3548',
+        glasses: 'aviator',
+        glassesColor: '#d8ad49',
+        earrings: 'drops',
+        earringColor: '#8055a2',
+      },
+    }),
+  })));
+});
+
+it('passes owned tattoo visuals into the same avatar preview', () => {
+  const tattoos = [{ id: 'tattoo-1', profile_id: 'character-one', body_slot: 'right_thigh', ink_color: '#111111', quality_score: 90, is_infected: false, category: 'blackwork' }];
+  vi.mocked(usePlayerStageTattoos).mockReturnValue(clothing(tattoos) as ReturnType<typeof usePlayerStageTattoos>);
+  render(<PlayerModelEditor />);
+  expect(preview).toHaveBeenCalledWith(expect.objectContaining({ tattoos }));
+  expect(screen.getByText(/1 tattoo from the Tattoo Parlour is rendered/i)).toBeVisible();
 });

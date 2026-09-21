@@ -157,6 +157,8 @@ export default function TattooParlour() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-stage-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["gig-player-appearances"] });
       queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
       queryClient.invalidateQueries({ queryKey: ["tattoo-artists"] });
       setTattooingSession(false);
@@ -182,6 +184,8 @@ export default function TattooParlour() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-stage-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["gig-player-appearances"] });
       queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
       setCustomDialogOpen(false);
       toast.success(`Custom tattoo complete! Quality ${result.qualityScore}/100. Paid $${result.price}.`);
@@ -203,6 +207,8 @@ export default function TattooParlour() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-stage-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["gig-player-appearances"] });
       queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
       result.isInfected ? toast.error(`Text tattoo completed but became infected. Quality ${result.qualityScore}/100.`) : toast.success(`Text tattoo complete! Quality ${result.qualityScore}/100. Paid $${result.price}.`);
     },
@@ -219,6 +225,8 @@ export default function TattooParlour() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-stage-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["gig-player-appearances"] });
       queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
       toast.success("Infection treated. $200 paid.");
     },

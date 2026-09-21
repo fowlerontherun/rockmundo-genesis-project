@@ -8,6 +8,7 @@ import type { GigExperienceDTO } from "@/features/gig-experience/types";
 import { derivePlaybackState } from "@/features/gig-experience/viewer/engine/PlaybackController";
 import { appearanceFromLegacy, resolveAppearance } from "@/features/player-model/appearance";
 import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel";
+import { normalizeTattooVisual, type ResolvedTattooVisual, type TattooVisualInput } from "@/features/player-model/tattoos";
 import { resolveEquippedClothingVisual } from "@/features/clothing-preview/equippedClothing";
 import { getTotpPerformanceAudio, type TotpBroadcastReplay } from "./api";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
@@ -65,6 +66,7 @@ export function memberStageDuty(member: TotpBroadcastReplay["payload"]["band"]["
 export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerModelsData | null {
   const appearances: GigPlayerModelsData["appearances"] = {};
   const richClothing: GigPlayerModelsData["richClothing"] = {};
+  const tattoos: NonNullable<GigPlayerModelsData["tattoos"]> = {};
   let frozen = 0;
   for (const member of source.payload.band.members) {
     const profileId = member.profile_id ? String(member.profile_id) : "";
@@ -81,9 +83,15 @@ export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerMode
             row.customizationConfig as ClothingCustomizationInput,
           ))
       : [];
+    const frozenTattoos: ResolvedTattooVisual[] = [];
+    if (Array.isArray(snapshot.tattoos)) for (const row of snapshot.tattoos) {
+      const tattoo = normalizeTattooVisual(row as TattooVisualInput, profileId);
+      if (tattoo) frozenTattoos.push(tattoo);
+    }
+    tattoos[profileId] = frozenTattoos;
     frozen++;
   }
-  return frozen > 0 ? { appearances, richClothing } : null;
+  return frozen > 0 ? { appearances, richClothing, tattoos } : null;
 }
 
 export function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {

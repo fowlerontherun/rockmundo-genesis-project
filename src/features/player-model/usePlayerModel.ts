@@ -4,13 +4,17 @@ import { useActiveProfile } from '@/hooks/useActiveProfile';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import { resolveEquippedClothingVisual, type ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { appearanceFromLegacy, appearanceSchema, resolveAppearance, type PlayerAppearance } from './appearance';
+import { normalizeTattooVisual, type ResolvedTattooVisual, type TattooVisualInput } from './tattoos';
 
 export const playerModelKey = (profileId: string | null) => ['player-stage-appearance', profileId] as const;
 export const equippedRichClothingKey = (profileId: string | null) => ['equipped-rich-clothing', profileId] as const;
+export const playerStageTattoosKey = (profileId: string | null) => ['player-stage-tattoos', profileId] as const;
 
 export interface GigPlayerModelsData {
   appearances: Record<string, PlayerAppearance>;
   richClothing: Record<string, ResolvedEquippedClothing[]>;
+  /** Render-only tattoo projection. Older replay snapshots may omit this field. */
+  tattoos?: Record<string, ResolvedTattooVisual[]>;
 }
 
 interface EquippedClothingRow {
@@ -18,6 +22,16 @@ interface EquippedClothingRow {
   item_id: string;
   selected_variant_key?: string | null;
   customization_config?: Record<string, string> | null;
+}
+
+function resolveTattooRows(rows: TattooVisualInput[]) {
+  const result: Record<string, ResolvedTattooVisual[]> = {};
+  for (const row of rows) {
+    const tattoo = normalizeTattooVisual(row);
+    if (!tattoo) continue;
+    (result[tattoo.profile_id] ??= []).push(tattoo);
+  }
+  return result;
 }
 
 async function resolveRichClothingRows(rows: EquippedClothingRow[]) {
@@ -69,6 +83,19 @@ export function usePlayerModel() {
   return { ...active, query, save };
 }
 
+export function usePlayerStageTattoos(profileId: string | null | undefined) {
+  return useQuery({
+    queryKey: playerStageTattoosKey(profileId ?? null),
+    enabled: !!profileId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_stage_tattoo_visuals' as any, { p_profile_ids: [profileId] } as any);
+      if (error) throw error;
+      return resolveTattooRows((data || []) as TattooVisualInput[])[profileId!] ?? [];
+    },
+  });
+}
+
 export function useEquippedRichClothing(profileId: string | null | undefined) {
   return useQuery({
     queryKey: equippedRichClothingKey(profileId ?? null),
@@ -92,13 +119,15 @@ export function useGigPlayerModels(profileIds: string[]) {
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceResult, clothingResult] = await Promise.all([
+      const [appearanceResult, clothingResult, tattooResult] = await Promise.all([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
         supabase.rpc('get_equipped_stage_clothing' as any, { p_profile_ids: ids } as any),
+        supabase.rpc('get_stage_tattoo_visuals' as any, { p_profile_ids: ids } as any),
       ]);
 
       if (appearanceResult.error) throw appearanceResult.error;
       if (clothingResult.error) console.warn('[gig-player-models] equipped rich clothing could not load', clothingResult.error);
+      if (tattooResult.error) console.warn('[gig-player-models] tattoo visuals could not load', tattooResult.error);
 
       const appearances = Object.fromEntries(
         (appearanceResult.data || []).map(row => [row.profile_id, resolveAppearance(row.appearance, row.profile_id)]),
@@ -113,7 +142,8 @@ export function useGigPlayerModels(profileIds: string[]) {
         }
       }
 
-      return { appearances, richClothing };
+      const tattoos = tattooResult.error ? {} : resolveTattooRows((tattooResult.data || []) as TattooVisualInput[]);
+      return { appearances, richClothing, tattoos };
     },
   });
 }

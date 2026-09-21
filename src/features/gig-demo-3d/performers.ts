@@ -11,6 +11,7 @@ import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreo
 import { singerGesture, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
 import { seededRandom } from './config';
+import { visibleTattoosForClothing } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
@@ -614,7 +615,7 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
     const cymbals: T.Object3D[] = [];
     try {
         const actors = lineup ? lineup.map(p => {
-            const assembled = assemblePlayerModel(library, p.appearance);
+            const assembled = assemblePlayerModel(library, p.appearance, visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []));
             const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing);
             disposeModel(assembled);
             actor.id = p.id;
