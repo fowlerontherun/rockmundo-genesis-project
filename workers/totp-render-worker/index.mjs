@@ -217,8 +217,7 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
   const byPerformance = new Map(replays.map((row) => [row.performance_id, row]));
   const tracks = [];
   for (const item of plan.items) {
-    if (!item.performance_id) continue;
-    const replay = byPerformance.get(item.performance_id);
+    const replay = item.performance_id ? byPerformance.get(item.performance_id) : null;
     const reaction = Math.max(-10, Math.min(10, Number(replay?.payload?.liveTv?.audienceReaction ?? 0)));
 
     if (item.kind === "performance") {
@@ -233,7 +232,7 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
 
     if (item.kind === "presenter_link") {
       if (item.audio_url) {
-        const file = await source(item.audio_url);
+        const file = await source(item.audio_url, item.audio_sha256 ?? null);
         if (!file) throw new Error(`Presenter link for ${item.performance_id} has no recorded presenter audio.`);
         tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.95, loop: false });
       } else if (Array.isArray(item.audio_sequence) && item.audio_sequence.length > 0) {
@@ -250,6 +249,18 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
       } else {
         throw new Error(`Presenter link for ${item.performance_id} has no exact take or frozen reusable audio. Browser speech synthesis is not allowed in a master.`);
       }
+    }
+
+    if (item.kind === "programme_continuity") {
+      const file = await source(item.audio_url, item.audio_sha256 ?? null);
+      if (!file) throw new Error(`Programme continuity item ${item.index} has no frozen presenter recording.`);
+      tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.95, loop: false });
+    }
+
+    if (item.kind === "chart_rundown" && item.script_text) {
+      const file = await source(item.audio_url, item.audio_sha256 ?? null);
+      if (!file) throw new Error("The chart rundown introduction has no frozen presenter recording.");
+      tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.95, loop: false });
     }
 
     if (item.kind === "applause") {
@@ -540,7 +551,7 @@ async function renderJob(claim, token) {
     }
     const captions = path.join(workDir, plan.delivery.captions);
     const chapters = path.join(workDir, plan.delivery.chapters);
-    await fsp.writeFile(captions, buildWebVtt(plan, replays), "utf8");
+    await fsp.writeFile(captions, plan.captions_vtt || buildWebVtt(plan, replays), "utf8");
     await fsp.writeFile(chapters, chapterFile(plan), "utf8");
 
     const probe = await probeMaster(master);
