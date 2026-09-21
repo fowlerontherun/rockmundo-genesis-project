@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { BODY_SLOTS, TATTOO_CATEGORIES, type BodySlot, type TattooCategory } from '@/data/tattooDesigns';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 
 export interface ResolvedTattooVisual {
   id: string;
@@ -41,6 +42,26 @@ export function normalizeTattooVisual(value: TattooVisualInput, fallbackProfileI
     is_infected: value.is_infected === true,
     category,
   };
+}
+
+
+function clothingCoverageSlots(clothing: ResolvedEquippedClothing): BodySlot[] {
+  const config = clothing.item.garment_config as Record<string, unknown> | null | undefined;
+  const raw = config?.tattooCoverageSlots ?? config?.tattoo_coverage_slots;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((slot): slot is BodySlot => typeof slot === 'string' && tattooSlots.has(slot as BodySlot));
+}
+
+/** Clothing metadata is authoritative for tattoo occlusion. We never infer coverage
+ * from item names, so new garments can define sleeves/necklines precisely. */
+export function visibleTattoosForClothing(
+  tattoos: ResolvedTattooVisual[] = [],
+  clothing: ResolvedEquippedClothing[] = [],
+): ResolvedTattooVisual[] {
+  if (!tattoos.length || !clothing.length) return tattoos;
+  const covered = new Set<BodySlot>();
+  for (const item of clothing) for (const slot of clothingCoverageSlots(item)) covered.add(slot);
+  return covered.size ? tattoos.filter(tattoo => !covered.has(tattoo.body_slot)) : tattoos;
 }
 
 const childBone = (bone: T.Bone, names: string[]) => bone.children.find(child => child instanceof T.Bone && names.some(name => cleanName(child.name).includes(cleanName(name)))) as T.Bone | undefined;
