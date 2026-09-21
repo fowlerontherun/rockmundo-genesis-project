@@ -98,6 +98,44 @@ describe("Top of the Pops render plan", () => {
     expect(performances[1].duration_ms).toBe(180_000);
   });
 
+  it("renders a frozen phrase and band-name sequence when no exact presenter take exists", () => {
+    const sequenceManifest: TotpEpisodeManifest = {
+      ...manifest,
+      segments: manifest.segments.map((segment) =>
+        segment.performance_id === "perf-1"
+          ? {
+              ...segment,
+              assets: [
+                segment.assets[0],
+                {
+                  kind: "presenter_audio_sequence",
+                  url: null,
+                  duration_ms: 2_465,
+                  sha256: null,
+                  version: null,
+                  script_checksum: introChecksum,
+                  gap_ms: 65,
+                  fragments: [
+                    { role: "phrase", url: "https://audio/phrase.webm", duration_ms: 1_200, sha256: "c".repeat(64), version: null },
+                    { role: "band_name", url: "https://audio/band.webm", duration_ms: 1_200, sha256: "d".repeat(64), version: 4 },
+                  ],
+                },
+              ],
+            }
+          : segment,
+      ),
+    };
+
+    const plan = buildTotpRenderPlan(sequenceManifest);
+    const link = plan.items.find((item) => item.kind === "presenter_link" && item.performance_id === "perf-1");
+    expect(link?.audio_url).toBeNull();
+    expect(link?.duration_ms).toBe(2_465);
+    expect(link?.audio_sequence).toEqual([
+      expect.objectContaining({ role: "phrase", url: "https://audio/phrase.webm", offset_ms: 0, duration_ms: 1_200 }),
+      expect.objectContaining({ role: "band_name", url: "https://audio/band.webm", offset_ms: 1_265, duration_ms: 1_200 }),
+    ]);
+  });
+
   it("is deterministic and names delivery files from the episode", () => {
     const a = buildTotpRenderPlan(manifest);
     const b = buildTotpRenderPlan(manifest);
