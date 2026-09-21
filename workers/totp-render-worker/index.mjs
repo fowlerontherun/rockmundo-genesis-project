@@ -220,6 +220,14 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
     const replay = item.performance_id ? byPerformance.get(item.performance_id) : null;
     const reaction = Math.max(-10, Math.min(10, Number(replay?.payload?.liveTv?.audienceReaction ?? 0)));
 
+    if (["opening_titles", "programme_continuity", "stage_transition", "chart_rundown", "end_credits"].includes(item.kind)) {
+      const ambient = pickSound(crowdSounds, ["ambient_chatter"], 3, `${item.kind}:${item.index}:studio-bed`);
+      if (ambient) {
+        const gain = item.kind === "stage_transition" ? 0.045 : item.kind === "chart_rundown" ? 0.035 : 0.025;
+        tracks.push({ file: await source(ambient.audio_url), startMs: item.start_ms, durationMs: item.duration_ms, gain, loop: true });
+      }
+    }
+
     if (item.kind === "performance") {
       const file = await source(item.audio_url ?? replay?.payload?.song?.audioUrl ?? null);
       if (!file) throw new Error(`Performance ${item.performance_id} has no canonical song audio.`);
@@ -547,7 +555,7 @@ async function renderJob(claim, token) {
     }
     const captions = path.join(workDir, plan.delivery.captions);
     const chapters = path.join(workDir, plan.delivery.chapters);
-    await fsp.writeFile(captions, buildWebVtt(plan, replays), "utf8");
+    await fsp.writeFile(captions, plan.captions_vtt || buildWebVtt(plan, replays), "utf8");
     await fsp.writeFile(chapters, chapterFile(plan), "utf8");
 
     const probe = await probeMaster(master);
