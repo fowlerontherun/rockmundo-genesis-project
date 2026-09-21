@@ -8,7 +8,7 @@ import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { STYLES, modelFile, type PlayerAppearance } from './appearance';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary } from './model';
-import type { ResolvedTattooVisual } from './tattoos';
+import { visibleTattoosForClothing, type ResolvedTattooVisual } from './tattoos';
 
 interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[]) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
 export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [] }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId; richClothing?: ResolvedEquippedClothing[]; tattoos?: ResolvedTattooVisual[] }) {
@@ -50,7 +50,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
         api.current = {
           replace: (value, nextRole, nextInstrument, nextRichClothing = [], nextTattoos = []) => {
             if (actor) disposeModel(actor.root); if (equipment) disposeModel(equipment);
-            const assembled = assemblePlayerModel(library!, value, nextTattoos);
+            const assembled = assemblePlayerModel(library!, value, visibleTattoosForClothing(nextTattoos, nextRichClothing));
             actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument, undefined, nextRichClothing); disposeModel(assembled); scene.add(actor.root);
             equipment = actor.equipment; if(equipment)scene.add(equipment);
           },
