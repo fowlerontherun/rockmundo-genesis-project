@@ -89,6 +89,86 @@ describe("Top of the Pops render plan", () => {
     expect(plan.total_duration_ms).toBe(plan.items.reduce((total, item) => total + item.duration_ms, 0));
   });
 
+  it("builds the same full programme structure as interactive playback when continuity is frozen", () => {
+    const audioAsset = (url: string, durationMs: number, script: string) => ({
+      kind: "presenter_audio" as const,
+      url,
+      duration_ms: durationMs,
+      sha256: "f".repeat(64),
+      version: 1,
+      script_checksum: manifestChecksum(canonicalise(script)),
+    });
+    const fullManifest: TotpEpisodeManifest = {
+      ...manifest,
+      presenter_dialogue: [
+        { cue_id: "opening", kind: "opening", performance_id: null, script_text: "Welcome to Top of the Pops.", asset: audioAsset("https://audio/opening.wav", 6_000, "Welcome to Top of the Pops.") },
+        { cue_id: "act:perf-1", kind: "act_intro", performance_id: "perf-1", script_text: "Here they are", asset: audioAsset("https://audio/p1.wav", 3_250, "Here they are") },
+        { cue_id: "between:perf-1", kind: "between", performance_id: "perf-1", script_text: "What a performance. Up next, Neon Vows.", asset: audioAsset("https://audio/between.wav", 4_900, "What a performance. Up next, Neon Vows.") },
+        { cue_id: "chart", kind: "chart", performance_id: null, script_text: "And now, let's take a look at this week's UK charts.", asset: audioAsset("https://audio/chart.wav", 5_500, "And now, let's take a look at this week's UK charts.") },
+        { cue_id: "act:perf-2", kind: "act_intro", performance_id: "perf-2", script_text: "Please welcome Neon Vows", asset: audioAsset("https://audio/p2.wav", 2_500, "Please welcome Neon Vows") },
+        { cue_id: "closing", kind: "closing", performance_id: null, script_text: "Thanks for joining us tonight.", asset: audioAsset("https://audio/closing.wav", 6_300, "Thanks for joining us tonight.") },
+      ],
+      chart_rundown: {
+        episode_id: "episode-1",
+        chart_snapshot_date: "2026-09-18",
+        digital_sales: [{
+          rank: 1, song_id: "song-1", band_id: "band-1", song_title: "Dead Radio", artist_name: "Shockmaster",
+          trend: "up", trend_change: 2, weekly_plays: 12000,
+        }],
+        streaming: [{
+          rank: 12, song_id: "song-2", band_id: "band-2", song_title: "Glass Parade", artist_name: "Neon Vows",
+          trend: "new", trend_change: null, weekly_plays: 9000,
+        }],
+        digital_sales_count: 1,
+        streaming_count: 1,
+      },
+      segments: [
+        manifest.segments[0],
+        {
+          ...manifest.segments[1],
+          presenter_intro: "Please welcome Neon Vows",
+          assets: [
+            { kind: "song_audio", url: "https://audio/2.mp3", duration_ms: 190_000, sha256: null, version: null, script_checksum: null },
+            audioAsset("https://audio/p2.wav", 2_500, "Please welcome Neon Vows"),
+          ],
+        },
+      ],
+    };
+
+    const plan = buildTotpRenderPlan(fullManifest);
+    expect(plan.items.map((item) => item.kind)).toEqual([
+      "opening_titles",
+      "programme_continuity",
+      "presenter_link",
+      "performance",
+      "applause",
+      "studio_transition",
+      "programme_continuity",
+      "chart_rundown",
+      "chart_rundown",
+      "presenter_link",
+      "performance",
+      "applause",
+      "programme_continuity",
+      "end_credits",
+    ]);
+    expect(plan.items.filter((item) => item.kind === "programme_continuity").map((item) => item.dialogue_kind)).toEqual(["opening", "between", "closing"]);
+    const chartItems = plan.items.filter((item) => item.kind === "chart_rundown");
+    expect(chartItems).toHaveLength(2);
+    expect(chartItems[0].duration_ms).toBe(5_500);
+    expect(chartItems[0].audio_url).toBe("https://audio/chart.wav");
+    expect(chartItems[1].duration_ms).toBe(5_000);
+    expect(chartItems[1].audio_url).toBeNull();
+    expect(plan.items.find((item) => item.kind === "studio_transition")).toEqual(expect.objectContaining({
+      from_performance_id: "perf-1",
+      to_performance_id: "perf-2",
+      duration_ms: 3_200,
+    }));
+    expect(plan.chapters.some((chapter) => chapter.title === "UK chart rundown")).toBe(true);
+    expect(plan.captions_vtt).toContain("Welcome to Top of the Pops.");
+    expect(plan.captions_vtt).toContain("Digital Sales Top 40");
+  });
+
   it("uses the exact recorded presenter duration and falls back for missing song duration", () => {
     const plan = buildTotpRenderPlan(manifest);
     const links = plan.items.filter((item) => item.kind === "presenter_link");
