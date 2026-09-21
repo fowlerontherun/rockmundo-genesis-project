@@ -50,3 +50,22 @@ export async function getTotpChartRundown(episodeId?: string | null): Promise<To
 export function hasTotpChartRundown(rundown?: TotpChartRundown | null): boolean {
   return !!rundown && (rundown.streaming.length > 0 || rundown.digital_sales.length > 0);
 }
+
+
+export async function getTotpAdminTestChartRundown(snapshotDate: string): Promise<TotpChartRundown> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate)) {
+    throw new Error("Choose a valid Top of the Pops chart snapshot.");
+  }
+  const { data, error } = await totpRpc<TotpChartRundown>("totp_admin_test_chart_rundown", {
+    p_snapshot_date: snapshotDate,
+  });
+  if (error) throw new Error(error.message || "Could not load the demo chart rundown.");
+  return data ?? {
+    episode_id: null,
+    chart_snapshot_date: snapshotDate,
+    streaming: [],
+    digital_sales: [],
+    streaming_count: 0,
+    digital_sales_count: 0,
+  };
+}
