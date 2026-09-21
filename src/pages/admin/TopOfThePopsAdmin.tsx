@@ -243,7 +243,7 @@ export default function TopOfThePopsAdmin() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="production" className="space-y-4">
+        <TabsContent value="production" className="space-y-4" id="production">
           <TotpControlRoomCard episode={current} />
           <TotpRunningSheetCard episode={current} />
           <TotpRehearsalCard episode={current} />
@@ -255,11 +255,11 @@ export default function TopOfThePopsAdmin() {
           <TotpMediaManager presenterKey={current.presenter_key ?? "alex_rayne"} />
         </TabsContent>
 
-        <TabsContent value="demo" className="space-y-4">
+        <TabsContent value="demo" className="space-y-4" id="demo">
           <TotpTestEpisodeCard />
         </TabsContent>
 
-        <TabsContent value="broadcast" className="space-y-4">
+        <TabsContent value="broadcast" className="space-y-4" id="broadcast">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Broadcast controls</CardTitle>
