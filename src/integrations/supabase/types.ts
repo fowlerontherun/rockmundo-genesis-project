@@ -5211,6 +5211,9 @@ export type Database = {
           payer_balance_after_minor: number
           payment_source: string
           profile_id: string
+          refund_id: string | null
+          refunded_amount_minor: number
+          refunded_at: string | null
         }
         Insert: {
           amount_minor: number
@@ -5224,6 +5227,9 @@ export type Database = {
           payer_balance_after_minor: number
           payment_source: string
           profile_id: string
+          refund_id?: string | null
+          refunded_amount_minor?: number
+          refunded_at?: string | null
         }
         Update: {
           amount_minor?: number
@@ -5237,8 +5243,83 @@ export type Database = {
           payer_balance_after_minor?: number
           payment_source?: string
           profile_id?: string
+          refund_id?: string | null
+          refunded_amount_minor?: number
+          refunded_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "booking_payments_refund_id_fkey"
+            columns: ["refund_id"]
+            isOneToOne: false
+            referencedRelation: "booking_refunds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_refunds: {
+        Row: {
+          amount_minor: number
+          booking_id: string
+          booking_payment_id: string
+          booking_type: string
+          currency_code: string
+          id: string
+          idempotency_key: string
+          payment_source: string
+          reason: string | null
+          refunded_at: string
+          refunded_by_profile_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          booking_id: string
+          booking_payment_id: string
+          booking_type: string
+          currency_code: string
+          id?: string
+          idempotency_key: string
+          payment_source: string
+          reason?: string | null
+          refunded_at?: string
+          refunded_by_profile_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          booking_id?: string
+          booking_payment_id?: string
+          booking_type?: string
+          currency_code?: string
+          id?: string
+          idempotency_key?: string
+          payment_source?: string
+          reason?: string | null
+          refunded_at?: string
+          refunded_by_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_refunds_booking_payment_id_fkey"
+            columns: ["booking_payment_id"]
+            isOneToOne: true
+            referencedRelation: "booking_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_refunds_refunded_by_profile_id_fkey"
+            columns: ["refunded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_refunds_refunded_by_profile_id_fkey"
+            columns: ["refunded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       botb_entries: {
         Row: {
@@ -63300,6 +63381,14 @@ export type Database = {
         Returns: Json
       }
       _refresh_festival_world_records_internal: { Args: never; Returns: Json }
+      _refund_atomic_booking_payment: {
+        Args: {
+          p_booking_payment_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       _replace_tour_operations_plan: {
         Args: { p_plan: Json; p_template_id?: string; p_tour_id: string }
         Returns: number
@@ -65002,6 +65091,14 @@ export type Database = {
           p_idempotency_key: string
           p_reason: string
           p_recording_id: string
+        }
+        Returns: Json
+      }
+      cancel_rehearsal_booking_atomic: {
+        Args: {
+          p_idempotency_key: string
+          p_reason: string
+          p_rehearsal_id: string
         }
         Returns: Json
       }
@@ -72156,6 +72253,10 @@ export type Database = {
       totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
       totp_episode_plan: { Args: { p_episode_id: string }; Returns: Json }
       totp_episode_presenter_audio: {
+        Args: { p_episode_id: string }
+        Returns: Json
+      }
+      totp_episode_presenter_fragments: {
         Args: { p_episode_id: string }
         Returns: Json
       }
