@@ -2,14 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const totpRpc = vi.fn();
 const getTotpPerformanceAudio = vi.fn();
+const getTotpEpisodePresenterFragments = vi.fn();
 const getTotpEpisodePlan = vi.fn();
+const totpRemoteAudioDurationMs = vi.fn();
 
 vi.mock("./rpc", () => ({ totpRpc: (...args: unknown[]) => totpRpc(...args) }));
 vi.mock("./api", () => ({
   getTotpPerformanceAudio: (...args: unknown[]) => getTotpPerformanceAudio(...args),
+  getTotpEpisodePresenterFragments: (...args: unknown[]) => getTotpEpisodePresenterFragments(...args),
 }));
 vi.mock("./scheduleApi", () => ({
   getTotpEpisodePlan: (...args: unknown[]) => getTotpEpisodePlan(...args),
+}));
+vi.mock("./audioAsset", () => ({
+  totpRemoteAudioDurationMs: (...args: unknown[]) => totpRemoteAudioDurationMs(...args),
+}));
+vi.mock("./totpMedia", () => ({
+  totpMediaPublicUrl: (path: string) => `https://media.example/${path}`,
 }));
 
 import {
@@ -84,8 +93,12 @@ function clearedPlan() {
 beforeEach(() => {
   totpRpc.mockReset();
   getTotpPerformanceAudio.mockReset();
+  getTotpEpisodePresenterFragments.mockReset();
   getTotpEpisodePlan.mockReset();
+  totpRemoteAudioDurationMs.mockReset();
   getTotpEpisodePlan.mockResolvedValue(clearedPlan());
+  getTotpEpisodePresenterFragments.mockResolvedValue({ presenter_key: "presenter_a", phrases: {}, bands: {} });
+  totpRemoteAudioDurationMs.mockResolvedValue(1_350);
 });
 
 describe("TOTP stored running sheet", () => {
@@ -103,6 +116,88 @@ describe("TOTP stored running sheet", () => {
     expect(manifest.segments[0].rights.status).toBe("cleared");
     expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.sha256).toBe("a".repeat(64));
     expect(issues).toEqual([]);
+  });
+
+  it("freezes a reusable phrase and matching band-name take when the exact presenter take is missing", async () => {
+    const reusableEpisode: TotpEpisode = {
+      ...episode,
+      performances: [{
+        ...episode.performances[0],
+        presenter_intro: "And now, it's The Kestrels!",
+      }],
+    };
+    const plan = clearedPlan();
+    plan.presenter_audio = {};
+    getTotpEpisodePlan.mockResolvedValue(plan);
+    getTotpEpisodePresenterFragments.mockResolvedValue({
+      presenter_key: "presenter_a",
+      phrases: {
+        "and-now-its": {
+          storage_path: `presenters/presenter_a/reusable-phrases/and-now-its-${"c".repeat(64)}.webm`,
+          uploaded_at: "2026-09-21T12:00:00Z",
+        },
+      },
+      bands: {
+        b1: {
+          band_id: "b1",
+          band_name: "The Kestrels",
+          audio_url: "https://media.example/bands/b1.webm",
+          duration_ms: 900,
+          sha256: "d".repeat(64),
+          version: 3,
+        },
+      },
+    });
+    getTotpPerformanceAudio.mockResolvedValue({
+      audio_url: "https://cdn/p1.mp3",
+      audio_generation_status: "complete",
+      duration_seconds: 182,
+    });
+
+    const { manifest, issues } = await buildTotpEpisodeManifestFromEpisode(reusableEpisode);
+
+    const sequence = manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio_sequence");
+    expect(sequence?.duration_ms).toBe(2_315);
+    expect(sequence?.gap_ms).toBe(65);
+    expect(sequence?.fragments).toEqual([
+      expect.objectContaining({ role: "phrase", duration_ms: 1_350, sha256: "c".repeat(64) }),
+      expect.objectContaining({ role: "band_name", duration_ms: 900, sha256: "d".repeat(64), version: 3 }),
+    ]);
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")).toBeUndefined();
+    expect(issues).toEqual([]);
+  });
+
+  it("prefers an exact current presenter take over reusable fragments", async () => {
+    getTotpEpisodePresenterFragments.mockResolvedValue({
+      presenter_key: "presenter_a",
+      phrases: {
+        "please-welcome": {
+          storage_path: `presenters/presenter_a/reusable-phrases/please-welcome-${"c".repeat(64)}.webm`,
+          uploaded_at: "2026-09-21T12:00:00Z",
+        },
+      },
+      bands: {
+        b1: {
+          band_id: "b1",
+          band_name: "The Kestrels",
+          audio_url: "https://media.example/bands/b1.webm",
+          duration_ms: 900,
+          sha256: "d".repeat(64),
+          version: 3,
+        },
+      },
+    });
+    getTotpPerformanceAudio.mockResolvedValue({
+      audio_url: "https://cdn/p1.mp3",
+      audio_generation_status: "complete",
+      duration_seconds: 182,
+    });
+
+    const { manifest } = await buildTotpEpisodeManifestFromEpisode(episode);
+
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.url).toBe("https://cdn/presenter-p1.wav");
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio_sequence")).toBeUndefined();
+    expect(totpRemoteAudioDurationMs).not.toHaveBeenCalled();
   });
 
   it("does not auto-clear a track with no rights record", async () => {
