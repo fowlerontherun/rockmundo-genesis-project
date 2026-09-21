@@ -36,6 +36,7 @@ import {
 } from "./episodeManifestApi";
 import { canonicalise, manifestChecksum } from "./episodeManifest";
 import type { TotpEpisode } from "./api";
+import { buildTotpPresenterDialogue } from "./presenterDialogue";
 
 const episode: TotpEpisode = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -62,6 +63,22 @@ const episode: TotpEpisode = {
 };
 
 function clearedPlan() {
+  const dialogue = buildTotpPresenterDialogue(episode);
+  const presenterAudio = Object.fromEntries(dialogue
+    .filter((line) => line.script.trim())
+    .map((line, index) => [line.planKey, {
+      cue_id: line.id,
+      kind: line.kind,
+      performance_id: line.performanceId,
+      presenter_key: "presenter_a",
+      script_text: line.script,
+      script_checksum: manifestChecksum(canonicalise(line.script)),
+      audio_url: `https://cdn/presenter-${line.id.replace(/[^a-z0-9]+/gi, "-")}.wav`,
+      duration_ms: line.kind === "act_intro" ? 2_400 : 3_200,
+      sha256: String(index + 1).repeat(64).slice(0, 64),
+      version: 1,
+      uploaded_at: "2026-09-19T10:00:00Z",
+    }]));
   return {
     episode_id: episode.id,
     theme: null,
@@ -80,19 +97,7 @@ function clearedPlan() {
         status: "cleared",
       },
     },
-    presenter_audio: {
-      p1: {
-        performance_id: "p1",
-        presenter_key: "presenter_a",
-        script_text: "Welcome!",
-        script_checksum: manifestChecksum(canonicalise("Welcome!")),
-        audio_url: "https://cdn/presenter-p1.wav",
-        duration_ms: 2_400,
-        sha256: "a".repeat(64),
-        version: 1,
-        uploaded_at: "2026-09-19T10:00:00Z",
-      },
-    },
+    presenter_audio: presenterAudio,
   };
 }
 
@@ -247,7 +252,7 @@ describe("TOTP stored running sheet", () => {
 
     const { manifest } = await buildTotpEpisodeManifestFromEpisode(episode);
 
-    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.url).toBe("https://cdn/presenter-p1.wav");
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.url).toContain("presenter-act-p1");
     expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio_sequence")).toBeUndefined();
     expect(totpRemoteAudioDurationMs).not.toHaveBeenCalled();
   });
