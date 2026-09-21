@@ -53,181 +53,19 @@ begin
      and not coalesce(obj->>'facialHair' = any(array['none','stubble','moustache','goatee','short_beard','full_beard','long_beard','sideburns']), false)
   then return false; end if;
   if obj ? 'facialHairColor'
-     and not coalesce(obj->>'facialHairColor' ~ '^#[0-9a-fA-F]{6}
-  obj := value->'equipment';
-  if jsonb_typeof(obj) <> 'object'
-     or (select count(*) from jsonb_object_keys(obj)) <> 4
-     or not (obj ?& array['top','bottom','footwear','instrument'])
-  then return false; end if;
-  foreach slot in array array['top','bottom','footwear','instrument'] loop
-    obj := value->'equipment'->slot;
-    item := obj->>'itemId';
-    if jsonb_typeof(obj) <> 'object'
-       or (select count(*) from jsonb_object_keys(obj)) <> 2
-       or not (obj ?& array['itemId','color'])
-       or not coalesce(obj->>'color' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-    if slot = 'instrument' then
-      if item is distinct from 'starter.instrument.standard' then return false; end if;
-    elsif item is null or not (item = any(case slot
-      when 'top' then array['starter.top.casual','starter.top.punk','starter.top.suit','starter.top.stripe','starter.top.plaid','starter.top.pinstripe']
-      when 'bottom' then array['starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim','starter.bottom.plaid','starter.bottom.pinstripe']
-      when 'footwear' then array['starter.footwear.casual','starter.footwear.punk','starter.footwear.suit','starter.footwear.canvas','starter.footwear.two-tone','starter.footwear.patent']
-      else array[]::text[] end))
-    then return false; end if;
-  end loop;
-
-  if value ? 'accessories' then
-    obj := value->'accessories';
-    if jsonb_typeof(obj) <> 'object'
-       or exists (
-         select 1 from jsonb_object_keys(obj) as keys(key)
-         where key not in ('hat','hatColor','glasses','glassesColor','earrings','earringColor')
-       )
-       or not (obj ?& array['hat','hatColor','glasses','glassesColor'])
-       or not coalesce(obj->>'hat' = any(array['none','beanie','baseball_cap','bucket_hat','fedora']), false)
-       or not coalesce(obj->>'glasses' = any(array['none','round','square','aviator','sunglasses']), false)
-       or not coalesce(obj->>'hatColor' ~ '^#[0-9a-fA-F]{6}$', false)
-       or not coalesce(obj->>'glassesColor' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-    if obj ? 'earrings'
-       and not coalesce(obj->>'earrings' = any(array['none','studs','hoops','drops']), false)
-    then return false; end if;
-    if obj ? 'earringColor'
-       and not coalesce(obj->>'earringColor' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-  end if;
-
-  return jsonb_typeof(value->'version') = 'number'
-    and jsonb_typeof(value->'body'->'frame') = 'string'
-    and jsonb_typeof(value->'body'->'height') = 'number'
-    and jsonb_typeof(value->'body'->'build') = 'number'
-    and jsonb_typeof(value->'head'->'style') = 'string';
-exception when others then
-  return false;
-end;
-$$;
-, false)
+     and not coalesce(obj->>'facialHairColor' ~ '^#[0-9a-fA-F]{6}$', false)
   then return false; end if;
   if obj ? 'faceShape'
      and not coalesce(obj->>'faceShape' = any(array['classic','oval','angular','soft','wide']), false)
   then return false; end if;
   if obj ? 'eyeColor'
-     and not coalesce(obj->>'eyeColor' ~ '^#[0-9a-fA-F]{6}
-  obj := value->'equipment';
-  if jsonb_typeof(obj) <> 'object'
-     or (select count(*) from jsonb_object_keys(obj)) <> 4
-     or not (obj ?& array['top','bottom','footwear','instrument'])
-  then return false; end if;
-  foreach slot in array array['top','bottom','footwear','instrument'] loop
-    obj := value->'equipment'->slot;
-    item := obj->>'itemId';
-    if jsonb_typeof(obj) <> 'object'
-       or (select count(*) from jsonb_object_keys(obj)) <> 2
-       or not (obj ?& array['itemId','color'])
-       or not coalesce(obj->>'color' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-    if slot = 'instrument' then
-      if item is distinct from 'starter.instrument.standard' then return false; end if;
-    elsif item is null or not (item = any(case slot
-      when 'top' then array['starter.top.casual','starter.top.punk','starter.top.suit','starter.top.stripe','starter.top.plaid','starter.top.pinstripe']
-      when 'bottom' then array['starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim','starter.bottom.plaid','starter.bottom.pinstripe']
-      when 'footwear' then array['starter.footwear.casual','starter.footwear.punk','starter.footwear.suit','starter.footwear.canvas','starter.footwear.two-tone','starter.footwear.patent']
-      else array[]::text[] end))
-    then return false; end if;
-  end loop;
-
-  if value ? 'accessories' then
-    obj := value->'accessories';
-    if jsonb_typeof(obj) <> 'object'
-       or exists (
-         select 1 from jsonb_object_keys(obj) as keys(key)
-         where key not in ('hat','hatColor','glasses','glassesColor','earrings','earringColor')
-       )
-       or not (obj ?& array['hat','hatColor','glasses','glassesColor'])
-       or not coalesce(obj->>'hat' = any(array['none','beanie','baseball_cap','bucket_hat','fedora']), false)
-       or not coalesce(obj->>'glasses' = any(array['none','round','square','aviator','sunglasses']), false)
-       or not coalesce(obj->>'hatColor' ~ '^#[0-9a-fA-F]{6}$', false)
-       or not coalesce(obj->>'glassesColor' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-    if obj ? 'earrings'
-       and not coalesce(obj->>'earrings' = any(array['none','studs','hoops','drops']), false)
-    then return false; end if;
-    if obj ? 'earringColor'
-       and not coalesce(obj->>'earringColor' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-  end if;
-
-  return jsonb_typeof(value->'version') = 'number'
-    and jsonb_typeof(value->'body'->'frame') = 'string'
-    and jsonb_typeof(value->'body'->'height') = 'number'
-    and jsonb_typeof(value->'body'->'build') = 'number'
-    and jsonb_typeof(value->'head'->'style') = 'string';
-exception when others then
-  return false;
-end;
-$$;
-, false)
+     and not coalesce(obj->>'eyeColor' ~ '^#[0-9a-fA-F]{6}$', false)
   then return false; end if;
   if obj ? 'eyebrowStyle'
      and not coalesce(obj->>'eyebrowStyle' = any(array['natural','straight','arched','bold','soft']), false)
   then return false; end if;
   if obj ? 'eyebrowColor'
-     and not coalesce(obj->>'eyebrowColor' ~ '^#[0-9a-fA-F]{6}
-  obj := value->'equipment';
-  if jsonb_typeof(obj) <> 'object'
-     or (select count(*) from jsonb_object_keys(obj)) <> 4
-     or not (obj ?& array['top','bottom','footwear','instrument'])
-  then return false; end if;
-  foreach slot in array array['top','bottom','footwear','instrument'] loop
-    obj := value->'equipment'->slot;
-    item := obj->>'itemId';
-    if jsonb_typeof(obj) <> 'object'
-       or (select count(*) from jsonb_object_keys(obj)) <> 2
-       or not (obj ?& array['itemId','color'])
-       or not coalesce(obj->>'color' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-    if slot = 'instrument' then
-      if item is distinct from 'starter.instrument.standard' then return false; end if;
-    elsif item is null or not (item = any(case slot
-      when 'top' then array['starter.top.casual','starter.top.punk','starter.top.suit','starter.top.stripe','starter.top.plaid','starter.top.pinstripe']
-      when 'bottom' then array['starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim','starter.bottom.plaid','starter.bottom.pinstripe']
-      when 'footwear' then array['starter.footwear.casual','starter.footwear.punk','starter.footwear.suit','starter.footwear.canvas','starter.footwear.two-tone','starter.footwear.patent']
-      else array[]::text[] end))
-    then return false; end if;
-  end loop;
-
-  if value ? 'accessories' then
-    obj := value->'accessories';
-    if jsonb_typeof(obj) <> 'object'
-       or exists (
-         select 1 from jsonb_object_keys(obj) as keys(key)
-         where key not in ('hat','hatColor','glasses','glassesColor','earrings','earringColor')
-       )
-       or not (obj ?& array['hat','hatColor','glasses','glassesColor'])
-       or not coalesce(obj->>'hat' = any(array['none','beanie','baseball_cap','bucket_hat','fedora']), false)
-       or not coalesce(obj->>'glasses' = any(array['none','round','square','aviator','sunglasses']), false)
-       or not coalesce(obj->>'hatColor' ~ '^#[0-9a-fA-F]{6}$', false)
-       or not coalesce(obj->>'glassesColor' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-    if obj ? 'earrings'
-       and not coalesce(obj->>'earrings' = any(array['none','studs','hoops','drops']), false)
-    then return false; end if;
-    if obj ? 'earringColor'
-       and not coalesce(obj->>'earringColor' ~ '^#[0-9a-fA-F]{6}$', false)
-    then return false; end if;
-  end if;
-
-  return jsonb_typeof(value->'version') = 'number'
-    and jsonb_typeof(value->'body'->'frame') = 'string'
-    and jsonb_typeof(value->'body'->'height') = 'number'
-    and jsonb_typeof(value->'body'->'build') = 'number'
-    and jsonb_typeof(value->'head'->'style') = 'string';
-exception when others then
-  return false;
-end;
-$$;
-, false)
+     and not coalesce(obj->>'eyebrowColor' ~ '^#[0-9a-fA-F]{6}$', false)
   then return false; end if;
   if obj ? 'skinDetail'
      and not coalesce(obj->>'skinDetail' = any(array['smooth','freckles','beauty_marks','weathered']), false)
