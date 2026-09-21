@@ -63,6 +63,15 @@ export interface TotpArchivedVisualSnapshot {
     selectedVariantKey?: string | null;
     customizationConfig?: unknown;
   }>;
+  tattoos?: Array<{
+    id?: unknown;
+    profile_id?: unknown;
+    body_slot?: unknown;
+    ink_color?: unknown;
+    quality_score?: unknown;
+    is_infected?: unknown;
+    category?: unknown;
+  }>;
 }
 
 export interface TotpArchivedBandMember {
