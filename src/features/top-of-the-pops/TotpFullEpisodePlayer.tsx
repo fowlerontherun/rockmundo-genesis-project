@@ -107,10 +107,9 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const actPresenterScript = current.payload.cues.find(
     (cue) => cue.type === "presenter" && !!cue.presenterText,
   )?.presenterText ?? "";
-  const actPresenterSequence = buildTotpActPresenterSequence(
-    current,
-    actPresenterScript,
-    presenterFragments,
+  const actPresenterSequence = useMemo(
+    () => buildTotpActPresenterSequence(current, actPresenterScript, presenterFragments),
+    [actPresenterScript, current, presenterFragments],
   );
 
   const completedActs = currentIndex;
