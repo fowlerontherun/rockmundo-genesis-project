@@ -4,6 +4,7 @@ import {
   buildTotpRehearsalRenderPlan,
   buildTotpSegmentPreviewRenderPlan,
   evaluateTotpRenderQc,
+  filterTotpRenderReplays,
   toTotpChapterFile,
   type TotpRenderProbe,
 } from "./renderSpec";
@@ -167,6 +168,20 @@ describe("Top of the Pops render plan", () => {
     expect(plan.chapters.some((chapter) => chapter.title === "UK chart rundown")).toBe(true);
     expect(plan.captions_vtt).toContain("Welcome to Top of the Pops.");
     expect(plan.captions_vtt).toContain("Digital Sales Top 40");
+  });
+
+  it("filters archived replays to only acts frozen into the render plan", () => {
+    const plan = buildTotpRenderPlan(manifest);
+    const kept = {
+      performance_id: "perf-1",
+      payload: { band: { name: "Shockmaster" } },
+    };
+    const removed = {
+      performance_id: "removed-perf",
+      payload: { band: { name: "Removed Act" } },
+    };
+
+    expect(filterTotpRenderReplays(plan, [kept, removed] as never)).toEqual([kept]);
   });
 
   it("uses the exact recorded presenter duration and falls back for missing song duration", () => {
