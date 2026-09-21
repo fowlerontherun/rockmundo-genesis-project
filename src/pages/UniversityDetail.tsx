@@ -203,7 +203,11 @@ export default function UniversityDetail() {
     enabled: !!profile?.id,
   });
 
-  const { data: skillDefinitions } = useQuery({
+  const {
+    data: skillDefinitions,
+    isLoading: skillDefinitionsLoading,
+    isError: skillDefinitionsError,
+  } = useQuery({
     queryKey: ["skill_definitions", "university_prerequisites"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -269,6 +273,13 @@ export default function UniversityDetail() {
 
       const course = courses?.find((c) => c.id === courseId);
       if (!course) throw new Error("Course not found");
+
+      if (skillDefinitionsLoading) {
+        throw new Error("Course requirements are still loading. Please try again in a moment.");
+      }
+      if (skillDefinitionsError || !skillDefinitions) {
+        throw new Error("Course requirements could not be loaded. Please refresh and try again.");
+      }
 
       const prerequisite = getCoursePrerequisite(course);
       if (prerequisite && prerequisite.currentLevel < prerequisite.requiredLevel) {
@@ -360,7 +371,7 @@ export default function UniversityDetail() {
     },
     onError: (error: any) => {
       const rawMessage = error?.message || "Unable to enroll in this course.";
-      const description = rawMessage.startsWith("university_course_prerequisite_not_met")
+      const description = rawMessage.includes("university_course_prerequisite_not_met")
         ? "This course tier is still locked. Complete the required previous-tier skill first."
         : rawMessage;
 
@@ -457,6 +468,10 @@ export default function UniversityDetail() {
   };
 
   const canEnroll = (course: Course) => {
+    if (skillDefinitionsLoading || skillDefinitionsError || !skillDefinitions) {
+      return false;
+    }
+
     const skillLevel = getSkillLevel(course.skill_slug);
     const tierPrerequisite = getCoursePrerequisite(course);
     const hasTargetLevel = skillLevel >= course.required_skill_level;
@@ -471,6 +486,13 @@ export default function UniversityDetail() {
   };
 
   const getEnrollmentMessage = (course: Course) => {
+    if (skillDefinitionsLoading) {
+      return "Checking course requirements...";
+    }
+    if (skillDefinitionsError || !skillDefinitions) {
+      return "Unable to load course requirements. Refresh the page to try again.";
+    }
+
     const skillLevel = getSkillLevel(course.skill_slug);
     const tierPrerequisite = getCoursePrerequisite(course);
     const price = calculatePrice(course.base_price);
