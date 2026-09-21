@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, CheckCircle2, Music2, Search, Send, ShieldAlert, Tv2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, Music2, RefreshCw, Search, Send, ShieldAlert, Tv2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import {
   adminBookTotpBand,
+  adminResendTotpInvitation,
   getTotpAdminBookingCatalog,
   type TotpAdminBookingCandidate,
 } from "./api";
@@ -56,6 +57,23 @@ export function TotpBookingManager({ episodeId }: { episodeId: string }) {
     onError: (error: Error) => {
       toast({
         title: "Could not book band",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resend = useMutation({
+    mutationFn: (invitationId: string) => adminResendTotpInvitation(invitationId),
+    onSuccess: (result) => {
+      toast({
+        title: "Top of the Pops invitation resent",
+        description: `Notification sent to ${result.recipients} active band member${result.recipients === 1 ? "" : "s"}.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not resend invitation",
         description: error.message,
         variant: "destructive",
       });
@@ -204,16 +222,26 @@ export function TotpBookingManager({ episodeId }: { episodeId: string }) {
                       </SelectContent>
                     </Select>
 
-                    <Button
-                      onClick={() => selectedSong && booking.mutate({ bandId: candidate.band_id, songId: selectedSong.song_id })}
-                      disabled={blocked || booking.isPending}
-                    >
-                      {candidate.invitation ? (
-                        <><CheckCircle2 className="mr-2 h-4 w-4" /> Invited</>
-                      ) : (
-                        <><Send className="mr-2 h-4 w-4" /> Send invite</>
-                      )}
-                    </Button>
+                    {candidate.invitation?.status === "invited" ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => resend.mutate(candidate.invitation!.invitation_id)}
+                        disabled={resend.isPending}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Resend invite
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => selectedSong && booking.mutate({ bandId: candidate.band_id, songId: selectedSong.song_id })}
+                        disabled={blocked || booking.isPending}
+                      >
+                        {candidate.invitation ? (
+                          <><CheckCircle2 className="mr-2 h-4 w-4" /> Invited</>
+                        ) : (
+                          <><Send className="mr-2 h-4 w-4" /> Send invite</>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
 
