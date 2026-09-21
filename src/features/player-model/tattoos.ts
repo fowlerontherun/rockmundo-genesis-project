@@ -1,5 +1,5 @@
 import * as T from 'three';
-import type { BodySlot, TattooCategory } from '@/data/tattooDesigns';
+import { BODY_SLOTS, TATTOO_CATEGORIES, type BodySlot, type TattooCategory } from '@/data/tattooDesigns';
 
 export interface ResolvedTattooVisual {
   id: string;
@@ -9,6 +9,38 @@ export interface ResolvedTattooVisual {
   quality_score: number;
   is_infected: boolean;
   category: TattooCategory | 'custom';
+}
+
+export interface TattooVisualInput {
+  id?: unknown;
+  profile_id?: unknown;
+  body_slot?: unknown;
+  ink_color?: unknown;
+  quality_score?: unknown;
+  is_infected?: unknown;
+  category?: unknown;
+}
+
+const tattooSlots = new Set<BodySlot>(Object.keys(BODY_SLOTS) as BodySlot[]);
+const tattooCategories = new Set<TattooCategory>(TATTOO_CATEGORIES);
+
+export function normalizeTattooVisual(value: TattooVisualInput, fallbackProfileId = ''): ResolvedTattooVisual | null {
+  const id = typeof value.id === 'string' ? value.id : '';
+  const profileId = typeof value.profile_id === 'string' && value.profile_id ? value.profile_id : fallbackProfileId;
+  const bodySlot = typeof value.body_slot === 'string' ? value.body_slot as BodySlot : null;
+  if (!id || !profileId || !bodySlot || !tattooSlots.has(bodySlot)) return null;
+  const categoryValue = typeof value.category === 'string' ? value.category : '';
+  const category = tattooCategories.has(categoryValue as TattooCategory) ? categoryValue as TattooCategory : 'custom';
+  const rawInk = typeof value.ink_color === 'string' ? value.ink_color : '';
+  return {
+    id,
+    profile_id: profileId,
+    body_slot: bodySlot,
+    ink_color: /^#[0-9a-fA-F]{6}$/.test(rawInk) ? rawInk.toLowerCase() : '#1d232d',
+    quality_score: Math.max(0, Math.min(100, Number(value.quality_score) || 0)),
+    is_infected: value.is_infected === true,
+    category,
+  };
 }
 
 const childBone = (bone: T.Bone, names: string[]) => bone.children.find(child => child instanceof T.Bone && names.some(name => cleanName(child.name).includes(cleanName(name)))) as T.Bone | undefined;
