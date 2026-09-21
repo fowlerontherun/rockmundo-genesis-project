@@ -52,7 +52,7 @@ describe("Top of the Pops presenter dialogue", () => {
     expect(lines.find((line) => line.id === "act:p1")?.planKey).toBe("p1");
   });
 
-  it("includes the exact dynamic band, song, stage and chart wording", () => {
+  it("keeps spoken continuity band-led while song titles stay visual-only", () => {
     const lines = buildTotpPresenterDialogue(episode);
     const opening = lines.find((line) => line.kind === "opening")?.script ?? "";
     const between = lines.find((line) => line.kind === "between")?.script ?? "";
@@ -60,9 +60,10 @@ describe("Top of the Pops presenter dialogue", () => {
 
     expect(opening).toContain("Shockmaster");
     expect(between).toContain("Neon Vows");
-    expect(between).toContain("Glass Parade");
+    expect(between).not.toContain("Glass Parade");
     expect(between).toContain("stage b");
+    expect(between).toContain("another chart hit from Neon Vows");
     expect(closing).toContain("Neon Vows");
-    expect(closing).toContain("Glass Parade");
+    expect(closing).not.toContain("Glass Parade");
   });
 });
