@@ -56454,6 +56454,53 @@ export type Database = {
           },
         ]
       }
+      totp_band_name_audio: {
+        Row: {
+          audio_url: string
+          band_id: string
+          duration_ms: number
+          recorded_band_name: string
+          sha256: string
+          storage_path: string
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          audio_url: string
+          band_id: string
+          duration_ms: number
+          recorded_band_name: string
+          sha256: string
+          storage_path: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Update: {
+          audio_url?: string
+          band_id?: string
+          duration_ms?: number
+          recorded_band_name?: string
+          sha256?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totp_band_name_audio_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: true
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totp_broadcast_replays: {
         Row: {
           checksum: string
@@ -56786,36 +56833,42 @@ export type Database = {
       }
       totp_episode_plans: {
         Row: {
+          broadcast_rights: Json
           closing_link: string | null
           created_at: string
           episode_id: string
           id: string
           notes: string | null
           opening_link: string | null
+          presenter_audio: Json
           segments: Json
           theme: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          broadcast_rights?: Json
           closing_link?: string | null
           created_at?: string
           episode_id: string
           id?: string
           notes?: string | null
           opening_link?: string | null
+          presenter_audio?: Json
           segments?: Json
           theme?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          broadcast_rights?: Json
           closing_link?: string | null
           created_at?: string
           episode_id?: string
           id?: string
           notes?: string | null
           opening_link?: string | null
+          presenter_audio?: Json
           segments?: Json
           theme?: string | null
           updated_at?: string
@@ -71421,6 +71474,7 @@ export type Database = {
         Args: { p_contract_id: string; p_reason?: string }
         Returns: Json
       }
+      totp_admin_band_name_audio_catalog: { Args: never; Returns: Json }
       totp_admin_broadcast_schedule: {
         Args: { p_from?: string; p_weeks?: number }
         Returns: Json
@@ -71641,6 +71695,16 @@ export type Database = {
           p_performance_id: string
           p_reason: string
           p_replacement_note?: string
+        }
+        Returns: Json
+      }
+      totp_admin_save_band_name_audio: {
+        Args: {
+          p_audio_url: string
+          p_band_id: string
+          p_duration_ms: number
+          p_sha256: string
+          p_storage_path: string
         }
         Returns: Json
       }
@@ -72079,6 +72143,10 @@ export type Database = {
       }
       totp_episode_manifest: { Args: { p_episode_id?: string }; Returns: Json }
       totp_episode_plan: { Args: { p_episode_id: string }; Returns: Json }
+      totp_episode_presenter_audio: {
+        Args: { p_episode_id: string }
+        Returns: Json
+      }
       totp_episode_production_audit: {
         Args: { p_episode_id: string; p_limit?: number }
         Returns: {
