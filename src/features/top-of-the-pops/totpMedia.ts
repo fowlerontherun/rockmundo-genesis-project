@@ -7,6 +7,8 @@ export type TotpPresenterAudioSlot = "opening" | "chart" | "act-intro" | "betwee
 export const TOTP_MEDIA_PATHS = {
   programmeIntro: "programme/intro",
   presenter: (presenterKey: string, slot: TotpPresenterAudioSlot) => `presenters/${presenterKey}/${slot}`,
+  chartPositionFolder: (presenterKey: string) => `presenters/${presenterKey}/chart-positions`,
+  chartPosition: (presenterKey: string, rank: number) => `presenters/${presenterKey}/chart-positions/${rank}`,
 } as const;
 
 export function totpMediaPublicUrl(path: string): string {
