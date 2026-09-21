@@ -96,6 +96,39 @@ describe("TOTP episode manifest", () => {
     expect(first.production_state).toBe("gameplay");
   });
 
+  it("accepts a frozen reusable presenter sequence as production-ready audio", () => {
+    const sequenceScript = "And now, it's The Kestrels!";
+    const sequenceEpisode: TotpEpisode = {
+      ...episode,
+      performances: episode.performances.map((performance) =>
+        performance.performance_id === "p1"
+          ? { ...performance, presenter_intro: sequenceScript }
+          : performance,
+      ),
+    };
+    const manifest = buildTotpEpisodeManifest(input({
+      episode: sequenceEpisode,
+      presenterAudio: {
+        p2: input().presenterAudio!.p2,
+      },
+      presenterSequences: {
+        p1: {
+          duration_ms: 2_165,
+          script_checksum: manifestChecksum(canonicalise(sequenceScript)),
+          gap_ms: 65,
+          fragments: [
+            { role: "phrase", url: "https://cdn/phrase.webm", duration_ms: 1_200, sha256: "c".repeat(64), version: null },
+            { role: "band_name", url: "https://cdn/band.webm", duration_ms: 900, sha256: "d".repeat(64), version: 2 },
+          ],
+        },
+      },
+    }));
+
+    expect(validateTotpEpisodeManifest(manifest)).toEqual([]);
+    expect(manifest.total_runtime_ms).toBe(383_165);
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio_sequence")?.fragments).toHaveLength(2);
+  });
+
   it("changes the checksum when any programme content changes", () => {
     const base = buildTotpEpisodeManifest(input());
     const changed = buildTotpEpisodeManifest(
