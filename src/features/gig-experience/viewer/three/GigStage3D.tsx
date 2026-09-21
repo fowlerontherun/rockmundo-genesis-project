@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS, type CameraShot, type DemoSettings } from '@/features
 import { useGigPlayerModels, type GigPlayerModelsData } from '@/features/player-model/usePlayerModel';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
 import type { TotpCameraShot, TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
 import { resolveTotpPresenter, totpVariantLabel } from '@/features/top-of-the-pops/presenters';
 import { totpAudienceChoreography } from '@/features/top-of-the-pops/studioAudience';
@@ -19,6 +20,7 @@ import { buildStagePlan, concertFrame, concertOptions, type ConcertPresentationM
 
 const EMPTY_APPEARANCES: Record<string, PlayerAppearance> = {};
 const EMPTY_RICH_CLOTHING: Record<string, ResolvedEquippedClothing[]> = {};
+const EMPTY_TATTOOS: Record<string, ResolvedTattooVisual[]> = {};
 const CAMERAS: Record<GigViewerCameraMode, CameraShot> = { venue_wide: 'front', stage_focus: 'guitar', auto: 'director', drums: 'drums', band_pov: 'stage' };
 const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   presenter_wide: 'tv_presenter_wide', presenter_close: 'tv_presenter_close', crane_sweep: 'tv_crane', studio_master: 'front',
@@ -49,6 +51,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       experience,
       archetype,
       resolvedPlayerModels?.richClothing ?? EMPTY_RICH_CLOTHING,
+      resolvedPlayerModels?.tattoos ?? EMPTY_TATTOOS,
       presentationMode,
       totpStage,
     );
@@ -123,10 +126,10 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
     </div>
     {(status !== 'ready' || waiting) && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-8 text-center text-slate-100" role={status === 'error' ? 'alert' : 'status'}>
       <strong className="text-lg">{status === 'error' ? 'The stage could not load' : isTotp ? `Preparing ${presenter.displayName}'s television studio` : 'Setting the stage'}</strong>
-      <p className="max-w-md text-sm text-slate-300">{status === 'error' ? message : isTotp ? 'Loading the performers, outfits, studio lights, cameras and audience…' : 'Loading the performers, outfits, lighting and venue materials…'}</p>
+      <p className="max-w-md text-sm text-slate-300">{status === 'error' ? message : isTotp ? 'Loading the performers, outfits, tattoos, studio lights, cameras and audience…' : 'Loading the performers, outfits, tattoos, lighting and venue materials…'}</p>
       {status === 'error' && <button className="rounded-lg bg-cyan-300 px-5 py-2 font-semibold text-slate-950" onClick={() => setAttempt(n => n + 1)}>Retry 3D stage</button>}
     </div>}
-    {!playerModelsSnapshot && livePlayerModels.isError && <div role="status" className="absolute bottom-3 left-3 right-3 rounded bg-slate-950/90 p-2 text-xs text-slate-200">Saved outfits could not load; starter models are shown. <button className="underline" onClick={() => void livePlayerModels.refetch()}>Reload outfits</button></div>}
+    {!playerModelsSnapshot && livePlayerModels.isError && <div role="status" className="absolute bottom-3 left-3 right-3 rounded bg-slate-950/90 p-2 text-xs text-slate-200">Saved character visuals could not load; starter models are shown. <button className="underline" onClick={() => void livePlayerModels.refetch()}>Reload character visuals</button></div>}
     {status === 'ready' && !livePlayerModels.isError && !isTotp && <Link to="/avatar-designer" className="absolute bottom-3 right-3 rounded bg-black/60 px-3 py-2 text-xs text-white hover:bg-black/80">Edit my stage model</Link>}
   </div>;
 }
