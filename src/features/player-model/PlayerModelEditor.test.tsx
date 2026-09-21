@@ -17,11 +17,14 @@ function model(profileId = 'character-one') {
 function clothing(data: unknown[] = [], isError = false) {
   return { data, isError, isPending: false, isFetching: false } as unknown as ReturnType<typeof useEquippedRichClothing>;
 }
+function tattooQuery(data: unknown[] = [], isError = false) {
+  return { data, isError, isPending: false, isFetching: false } as unknown as ReturnType<typeof usePlayerStageTattoos>;
+}
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usePlayerModel).mockReturnValue(model());
   vi.mocked(useEquippedRichClothing).mockReturnValue(clothing());
-  vi.mocked(usePlayerStageTattoos).mockReturnValue(clothing() as ReturnType<typeof usePlayerStageTattoos>);
+  vi.mocked(usePlayerStageTattoos).mockReturnValue(tattooQuery());
   save.mockImplementation(async args => ({ appearance: args.appearance, revision: 1 }));
 });
 afterEach(cleanup);
@@ -121,7 +124,7 @@ it('saves hats, glasses and earrings as one shared stage appearance', async () =
 
 it('passes owned tattoo visuals into the same avatar preview', () => {
   const tattoos = [{ id: 'tattoo-1', profile_id: 'character-one', body_slot: 'right_thigh', ink_color: '#111111', quality_score: 90, is_infected: false, category: 'blackwork' }];
-  vi.mocked(usePlayerStageTattoos).mockReturnValue(clothing(tattoos) as ReturnType<typeof usePlayerStageTattoos>);
+  vi.mocked(usePlayerStageTattoos).mockReturnValue(tattooQuery(tattoos));
   render(<PlayerModelEditor />);
   expect(preview).toHaveBeenCalledWith(expect.objectContaining({ tattoos }));
   expect(screen.getByText(/1 tattoo from the Tattoo Parlour is rendered/i)).toBeVisible();
