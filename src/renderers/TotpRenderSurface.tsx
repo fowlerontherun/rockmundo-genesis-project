@@ -12,7 +12,7 @@ import { buildTotpCaptionCues } from "@/features/top-of-the-pops/broadcastCaptio
 import { resolveTotpPresenter } from "@/features/top-of-the-pops/presenters";
 import { buildTotpContinuityCopy, orderTotpProgrammeReplays } from "@/features/top-of-the-pops/programmeContinuity";
 import type { TotpBroadcastReplay } from "@/features/top-of-the-pops/api";
-import type { TotpRenderPlan, TotpRenderItem } from "@/features/top-of-the-pops/renderSpec";
+import { filterTotpRenderReplays, type TotpRenderPlan, type TotpRenderItem } from "@/features/top-of-the-pops/renderSpec";
 
 export interface TotpOfflineRenderPayload {
   plan: TotpRenderPlan;
