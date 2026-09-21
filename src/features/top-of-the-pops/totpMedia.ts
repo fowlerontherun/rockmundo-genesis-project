@@ -9,6 +9,8 @@ export const TOTP_MEDIA_PATHS = {
   presenter: (presenterKey: string, slot: TotpPresenterAudioSlot) => `presenters/${presenterKey}/${slot}`,
   chartPositionFolder: (presenterKey: string) => `presenters/${presenterKey}/chart-positions`,
   chartPosition: (presenterKey: string, rank: number, revision: string, extension: string) => `presenters/${presenterKey}/chart-positions/${rank}-${revision}.${extension}`,
+  reusablePhraseFolder: (presenterKey: string) => `presenters/${presenterKey}/reusable-phrases`,
+  reusablePhrase: (presenterKey: string, phraseId: string, revision: string, extension: string) => `presenters/${presenterKey}/reusable-phrases/${phraseId}-${revision}.${extension}`,
 } as const;
 
 export function totpMediaPublicUrl(path: string): string {

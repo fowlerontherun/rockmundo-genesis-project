@@ -28,6 +28,7 @@ import { getTotpEpisodePlan, saveTotpEpisodePlan, type TotpEpisodePlan, type Tot
 import { detectTotpUploadMime, TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import { TOTP_CHART_POSITIONS, TOTP_REUSABLE_VOICE_SCRIPT_GUIDE, totpChartPositionScript } from "./chartPositionAudio";
 import { totpAudioDurationMs, totpAudioFileExtension, totpAudioSha256 } from "./audioAsset";
+import { TotpReusablePhraseLibrary } from "./TotpReusablePhraseLibrary";
 
 const ACCEPTED_AUDIO = "audio/mpeg,audio/wav,audio/ogg,audio/webm,audio/mp4,.mp3,.wav,.ogg,.webm,.m4a";
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
@@ -503,6 +504,8 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
           )}
         </section>
 
+
+        <TotpReusablePhraseLibrary presenterKey={presenterKey} />
 
         <section id="chart-position-audio" className="space-y-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
