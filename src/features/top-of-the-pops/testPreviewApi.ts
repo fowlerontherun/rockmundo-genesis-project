@@ -1,4 +1,5 @@
 import { totpRpc } from "./rpc";
+import { buildTotpReusablePresenterIntro } from "./presenterPhraseAudio";
 
 export interface TotpTestPreviewSideEffects {
   invitations: boolean;
@@ -53,8 +54,11 @@ export interface TotpAdminTestPreview {
   performances: TotpTestPreviewPerformance[];
 }
 
-function energeticDemoIntro(performance: TotpTestPreviewPerformance): string {
-  return `Come on, studio — make some noise! At number ${performance.qualifying_rank} this week, here is another chart hit from ${performance.band_name}!`;
+function energeticDemoIntro(performance: TotpTestPreviewPerformance, seed: string): string {
+  return buildTotpReusablePresenterIntro(performance.band_name, {
+    rank: performance.qualifying_rank,
+    stableKey: `${seed}:${performance.band_id}:${performance.song_id}`,
+  }).script;
 }
 
 export function isTotpTestPreviewSafe(preview: TotpAdminTestPreview): boolean {
@@ -92,7 +96,7 @@ export async function adminPreviewTotpTestEpisode(seed = "admin-test", maxPerfor
     ...data,
     performances: data.performances.map((performance) => ({
       ...performance,
-      presenter_intro: energeticDemoIntro(performance),
+      presenter_intro: energeticDemoIntro(performance, normalizedSeed),
       members: lineups.data?.[performance.band_id] ?? [],
       audio: audio.data?.[performance.song_id] ?? null,
     })),
