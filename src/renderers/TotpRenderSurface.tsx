@@ -112,21 +112,21 @@ function ChartRundownFrame({ item }: { item: TotpRenderItem }) {
   const page = item.chart_page;
   if (!page) return <div className="flex h-full w-full items-center justify-center bg-slate-950 text-4xl font-black text-white">CHART DATA UNAVAILABLE</div>;
   return (
-    <div className="relative h-full w-full overflow-hidden bg-slate-950 px-24 py-20 text-white" data-totp-offline-chart={page.chartType}>
+    <div className="relative h-full w-full overflow-hidden bg-slate-950 px-20 py-12 text-white" data-totp-offline-chart={page.chartType}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.22),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,.22),transparent_30%)]" />
       <div className="relative">
         <div className="text-lg font-black uppercase tracking-[0.3em] text-cyan-200">Top of the Pops chart rundown</div>
-        <div className="mt-3 text-6xl font-black tracking-tight">{page.chartLabel}</div>
-        <div className="mt-2 text-xl text-white/60">Positions {page.rangeLabel}</div>
-        <div className="mt-10 grid gap-3">
+        <div className="mt-2 text-5xl font-black tracking-tight">{page.chartLabel}</div>
+        <div className="mt-1 text-lg text-white/60">Positions {page.rangeLabel}</div>
+        <div className="mt-6 grid gap-2">
           {page.entries.map((entry) => (
-            <div key={`${page.chartType}:${entry.rank}:${entry.song_id ?? entry.song_title}`} className="grid grid-cols-[110px_1fr_210px] items-center rounded-xl border border-white/10 bg-white/[.06] px-6 py-4">
-              <div className={`text-5xl font-black tabular-nums ${entry.rank === 1 ? "text-amber-200" : "text-white"}`}>#{entry.rank}</div>
+            <div key={`${page.chartType}:${entry.rank}:${entry.song_id ?? entry.song_title}`} className="grid grid-cols-[90px_1fr_180px] items-center rounded-lg border border-white/10 bg-white/[.06] px-5 py-2">
+              <div className={`text-3xl font-black tabular-nums ${entry.rank === 1 ? "text-amber-200" : "text-white"}`}>#{entry.rank}</div>
               <div className="min-w-0">
-                <div className="truncate text-3xl font-bold">{entry.artist_name}</div>
-                <div className="truncate text-xl text-white/55">{entry.song_title}</div>
+                <div className="truncate text-2xl font-bold leading-tight">{entry.artist_name}</div>
+                <div className="truncate text-base leading-tight text-white/55">{entry.song_title}</div>
               </div>
-              <div className="text-right text-lg text-white/55">{Number(entry.weekly_plays ?? 0).toLocaleString("en-GB")} weekly</div>
+              <div className="text-right text-base text-white/55">{Number(entry.weekly_plays ?? 0).toLocaleString("en-GB")} weekly</div>
             </div>
           ))}
         </div>
