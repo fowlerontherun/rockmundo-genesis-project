@@ -30,14 +30,15 @@ export function TotpFullShowDemo({
     () => performances
       .slice()
       .sort((a, b) => a.running_order - b.running_order)
-      .map((performance) => {
-        const style = getTotpTestStyleOutcome(seed, performance, "polished");
-        const incident = getTotpTestIncident(seed, performance);
+      .map((performance, index) => {
+        const bookedPerformance = { ...performance, running_order: index + 1 };
+        const style = getTotpTestStyleOutcome(seed, bookedPerformance, "polished");
+        const incident = getTotpTestIncident(seed, bookedPerformance);
         const audienceReaction = combineTotpTestEffects(
           incident.effects,
           style?.effects ?? { reputation: 0, fan_sentiment: 0, media_intensity: 0, audience_reaction: 0 },
         ).audience_reaction;
-        return buildTotpTestReplay(performance, seed, generatedAt, audienceReaction);
+        return buildTotpTestReplay(bookedPerformance, seed, generatedAt, audienceReaction);
       }),
     [generatedAt, performances, seed],
   );
