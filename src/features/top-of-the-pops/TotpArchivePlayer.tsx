@@ -161,6 +161,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
   const presenterAudioRef = useRef<HTMLAudioElement | null>(null);
+  const exportAudioRouterRef = useRef<((element: HTMLAudioElement | null) => void) | null>(null);
   const presenterLineRef = useRef<TotpPresenterLineHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const exportStopRef = useRef(false);
@@ -303,8 +304,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
       recordedSequence: presenterRecordedUrl ? null : presenterRecordedSequence,
       volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
       onRecordedElementChange: (element) => {
-        // Keep the export mixer on whichever reusable fragment is currently live.
+        // Keep both normal playback state and any already-running browser export
+        // attached to whichever reusable presenter fragment is currently live.
         presenterAudioRef.current = element;
+        exportAudioRouterRef.current?.(element);
       },
       onSpeakingChange: (speaking) => {
         setPresenterSpeaking(speaking);
@@ -385,6 +388,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
         container,
         songAudio: songAudioRef.current,
         presenterAudio: presenterAudioRef.current,
+        onAudioRouterReady: (route) => {
+          exportAudioRouterRef.current = route;
+          route?.(presenterAudioRef.current);
+        },
         durationMs: replay.durationMs,
         shouldStop: () => exportStopRef.current,
         onProgress: (update) => {
@@ -402,8 +409,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
       setDriveState("idle");
       setDriveLink(null);
       setDriveError(null);
+      exportAudioRouterRef.current = null;
       setExportState("idle");
     } catch (error) {
+      exportAudioRouterRef.current = null;
       setPlaying(false);
       setExportState("error");
       setExportError(error instanceof TotpExportUnsupportedError || error instanceof Error ? error.message : "The export failed — please try again.");
