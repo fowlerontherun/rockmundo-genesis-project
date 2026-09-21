@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ArrowRight, CalendarDays, RefreshCw, Tv2 } from "lucide-react";
 import { TOTP_PRESENTERS } from "@/features/top-of-the-pops/presenters";
+import { londonTimeOfDay, londonWallClockToIso } from "@/features/top-of-the-pops/scheduleTime";
 import { TotpScheduleWeekCard } from "@/features/top-of-the-pops/TotpScheduleWeekCard";
 import { TotpEpisodePlanEditor } from "@/features/top-of-the-pops/TotpEpisodePlanEditor";
 import {
@@ -61,15 +62,6 @@ interface EpisodeForm {
   maxPerformances: number;
 }
 
-function localIsoToTimestamp(dateIso: string, time: string): string {
-  return new Date(`${dateIso}T${time || "19:30"}:00`).toISOString();
-}
-
-function timeOfDay(iso: string): string {
-  const date = new Date(iso);
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
-
 export default function TopOfThePopsSchedule() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -95,8 +87,8 @@ export default function TopOfThePopsSchedule() {
       saveTotpEpisodeDraft({
         episodeId: draft.episodeId,
         episodeDate: draft.episodeDate,
-        broadcastAt: localIsoToTimestamp(draft.episodeDate, draft.broadcastTime),
-        checkInAt: localIsoToTimestamp(draft.episodeDate, draft.checkInTime),
+        broadcastAt: londonWallClockToIso(draft.episodeDate, draft.broadcastTime || "19:30"),
+        checkInAt: londonWallClockToIso(draft.episodeDate, draft.checkInTime || "18:00"),
         chartSnapshotDate: draft.chartSnapshotDate || null,
         cityId: draft.cityId || null,
         presenterKey: draft.presenterKey,
@@ -141,8 +133,8 @@ export default function TopOfThePopsSchedule() {
     setForm({
       episodeId: episode.id,
       episodeDate: episode.episode_date.slice(0, 10),
-      broadcastTime: timeOfDay(episode.broadcast_at),
-      checkInTime: timeOfDay(episode.check_in_at),
+      broadcastTime: londonTimeOfDay(episode.broadcast_at),
+      checkInTime: londonTimeOfDay(episode.check_in_at),
       chartSnapshotDate: episode.chart_snapshot_date.slice(0, 10),
       cityId: episode.city_id ?? "",
       presenterKey: episode.presenter_key,
