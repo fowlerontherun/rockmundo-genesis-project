@@ -74,6 +74,76 @@ function findBone(bones: Map<string, T.Bone>, candidates: string[]) {
   }
 }
 
+function tattooPatternTexture(tattoo: ResolvedTattooVisual) {
+  const size = 64;
+  const data = new Uint8Array(size * size * 4);
+  let seed = 2166136261;
+  for (const char of `${tattoo.id}:${tattoo.category}`) seed = Math.imul(seed ^ char.charCodeAt(0), 16777619) >>> 0;
+  const noise = (x: number, y: number) => {
+    let n = Math.imul(x + 37, 374761393) ^ Math.imul(y + 17, 668265263) ^ seed;
+    n = Math.imul(n ^ (n >>> 13), 1274126177);
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+  };
+  const line = (distance: number, width: number) => Math.max(0, 1 - Math.abs(distance) / width);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const u = (x + .5) / size, v = (y + .5) / size, px = u * 2 - 1, py = v * 2 - 1;
+    const radius = Math.sqrt(px * px + py * py);
+    let alpha = 0;
+    if (tattoo.category === 'fine_line') {
+      alpha = Math.max(line(radius - .56, .028), line(py - px * .35, .025) * (radius < .72 ? 1 : 0));
+    } else if (tattoo.category === 'geometric') {
+      alpha = Math.max(line(((x + y + (seed % 13)) % 16) - 8, 1.4), line(((x - y + 128 + (seed % 9)) % 19) - 9.5, 1.1));
+      if (radius > .76) alpha *= .25;
+    } else if (tattoo.category === 'musical') {
+      const staff = [20, 26, 32, 38, 44].some(row => Math.abs(y - row) < 1.1) ? .72 : 0;
+      const noteA = ((x - 24) ** 2) / 28 + ((y - 37) ** 2) / 16 < 1 ? 1 : 0;
+      const noteB = ((x - 42) ** 2) / 30 + ((y - 28) ** 2) / 18 < 1 ? .95 : 0;
+      const stems = (Math.abs(x - 28) < 1.4 && y > 17 && y < 38) || (Math.abs(x - 46) < 1.4 && y > 10 && y < 29) ? .9 : 0;
+      alpha = Math.max(staff, noteA, noteB, stems);
+    } else if (tattoo.category === 'text') {
+      const rows = [23, 30, 38, 45];
+      alpha = rows.some(row => Math.abs(y - row) < 1.4 && x > 10 + ((row + seed) % 8) && x < 55 - ((row + seed) % 11)) ? .88 : 0;
+      if ((x + y + seed) % 17 < 3) alpha *= .2;
+    } else if (tattoo.category === 'blackwork') {
+      const angular = Math.max(line(Math.abs(px) + Math.abs(py) - .62, .07), line(py + px * .72, .08));
+      alpha = Math.max(angular, radius < .25 ? .96 : 0);
+    } else if (tattoo.category === 'tribal') {
+      alpha = Math.max(line(radius - (.37 + .09 * Math.sin(Math.atan2(py, px) * 3)), .075), line(py + .25 * Math.sin(px * 7), .065));
+    } else if (tattoo.category === 'sleeve') {
+      alpha = Math.max(line(Math.sin((u * 5 + v * 3) * Math.PI), .16), noise(x, y) > .82 ? .72 : 0);
+    } else if (tattoo.category === 'abstract') {
+      const blot = noise(Math.floor(x / 4), Math.floor(y / 4));
+      alpha = blot > .66 && radius < .86 ? Math.min(1, (blot - .66) * 3.4) : 0;
+      alpha = Math.max(alpha, line(py - Math.sin(px * 5 + (seed % 7)) * .23, .04));
+    } else if (tattoo.category === 'portrait' || tattoo.category === 'realism') {
+      const face = Math.max(0, 1 - radius / .78);
+      const eyeBand = line(py + .16, .055) * (Math.abs(px) < .55 ? 1 : 0);
+      alpha = Math.max(face * (.25 + noise(x, y) * .62), eyeBand * .9);
+    } else if (tattoo.category === 'traditional' || tattoo.category === 'japanese') {
+      const outer = line(radius - .61, .065);
+      const inner = Math.max(0, 1 - Math.abs(px * .75) - Math.abs(py * 1.05));
+      alpha = Math.max(outer, inner > .35 ? .78 : 0, line(py - Math.sin(px * 4) * .18, .045));
+    } else if (tattoo.category === 'skull') {
+      const head = radius < .62 ? .52 : 0;
+      const eye = (((px - .22) / .14) ** 2 + ((py + .12) / .12) ** 2 < 1) || (((px + .22) / .14) ** 2 + ((py + .12) / .12) ** 2 < 1) ? 1 : 0;
+      const jaw = Math.abs(px) < .3 && py > .28 && py < .65 ? .82 : 0;
+      alpha = Math.max(head, eye, jaw);
+    } else {
+      alpha = Math.max(line(radius - .55, .07), radius < .34 ? .55 : 0);
+    }
+    const value = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+    const index = (y * size + x) * 4;
+    data[index] = value; data[index + 1] = value; data[index + 2] = value; data[index + 3] = 255;
+  }
+  const texture = new T.DataTexture(data, size, size, T.RGBAFormat);
+  texture.name = `tattoo-pattern-${tattoo.category}`;
+  texture.colorSpace = T.NoColorSpace;
+  texture.minFilter = T.LinearFilter;
+  texture.magFilter = T.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function tattooMaterial(tattoo: ResolvedTattooVisual) {
   const color = new T.Color(tattoo.ink_color || '#1d232d');
   if (tattoo.is_infected) color.lerp(new T.Color('#7e2635'), .35);
@@ -82,7 +152,9 @@ function tattooMaterial(tattoo: ResolvedTattooVisual) {
     roughness: .98,
     metalness: 0,
     transparent: true,
-    opacity: Math.max(.42, Math.min(.9, tattoo.quality_score / 110)),
+    opacity: Math.max(.5, Math.min(.94, tattoo.quality_score / 106)),
+    alphaMap: tattooPatternTexture(tattoo),
+    alphaTest: .04,
     side: T.DoubleSide,
     depthWrite: true,
     polygonOffset: true,
