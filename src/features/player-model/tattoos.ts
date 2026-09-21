@@ -11,7 +11,7 @@ export interface ResolvedTattooVisual {
   category: TattooCategory | 'custom';
 }
 
-const childBone = (bone: T.Bone, names: string[]) => bone.children.find(child => child instanceof T.Bone && names.some(name => child.name.replace(/[_.]/g, '').includes(name))) as T.Bone | undefined;
+const childBone = (bone: T.Bone, names: string[]) => bone.children.find(child => child instanceof T.Bone && names.some(name => cleanName(child.name).includes(cleanName(name)))) as T.Bone | undefined;
 const cleanName = (value: string) => value.replace(/[_.]/g, '').toLowerCase();
 
 function findBone(bones: Map<string, T.Bone>, candidates: string[]) {
