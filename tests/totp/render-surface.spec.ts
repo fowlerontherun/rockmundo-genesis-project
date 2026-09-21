@@ -83,16 +83,16 @@ test("deterministic render surface draws continuity, chart and studio-transition
     minRank: 1,
     maxRank: 10,
     sourceCount: 1,
-    entries: [{
-      rank: 1,
-      song_id: "song-1",
-      band_id: "band-1",
-      song_title: "Dead Radio",
-      artist_name: "Shockmaster",
-      trend: "up",
-      trend_change: 2,
-      weekly_plays: 12000,
-    }],
+    entries: Array.from({ length: 10 }, (_, index) => ({
+      rank: 10 - index,
+      song_id: `song-${10 - index}`,
+      band_id: `band-${10 - index}`,
+      song_title: `Chart Song ${10 - index}`,
+      artist_name: `Chart Band ${10 - index}`,
+      trend: index % 3 === 0 ? "up" : "same",
+      trend_change: index % 3 === 0 ? 2 : 0,
+      weekly_plays: 12000 - index * 317,
+    })),
   };
 
   const plan = {
