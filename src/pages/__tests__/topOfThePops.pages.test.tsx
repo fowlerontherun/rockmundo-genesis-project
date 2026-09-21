@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import type { TotpEpisode, TotpInvitation } from "@/features/top-of-the-pops/api";
@@ -131,6 +131,9 @@ describe("Top of the Pops pages", () => {
 
   it("renders the admin episode with the stored running sheet panel", async () => {
     const { container } = renderPage(<TopOfThePopsAdmin />);
+
+    await waitFor(() => expect(screen.getByRole("tab", { name: /Production/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("tab", { name: /Production/i }));
 
     await waitFor(() => expect(container.querySelector("[data-totp-running-sheet]")).not.toBeNull());
     expect(screen.getByText(/Episode running sheet/i)).toBeInTheDocument();

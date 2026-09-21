@@ -64,8 +64,15 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
   useEffect(() => () => {
     requestIdRef.current += 1;
     const recorder = recorderRef.current;
-    if (recorder && recorder.state !== "inactive") recorder.stop();
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      if (recorder.state !== "inactive") recorder.stop();
+    }
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    recorderRef.current = null;
+    chunksRef.current = [];
   }, []);
 
   const recordedCount = assets.size;
@@ -125,6 +132,7 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
         streamRef.current = null;
         recorderRef.current = null;
         setRecordingId(null);
+        if (requestId !== requestIdRef.current) return;
         if (blob.size > 0) {
           const extension = type.includes("ogg") ? "ogg" : type.includes("mp4") ? "m4a" : "webm";
           const file = new File([blob], `${id}.${extension}`, { type });
@@ -154,7 +162,7 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
   };
 
   return (
-    <Card>
+    <Card id="totp-presenter-phrase-library">
       <CardHeader>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>

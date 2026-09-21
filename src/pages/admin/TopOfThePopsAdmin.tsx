@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Archive,
   AudioLines,
@@ -35,6 +36,17 @@ import { TotpControlRoomCard } from "@/features/top-of-the-pops/TotpControlRoomC
 import { TotpRenderQueueCard } from "@/features/top-of-the-pops/TotpRenderQueueCard";
 import { TotpRehearsalCard } from "@/features/top-of-the-pops/TotpRehearsalCard";
 
+type AdminTab = "overview" | "production" | "audio" | "demo" | "broadcast" | "schedule";
+
+function tabFromHash(hash: string): AdminTab | null {
+  if (["#band-name-audio", "#chart-position-audio", "#totp-audio-studio", "#totp-presenter-phrase-library"].includes(hash)) return "audio";
+  if (hash === "#production") return "production";
+  if (hash === "#demo") return "demo";
+  if (hash === "#broadcast") return "broadcast";
+  if (hash === "#schedule") return "schedule";
+  return null;
+}
+
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
@@ -45,12 +57,13 @@ function formatDateTime(value: string) {
 
 function AdminTabsList() {
   return (
-    <TabsList className="grid h-auto w-full grid-cols-2 gap-1 md:grid-cols-5">
+    <TabsList className="grid h-auto w-full grid-cols-2 gap-1 md:grid-cols-6">
       <TabsTrigger value="overview" className="gap-1.5"><Tv2 className="h-4 w-4" /> Overview</TabsTrigger>
       <TabsTrigger value="production" className="gap-1.5"><Settings2 className="h-4 w-4" /> Production</TabsTrigger>
       <TabsTrigger value="audio" className="gap-1.5"><AudioLines className="h-4 w-4" /> Audio & media</TabsTrigger>
       <TabsTrigger value="demo" className="gap-1.5"><FlaskConical className="h-4 w-4" /> Demo</TabsTrigger>
-      <TabsTrigger value="broadcast" className="col-span-2 gap-1.5 md:col-span-1"><Radio className="h-4 w-4" /> Broadcast</TabsTrigger>
+      <TabsTrigger value="broadcast" className="gap-1.5"><Radio className="h-4 w-4" /> Broadcast</TabsTrigger>
+      <TabsTrigger value="schedule" className="gap-1.5"><CalendarDays className="h-4 w-4" /> Schedule</TabsTrigger>
     </TabsList>
   );
 }
@@ -58,6 +71,21 @@ function AdminTabsList() {
 export default function TopOfThePopsAdmin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => tabFromHash(location.hash) ?? "overview");
+
+  useEffect(() => {
+    const hashTab = tabFromHash(location.hash);
+    if (hashTab) setActiveTab(hashTab);
+  }, [location.hash]);
+
+  useEffect(() => {
+    if (!location.hash) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: "start" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, location.hash]);
   const episode = useQuery({
     queryKey: ["totp", "episode", "admin-current"],
     queryFn: () => getTotpEpisode(),
@@ -130,24 +158,35 @@ export default function TopOfThePopsAdmin() {
           </Button>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AdminTab)} className="space-y-4">
           <AdminTabsList />
           <TabsContent value="overview" className="space-y-4">
             <TotpProductionHealthCard />
             <Card><CardContent className="p-6 text-sm text-muted-foreground">No scheduled Top of the Pops episode found. Use the schedule button above to create the next broadcast.</CardContent></Card>
           </TabsContent>
-          <TabsContent value="production" className="space-y-4">
+          <TabsContent value="production" className="space-y-4" id="production">
             <Card><CardContent className="p-6 text-sm text-muted-foreground">Schedule an episode before production planning, rehearsal and render controls become available.</CardContent></Card>
           </TabsContent>
           <TabsContent value="audio" className="space-y-4">
             <TotpAudioStudio episode={null} />
             <TotpMediaManager presenterKey="alex_rayne" />
           </TabsContent>
-          <TabsContent value="demo" className="space-y-4">
+          <TabsContent value="demo" className="space-y-4" id="demo">
             <TotpTestEpisodeCard />
           </TabsContent>
-          <TabsContent value="broadcast" className="space-y-4">
+          <TabsContent value="broadcast" className="space-y-4" id="broadcast">
             <Card><CardContent className="p-6 text-sm text-muted-foreground">There is no scheduled broadcast to settle or archive.</CardContent></Card>
+          </TabsContent>
+          <TabsContent value="schedule" className="space-y-4" id="schedule">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5" /> Broadcast schedule</CardTitle>
+                <CardDescription>Create the next episode or open the full scheduling workspace.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild><Link to="/admin/top-of-the-pops/schedule"><CalendarDays className="mr-2 h-4 w-4" /> Open schedule / reschedule</Link></Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
@@ -185,7 +224,7 @@ export default function TopOfThePopsAdmin() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AdminTab)} className="space-y-4">
         <AdminTabsList />
 
         <TabsContent value="overview" className="space-y-4">
@@ -204,7 +243,7 @@ export default function TopOfThePopsAdmin() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="production" className="space-y-4">
+        <TabsContent value="production" className="space-y-4" id="production">
           <TotpControlRoomCard episode={current} />
           <TotpRunningSheetCard episode={current} />
           <TotpRehearsalCard episode={current} />
@@ -216,11 +255,11 @@ export default function TopOfThePopsAdmin() {
           <TotpMediaManager presenterKey={current.presenter_key ?? "alex_rayne"} />
         </TabsContent>
 
-        <TabsContent value="demo" className="space-y-4">
+        <TabsContent value="demo" className="space-y-4" id="demo">
           <TotpTestEpisodeCard />
         </TabsContent>
 
-        <TabsContent value="broadcast" className="space-y-4">
+        <TabsContent value="broadcast" className="space-y-4" id="broadcast">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Clapperboard className="h-5 w-5" /> Broadcast controls</CardTitle>
@@ -293,6 +332,19 @@ export default function TopOfThePopsAdmin() {
                   </div>
                 );
               })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="schedule" className="space-y-4" id="schedule">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><CalendarDays className="h-5 w-5" /> Broadcast schedule</CardTitle>
+              <CardDescription>Change the episode date, broadcast time, check-in, presenter, city, show type and maximum acts in the dedicated scheduling workspace.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <Button asChild><Link to="/admin/top-of-the-pops/schedule"><CalendarDays className="mr-2 h-4 w-4" /> Open schedule / reschedule</Link></Button>
+              <span className="text-sm text-muted-foreground">Episode #{current.episode_number} · {formatDateTime(current.broadcast_at)}</span>
             </CardContent>
           </Card>
         </TabsContent>
