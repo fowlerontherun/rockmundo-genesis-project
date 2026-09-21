@@ -219,6 +219,11 @@ export default function TopOfThePopsAdmin() {
           {variantLabel && <Badge variant="outline">{variantLabel}</Badge>}
           <Badge variant="secondary">{current.status}</Badge>
           <Button asChild size="sm" variant="outline">
+            <Link to="/admin/top-of-the-pops#bookings">
+              <UserRoundPlus className="mr-1 h-4 w-4" /> Book bands
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <Link to="/admin/top-of-the-pops/schedule">
               <CalendarDays className="mr-1 h-4 w-4" /> Schedule / reschedule
             </Link>
