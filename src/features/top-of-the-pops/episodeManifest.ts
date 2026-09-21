@@ -1,4 +1,5 @@
 import type { TotpEpisode, TotpPerformance } from "./api";
+import type { TotpChartRundown } from "./chartRundownApi";
 
 /**
  * Phase 0 broadcast contract.
@@ -94,6 +95,8 @@ export interface TotpEpisodeManifest {
   segments: TotpManifestSegment[];
   /** Complete presenter recording sheet, including programme continuity outside act segments. */
   presenter_dialogue?: TotpManifestPresenterDialogue[];
+  /** Frozen chart snapshot used by both interactive playback and canonical masters. */
+  chart_rundown?: TotpChartRundown | null;
   total_runtime_ms: number;
   production_state: TotpProductionState;
   checksum: string;
@@ -149,6 +152,8 @@ export interface TotpManifestInput {
       script_checksum: string | null;
     } | null;
   }>;
+  /** Frozen UK chart rundown for the episode. */
+  chartRundown?: TotpChartRundown | null;
   /** song_id -> rights record */
   rights: Record<string, TotpTrackRights>;
   /** Used only to evaluate licence expiry; defaults to the broadcast date. */
@@ -218,6 +223,7 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     presenterAudio = {},
     presenterSequences = {},
     presenterDialogue = [],
+    chartRundown = null,
     rights,
   } = input;
 
@@ -312,6 +318,7 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     programme_spec: PROGRAMME_SPEC,
     segments,
     presenter_dialogue: presenterDialogueManifest,
+    chart_rundown: chartRundown,
     total_runtime_ms: totalRuntimeMs,
   };
 
