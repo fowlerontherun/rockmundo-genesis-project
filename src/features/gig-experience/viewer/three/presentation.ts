@@ -343,9 +343,9 @@ export function concertOptions(
   experience: GigExperienceDTO | null,
   archetype: string,
   richClothing: Record<string, ResolvedEquippedClothing[]> = {},
-  tattoos: Record<string, ResolvedTattooVisual[]> = {},
   presentationMode: ConcertPresentationMode = 'gig',
   totpStage: TotpStageKey = 'main_stage',
+  tattoos: Record<string, ResolvedTattooVisual[]> = {},
 ): ConcertOptions {
   const totp = presentationMode === 'totp';
   const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
