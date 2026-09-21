@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, ChevronRight, Minus, Radio, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,27 +39,45 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
   const pages = useMemo(() => buildTotpChartRundownPages(rundown), [rundown]);
   const [pageIndex, setPageIndex] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [pageVisualComplete, setPageVisualComplete] = useState(false);
+  const [introNarrationComplete, setIntroNarrationComplete] = useState(false);
+  const advanceGuardRef = useRef(false);
   const page = pages[pageIndex] ?? null;
   const presenter = resolveTotpPresenter(presenterKey);
 
   const advance = useCallback(() => {
+    if (advanceGuardRef.current) return;
+    advanceGuardRef.current = true;
     if (pageIndex >= pages.length - 1) {
       onEnded?.();
       return;
     }
     setElapsedMs(0);
+    setPageVisualComplete(false);
     setPageIndex((index) => Math.min(pages.length - 1, index + 1));
   }, [onEnded, pageIndex, pages.length]);
 
   useEffect(() => {
+    advanceGuardRef.current = false;
+    setPageVisualComplete(false);
+    if (pageIndex !== 0) setIntroNarrationComplete(true);
+  }, [pageIndex]);
+
+  useEffect(() => {
     if (!autoPlay || !page || pageIndex !== 0 || typeof window === "undefined") return;
+    setIntroNarrationComplete(false);
     const line = playTotpPresenterLine({
       text: "And now, let's take a look at this week's UK charts.",
       presenterKey: presenter.key,
       recordedUrl: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart")),
       volume: 0.95,
+      onEnded: () => setIntroNarrationComplete(true),
     });
-    return () => line.stop();
+    const safety = window.setTimeout(() => setIntroNarrationComplete(true), 20_000);
+    return () => {
+      window.clearTimeout(safety);
+      line.stop();
+    };
   }, [autoPlay, page, pageIndex, presenter.key, recordedUrl]);
 
   useEffect(() => {
@@ -70,11 +88,17 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
       setElapsedMs(nextElapsed);
       if (nextElapsed >= PAGE_DURATION_MS) {
         window.clearInterval(timer);
-        queueMicrotask(advance);
+        setPageVisualComplete(true);
       }
     }, 100);
     return () => window.clearInterval(timer);
-  }, [advance, autoPlay, page]);
+  }, [autoPlay, page, pageIndex]);
+
+  useEffect(() => {
+    if (!autoPlay || !pageVisualComplete) return;
+    if (pageIndex === 0 && !introNarrationComplete) return;
+    queueMicrotask(advance);
+  }, [advance, autoPlay, introNarrationComplete, pageIndex, pageVisualComplete]);
 
   if (!page) {
     return (
