@@ -64665,6 +64665,10 @@ export type Database = {
         Args: { p_band_id: string; p_instance_id: string }
         Returns: boolean
       }
+      can_access_label_contract: {
+        Args: { p_contract_id: string }
+        Returns: boolean
+      }
       can_apply_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
@@ -64696,6 +64700,10 @@ export type Database = {
       }
       can_manage_festival_edition: {
         Args: { p_edition_id: string }
+        Returns: boolean
+      }
+      can_manage_label_contract: {
+        Args: { p_contract_id: string; p_roles?: string[] }
         Returns: boolean
       }
       can_manage_twaater_band: { Args: { _band_id: string }; Returns: boolean }
@@ -68280,6 +68288,10 @@ export type Database = {
       is_company_owner: { Args: { _company_id: string }; Returns: boolean }
       is_current_band_member: {
         Args: { p_band_id: string; p_profile_id?: string }
+        Returns: boolean
+      }
+      is_label_team_member: {
+        Args: { p_label_id: string; p_roles?: string[] }
         Returns: boolean
       }
       is_master_discovered: {
