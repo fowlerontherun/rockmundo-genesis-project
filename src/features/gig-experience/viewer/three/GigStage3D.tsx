@@ -51,9 +51,9 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       experience,
       archetype,
       resolvedPlayerModels?.richClothing ?? EMPTY_RICH_CLOTHING,
-      resolvedPlayerModels?.tattoos ?? EMPTY_TATTOOS,
       presentationMode,
       totpStage,
+      resolvedPlayerModels?.tattoos ?? EMPTY_TATTOOS,
     );
     if (presentationMode !== 'totp') return base;
     return {
