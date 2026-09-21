@@ -254,10 +254,11 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     const line = dialogueFor(kind, performanceId);
     const copy = buildTotpContinuityCopyFromActs(kind, acts, currentIndex);
     const script = line?.script_text?.trim() || totpContinuitySpeech(copy);
+    const visualMinimumMs = kind === "opening" ? 5_800 : kind === "between" ? 4_800 : 6_200;
     push({
       kind: "programme_continuity",
       label: kind === "opening" ? "Programme opening" : kind === "closing" ? "Programme close" : "Presenter continuity",
-      duration_ms: line?.asset?.duration_ms && line.asset.duration_ms > 0 ? line.asset.duration_ms : TOTP_RENDER_TIMING.programmeContinuityMs,
+      duration_ms: Math.max(visualMinimumMs, line?.asset?.duration_ms ?? 0),
       performance_id: performanceId,
       audio_url: line?.asset?.url ?? null,
       continuity_kind: kind,
