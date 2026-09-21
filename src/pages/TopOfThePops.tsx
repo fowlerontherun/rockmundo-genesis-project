@@ -252,7 +252,7 @@ export default function TopOfThePops() {
         </CardContent>
       </Card>
 
-      <section className="space-y-3">
+      <section className="space-y-3" id="invitations">
         <div>
           <h2 className="text-xl font-semibold">Your invitations</h2>
           <p className="text-sm text-muted-foreground">Only the band leader can accept, decline, complete studio check-in or make the band's on-air choices.</p>
@@ -278,6 +278,16 @@ export default function TopOfThePops() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {invitation.status === "invited" && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+                    <div className="font-semibold">Top of the Pops booking offer — response required</div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {invitation.band_name} has been invited to perform {invitation.song_title}, currently #{invitation.qualifying_rank} in the qualifying UK chart.
+                      Only the band leader can accept or decline. If accepted, every active band member must travel to {invitation.london_city_name} and be ready for studio check-in.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
                   <div className="flex items-center gap-2">
                     <CalendarDays className="h-4 w-4 text-muted-foreground" />
