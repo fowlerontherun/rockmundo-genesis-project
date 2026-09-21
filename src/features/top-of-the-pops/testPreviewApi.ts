@@ -54,7 +54,7 @@ export interface TotpAdminTestPreview {
 }
 
 function energeticDemoIntro(performance: TotpTestPreviewPerformance): string {
-  return `Come on, studio — make some noise! At number ${performance.qualifying_rank} this week, here are ${performance.band_name} with ${performance.song_title}!`;
+  return `Come on, studio — make some noise! At number ${performance.qualifying_rank} this week, here is another chart hit from ${performance.band_name}!`;
 }
 
 export function isTotpTestPreviewSafe(preview: TotpAdminTestPreview): boolean {
