@@ -1,4 +1,5 @@
 import type { TotpEpisode, TotpPerformance } from "./api";
+import type { TotpChartRundown } from "./chartRundownApi";
 
 /**
  * Phase 0 broadcast contract.
@@ -94,6 +95,8 @@ export interface TotpEpisodeManifest {
   segments: TotpManifestSegment[];
   /** Complete presenter recording sheet, including programme continuity outside act segments. */
   presenter_dialogue?: TotpManifestPresenterDialogue[];
+  /** Immutable UK chart snapshot used by the browser show and canonical master. */
+  chart_rundown?: TotpChartRundown | null;
   total_runtime_ms: number;
   production_state: TotpProductionState;
   checksum: string;
@@ -111,7 +114,8 @@ export interface TotpManifestIssue {
     | "youtube_not_permitted"
     | "no_segments"
     | "missing_presenter_intro"
-    | "missing_presenter_audio";
+    | "missing_presenter_audio"
+    | "missing_programme_continuity_audio";
   performance_id?: string;
   message: string;
 }
@@ -149,6 +153,8 @@ export interface TotpManifestInput {
       script_checksum: string | null;
     } | null;
   }>;
+  /** Frozen UK streaming/digital-sales chart snapshot for this episode. */
+  chartRundown?: TotpChartRundown | null;
   /** song_id -> rights record */
   rights: Record<string, TotpTrackRights>;
   /** Used only to evaluate licence expiry; defaults to the broadcast date. */
@@ -218,6 +224,7 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     presenterAudio = {},
     presenterSequences = {},
     presenterDialogue = [],
+    chartRundown = null,
     rights,
   } = input;
 
@@ -312,6 +319,13 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     programme_spec: PROGRAMME_SPEC,
     segments,
     presenter_dialogue: presenterDialogueManifest,
+    chart_rundown: chartRundown
+      ? {
+          ...chartRundown,
+          streaming: chartRundown.streaming.map((entry) => ({ ...entry })),
+          digital_sales: chartRundown.digital_sales.map((entry) => ({ ...entry })),
+        }
+      : null,
     total_runtime_ms: totalRuntimeMs,
   };
 
@@ -334,6 +348,44 @@ export function validateTotpEpisodeManifest(
       code: "no_segments",
       message: "The episode has no locked performances.",
     });
+  }
+
+  const hasFrozenChart = Boolean(
+    manifest.chart_rundown
+      && ((manifest.chart_rundown.streaming?.length ?? 0) > 0
+        || (manifest.chart_rundown.digital_sales?.length ?? 0) > 0),
+  );
+
+  for (const line of manifest.presenter_dialogue ?? []) {
+    if (line.kind === "act_intro" || !line.script_text.trim()) continue;
+    if (line.kind === "chart" && !hasFrozenChart) continue;
+
+    const expectedScriptChecksum = manifestChecksum(canonicalise(line.script_text));
+    const asset = line.asset;
+    const ready = Boolean(
+      asset?.kind === "presenter_audio"
+        && asset.url
+        && asset.duration_ms
+        && asset.duration_ms > 0
+        && asset.sha256
+        && asset.version
+        && asset.script_checksum === expectedScriptChecksum,
+    );
+    if (!ready) {
+      const label = line.kind === "opening"
+        ? "programme opening"
+        : line.kind === "closing"
+          ? "programme closing"
+          : line.kind === "chart"
+            ? "chart rundown introduction"
+            : "between-act presenter link";
+      issues.push({
+        severity: "blocking",
+        code: "missing_programme_continuity_audio",
+        performance_id: line.performance_id ?? undefined,
+        message: `The ${label} needs a current recorded presenter take before external production.`,
+      });
+    }
   }
 
   for (const segment of manifest.segments) {

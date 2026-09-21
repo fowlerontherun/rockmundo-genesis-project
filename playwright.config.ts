@@ -19,7 +19,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run build -- --base=/ && npm run preview -- --host 127.0.0.1 --port 4173',
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === '1' || !process.env.CI,
     timeout: 120_000,
     env: {
       VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ?? 'http://127.0.0.1:54321',

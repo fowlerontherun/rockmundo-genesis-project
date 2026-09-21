@@ -151,6 +151,72 @@ describe("TOTP episode manifest", () => {
     expect(codes).toContain("rights_not_cleared");
   });
 
+  it("requires frozen non-act presenter continuity before external production", () => {
+    const manifest = buildTotpEpisodeManifest(
+      input({
+        presenterDialogue: [
+          {
+            cue_id: "opening",
+            kind: "opening",
+            performance_id: null,
+            script_text: "Welcome to Top of the Pops.",
+            audio: null,
+          },
+          {
+            cue_id: "closing",
+            kind: "closing",
+            performance_id: null,
+            script_text: "Thanks for joining us.",
+            audio: {
+              url: "https://cdn/closing.wav",
+              duration_ms: 2_500,
+              sha256: "c".repeat(64),
+              version: 1,
+              script_checksum: manifestChecksum(canonicalise("Thanks for joining us.")),
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(validateTotpEpisodeManifest(manifest).map((issue) => issue.code)).toContain("missing_programme_continuity_audio");
+    expect(promoteTotpManifest(manifest, "production_ready").manifest.production_state).toBe("gameplay");
+  });
+
+  it("only requires the chart presenter take when the frozen chart contains real positions", () => {
+    const chartLine = {
+      cue_id: "chart",
+      kind: "chart" as const,
+      performance_id: null,
+      script_text: "And now, the charts.",
+      audio: null,
+    };
+    const withoutChart = buildTotpEpisodeManifest(input({ presenterDialogue: [chartLine] }));
+    expect(validateTotpEpisodeManifest(withoutChart).map((issue) => issue.code)).not.toContain("missing_programme_continuity_audio");
+
+    const withChart = buildTotpEpisodeManifest(input({
+      presenterDialogue: [chartLine],
+      chartRundown: {
+        episode_id: episode.id,
+        chart_snapshot_date: "2026-09-18",
+        streaming: [{
+          rank: 1,
+          song_id: "s1",
+          band_id: "b1",
+          song_title: "Opening Night",
+          artist_name: "The Kestrels",
+          trend: "up",
+          trend_change: 1,
+          weekly_plays: 1000,
+        }],
+        digital_sales: [],
+        streaming_count: 1,
+        digital_sales_count: 0,
+      },
+    }));
+    expect(validateTotpEpisodeManifest(withChart).map((issue) => issue.code)).toContain("missing_programme_continuity_audio");
+  });
+
   it("flags expired licences against the evaluation date", () => {
     const manifest = buildTotpEpisodeManifest(
       input({ rights: { s1: { ...cleared, expires_on: "2026-01-01" }, s2: cleared } }),

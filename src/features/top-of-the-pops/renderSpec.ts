@@ -1,7 +1,9 @@
 import type { TotpEpisodeManifest } from "./episodeManifest";
+import type { TotpBroadcastReplay } from "./api";
 import { TOTP_MIX_TARGET } from "./broadcastAudioMix";
 import { toTotpWebVtt, type TotpCaptionCue } from "./broadcastCaptions";
 import { resolveTotpPresenter } from "./presenters";
+import { buildTotpChartRundownPages, type TotpChartRundownPage } from "./chartRundown";
 
 /**
  * Phase 2 deterministic render plan.
@@ -17,7 +19,12 @@ export const TOTP_RENDER_AUDIO_SAMPLE_RATE = 48_000 as const;
 /** Fixed continuity allowances, in milliseconds. */
 export const TOTP_RENDER_TIMING = Object.freeze({
   openingTitlesMs: 12_000,
+  openingContinuityMs: 5_800,
   presenterLinkMs: 8_000,
+  betweenContinuityMs: 4_800,
+  stageTransitionMs: 3_200,
+  chartPageMs: 5_000,
+  closingContinuityMs: 6_200,
   performanceFallbackMs: 180_000,
   audienceApplauseMs: 4_000,
   endCreditsMs: 14_000,
@@ -25,9 +32,12 @@ export const TOTP_RENDER_TIMING = Object.freeze({
 
 export type TotpRenderItemKind =
   | "opening_titles"
+  | "programme_continuity"
   | "presenter_link"
   | "performance"
   | "applause"
+  | "studio_transition"
+  | "chart_rundown"
   | "end_credits";
 
 export type TotpRenderPurpose = "master" | "rehearsal" | "segment_preview";
@@ -49,6 +59,13 @@ export interface TotpRenderItem {
   duration_ms: number;
   performance_id: string | null;
   audio_url: string | null;
+  audio_sha256?: string | null;
+  script_text?: string | null;
+  dialogue_kind?: "opening" | "act_intro" | "between" | "chart" | "closing" | null;
+  continuity_index?: number | null;
+  from_performance_id?: string | null;
+  to_performance_id?: string | null;
+  chart_page?: TotpChartRundownPage | null;
   /** Frozen presenter fragments when no exact full-line take is available. */
   audio_sequence?: TotpRenderAudioSequenceItem[] | null;
 }
@@ -88,6 +105,18 @@ export interface TotpRenderQcCheck {
     | "caption_overflow_absent"
     | "chapters_present";
   description: string;
+}
+
+export function filterTotpRenderReplays(
+  plan: Pick<TotpRenderPlan, "items">,
+  replays: TotpBroadcastReplay[],
+): TotpBroadcastReplay[] {
+  const frozenPerformanceIds = new Set(
+    plan.items
+      .filter((item) => item.kind === "performance" && !!item.performance_id)
+      .map((item) => item.performance_id!),
+  );
+  return replays.filter((replay) => frozenPerformanceIds.has(replay.performance_id));
 }
 
 export interface TotpRenderPlan {
@@ -145,25 +174,46 @@ function manifestCaptionTrack(
   const presenterName = resolveTotpPresenter(manifest.presenter_key).displayName;
   const captions: TotpCaptionCue[] = [];
 
-  manifest.segments.forEach((segment, position) => {
-    const link = items.find((item) => item.kind === "presenter_link" && item.performance_id === segment.performance_id);
-    const performance = items.find((item) => item.kind === "performance" && item.performance_id === segment.performance_id);
-    const applause = items.find((item) => item.kind === "applause" && item.performance_id === segment.performance_id);
-
-    if (segment.presenter_intro && link) {
+  for (const item of items) {
+    if (
+      (item.kind === "programme_continuity"
+        || item.kind === "presenter_link"
+        || item.kind === "chart_rundown")
+      && item.script_text?.trim()
+    ) {
       captions.push({
-        id: `caption-presenter-${position + 1}`,
-        startMs: link.start_ms,
-        endMs: link.start_ms + link.duration_ms,
+        id: `caption-dialogue-${item.index}`,
+        startMs: item.start_ms,
+        endMs: item.start_ms + item.duration_ms,
         speaker: presenterName,
-        text: segment.presenter_intro,
+        text: item.script_text,
       });
     }
+
+    if (item.kind === "chart_rundown" && item.chart_page) {
+      const chartText = item.chart_page.entries
+        .map((entry) => `#${entry.rank} ${entry.artist_name} — ${entry.song_title}`)
+        .join("; ");
+      if (chartText) {
+        captions.push({
+          id: `caption-chart-page-${item.index}`,
+          startMs: item.start_ms,
+          endMs: item.start_ms + item.duration_ms,
+          speaker: null,
+          text: `[on screen] ${item.chart_page.chartLabel}: ${chartText}`,
+        });
+      }
+    }
+  }
+
+  manifest.segments.forEach((segment, position) => {
+    const performance = items.find((item) => item.kind === "performance" && item.performance_id === segment.performance_id);
+    const applause = items.find((item) => item.kind === "applause" && item.performance_id === segment.performance_id);
 
     if (performance) {
       const graphicStart = performance.start_ms + Math.min(650, Math.max(0, performance.duration_ms - 1));
       captions.push({
-        id: `caption-chart-${position + 1}`,
+        id: `caption-performance-chart-${position + 1}`,
         startMs: graphicStart,
         endMs: Math.min(performance.start_ms + performance.duration_ms, graphicStart + 3_200),
         speaker: null,
@@ -185,6 +235,23 @@ function manifestCaptionTrack(
   return captions.sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id));
 }
 
+function dialogueLine(
+  manifest: TotpEpisodeManifest,
+  kind: "opening" | "between" | "chart" | "closing",
+  performanceId: string | null = null,
+) {
+  return (manifest.presenter_dialogue ?? []).find((line) =>
+    line.kind === kind
+      && (performanceId === null || line.performance_id === performanceId),
+  ) ?? null;
+}
+
+function continuityVisualDuration(kind: "opening" | "between" | "closing"): number {
+  if (kind === "opening") return TOTP_RENDER_TIMING.openingContinuityMs;
+  if (kind === "closing") return TOTP_RENDER_TIMING.closingContinuityMs;
+  return TOTP_RENDER_TIMING.betweenContinuityMs;
+}
+
 export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPlan {
   const items: TotpRenderItem[] = [];
   const chapters: TotpRenderChapter[] = [];
@@ -197,6 +264,61 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     return entry;
   };
 
+  const pushContinuity = (
+    kind: "opening" | "between" | "closing",
+    performanceId: string | null,
+    continuityIndex: number,
+  ) => {
+    const line = dialogueLine(manifest, kind, performanceId);
+    if (!line?.script_text.trim()) return null;
+    const durationMs = Math.max(
+      continuityVisualDuration(kind),
+      Number(line.asset?.duration_ms ?? 0),
+    );
+    return push({
+      kind: "programme_continuity",
+      label: kind === "opening"
+        ? "Programme opening"
+        : kind === "closing"
+          ? "Programme close"
+          : "Between-act presenter link",
+      duration_ms: durationMs,
+      performance_id: performanceId,
+      audio_url: line.asset?.url ?? null,
+      audio_sha256: line.asset?.sha256 ?? null,
+      script_text: line.script_text,
+      dialogue_kind: kind,
+      continuity_index: continuityIndex,
+    });
+  };
+
+  const chartPages = manifest.chart_rundown
+    ? buildTotpChartRundownPages(manifest.chart_rundown)
+    : [];
+  const chartLine = chartPages.length > 0 ? dialogueLine(manifest, "chart") : null;
+
+  const pushChartRundown = () => {
+    if (!chartPages.length) return;
+    const chapterStart = cursor;
+    chartPages.forEach((page, pageIndex) => {
+      const firstPage = pageIndex === 0;
+      push({
+        kind: "chart_rundown",
+        label: `${page.chartLabel} · ${page.rangeLabel}`,
+        duration_ms: firstPage
+          ? Math.max(TOTP_RENDER_TIMING.chartPageMs, Number(chartLine?.asset?.duration_ms ?? 0))
+          : TOTP_RENDER_TIMING.chartPageMs,
+        performance_id: null,
+        audio_url: firstPage ? chartLine?.asset?.url ?? null : null,
+        audio_sha256: firstPage ? chartLine?.asset?.sha256 ?? null : null,
+        script_text: firstPage ? chartLine?.script_text ?? null : null,
+        dialogue_kind: firstPage ? "chart" : null,
+        chart_page: page,
+      });
+    });
+    chapters.push({ title: "UK chart rundown", start_ms: chapterStart, end_ms: cursor });
+  };
+
   const titles = push({
     kind: "opening_titles",
     label: "Opening titles",
@@ -205,6 +327,10 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     audio_url: null,
   });
   chapters.push({ title: "Opening titles", start_ms: titles.start_ms, end_ms: cursor });
+
+  const fullProgramme = (manifest.presenter_dialogue?.length ?? 0) > 0;
+  if (fullProgramme) pushContinuity("opening", null, 0);
+  if (fullProgramme && manifest.segments.length === 1) pushChartRundown();
 
   manifest.segments.forEach((segment, position) => {
     const presenterAsset = segment.assets.find((asset) => asset.kind === "presenter_audio") ?? null;
@@ -239,6 +365,9 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
             : TOTP_RENDER_TIMING.presenterLinkMs,
       performance_id: segment.performance_id,
       audio_url: presenterAsset?.url ?? null,
+      audio_sha256: presenterAsset?.sha256 ?? null,
+      script_text: segment.presenter_intro ?? null,
+      dialogue_kind: "act_intro",
       audio_sequence: audioSequence,
     });
 
@@ -246,7 +375,9 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     push({
       kind: "performance",
       label: `${segment.band_name} — ${segment.song_title}`,
-      duration_ms: songAsset?.duration_ms && songAsset.duration_ms > 0 ? songAsset.duration_ms : TOTP_RENDER_TIMING.performanceFallbackMs,
+      duration_ms: songAsset?.duration_ms && songAsset.duration_ms > 0
+        ? songAsset.duration_ms
+        : TOTP_RENDER_TIMING.performanceFallbackMs,
       performance_id: segment.performance_id,
       audio_url: songAsset?.url ?? null,
     });
@@ -264,7 +395,27 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
       start_ms: link.start_ms,
       end_ms: cursor,
     });
+
+    const nextSegment = manifest.segments[position + 1] ?? null;
+    if (fullProgramme && nextSegment) {
+      push({
+        kind: "studio_transition",
+        label: `Studio transition · ${segment.band_name} to ${nextSegment.band_name}`,
+        duration_ms: TOTP_RENDER_TIMING.stageTransitionMs,
+        performance_id: null,
+        audio_url: null,
+        from_performance_id: segment.performance_id,
+        to_performance_id: nextSegment.performance_id,
+      });
+      pushContinuity("between", segment.performance_id, position);
+
+      if (position === manifest.segments.length - 2) {
+        pushChartRundown();
+      }
+    }
   });
+
+  if (fullProgramme) pushContinuity("closing", null, Math.max(0, manifest.segments.length - 1));
 
   const credits = push({
     kind: "end_credits",
@@ -277,11 +428,15 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
 
   const base = `totp-episode-${String(manifest.episode_number).padStart(3, "0")}-${slug(manifest.episode_date)}`;
   const firstPerformance = items.find((item) => item.kind === "performance");
-  const posterAt = firstPerformance ? firstPerformance.start_ms + Math.floor(firstPerformance.duration_ms / 2) : Math.floor(cursor / 2);
+  const posterAt = firstPerformance
+    ? firstPerformance.start_ms + Math.floor(firstPerformance.duration_ms / 2)
+    : Math.floor(cursor / 2);
   const thumbnailAt = items
     .filter((item) => item.kind === "performance")
     .map((item) => item.start_ms + Math.floor(item.duration_ms / 3));
-  const thumbnailFiles = thumbnailAt.map((_, index) => `${base}-thumb-${String(index + 1).padStart(2, "0")}.jpg`);
+  const thumbnailFiles = thumbnailAt.map((_, index) =>
+    `${base}-thumb-${String(index + 1).padStart(2, "0")}.jpg`,
+  );
 
   return {
     plan_version: TOTP_RENDER_PLAN_VERSION,
@@ -312,7 +467,6 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     qc_checks: QC_CHECKS,
   };
 }
-
 
 function deliveryForPurpose(
   plan: TotpRenderPlan,
@@ -354,7 +508,10 @@ export function buildTotpSegmentPreviewRenderPlan(
 
   let cursor = 0;
   const items = master.items
-    .filter((item) => item.performance_id === performanceId)
+    .filter((item) =>
+      item.performance_id === performanceId
+        && ["presenter_link", "performance", "applause"].includes(item.kind),
+    )
     .map((item, index) => {
       const next = { ...item, index, start_ms: cursor };
       cursor += item.duration_ms;

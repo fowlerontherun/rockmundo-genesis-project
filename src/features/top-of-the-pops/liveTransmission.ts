@@ -1,4 +1,5 @@
 import type { TotpEpisodeManifest } from "./episodeManifest";
+import { buildTotpRenderPlan } from "./renderSpec";
 
 /**
  * Phase 6 — live transmission.
@@ -244,7 +245,7 @@ export const TOTP_LIVE_CLOSE_MS = 20_000;
 
 /** Transmission order, including the standby material either side of the show. */
 export function buildTotpLiveRundown(manifest: TotpEpisodeManifest | null): TotpLiveRundownItem[] {
-  const programmeMs = manifest?.total_runtime_ms ?? 0;
+  const programmeMs = manifest ? buildTotpRenderPlan(manifest).total_duration_ms : 0;
   return [
     { key: "slate", label: "Slate and ident", durationMs: TOTP_LIVE_SLATE_MS, loopable: true },
     { key: "countdown", label: "Countdown clock", durationMs: TOTP_LIVE_COUNTDOWN_MS, loopable: false },

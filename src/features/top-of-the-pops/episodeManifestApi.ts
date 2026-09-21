@@ -11,6 +11,7 @@ import {
 } from "./episodeManifest";
 import { totpRpc } from "./rpc";
 import { getTotpEpisodePlan } from "./scheduleApi";
+import { getTotpChartRundown } from "./chartRundownApi";
 import { buildTotpPresenterDialogue } from "./presenterDialogue";
 import { matchTotpReusablePresenterPhrase } from "./presenterPhraseAudio";
 import { totpRemoteAudioDurationMs, totpRemoteAudioSha256 } from "./audioAsset";
@@ -82,9 +83,10 @@ export async function buildTotpEpisodeManifestFromEpisode(
   }> = {};
   const presenterSequences: NonNullable<Parameters<typeof buildTotpEpisodeManifest>[0]["presenterSequences"]> = {};
   const rights: Record<string, TotpTrackRights> = {};
-  const [plan, presenterFragments] = await Promise.all([
+  const [plan, presenterFragments, chartRundown] = await Promise.all([
     getTotpEpisodePlan(episode.id),
     getTotpEpisodePresenterFragments(episode.id).catch(() => emptyPresenterFragments()),
+    getTotpChartRundown(episode.id),
   ]);
   const reusableDurationByPath = new Map<string, number>();
 
@@ -209,6 +211,7 @@ export async function buildTotpEpisodeManifestFromEpisode(
     presenterAudio,
     presenterSequences,
     presenterDialogue,
+    chartRundown,
     rights,
   });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };
