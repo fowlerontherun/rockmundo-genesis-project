@@ -83,7 +83,52 @@ function totpPerformerFootprint(role: PresentationRole, instrument?: string | nu
   return { u: .12, v: .125 };
 }
 
-export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
+function stableTotpLayoutSeed(value: unknown): number {
+  const text = String(value ?? '0');
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function totpLayoutVariantMark(
+  mark: TotpStageMark,
+  role: PresentationRole,
+  variantSeed: number,
+): TotpStageMark {
+  const variant = Math.abs(variantSeed) % 4;
+  const anchoredCentre = role === 'vocalist' || role === 'drums';
+  let u = mark.u;
+  let v = mark.v;
+
+  if (variant === 1 && !anchoredCentre) {
+    // Mirror the side-line while keeping the frontperson and drummer anchored.
+    u = 1 - u;
+  } else if (variant === 2 && !anchoredCentre) {
+    // A wider, slightly diagonal TV formation.
+    const side = u < .5 ? -1 : 1;
+    u = .5 + (u - .5) * 1.10;
+    v += side * .022;
+  } else if (variant === 3) {
+    // A tighter asymmetric setup: useful for a different camera read without
+    // moving fixed rigs into unsafe scenery.
+    if (!anchoredCentre) {
+      u = 1 - u;
+      v += u < .5 ? .028 : -.018;
+    } else if (role === 'vocalist') {
+      v -= .018;
+    }
+  }
+
+  return {
+    u: clamp(u, .22, .78),
+    v: clamp(v, .24, .84),
+  };
+}
+
+export function totpFormation(plan: PerformerPlan, variantSeed = 0): Map<string, TotpStageMark> {
   const assigned = new Map<string, TotpStageMark>();
   const used: Array<{ mark: TotpStageMark; footprint: TotpPerformerFootprint }> = [];
 
@@ -99,15 +144,20 @@ export function totpFormation(plan: PerformerPlan): Map<string, TotpStageMark> {
   });
 
   for (const entity of ranked) {
-    const preferred = totpPreferredMarks(entity.role, entity.instrument);
+    const preferredBase = totpPreferredMarks(entity.role, entity.instrument);
+    const entitySeed = stableTotpLayoutSeed(`${variantSeed}:${entity.id}`);
+    const rotation = preferredBase.length ? entitySeed % preferredBase.length : 0;
+    const preferred = preferredBase
+      .map((_, index) => preferredBase[(index + rotation) % preferredBase.length])
+      .map((mark) => totpLayoutVariantMark(mark, entity.role, variantSeed));
     const footprint = totpPerformerFootprint(entity.role, entity.instrument);
-    const candidates = [
-      ...preferred,
+    const fallbackCandidates = [
       { u: .34, v: .58 }, { u: .66, v: .58 },
       { u: .37, v: .44 }, { u: .63, v: .44 },
       { u: .42, v: .36 }, { u: .58, v: .36 },
       { u: .50, v: .50 },
-    ];
+    ].map((mark) => totpLayoutVariantMark(mark, entity.role, variantSeed));
+    const candidates = [...preferred, ...fallbackCandidates];
     const clearanceScore = (candidate: TotpStageMark) => {
       if (!used.length) return 99;
       return Math.min(...used.map((other) => {
@@ -199,8 +249,9 @@ export function totpLiveMarks(
   plan: PerformerPlan,
   positionMs: number,
   performing: boolean,
+  variantSeed = 0,
 ): Map<string, TotpStageMark> {
-  const formation = totpFormation(plan);
+  const formation = totpFormation(plan, variantSeed);
   const states = plan.entities.map((entity) => {
     const home = formation.get(entity.id) ?? { u: .5, v: .55 };
     const choreography = totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, performing);
@@ -259,8 +310,9 @@ function totpStagePoint(
   totpStage: TotpStageKey,
   positionMs = 0,
   performing = false,
+  variantSeed = 0,
 ): [number, number, number] {
-  const live = totpLiveMarks(plan, positionMs, performing);
+  const live = totpLiveMarks(plan, positionMs, performing, variantSeed);
   const entity = plan.entities.find((candidate) => candidate.id === entityId);
   const mark = live.get(entityId) ?? { u: .5, v: .55 };
   return totpStageWorldPosition(totpStage, venue, mark, entity?.role);
@@ -295,7 +347,7 @@ export function concertOptions(
 ): ConcertOptions {
   const totp = presentationMode === 'totp';
   const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
-  let seed = 0; for (const c of seedSource) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const seed = stableTotpLayoutSeed(seedSource);
   const venue: ConcertVenue = totp
     ? {
         name: 'RockMundo Television Centre',
@@ -318,7 +370,7 @@ export function concertOptions(
         displayName: p.displayName,
         ...stageAssignment(p.instrument, roleMap[p.role]),
         phase: p.idlePhase,
-        position: totp ? totpStagePoint(plan, p.id, profile, totpStage, 0, false) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
+        position: totp ? totpStagePoint(plan, p.id, profile, totpStage, 0, false, seed) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
         appearance: appearances[profileId] ?? defaultAppearance(profileId),
         richClothing: richClothing[profileId] ?? [],
       };
@@ -330,6 +382,7 @@ export function concertOptions(
  * pause, speed changes, a reload or a backwards seek. Never writes gig outcomes. */
 export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, experience: GigExperienceDTO | null, playback: DerivedPlaybackState, reducedMotion: boolean, tuning: CrowdTuningOptions, venue?: ConcertVenue, presentationMode: ConcertPresentationMode = 'gig', totpStage: TotpStageKey = 'main_stage'): ConcertFrame {
   const profile = resolveVenueProfile(venue ?? { type: experience?.gig.venue.type, name: experience?.gig.venue.name, capacity: experience?.gig.venue.capacity });
+  const totpLayoutSeed = stableTotpLayoutSeed(`totp:${replay.simulationSeed}`);
   const positionMs = playback.positionMs;
   const past = replay.events.filter(e => e.scheduledOffsetMs <= positionMs).sort((a, b) => a.scheduledOffsetMs - b.scheduledOffsetMs || a.sequence - b.sequence);
   const active = past.filter(e => positionMs <= e.scheduledOffsetMs + Math.max(1, e.durationMs));
@@ -366,13 +419,13 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
       return {
         id: p.id,
         position: presentationMode === 'totp'
-          ? totpStagePoint(plan, p.id, profile, totpStage, positionMs, songPlaying)
+          ? totpStagePoint(plan, p.id, profile, totpStage, positionMs, songPlaying, totpLayoutSeed)
           : stagePoint(plan, fixed ? p.stageSlot : p.currentPosition, profile, presentationMode, totpStage),
         visible: p.visible && p.lifecycleState !== 'waiting_backstage',
         walking: ['entering', 'taking_position', 'exiting'].includes(p.lifecycleState)
           || (presentationMode === 'totp' && songPlaying && !fixed && (() => {
             const entity = plan.entities.find((candidate) => candidate.id === p.id);
-            const home = totpFormation(plan).get(p.id) ?? { u: .5, v: .55 };
+            const home = totpFormation(plan, totpLayoutSeed).get(p.id) ?? { u: .5, v: .55 };
             return entity
               ? totpChoreographyState(entity.role, entity.instrument, home, positionMs, entity.idlePhase ?? 0, true).walking
               : false;
