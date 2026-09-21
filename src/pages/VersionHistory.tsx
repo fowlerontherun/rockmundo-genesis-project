@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.753",
+    date: "2026-09-21",
+    changes: [
+      { type: "fix", description: "Fixed record label upgrades (including the marketing department) failing with a \"function does not exist\" error by restoring the missing label team membership checks in the database" },
+    ],
+  },
+  {
     version: "1.1.752",
     date: "2026-09-20",
     changes: [
