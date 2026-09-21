@@ -18,7 +18,7 @@ export const TOTP_RENDER_AUDIO_SAMPLE_RATE = 48_000 as const;
 
 /** Fixed continuity allowances, in milliseconds. */
 export const TOTP_RENDER_TIMING = Object.freeze({
-  openingTitlesMs: 12_000,
+  openingTitlesMs: 15_943,
   presenterLinkMs: 8_000,
   programmeContinuityMs: 6_200,
   stageTransitionMs: 3_200,
@@ -259,7 +259,7 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
   const titles = push({
     kind: "opening_titles",
     label: "Opening titles",
-    duration_ms: 15_943,
+    duration_ms: TOTP_RENDER_TIMING.openingTitlesMs,
     performance_id: null,
     audio_url: null,
   });
