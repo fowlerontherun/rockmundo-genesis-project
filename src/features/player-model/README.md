@@ -18,7 +18,7 @@ modular assembly, skin/clothing dyes and performance poses.
 - Free starter clothing and standard instrument finishes. Saving costs nothing
   and does not affect skill, cash, equipment ownership or gig outcomes.
 - Five hat states (none, beanie, baseball cap, bucket hat, fedora), five eyewear states (none, round, square, aviator, sunglasses), and four earring states (none, studs, hoops, drops), with named colours and a custom picker. Accessories fit from measured head bounds, attach to the animated Head bone and are saved with the stage appearance.
-- Owned Tattoo Parlour ink is rendered on the same 3D model using the existing body slots. Arm, shoulder, wrist, neck, chest and back tattoos follow rig bones; quality controls ink opacity and infection adds a visible irritated tint without changing the authoritative tattoo record.
+- Owned Tattoo Parlour ink is rendered on the same 3D model using the shared body-slot catalogue. Arm, shoulder, wrist, neck, chest, stomach, back, thigh and calf tattoos follow rig bones; quality controls ink opacity and infection adds a visible irritated tint without changing the authoritative tattoo record.
 - Camera rotation/zoom, keyboard controls and ten performance preview poses.
 - The active character owns its model. Switching characters resets the editor
   session; saves target the character captured in the request.
@@ -130,3 +130,16 @@ slot, ink colour, quality, infection state and design category. Anonymous execut
 revoked. This keeps financial and artist data private while letting bandmates' visible ink appear in shared performances. Tattoo purchases and treatment invalidate the fitting-room and gig cosmetic caches immediately. Future Top of the Pops replay snapshots also freeze these render-only tattoo fields alongside clothing and appearance.
 
 Migration: `supabase/migrations/20260921183000_avatar_accessories_stage_tattoos.sql`.
+
+
+### Tattoo and clothing occlusion
+
+Rich garments may define `garment_config.tattooCoverageSlots` with any valid tattoo body slots.
+The fitting room, gigs and Top of the Pops use that explicit metadata to hide ink covered by
+clothing. Coverage is never inferred from a garment name or category, so a sleeveless jacket
+and a long-sleeved jacket can behave differently without renderer special cases. The Clothing
+Studio exposes every shared body slot as a coverage toggle.
+
+The shared catalogue now mirrors the live Tattoo Parlour data, including stomach, thigh and
+calf placement plus blackwork, fine-line, realism and traditional styles. This prevents newer
+tattoos from disappearing when a player moves from the 2D parlour view into the 3D avatar.
