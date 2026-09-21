@@ -12,6 +12,7 @@ import {
   Radio,
   Settings2,
   Tv2,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,11 +36,13 @@ import { TotpRunningSheetCard } from "@/features/top-of-the-pops/TotpRunningShee
 import { TotpControlRoomCard } from "@/features/top-of-the-pops/TotpControlRoomCard";
 import { TotpRenderQueueCard } from "@/features/top-of-the-pops/TotpRenderQueueCard";
 import { TotpRehearsalCard } from "@/features/top-of-the-pops/TotpRehearsalCard";
+import { TotpBookingManager } from "@/features/top-of-the-pops/TotpBookingManager";
 
-type AdminTab = "overview" | "production" | "audio" | "demo" | "broadcast" | "schedule";
+type AdminTab = "overview" | "bookings" | "production" | "audio" | "demo" | "broadcast" | "schedule";
 
 function tabFromHash(hash: string): AdminTab | null {
   if (["#band-name-audio", "#chart-position-audio", "#totp-audio-studio", "#totp-presenter-phrase-library"].includes(hash)) return "audio";
+  if (hash === "#bookings") return "bookings";
   if (hash === "#production") return "production";
   if (hash === "#demo") return "demo";
   if (hash === "#broadcast") return "broadcast";
@@ -57,8 +60,9 @@ function formatDateTime(value: string) {
 
 function AdminTabsList() {
   return (
-    <TabsList className="grid h-auto w-full grid-cols-2 gap-1 md:grid-cols-6">
+    <TabsList className="grid h-auto w-full grid-cols-2 gap-1 md:grid-cols-7">
       <TabsTrigger value="overview" className="gap-1.5"><Tv2 className="h-4 w-4" /> Overview</TabsTrigger>
+      <TabsTrigger value="bookings" className="gap-1.5"><Users className="h-4 w-4" /> Bookings</TabsTrigger>
       <TabsTrigger value="production" className="gap-1.5"><Settings2 className="h-4 w-4" /> Production</TabsTrigger>
       <TabsTrigger value="audio" className="gap-1.5"><AudioLines className="h-4 w-4" /> Audio & media</TabsTrigger>
       <TabsTrigger value="demo" className="gap-1.5"><FlaskConical className="h-4 w-4" /> Demo</TabsTrigger>
@@ -164,6 +168,13 @@ export default function TopOfThePopsAdmin() {
             <TotpProductionHealthCard />
             <Card><CardContent className="p-6 text-sm text-muted-foreground">No scheduled Top of the Pops episode found. Use the schedule button above to create the next broadcast.</CardContent></Card>
           </TabsContent>
+          <TabsContent value="bookings" className="space-y-4" id="bookings">
+            <Card>
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                Schedule an episode before booking bands for Top of the Pops.
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="production" className="space-y-4" id="production">
             <Card><CardContent className="p-6 text-sm text-muted-foreground">Schedule an episode before production planning, rehearsal and render controls become available.</CardContent></Card>
           </TabsContent>
@@ -241,6 +252,10 @@ export default function TopOfThePopsAdmin() {
               <div className="rounded-md border p-3"><div className="text-xs text-muted-foreground">Archived</div><div className="font-semibold">{archive.data?.replays.length ?? 0}/{current.performances.length}</div></div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="bookings" className="space-y-4" id="bookings">
+          <TotpBookingManager episodeId={current.id} />
         </TabsContent>
 
         <TabsContent value="production" className="space-y-4" id="production">
