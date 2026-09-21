@@ -231,6 +231,14 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
       }
     }
 
+    if (item.kind === "programme_continuity" || item.kind === "chart_rundown") {
+      if (item.audio_url) {
+        const file = await source(item.audio_url);
+        if (!file) throw new Error(`${item.kind} has no canonical presenter audio.`);
+        tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.95, loop: false });
+      }
+    }
+
     if (item.kind === "presenter_link") {
       if (item.audio_url) {
         const file = await source(item.audio_url);
