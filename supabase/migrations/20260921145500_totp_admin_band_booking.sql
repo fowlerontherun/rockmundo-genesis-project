@@ -29,8 +29,8 @@ BEGIN
     RAISE EXCEPTION 'Top of the Pops episode not found';
   END IF;
 
-  IF EXISTS (
-    SELECT 1
+  IF (
+    SELECT count(DISTINCT ce.chart_type) = 2
     FROM public.chart_entries ce
     WHERE ce.chart_date = v_episode.chart_snapshot_date
       AND ce.country = 'United Kingdom'
@@ -217,8 +217,8 @@ BEGIN
     RAISE EXCEPTION 'Studio check-in has already started for this episode';
   END IF;
 
-  IF EXISTS (
-    SELECT 1
+  IF (
+    SELECT count(DISTINCT ce.chart_type) = 2
     FROM public.chart_entries ce
     WHERE ce.chart_date = v_episode.chart_snapshot_date
       AND ce.country = 'United Kingdom'
