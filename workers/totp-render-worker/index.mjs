@@ -217,8 +217,7 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
   const byPerformance = new Map(replays.map((row) => [row.performance_id, row]));
   const tracks = [];
   for (const item of plan.items) {
-    if (!item.performance_id) continue;
-    const replay = byPerformance.get(item.performance_id);
+    const replay = item.performance_id ? byPerformance.get(item.performance_id) : null;
     const reaction = Math.max(-10, Math.min(10, Number(replay?.payload?.liveTv?.audienceReaction ?? 0)));
 
     if (item.kind === "performance") {
