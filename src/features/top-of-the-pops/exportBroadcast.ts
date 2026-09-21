@@ -28,6 +28,12 @@ export interface TotpExportOptions {
   songAudio?: HTMLAudioElement | null;
   /** Presenter voice audio element, if one is currently loaded. */
   presenterAudio?: HTMLAudioElement | null;
+  /**
+   * Lets the caller route presenter elements created after export starts into
+   * the already-live WebAudio graph. Fragmented presenter reads create a fresh
+   * Audio element for each phrase/name clip, so a one-time snapshot is not enough.
+   */
+  onAudioRouterReady?: (route: ((element: HTMLAudioElement | null) => void) | null) => void;
   /** Total episode length in milliseconds — recording stops at the latest when this elapses. */
   durationMs: number;
   onProgress?: (progress: TotpExportProgress) => void;
@@ -86,17 +92,22 @@ export async function recordTotpBroadcast(options: TotpExportOptions & { shouldS
     if (AudioContextCtor) {
       audioContext = new AudioContextCtor();
       const destination = audioContext.createMediaStreamDestination();
-      for (const element of [options.songAudio, options.presenterAudio]) {
-        if (!element) continue;
+      const routedElements = new Set<HTMLAudioElement>();
+      const routeAudio = (element: HTMLAudioElement | null) => {
+        if (!element || routedElements.has(element)) return;
         try {
-          const source = audioContext.createMediaElementSource(element);
+          const source = audioContext!.createMediaElementSource(element);
           source.connect(destination);
-          source.connect(audioContext.destination); // keep it audible while recording
+          source.connect(audioContext!.destination); // keep it audible while recording
+          routedElements.add(element);
           cleanupAudio.push(() => source.disconnect());
         } catch {
           // Element already routed elsewhere or not capturable — skip it.
         }
-      }
+      };
+      routeAudio(options.songAudio ?? null);
+      routeAudio(options.presenterAudio ?? null);
+      options.onAudioRouterReady?.(routeAudio);
       for (const track of destination.stream.getAudioTracks()) videoStream.addTrack(track);
     }
   } catch {
@@ -130,6 +141,7 @@ export async function recordTotpBroadcast(options: TotpExportOptions & { shouldS
   recorder.stop();
   await stopped;
 
+  options.onAudioRouterReady?.(null);
   for (const cleanup of cleanupAudio) cleanup();
   if (audioContext) void audioContext.close().catch(() => undefined);
   for (const track of videoStream.getTracks()) track.stop();
