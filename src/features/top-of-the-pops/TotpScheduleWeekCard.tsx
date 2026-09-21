@@ -84,7 +84,7 @@ export function TotpScheduleWeekCard({
                   </Button>
                   {editable && (
                     <Button size="sm" variant="outline" data-totp-episode-edit onClick={() => onEdit(episode)}>
-                      <Pencil className="mr-1 h-4 w-4" /> Edit
+                      <Pencil className="mr-1 h-4 w-4" /> Reschedule / edit
                     </Button>
                   )}
                   {editable && episode.status !== "cancelled" && (
