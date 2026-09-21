@@ -8,6 +8,7 @@ import {
 } from "./renderQueueApi";
 import type { TotpEpisodePlan } from "./scheduleApi";
 import { TOTP_TARGET_RUNTIME_SECONDS, plannedRuntimeSeconds } from "./scheduleWeeks";
+import { buildTotpRenderPlan } from "./renderSpec";
 
 /**
  * Phase 3 control room.
@@ -236,7 +237,7 @@ export function buildTotpPreflight(input: TotpPreflightInput): TotpPreflightRepo
     ),
   );
 
-  const runtimeSeconds = Math.round((manifest?.total_runtime_ms ?? 0) / 1000);
+  const runtimeSeconds = manifest ? Math.round(buildTotpRenderPlan(manifest).total_duration_ms / 1000) : 0;
   const withinRuntime = runtimeSeconds > 0 && Math.abs(runtimeSeconds - TOTP_TARGET_RUNTIME_SECONDS) <= 5 * 60;
   checks.push(
     check(
