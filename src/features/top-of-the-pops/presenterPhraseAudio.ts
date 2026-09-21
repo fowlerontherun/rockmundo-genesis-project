@@ -51,3 +51,100 @@ export const TOTP_REUSABLE_PRESENTER_PHRASES: TotpReusablePresenterPhrase[] = [
 export function totpReusablePresenterPhrase(id: string): TotpReusablePresenterPhrase | undefined {
   return TOTP_REUSABLE_PRESENTER_PHRASES.find((phrase) => phrase.id === id);
 }
+
+
+export interface TotpPresenterPhraseContext {
+  rank: number;
+  stableKey: string;
+  isNewEntry?: boolean;
+  isDebut?: boolean;
+  chartMovement?: number | null;
+  isReturning?: boolean;
+}
+
+function stablePhraseIndex(key: string, length: number): number {
+  if (length <= 1) return 0;
+  let hash = 2166136261;
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash >>> 0) % length;
+}
+
+function choosePhrase(ids: string[], stableKey: string): TotpReusablePresenterPhrase {
+  const choices = ids
+    .map(totpReusablePresenterPhrase)
+    .filter((phrase): phrase is TotpReusablePresenterPhrase => Boolean(phrase));
+  if (!choices.length) {
+    const fallback = totpReusablePresenterPhrase("please-welcome");
+    if (!fallback) throw new Error("Reusable presenter phrase catalogue is missing its fallback.");
+    return fallback;
+  }
+  return choices[stablePhraseIndex(stableKey, choices.length)];
+}
+
+/**
+ * Picks a reusable intro deterministically so every viewer and render worker
+ * gets the same presenter wording for the same performance.
+ *
+ * Context-specific phrases are only used when the caller actually knows the
+ * chart state. Otherwise selection falls back to wording that is always true.
+ */
+export function selectTotpReusablePresenterPhrase(
+  context: TotpPresenterPhraseContext,
+): TotpReusablePresenterPhrase {
+  const rank = Math.max(1, Math.min(40, Math.round(context.rank)));
+  const key = `${context.stableKey}:${rank}`;
+
+  if (context.isDebut) {
+    return choosePhrase(["debut-its"], key);
+  }
+
+  if (context.isNewEntry) {
+    if (rank <= 10) {
+      return choosePhrase(["straight-top-ten-its", "latest-entry-from", "brand-new-entry-from"], key);
+    }
+    return choosePhrase(["latest-entry-from", "brand-new-entry-from"], key);
+  }
+
+  const movement = Number(context.chartMovement ?? 0);
+  if (movement >= 10) {
+    return choosePhrase(["biggest-movers-its", "climbing-chart-its"], key);
+  }
+  if (movement > 0) {
+    return choosePhrase(["climbing-chart-its", "moving-up-its"], key);
+  }
+
+  if (context.isReturning) {
+    return choosePhrase(["back-on-totp-its", "returning-studio-its"], key);
+  }
+
+  if (rank === 1) {
+    return choosePhrase(["number-one-its"], key);
+  }
+
+  if (rank <= 10) {
+    return choosePhrase(["top-ten-this-week-its", "up-next-its", "and-now-its", "please-welcome"], key);
+  }
+
+  return choosePhrase([
+    "please-welcome",
+    "up-next-its",
+    "and-now-its",
+    "time-for",
+    "another-hit-from",
+    "studio-ready-for",
+  ], key);
+}
+
+export function buildTotpReusablePresenterIntro(
+  bandName: string,
+  context: TotpPresenterPhraseContext,
+): { phrase: TotpReusablePresenterPhrase; script: string } {
+  const phrase = selectTotpReusablePresenterPhrase(context);
+  return {
+    phrase,
+    script: `${phrase.script} ${bandName.trim()}!`,
+  };
+}
