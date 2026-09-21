@@ -4,12 +4,13 @@ begin;
 do $$
 declare
   a jsonb := '{"version":1,"body":{"frame":"masculine","height":1,"build":1,"skin":"#a96f46"},"head":{"style":"casual","hair":"#54372a"},"equipment":{"top":{"itemId":"starter.top.casual","color":"#436477"},"bottom":{"itemId":"starter.bottom.casual","color":"#272e39"},"footwear":{"itemId":"starter.footwear.casual","color":"#25232b"},"instrument":{"itemId":"starter.instrument.standard","color":"#b97536"}}}';
-  valid_accessories jsonb := '{"accessories":{"hat":"bucket_hat","hatColor":"#20232b","glasses":"aviator","glassesColor":"#d8ad49"}}';
+  valid_accessories jsonb := '{"accessories":{"hat":"bucket_hat","hatColor":"#20232b","glasses":"aviator","glassesColor":"#d8ad49","earrings":"hoops","earringColor":"#d8ad49"}}';
 begin
   if public.is_valid_player_stage_appearance(a) is distinct from true then raise exception 'Legacy v1 appearance rejected'; end if;
   if public.is_valid_player_stage_appearance(a || valid_accessories) is distinct from true then raise exception 'Valid accessories rejected'; end if;
   if public.is_valid_player_stage_appearance(a || '{"accessories":{"hat":"crown","hatColor":"#20232b","glasses":"aviator","glassesColor":"#d8ad49"}}') is distinct from false then raise exception 'Unknown hat accepted'; end if;
   if public.is_valid_player_stage_appearance(a || '{"accessories":{"hat":"beanie","hatColor":"red","glasses":"none","glassesColor":"#20232b"}}') is distinct from false then raise exception 'Invalid accessory colour accepted'; end if;
+  if public.is_valid_player_stage_appearance(a || '{"accessories":{"hat":"none","hatColor":"#20232b","glasses":"none","glassesColor":"#20232b","earrings":"chains"}}') is distinct from false then raise exception 'Unknown earring style accepted'; end if;
   if public.is_valid_player_stage_appearance(a || '{"accessories":{"hat":"none","hatColor":"#20232b","glasses":"none","glassesColor":"#20232b","url":"https://example.com"}}') is distinct from false then raise exception 'Extra accessory property accepted'; end if;
 end $$;
 
