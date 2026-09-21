@@ -15,7 +15,12 @@ export const BODY_SLOTS = {
   right_inner_arm: { label: 'Right Inner Arm', arm: 'right', sleeveSlot: true },
   neck: { label: 'Neck', arm: null, sleeveSlot: false },
   chest: { label: 'Chest', arm: null, sleeveSlot: false },
+  stomach: { label: 'Stomach', arm: null, sleeveSlot: false },
   back: { label: 'Back', arm: null, sleeveSlot: false },
+  left_thigh: { label: 'Left Thigh', arm: null, sleeveSlot: false },
+  left_calf: { label: 'Left Calf', arm: null, sleeveSlot: false },
+  right_thigh: { label: 'Right Thigh', arm: null, sleeveSlot: false },
+  right_calf: { label: 'Right Calf', arm: null, sleeveSlot: false },
 } as const;
 
 export type BodySlot = keyof typeof BODY_SLOTS;
@@ -24,7 +29,8 @@ export const LEFT_SLEEVE_SLOTS: BodySlot[] = ['left_shoulder', 'left_upper_arm',
 export const RIGHT_SLEEVE_SLOTS: BodySlot[] = ['right_shoulder', 'right_upper_arm', 'right_inner_arm', 'right_forearm', 'right_wrist'];
 
 export const TATTOO_CATEGORIES = [
-  'skull', 'tribal', 'japanese', 'musical', 'sleeve', 'geometric', 'text', 'abstract', 'portrait'
+  'skull', 'tribal', 'japanese', 'musical', 'sleeve', 'geometric', 'text', 'abstract', 'portrait',
+  'blackwork', 'fine_line', 'realism', 'traditional'
 ] as const;
 
 export type TattooCategory = typeof TATTOO_CATEGORIES[number];
@@ -39,6 +45,10 @@ export const CATEGORY_LABELS: Record<TattooCategory, string> = {
   text: '✍️ Script',
   abstract: '🎨 Abstract',
   portrait: '👤 Portrait',
+  blackwork: '⬛ Blackwork',
+  fine_line: '✒️ Fine line',
+  realism: '🖼️ Realism',
+  traditional: '⚓ Traditional',
 };
 
 export interface TattooDesign {
@@ -84,6 +94,10 @@ export function getTattooDifficulty(design: Pick<TattooDesign, 'category' | 'bas
     japanese: 4,
     sleeve: 4,
     portrait: 5,
+    blackwork: 4,
+    fine_line: 2,
+    realism: 5,
+    traditional: 3,
   };
   const priceBump = design.base_price >= 2500 ? 1 : 0;
   return Math.max(1, Math.min(5, categoryDifficulty[design.category] + priceBump));
