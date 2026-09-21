@@ -138,8 +138,9 @@ function tattooPatternTexture(tattoo: ResolvedTattooVisual) {
   const texture = new T.DataTexture(data, size, size, T.RGBAFormat);
   texture.name = `tattoo-pattern-${tattoo.category}`;
   texture.colorSpace = T.NoColorSpace;
-  texture.minFilter = T.LinearFilter;
+  texture.minFilter = T.LinearMipmapLinearFilter;
   texture.magFilter = T.LinearFilter;
+  texture.generateMipmaps = true;
   texture.needsUpdate = true;
   return texture;
 }
@@ -149,12 +150,12 @@ function tattooMaterial(tattoo: ResolvedTattooVisual) {
   if (tattoo.is_infected) color.lerp(new T.Color('#7e2635'), .35);
   const material = new T.MeshStandardMaterial({
     color,
-    roughness: .98,
+    roughness: .94,
     metalness: 0,
     transparent: true,
-    opacity: Math.max(.5, Math.min(.94, tattoo.quality_score / 106)),
+    opacity: Math.max(.58, Math.min(.96, .58 + tattoo.quality_score * .0038)),
     alphaMap: tattooPatternTexture(tattoo),
-    alphaTest: .04,
+    alphaTest: .025,
     side: T.DoubleSide,
     depthWrite: true,
     polygonOffset: true,
@@ -170,8 +171,8 @@ function wrapSegment(root: T.Object3D, bone: T.Bone, child: T.Bone | undefined, 
   const a = bone.getWorldPosition(new T.Vector3()), b = child?.getWorldPosition(new T.Vector3()) ?? a.clone().add(new T.Vector3(0, -.28, 0));
   const direction = b.clone().sub(a), length = Math.max(.08, direction.length() * Math.max(.18, end - start));
   const center = a.clone().lerp(b, (start + end) / 2);
-  const geometry = new T.CylinderGeometry(radius, radius * .98, length, 18, 1, true, thetaStart, thetaLength);
-  const hash = [...tattoo.category].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 0);
+  const geometry = new T.CylinderGeometry(radius, radius * .98, length, 32, 2, true, thetaStart, thetaLength);
+  const hash = [...`${tattoo.id}:${tattoo.category}`].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 0);
   geometry.rotateY((hash % 7 - 3) * .055);
   const mark = new T.Mesh(geometry, tattooMaterial(tattoo));
   mark.name = `avatar-tattoo-${tattoo.id}`;
@@ -188,12 +189,12 @@ function torsoMark(root: T.Object3D, bone: T.Bone, tattoo: ResolvedTattooVisual,
   const categoryScale: Partial<Record<ResolvedTattooVisual['category'], number>> = { sleeve: 1.22, portrait: 1.14, realism: 1.16, traditional: 1.05, blackwork: 1.08, fine_line: .82, text: .84, geometric: .92 };
   const scale = categoryScale[tattoo.category] ?? 1;
   const geometry = tattoo.category === 'geometric'
-    ? new T.RingGeometry(.035 * scale, .095 * scale, 6)
+    ? new T.RingGeometry(.035 * scale, .095 * scale, 12)
     : tattoo.category === 'musical'
-      ? new T.RingGeometry(.028 * scale, .078 * scale, 18, 1, .3, Math.PI * 1.65)
+      ? new T.RingGeometry(.028 * scale, .078 * scale, 30, 1, .3, Math.PI * 1.65)
       : tattoo.category === 'fine_line'
-        ? new T.RingGeometry(.055 * scale, .064 * scale, 22)
-        : new T.CircleGeometry(.085 * scale, tattoo.category === 'tribal' || tattoo.category === 'blackwork' ? 5 : 18);
+        ? new T.RingGeometry(.055 * scale, .064 * scale, 32)
+        : new T.CircleGeometry(.085 * scale, tattoo.category === 'tribal' || tattoo.category === 'blackwork' ? 8 : 32);
   const mark = new T.Mesh(geometry, tattooMaterial(tattoo));
   mark.name = `avatar-tattoo-${tattoo.id}`;
   mark.position.copy(center).add(new T.Vector3(0, yOffset, back ? -depth : depth));
