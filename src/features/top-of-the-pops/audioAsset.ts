@@ -74,3 +74,17 @@ export async function totpRemoteAudioDurationMs(url: string): Promise<number> {
     audio.src = normalized;
   });
 }
+
+
+export async function totpRemoteAudioSha256(url: string): Promise<string> {
+  const normalized = url.trim();
+  if (!normalized) throw new Error("Could not hash an empty audio URL.");
+  const response = await fetch(normalized);
+  if (!response.ok) {
+    throw new Error(`Could not load reusable presenter audio for hashing (HTTP ${response.status}).`);
+  }
+  const digest = await crypto.subtle.digest("SHA-256", await response.arrayBuffer());
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
