@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
-import { visibleTattoosForClothing, type ResolvedTattooVisual } from './tattoos';
+import { normalizeTattooVisual, visibleTattoosForClothing, type ResolvedTattooVisual } from './tattoos';
 
 const tattoos: ResolvedTattooVisual[] = [
   { id: 'arm', profile_id: 'profile', body_slot: 'left_forearm', ink_color: '#18202b', quality_score: 90, is_infected: false, category: 'musical' },
@@ -54,5 +54,30 @@ describe('tattoo clothing occlusion', () => {
       clothing({ tattooCoverageSlots: ['neck'] }),
     ]);
     expect(visible.map(tattoo => tattoo.id)).toEqual(['chest']);
+  });
+});
+
+
+describe('tattoo catalogue compatibility', () => {
+  it('keeps newer catalogue body slots and categories intact', () => {
+    expect(normalizeTattooVisual({
+      id: 'leg-tattoo', profile_id: 'profile', body_slot: 'right_thigh',
+      ink_color: '#101010', quality_score: 92, is_infected: false, category: 'blackwork',
+    })).toMatchObject({ body_slot: 'right_thigh', category: 'blackwork' });
+    expect(normalizeTattooVisual({
+      id: 'stomach-tattoo', profile_id: 'profile', body_slot: 'stomach',
+      ink_color: '#222222', quality_score: 80, is_infected: false, category: 'traditional',
+    })).toMatchObject({ body_slot: 'stomach', category: 'traditional' });
+  });
+
+  it('still sanitizes unknown catalogue values', () => {
+    expect(normalizeTattooVisual({
+      id: 'unknown-category', profile_id: 'profile', body_slot: 'left_calf',
+      ink_color: '#ABCDEF', quality_score: 120, is_infected: false, category: 'future-style',
+    })).toMatchObject({ body_slot: 'left_calf', category: 'custom', ink_color: '#abcdef', quality_score: 100 });
+    expect(normalizeTattooVisual({
+      id: 'bad-slot', profile_id: 'profile', body_slot: 'face',
+      ink_color: '#111111', quality_score: 80, is_infected: false, category: 'blackwork',
+    })).toBeNull();
   });
 });
