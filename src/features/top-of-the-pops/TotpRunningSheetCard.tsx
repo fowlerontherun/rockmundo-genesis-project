@@ -14,6 +14,7 @@ import {
 import type { TotpProductionState } from "./episodeManifest";
 import { getTotpEpisodePlan } from "./scheduleApi";
 import { formatPlannedRuntime, plannedRuntimeSeconds } from "./scheduleWeeks";
+import { buildTotpRenderPlan } from "./renderSpec";
 
 const STATE_LABELS: Record<TotpProductionState, string> = {
   gameplay: "In-game only",
@@ -74,6 +75,7 @@ export function TotpRunningSheetCard({ episode }: { episode: TotpEpisode }) {
   const blocking = (live.data?.issues ?? []).filter((issue) => issue.severity === "blocking");
   const warnings = (live.data?.issues ?? []).filter((issue) => issue.severity === "warning");
   const inSync = storedManifestMatchesLive(stored.data ?? null, live.data?.manifest ?? null);
+  const canonicalRuntimeMs = live.data ? buildTotpRenderPlan(live.data.manifest).total_duration_ms : 0;
 
   return (
     <Card data-totp-running-sheet>
@@ -105,7 +107,7 @@ export function TotpRunningSheetCard({ episode }: { episode: TotpEpisode }) {
           <>
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
               <span>{live.data.manifest.segments.length} acts</span>
-              <span>Runtime {formatRuntime(live.data.manifest.total_runtime_ms)}</span>
+              <span>Runtime {formatRuntime(canonicalRuntimeMs)}</span>
               <span>Fingerprint {live.data.manifest.checksum.slice(0, 12)}</span>
             </div>
 
