@@ -75,7 +75,7 @@ function clearedPlan() {
       script_checksum: manifestChecksum(canonicalise(line.script)),
       audio_url: `https://cdn/presenter-${line.id.replace(/[^a-z0-9]+/gi, "-")}.wav`,
       duration_ms: line.kind === "act_intro" ? 2_400 : 3_200,
-      sha256: String(index + 1).repeat(64).slice(0, 64),
+      sha256: line.kind === "act_intro" ? "a".repeat(64) : String(index + 1).repeat(64).slice(0, 64),
       version: 1,
       uploaded_at: "2026-09-19T10:00:00Z",
     }]));
@@ -99,6 +99,12 @@ function clearedPlan() {
     },
     presenter_audio: presenterAudio,
   };
+}
+
+function planWithoutActPresenter() {
+  const plan = clearedPlan();
+  const { p1: _actPresenter, ...presenter_audio } = plan.presenter_audio;
+  return { ...plan, presenter_audio };
 }
 
 beforeEach(() => {
@@ -141,10 +147,7 @@ describe("TOTP stored running sheet", () => {
         presenter_intro: "And now, it's The Kestrels!",
       }],
     };
-    getTotpEpisodePlan.mockResolvedValue({
-      ...clearedPlan(),
-      presenter_audio: {},
-    });
+    getTotpEpisodePlan.mockResolvedValue(planWithoutActPresenter());
     getTotpEpisodePresenterFragments.mockResolvedValue({
       presenter_key: "presenter_a",
       phrases: {
@@ -191,7 +194,7 @@ describe("TOTP stored running sheet", () => {
         presenter_intro: "And now, it's The Kestrels!",
       }],
     };
-    getTotpEpisodePlan.mockResolvedValue({ ...clearedPlan(), presenter_audio: {} });
+    getTotpEpisodePlan.mockResolvedValue(planWithoutActPresenter());
     getTotpEpisodePresenterFragments.mockResolvedValue({
       presenter_key: "presenter_a",
       phrases: {
