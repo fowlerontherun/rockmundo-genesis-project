@@ -6,6 +6,7 @@ import { headModelStyle, equipmentItem, equipmentStyle, modelFile, type PlayerAp
 
 import { addHair, isScalpHair } from './hair';
 import { addAccessories } from './accessories';
+import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
 
@@ -68,13 +69,16 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
           const name = material.name.toLowerCase();
-          material.roughness = /skin/.test(name) ? .69 : .84;
+          material.roughness = /skin/.test(name) ? skinRoughness(appearance) : .84;
           material.metalness = /earring|metal/.test(name) ? .65 : 0;
           if (/skin/.test(name)) material.color.set(appearance.body.skin);
           else if (choice.part === 'head') {
-            // Women's Brown is the iris; Hair_Brown is brows. White on a body
-            // is dyeable fabric, but eye whites and metal details keep contrast.
-            if (/hair|eyebrow|pink|red/.test(name)) material.color.set(appearance.head.hair);
+            // The source rigs use slightly different material names. Keep iris,
+            // brows and hair independently tintable while preserving eye whites.
+            const isFeminineIris = appearance.body.frame === 'feminine' && name === 'brown';
+            if (/iris|pupil/.test(name) || isFeminineIris) material.color.set(appearance.head.eyeColor ?? '#65442d');
+            else if (/eyebrow|brow|hair_brown/.test(name)) material.color.set(appearance.head.eyebrowColor ?? appearance.head.hair);
+            else if (/hair|pink|red/.test(name)) material.color.set(appearance.head.hair);
           } else if (!/earring|metal/.test(name) && !(name === 'white' && (choice.style !== 'casual' || choice.part === 'feet'))) {
             material.color.set(choice.dye);
             if (choice.fabric !== 'plain') {
@@ -117,6 +121,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
   }
   const headBone = bones.get('Head');
   if (headBone) {
+    addFaceDetails(result, appearance, headBone);
     addHair(result, appearance, headBone);
     addAccessories(result, appearance, headBone);
   }

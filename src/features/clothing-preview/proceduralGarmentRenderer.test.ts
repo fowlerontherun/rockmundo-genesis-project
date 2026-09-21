@@ -68,6 +68,18 @@ describe('procedural garment stage rig anchors', () => {
     disposeProceduralGarment(garment);
   });
 
+  it('adds visible construction seams and folds without changing rig ownership', () => {
+    const garment = buildProceduralGarment(item('shirt', 'top', { sleeve: 'long', silhouette: 'classic', collar: 'crew' }));
+    expect(garment.getObjectByName('garment-shoulder-seam-left')).toBeTruthy();
+    expect(garment.getObjectByName('garment-shoulder-seam-right')).toBeTruthy();
+    expect(garment.getObjectByName('garment-hem-seam')).toBeTruthy();
+    expect(garment.getObjectByName('garment-front-fold-1')).toBeTruthy();
+    for (const name of ['garment-shoulder-seam-left', 'garment-shoulder-seam-right', 'garment-hem-seam', 'garment-front-fold-1']) {
+      expect(garment.getObjectByName(name)?.userData.rigAnchor).toBe('Torso');
+    }
+    disposeProceduralGarment(garment);
+  });
+
   it('anchors top bodies and sleeves to torso and both upper arms', () => {
     const result = anchors(item('shirt', 'top', { sleeve: 'long' }));
     expect(result).toContain('Torso');
@@ -75,8 +87,12 @@ describe('procedural garment stage rig anchors', () => {
     expect(result).toContain('UpperArm.R');
   });
 
-  it('anchors trouser legs independently to both upper legs', () => {
+  it('anchors trouser legs and construction creases independently to both upper legs', () => {
+    const garment = buildProceduralGarment(item('pants', 'bottom'));
     expect(anchors(item('pants', 'bottom'))).toEqual(expect.arrayContaining(['UpperLeg.L', 'UpperLeg.R']));
+    expect(garment.getObjectByName('garment-trouser-crease-left')?.userData.rigAnchor).toBe('UpperLeg.L');
+    expect(garment.getObjectByName('garment-trouser-crease-right')?.userData.rigAnchor).toBe('UpperLeg.R');
+    disposeProceduralGarment(garment);
   });
 
   it('anchors footwear independently to both feet', () => {

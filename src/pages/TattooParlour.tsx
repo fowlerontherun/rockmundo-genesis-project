@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Crosshair, Palette, ShieldAlert, Sparkles, Star, Type } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { TattooBodyPreview } from "@/components/tattoo/TattooBodyPreview";
+import { TattooAvatarPreview } from "@/components/tattoo/TattooAvatarPreview";
 import { TattooDesignCard } from "@/components/tattoo/TattooDesignCard";
 import { TattooInfectionAlert } from "@/components/tattoo/TattooInfectionAlert";
 import { TattooArtistCard, type TattooArtist } from "@/components/tattoo/TattooArtistCard";
@@ -303,10 +304,11 @@ export default function TattooParlour() {
         </TabsContent>
 
         <TabsContent value="my-tattoos" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <Card><CardHeader><CardTitle className="text-sm">Live 3D character</CardTitle></CardHeader><CardContent className="p-0"><TattooAvatarPreview /></CardContent></Card>
             <Card><CardHeader><CardTitle className="text-sm">Body Map</CardTitle></CardHeader><CardContent><TattooBodyPreview tattoos={playerTattoos || []} /></CardContent></Card>
-            <div className="lg:col-span-2">{!playerTattoos?.length ? <Card><CardContent className="p-6 text-center text-muted-foreground">No tattoos yet.</CardContent></Card> : <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{playerTattoos.map((tattoo) => <Card key={tattoo.id} className={tattoo.is_infected ? "border-destructive/50" : ""}><CardContent className="space-y-2 p-4"><div className="flex items-center justify-between"><h4 className="font-semibold text-sm">{tattoo.custom_text ? `“${tattoo.custom_text}”` : tattoo.design?.name || "Custom Tattoo"}</h4>{tattoo.is_infected && <Badge variant="destructive">Infected</Badge>}</div>{tattoo.custom_text && tattoo.font_style && <div className="rounded bg-muted/50 p-2 text-center" style={getFontCss(tattoo.font_style)}>{tattoo.custom_text}</div>}<div className="flex flex-wrap gap-2"><Badge variant="outline">{BODY_SLOTS[tattoo.body_slot as BodySlot]?.label || tattoo.body_slot}</Badge><Badge variant="outline">Quality {tattoo.quality_score}/100</Badge>{(tattoo as any).minigame_score != null && <Badge variant="outline">Execution {(tattoo as any).minigame_score}%</Badge>}</div></CardContent></Card>)}</div>}</div>
           </div>
+          {!playerTattoos?.length ? <Card><CardContent className="p-6 text-center text-muted-foreground">No tattoos yet. Your live character preview will update as soon as you add one.</CardContent></Card> : <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{playerTattoos.map((tattoo) => <Card key={tattoo.id} className={tattoo.is_infected ? "border-destructive/50" : ""}><CardContent className="space-y-2 p-4"><div className="flex items-center justify-between"><h4 className="font-semibold text-sm">{tattoo.custom_text ? `“${tattoo.custom_text}”` : tattoo.design?.name || "Custom Tattoo"}</h4>{tattoo.is_infected && <Badge variant="destructive">Infected</Badge>}</div>{tattoo.custom_text && tattoo.font_style && <div className="rounded bg-muted/50 p-2 text-center" style={getFontCss(tattoo.font_style)}>{tattoo.custom_text}</div>}<div className="flex flex-wrap gap-2"><Badge variant="outline">{BODY_SLOTS[tattoo.body_slot as BodySlot]?.label || tattoo.body_slot}</Badge><Badge variant="outline">Quality {tattoo.quality_score}/100</Badge>{(tattoo as any).minigame_score != null && <Badge variant="outline">Execution {(tattoo as any).minigame_score}%</Badge>}</div></CardContent></Card>)}</div>}
         </TabsContent>
 
         <TabsContent value="custom" className="space-y-4">

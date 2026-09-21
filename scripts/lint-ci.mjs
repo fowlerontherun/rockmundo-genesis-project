@@ -44,6 +44,10 @@ if (newErrors > 0) {
       activeSessionPaths.some((activePath) => path.endsWith(activePath)) ||
       path.includes("/src/features/top-of-the-pops/") ||
       path.includes("/src/features/gig-demo-3d/") ||
+      path.includes("/src/features/player-model/") ||
+      path.includes("/src/features/clothing-preview/") ||
+      path.endsWith("/src/components/tattoo/TattooAvatarPreview.tsx") ||
+      path.endsWith("/src/pages/TattooParlour.tsx") ||
       path.endsWith("/src/features/gig-experience/viewer/GigCanvas.tsx") ||
       path.endsWith("/src/features/gig-experience/viewer/three/GigStage3D.tsx") ||
       path.endsWith("/src/features/gig-experience/viewer/three/presentation.ts")

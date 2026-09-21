@@ -17,11 +17,14 @@ function model(profileId = 'character-one') {
 function clothing(data: unknown[] = [], isError = false) {
   return { data, isError, isPending: false, isFetching: false } as unknown as ReturnType<typeof useEquippedRichClothing>;
 }
+function tattooQuery(data: unknown[] = [], isError = false) {
+  return { data, isError, isPending: false, isFetching: false } as unknown as ReturnType<typeof usePlayerStageTattoos>;
+}
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usePlayerModel).mockReturnValue(model());
   vi.mocked(useEquippedRichClothing).mockReturnValue(clothing());
-  vi.mocked(usePlayerStageTattoos).mockReturnValue(clothing() as ReturnType<typeof usePlayerStageTattoos>);
+  vi.mocked(usePlayerStageTattoos).mockReturnValue(tattooQuery());
   save.mockImplementation(async args => ({ appearance: args.appearance, revision: 1 }));
 });
 afterEach(cleanup);
@@ -57,17 +60,34 @@ it('gives every character six free choices per clothing type and persists new de
   await waitFor(() => expect(save).toHaveBeenCalled());
   for (const slot of SLOTS) expect(save.mock.calls[0][0].appearance.equipment[slot]).toEqual({ itemId: STARTER_ITEMS[slot][5].id, color: '#338b8d' });
 });
-it('saves hairstyle and independent facial hair, with matching colour available', async () => {
+it('saves detailed face, eye, brow, hair and skin choices as one appearance', async () => {
   render(<PlayerModelEditor />);
+  fireEvent.change(screen.getByLabelText('Face shape'), { target: { value: 'angular' } });
+  fireEvent.change(screen.getByLabelText('Skin detail'), { target: { value: 'freckles' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Eye colour: Green' }));
+  fireEvent.change(screen.getByLabelText('Eyebrows'), { target: { value: 'arched' } });
+  expect(screen.getByLabelText('Match eyebrow colour to hair')).toBeChecked();
+  fireEvent.click(screen.getByLabelText('Match eyebrow colour to hair'));
+  fireEvent.click(screen.getByRole('button', { name: 'Eyebrow colour: Chestnut' }));
   fireEvent.change(screen.getByLabelText('Hairstyle'), { target: { value: 'quiff' } });
   fireEvent.change(screen.getByLabelText('Facial hair'), { target: { value: 'goatee' } });
-  expect(screen.getByLabelText('Match hair colour')).toBeChecked();
-  fireEvent.click(screen.getByLabelText('Match hair colour'));
+  expect(screen.getByLabelText('Match facial hair colour')).toBeChecked();
+  fireEvent.click(screen.getByLabelText('Match facial hair colour'));
   fireEvent.click(screen.getByRole('button', { name: 'Facial hair colour: Ginger' }));
   fireEvent.click(screen.getByRole('button', { name: 'Hair colour: Blue' }));
   expect(save).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
-  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ appearance: expect.objectContaining({ head: expect.objectContaining({ hairStyle: 'quiff', facialHair: 'goatee', hair: '#426baa', facialHairColor: '#b75e32' }) }) })));
+  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ appearance: expect.objectContaining({ head: expect.objectContaining({
+    faceShape: 'angular',
+    skinDetail: 'freckles',
+    eyeColor: '#4f755a',
+    eyebrowStyle: 'arched',
+    eyebrowColor: '#854b32',
+    hairStyle: 'quiff',
+    facialHair: 'goatee',
+    hair: '#426baa',
+    facialHairColor: '#b75e32',
+  }) }) })));
 });
 
 it('passes currently equipped rich clothing into the shared animated preview', () => {
@@ -104,7 +124,7 @@ it('saves hats, glasses and earrings as one shared stage appearance', async () =
 
 it('passes owned tattoo visuals into the same avatar preview', () => {
   const tattoos = [{ id: 'tattoo-1', profile_id: 'character-one', body_slot: 'right_thigh', ink_color: '#111111', quality_score: 90, is_infected: false, category: 'blackwork' }];
-  vi.mocked(usePlayerStageTattoos).mockReturnValue(clothing(tattoos) as ReturnType<typeof usePlayerStageTattoos>);
+  vi.mocked(usePlayerStageTattoos).mockReturnValue(tattooQuery(tattoos));
   render(<PlayerModelEditor />);
   expect(preview).toHaveBeenCalledWith(expect.objectContaining({ tattoos }));
   expect(screen.getByText(/1 tattoo from the Tattoo Parlour is rendered/i)).toBeVisible();

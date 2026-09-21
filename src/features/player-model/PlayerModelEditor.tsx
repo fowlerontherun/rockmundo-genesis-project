@@ -38,7 +38,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
     else setError('Your saved model could not be reloaded. Your edits are still here.');
   }
   return <section className="player-model-editor" aria-label="Full-body avatar creator">
-    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your character, dress them head to toe, add accessories, and take the same look on stage.</p></div><span className="player-model-editor__badge">ACCESSORIES · TATTOOS · SKIN STORE</span></div>
+    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">FACE DETAIL · ACCESSORIES · TATTOOS · SKIN STORE</span></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
         <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} tattoos={tattoos} />

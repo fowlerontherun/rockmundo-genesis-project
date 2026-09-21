@@ -41,9 +41,15 @@ export const FACIAL_HAIR_STYLES = ['none', 'stubble', 'moustache', 'goatee', 'sh
 export const HAT_STYLES = ['none', 'beanie', 'baseball_cap', 'bucket_hat', 'fedora'] as const;
 export const GLASSES_STYLES = ['none', 'round', 'square', 'aviator', 'sunglasses'] as const;
 export const EARRING_STYLES = ['none', 'studs', 'hoops', 'drops'] as const;
+export const FACE_SHAPES = ['classic', 'oval', 'angular', 'soft', 'wide'] as const;
+export const EYEBROW_STYLES = ['natural', 'straight', 'arched', 'bold', 'soft'] as const;
+export const SKIN_DETAILS = ['smooth', 'freckles', 'beauty_marks', 'weathered'] as const;
 export const HAT_LABELS: Record<typeof HAT_STYLES[number], string> = { none: 'No hat', beanie: 'Beanie', baseball_cap: 'Baseball cap', bucket_hat: 'Bucket hat', fedora: 'Fedora' };
 export const GLASSES_LABELS: Record<typeof GLASSES_STYLES[number], string> = { none: 'No glasses', round: 'Round glasses', square: 'Square glasses', aviator: 'Aviators', sunglasses: 'Sunglasses' };
 export const EARRING_LABELS: Record<typeof EARRING_STYLES[number], string> = { none: 'No earrings', studs: 'Studs', hoops: 'Hoops', drops: 'Drop earrings' };
+export const FACE_SHAPE_LABELS: Record<typeof FACE_SHAPES[number], string> = { classic: 'Classic', oval: 'Oval', angular: 'Angular', soft: 'Soft', wide: 'Wide' };
+export const EYEBROW_LABELS: Record<typeof EYEBROW_STYLES[number], string> = { natural: 'Natural', straight: 'Straight', arched: 'Arched', bold: 'Bold', soft: 'Soft' };
+export const SKIN_DETAIL_LABELS: Record<typeof SKIN_DETAILS[number], string> = { smooth: 'Smooth', freckles: 'Freckles', beauty_marks: 'Beauty marks', weathered: 'Weathered' };
 export const ACCESSORY_COLORS = [['Black', '#20232b'], ['Chalk', '#eee8db'], ['Red', '#bd3548'], ['Gold', '#d8ad49'], ['Green', '#3d795b'], ['Blue', '#426baa'], ['Purple', '#8055a2'], ['Pink', '#d376a1']] as const;
 export const HAIR_LABELS: Record<typeof HAIR_STYLES[number], string> = {
   original: 'Original haircut', bald: 'Bald', buzz: 'Buzz cut', quiff: 'Quiff', mohawk: 'Mohawk', bob: 'Bob',
@@ -52,13 +58,14 @@ export const HAIR_LABELS: Record<typeof HAIR_STYLES[number], string> = {
 };
 export const FACIAL_HAIR_LABELS: Record<typeof FACIAL_HAIR_STYLES[number], string> = { none: 'Clean shaven', stubble: 'Stubble', moustache: 'Moustache', goatee: 'Goatee', short_beard: 'Short beard', full_beard: 'Full beard', long_beard: 'Long beard', sideburns: 'Sideburns' };
 export const HAIR_COLORS = [['Black', '#221f24'], ['Brown', '#54372a'], ['Chestnut', '#854b32'], ['Ginger', '#b75e32'], ['Blond', '#d5b474'], ['Silver', '#aeb5bd'], ['White', '#eee8db'], ['Pink', '#d376a1'], ['Blue', '#426baa'], ['Purple', '#8055a2']] as const;
+export const EYE_COLORS = [['Dark brown', '#402a22'], ['Brown', '#65442d'], ['Hazel', '#8a713d'], ['Green', '#4f755a'], ['Blue', '#4d79a8'], ['Grey', '#7b8794'], ['Amber', '#a16b2f']] as const;
 export function headModelStyle(appearance: PlayerAppearance): Style { return appearance.head.hairStyle && appearance.head.hairStyle !== 'original' ? 'casual' : appearance.head.style; }
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/).transform(value => value.toLowerCase());
 const item = (slot: EquipmentSlot) => z.string().refine(value => STARTER_ITEMS[slot].some(entry => entry.id === value), 'Choose an available starter item');
 export const appearanceSchema = z.object({
   version: z.literal(1),
   body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), skin: color }).strict(),
-  head: z.object({ style: z.enum(STYLES), hair: color, hairStyle: z.enum(HAIR_STYLES).optional(), facialHair: z.enum(FACIAL_HAIR_STYLES).optional(), facialHairColor: color.optional() }).strict(),
+  head: z.object({ style: z.enum(STYLES), hair: color, hairStyle: z.enum(HAIR_STYLES).optional(), facialHair: z.enum(FACIAL_HAIR_STYLES).optional(), facialHairColor: color.optional(), faceShape: z.enum(FACE_SHAPES).optional(), eyeColor: color.optional(), eyebrowStyle: z.enum(EYEBROW_STYLES).optional(), eyebrowColor: color.optional(), skinDetail: z.enum(SKIN_DETAILS).optional() }).strict(),
   equipment: z.object({
     top: z.object({ itemId: item('top'), color }).strict(),
     bottom: z.object({ itemId: item('bottom'), color }).strict(),
@@ -82,7 +89,7 @@ export function defaultAppearance(seed = ''): PlayerAppearance {
   return {
     version: 1,
     body: { frame: 'masculine', height: 1, build: 1, skin: ['#d4a373', '#8d5524', '#edc7a5', '#593a2d'][hash % 4] },
-    head: { style, hair: '#282027' },
+    head: { style, hair: '#282027', faceShape: 'classic', eyeColor: '#65442d', eyebrowStyle: 'natural', skinDetail: 'smooth' },
     equipment: {
       top: { itemId: `starter.top.${style}`, color: ['#496c7d', '#683c57', '#334f49'][hash % 3] },
       bottom: { itemId: `starter.bottom.${style}`, color: '#272e39' },
@@ -97,6 +104,13 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   if (!parsed.success) return defaultAppearance(seed);
   return {
     ...parsed.data,
+    head: {
+      ...parsed.data.head,
+      faceShape: parsed.data.head.faceShape ?? 'classic',
+      eyeColor: parsed.data.head.eyeColor ?? '#65442d',
+      eyebrowStyle: parsed.data.head.eyebrowStyle ?? 'natural',
+      skinDetail: parsed.data.head.skinDetail ?? 'smooth',
+    },
     accessories: {
       hat: parsed.data.accessories?.hat ?? 'none',
       hatColor: parsed.data.accessories?.hatColor ?? '#20232b',

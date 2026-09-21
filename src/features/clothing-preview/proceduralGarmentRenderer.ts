@@ -93,6 +93,50 @@ function markRigAnchor(mesh: T.Mesh, anchor: GarmentRigAnchor) {
   return mesh;
 }
 
+function garmentConstructionMaterial(spec: RichGarmentVisualSpec, lighten = false) {
+  const color = new T.Color(lighten ? spec.secondaryColor : spec.primaryColor);
+  if (!lighten) color.offsetHSL(0, 0, -.055);
+  return new T.MeshStandardMaterial({
+    color,
+    roughness: Math.min(1, spec.roughness + .08),
+    metalness: Math.max(0, spec.metalness * .25),
+  });
+}
+
+function addTopConstructionDetails(
+  spec: RichGarmentVisualSpec,
+  bodyHeight: number,
+  halfShoulder: number,
+  halfHem: number,
+  torsoDepth: number,
+  add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
+) {
+  const seamMaterial = garmentConstructionMaterial(spec, true);
+  const foldMaterial = garmentConstructionMaterial(spec);
+  const frontZ = spec.z + torsoDepth * .515;
+
+  for (const side of [-1, 1]) {
+    const seam = new T.Mesh(new T.BoxGeometry(halfShoulder * .34, .009, .009), seamMaterial.clone());
+    seam.name = `garment-shoulder-seam-${side < 0 ? 'left' : 'right'}`;
+    seam.position.set(side * halfShoulder * .67, spec.y + bodyHeight * .405, frontZ);
+    seam.rotation.z = side * .14;
+    add(seam, 'Torso');
+  }
+
+  const hem = new T.Mesh(new T.BoxGeometry(halfHem * 1.72, .009, .01), seamMaterial.clone());
+  hem.name = 'garment-hem-seam';
+  hem.position.set(0, spec.y - bodyHeight * .47, frontZ);
+  add(hem, 'Torso');
+
+  for (const [index, x] of [-.16, 0, .16].entries()) {
+    const fold = new T.Mesh(new T.BoxGeometry(.008, bodyHeight * (.2 + index * .025), .007), foldMaterial.clone());
+    fold.name = `garment-front-fold-${index + 1}`;
+    fold.position.set(x * spec.scaleX, spec.y - bodyHeight * (.16 + (index % 2) * .035), frontZ + .004);
+    fold.rotation.z = (index - 1) * .055;
+    add(fold, 'Torso');
+  }
+}
+
 function addDetail(group: T.Group, detail: any, index: number, spec: RichGarmentVisualSpec) {
   const color = /^#[0-9a-fA-F]{6}$/.test(String(detail?.color || '')) ? detail.color : spec.secondaryColor;
   const scale = Math.max(.45, Math.min(1.8, Number(detail?.scale || 1)));
@@ -199,6 +243,7 @@ function addTopGarment(
   );
   torso.position.set(0, spec.y, spec.z);
   add(torso, 'Torso');
+  addTopConstructionDetails(spec, bodyHeight, halfShoulder, halfHem, torsoDepth, add);
 
   if (isDress) {
     const skirtHeight = Math.max(.52, spec.scaleY * .96);
@@ -305,17 +350,28 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       add(skirt, 'Hips');
     } else {
       for (const side of [-1, 1]) {
+        const anchor = side > 0 ? 'UpperLeg.L' : 'UpperLeg.R';
         const leg = new T.Mesh(new T.CapsuleGeometry(spec.scaleX * .22, spec.scaleY, 6, 14), material);
         leg.position.set(side * spec.scaleX * .25, spec.y, spec.z);
-        add(leg, side > 0 ? 'UpperLeg.L' : 'UpperLeg.R');
+        add(leg, anchor);
+        const crease = new T.Mesh(new T.BoxGeometry(.009, spec.scaleY * .72, .008), garmentConstructionMaterial(spec));
+        crease.name = `garment-trouser-crease-${side > 0 ? 'left' : 'right'}`;
+        crease.position.set(side * spec.scaleX * .25, spec.y, spec.z + spec.scaleZ * .43);
+        add(crease, anchor);
       }
     }
   } else if (spec.slot === 'footwear') {
     for (const side of [-1, 1]) {
       const shoe = new T.Mesh(new T.BoxGeometry(spec.scaleX, spec.scaleY, spec.scaleZ), material);
+      const anchor = side > 0 ? 'Foot.L' : 'Foot.R';
       shoe.position.set(side * .2, spec.y, .09 + spec.z);
       shoe.rotation.x = -.08;
-      add(shoe, side > 0 ? 'Foot.L' : 'Foot.R');
+      add(shoe, anchor);
+      const sole = new T.Mesh(new T.BoxGeometry(spec.scaleX * 1.05, Math.max(.018, spec.scaleY * .12), spec.scaleZ * 1.04), garmentConstructionMaterial(spec, true));
+      sole.name = `garment-shoe-sole-${side > 0 ? 'left' : 'right'}`;
+      sole.position.set(side * .2, spec.y - spec.scaleY * .46, .09 + spec.z + .006);
+      sole.rotation.x = -.08;
+      add(sole, anchor);
     }
   } else if (spec.slot === 'headwear') {
     const crown = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .55, spec.scaleX * .62, spec.scaleY, 28), material);

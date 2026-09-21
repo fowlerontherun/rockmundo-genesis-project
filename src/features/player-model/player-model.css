@@ -73,3 +73,9 @@
 .player-model-head__match { display: flex; align-items: center; gap: 8px; }
 .player-model-head input[type=checkbox] { accent-color: #8adbd7; width: 17px; height: 17px; }
 .player-model-preview__controls { flex-wrap: wrap; padding: 0 12px; }
+
+.tattoo-avatar-preview { overflow: hidden; border-radius: 0 0 12px 12px; background: #101823; }
+.tattoo-avatar-preview .player-model-preview { position: relative; top: 0; height: clamp(380px, 52vw, 520px); min-height: 360px; }
+.tattoo-avatar-preview__note { margin: 0; padding: 12px 16px 16px; border-top: 1px solid #2a3748; color: #a6b2c4; font-size: 11px; line-height: 1.55; }
+.tattoo-avatar-preview__status { display: grid; min-height: 220px; place-items: center; padding: 24px; text-align: center; color: #a6b2c4; background: #101823; }
+@media (max-width: 760px) { .tattoo-avatar-preview .player-model-preview { height: 420px; } }
