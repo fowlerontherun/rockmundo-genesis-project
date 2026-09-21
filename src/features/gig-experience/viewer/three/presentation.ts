@@ -146,7 +146,7 @@ export function totpFormation(plan: PerformerPlan, variantSeed = 0): Map<string,
   for (const entity of ranked) {
     const preferredBase = totpPreferredMarks(entity.role, entity.instrument);
     const entitySeed = stableTotpLayoutSeed(`${variantSeed}:${entity.id}`);
-    const rotation = preferredBase.length ? entitySeed % preferredBase.length : 0;
+    const rotation = variantSeed !== 0 && preferredBase.length ? entitySeed % preferredBase.length : 0;
     const preferred = preferredBase
       .map((_, index) => preferredBase[(index + rotation) % preferredBase.length])
       .map((mark) => totpLayoutVariantMark(mark, entity.role, variantSeed));
