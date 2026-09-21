@@ -80,7 +80,7 @@
     "test:totp-render-worker": "node --test workers/totp-render-worker/lib.test.mjs",
     "test:totp:phase2": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/episodeManifest.test.ts src/features/top-of-the-pops/episodeManifestApi.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx && node --test workers/totp-render-worker/lib.test.mjs",
     "test:totp:phase3": "vitest run src/features/top-of-the-pops/renderSpec.test.ts src/features/top-of-the-pops/renderQueueApi.test.ts src/features/top-of-the-pops/__tests__/preflight.test.ts src/features/top-of-the-pops/productionAuditApi.test.ts src/features/top-of-the-pops/TotpBroadcastRecoveryBoundary.test.tsx src/pages/__tests__/topOfThePops.pages.test.tsx && node --test workers/totp-render-worker/lib.test.mjs",
-    "test:totp:render-smoke": "playwright test tests/totp/render-surface.spec.ts --project=chromium"
+    "test:totp:render-smoke": "playwright test --config=playwright.totp.config.ts render-surface.spec.ts --project=chromium"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
