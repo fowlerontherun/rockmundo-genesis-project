@@ -34,8 +34,8 @@ function mesh(geometry: T.BufferGeometry, mat: T.Material, name: string) {
 }
 
 export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, head: T.Bone) {
-  const accessories = appearance.accessories ?? { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b' };
-  if (accessories.hat === 'none' && accessories.glasses === 'none') return;
+  const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) };
+  if (accessories.hat === 'none' && accessories.glasses === 'none' && accessories.earrings === 'none') return;
 
   const bounds = headSkinBounds(root);
   if (bounds.isEmpty()) return;
@@ -133,6 +133,39 @@ export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, h
       glasses.add(arm);
     }
     anchor.add(glasses);
+  }
+
+  if (accessories.earrings !== 'none') {
+    const earrings = new T.Group();
+    earrings.name = `avatar-earrings-${accessories.earrings}`;
+    const metal = material(accessories.earringColor, 'AccessoryEarring', .9, .22);
+    const earY = center.y - size.y * .015;
+    const earZ = center.z + rz * .03;
+    for (const side of [-1, 1]) {
+      const earX = center.x + side * rx * .985;
+      if (accessories.earrings === 'studs') {
+        const stud = mesh(new T.SphereGeometry(size.x * .028, 12, 8), metal.clone(), 'earring-stud');
+        stud.position.set(earX, earY, earZ);
+        earrings.add(stud);
+      } else if (accessories.earrings === 'hoops') {
+        const hoop = mesh(new T.TorusGeometry(size.y * .055, size.x * .012, 8, 22, Math.PI * 1.86), metal.clone(), 'earring-hoop');
+        hoop.position.set(earX, earY - size.y * .035, earZ);
+        hoop.rotation.z = side * .05;
+        earrings.add(hoop);
+      } else {
+        const stud = mesh(new T.SphereGeometry(size.x * .022, 10, 8), metal.clone(), 'earring-drop-stud');
+        stud.position.set(earX, earY, earZ);
+        earrings.add(stud);
+        const link = mesh(new T.CylinderGeometry(size.x * .008, size.x * .008, size.y * .09, 8), metal.clone(), 'earring-drop-link');
+        link.position.set(earX, earY - size.y * .055, earZ);
+        earrings.add(link);
+        const drop = mesh(new T.SphereGeometry(size.x * .034, 12, 8), metal.clone(), 'earring-drop');
+        drop.scale.y = 1.3;
+        drop.position.set(earX, earY - size.y * .115, earZ);
+        earrings.add(drop);
+      }
+    }
+    anchor.add(earrings);
   }
 
   root.add(anchor);
