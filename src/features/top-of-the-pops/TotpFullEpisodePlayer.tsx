@@ -46,10 +46,11 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   const current = ordered[currentIndex] ?? null;
   const hasChartRundown = totpRundownHasRealPositions(chartRundown);
   const episodeId = ordered[0]?.payload.episodeId ?? null;
+  const episodeIdIsPersisted = !!episodeId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(episodeId);
   const presenterAudioQuery = useQuery({
     queryKey: ["totp", "presenter-audio", episodeId],
     queryFn: () => getTotpEpisodePresenterAudio(episodeId!),
-    enabled: !!episodeId,
+    enabled: episodeIdIsPersisted,
     staleTime: 60_000,
   });
   const presenterAudio = presenterAudioQuery.data ?? {};
