@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOTP_REUSABLE_PRESENTER_PHRASES, totpReusablePresenterPhrase } from "./presenterPhraseAudio";
+import { TOTP_REUSABLE_PRESENTER_PHRASES, buildTotpReusablePresenterIntro, selectTotpReusablePresenterPhrase, totpReusablePresenterPhrase } from "./presenterPhraseAudio";
 
 describe("TOTP reusable presenter phrase library", () => {
   it("provides a varied reusable phrase bank without song-title placeholders", () => {
@@ -28,5 +28,20 @@ describe("TOTP reusable presenter phrase library", () => {
     expect(totpReusablePresenterPhrase("latest-entry-from")?.script).toBe("Here's the latest entry from");
     expect(totpReusablePresenterPhrase("another-smash-from")?.script).toBe("Here's another smash hit from");
     expect(totpReusablePresenterPhrase("number-one-its")?.script).toBe("At number one, it's");
+  });
+
+  it("selects context-aware phrases only when the context is known", () => {
+    expect(selectTotpReusablePresenterPhrase({ rank: 8, stableKey: "demo", isNewEntry: true }).category).toBe("new_entry");
+    expect(selectTotpReusablePresenterPhrase({ rank: 22, stableKey: "demo", chartMovement: 12 }).category).toBe("climber");
+    expect(selectTotpReusablePresenterPhrase({ rank: 4, stableKey: "demo", isReturning: true }).category).toBe("returning");
+    expect(selectTotpReusablePresenterPhrase({ rank: 1, stableKey: "demo" }).id).toBe("number-one-its");
+  });
+
+  it("is deterministic and keeps song titles out of the assembled line", () => {
+    const first = buildTotpReusablePresenterIntro("Untitled Audio", { rank: 7, stableKey: "episode-42:band-1" });
+    const second = buildTotpReusablePresenterIntro("Untitled Audio", { rank: 7, stableKey: "episode-42:band-1" });
+    expect(second).toEqual(first);
+    expect(first.script).toContain("Untitled Audio!");
+    expect(first.script.toLowerCase()).not.toContain("song");
   });
 });
