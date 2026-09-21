@@ -42,10 +42,19 @@ describe('Top of the Pops archived performer visuals', () => {
       profile_id: PROFILE_ID,
       display_name: 'Frozen Player',
       role: 'guitar',
-      visual_snapshot: { appearance, legacyAvatar: null, richClothing: [] },
+      visual_snapshot: {
+        appearance,
+        legacyAvatar: null,
+        richClothing: [],
+        tattoos: [{ id: 'tattoo-1', profile_id: PROFILE_ID, body_slot: 'left_forearm', ink_color: '#1A2230', quality_score: 91, is_infected: false, category: 'musical' }],
+      },
     }));
-    expect(result?.appearances[PROFILE_ID]).toEqual(appearance);
+    expect(result?.appearances[PROFILE_ID]).toMatchObject(appearance);
+    expect(result?.appearances[PROFILE_ID].accessories).toEqual({ hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b' });
     expect(result?.richClothing[PROFILE_ID]).toEqual([]);
+    expect(result?.tattoos?.[PROFILE_ID]).toEqual([{
+      id: 'tattoo-1', profile_id: PROFILE_ID, body_slot: 'left_forearm', ink_color: '#1a2230', quality_score: 91, is_infected: false, category: 'musical',
+    }]);
   });
 
   it('reconstructs a legacy avatar when no stage appearance existed at broadcast time', () => {
