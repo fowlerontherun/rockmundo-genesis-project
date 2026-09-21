@@ -16,6 +16,7 @@ import {
   evaluateProbe,
   frameCount,
   locateFrame,
+  presenterSequenceTrackSpecs,
   sha256Text,
   stableStringify,
 } from "./lib.mjs";
@@ -236,22 +237,14 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
         if (!file) throw new Error(`Presenter link for ${item.performance_id} has no recorded presenter audio.`);
         tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.95, loop: false });
       } else if (Array.isArray(item.audio_sequence) && item.audio_sequence.length > 0) {
-        for (const fragment of item.audio_sequence) {
-          const durationMs = Math.max(1, Number(fragment.duration_ms ?? 0));
-          const offsetMs = Math.max(0, Number(fragment.offset_ms ?? 0));
-          if (!fragment.url || !fragment.sha256 || !Number.isFinite(durationMs) || !Number.isFinite(offsetMs)) {
-            throw new Error(`Presenter fragment for ${item.performance_id} is incomplete.`);
-          }
-          if (offsetMs + durationMs > item.duration_ms + 5) {
-            throw new Error(`Presenter fragments for ${item.performance_id} exceed the frozen link duration.`);
-          }
-          const file = await source(fragment.url, fragment.sha256);
+        for (const fragmentTrack of presenterSequenceTrackSpecs(item)) {
+          const file = await source(fragmentTrack.url, fragmentTrack.sha256);
           tracks.push({
             file,
-            startMs: item.start_ms + offsetMs,
-            durationMs,
-            gain: 0.95,
-            loop: false,
+            startMs: fragmentTrack.startMs,
+            durationMs: fragmentTrack.durationMs,
+            gain: fragmentTrack.gain,
+            loop: fragmentTrack.loop,
           });
         }
       } else {
