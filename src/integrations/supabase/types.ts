@@ -72159,6 +72159,10 @@ export type Database = {
         Args: { p_episode_id: string }
         Returns: Json
       }
+      totp_episode_presenter_fragments: {
+        Args: { p_episode_id: string }
+        Returns: Json
+      }
       totp_episode_production_audit: {
         Args: { p_episode_id: string; p_limit?: number }
         Returns: {
