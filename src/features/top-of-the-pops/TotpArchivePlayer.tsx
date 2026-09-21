@@ -295,7 +295,10 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
     const line = playTotpPresenterLine({
       text: cue.presenterText,
       presenterKey,
-      recordedUrl: presenterRecordedUrl || null,
+      recordedUrl: presenterRecordedUrl
+        || (!presenterRecordedSequence?.length
+          ? totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro"))
+          : null),
       recordedSequence: presenterRecordedUrl ? null : presenterRecordedSequence,
       volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
       onRecordedElementChange: (element) => {
