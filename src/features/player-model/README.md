@@ -7,7 +7,7 @@ modular assembly, skin/clothing dyes and performance poses.
 
 ## Shipped behaviour
 
-- Masculine and feminine rig families; height/build, skin tone and hair colour.
+- Masculine and feminine rig families; height/build, skin tone, hair colour and shared head-detail anchors.
 - Three heads and six free choices each for tops, bottoms and footwear: 18 starter
   pieces, 12 named colour swatches per slot and a custom colour picker. Every new
   and existing character can equip them immediately; no purchase or grant is needed.
@@ -17,11 +17,12 @@ modular assembly, skin/clothing dyes and performance poses.
   garment designs built from the existing meshes, not 18 new mesh silhouettes.
 - Free starter clothing and standard instrument finishes. Saving costs nothing
   and does not affect skill, cash, equipment ownership or gig outcomes.
+- Five hat states (none, beanie, baseball cap, bucket hat, fedora) and five eyewear states (none, round, square, aviator, sunglasses), each with named colours and a custom picker. Accessories attach to the animated Head bone and are saved with the stage appearance.
+- Owned Tattoo Parlour ink is rendered on the same 3D model using the existing body slots. Arm, shoulder, wrist, neck, chest and back tattoos follow rig bones; quality controls ink opacity and infection adds a visible irritated tint without changing the authoritative tattoo record.
 - Camera rotation/zoom, keyboard controls and ten performance preview poses.
 - The active character owns its model. Switching characters resets the editor
   session; saves target the character captured in the request.
-- Gig lineups load cosmetic appearances in one batched read. Missing models use
-  stable starter appearances. Read failures show a recoverable notice.
+- Gig lineups load cosmetic appearances, rich clothing and a minimal tattoo visual projection in batched reads. Missing models use stable starter appearances. Tattoo purchase price, artist, custom text and minigame data are never exposed through the stage projection. Read failures show a recoverable notice.
 - Replays use each performer's **current saved appearance**. Historical wardrobe
   snapshots are not yet recorded. Their canonical event/checksum contracts stay
   unchanged.
@@ -69,13 +70,11 @@ poses and WebGL resources have explicit cleanup.
    adding paid or unlockable items. Do not add them to the free starter allow-list
    or trust a client-supplied price. Existing legacy purchase mutations are not
    reused by this feature.
-3. Add attachment slots for hats, glasses, jewellery and instrument meshes; retain
-   the current standard instrument fallback for unsupported roles/items.
+3. Extend the shipped Head attachment system for jewellery and authored accessory meshes; retain the current standard instrument fallback for unsupported roles/items.
 4. Add appearance snapshots to the authoritative replay generation workflow if
    historical clothing must be preserved. Do not write snapshots from the viewer.
 
-Purchases, accessories and a full face sculpting system are follow-up features;
-the shipped editor only exposes controls that affect the actual stage model.
+Paid accessory ownership and a full face-sculpting system remain follow-up features; the shipped free hats/glasses and owned tattoos now affect the actual stage model.
 
 The six-starter-clothing migration extends only the validated item allow-list.
 `supabase/tests/starter_wardrobe.sql` tests all 18 IDs on both frames and rejects
@@ -116,3 +115,21 @@ checks 256 hair/beard/frame combinations, matching colour, old saved data and
 invalid-input rejection using read-only validation calls. Offline tests exercise
 actual rig assembly, crown coverage, bone attachment, animation and independent
 colour persistence. Browser visual review remains before release.
+
+
+## Accessories and tattoo integration
+
+Accessory choices remain part of appearance version 1 through an optional `accessories`
+object so pre-existing saved rows continue to validate without a rewrite. The database
+allow-list accepts only known hat/glasses IDs and six-digit hex colours. The fitting
+room uses the same procedural attachment renderer as gigs and Top of the Pops.
+
+Tattoo ownership is **not** duplicated into `player_stage_appearances`. The Tattoo
+Parlour remains authoritative. `public.get_stage_tattoo_visuals(uuid[])` exposes only
+the render fields required by authenticated stage viewers: profile/tattoo IDs, body
+slot, ink colour, quality, infection state and design category. Anonymous execution is
+revoked. This keeps financial and artist data private while letting bandmates' visible
+ink appear in shared performances. Tattoo purchases and treatment invalidate the
+fitting-room and gig cosmetic caches immediately.
+
+Migration: `supabase/migrations/20260921183000_avatar_accessories_stage_tattoos.sql`.
