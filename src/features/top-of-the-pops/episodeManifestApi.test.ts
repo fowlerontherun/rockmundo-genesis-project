@@ -4,6 +4,7 @@ const totpRpc = vi.fn();
 const getTotpPerformanceAudio = vi.fn();
 const getTotpEpisodePresenterFragments = vi.fn();
 const getTotpEpisodePlan = vi.fn();
+const getTotpChartRundown = vi.fn();
 const totpRemoteAudioDurationMs = vi.fn();
 const totpRemoteAudioSha256 = vi.fn();
 
@@ -14,6 +15,9 @@ vi.mock("./api", () => ({
 }));
 vi.mock("./scheduleApi", () => ({
   getTotpEpisodePlan: (...args: unknown[]) => getTotpEpisodePlan(...args),
+}));
+vi.mock("./chartRundownApi", () => ({
+  getTotpChartRundown: (...args: unknown[]) => getTotpChartRundown(...args),
 }));
 vi.mock("./audioAsset", () => ({
   totpRemoteAudioDurationMs: (...args: unknown[]) => totpRemoteAudioDurationMs(...args),
@@ -97,9 +101,11 @@ beforeEach(() => {
   getTotpPerformanceAudio.mockReset();
   getTotpEpisodePresenterFragments.mockReset();
   getTotpEpisodePlan.mockReset();
+  getTotpChartRundown.mockReset();
   totpRemoteAudioDurationMs.mockReset();
   totpRemoteAudioSha256.mockReset();
   getTotpEpisodePlan.mockResolvedValue(clearedPlan());
+  getTotpChartRundown.mockResolvedValue({ episode_id: episode.id, chart_snapshot_date: "2026-09-19", streaming: [], digital_sales: [], streaming_count: 0, digital_sales_count: 0 });
   getTotpEpisodePresenterFragments.mockResolvedValue({ presenter_key: "presenter_a", phrases: {}, bands: {} });
   totpRemoteAudioDurationMs.mockResolvedValue(1_350);
   totpRemoteAudioSha256.mockResolvedValue("e".repeat(64));
