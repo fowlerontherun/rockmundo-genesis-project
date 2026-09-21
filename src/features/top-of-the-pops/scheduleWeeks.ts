@@ -74,3 +74,14 @@ export function formatPlannedRuntime(seconds: number): string {
 }
 
 export const TOTP_TARGET_RUNTIME_SECONDS = 20 * 60;
+
+
+const TOTP_CADENCE_ANCHOR = "2026-09-17";
+
+export function isTotpEpisodeDate(iso: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const date = toUtcDate(iso);
+  const anchor = toUtcDate(TOTP_CADENCE_ANCHOR);
+  const diffDays = Math.round((date.getTime() - anchor.getTime()) / 86_400_000);
+  return diffDays >= 0 && date.getUTCDay() === 4 && diffDays % 14 === 0;
+}
