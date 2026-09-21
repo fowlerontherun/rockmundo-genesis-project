@@ -438,6 +438,12 @@ export async function getTotpAdminBookingCatalog(episodeId: string): Promise<Tot
   return data;
 }
 
+export interface TotpAdminResendInvitationResult {
+  status: "resent";
+  invitation_id: string;
+  recipients: number;
+}
+
 export async function adminBookTotpBand(
   episodeId: string,
   bandId: string,
@@ -453,6 +459,16 @@ export async function adminBookTotpBand(
   });
   if (error) throw new Error(error.message || "Could not book this band for Top of the Pops.");
   if (!data) throw new Error("Top of the Pops returned no booking result.");
+  return data;
+}
+
+export async function adminResendTotpInvitation(invitationIdValue: string): Promise<TotpAdminResendInvitationResult> {
+  const normalizedId = invitationId(invitationIdValue);
+  const { data, error } = await totpRpc<TotpAdminResendInvitationResult>("totp_admin_resend_invitation", {
+    p_invitation_id: normalizedId,
+  });
+  if (error) throw new Error(error.message || "Could not resend the Top of the Pops invitation.");
+  if (!data) throw new Error("Top of the Pops returned no resend result.");
   return data;
 }
 
