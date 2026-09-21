@@ -145,6 +145,26 @@ export interface TotpPresenterPlaybackAsset {
   uploaded_at: string;
 }
 
+export interface TotpPresenterFragmentPhraseAsset {
+  storage_path: string;
+  uploaded_at: string | null;
+}
+
+export interface TotpPresenterFragmentBandAsset {
+  band_id: string;
+  band_name: string;
+  audio_url: string;
+  duration_ms: number;
+  sha256: string;
+  version: number;
+}
+
+export interface TotpPresenterFragmentBundle {
+  presenter_key: string | null;
+  phrases: Record<string, TotpPresenterFragmentPhraseAsset>;
+  bands: Record<string, TotpPresenterFragmentBandAsset>;
+}
+
 export interface TotpCheckInResult {
   status: "checked_in";
   already_checked_in?: boolean;
@@ -275,6 +295,19 @@ export async function getTotpEpisodePresenterAudio(
   );
   if (error) throw new Error(error.message || "Could not load presenter recordings.");
   return data && typeof data === "object" && !Array.isArray(data) ? data : {};
+}
+
+export async function getTotpEpisodePresenterFragments(
+  episodeId: string,
+): Promise<TotpPresenterFragmentBundle> {
+  const { data, error } = await totpRpc<TotpPresenterFragmentBundle>(
+    "totp_episode_presenter_fragments",
+    { p_episode_id: invitationId(episodeId) },
+  );
+  if (error) throw new Error(error.message || "Could not load reusable presenter audio.");
+  return data && typeof data === "object" && !Array.isArray(data)
+    ? data
+    : { presenter_key: null, phrases: {}, bands: {} };
 }
 
 export async function getTotpBroadcastArchive(episodeId?: string | null): Promise<TotpBroadcastArchive> {
