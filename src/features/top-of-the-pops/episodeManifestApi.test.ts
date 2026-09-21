@@ -5,6 +5,7 @@ const getTotpPerformanceAudio = vi.fn();
 const getTotpEpisodePresenterFragments = vi.fn();
 const getTotpEpisodePlan = vi.fn();
 const totpRemoteAudioDurationMs = vi.fn();
+const totpRemoteAudioSha256 = vi.fn();
 
 vi.mock("./rpc", () => ({ totpRpc: (...args: unknown[]) => totpRpc(...args) }));
 vi.mock("./api", () => ({
@@ -16,6 +17,7 @@ vi.mock("./scheduleApi", () => ({
 }));
 vi.mock("./audioAsset", () => ({
   totpRemoteAudioDurationMs: (...args: unknown[]) => totpRemoteAudioDurationMs(...args),
+  totpRemoteAudioSha256: (...args: unknown[]) => totpRemoteAudioSha256(...args),
 }));
 vi.mock("./totpMedia", () => ({
   totpMediaPublicUrl: (path: string) => `https://media.example/${path}`,
@@ -96,9 +98,11 @@ beforeEach(() => {
   getTotpEpisodePresenterFragments.mockReset();
   getTotpEpisodePlan.mockReset();
   totpRemoteAudioDurationMs.mockReset();
+  totpRemoteAudioSha256.mockReset();
   getTotpEpisodePlan.mockResolvedValue(clearedPlan());
   getTotpEpisodePresenterFragments.mockResolvedValue({ presenter_key: "presenter_a", phrases: {}, bands: {} });
   totpRemoteAudioDurationMs.mockResolvedValue(1_350);
+  totpRemoteAudioSha256.mockResolvedValue("e".repeat(64));
 });
 
 describe("TOTP stored running sheet", () => {
@@ -165,6 +169,47 @@ describe("TOTP stored running sheet", () => {
       expect.objectContaining({ role: "band_name", duration_ms: 900, sha256: "d".repeat(64), version: 3 }),
     ]);
     expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")).toBeUndefined();
+    expect(issues).toEqual([]);
+  });
+
+  it("remotely hashes legacy reusable phrase files with truncated digest filenames", async () => {
+    const reusableEpisode: TotpEpisode = {
+      ...episode,
+      performances: [{
+        ...episode.performances[0],
+        presenter_intro: "And now, it's The Kestrels!",
+      }],
+    };
+    getTotpEpisodePlan.mockResolvedValue({ ...clearedPlan(), presenter_audio: {} });
+    getTotpEpisodePresenterFragments.mockResolvedValue({
+      presenter_key: "presenter_a",
+      phrases: {
+        "and-now-its": {
+          storage_path: `presenters/presenter_a/reusable-phrases/and-now-its-${"c".repeat(16)}.webm`,
+          uploaded_at: "2026-09-21T11:00:00Z",
+        },
+      },
+      bands: {
+        b1: {
+          band_id: "b1",
+          band_name: "The Kestrels",
+          audio_url: "https://media.example/bands/b1.webm",
+          duration_ms: 900,
+          sha256: "d".repeat(64),
+          version: 3,
+        },
+      },
+    });
+    getTotpPerformanceAudio.mockResolvedValue({
+      audio_url: "https://cdn/p1.mp3",
+      audio_generation_status: "complete",
+      duration_seconds: 182,
+    });
+
+    const { manifest, issues } = await buildTotpEpisodeManifestFromEpisode(reusableEpisode);
+
+    expect(totpRemoteAudioSha256).toHaveBeenCalledOnce();
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio_sequence")?.fragments?.[0].sha256).toBe("e".repeat(64));
     expect(issues).toEqual([]);
   });
 
