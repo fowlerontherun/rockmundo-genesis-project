@@ -59,6 +59,35 @@ vi.mock("@/features/top-of-the-pops/api", () => ({
   adminLockTotpRunningOrder: vi.fn(),
   adminBuildTotpBroadcastArchive: vi.fn(),
   adminCompleteTotpPerformance: vi.fn(),
+  getTotpAdminBookingCatalog: vi.fn().mockResolvedValue({
+    episode_id: episode.id,
+    episode_number: episode.episode_number,
+    episode_date: episode.episode_date,
+    episode_status: "inviting",
+    configured_snapshot_date: "2026-09-18",
+    source_snapshot_date: "2026-09-18",
+    provisional_snapshot: false,
+    max_performances: 10,
+    booked_slots: 0,
+    available_slots: 10,
+    candidates: [{
+      band_id: episode.performances[0].band_id,
+      band_name: "The Kestrels",
+      genre: "Indie Rock",
+      best_rank: 1,
+      eligible: true,
+      previous_episode_performer: false,
+      ineligible_reason: null,
+      invitation: null,
+      songs: [{
+        song_id: episode.performances[0].song_id,
+        song_title: "Opening Night",
+        qualifying_rank: 1,
+        qualifying_chart: "both",
+      }],
+    }],
+  }),
+  adminBookTotpBand: vi.fn(),
   canRespondToTotpInvitation: () => true,
   canAttemptTotpCheckIn: () => false,
 }));
@@ -127,6 +156,15 @@ describe("Top of the Pops pages", () => {
     await waitFor(() => expect(screen.getAllByText(/The Kestrels/i).length).toBeGreaterThan(0));
     expect(screen.getAllByText(/Opening Night/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/London time/i).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("opens the admin Bookings tab and shows chart-eligible bands", async () => {
+    renderPage(<TopOfThePopsAdmin />, "/admin/top-of-the-pops#bookings");
+
+    await waitFor(() => expect(screen.getByRole("tab", { name: /Bookings/i })).toHaveAttribute("data-state", "active"));
+    expect(await screen.findByText(/Book bands for Top of the Pops/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/The Kestrels/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Send invite/i })).toBeEnabled();
   });
 
   it("renders the admin episode with the stored running sheet panel", async () => {

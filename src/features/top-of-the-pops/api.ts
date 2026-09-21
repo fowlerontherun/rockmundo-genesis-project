@@ -165,6 +165,61 @@ export interface TotpPresenterFragmentBundle {
   bands: Record<string, TotpPresenterFragmentBandAsset>;
 }
 
+export interface TotpAdminBookingSong {
+  song_id: string;
+  song_title: string;
+  qualifying_rank: number;
+  qualifying_chart: "streaming" | "digital_sales" | "both";
+}
+
+export interface TotpAdminBookingInvitationSummary {
+  invitation_id: string;
+  status: TotpInvitationStatus;
+  song_id: string;
+  qualifying_rank: number;
+  response_deadline: string;
+}
+
+export interface TotpAdminBookingCandidate {
+  band_id: string;
+  band_name: string;
+  genre: string;
+  best_rank: number;
+  eligible: boolean;
+  previous_episode_performer: boolean;
+  ineligible_reason: string | null;
+  invitation: TotpAdminBookingInvitationSummary | null;
+  songs: TotpAdminBookingSong[];
+}
+
+export interface TotpAdminBookingCatalog {
+  episode_id: string;
+  episode_number: number;
+  episode_date: string;
+  episode_status: string;
+  configured_snapshot_date: string;
+  source_snapshot_date: string | null;
+  provisional_snapshot: boolean;
+  max_performances: number;
+  booked_slots: number;
+  available_slots: number;
+  candidates: TotpAdminBookingCandidate[];
+}
+
+export interface TotpAdminBookingResult {
+  status: "booked" | "already_booked";
+  invitation_id: string;
+  invitation_status: TotpInvitationStatus;
+  band_id: string;
+  band_name?: string;
+  song_id: string;
+  song_title?: string;
+  qualifying_rank: number;
+  qualifying_chart?: "streaming" | "digital_sales" | "both";
+  response_deadline?: string;
+  chart_snapshot_date?: string;
+}
+
 export interface TotpCheckInResult {
   status: "checked_in";
   already_checked_in?: boolean;
@@ -370,6 +425,34 @@ export async function chooseTotpBackstageInterview(id: string, choice: TotpInter
   });
   if (error) throw new Error(error.message || "Could not save the Top of the Pops interview response.");
   if (!data) throw new Error("Top of the Pops returned no interview response.");
+  return data;
+}
+
+export async function getTotpAdminBookingCatalog(episodeId: string): Promise<TotpAdminBookingCatalog> {
+  const normalizedId = invitationId(episodeId);
+  const { data, error } = await totpRpc<TotpAdminBookingCatalog>("totp_admin_booking_catalog", {
+    p_episode_id: normalizedId,
+  });
+  if (error) throw new Error(error.message || "Could not load Top of the Pops booking options.");
+  if (!data) throw new Error("Top of the Pops returned no booking catalogue.");
+  return data;
+}
+
+export async function adminBookTotpBand(
+  episodeId: string,
+  bandId: string,
+  songId: string,
+): Promise<TotpAdminBookingResult> {
+  const normalizedEpisodeId = invitationId(episodeId);
+  const normalizedBandId = invitationId(bandId);
+  const normalizedSongId = invitationId(songId);
+  const { data, error } = await totpRpc<TotpAdminBookingResult>("totp_admin_book_band", {
+    p_episode_id: normalizedEpisodeId,
+    p_band_id: normalizedBandId,
+    p_song_id: normalizedSongId,
+  });
+  if (error) throw new Error(error.message || "Could not book this band for Top of the Pops.");
+  if (!data) throw new Error("Top of the Pops returned no booking result.");
   return data;
 }
 
