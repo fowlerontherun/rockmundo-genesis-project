@@ -66,8 +66,8 @@ export function buildTotpContinuityCopyFromActs(
   if (kind === "between" && current && nextAct) {
     return {
       eyebrow: "Back in the studio!",
-      headline: `${current.bandName} — ${current.songTitle}!`,
-      body: `What a reaction! That's this week's #${current.chartRank}. We're heading ${nextAct.stage === current.stage ? "straight back to the same stage" : `across the studio to ${nextAct.stage.replaceAll("_", " ")}`} — next up, ${nextAct.bandName} with ${nextAct.songTitle}, currently #${nextAct.chartRank}!`,
+      headline: `${current.bandName} — what a performance!`,
+      body: `What a reaction! That's this week's number ${current.chartRank}. We're heading ${nextAct.stage === current.stage ? "straight back to the same stage" : `across the studio to ${nextAct.stage.replaceAll("_", " ")}`} — next up, another chart hit from ${nextAct.bandName}, currently at number ${nextAct.chartRank}!`,
       nextAct,
     };
   }
@@ -79,7 +79,7 @@ export function buildTotpContinuityCopyFromActs(
       ? `Tonight's #1: ${numberOne.bandName}`
       : "See you for the next show",
     body: numberOne
-      ? `${numberOne.songTitle} is sitting at number one! Thanks for making some noise with us tonight — we'll see you next time!`
+      ? `${numberOne.bandName} are sitting at number one! Thanks for making some noise with us tonight — we'll see you next time!`
       : "Thanks for joining us in London! Keep the music loud and we'll see you on the next Top of the Pops!",
     nextAct: null,
   };

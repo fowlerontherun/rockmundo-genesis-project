@@ -36,6 +36,7 @@ import {
 import {
   addDaysIso,
   buildTotpScheduleWeeks,
+  isTotpEpisodeDate,
   mondayOfIso,
   todayIso,
 } from "@/features/top-of-the-pops/scheduleWeeks";
@@ -76,6 +77,7 @@ export default function TopOfThePopsSchedule() {
   const [weeks, setWeeks] = useState(8);
   const [form, setForm] = useState<EpisodeForm | null>(null);
   const [planEpisode, setPlanEpisode] = useState<TotpScheduleEpisode | null>(null);
+  const formDateIsValid = form ? isTotpEpisodeDate(form.episodeDate) : false;
 
   const schedule = useQuery({
     queryKey: ["totp", "schedule", anchor, weeks],
@@ -217,7 +219,9 @@ export default function TopOfThePopsSchedule() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{form?.episodeId ? "Edit episode" : "Plan a new episode"}</DialogTitle>
-            <DialogDescription>Set the air night, host city and presenter for this show.</DialogDescription>
+            <DialogDescription>
+              Set or reschedule the air night, host city and presenter. Regular broadcasts follow the fortnightly Thursday cadence.
+            </DialogDescription>
           </DialogHeader>
           {form && (
             <div className="grid gap-3 sm:grid-cols-2">
@@ -229,6 +233,11 @@ export default function TopOfThePopsSchedule() {
                   value={form.episodeDate}
                   onChange={(event) => setForm({ ...form, episodeDate: event.target.value })}
                 />
+                {!formDateIsValid && (
+                  <p className="text-xs text-destructive">
+                    Choose a valid fortnightly Thursday broadcast date.
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="chart-date">Chart week</Label>
@@ -307,10 +316,10 @@ export default function TopOfThePopsSchedule() {
             <Button variant="ghost" onClick={() => setForm(null)}>Cancel</Button>
             <Button
               data-totp-schedule-save
-              disabled={saveEpisode.isPending || !form?.episodeDate}
+              disabled={saveEpisode.isPending || !form?.episodeDate || !formDateIsValid}
               onClick={() => form && saveEpisode.mutate(form)}
             >
-              {saveEpisode.isPending ? "Saving…" : "Save episode"}
+              {saveEpisode.isPending ? "Saving…" : form?.episodeId ? "Save reschedule" : "Schedule episode"}
             </Button>
           </DialogFooter>
         </DialogContent>

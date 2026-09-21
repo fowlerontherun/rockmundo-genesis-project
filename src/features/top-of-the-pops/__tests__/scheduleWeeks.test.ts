@@ -5,6 +5,7 @@ import {
   formatPlannedRuntime,
   mondayOfIso,
   plannedRuntimeSeconds,
+  isTotpEpisodeDate,
 } from "../scheduleWeeks";
 import type { TotpScheduleEpisode } from "../scheduleApi";
 
@@ -36,6 +37,13 @@ describe("scheduleWeeks", () => {
     expect(mondayOfIso("2026-09-19")).toBe("2026-09-14");
     expect(mondayOfIso("2026-09-20")).toBe("2026-09-14");
     expect(mondayOfIso("2026-09-14")).toBe("2026-09-14");
+  });
+
+  it("recognises only the fortnightly Thursday broadcast cadence", () => {
+    expect(isTotpEpisodeDate("2026-09-17")).toBe(true);
+    expect(isTotpEpisodeDate("2026-10-01")).toBe(true);
+    expect(isTotpEpisodeDate("2026-09-24")).toBe(false);
+    expect(isTotpEpisodeDate("2026-09-18")).toBe(false);
   });
 
   it("adds days across month boundaries", () => {

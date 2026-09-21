@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { type ActivityType } from "@/hooks/useScheduledActivities";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Music, Guitar, Users, Headphones, MapPin, Briefcase, GraduationCap, BookOpen, Video, Heart, Calendar, Target, Mic, Star, Clapperboard } from "lucide-react";
+import { Music, Guitar, Users, Headphones, MapPin, Briefcase, GraduationCap, BookOpen, Video, Heart, Calendar, Target, Mic, Star, Clapperboard, Trophy } from "lucide-react";
 
 interface ScheduleActivityDialogProps {
   open: boolean;
@@ -36,6 +36,7 @@ const ACTIVITY_ROUTES: Record<ActivityType, { path: string; icon: any; label: st
   release_promo: { path: '/release-manager', icon: Star, label: 'Release Promo', description: 'Promotional tour for a release' },
   teaching: { path: '/teaching', icon: GraduationCap, label: 'Teaching Session', description: 'Teach a skill to a friend for bonus XP' },
   jam_session: { path: '/jam-sessions', icon: Users, label: 'Jam Session', description: 'Book a collaborative jam session' },
+  major_event: { path: '/major-events', icon: Trophy, label: 'Major Event', description: 'View stadium and major-event appearances' },
   other: { path: '/schedule', icon: Calendar, label: 'Other Activity', description: 'Schedule a custom activity' },
 };
 
