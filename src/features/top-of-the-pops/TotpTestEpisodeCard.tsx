@@ -8,8 +8,7 @@ import { Check, Clapperboard, FlaskConical, ListVideo, Minus, Plus, ShieldCheck 
 import { TotpTestLifecycleSimulator } from "./TotpTestLifecycleSimulator";
 import { TotpFullShowDemo } from "./TotpFullShowDemo";
 import { adminPreviewTotpTestEpisode, type TotpTestPreviewPerformance } from "./testPreviewApi";
-import { getTotpChartRundown } from "./chartRundownApi";
-import { getTotpEpisode } from "./api";
+import { getTotpAdminTestChartRundown } from "./chartRundownApi";
 
 function formatSnapshotDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Europe/London" }).format(new Date(`${value}T12:00:00Z`));
@@ -24,18 +23,6 @@ export function TotpTestEpisodeCard() {
   const [selectedPerformance, setSelectedPerformance] = useState<TotpTestPreviewPerformance | null>(null);
   const [bookedKeys, setBookedKeys] = useState<string[]>([]);
   const [showFullDemo, setShowFullDemo] = useState(false);
-
-  const currentEpisode = useQuery({
-    queryKey: ["totp", "episode", "admin-demo-rundown"],
-    queryFn: () => getTotpEpisode(),
-    staleTime: 30_000,
-  });
-  const currentEpisodeId = currentEpisode.data?.id ?? null;
-  const rundown = useQuery({
-    queryKey: ["totp", "chart-rundown", "admin-demo", currentEpisodeId ?? "latest"],
-    queryFn: () => getTotpChartRundown(currentEpisodeId),
-    staleTime: 60_000,
-  });
 
   const preview = useMutation({
     mutationFn: () => adminPreviewTotpTestEpisode("admin-test", 10),
@@ -52,6 +39,12 @@ export function TotpTestEpisodeCard() {
   });
 
   const result = preview.data;
+  const rundown = useQuery({
+    queryKey: ["totp", "chart-rundown", "admin-demo", result?.chart_snapshot_date ?? "none"],
+    queryFn: () => getTotpAdminTestChartRundown(result!.chart_snapshot_date),
+    enabled: !!result?.chart_snapshot_date,
+    staleTime: 60_000,
+  });
   const bookedPerformances = result?.performances.filter((performance) => bookedKeys.includes(performanceKey(performance))) ?? [];
 
   const toggleBooking = (performance: TotpTestPreviewPerformance) => {
