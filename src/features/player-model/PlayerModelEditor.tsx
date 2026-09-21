@@ -2,9 +2,10 @@ import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/feature
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
-import { useEquippedRichClothing, usePlayerModel } from './usePlayerModel';
+import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 import { defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
 import { HeadStyling } from './HeadStyling';
+import { AccessoryStyling } from './AccessoryStyling';
 import { StarterWardrobe } from './StarterWardrobe';
 import './player-model.css';
 
@@ -12,13 +13,14 @@ const SKIN_COLORS = ['#f3d3b7', '#dfb18c', '#c58c63', '#a96f46', '#805132', '#59
 export default function PlayerModelEditor() {
   const model = usePlayerModel();
   const richClothing = useEquippedRichClothing(model.profileId);
+  const tattoos = usePlayerStageTattoos(model.profileId);
   if (model.isLoading || (model.profileId && model.query.isPending)) return <p role="status" className="p-8">Loading your character’s stage model…</p>;
   if (model.error || model.query.isError) return <div role="alert" className="p-8"><p>Your saved model could not load.</p><button type="button" className="underline" onClick={() => void model.query.refetch()}>Try again</button></div>;
   if (!model.profileId || !model.query.data) return <p className="p-8">Select a character to create a stage model.</p>;
-  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} />;
+  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} />;
 }
 
-function EditorSession({ profileId, initial, model, richClothing, richClothingError }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean }) {
+function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean }) {
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
@@ -36,12 +38,14 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
     else setError('Your saved model could not be reloaded. Your edits are still here.');
   }
   return <section className="player-model-editor" aria-label="Full-body avatar creator">
-    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your character, dress them head to toe, and take the same look on stage.</p></div><span className="player-model-editor__badge">18 STARTER PIECES · SKIN STORE LAYERS</span></div>
+    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your character, dress them head to toe, add accessories, and take the same look on stage.</p></div><span className="player-model-editor__badge">ACCESSORIES · TATTOOS · SKIN STORE</span></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
-        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} />
+        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} tattoos={tattoos} />
         {richClothing.length > 0 && <p className="player-model-editor__hint">Your currently equipped Skin Store clothing is layered over the starter base model and will also appear in 3D gigs.</p>}
         {richClothingError && <p role="status" className="player-model-editor__hint">Your equipped Skin Store clothing could not be loaded; the starter base outfit is shown.</p>}
+        {tattoos.length > 0 && <p className="player-model-editor__hint">{tattoos.length} tattoo{tattoos.length === 1 ? '' : 's'} from the Tattoo Parlour {tattoos.length === 1 ? 'is' : 'are'} rendered directly on this stage model.</p>}
+        {tattooError && <p role="status" className="player-model-editor__hint">Your tattoo visuals could not be loaded. Your saved tattoos have not been changed.</p>}
         <div className="player-model-editor__preview-role"><label htmlFor="preview-instrument">Try a performance pose</label><select id="preview-instrument" value={role} onChange={event => setRole(event.target.value)}><option value="other">Backstage</option>{Object.entries(STAGE_INSTRUMENTS).map(([id, spec]) => <option key={id} value={id}>{spec.label}</option>)}</select><p>Your band role decides which instrument you play at gigs.</p></div>
       </div>
       <form className="player-model-editor__form" onSubmit={event => { event.preventDefault(); void save(); }}>
@@ -52,6 +56,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <label className="player-model-editor__range">Build <output>{Math.round(draft.body.build * 100)}%</output><input type="range" min="0.85" max="1.15" step="0.01" value={draft.body.build} onChange={event => setBody({ build: Number(event.target.value) })} /></label>
           <div className="player-model-editor__skin"><span>Skin tone</span><div role="group" aria-label="Skin tones">{SKIN_COLORS.map((color, index) => <button key={color} type="button" aria-label={`Skin tone ${index + 1}`} aria-pressed={draft.body.skin === color} style={{ backgroundColor: color }} onClick={() => setBody({ skin: color })} />)}<input type="color" aria-label="Custom skin tone" value={draft.body.skin} onChange={event => setBody({ skin: event.target.value })} /></div></div>
           <HeadStyling appearance={draft} onChange={change} />
+          <AccessoryStyling appearance={draft} onChange={change} />
         </fieldset>
         <fieldset disabled={model.save.isPending}>
           <legend>02 <span>Wardrobe</span></legend>
