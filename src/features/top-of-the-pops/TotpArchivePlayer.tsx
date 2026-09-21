@@ -161,6 +161,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
   const endedRef = useRef(false);
   const songAudioRef = useRef<HTMLAudioElement | null>(null);
   const presenterAudioRef = useRef<HTMLAudioElement | null>(null);
+  const presenterLineRef = useRef<TotpPresenterLineHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const exportStopRef = useRef(false);
   const [exportState, setExportState] = useState<"idle" | "recording" | "finishing" | "error">("idle");
@@ -271,11 +272,25 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
 
   useEffect(() => {
     if (!voiceEnabled) {
+      presenterLineRef.current?.stop();
+      presenterLineRef.current = null;
+      presenterAudioRef.current = null;
       setPresenterSpeaking(false);
       cancelTotpPresenterSpeech();
       return;
     }
-    if (!playing || cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
+
+    if (!playing) {
+      presenterLineRef.current?.stop();
+      presenterLineRef.current = null;
+      presenterAudioRef.current = null;
+      setPresenterSpeaking(false);
+      if (cue?.type === "presenter") spokenPresenterCueRef.current = null;
+      return;
+    }
+
+    if (cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
+
     spokenPresenterCueRef.current = cue.id;
     const holder: { current: TotpPresenterLineHandle | null } = { current: null };
     const line = playTotpPresenterLine({
@@ -285,19 +300,28 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
       volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
       onSpeakingChange: (speaking) => {
         setPresenterSpeaking(speaking);
-        // Keep the export mixer pointed at the live presenter element.
+        // Keep the export mixer pointed at the live presenter element. The line is
+        // intentionally allowed to finish after the visual cue changes so a long
+        // recorded introduction cannot be chopped at the performance boundary.
         presenterAudioRef.current = speaking ? holder.current?.element ?? null : null;
+        if (!speaking && presenterLineRef.current === holder.current) {
+          presenterLineRef.current = null;
+          presenterAudioRef.current = null;
+        }
       },
     });
     holder.current = line;
+    presenterLineRef.current = line;
+  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedUrl, voiceEnabled]);
 
-
+  useEffect(() => {
     return () => {
-      line.stop();
+      presenterLineRef.current?.stop();
+      presenterLineRef.current = null;
       presenterAudioRef.current = null;
       setPresenterSpeaking(false);
     };
-  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedUrl, voiceEnabled]);
+  }, [source.id]);
   useEffect(() => {
     if (!playing) return;
     let frame = 0, previous = performance.now();
