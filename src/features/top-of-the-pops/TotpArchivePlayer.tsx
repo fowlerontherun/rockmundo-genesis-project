@@ -20,7 +20,7 @@ import { totpAudienceReactionLabel } from "./studioAudience";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import { downloadTotpExport, recordTotpBroadcast, TOTP_EXPORT_PROFILE, totpExportFileName, TotpExportUnsupportedError } from "./exportBroadcast";
 import { TOTP_EXPORT_LEAD_IN_MS, totpCountdownSeconds } from "./broadcastCountdown";
-import { cancelTotpPresenterSpeech, playTotpPresenterLine, type TotpPresenterLineHandle } from "./presenterVoice";
+import { cancelTotpPresenterSpeech, playTotpPresenterLine, type TotpPresenterLineHandle, type TotpPresenterRecordedClip } from "./presenterVoice";
 
 const metric = <T,>(value: T) => ({ status: "available" as const, value, source: "authoritative" as const });
 const unavailable = (reason: string) => ({ status: "not_applicable" as const, reason });
@@ -136,9 +136,9 @@ export function activeTotpCue(cues: TotpBroadcastCue[], positionMs: number): Tot
   return active.at(-1) ?? cues.filter((cue) => cue.offsetMs <= positionMs).at(-1) ?? cues[0] ?? null;
 }
 
-export interface TotpArchivePlayerProps { replay: TotpBroadcastReplay; autoPlay?: boolean; presenterRecordedUrl?: string | null; onEnded?: () => void; }
+export interface TotpArchivePlayerProps { replay: TotpBroadcastReplay; autoPlay?: boolean; presenterRecordedUrl?: string | null; presenterRecordedSequence?: TotpPresenterRecordedClip[] | null; onEnded?: () => void; }
 
-export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterRecordedUrl = null, onEnded }: TotpArchivePlayerProps) {
+export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterRecordedUrl = null, presenterRecordedSequence = null, onEnded }: TotpArchivePlayerProps) {
   const replay = useMemo(() => archivedReplay(source), [source]);
   const experience = useMemo(() => archivedExperience(source), [source]);
   const playerModelsSnapshot = useMemo(() => archivedPlayerModels(source), [source]);
@@ -292,27 +292,28 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
     if (cue?.type !== "presenter" || !cue.presenterText || spokenPresenterCueRef.current === cue.id) return;
 
     spokenPresenterCueRef.current = cue.id;
-    const holder: { current: TotpPresenterLineHandle | null } = { current: null };
     const line = playTotpPresenterLine({
       text: cue.presenterText,
       presenterKey,
-      recordedUrl: presenterRecordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenterKey, "act-intro")),
+      recordedUrl: presenterRecordedUrl || null,
+      recordedSequence: presenterRecordedUrl ? null : presenterRecordedSequence,
       volume: clampTotpGain(totpMixLevels(cue.type, audienceReaction).presenter),
+      onRecordedElementChange: (element) => {
+        // Keep the export mixer on whichever reusable fragment is currently live.
+        presenterAudioRef.current = element;
+      },
       onSpeakingChange: (speaking) => {
         setPresenterSpeaking(speaking);
-        // Keep the export mixer pointed at the live presenter element. The line is
-        // intentionally allowed to finish after the visual cue changes so a long
-        // recorded introduction cannot be chopped at the performance boundary.
-        presenterAudioRef.current = speaking ? holder.current?.element ?? null : null;
-        if (!speaking && presenterLineRef.current === holder.current) {
+        // The line may intentionally continue after the visual cue changes so a
+        // longer recorded introduction is never chopped at the performance boundary.
+        if (!speaking && presenterLineRef.current === line) {
           presenterLineRef.current = null;
           presenterAudioRef.current = null;
         }
       },
     });
-    holder.current = line;
     presenterLineRef.current = line;
-  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedUrl, voiceEnabled]);
+  }, [audienceReaction, cue?.id, cue?.presenterText, cue?.type, playing, presenterKey, presenterRecordedSequence, presenterRecordedUrl, voiceEnabled]);
 
   useEffect(() => {
     return () => {
