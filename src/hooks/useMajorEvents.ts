@@ -309,10 +309,12 @@ export function useAcceptMajorEvent() {
       if (existingError) throw existingError;
       if (existing) throw new Error('Your band has already confirmed this major event.');
 
+      // createScheduledActivity resolves the active profile from the authenticated
+      // account. Passing profileId as userId made it query profiles.user_id with a
+      // profile UUID, which caused "Player profile not found" for valid players.
       await createScheduledActivity({
-        userId: profileId,
         bandId,
-        activityType: 'major_event' as any,
+        activityType: 'major_event',
         scheduledStart: start,
         scheduledEnd: end,
         title: `🏟️ ${eventName}`,
