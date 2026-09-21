@@ -55,10 +55,10 @@ describe('shipped modular stage models', () => {
     actor.walking = false; actor.update(4, .8, false); const first = actor.bones.get('Head')!.matrixWorld.toArray(); actor.update(90, .8, false); actor.update(4, .8, false); expect(actor.bones.get('Head')!.matrixWorld.toArray()).toEqual(first);
     disposeModel(actor.root);
   });
-  it.each(['masculine', 'feminine'] as const)('assembles %s hats, glasses and owned tattoo visuals on the animated rig', frame => {
+  it.each(['masculine', 'feminine'] as const)('assembles %s hats, glasses, earrings and owned tattoo visuals on the animated rig', frame => {
     const appearance = defaultAppearance();
     appearance.body.frame = frame;
-    appearance.accessories = { hat: 'beanie', hatColor: '#bd3548', glasses: 'round', glassesColor: '#d8ad49' };
+    appearance.accessories = { hat: 'beanie', hatColor: '#bd3548', glasses: 'round', glassesColor: '#d8ad49', earrings: 'hoops', earringColor: '#d8ad49' };
     const tattoos = [{
       id: 'tattoo-visual-1', profile_id: 'profile-1', body_slot: 'left_upper_arm' as const,
       ink_color: '#18202b', quality_score: 88, is_infected: false, category: 'musical' as const,
@@ -67,11 +67,13 @@ describe('shipped modular stage models', () => {
     const model = assemblePlayerModel(library, appearance, tattoos);
     expect(model.getObjectByName('avatar-hat-beanie')).toBeTruthy();
     expect(model.getObjectByName('avatar-glasses-round')).toBeTruthy();
+    expect(model.getObjectByName('avatar-earrings-hoops')).toBeTruthy();
     expect(model.getObjectByName('avatar-tattoo-tattoo-visual-1')).toBeTruthy();
     const actor = new Musician(model, 'vocals', [0, 0, 0], 0, undefined, appearance);
     actor.update(8, .75, false);
     expect(actor.root.getObjectByName('avatar-hat-beanie')).toBeTruthy();
     expect(actor.root.getObjectByName('avatar-glasses-round')).toBeTruthy();
+    expect(actor.root.getObjectByName('avatar-earrings-hoops')).toBeTruthy();
     expect(actor.root.getObjectByName('avatar-tattoo-tattoo-visual-1')).toBeTruthy();
     disposeModel(model); disposeModel(actor.root);
   });
@@ -105,6 +107,7 @@ describe('appearance boundaries', () => {
       (a: ReturnType<typeof defaultAppearance>) => { a.head.hair = 'red'; },
       (a: ReturnType<typeof defaultAppearance>) => { a.accessories!.hat = 'crown' as never; },
       (a: ReturnType<typeof defaultAppearance>) => { a.accessories!.glassesColor = 'transparent'; },
+      (a: ReturnType<typeof defaultAppearance>) => { a.accessories!.earrings = 'chains' as never; },
     ]) { const value = defaultAppearance(); edit(value); expect(appearanceSchema.safeParse(value).success).toBe(false); expect(resolveAppearance(value, 'safe')).toEqual(defaultAppearance('safe')); }
     expect(appearanceSchema.safeParse({ ...defaultAppearance(), bonus: 100 }).success).toBe(false);
   });
