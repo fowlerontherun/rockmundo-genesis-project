@@ -92,10 +92,17 @@ export default function TopOfThePopsAdmin() {
   if (!current) {
     return (
       <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
-        <div>
-          <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Tv2 className="h-4 w-4" /> Television administration</div>
-          <h1 className="text-3xl font-bold">Top of the Pops</h1>
-          <p className="text-muted-foreground">No real episode is currently scheduled. You can still run the safe test harness below.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground"><Tv2 className="h-4 w-4" /> Television administration</div>
+            <h1 className="text-3xl font-bold">Top of the Pops</h1>
+            <p className="text-muted-foreground">No real episode is currently scheduled. Set or reschedule the next show, or run the safe full-show demo below.</p>
+          </div>
+          <Button asChild size="sm">
+            <Link to="/admin/top-of-the-pops/schedule">
+              <CalendarDays className="mr-1 h-4 w-4" /> Schedule / reschedule show
+            </Link>
+          </Button>
         </div>
         <TotpProductionHealthCard />
         <TotpAudioStudio episode={null} />
@@ -126,7 +133,7 @@ export default function TopOfThePopsAdmin() {
           <Badge variant="secondary">{current.status}</Badge>
           <Button asChild size="sm" variant="outline">
             <Link to="/admin/top-of-the-pops/schedule">
-              <CalendarDays className="mr-1 h-4 w-4" /> Broadcast schedule
+              <CalendarDays className="mr-1 h-4 w-4" /> Schedule / reschedule
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
