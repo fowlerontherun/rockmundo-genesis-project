@@ -454,6 +454,33 @@ export function validateTotpEpisodeManifest(
     }
   }
 
+  const hasFrozenCharts = Boolean(
+    manifest.chart_rundown
+      && ((manifest.chart_rundown.streaming?.length ?? 0) > 0
+        || (manifest.chart_rundown.digital_sales?.length ?? 0) > 0),
+  );
+  for (const line of manifest.presenter_dialogue ?? []) {
+    if (line.kind === "act_intro" || !line.script_text.trim()) continue;
+    if (line.kind === "chart" && !hasFrozenCharts) continue;
+    const expectedScriptChecksum = manifestChecksum(canonicalise(line.script_text));
+    const asset = line.asset;
+    if (
+      !asset?.url
+      || !asset.duration_ms
+      || asset.duration_ms <= 0
+      || !asset.sha256
+      || !asset.version
+      || asset.script_checksum !== expectedScriptChecksum
+    ) {
+      issues.push({
+        severity: "blocking",
+        code: "missing_presenter_audio",
+        performance_id: line.performance_id ?? undefined,
+        message: `${line.kind.replaceAll("_", " ")} presenter continuity needs a recorded take matching the current script before external production.`,
+      });
+    }
+  }
+
   return issues;
 }
 
