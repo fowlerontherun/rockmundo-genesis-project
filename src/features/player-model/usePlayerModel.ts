@@ -3,9 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import { resolveEquippedClothingVisual, type ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
-import { BODY_SLOTS, TATTOO_CATEGORIES, type BodySlot, type TattooCategory } from '@/data/tattooDesigns';
 import { appearanceFromLegacy, appearanceSchema, resolveAppearance, type PlayerAppearance } from './appearance';
-import type { ResolvedTattooVisual } from './tattoos';
+import { normalizeTattooVisual, type ResolvedTattooVisual, type TattooVisualInput } from './tattoos';
 
 export const playerModelKey = (profileId: string | null) => ['player-stage-appearance', profileId] as const;
 export const equippedRichClothingKey = (profileId: string | null) => ['equipped-rich-clothing', profileId] as const;
@@ -25,34 +24,12 @@ interface EquippedClothingRow {
   customization_config?: Record<string, string> | null;
 }
 
-interface StageTattooRow {
-  id: string;
-  profile_id: string;
-  body_slot: string;
-  ink_color: string;
-  quality_score: number;
-  is_infected: boolean;
-  category: string | null;
-}
-
-const tattooSlots = new Set<BodySlot>(Object.keys(BODY_SLOTS) as BodySlot[]);
-const tattooCategories = new Set<TattooCategory>(TATTOO_CATEGORIES);
-
-function resolveTattooRows(rows: StageTattooRow[]) {
+function resolveTattooRows(rows: TattooVisualInput[]) {
   const result: Record<string, ResolvedTattooVisual[]> = {};
   for (const row of rows) {
-    if (!row.profile_id || !tattooSlots.has(row.body_slot as BodySlot)) continue;
-    const category = tattooCategories.has(row.category as TattooCategory) ? row.category as TattooCategory : 'custom';
-    const ink = /^#[0-9a-fA-F]{6}$/.test(row.ink_color || '') ? row.ink_color.toLowerCase() : '#1d232d';
-    (result[row.profile_id] ??= []).push({
-      id: row.id,
-      profile_id: row.profile_id,
-      body_slot: row.body_slot as BodySlot,
-      ink_color: ink,
-      quality_score: Math.max(0, Math.min(100, Number(row.quality_score) || 0)),
-      is_infected: Boolean(row.is_infected),
-      category,
-    });
+    const tattoo = normalizeTattooVisual(row);
+    if (!tattoo) continue;
+    (result[tattoo.profile_id] ??= []).push(tattoo);
   }
   return result;
 }
@@ -114,7 +91,7 @@ export function usePlayerStageTattoos(profileId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_stage_tattoo_visuals' as any, { p_profile_ids: [profileId] } as any);
       if (error) throw error;
-      return resolveTattooRows((data || []) as StageTattooRow[])[profileId!] ?? [];
+      return resolveTattooRows((data || []) as TattooVisualInput[])[profileId!] ?? [];
     },
   });
 }
@@ -165,7 +142,7 @@ export function useGigPlayerModels(profileIds: string[]) {
         }
       }
 
-      const tattoos = tattooResult.error ? {} : resolveTattooRows((tattooResult.data || []) as StageTattooRow[]);
+      const tattoos = tattooResult.error ? {} : resolveTattooRows((tattooResult.data || []) as TattooVisualInput[]);
       return { appearances, richClothing, tattoos };
     },
   });
