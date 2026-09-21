@@ -1,6 +1,8 @@
 import { getTotpEpisodePresenterFragments, getTotpPerformanceAudio, type TotpEpisode, type TotpPresenterFragmentBundle } from "./api";
 import {
   buildTotpEpisodeManifest,
+  canonicalise,
+  manifestChecksum,
   validateTotpEpisodeManifest,
   type TotpEpisodeManifest,
   type TotpManifestIssue,
