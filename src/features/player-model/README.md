@@ -17,7 +17,7 @@ modular assembly, skin/clothing dyes and performance poses.
   garment designs built from the existing meshes, not 18 new mesh silhouettes.
 - Free starter clothing and standard instrument finishes. Saving costs nothing
   and does not affect skill, cash, equipment ownership or gig outcomes.
-- Five hat states (none, beanie, baseball cap, bucket hat, fedora) and five eyewear states (none, round, square, aviator, sunglasses), each with named colours and a custom picker. Accessories attach to the animated Head bone and are saved with the stage appearance.
+- Five hat states (none, beanie, baseball cap, bucket hat, fedora), five eyewear states (none, round, square, aviator, sunglasses), and four earring states (none, studs, hoops, drops), with named colours and a custom picker. Accessories fit from measured head bounds, attach to the animated Head bone and are saved with the stage appearance.
 - Owned Tattoo Parlour ink is rendered on the same 3D model using the existing body slots. Arm, shoulder, wrist, neck, chest and back tattoos follow rig bones; quality controls ink opacity and infection adds a visible irritated tint without changing the authoritative tattoo record.
 - Camera rotation/zoom, keyboard controls and ten performance preview poses.
 - The active character owns its model. Switching characters resets the editor
@@ -117,7 +117,9 @@ colour persistence. Browser visual review remains before release.
 ## Accessories and tattoo integration
 
 Accessory choices remain part of appearance version 1 through an optional `accessories`
-object so pre-existing saved rows continue to validate without a rewrite. The database
+object so pre-existing saved rows continue to validate without a rewrite. The original
+four-field hat/glasses payload remains accepted; newer saves add optional earring style
+and colour fields. The database
 allow-list accepts only known hat/glasses IDs and six-digit hex colours. The fitting
 room uses the same procedural attachment renderer as gigs and Top of the Pops.
 
