@@ -68,6 +68,19 @@ interface SkillProgress {
   current_level: number;
 }
 
+interface SkillDefinition {
+  slug: string;
+  display_name: string | null;
+  tier_caps: Record<string, unknown> | null;
+}
+
+interface CoursePrerequisite {
+  slug: string;
+  requiredLevel: number;
+  label: string;
+  currentLevel: number;
+}
+
 export default function UniversityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -190,6 +203,18 @@ export default function UniversityDetail() {
     enabled: !!profile?.id,
   });
 
+  const { data: skillDefinitions } = useQuery({
+    queryKey: ["skill_definitions", "university_prerequisites"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("skill_definitions")
+        .select("slug, display_name, tier_caps");
+      if (error) throw error;
+      return (data || []) as SkillDefinition[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Fetch ANY current enrollment (not just this university)
   const { data: currentEnrollment } = useQuery({
     queryKey: ["current_enrollment", profile?.id],
@@ -244,6 +269,20 @@ export default function UniversityDetail() {
 
       const course = courses?.find((c) => c.id === courseId);
       if (!course) throw new Error("Course not found");
+
+      const prerequisite = getCoursePrerequisite(course);
+      if (prerequisite && prerequisite.currentLevel < prerequisite.requiredLevel) {
+        throw new Error(
+          `Requires ${prerequisite.label} level ${prerequisite.requiredLevel} (you have ${prerequisite.currentLevel})`,
+        );
+      }
+
+      const targetSkillLevel = getSkillLevel(course.skill_slug);
+      if (targetSkillLevel < course.required_skill_level) {
+        throw new Error(
+          `Requires skill level ${course.required_skill_level} (you have ${targetSkillLevel})`,
+        );
+      }
 
       const finalPrice = calculateUniversityCoursePrice(
         course.base_price,
@@ -320,9 +359,14 @@ export default function UniversityDetail() {
       });
     },
     onError: (error: any) => {
+      const rawMessage = error?.message || "Unable to enroll in this course.";
+      const description = rawMessage.startsWith("university_course_prerequisite_not_met")
+        ? "This course tier is still locked. Complete the required previous-tier skill first."
+        : rawMessage;
+
       toast({
         title: "Enrollment Failed",
-        description: error.message,
+        description,
         variant: "destructive",
       });
     },
@@ -346,9 +390,79 @@ export default function UniversityDetail() {
     return skillProgress?.find((sp) => sp.skill_slug === skillSlug)?.current_level || 0;
   };
 
+  const getSkillDefinition = (skillSlug: string) =>
+    skillDefinitions?.find((definition) => definition.slug === skillSlug);
+
+  const getSkillMaxLevel = (skillSlug: string) => {
+    if (["guitar", "vocals", "drums", "bass", "performance", "songwriting", "composition", "technical"].includes(skillSlug)) {
+      return 100;
+    }
+
+    const maxLevel = getSkillDefinition(skillSlug)?.tier_caps?.max_level;
+    return typeof maxLevel === "number" && Number.isFinite(maxLevel)
+      ? Math.max(1, Math.floor(maxLevel))
+      : 20;
+  };
+
+  const getCoursePrerequisite = (course: Course): CoursePrerequisite | null => {
+    const definition = getSkillDefinition(course.skill_slug);
+    const tierCaps = definition?.tier_caps || {};
+    const explicitPrerequisite =
+      typeof tierCaps.requires === "string" && tierCaps.requires.trim()
+        ? tierCaps.requires.trim()
+        : null;
+
+    let prerequisiteSlug = explicitPrerequisite;
+    let requiredLevel =
+      typeof tierCaps.required_level === "number" && Number.isFinite(tierCaps.required_level)
+        ? Math.max(1, Math.floor(tierCaps.required_level))
+        : null;
+
+    if (!prerequisiteSlug && course.skill_slug.includes("_professional_")) {
+      prerequisiteSlug = course.skill_slug.replace("_professional_", "_basic_");
+    } else if (!prerequisiteSlug && course.skill_slug.includes("_mastery_")) {
+      prerequisiteSlug = course.skill_slug.replace("_mastery_", "_professional_");
+    } else if (!prerequisiteSlug && course.skill_slug.startsWith("professional_")) {
+      const candidate = `basic_${course.skill_slug.slice("professional_".length)}`;
+      if (getSkillDefinition(candidate)) {
+        prerequisiteSlug = candidate;
+      } else {
+        prerequisiteSlug = ({
+          professional_ai_music_integration: "basic_ai_music_tools",
+          professional_crowd_engagement: "basic_crowd_interaction",
+          professional_daw_production: "basic_daw_use",
+          professional_social_media_musician: "basic_social_media_performance",
+          professional_streaming_shows: "basic_streaming_concerts",
+          professional_visual_shows: "basic_visual_performance_integration",
+          professional_vocal_production: "basic_vocal_tuning_processing",
+        } as Record<string, string>)[course.skill_slug] || null;
+      }
+    }
+
+    if (!prerequisiteSlug || !getSkillDefinition(prerequisiteSlug)) {
+      return null;
+    }
+
+    if (requiredLevel === null) {
+      requiredLevel = getSkillMaxLevel(prerequisiteSlug);
+    }
+
+    const prerequisiteDefinition = getSkillDefinition(prerequisiteSlug);
+    return {
+      slug: prerequisiteSlug,
+      requiredLevel,
+      label: prerequisiteDefinition?.display_name || formatSkillSlug(prerequisiteSlug),
+      currentLevel: getSkillLevel(prerequisiteSlug),
+    };
+  };
+
   const canEnroll = (course: Course) => {
     const skillLevel = getSkillLevel(course.skill_slug);
-    const hasPrerequisite = skillLevel >= course.required_skill_level;
+    const tierPrerequisite = getCoursePrerequisite(course);
+    const hasTargetLevel = skillLevel >= course.required_skill_level;
+    const hasTierPrerequisite =
+      !tierPrerequisite || tierPrerequisite.currentLevel >= tierPrerequisite.requiredLevel;
+    const hasPrerequisite = hasTargetLevel && hasTierPrerequisite;
     const hasEnoughCash = (profile?.cash || 0) >= calculatePrice(course.base_price);
     const currentEnrollments = courseEnrollmentCounts?.[course.id] || 0;
     const hasCapacity =
@@ -358,9 +472,13 @@ export default function UniversityDetail() {
 
   const getEnrollmentMessage = (course: Course) => {
     const skillLevel = getSkillLevel(course.skill_slug);
+    const tierPrerequisite = getCoursePrerequisite(course);
     const price = calculatePrice(course.base_price);
     const currentEnrollments = courseEnrollmentCounts?.[course.id] || 0;
 
+    if (tierPrerequisite && tierPrerequisite.currentLevel < tierPrerequisite.requiredLevel) {
+      return `Requires ${tierPrerequisite.label} level ${tierPrerequisite.requiredLevel} (you have ${tierPrerequisite.currentLevel})`;
+    }
     if (skillLevel < course.required_skill_level) {
       return `Requires skill level ${course.required_skill_level} (you have ${skillLevel})`;
     }
@@ -395,6 +513,10 @@ export default function UniversityDetail() {
       course.xp_per_day_max,
       duration,
     );
+    const tierPrerequisite = getCoursePrerequisite(course);
+    const requirementLabel = tierPrerequisite
+      ? `${tierPrerequisite.label} level ${tierPrerequisite.requiredLevel} required`
+      : `Level ${course.required_skill_level}+ required`;
 
     return (
       <Card key={course.id} className={atCapacity ? "border-destructive/40" : undefined}>
@@ -439,7 +561,7 @@ export default function UniversityDetail() {
             </div>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span>Level {course.required_skill_level}+ required</span>
+              <span>{requirementLabel}</span>
             </div>
             <div className="flex items-center gap-2">
               <CalendarCheck className="h-4 w-4 text-muted-foreground" />
