@@ -9,6 +9,7 @@ import { resolveVenueProfile, stagePosition, type VenueProfile } from '@/feature
 import { resolveTotpStudioStageGeometry } from '@/features/gig-demo-3d/totpStudioGeometry';
 import { defaultAppearance, type PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
 import type { CrowdTuningOptions } from '../engine/CrowdTuning';
 import type { TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
 
@@ -342,6 +343,7 @@ export function concertOptions(
   experience: GigExperienceDTO | null,
   archetype: string,
   richClothing: Record<string, ResolvedEquippedClothing[]> = {},
+  tattoos: Record<string, ResolvedTattooVisual[]> = {},
   presentationMode: ConcertPresentationMode = 'gig',
   totpStage: TotpStageKey = 'main_stage',
 ): ConcertOptions {
@@ -375,6 +377,7 @@ export function concertOptions(
         position: totp ? totpStagePoint(plan, p.id, profile, totpStage, 0, false, totpLayoutSeed) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
         appearance: appearances[profileId] ?? defaultAppearance(profileId),
         richClothing: richClothing[profileId] ?? [],
+        tattoos: tattoos[profileId] ?? [],
       };
     }),
   };
