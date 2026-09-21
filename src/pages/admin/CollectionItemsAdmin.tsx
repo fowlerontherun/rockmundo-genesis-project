@@ -21,6 +21,7 @@ import { ClothingPreviewManager } from "@/components/admin/clothing/ClothingPrev
 import { browserDownloadJson, slugifyExternalKey, toPortableClothingItem } from "@/features/clothing-transfer/clothingTransfer";
 import { RichClothingPreview } from "@/features/clothing-preview/RichClothingPreview";
 import { defaultAppearance } from "@/features/player-model/appearance";
+import { BODY_SLOTS, type BodySlot } from "@/data/tattooDesigns";
 
 const CATEGORIES = ["shirt", "t-shirt", "tank-top", "hoodie", "sweater", "pants", "jeans", "shorts", "skirt", "dress", "jacket", "coat", "vest", "shoes", "boots", "trainers", "accessory", "hat", "glasses"];
 const SLOTS = ["top", "outerwear", "bottom", "dress", "footwear", "headwear", "eyewear", "accessory"];
@@ -47,6 +48,7 @@ interface ClothingForm {
   featured: boolean;
   bonus_enabled: boolean;
   bonuses: BonusConfig;
+  tattoo_coverage_slots: BodySlot[];
   design: ClothingDesignConfig;
 }
 
@@ -66,10 +68,18 @@ const emptyForm = (): ClothingForm => ({
   featured: false,
   bonus_enabled: false,
   bonuses: { ...EMPTY_BONUSES },
+  tattoo_coverage_slots: [],
   design: cloneDefaultDesign(),
 });
 
 const compactBonuses = (bonuses: BonusConfig) => Object.fromEntries(Object.entries(bonuses).filter(([, value]) => Number(value) > 0));
+
+const tattooCoverageFromItem = (item: any): BodySlot[] => {
+  const config = item?.garment_config || {};
+  const raw = config.tattooCoverageSlots ?? config.tattoo_coverage_slots;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((slot: unknown): slot is BodySlot => typeof slot === "string" && slot in BODY_SLOTS);
+};
 
 const bonusSummary = (item: any) => {
   if (!item.bonus_enabled) return [];
@@ -112,7 +122,7 @@ const CollectionItemsAdmin = () => {
     price: formData.price,
     rarity: formData.rarity,
     color_variants: formData.color_variants_text.split(",").map(v => v.trim()).filter(Boolean),
-    garment_config: formData.design.garment,
+    garment_config: { ...formData.design.garment, tattooCoverageSlots: formData.tattoo_coverage_slots },
     material_config: formData.design.material,
     pattern_config: formData.design.pattern,
     detail_layers: formData.design.details.map(d => ({ ...d, opacity: Math.max(0, Math.min(1, d.opacity / 100)) })),
@@ -169,7 +179,7 @@ const CollectionItemsAdmin = () => {
     featured: data.featured,
     bonus_enabled: data.bonus_enabled,
     bonus_config: data.bonus_enabled ? compactBonuses(data.bonuses) : {},
-    garment_config: data.design.garment,
+    garment_config: { ...data.design.garment, tattooCoverageSlots: data.tattoo_coverage_slots },
     material_config: data.design.material,
     pattern_config: data.design.pattern,
     detail_layers: data.design.details.map(d => ({ ...d, opacity: Math.max(0, Math.min(1, d.opacity / 100)) })),
@@ -248,6 +258,7 @@ const CollectionItemsAdmin = () => {
         recording_pct: Number(bonus.recording_pct || 0),
         songwriting_pct: Number(bonus.songwriting_pct || 0),
       },
+      tattoo_coverage_slots: tattooCoverageFromItem(item),
       design,
     });
     setIsDialogOpen(true);
@@ -261,6 +272,12 @@ const CollectionItemsAdmin = () => {
   };
 
   const setBonus = (key: keyof BonusConfig, value: number) => setFormData(current => ({ ...current, bonuses: { ...current.bonuses, [key]: Math.max(0, value || 0) } }));
+  const toggleTattooCoverage = (slot: BodySlot, covered: boolean) => setFormData(current => ({
+    ...current,
+    tattoo_coverage_slots: covered
+      ? [...new Set([...current.tattoo_coverage_slots, slot])]
+      : current.tattoo_coverage_slots.filter(value => value !== slot),
+  }));
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); editingItem ? updateMutation.mutate({ id: editingItem.id, data: formData }) : createMutation.mutate(formData); };
 
   return <div className="container mx-auto p-6 space-y-6">
@@ -321,6 +338,26 @@ const CollectionItemsAdmin = () => {
                         <div className="space-y-2"><Label>Pattern</Label><Select value={formData.design.pattern.type} onValueChange={v=>setFormData(current=>({...current,design:{...current.design,pattern:{...current.design.pattern,type:v}}}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{["solid","stripes","checks","tartan","polka-dot","floral","camouflage","tie-dye","gradient","geometric","stars","flames"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Fit</Label><Select value={formData.design.fit.fit} onValueChange={v=>setFormData(current=>({...current,design:{...current.design,fit:{...current.design.fit,fit:v}}}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{["skinny","slim","regular","relaxed","oversized"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Condition</Label><Select value={formData.design.wear.condition} onValueChange={v=>setFormData(current=>({...current,design:{...current.design,wear:{...current.design.wear,condition:v}}}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{["new","washed","faded","vintage","distressed","stage-worn"].map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3"><CardTitle className="text-base">Tattoo coverage</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-xs text-muted-foreground">Select only the skin regions physically covered by this garment. Tattoos in those regions will be hidden on the avatar, gigs and Top of the Pops.</p>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {(Object.entries(BODY_SLOTS) as Array<[BodySlot, (typeof BODY_SLOTS)[BodySlot]]>).map(([slot, detail]) => (
+                            <label key={slot} className="flex items-center justify-between gap-3 rounded border p-2 text-sm">
+                              <span>{detail.label}</span>
+                              <Switch
+                                aria-label={`Garment covers ${detail.label}`}
+                                checked={formData.tattoo_coverage_slots.includes(slot)}
+                                onCheckedChange={covered => toggleTattooCoverage(slot, covered)}
+                              />
+                            </label>
+                          ))}
+                        </div>
+                        {formData.tattoo_coverage_slots.length > 0 ? <p className="text-xs text-muted-foreground">{formData.tattoo_coverage_slots.length} tattoo region{formData.tattoo_coverage_slots.length === 1 ? "" : "s"} will be occluded.</p> : <p className="text-xs text-muted-foreground">No tattoo regions are hidden by this item.</p>}
                       </CardContent>
                     </Card>
 
