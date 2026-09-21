@@ -30,13 +30,24 @@ export interface TotpTrackRights {
   status: TotpRightsStatus;
 }
 
+export interface TotpManifestAudioFragment {
+  role: "phrase" | "band_name";
+  url: string;
+  duration_ms: number;
+  sha256: string;
+  version: number | null;
+}
+
 export interface TotpManifestAsset {
-  kind: "song_audio" | "presenter_audio";
+  kind: "song_audio" | "presenter_audio" | "presenter_audio_sequence";
   url: string | null;
   duration_ms: number | null;
   sha256: string | null;
   version: number | null;
   script_checksum: string | null;
+  /** Frozen splice inputs for deterministic presenter rendering. */
+  fragments?: TotpManifestAudioFragment[];
+  gap_ms?: number | null;
 }
 
 export interface TotpManifestPresenterDialogue {
@@ -117,6 +128,13 @@ export interface TotpManifestInput {
     version: number | null;
     script_checksum: string | null;
   }>;
+  /** performance_id -> immutable reusable phrase + current band-name splice. */
+  presenterSequences?: Record<string, {
+    duration_ms: number;
+    script_checksum: string;
+    gap_ms: number;
+    fragments: TotpManifestAudioFragment[];
+  }>;
   /** Complete presenter cue sheet in programme order. */
   presenterDialogue?: Array<{
     cue_id: string;
@@ -194,12 +212,20 @@ function sortPerformances(performances: TotpPerformance[]): TotpPerformance[] {
 }
 
 export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeManifest {
-  const { episode, songAudio, presenterAudio = {}, presenterDialogue = [], rights } = input;
+  const {
+    episode,
+    songAudio,
+    presenterAudio = {},
+    presenterSequences = {},
+    presenterDialogue = [],
+    rights,
+  } = input;
 
   const segments: TotpManifestSegment[] = sortPerformances(episode.performances).map(
     (performance, position) => {
       const song = songAudio[performance.performance_id] ?? { url: null, duration_ms: null };
       const link = presenterAudio[performance.performance_id] ?? null;
+      const sequence = presenterSequences[performance.performance_id] ?? null;
       const assets: TotpManifestAsset[] = [
         {
           kind: "song_audio",
@@ -218,6 +244,17 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
           sha256: link.sha256 ?? null,
           version: link.version ?? null,
           script_checksum: link.script_checksum ?? null,
+        });
+      } else if (sequence) {
+        assets.push({
+          kind: "presenter_audio_sequence",
+          url: null,
+          duration_ms: sequence.duration_ms,
+          sha256: null,
+          version: null,
+          script_checksum: sequence.script_checksum,
+          fragments: sequence.fragments.map((fragment) => ({ ...fragment })),
+          gap_ms: sequence.gap_ms,
         });
       }
 
@@ -372,20 +409,39 @@ export function validateTotpEpisodeManifest(
       });
     } else {
       const presenter = segment.assets.find((asset) => asset.kind === "presenter_audio");
+      const sequence = segment.assets.find((asset) => asset.kind === "presenter_audio_sequence");
       const expectedScriptChecksum = manifestChecksum(canonicalise(segment.presenter_intro));
-      if (
-        !presenter?.url
-        || !presenter.duration_ms
-        || presenter.duration_ms <= 0
-        || !presenter.sha256
-        || !presenter.version
-        || presenter.script_checksum !== expectedScriptChecksum
-      ) {
+      const exactReady = Boolean(
+        presenter?.url
+          && presenter.duration_ms
+          && presenter.duration_ms > 0
+          && presenter.sha256
+          && presenter.version
+          && presenter.script_checksum === expectedScriptChecksum,
+      );
+      const sequenceFragments = sequence?.fragments ?? [];
+      const sequenceReady = Boolean(
+        sequence
+          && sequence.duration_ms
+          && sequence.duration_ms > 0
+          && sequence.script_checksum === expectedScriptChecksum
+          && Number.isFinite(sequence.gap_ms ?? 0)
+          && (sequence.gap_ms ?? 0) >= 0
+          && sequenceFragments.length === 2
+          && sequenceFragments[0]?.role === "phrase"
+          && sequenceFragments[1]?.role === "band_name"
+          && sequenceFragments.every((fragment) =>
+            Boolean(fragment.url)
+              && fragment.duration_ms > 0
+              && Boolean(fragment.sha256),
+          ),
+      );
+      if (!exactReady && !sequenceReady) {
         issues.push({
           severity: "blocking",
           code: "missing_presenter_audio",
           performance_id: segment.performance_id,
-          message: `${segment.band_name} needs a recorded presenter introduction matching the current script before external production.`,
+          message: `${segment.band_name} needs either an exact presenter take or a frozen reusable phrase + band-name recording matching the current script before external production.`,
         });
       }
     }
