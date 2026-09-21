@@ -1,4 +1,6 @@
 import type { TotpEpisodeManifest } from "./episodeManifest";
+import { buildTotpChartRundownPages } from "./chartRundown";
+import { buildTotpContinuityCopyFromActs, totpContinuitySpeech } from "./programmeContinuity";
 import { TOTP_MIX_TARGET } from "./broadcastAudioMix";
 import { toTotpWebVtt, type TotpCaptionCue } from "./broadcastCaptions";
 import { resolveTotpPresenter } from "./presenters";
@@ -18,6 +20,9 @@ export const TOTP_RENDER_AUDIO_SAMPLE_RATE = 48_000 as const;
 export const TOTP_RENDER_TIMING = Object.freeze({
   openingTitlesMs: 12_000,
   presenterLinkMs: 8_000,
+  programmeContinuityMs: 6_200,
+  stageTransitionMs: 3_200,
+  chartPageMs: 5_000,
   performanceFallbackMs: 180_000,
   audienceApplauseMs: 4_000,
   endCreditsMs: 14_000,
@@ -26,6 +31,9 @@ export const TOTP_RENDER_TIMING = Object.freeze({
 export type TotpRenderItemKind =
   | "opening_titles"
   | "presenter_link"
+  | "programme_continuity"
+  | "stage_transition"
+  | "chart_rundown"
   | "performance"
   | "applause"
   | "end_credits";
@@ -49,6 +57,11 @@ export interface TotpRenderItem {
   duration_ms: number;
   performance_id: string | null;
   audio_url: string | null;
+  continuity_kind?: "opening" | "between" | "closing" | null;
+  continuity_text?: string | null;
+  from_performance_id?: string | null;
+  to_performance_id?: string | null;
+  chart_page?: ReturnType<typeof buildTotpChartRundownPages>[number] | null;
   /** Frozen presenter fragments when no exact full-line take is available. */
   audio_sequence?: TotpRenderAudioSequenceItem[] | null;
 }
@@ -197,14 +210,62 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     return entry;
   };
 
+  const dialogue = manifest.presenter_dialogue ?? [];
+  const dialogueFor = (kind: "opening" | "between" | "chart" | "closing", performanceId?: string | null) =>
+    dialogue.find((line) => line.kind === kind && (performanceId === undefined || line.performance_id === performanceId)) ?? null;
+
+  const acts = manifest.segments.map((segment) => ({
+    replayId: segment.performance_id,
+    runningOrder: segment.index,
+    chartRank: segment.qualifying_rank,
+    bandName: segment.band_name,
+    songTitle: segment.song_title,
+    stage: segment.stage_key,
+  }));
+
+  const pushContinuity = (kind: "opening" | "between" | "closing", currentIndex: number, performanceId: string | null) => {
+    const line = dialogueFor(kind, performanceId);
+    const copy = buildTotpContinuityCopyFromActs(kind, acts, currentIndex);
+    const script = line?.script_text?.trim() || totpContinuitySpeech(copy);
+    push({
+      kind: "programme_continuity",
+      label: kind === "opening" ? "Programme opening" : kind === "closing" ? "Programme close" : "Presenter continuity",
+      duration_ms: line?.asset?.duration_ms && line.asset.duration_ms > 0 ? line.asset.duration_ms : TOTP_RENDER_TIMING.programmeContinuityMs,
+      performance_id: performanceId,
+      audio_url: line?.asset?.url ?? null,
+      continuity_kind: kind,
+      continuity_text: script,
+    });
+  };
+
+  const pushChartRundown = () => {
+    const pages = manifest.chart_rundown ? buildTotpChartRundownPages(manifest.chart_rundown) : [];
+    if (!pages.length) return;
+    const chartLine = dialogueFor("chart");
+    pages.forEach((page, index) => {
+      push({
+        kind: "chart_rundown",
+        label: `${page.chartLabel} ${page.rangeLabel}`,
+        duration_ms: index === 0 && chartLine?.asset?.duration_ms && chartLine.asset.duration_ms > TOTP_RENDER_TIMING.chartPageMs
+          ? chartLine.asset.duration_ms
+          : TOTP_RENDER_TIMING.chartPageMs,
+        performance_id: null,
+        audio_url: index === 0 ? chartLine?.asset?.url ?? null : null,
+        chart_page: page,
+      });
+    });
+  };
+
   const titles = push({
     kind: "opening_titles",
     label: "Opening titles",
-    duration_ms: TOTP_RENDER_TIMING.openingTitlesMs,
+    duration_ms: 15_943,
     performance_id: null,
     audio_url: null,
   });
   chapters.push({ title: "Opening titles", start_ms: titles.start_ms, end_ms: cursor });
+
+  if (manifest.segments.length > 0) pushContinuity("opening", 0, null);
 
   manifest.segments.forEach((segment, position) => {
     const presenterAsset = segment.assets.find((asset) => asset.kind === "presenter_audio") ?? null;
@@ -223,11 +284,10 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
             version: fragment.version,
           };
           fragmentOffsetMs += fragment.duration_ms;
-          if (fragmentIndex < sequenceFragments.length - 1) {
-            fragmentOffsetMs += Math.max(0, presenterSequence?.gap_ms ?? 0);
-          }
+          if (fragmentIndex < sequenceFragments.length - 1) fragmentOffsetMs += Math.max(0, presenterSequence?.gap_ms ?? 0);
           return entry;
         });
+
     const link = push({
       kind: "presenter_link",
       label: `Presenter link ${position + 1}`,
@@ -264,7 +324,24 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
       start_ms: link.start_ms,
       end_ms: cursor,
     });
+
+    if (position < manifest.segments.length - 1) {
+      const next = manifest.segments[position + 1];
+      push({
+        kind: "stage_transition",
+        label: `${segment.stage_key} → ${next.stage_key}`,
+        duration_ms: TOTP_RENDER_TIMING.stageTransitionMs,
+        performance_id: segment.performance_id,
+        audio_url: null,
+        from_performance_id: segment.performance_id,
+        to_performance_id: next.performance_id,
+      });
+      pushContinuity("between", position, segment.performance_id);
+      if (position === manifest.segments.length - 2) pushChartRundown();
+    }
   });
+
+  if (manifest.segments.length > 0) pushContinuity("closing", manifest.segments.length - 1, null);
 
   const credits = push({
     kind: "end_credits",
@@ -278,9 +355,7 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
   const base = `totp-episode-${String(manifest.episode_number).padStart(3, "0")}-${slug(manifest.episode_date)}`;
   const firstPerformance = items.find((item) => item.kind === "performance");
   const posterAt = firstPerformance ? firstPerformance.start_ms + Math.floor(firstPerformance.duration_ms / 2) : Math.floor(cursor / 2);
-  const thumbnailAt = items
-    .filter((item) => item.kind === "performance")
-    .map((item) => item.start_ms + Math.floor(item.duration_ms / 3));
+  const thumbnailAt = items.filter((item) => item.kind === "performance").map((item) => item.start_ms + Math.floor(item.duration_ms / 3));
   const thumbnailFiles = thumbnailAt.map((_, index) => `${base}-thumb-${String(index + 1).padStart(2, "0")}.jpg`);
 
   return {
@@ -312,7 +387,6 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     qc_checks: QC_CHECKS,
   };
 }
-
 
 function deliveryForPurpose(
   plan: TotpRenderPlan,
