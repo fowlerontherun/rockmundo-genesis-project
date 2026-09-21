@@ -10,7 +10,7 @@ export type ActivityType =
   | 'travel' | 'work' | 'university' | 'reading' | 'mentorship' 
   | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' 
   | 'pr_appearance' | 'film_production' | 'festival_attendance' | 'festival_performance' 
-  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'jam_session' | 'other';
+  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'jam_session' | 'major_event' | 'other';
 
 export type ActivityStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'missed';
 

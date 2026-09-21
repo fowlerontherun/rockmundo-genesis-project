@@ -21,6 +21,7 @@ const WELLNESS_GATE_MAP: Record<ActivityType, string | null> = {
   skill_practice: "training",
   open_mic: "open_mic",
   festival_performance: "festival_performance",
+  major_event: "gig",
   pr_appearance: "pr_appearance",
   // Wellness / recovery & passive activities — never gated by wellness itself.
   health: null,
