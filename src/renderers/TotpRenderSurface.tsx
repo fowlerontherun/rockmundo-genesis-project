@@ -77,9 +77,11 @@ function EndCredits({ replays, localMs, durationMs }: { replays: TotpBroadcastRe
 
 function ProgrammeContinuityFrame({
   item,
+  localMs,
   replays,
 }: {
   item: TotpRenderItem;
+  localMs: number;
   replays: TotpBroadcastReplay[];
 }) {
   const kind = item.dialogue_kind === "closing" ? "closing" : item.dialogue_kind === "between" ? "between" : "opening";
@@ -87,12 +89,23 @@ function ProgrammeContinuityFrame({
   const index = Math.max(0, Math.min(ordered.length - 1, Number(item.continuity_index ?? 0)));
   const copy = buildTotpContinuityCopy(kind, ordered, index);
   const presenter = resolveTotpPresenter(String(ordered[0]?.payload.presenterKey ?? ordered[0]?.presenter_key ?? "alex_rayne"));
+  const progress = clamp(localMs / Math.max(1, item.duration_ms), 0, 1);
+  const sweepX = -45 + progress * 190;
+  const pulse = 0.18 + Math.sin(progress * Math.PI * 4) * 0.06;
 
   return (
     <div className="relative flex h-full w-full overflow-hidden bg-slate-950 text-white" data-totp-offline-continuity={kind}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,.28),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,.22),transparent_34%),linear-gradient(135deg,#05050a,#101827_58%,#07111d)]" />
+      <div
+        className="absolute inset-y-0 w-[42%] -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-cyan-200/5 blur-xl"
+        style={{ left: `${sweepX}%`, opacity: 0.55 }}
+      />
+      <div
+        className="absolute -bottom-[35%] left-[20%] h-[72%] w-[60%] rounded-full bg-fuchsia-500 blur-[120px]"
+        style={{ opacity: pulse }}
+      />
       <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-fuchsia-500 via-amber-300 to-cyan-400" />
-      <div className="relative mx-auto flex w-[1500px] flex-col justify-center py-24">
+      <div className="relative mx-auto flex w-[1500px] flex-col justify-center py-24" style={{ transform: `translateY(${Math.sin(progress * Math.PI) * -8}px)` }}>
         <div className="flex items-center justify-between text-xl font-black uppercase tracking-[0.28em] text-cyan-200">
           <span>Top of the Pops</span>
           <span>{presenter.displayName} · London</span>
@@ -112,16 +125,25 @@ function ProgrammeContinuityFrame({
           </div>
         ) : null}
       </div>
+      <div className="absolute inset-x-0 bottom-0 h-1.5 bg-white/10">
+        <div className="h-full bg-gradient-to-r from-fuchsia-400 via-white to-cyan-300" style={{ width: `${progress * 100}%` }} />
+      </div>
     </div>
   );
 }
 
-function ChartRundownFrame({ item }: { item: TotpRenderItem }) {
+function ChartRundownFrame({ item, localMs }: { item: TotpRenderItem; localMs: number }) {
   const page = item.chart_page;
   if (!page) return <div className="h-full w-full bg-black" />;
+  const progress = clamp(localMs / Math.max(1, item.duration_ms), 0, 1);
+  const sweepX = -35 + progress * 165;
   return (
     <div className="relative h-full w-full overflow-hidden bg-slate-950 text-white" data-totp-offline-chart={page.chartType}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.24),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,.24),transparent_30%)]" />
+      <div
+        className="absolute inset-y-0 w-[34%] bg-gradient-to-r from-transparent via-cyan-200/18 to-transparent blur-2xl"
+        style={{ left: `${sweepX}%` }}
+      />
       <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-cyan-400 via-white to-fuchsia-500" />
       <div className="relative mx-auto w-[1600px] py-12">
         <div className="flex items-start justify-between gap-10">
@@ -144,6 +166,9 @@ function ChartRundownFrame({ item }: { item: TotpRenderItem }) {
             </div>
           ))}
         </div>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 h-1.5 bg-white/10">
+        <div className="h-full bg-gradient-to-r from-cyan-300 via-white to-fuchsia-400" style={{ width: `${progress * 100}%` }} />
       </div>
     </div>
   );
@@ -266,6 +291,18 @@ function BroadcastItem({ item, localMs, replays }: { item: TotpRenderItem; local
 
 export function TotpRenderSurface({ payload, frame }: { payload: TotpOfflineRenderPayload; frame: TotpOfflineRenderFrame }) {
   const item = payload.plan.items[frame.itemIndex] ?? payload.plan.items[0];
+  const frozenPerformanceIds = useMemo(
+    () => new Set(
+      payload.plan.items
+        .filter((entry) => entry.kind === "performance" && !!entry.performance_id)
+        .map((entry) => entry.performance_id!),
+    ),
+    [payload.plan.items],
+  );
+  const programmeReplays = useMemo(
+    () => payload.replays.filter((replay) => frozenPerformanceIds.has(replay.performance_id)),
+    [frozenPerformanceIds, payload.replays],
+  );
   if (!item) return <div className="h-full w-full bg-black" />;
 
   return (
@@ -279,15 +316,15 @@ export function TotpRenderSurface({ payload, frame }: { payload: TotpOfflineRend
       {item.kind === "opening_titles" ? (
         <OpeningTitles localMs={frame.localMs} durationMs={item.duration_ms} />
       ) : item.kind === "programme_continuity" ? (
-        <ProgrammeContinuityFrame item={item} replays={payload.replays} />
+        <ProgrammeContinuityFrame item={item} localMs={frame.localMs} replays={programmeReplays} />
       ) : item.kind === "chart_rundown" ? (
-        <ChartRundownFrame item={item} />
+        <ChartRundownFrame item={item} localMs={frame.localMs} />
       ) : item.kind === "studio_transition" ? (
-        <StageTransitionFrame item={item} localMs={frame.localMs} replays={payload.replays} />
+        <StageTransitionFrame item={item} localMs={frame.localMs} replays={programmeReplays} />
       ) : item.kind === "end_credits" ? (
-        <EndCredits replays={payload.replays} localMs={frame.localMs} durationMs={item.duration_ms} />
+        <EndCredits replays={programmeReplays} localMs={frame.localMs} durationMs={item.duration_ms} />
       ) : (
-        <BroadcastItem item={item} localMs={frame.localMs} replays={payload.replays} />
+        <BroadcastItem item={item} localMs={frame.localMs} replays={programmeReplays} />
       )}
     </main>
   );
