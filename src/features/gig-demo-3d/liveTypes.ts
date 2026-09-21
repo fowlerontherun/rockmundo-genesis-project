@@ -1,6 +1,7 @@
 import type { InstrumentId, VocalRole } from './instrumentCatalog';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
 
 export type StageRole = 'vocals' | 'guitar' | 'bass' | 'drums' | 'keyboard' | 'dj' | 'strings' | 'brass' | 'woodwind' | 'percussion' | 'other' | 'fan';
 export interface ConcertPerformer {
@@ -12,6 +13,7 @@ export interface ConcertPerformer {
   position: [number, number, number];
   appearance: PlayerAppearance;
   richClothing?: ResolvedEquippedClothing[];
+  tattoos?: ResolvedTattooVisual[];
   phase: number;
 }
 export interface ConcertVenue {
