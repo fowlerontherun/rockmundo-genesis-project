@@ -136,6 +136,55 @@ describe("Top of the Pops render plan", () => {
     ]);
   });
 
+  it("builds the canonical full-show order with continuity, transition and frozen chart pages", () => {
+    const fullShow: TotpEpisodeManifest = {
+      ...manifest,
+      presenter_dialogue: [
+        { cue_id: "opening", kind: "opening", performance_id: null, script_text: "Welcome to the show.", asset: { kind: "presenter_audio", url: "https://audio/opening.wav", duration_ms: 2_500, sha256: "1".repeat(64), version: 1, script_checksum: manifestChecksum(canonicalise("Welcome to the show.")) } },
+        { cue_id: "between:perf-1", kind: "between", performance_id: "perf-1", script_text: "Back in the studio.", asset: { kind: "presenter_audio", url: "https://audio/between.wav", duration_ms: 2_200, sha256: "2".repeat(64), version: 1, script_checksum: manifestChecksum(canonicalise("Back in the studio.")) } },
+        { cue_id: "chart", kind: "chart", performance_id: null, script_text: "And now, let's take a look at this week's UK charts.", asset: { kind: "presenter_audio", url: "https://audio/chart.wav", duration_ms: 2_000, sha256: "3".repeat(64), version: 1, script_checksum: manifestChecksum(canonicalise("And now, let's take a look at this week's UK charts.")) } },
+        { cue_id: "closing", kind: "closing", performance_id: null, script_text: "Thanks for watching.", asset: { kind: "presenter_audio", url: "https://audio/closing.wav", duration_ms: 2_800, sha256: "4".repeat(64), version: 1, script_checksum: manifestChecksum(canonicalise("Thanks for watching.")) } },
+      ],
+      chart_rundown: {
+        episode_id: "episode-1",
+        chart_snapshot_date: "2026-09-19",
+        streaming: [],
+        digital_sales: [{
+          rank: 1,
+          song_id: "song-1",
+          band_id: "band-1",
+          song_title: "Dead Radio",
+          artist_name: "Shockmaster",
+          trend: "up",
+          trend_change: 1,
+          weekly_plays: 12345,
+        }],
+        streaming_count: 0,
+        digital_sales_count: 1,
+      },
+    };
+
+    const plan = buildTotpRenderPlan(fullShow);
+    expect(plan.items.map((item) => item.kind)).toEqual([
+      "opening_titles",
+      "programme_continuity",
+      "presenter_link",
+      "performance",
+      "applause",
+      "stage_transition",
+      "programme_continuity",
+      "chart_rundown",
+      "presenter_link",
+      "performance",
+      "applause",
+      "programme_continuity",
+      "end_credits",
+    ]);
+    const chart = plan.items.find((item) => item.kind === "chart_rundown");
+    expect(chart?.chart_page?.entries[0].artist_name).toBe("Shockmaster");
+    expect(chart?.audio_url).toBe("https://audio/chart.wav");
+  });
+
   it("is deterministic and names delivery files from the episode", () => {
     const a = buildTotpRenderPlan(manifest);
     const b = buildTotpRenderPlan(manifest);
