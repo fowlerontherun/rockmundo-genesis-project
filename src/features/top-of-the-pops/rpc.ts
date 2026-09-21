@@ -20,7 +20,8 @@ export type TotpRpcName =
   | "totp_episode_presenter_audio"
   | "totp_episode_presenter_fragments"
   | "totp_admin_booking_catalog"
-  | "totp_admin_book_band";
+  | "totp_admin_book_band"
+  | "totp_admin_resend_invitation";
 type TotpRpcArgument = Record<string, unknown> | undefined;
 type TypedTotpRpc = (functionName: TotpRpcName, args?: TotpRpcArgument) => PromiseLike<TotpRpcResponse<unknown>>;
 
