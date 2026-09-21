@@ -1,0 +1,309 @@
+-- Top of the Pops: make band invitations visible and actionable for every active member.
+-- The notification feed is profile-scoped, so TOTP notifications must carry profile_id.
+-- Invitation discovery also accepts canonical profile ownership when legacy band_members.user_id is missing.
+
+CREATE OR REPLACE FUNCTION public.totp_my_invitations()
+RETURNS TABLE (
+  invitation_id uuid,
+  episode_id uuid,
+  episode_date date,
+  check_in_at timestamptz,
+  broadcast_at timestamptz,
+  band_id uuid,
+  band_name text,
+  song_id uuid,
+  song_title text,
+  qualifying_rank integer,
+  status text,
+  response_deadline timestamptz,
+  london_city_id uuid,
+  london_city_name text
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    i.id,
+    e.id,
+    e.episode_date,
+    e.check_in_at,
+    e.broadcast_at,
+    b.id,
+    b.name::text,
+    s.id,
+    s.title,
+    i.qualifying_rank,
+    i.status,
+    i.response_deadline,
+    c.id,
+    c.name::text
+  FROM public.totp_invitations i
+  JOIN public.totp_episodes e ON e.id = i.episode_id
+  JOIN public.bands b ON b.id = i.band_id
+  JOIN public.songs s ON s.id = i.song_id
+  JOIN public.cities c ON c.id = e.city_id
+  WHERE EXISTS (
+    SELECT 1
+    FROM public.band_members bm
+    LEFT JOIN public.profiles member_profile ON member_profile.id = bm.profile_id
+    WHERE bm.band_id = i.band_id
+      AND coalesce(bm.member_status, 'active') = 'active'
+      AND coalesce(bm.is_touring_member, false) = false
+      AND coalesce(bm.user_id, member_profile.user_id) = auth.uid()
+  )
+  ORDER BY e.episode_date DESC, i.qualifying_rank ASC;
+$$;
+
+REVOKE ALL ON FUNCTION public.totp_my_invitations() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.totp_my_invitations() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.totp_notify_new_invitation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_episode public.totp_episodes%ROWTYPE;
+  v_band_name text;
+  v_song_title text;
+  v_city_name text;
+  v_leader_profile uuid;
+  v_message text;
+BEGIN
+  SELECT * INTO v_episode
+  FROM public.totp_episodes
+  WHERE id = NEW.episode_id;
+
+  SELECT b.name::text, b.leader_id
+  INTO v_band_name, v_leader_profile
+  FROM public.bands b
+  WHERE b.id = NEW.band_id;
+
+  SELECT s.title::text
+  INTO v_song_title
+  FROM public.songs s
+  WHERE s.id = NEW.song_id;
+
+  SELECT c.name::text
+  INTO v_city_name
+  FROM public.cities c
+  WHERE c.id = v_episode.city_id;
+
+  v_message := format(
+    '%s has been invited to Top of the Pops to perform %s (UK chart #%s). Broadcast: %s. Studio call: %s in %s. Reply by: %s. All active band members must be in the studio city for check-in; only the band leader can accept or decline.',
+    coalesce(v_band_name, 'Your band'),
+    coalesce(v_song_title, 'the qualifying song'),
+    NEW.qualifying_rank,
+    to_char(v_episode.broadcast_at AT TIME ZONE 'Europe/London', 'Dy DD Mon YYYY, HH24:MI'),
+    to_char(v_episode.check_in_at AT TIME ZONE 'Europe/London', 'Dy DD Mon YYYY, HH24:MI'),
+    coalesce(v_city_name, 'London'),
+    to_char(NEW.response_deadline AT TIME ZONE 'Europe/London', 'Dy DD Mon YYYY, HH24:MI')
+  );
+
+  WITH recipients AS (
+    SELECT DISTINCT
+      coalesce(bm.user_id, p.user_id) AS user_id,
+      coalesce(bm.profile_id, p.id) AS profile_id
+    FROM public.band_members bm
+    LEFT JOIN public.profiles p ON p.id = bm.profile_id
+    WHERE bm.band_id = NEW.band_id
+      AND coalesce(bm.member_status, 'active') = 'active'
+      AND coalesce(bm.is_touring_member, false) = false
+
+    UNION
+
+    SELECT p.user_id, p.id
+    FROM public.profiles p
+    WHERE p.id = v_leader_profile
+  )
+  INSERT INTO public.notifications(
+    user_id,
+    profile_id,
+    category,
+    type,
+    title,
+    message,
+    action_path,
+    metadata
+  )
+  SELECT
+    r.user_id,
+    r.profile_id,
+    'career',
+    'info',
+    CASE
+      WHEN r.profile_id = v_leader_profile THEN 'Top of the Pops invitation — response needed'
+      ELSE 'Your band has a Top of the Pops invitation'
+    END,
+    v_message,
+    '/top-of-the-pops#invitations',
+    jsonb_build_object(
+      'episode_id', NEW.episode_id,
+      'invitation_id', NEW.id,
+      'band_id', NEW.band_id,
+      'song_id', NEW.song_id,
+      'qualifying_rank', NEW.qualifying_rank,
+      'episode_date', v_episode.episode_date,
+      'broadcast_at', v_episode.broadcast_at,
+      'check_in_at', v_episode.check_in_at,
+      'response_deadline', NEW.response_deadline,
+      'city_id', v_episode.city_id,
+      'city_name', v_city_name,
+      'leader_action_required', r.profile_id = v_leader_profile
+    )
+  FROM recipients r
+  WHERE r.user_id IS NOT NULL
+    AND r.profile_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.notifications n
+      WHERE n.profile_id = r.profile_id
+        AND n.type = 'info'
+        AND n.metadata->>'invitation_id' = NEW.id::text
+    );
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.totp_notify_new_invitation() FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.totp_respond_to_invitation(
+  p_invitation_id uuid,
+  p_response text
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_inv public.totp_invitations%ROWTYPE;
+  v_episode public.totp_episodes%ROWTYPE;
+  v_leader_profile uuid;
+  v_band_name text;
+  v_song_title text;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  IF p_response NOT IN ('accepted', 'declined') THEN
+    RAISE EXCEPTION 'Response must be accepted or declined';
+  END IF;
+
+  SELECT * INTO v_inv
+  FROM public.totp_invitations
+  WHERE id = p_invitation_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Top of the Pops invitation not found';
+  END IF;
+
+  SELECT p.id
+  INTO v_leader_profile
+  FROM public.profiles p
+  WHERE p.user_id = auth.uid()
+    AND p.id = (SELECT leader_id FROM public.bands WHERE id = v_inv.band_id)
+  LIMIT 1;
+
+  IF v_leader_profile IS NULL THEN
+    RAISE EXCEPTION 'Only the band leader can respond to this invitation';
+  END IF;
+
+  IF v_inv.status <> 'invited' THEN
+    RAISE EXCEPTION 'This invitation has already been responded to';
+  END IF;
+
+  IF now() > v_inv.response_deadline THEN
+    UPDATE public.totp_invitations
+    SET status = 'expired', updated_at = now()
+    WHERE id = p_invitation_id;
+    RETURN 'expired';
+  END IF;
+
+  UPDATE public.totp_invitations
+  SET status = p_response,
+      responded_at = now(),
+      updated_at = now()
+  WHERE id = p_invitation_id;
+
+  SELECT * INTO v_episode
+  FROM public.totp_episodes
+  WHERE id = v_inv.episode_id;
+
+  SELECT b.name::text, s.title::text
+  INTO v_band_name, v_song_title
+  FROM public.bands b
+  JOIN public.songs s ON s.id = v_inv.song_id
+  WHERE b.id = v_inv.band_id;
+
+  WITH recipients AS (
+    SELECT DISTINCT
+      coalesce(bm.user_id, p.user_id) AS user_id,
+      coalesce(bm.profile_id, p.id) AS profile_id
+    FROM public.band_members bm
+    LEFT JOIN public.profiles p ON p.id = bm.profile_id
+    WHERE bm.band_id = v_inv.band_id
+      AND coalesce(bm.member_status, 'active') = 'active'
+      AND coalesce(bm.is_touring_member, false) = false
+  )
+  INSERT INTO public.notifications(
+    user_id,
+    profile_id,
+    category,
+    type,
+    title,
+    message,
+    action_path,
+    metadata
+  )
+  SELECT
+    r.user_id,
+    r.profile_id,
+    'career',
+    CASE WHEN p_response = 'accepted' THEN 'success' ELSE 'info' END,
+    CASE
+      WHEN p_response = 'accepted' THEN 'Top of the Pops invitation accepted'
+      ELSE 'Top of the Pops invitation declined'
+    END,
+    CASE
+      WHEN p_response = 'accepted' THEN format(
+        '%s accepted Top of the Pops. %s is booked for the broadcast on %s. Studio call is %s; every active band member must be in the studio city and not travelling for check-in.',
+        v_band_name,
+        v_song_title,
+        to_char(v_episode.broadcast_at AT TIME ZONE 'Europe/London', 'Dy DD Mon YYYY, HH24:MI'),
+        to_char(v_episode.check_in_at AT TIME ZONE 'Europe/London', 'Dy DD Mon YYYY, HH24:MI')
+      )
+      ELSE format('%s declined its Top of the Pops invitation for %s.', v_band_name, v_song_title)
+    END,
+    '/top-of-the-pops#invitations',
+    jsonb_build_object(
+      'episode_id', v_inv.episode_id,
+      'invitation_id', v_inv.id,
+      'band_id', v_inv.band_id,
+      'song_id', v_inv.song_id,
+      'response', p_response,
+      'broadcast_at', v_episode.broadcast_at,
+      'check_in_at', v_episode.check_in_at
+    )
+  FROM recipients r
+  WHERE r.user_id IS NOT NULL
+    AND r.profile_id IS NOT NULL;
+
+  RETURN p_response;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.totp_respond_to_invitation(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.totp_respond_to_invitation(uuid, text) TO authenticated;
+
+COMMENT ON FUNCTION public.totp_my_invitations() IS
+  'Returns TOTP invitations for the signed-in user using either canonical profile ownership or legacy band_members.user_id membership.';
+COMMENT ON FUNCTION public.totp_notify_new_invitation() IS
+  'Creates profile-scoped, actionable TOTP notifications for every active non-touring band member.';
+COMMENT ON FUNCTION public.totp_respond_to_invitation(uuid, text) IS
+  'Leader-only TOTP invitation response with profile-scoped outcome notifications for the full active band.';
