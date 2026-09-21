@@ -13,7 +13,7 @@ import { totpRpc } from "./rpc";
 import { getTotpEpisodePlan } from "./scheduleApi";
 import { buildTotpPresenterDialogue } from "./presenterDialogue";
 import { matchTotpReusablePresenterPhrase } from "./presenterPhraseAudio";
-import { totpRemoteAudioDurationMs } from "./audioAsset";
+import { totpRemoteAudioDurationMs, totpRemoteAudioSha256 } from "./audioAsset";
 import { totpMediaPublicUrl } from "./totpMedia";
 
 export interface StoredTotpEpisodeManifest {
@@ -132,11 +132,9 @@ export async function buildTotpEpisodeManifestFromEpisode(
     const phrase = script ? matchTotpReusablePresenterPhrase(script, performance.band_name) : null;
     const phraseAsset = phrase ? presenterFragments.phrases?.[phrase.id] : null;
     const bandAsset = presenterFragments.bands?.[performance.band_id] ?? null;
-    const phraseSha256 = phraseAsset?.storage_path ? reusablePhraseSha256(phraseAsset.storage_path) : null;
     if (
       !phrase
       || !phraseAsset?.storage_path
-      || !phraseSha256
       || !bandAsset?.audio_url
       || !bandAsset.sha256
       || !bandAsset.duration_ms
@@ -148,14 +146,19 @@ export async function buildTotpEpisodeManifestFromEpisode(
 
     const phraseUrl = totpMediaPublicUrl(phraseAsset.storage_path);
     let phraseDurationMs = reusableDurationByPath.get(phraseAsset.storage_path) ?? null;
-    if (!phraseDurationMs) {
-      try {
+    let phraseSha256 = reusablePhraseSha256(phraseAsset.storage_path);
+    try {
+      if (!phraseDurationMs) {
         phraseDurationMs = await totpRemoteAudioDurationMs(phraseUrl);
         reusableDurationByPath.set(phraseAsset.storage_path, phraseDurationMs);
-      } catch {
-        continue;
       }
+      if (!phraseSha256) {
+        phraseSha256 = await totpRemoteAudioSha256(phraseUrl);
+      }
+    } catch {
+      continue;
     }
+    if (!phraseSha256) continue;
 
     presenterSequences[performance.performance_id] = {
       duration_ms: phraseDurationMs + TOTP_REUSABLE_PRESENTER_GAP_MS + bandAsset.duration_ms,
