@@ -23,9 +23,7 @@ modular assembly, skin/clothing dyes and performance poses.
 - The active character owns its model. Switching characters resets the editor
   session; saves target the character captured in the request.
 - Gig lineups load cosmetic appearances, rich clothing and a minimal tattoo visual projection in batched reads. Missing models use stable starter appearances. Tattoo purchase price, artist, custom text and minigame data are never exposed through the stage projection. Read failures show a recoverable notice.
-- Replays use each performer's **current saved appearance**. Historical wardrobe
-  snapshots are not yet recorded. Their canonical event/checksum contracts stay
-  unchanged.
+- Ordinary gig replays use each performer's **current saved appearance**. Top of the Pops broadcast archives freeze appearance, rich clothing and tattoo visuals when the canonical replay is created, so later cosmetic changes do not rewrite television history.
 
 ## Storage and permissions
 
@@ -71,8 +69,7 @@ poses and WebGL resources have explicit cleanup.
    or trust a client-supplied price. Existing legacy purchase mutations are not
    reused by this feature.
 3. Extend the shipped Head attachment system for jewellery and authored accessory meshes; retain the current standard instrument fallback for unsupported roles/items.
-4. Add appearance snapshots to the authoritative replay generation workflow if
-   historical clothing must be preserved. Do not write snapshots from the viewer.
+4. If ordinary gig history later needs frozen cosmetics, capture the same render-only snapshot server-side when the authoritative replay is generated. Do not write snapshots from the viewer.
 
 Paid accessory ownership and a full face-sculpting system remain follow-up features; the shipped free hats/glasses and owned tattoos now affect the actual stage model.
 
@@ -128,8 +125,6 @@ Tattoo ownership is **not** duplicated into `player_stage_appearances`. The Tatt
 Parlour remains authoritative. `public.get_stage_tattoo_visuals(uuid[])` exposes only
 the render fields required by authenticated stage viewers: profile/tattoo IDs, body
 slot, ink colour, quality, infection state and design category. Anonymous execution is
-revoked. This keeps financial and artist data private while letting bandmates' visible
-ink appear in shared performances. Tattoo purchases and treatment invalidate the
-fitting-room and gig cosmetic caches immediately.
+revoked. This keeps financial and artist data private while letting bandmates' visible ink appear in shared performances. Tattoo purchases and treatment invalidate the fitting-room and gig cosmetic caches immediately. Future Top of the Pops replay snapshots also freeze these render-only tattoo fields alongside clothing and appearance.
 
 Migration: `supabase/migrations/20260921183000_avatar_accessories_stage_tattoos.sql`.
