@@ -15,6 +15,7 @@ on:
       - ".github/workflows/totp-*.yml"
       - "totp-render.html"
       - "vite.config.ts"
+      - "playwright.totp.config.ts"
       - "package.json"
       - "package-lock.json"
   workflow_dispatch:
