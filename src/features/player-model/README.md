@@ -143,3 +143,33 @@ Studio exposes every shared body slot as a coverage toggle.
 The shared catalogue now mirrors the live Tattoo Parlour data, including stomach, thigh and
 calf placement plus blackwork, fine-line, realism and traditional styles. This prevents newer
 tattoos from disappearing when a player moves from the 2D parlour view into the 3D avatar.
+
+
+## Phase 3: face, skin and garment detail
+
+Phase 3 extends the existing version-1 appearance rather than creating another avatar format.
+Face shape, eye colour, eyebrow style/colour and skin detail are optional head fields, so old
+saved avatars remain valid. Face-shape adjustments are applied on the animated Head bone and
+the detail layer follows that same bone through fitting-room and performance poses. Freckles,
+beauty marks and weathered detail are lightweight rig-attached geometry; eye and brow tinting
+uses the existing authored head materials where present.
+
+Rich procedural garments now add small construction cues such as shoulder and hem seams,
+front folds, trouser creases and footwear soles. These reuse the existing rig anchors and
+materials, so they move with the same torso/limb bones and do not require extra downloads.
+
+Migration: `supabase/migrations/20260921195000_avatar_face_detail_phase_3.sql`.
+Regression: `supabase/tests/avatar_face_detail_phase_3.sql`.
+
+## Phase 4: unified tattoo/avatar polish
+
+The Tattoo Parlour's **My Tattoos** tab now includes the shared animated 3D player model next
+to the placement map. It reads the same saved appearance, equipped rich clothing and
+render-only Tattoo Parlour projection as gigs, so clothing coverage and visible ink match the
+stage presentation. The existing cache invalidation after purchase, text/custom tattoo and
+infection treatment updates this view as well as subsequent gigs.
+
+Tattoo surfaces use smoother curved geometry, stable per-tattoo orientation and mipmapped
+style masks for cleaner close-up rendering. The authoritative tattoo record remains in the
+Tattoo Parlour; no ownership, pricing, artist or private minigame data is copied into avatar
+appearance JSON.
