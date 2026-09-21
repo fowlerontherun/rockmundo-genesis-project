@@ -144,7 +144,7 @@ describe("TOTP stored running sheet", () => {
     expect(manifest.segments).toHaveLength(1);
     expect(manifest.total_runtime_ms).toBe(184_400);
     expect(manifest.segments[0].rights.status).toBe("cleared");
-    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.audio_url).toBe("https://cdn/presenter-p1.wav");
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.url).toBe("https://cdn/presenter-p1.wav");
     expect(manifest.presenter_dialogue?.find((line) => line.kind === "opening")?.asset?.url).toContain("opening.wav");
     expect(manifest.chart_rundown?.streaming).toEqual([]);
     expect(issues).toEqual([]);
