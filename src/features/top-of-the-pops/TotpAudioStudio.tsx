@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -25,7 +25,8 @@ import {
   type TotpBandNameAudioCatalogRow,
 } from "./bandNameAudioApi";
 import { getTotpEpisodePlan, saveTotpEpisodePlan, type TotpEpisodePlan, type TotpPresenterAudioPlan } from "./scheduleApi";
-import { detectTotpUploadMime, TOTP_MEDIA_BUCKET, totpMediaPublicUrl } from "./totpMedia";
+import { detectTotpUploadMime, TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
+import { TOTP_CHART_POSITIONS, TOTP_REUSABLE_VOICE_SCRIPT_GUIDE, totpChartPositionScript } from "./chartPositionAudio";
 import { totpAudioDurationMs, totpAudioFileExtension, totpAudioSha256 } from "./audioAsset";
 
 const ACCEPTED_AUDIO = "audio/mpeg,audio/wav,audio/ogg,audio/webm,audio/mp4,.mp3,.wav,.ogg,.webm,.m4a";
@@ -89,6 +90,13 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
   const [bandSearch, setBandSearch] = useState("");
   const [uploadingCue, setUploadingCue] = useState<string | null>(null);
   const [uploadingBand, setUploadingBand] = useState<string | null>(null);
+  const [uploadingRank, setUploadingRank] = useState<number | null>(null);
+  const [recordingRank, setRecordingRank] = useState<number | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingRequestIdRef = useRef(0);
+  const presenterKey = episode?.presenter_key ?? "alex_rayne";
 
   const planQuery = useQuery({
     queryKey: ["totp", "episode-plan", episode?.id ?? "none"],
@@ -99,6 +107,34 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
   const bandsQuery = useQuery({
     queryKey: ["totp", "band-name-audio"],
     queryFn: getTotpBandNameAudioCatalog,
+  });
+
+  const chartPositionAssets = useQuery({
+    queryKey: ["totp", "chart-position-audio", presenterKey],
+    queryFn: async () => {
+      const folder = TOTP_MEDIA_PATHS.chartPositionFolder(presenterKey);
+      const { data, error } = await supabase.storage
+        .from(TOTP_MEDIA_BUCKET)
+        .list(folder, { limit: 200 });
+      if (error) throw new Error(error.message);
+
+      const newestByRank = new Map<number, { path: string; createdAt: number }>();
+      for (const item of data ?? []) {
+        const match = /^(\d+)-([a-f0-9]{8,64})\.(mp3|wav|ogg|webm|m4a|mp4)$/i.exec(item.name);
+        if (!match) continue;
+        const rank = Number(match[1]);
+        if (!Number.isInteger(rank) || rank < 1 || rank > 40) continue;
+        const createdAt = Date.parse(item.created_at ?? item.updated_at ?? "") || 0;
+        const current = newestByRank.get(rank);
+        if (!current || createdAt >= current.createdAt) {
+          newestByRank.set(rank, { path: `${folder}/${item.name}`, createdAt });
+        }
+      }
+
+      return new Map(
+        [...newestByRank.entries()].map(([rank, asset]) => [rank, asset.path] as const),
+      );
+    },
   });
 
   const dialogue = useMemo(
@@ -229,6 +265,128 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
     },
   });
 
+
+  const chartPositionUpload = useMutation({
+    mutationFn: async ({ rank, file }: { rank: number; file: File }) => {
+      const { mime, sha256 } = await validateAndMeasure(file);
+      const revision = sha256.slice(0, 16);
+      const extension = totpAudioFileExtension(mime);
+      const path = TOTP_MEDIA_PATHS.chartPosition(presenterKey, rank, revision, extension);
+      const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(path, file, {
+        upsert: true,
+        contentType: mime,
+        cacheControl: "31536000",
+      });
+      if (error) throw new Error(error.message);
+      return rank;
+    },
+    onMutate: ({ rank }) => setUploadingRank(rank),
+    onSuccess: (rank) => {
+      setUploadingRank(null);
+      toast({
+        title: `Chart position ${rank} saved`,
+        description: `“${totpChartPositionScript(rank)}” is now available for the presenter voice library.`,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["totp", "chart-position-audio", presenterKey] });
+    },
+    onError: (error: Error) => {
+      setUploadingRank(null);
+      toast({ title: "Chart position upload failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const stopChartPositionRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+  };
+
+  const startChartPositionRecording = async (rank: number) => {
+    if (recordingRank !== null) return;
+    const requestId = ++recordingRequestIdRef.current;
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      toast({
+        title: "Microphone recording unavailable",
+        description: "This browser cannot record directly. You can still upload an MP3, WAV, OGG, WebM or M4A file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (requestId !== recordingRequestIdRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
+      const mimeType = candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate));
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      recordingChunksRef.current = [];
+      recordingStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      setRecordingRank(rank);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        recordingStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        recordingChunksRef.current = [];
+        setRecordingRank(null);
+        toast({ title: "Recording failed", description: "The browser could not capture that take.", variant: "destructive" });
+      };
+      recorder.onstop = () => {
+        const finalMime = recorder.mimeType || "audio/webm";
+        const blob = new Blob(recordingChunksRef.current, { type: finalMime });
+        stream.getTracks().forEach((track) => track.stop());
+        recordingStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        recordingChunksRef.current = [];
+        setRecordingRank(null);
+        if (requestId !== recordingRequestIdRef.current) return;
+        if (blob.size > 0) {
+          const extension = finalMime.includes("ogg") ? "ogg" : "webm";
+          chartPositionUpload.mutate({
+            rank,
+            file: new File([blob], `totp-chart-position-${rank}.${extension}`, { type: finalMime }),
+          });
+        }
+      };
+
+      recorder.start();
+    } catch (error) {
+      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+      mediaRecorderRef.current = null;
+      recordingChunksRef.current = [];
+      setRecordingRank(null);
+      toast({
+        title: "Microphone access failed",
+        description: error instanceof Error ? error.message : "Allow microphone access and try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      recordingRequestIdRef.current += 1;
+      const recorder = mediaRecorderRef.current;
+      if (recorder) {
+        recorder.ondataavailable = null;
+        recorder.onerror = null;
+        recorder.onstop = null;
+        if (recorder.state !== "inactive") recorder.stop();
+      }
+      recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+      mediaRecorderRef.current = null;
+      recordingChunksRef.current = [];
+    };
+  }, []);
+
   return (
     <Card id="totp-audio-studio">
       <CardHeader>
@@ -338,6 +496,100 @@ export function TotpAudioStudio({ episode }: { episode: TotpEpisode | null }) {
                         The displayed dialogue changed after this take was recorded. Upload a new take before production sign-off.
                       </div>
                     ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+
+        <section id="chart-position-audio" className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 font-semibold">
+                <Mic2 className="h-4 w-4" /> Chart position voice library
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Record the forty reusable chart-position phrases once for this presenter. Use a clean, neutral delivery so the clips can be joined to artist and song audio in any episode.
+              </p>
+            </div>
+            <Badge variant={chartPositionAssets.data?.size === 40 ? "secondary" : "outline"}>
+              {chartPositionAssets.data?.size ?? 0}/40 positions recorded
+            </Badge>
+          </div>
+
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <h4 className="text-sm font-semibold">Supporting presenter lines</h4>
+            <p className="mt-1 text-xs text-muted-foreground">
+              These are the other reusable chart phrases worth recording. The main chart introduction is already supported by the episode audio sheet; the remaining cues are recommended building blocks for richer chart narration.
+            </p>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {TOTP_REUSABLE_VOICE_SCRIPT_GUIDE.map((line) => (
+                <div key={line.id} className="rounded-md border bg-background p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold">{line.label}</span>
+                    <Badge variant="outline">{line.status}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm leading-6">“{line.script}”</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {chartPositionAssets.isError ? (
+            <div className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive">
+              {(chartPositionAssets.error as Error).message}
+            </div>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2">
+              {TOTP_CHART_POSITIONS.map((rank) => {
+                const assetPath = chartPositionAssets.data?.get(rank) ?? null;
+                const exists = Boolean(assetPath);
+                const isRecording = recordingRank === rank;
+                const isBusy = uploadingRank === rank;
+                const audioUrl = assetPath ? totpMediaPublicUrl(assetPath) : null;
+                return (
+                  <div key={rank} className="rounded-lg border p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-black tabular-nums">#{rank}</span>
+                          {exists ? statusBadge("recorded") : statusBadge("missing")}
+                        </div>
+                        <p className="mt-2 text-sm font-medium">“{totpChartPositionScript(rank)}”</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant={isRecording ? "destructive" : "outline"}
+                          disabled={(recordingRank !== null && !isRecording) || isBusy}
+                          onClick={() => isRecording ? stopChartPositionRecording() : void startChartPositionRecording(rank)}
+                        >
+                          {isRecording ? "Stop & save" : <><Mic2 className="mr-2 h-4 w-4" /> Record</>}
+                        </Button>
+                        <label
+                          htmlFor={`totp-chart-position-${rank}`}
+                          className={`inline-flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs hover:bg-muted/40 ${isBusy ? "pointer-events-none opacity-50" : ""}`}
+                        >
+                          {isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                          {exists ? "Replace file" : "Upload"}
+                        </label>
+                        <input
+                          id={`totp-chart-position-${rank}`}
+                          className="sr-only"
+                          type="file"
+                          accept={ACCEPTED_AUDIO}
+                          disabled={isBusy}
+                          onChange={(event) => {
+                            const file = event.currentTarget.files?.[0];
+                            if (file) chartPositionUpload.mutate({ rank, file });
+                            event.currentTarget.value = "";
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {audioUrl ? <audio className="mt-3 h-8 w-full" controls preload="none" src={audioUrl} /> : null}
                   </div>
                 );
               })}
