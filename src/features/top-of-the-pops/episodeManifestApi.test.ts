@@ -126,9 +126,10 @@ describe("TOTP stored running sheet", () => {
         presenter_intro: "And now, it's The Kestrels!",
       }],
     };
-    const plan = clearedPlan();
-    plan.presenter_audio = {};
-    getTotpEpisodePlan.mockResolvedValue(plan);
+    getTotpEpisodePlan.mockResolvedValue({
+      ...clearedPlan(),
+      presenter_audio: {},
+    });
     getTotpEpisodePresenterFragments.mockResolvedValue({
       presenter_key: "presenter_a",
       phrases: {
