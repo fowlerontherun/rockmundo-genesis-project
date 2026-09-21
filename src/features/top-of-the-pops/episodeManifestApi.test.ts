@@ -150,6 +150,51 @@ describe("TOTP stored running sheet", () => {
     expect(issues).toEqual([]);
   });
 
+  it("freezes the immutable UK chart snapshot into the same production manifest", async () => {
+    getTotpChartRundown.mockResolvedValue({
+      episode_id: episode.id,
+      chart_snapshot_date: "2026-09-18",
+      streaming: [{
+        rank: 1,
+        song_id: "s1",
+        band_id: "b1",
+        song_title: "Opening Night",
+        artist_name: "The Kestrels",
+        trend: "up",
+        trend_change: 2,
+        weekly_plays: 12345,
+      }],
+      digital_sales: [{
+        rank: 4,
+        song_id: "s1",
+        band_id: "b1",
+        song_title: "Opening Night",
+        artist_name: "The Kestrels",
+        trend: "new",
+        trend_change: null,
+        weekly_plays: 4321,
+      }],
+      streaming_count: 1,
+      digital_sales_count: 1,
+    });
+    getTotpPerformanceAudio.mockResolvedValue({
+      audio_url: "https://cdn/p1.mp3",
+      audio_generation_status: "complete",
+      duration_seconds: 182,
+    });
+
+    const { manifest, issues } = await buildTotpEpisodeManifestFromEpisode(episode);
+
+    expect(manifest.chart_rundown?.chart_snapshot_date).toBe("2026-09-18");
+    expect(manifest.chart_rundown?.streaming[0]).toEqual(expect.objectContaining({
+      rank: 1,
+      artist_name: "The Kestrels",
+      weekly_plays: 12345,
+    }));
+    expect(manifest.presenter_dialogue?.find((line) => line.kind === "chart")?.asset?.audio_url).toContain("chart.wav");
+    expect(issues).toEqual([]);
+  });
+
   it("freezes a reusable phrase and matching band-name take when the exact presenter take is missing", async () => {
     const reusableEpisode: TotpEpisode = {
       ...episode,
