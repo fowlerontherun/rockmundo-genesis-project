@@ -195,6 +195,33 @@ function manifestCaptionTrack(
     }
   });
 
+  items.forEach((item) => {
+    if (item.kind === "programme_continuity" && item.continuity_text?.trim()) {
+      captions.push({
+        id: `caption-continuity-${item.index}`,
+        startMs: item.start_ms,
+        endMs: item.start_ms + item.duration_ms,
+        speaker: presenterName,
+        text: item.continuity_text,
+      });
+    }
+  });
+
+  const chartIntro = manifest.presenter_dialogue?.find((line) => line.kind === "chart" && line.script_text.trim());
+  const firstChartPage = items.find((item) => item.kind === "chart_rundown");
+  if (chartIntro && firstChartPage) {
+    captions.push({
+      id: "caption-chart-rundown-intro",
+      startMs: firstChartPage.start_ms,
+      endMs: Math.min(
+        firstChartPage.start_ms + firstChartPage.duration_ms,
+        firstChartPage.start_ms + Math.max(1_200, chartIntro.asset?.duration_ms ?? firstChartPage.duration_ms),
+      ),
+      speaker: presenterName,
+      text: chartIntro.script_text,
+    });
+  }
+
   return captions.sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id));
 }
 
