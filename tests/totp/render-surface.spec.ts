@@ -173,13 +173,25 @@ test("deterministic render surface draws continuity, chart and studio-transition
 
   const surface = page.locator("[data-totp-offline-render]");
   await expect(surface).toHaveAttribute("data-totp-render-item", "programme_continuity");
-  expect((await surface.screenshot({ type: "png" })).byteLength).toBeGreaterThan(10_000);
+  const continuityStart = await surface.screenshot({ type: "png" });
+  expect(continuityStart.byteLength).toBeGreaterThan(10_000);
+  await page.evaluate(async () => {
+    await (window as any).__totpRenderSetFrame({ itemIndex: 0, localMs: 4200 });
+  });
+  const continuityLater = await surface.screenshot({ type: "png" });
+  expect(continuityLater.equals(continuityStart)).toBe(false);
 
   await page.evaluate(async () => {
-    await (window as any).__totpRenderSetFrame({ itemIndex: 1, localMs: 2500 });
+    await (window as any).__totpRenderSetFrame({ itemIndex: 1, localMs: 800 });
   });
   await expect(surface).toHaveAttribute("data-totp-render-item", "chart_rundown");
-  expect((await surface.screenshot({ type: "png" })).byteLength).toBeGreaterThan(10_000);
+  const chartStart = await surface.screenshot({ type: "png" });
+  expect(chartStart.byteLength).toBeGreaterThan(10_000);
+  await page.evaluate(async () => {
+    await (window as any).__totpRenderSetFrame({ itemIndex: 1, localMs: 4200 });
+  });
+  const chartLater = await surface.screenshot({ type: "png" });
+  expect(chartLater.equals(chartStart)).toBe(false);
 
   await page.evaluate(async () => {
     await (window as any).__totpRenderSetFrame({ itemIndex: 2, localMs: 1600 });
