@@ -427,8 +427,9 @@ export function buildTotpSegmentPreviewRenderPlan(
   if (!segment) throw new Error("That performance is not in the frozen running sheet.");
 
   let cursor = 0;
+  const previewKinds = new Set<TotpRenderItemKind>(["presenter_link", "performance", "applause"]);
   const items = master.items
-    .filter((item) => item.performance_id === performanceId)
+    .filter((item) => item.performance_id === performanceId && previewKinds.has(item.kind))
     .map((item, index) => {
       const next = { ...item, index, start_ms: cursor };
       cursor += item.duration_ms;
