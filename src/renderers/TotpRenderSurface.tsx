@@ -123,7 +123,7 @@ function ChartRundownFrame({ item }: { item: TotpRenderItem }) {
     <div className="relative h-full w-full overflow-hidden bg-slate-950 text-white" data-totp-offline-chart={page.chartType}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.24),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,.24),transparent_30%)]" />
       <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-cyan-400 via-white to-fuchsia-500" />
-      <div className="relative mx-auto w-[1600px] py-20">
+      <div className="relative mx-auto w-[1600px] py-12">
         <div className="flex items-start justify-between gap-10">
           <div>
             <div className="text-xl font-black uppercase tracking-[0.3em] text-cyan-200">Top of the Pops chart rundown</div>
@@ -132,13 +132,13 @@ function ChartRundownFrame({ item }: { item: TotpRenderItem }) {
           </div>
           <div className="rounded-full border border-white/15 bg-white/10 px-6 py-3 text-xl font-black">{page.sourceCount} real positions</div>
         </div>
-        <div className="mt-12 grid gap-3">
+        <div className="mt-8 grid gap-2">
           {page.entries.map((entry) => (
-            <div key={`${page.id}:${entry.rank}:${entry.song_id ?? entry.song_title}`} className={`grid grid-cols-[100px_minmax(0,1fr)_220px] items-center gap-5 rounded-2xl border px-7 py-4 ${entry.rank === 1 ? "border-amber-300/45 bg-amber-300/10" : "border-white/10 bg-white/[.06]"}`}>
-              <div className={`text-5xl font-black tabular-nums ${entry.rank === 1 ? "text-amber-200" : "text-white"}`}>#{entry.rank}</div>
+            <div key={`${page.id}:${entry.rank}:${entry.song_id ?? entry.song_title}`} className={`grid grid-cols-[90px_minmax(0,1fr)_190px] items-center gap-4 rounded-xl border px-6 py-2.5 ${entry.rank === 1 ? "border-amber-300/45 bg-amber-300/10" : "border-white/10 bg-white/[.06]"}`}>
+              <div className={`text-4xl font-black tabular-nums ${entry.rank === 1 ? "text-amber-200" : "text-white"}`}>#{entry.rank}</div>
               <div className="min-w-0">
-                <div className="truncate text-3xl font-bold">{entry.artist_name}</div>
-                <div className="mt-1 truncate text-xl text-white/55">{entry.song_title}</div>
+                <div className="truncate text-[28px] font-bold">{entry.artist_name}</div>
+                <div className="mt-0.5 truncate text-lg text-white/55">{entry.song_title}</div>
               </div>
               <div className="text-right text-xl text-white/50">{entry.trend === "new" ? "NEW" : entry.trend_change ? `${entry.trend_change > 0 ? "▲" : "▼"} ${Math.abs(entry.trend_change)}` : "—"}</div>
             </div>
