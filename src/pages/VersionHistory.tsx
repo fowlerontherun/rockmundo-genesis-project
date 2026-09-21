@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.754",
+    date: "2026-09-21",
+    changes: [
+      { type: "fix", description: "Cancelling a recording session (or a rehearsal booking) no longer fails with a \"function does not exist\" error — refunds are restored and paid back to whoever covered the booking, and the same cancellation can never be refunded twice" },
+    ],
+  },
+  {
     version: "1.1.753",
     date: "2026-09-21",
     changes: [
