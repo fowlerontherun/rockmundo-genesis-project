@@ -77,6 +77,21 @@ describe('shipped modular stage models', () => {
     expect(actor.root.getObjectByName('avatar-tattoo-tattoo-visual-1')).toBeTruthy();
     disposeModel(model); disposeModel(actor.root);
   });
+  it.each(['masculine', 'feminine'] as const)('renders %s stomach, thigh and calf catalogue tattoos', frame => {
+    const appearance = defaultAppearance(); appearance.body.frame = frame;
+    const tattoos = [
+      { id: 'stomach', profile_id: 'profile-1', body_slot: 'stomach' as const, ink_color: '#101010', quality_score: 95, is_infected: false, category: 'blackwork' as const },
+      { id: 'thigh', profile_id: 'profile-1', body_slot: 'right_thigh' as const, ink_color: '#111111', quality_score: 83, is_infected: false, category: 'realism' as const },
+      { id: 'calf', profile_id: 'profile-1', body_slot: 'left_calf' as const, ink_color: '#222222', quality_score: 78, is_infected: false, category: 'fine_line' as const },
+    ];
+    const model = assemblePlayerModel(library, appearance, tattoos);
+    for (const tattoo of tattoos) expect(model.getObjectByName(`avatar-tattoo-${tattoo.id}`)).toBeTruthy();
+    const actor = new Musician(model, 'vocals', [0, 0, 0], 0, undefined, appearance);
+    actor.update(5, .6, false);
+    for (const tattoo of tattoos) expect(actor.root.getObjectByName(`avatar-tattoo-${tattoo.id}`)).toBeTruthy();
+    disposeModel(model); disposeModel(actor.root);
+  });
+
   it('dyes the feminine casual shirt and keeps skin and eyes independent', () => {
     const appearance = defaultAppearance(); appearance.body.frame = 'feminine'; appearance.equipment.top = { itemId: 'starter.top.casual', color: '#00ff00' }; appearance.body.skin = '#8d5524';
     const model = assemblePlayerModel(library, appearance); const found = new Map<string, string>();
