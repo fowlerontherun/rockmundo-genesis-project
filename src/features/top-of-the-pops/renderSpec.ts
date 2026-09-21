@@ -1,4 +1,5 @@
 import type { TotpEpisodeManifest } from "./episodeManifest";
+import type { TotpBroadcastReplay } from "./api";
 import { TOTP_MIX_TARGET } from "./broadcastAudioMix";
 import { toTotpWebVtt, type TotpCaptionCue } from "./broadcastCaptions";
 import { resolveTotpPresenter } from "./presenters";
@@ -104,6 +105,18 @@ export interface TotpRenderQcCheck {
     | "caption_overflow_absent"
     | "chapters_present";
   description: string;
+}
+
+export function filterTotpRenderReplays(
+  plan: Pick<TotpRenderPlan, "items">,
+  replays: TotpBroadcastReplay[],
+): TotpBroadcastReplay[] {
+  const frozenPerformanceIds = new Set(
+    plan.items
+      .filter((item) => item.kind === "performance" && !!item.performance_id)
+      .map((item) => item.performance_id!),
+  );
+  return replays.filter((replay) => frozenPerformanceIds.has(replay.performance_id));
 }
 
 export interface TotpRenderPlan {
