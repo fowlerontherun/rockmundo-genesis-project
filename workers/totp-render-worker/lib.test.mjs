@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildWebVtt, evaluateProbe, frameCount, locateFrame, stableStringify, wrapCaption } from "./lib.mjs";
+import { buildWebVtt, evaluateProbe, frameCount, locateFrame, presenterSequenceTrackSpecs, stableStringify, wrapCaption } from "./lib.mjs";
 
 const plan = {
   total_duration_ms: 10_000,
@@ -24,6 +24,33 @@ test("frame selection is continuous across item boundaries", () => {
   assert.deepEqual(locateFrame(plan, 2_000), { itemIndex: 1, localMs: 0 });
   assert.deepEqual(locateFrame(plan, 9_999), { itemIndex: 3, localMs: 999 });
   assert.equal(frameCount(plan), 300);
+});
+
+test("frozen presenter fragments keep their authoritative offsets", () => {
+  const tracks = presenterSequenceTrackSpecs({
+    performance_id: "p1",
+    start_ms: 2_000,
+    duration_ms: 2_465,
+    audio_sequence: [
+      { url: "https://audio/phrase.webm", sha256: "a".repeat(64), duration_ms: 1_200, offset_ms: 0 },
+      { url: "https://audio/band.webm", sha256: "b".repeat(64), duration_ms: 1_200, offset_ms: 1_265 },
+    ],
+  });
+  assert.deepEqual(tracks, [
+    { url: "https://audio/phrase.webm", sha256: "a".repeat(64), startMs: 2_000, durationMs: 1_200, gain: 0.95, loop: false },
+    { url: "https://audio/band.webm", sha256: "b".repeat(64), startMs: 3_265, durationMs: 1_200, gain: 0.95, loop: false },
+  ]);
+});
+
+test("frozen presenter fragments cannot overrun their link", () => {
+  assert.throws(() => presenterSequenceTrackSpecs({
+    performance_id: "p1",
+    start_ms: 0,
+    duration_ms: 1_000,
+    audio_sequence: [
+      { url: "https://audio/phrase.webm", sha256: "a".repeat(64), duration_ms: 800, offset_ms: 400 },
+    ],
+  }), /exceed the frozen link duration/);
 });
 
 test("captions are at most two wrapped lines", () => {

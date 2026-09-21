@@ -32,6 +32,15 @@ export type TotpRenderItemKind =
 
 export type TotpRenderPurpose = "master" | "rehearsal" | "segment_preview";
 
+export interface TotpRenderAudioSequenceItem {
+  role: "phrase" | "band_name";
+  url: string;
+  duration_ms: number;
+  offset_ms: number;
+  sha256: string;
+  version: number | null;
+}
+
 export interface TotpRenderItem {
   index: number;
   kind: TotpRenderItemKind;
@@ -40,6 +49,8 @@ export interface TotpRenderItem {
   duration_ms: number;
   performance_id: string | null;
   audio_url: string | null;
+  /** Frozen presenter fragments when no exact full-line take is available. */
+  audio_sequence?: TotpRenderAudioSequenceItem[] | null;
 }
 
 export interface TotpRenderChapter {
@@ -197,15 +208,38 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
 
   manifest.segments.forEach((segment, position) => {
     const presenterAsset = segment.assets.find((asset) => asset.kind === "presenter_audio") ?? null;
+    const presenterSequence = segment.assets.find((asset) => asset.kind === "presenter_audio_sequence") ?? null;
+    const sequenceFragments = presenterSequence?.fragments ?? [];
+    let fragmentOffsetMs = 0;
+    const audioSequence = presenterAsset?.url || sequenceFragments.length === 0
+      ? null
+      : sequenceFragments.map((fragment, fragmentIndex) => {
+          const entry = {
+            role: fragment.role,
+            url: fragment.url,
+            duration_ms: fragment.duration_ms,
+            offset_ms: fragmentOffsetMs,
+            sha256: fragment.sha256,
+            version: fragment.version,
+          };
+          fragmentOffsetMs += fragment.duration_ms;
+          if (fragmentIndex < sequenceFragments.length - 1) {
+            fragmentOffsetMs += Math.max(0, presenterSequence?.gap_ms ?? 0);
+          }
+          return entry;
+        });
     const link = push({
       kind: "presenter_link",
       label: `Presenter link ${position + 1}`,
       duration_ms:
         presenterAsset?.duration_ms && presenterAsset.duration_ms > 0
           ? presenterAsset.duration_ms
-          : TOTP_RENDER_TIMING.presenterLinkMs,
+          : presenterSequence?.duration_ms && presenterSequence.duration_ms > 0
+            ? presenterSequence.duration_ms
+            : TOTP_RENDER_TIMING.presenterLinkMs,
       performance_id: segment.performance_id,
       audio_url: presenterAsset?.url ?? null,
+      audio_sequence: audioSequence,
     });
 
     const songAsset = segment.assets.find((asset) => asset.kind === "song_audio") ?? null;

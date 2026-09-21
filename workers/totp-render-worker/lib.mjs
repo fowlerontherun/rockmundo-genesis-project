@@ -32,6 +32,35 @@ export function frameCount(plan) {
   return Math.round((plan.total_duration_ms / 1000) * FPS);
 }
 
+export function presenterSequenceTrackSpecs(item, gain = 0.95) {
+  if (!Array.isArray(item?.audio_sequence) || item.audio_sequence.length === 0) return [];
+  return item.audio_sequence.map((fragment) => {
+    const durationMs = Number(fragment?.duration_ms ?? 0);
+    const offsetMs = Number(fragment?.offset_ms ?? 0);
+    if (
+      !fragment?.url
+      || !fragment?.sha256
+      || !Number.isFinite(durationMs)
+      || durationMs <= 0
+      || !Number.isFinite(offsetMs)
+      || offsetMs < 0
+    ) {
+      throw new Error(`Presenter fragment for ${item.performance_id ?? "unknown"} is incomplete.`);
+    }
+    if (offsetMs + durationMs > Number(item.duration_ms ?? 0) + 5) {
+      throw new Error(`Presenter fragments for ${item.performance_id ?? "unknown"} exceed the frozen link duration.`);
+    }
+    return {
+      url: fragment.url,
+      sha256: fragment.sha256,
+      startMs: Number(item.start_ms ?? 0) + offsetMs,
+      durationMs,
+      gain,
+      loop: false,
+    };
+  });
+}
+
 function vttStamp(ms) {
   const total = Math.max(0, Math.round(ms));
   const hours = Math.floor(total / 3_600_000);

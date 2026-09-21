@@ -16,6 +16,7 @@ import {
   evaluateProbe,
   frameCount,
   locateFrame,
+  presenterSequenceTrackSpecs,
   sha256Text,
   stableStringify,
 } from "./lib.mjs";
@@ -196,12 +197,20 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
   await fsp.mkdir(audioDir, { recursive: true });
   let serial = 0;
 
-  async function source(url) {
+  async function source(url, expectedSha256 = null) {
     if (!url) return null;
-    if (cache.has(url)) return cache.get(url);
-    const file = path.join(audioDir, `source-${String(++serial).padStart(3, "0")}.bin`);
-    await download(url, file);
-    cache.set(url, file);
+    let file = cache.get(url) ?? null;
+    if (!file) {
+      file = path.join(audioDir, `source-${String(++serial).padStart(3, "0")}.bin`);
+      await download(url, file);
+      cache.set(url, file);
+    }
+    if (expectedSha256) {
+      const actualSha256 = await fileSha256(file);
+      if (actualSha256.toLowerCase() !== String(expectedSha256).toLowerCase()) {
+        throw new Error(`Frozen audio checksum mismatch for ${url}.`);
+      }
+    }
     return file;
   }
 
@@ -223,9 +232,24 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
     }
 
     if (item.kind === "presenter_link") {
-      const file = await source(item.audio_url);
-      if (!file) throw new Error(`Presenter link for ${item.performance_id} has no recorded presenter audio. Browser speech synthesis is not allowed in a master.`);
-      tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.95, loop: false });
+      if (item.audio_url) {
+        const file = await source(item.audio_url);
+        if (!file) throw new Error(`Presenter link for ${item.performance_id} has no recorded presenter audio.`);
+        tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.95, loop: false });
+      } else if (Array.isArray(item.audio_sequence) && item.audio_sequence.length > 0) {
+        for (const fragmentTrack of presenterSequenceTrackSpecs(item)) {
+          const file = await source(fragmentTrack.url, fragmentTrack.sha256);
+          tracks.push({
+            file,
+            startMs: fragmentTrack.startMs,
+            durationMs: fragmentTrack.durationMs,
+            gain: fragmentTrack.gain,
+            loop: fragmentTrack.loop,
+          });
+        }
+      } else {
+        throw new Error(`Presenter link for ${item.performance_id} has no exact take or frozen reusable audio. Browser speech synthesis is not allowed in a master.`);
+      }
     }
 
     if (item.kind === "applause") {
