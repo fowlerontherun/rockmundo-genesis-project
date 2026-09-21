@@ -110,19 +110,21 @@ function wrapSegment(root: T.Object3D, bone: T.Bone, child: T.Bone | undefined, 
   bone.attach(mark);
 }
 
-function torsoMark(root: T.Object3D, bone: T.Bone, tattoo: ResolvedTattooVisual, back = false) {
+function torsoMark(root: T.Object3D, bone: T.Bone, tattoo: ResolvedTattooVisual, back = false, yOffset = .02, depth = .145) {
   root.updateMatrixWorld(true);
   const center = bone.getWorldPosition(new T.Vector3());
-  const categoryScale: Partial<Record<ResolvedTattooVisual['category'], number>> = { sleeve: 1.22, portrait: 1.14, text: .84, geometric: .92 };
+  const categoryScale: Partial<Record<ResolvedTattooVisual['category'], number>> = { sleeve: 1.22, portrait: 1.14, realism: 1.16, traditional: 1.05, blackwork: 1.08, fine_line: .82, text: .84, geometric: .92 };
   const scale = categoryScale[tattoo.category] ?? 1;
   const geometry = tattoo.category === 'geometric'
     ? new T.RingGeometry(.035 * scale, .095 * scale, 6)
     : tattoo.category === 'musical'
       ? new T.RingGeometry(.028 * scale, .078 * scale, 18, 1, .3, Math.PI * 1.65)
-      : new T.CircleGeometry(.085 * scale, tattoo.category === 'tribal' ? 5 : 18);
+      : tattoo.category === 'fine_line'
+        ? new T.RingGeometry(.055 * scale, .064 * scale, 22)
+        : new T.CircleGeometry(.085 * scale, tattoo.category === 'tribal' || tattoo.category === 'blackwork' ? 5 : 18);
   const mark = new T.Mesh(geometry, tattooMaterial(tattoo));
   mark.name = `avatar-tattoo-${tattoo.id}`;
-  mark.position.copy(center).add(new T.Vector3(0, .02, back ? -.14 : .145));
+  mark.position.copy(center).add(new T.Vector3(0, yOffset, back ? -depth : depth));
   mark.rotation.y = back ? Math.PI : 0;
   root.add(mark);
   root.updateMatrixWorld(true);
@@ -137,6 +139,13 @@ export function addTattoos(root: T.Object3D, tattoos: ResolvedTattooVisual[] = [
   const lowerR = findBone(bones, ['LowerArm.R', 'LowerArm_R', 'RightLowerArm']);
   const neck = findBone(bones, ['Neck']);
   const chest = findBone(bones, ['Spine2', 'Spine.002', 'Chest', 'UpperChest']) ?? findBone(bones, ['Spine1', 'Spine.001']);
+  const stomach = findBone(bones, ['Spine', 'Spine0', 'Spine.000', 'Hips']) ?? findBone(bones, ['Spine1', 'Spine.001']);
+  const upperLegL = findBone(bones, ['UpperLeg.L', 'UpperLeg_L', 'LeftUpperLeg']);
+  const upperLegR = findBone(bones, ['UpperLeg.R', 'UpperLeg_R', 'RightUpperLeg']);
+  const lowerLegL = findBone(bones, ['LowerLeg.L', 'LowerLeg_L', 'LeftLowerLeg']);
+  const lowerLegR = findBone(bones, ['LowerLeg.R', 'LowerLeg_R', 'RightLowerLeg']);
+  const footL = findBone(bones, ['Foot.L', 'Foot_L', 'LeftFoot']);
+  const footR = findBone(bones, ['Foot.R', 'Foot_R', 'RightFoot']);
 
   for (const tattoo of tattoos) {
     if (tattoo.body_slot === 'left_shoulder' && upperL) wrapSegment(root, upperL, lowerL, tattoo, .02, .27, -.55, 1.8, .071);
@@ -151,6 +160,11 @@ export function addTattoos(root: T.Object3D, tattoos: ResolvedTattooVisual[] = [
     else if (tattoo.body_slot === 'right_wrist' && lowerR) wrapSegment(root, lowerR, childBone(lowerR, ['hand', 'wrist']), tattoo, .72, .93, -.95, 1.9, .049);
     else if (tattoo.body_slot === 'neck' && neck) wrapSegment(root, neck, findBone(bones, ['Head']), tattoo, .04, .52, -.7, 1.45, .067);
     else if (tattoo.body_slot === 'chest' && chest) torsoMark(root, chest, tattoo, false);
+    else if (tattoo.body_slot === 'stomach' && stomach) torsoMark(root, stomach, tattoo, false, .055, .135);
     else if (tattoo.body_slot === 'back' && chest) torsoMark(root, chest, tattoo, true);
+    else if (tattoo.body_slot === 'left_thigh' && upperLegL) wrapSegment(root, upperLegL, lowerLegL, tattoo, .12, .68, -.8, 1.55, .092);
+    else if (tattoo.body_slot === 'right_thigh' && upperLegR) wrapSegment(root, upperLegR, lowerLegR, tattoo, .12, .68, -.8, 1.55, .092);
+    else if (tattoo.body_slot === 'left_calf' && lowerLegL) wrapSegment(root, lowerLegL, footL, tattoo, .16, .72, -.78, 1.5, .066);
+    else if (tattoo.body_slot === 'right_calf' && lowerLegR) wrapSegment(root, lowerLegR, footR, tattoo, .16, .72, -.78, 1.5, .066);
   }
 }
