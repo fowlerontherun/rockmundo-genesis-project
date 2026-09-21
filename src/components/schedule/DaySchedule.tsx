@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import {
   Clock, ExternalLink, Music, Guitar, Headphones, Briefcase, GraduationCap,
-  BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard
+  BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard, Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScheduledActivities, type ActivityType, type ScheduledActivity } from "@/hooks/useScheduledActivities";
@@ -40,6 +40,7 @@ const ACTIVITY_ICONS: Record<ActivityType, typeof Music> = {
   release_promo: Star,
   teaching: GraduationCap,
   jam_session: Users,
+  major_event: Trophy,
   other: Clock,
 };
 
@@ -66,6 +67,7 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   release_promo: "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300",
   teaching: "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300",
   jam_session: "bg-violet-500/10 border-violet-500/30 text-violet-700 dark:text-violet-300",
+  major_event: "bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300",
   other: "bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300",
 };
 
@@ -74,7 +76,7 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   travel: "Travel", work: "Work", university: "Education", reading: "Reading", mentorship: "Mentorship",
   youtube_video: "Video", health: "Health", skill_practice: "Practice", open_mic: "Open mic",
   pr_appearance: "PR", film_production: "Film", festival_attendance: "Festival", festival_performance: "Festival gig",
-  release_manufacturing: "Release", release_promo: "Promotion", teaching: "Teaching", jam_session: "Jam session", other: "Other",
+  release_manufacturing: "Release", release_promo: "Promotion", teaching: "Teaching", jam_session: "Jam session", major_event: "Major event", other: "Other",
 };
 
 function getDetailHref(activity: ScheduledActivity) {
@@ -83,6 +85,7 @@ function getDetailHref(activity: ScheduledActivity) {
   if (activity.linked_recording_id) return "/recording-studio";
   if (activity.activity_type === "travel") return "/tour-manager";
   if (activity.activity_type === "work") return "/employment";
+  if (activity.activity_type === "major_event") return "/major-events";
   if (activity.activity_type === "university" || activity.activity_type === "teaching") return "/education";
   return null;
 }
