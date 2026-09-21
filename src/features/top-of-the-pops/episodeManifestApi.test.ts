@@ -4,6 +4,7 @@ const totpRpc = vi.fn();
 const getTotpPerformanceAudio = vi.fn();
 const getTotpEpisodePresenterFragments = vi.fn();
 const getTotpEpisodePlan = vi.fn();
+const getTotpChartRundown = vi.fn();
 const totpRemoteAudioDurationMs = vi.fn();
 const totpRemoteAudioSha256 = vi.fn();
 
@@ -14,6 +15,9 @@ vi.mock("./api", () => ({
 }));
 vi.mock("./scheduleApi", () => ({
   getTotpEpisodePlan: (...args: unknown[]) => getTotpEpisodePlan(...args),
+}));
+vi.mock("./chartRundownApi", () => ({
+  getTotpChartRundown: (...args: unknown[]) => getTotpChartRundown(...args),
 }));
 vi.mock("./audioAsset", () => ({
   totpRemoteAudioDurationMs: (...args: unknown[]) => totpRemoteAudioDurationMs(...args),
@@ -31,6 +35,7 @@ import {
   unverifiedTrackRights,
 } from "./episodeManifestApi";
 import { canonicalise, manifestChecksum } from "./episodeManifest";
+import { buildTotpPresenterDialogue } from "./presenterDialogue";
 import type { TotpEpisode } from "./api";
 
 const episode: TotpEpisode = {
@@ -58,6 +63,24 @@ const episode: TotpEpisode = {
 };
 
 function clearedPlan() {
+  const presenter_audio = Object.fromEntries(
+    buildTotpPresenterDialogue(episode)
+      .filter((line) => line.script.trim())
+      .map((line, index) => [line.planKey, {
+        cue_id: line.id,
+        kind: line.kind,
+        performance_id: line.performanceId,
+        presenter_key: "presenter_a",
+        script_text: line.script,
+        script_checksum: manifestChecksum(canonicalise(line.script)),
+        audio_url: line.planKey === "p1" ? "https://cdn/presenter-p1.wav" : `https://cdn/${line.id.replaceAll(":", "-")}.wav`,
+        duration_ms: line.planKey === "p1" ? 2_400 : 2_000 + index * 100,
+        sha256: String(index + 1).padStart(64, "a").slice(-64),
+        version: 1,
+        uploaded_at: "2026-09-19T10:00:00Z",
+      }]),
+  );
+
   return {
     episode_id: episode.id,
     theme: null,
@@ -76,20 +99,14 @@ function clearedPlan() {
         status: "cleared",
       },
     },
-    presenter_audio: {
-      p1: {
-        performance_id: "p1",
-        presenter_key: "presenter_a",
-        script_text: "Welcome!",
-        script_checksum: manifestChecksum(canonicalise("Welcome!")),
-        audio_url: "https://cdn/presenter-p1.wav",
-        duration_ms: 2_400,
-        sha256: "a".repeat(64),
-        version: 1,
-        uploaded_at: "2026-09-19T10:00:00Z",
-      },
-    },
+    presenter_audio,
   };
+}
+
+function clearedPlanWithoutActTake() {
+  const plan = clearedPlan();
+  const { p1: _act, ...continuity } = plan.presenter_audio;
+  return { ...plan, presenter_audio: continuity };
 }
 
 beforeEach(() => {
@@ -97,10 +114,19 @@ beforeEach(() => {
   getTotpPerformanceAudio.mockReset();
   getTotpEpisodePresenterFragments.mockReset();
   getTotpEpisodePlan.mockReset();
+  getTotpChartRundown.mockReset();
   totpRemoteAudioDurationMs.mockReset();
   totpRemoteAudioSha256.mockReset();
   getTotpEpisodePlan.mockResolvedValue(clearedPlan());
   getTotpEpisodePresenterFragments.mockResolvedValue({ presenter_key: "presenter_a", phrases: {}, bands: {} });
+  getTotpChartRundown.mockResolvedValue({
+    episode_id: episode.id,
+    chart_snapshot_date: "2026-09-18",
+    streaming: [],
+    digital_sales: [],
+    streaming_count: 0,
+    digital_sales_count: 0,
+  });
   totpRemoteAudioDurationMs.mockResolvedValue(1_350);
   totpRemoteAudioSha256.mockResolvedValue("e".repeat(64));
 });
@@ -118,7 +144,9 @@ describe("TOTP stored running sheet", () => {
     expect(manifest.segments).toHaveLength(1);
     expect(manifest.total_runtime_ms).toBe(184_400);
     expect(manifest.segments[0].rights.status).toBe("cleared");
-    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.sha256).toBe("a".repeat(64));
+    expect(manifest.segments[0].assets.find((asset) => asset.kind === "presenter_audio")?.audio_url).toBe("https://cdn/presenter-p1.wav");
+    expect(manifest.presenter_dialogue?.find((line) => line.kind === "opening")?.asset?.audio_url).toContain("opening.wav");
+    expect(manifest.chart_rundown?.streaming).toEqual([]);
     expect(issues).toEqual([]);
   });
 
@@ -130,10 +158,7 @@ describe("TOTP stored running sheet", () => {
         presenter_intro: "And now, it's The Kestrels!",
       }],
     };
-    getTotpEpisodePlan.mockResolvedValue({
-      ...clearedPlan(),
-      presenter_audio: {},
-    });
+    getTotpEpisodePlan.mockResolvedValue(clearedPlanWithoutActTake());
     getTotpEpisodePresenterFragments.mockResolvedValue({
       presenter_key: "presenter_a",
       phrases: {
@@ -180,7 +205,7 @@ describe("TOTP stored running sheet", () => {
         presenter_intro: "And now, it's The Kestrels!",
       }],
     };
-    getTotpEpisodePlan.mockResolvedValue({ ...clearedPlan(), presenter_audio: {} });
+    getTotpEpisodePlan.mockResolvedValue(clearedPlanWithoutActTake());
     getTotpEpisodePresenterFragments.mockResolvedValue({
       presenter_key: "presenter_a",
       phrases: {
