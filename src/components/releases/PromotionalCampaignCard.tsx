@@ -24,11 +24,11 @@ interface Campaign {
 }
 
 const CAMPAIGN_TYPES = [
-  { id: "social_media_blitz", name: "Social Media Blitz", description: "Boost visibility on Twaater and DikCok", cost: 500, duration: 3, effects: { hypeBoost: 15, streamBoost: 10, followerBoost: 50 } },
-  { id: "radio_push", name: "Radio Push Campaign", description: "Get more radio station submissions reviewed", cost: 1000, duration: 5, effects: { hypeBoost: 25, radioBoost: 30, chartsBoost: 5 } },
-  { id: "playlist_placement", name: "Playlist Placement Drive", description: "Increase chances of playlist adds", cost: 750, duration: 7, effects: { streamBoost: 40, playlistBoost: 20, hypeBoost: 10 } },
-  { id: "press_tour", name: "Virtual Press Tour", description: "Media coverage and interviews", cost: 2000, duration: 5, effects: { hypeBoost: 50, fameBoost: 25, followerBoost: 100 } },
-  { id: "influencer_campaign", name: "Influencer Campaign", description: "Partner with DikCok creators", cost: 1500, duration: 4, effects: { hypeBoost: 35, streamBoost: 25, viralChance: 10 } },
+  { id: "social_media_blitz", name: "Social Media Blitz", description: "Boost visibility on Twaater and DikCok", cost: 500, duration: 3, effects: { hypeBoost: 15, reachBoost: 12, streamBoost: 10, followerBoost: 50 } },
+  { id: "radio_push", name: "Radio Push Campaign", description: "Get more radio station submissions reviewed", cost: 1000, duration: 5, effects: { hypeBoost: 25, reachBoost: 22, radioBoost: 30, chartsBoost: 5 } },
+  { id: "playlist_placement", name: "Playlist Placement Drive", description: "Increase chances of playlist adds", cost: 750, duration: 7, effects: { streamBoost: 40, playlistBoost: 20, hypeBoost: 10, reachBoost: 28 } },
+  { id: "press_tour", name: "Virtual Press Tour", description: "Media coverage and interviews", cost: 2000, duration: 5, effects: { hypeBoost: 50, reachBoost: 32, fameBoost: 25, followerBoost: 100 } },
+  { id: "influencer_campaign", name: "Influencer Campaign", description: "Partner with DikCok creators", cost: 1500, duration: 4, effects: { hypeBoost: 35, reachBoost: 26, streamBoost: 25, viralChance: 10 } },
 ];
 
 export const PromotionalCampaignCard = ({ releaseId, releaseTitle, bandBalance }: PromotionalCampaignCardProps) => {
@@ -69,14 +69,14 @@ export const PromotionalCampaignCard = ({ releaseId, releaseTitle, bandBalance }
       });
       if (error) throw error;
 
-      // Apply hype boost to release
-      const hypeBoost = campaign.effects.hypeBoost || 0;
-      if (hypeBoost > 0) {
-        const { data: rel } = await supabase.from("releases").select("hype_score").eq("id", releaseId).single();
-        const currentHype = (rel as any)?.hype_score || 0;
-        const newHype = Math.min(1000, currentHype + hypeBoost);
-        await supabase.from("releases").update({ hype_score: newHype } as any).eq("id", releaseId);
-      }
+      const { error: reachError } = await (supabase as any).rpc("apply_release_pr_reach", {
+        p_release_id: releaseId,
+        p_channel: campaign.id,
+        p_reach_delta: campaign.effects.reachBoost || 0,
+        p_hype_delta: campaign.effects.hypeBoost || 0,
+        p_source_ref: null,
+      });
+      if (reachError) throw reachError;
 
       return campaign;
     },
