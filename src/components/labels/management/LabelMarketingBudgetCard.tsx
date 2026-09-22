@@ -15,11 +15,16 @@ interface LabelMarketingBudgetCardProps {
 }
 
 const MARKETING_LEVELS: Record<number, { multiplier: number; cap: number; upgradeCost: number | null }> = {
-  1: { multiplier: 1, cap: 10_000, upgradeCost: 25_000 },
+  1: { multiplier: 1.00, cap: 10_000, upgradeCost: 25_000 },
   2: { multiplier: 1.25, cap: 25_000, upgradeCost: 75_000 },
   3: { multiplier: 1.55, cap: 60_000, upgradeCost: 175_000 },
-  4: { multiplier: 1.9, cap: 150_000, upgradeCost: 400_000 },
-  5: { multiplier: 2.3, cap: 500_000, upgradeCost: null },
+  4: { multiplier: 1.90, cap: 150_000, upgradeCost: 400_000 },
+  5: { multiplier: 2.30, cap: 500_000, upgradeCost: 750_000 },
+  6: { multiplier: 2.70, cap: 750_000, upgradeCost: 1_250_000 },
+  7: { multiplier: 3.15, cap: 1_000_000, upgradeCost: 2_000_000 },
+  8: { multiplier: 3.65, cap: 1_500_000, upgradeCost: 3_250_000 },
+  9: { multiplier: 4.20, cap: 2_250_000, upgradeCost: 5_000_000 },
+  10: { multiplier: 4.80, cap: 3_000_000, upgradeCost: null },
 };
 
 export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketingBudgetCardProps) {
@@ -40,7 +45,7 @@ export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketi
 
   const currentBudget = Number(label?.weekly_marketing_budget ?? 0);
   const currentBalance = Number(label?.balance ?? labelBalance ?? 0);
-  const marketingLevel = Math.max(1, Math.min(5, Number(label?.marketing_level ?? 1)));
+  const marketingLevel = Math.max(1, Math.min(10, Number(label?.marketing_level ?? 1)));
   const levelConfig = MARKETING_LEVELS[marketingLevel];
   const [budget, setBudget] = useState<number | null>(null);
 
@@ -108,7 +113,7 @@ export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketi
             <h3 className="font-semibold">Label Marketing Department</h3>
           </div>
           <div className="flex gap-2">
-            <Badge variant="secondary">Level {marketingLevel}/5</Badge>
+            <Badge variant="secondary">Level {marketingLevel}/10</Badge>
             <Badge variant="outline" className="gap-1">
               <DollarSign className="h-3 w-3" />
               {currentBudget.toLocaleString()}/week
