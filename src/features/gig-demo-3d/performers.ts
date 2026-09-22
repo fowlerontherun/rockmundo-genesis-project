@@ -421,10 +421,80 @@ export class Musician {
         }
         if (this.action && !reduced && (!rig || rig.family === 'voice') && /wave|singalong|crowd_interaction|storytelling|mic_trick/.test(this.action))
             this.hand('L', this.point(.3, 1.85, .2), this.point(.65, 1.4, .2));
-        // Gently curl fingers around instrument necks, sticks and the microphone.
-        for (const [name, bone] of this.bones)
-            if (/^(Index|Middle|Ring|Pinky)[34]\./.test(name))
-                bone.rotateX(this.role === 'fan' ? 0.2 : rig?.family === 'keys' ? .24 + Math.max(0, Math.sin(t * 11 + name.charCodeAt(0))) * .18 * motionEnergy : .58);
+        // Shape the hands by playing role rather than applying the same fist pose
+        // to every performer. Small local rotations keep compatibility with the
+        // imported rigs while making fret, pick and stick grips read differently.
+        const strum = rig?.family === 'strum';
+        const kit = rig?.family === 'kit';
+        const bass = this.role === 'bass';
+        const fretPulse = reduced ? 0 : Math.max(0, Math.sin(t * (bass ? 4.2 : 6.8) + this.phase)) * motionEnergy;
+        for (const [name, bone] of this.bones) {
+            const finger = /^(Index|Middle|Ring|Pinky)([1234])\.([LR])$/.exec(name);
+            if (finger) {
+                const [, digit, joint, side] = finger;
+                let curl = this.role === 'fan' ? .2 : rig?.family === 'keys' ? .22 : .5;
+                if (strum) {
+                    if (side === 'L') {
+                        // Fretting hand: index/middle do more work, ring/pinky relax
+                        // between chord changes instead of forming one solid fist.
+                        const weight = digit === 'Index' ? .92 : digit === 'Middle' ? .82 : digit === 'Ring' ? .68 : .58;
+                        curl = (.42 + weight * .28 + fretPulse * .08) * (Number(joint) >= 3 ? 1 : .72);
+                    } else {
+                        // Picking hand stays much more open; bass fingers curl farther
+                        // for alternating finger plucks than a guitar pick grip.
+                        const pickWeight = bass
+                            ? (digit === 'Index' || digit === 'Middle' ? .64 : .32)
+                            : (digit === 'Index' ? .38 : digit === 'Middle' ? .32 : .2);
+                        curl = pickWeight + fretPulse * (bass ? .07 : .035);
+                    }
+                } else if (kit) {
+                    // Stick grip: first two fingers secure the fulcrum while the
+                    // remaining fingers wrap more loosely around the shaft.
+                    curl = digit === 'Index' ? .62 : digit === 'Middle' ? .68 : digit === 'Ring' ? .56 : .48;
+                } else if (rig?.family === 'keys') {
+                    curl = .18 + Math.max(0, Math.sin(t * 11 + name.charCodeAt(0))) * .2 * motionEnergy;
+                } else if (rig?.family === 'voice') {
+                    curl = side === 'R' ? .64 : .34;
+                }
+                bone.rotateX(curl);
+            }
+
+            const thumb = /^Thumb([1234])\.([LR])$/.exec(name);
+            if (thumb) {
+                const [, joint, side] = thumb;
+                let thumbCurl = .18;
+                if (strum)
+                    thumbCurl = side === 'L' ? .36 : bass ? .3 : .42;
+                else if (kit)
+                    thumbCurl = .48;
+                else if (rig?.family === 'voice' && side === 'R')
+                    thumbCurl = .5;
+                bone.rotateX(thumbCurl * (Number(joint) >= 2 ? 1 : .65));
+            }
+        }
+
+        if (strum && !this.walking) {
+            const leftHand = this.bones.get('Hand.L');
+            const rightHand = this.bones.get('Hand.R');
+            if (leftHand) {
+                leftHand.rotateZ((bass ? -.08 : -.11) + Math.sin(t * .7 + this.phase) * .018 * motionEnergy);
+                leftHand.rotateY(.035);
+            }
+            if (rightHand) {
+                const stroke = Math.sin(t * Math.PI * (bass ? 4 : 8) + this.phase);
+                rightHand.rotateZ((bass ? .055 : .075) + stroke * (bass ? .025 : .045) * motionEnergy);
+                rightHand.rotateX(bass ? -.035 : -.018);
+            }
+        } else if (kit && !this.walking) {
+            for (const side of ['L', 'R'] as const) {
+                const hand = this.bones.get(`Hand.${side}`);
+                if (!hand) continue;
+                const sign = side === 'L' ? 1 : -1;
+                const rebound = Math.max(0, Math.sin(t * Math.PI * 4 + (side === 'L' ? 0 : Math.PI)));
+                hand.rotateZ(sign * (.06 + rebound * .035 * motionEnergy));
+                hand.rotateX(-.025 + rebound * .025 * motionEnergy);
+            }
+        }
         this.root.updateMatrixWorld(true);
         // Imported wrist axes differ between avatars. Keep the grille pointing
         // towards the face instead of inheriting an arbitrary wrist orientation.
