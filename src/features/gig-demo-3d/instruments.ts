@@ -159,7 +159,9 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
         g.position.set(-.07, 1.10, .25);
         g.rotation.set(.035, -.045, -1.01);
         root.add(g);
-        const left = marker(g, 'grip-left', [.015, .71, .12]), right = marker(g, 'grip-right', [0, .03, .18]);
+        // Grip points live just above the strings/instrument face so the wrist centre
+        // does not enter the fretboard or guitar body when the arm solver reaches them.
+        const left = marker(g, 'grip-left', [.015, .71, .155]), right = marker(g, 'grip-right', [0, .03, .225]);
         moving.push((t, e) => {
             const subdivision = id === 'bass_guitar' ? 4.2 : 7.6;
             left.position.y = .71 + (fretPosition(t, id === 'bass_guitar') - .71) * e;
@@ -540,7 +542,9 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             stick.name = 'playing-stick';
             tools.push(stick);
             grip.add(stick);
-            rod(stick, [0, .02, -.03], [0, -.19, .31], spec.family === 'kit' ? .009 : .007, darkWood);
+            // Start the shaft in front of the palm and make kit sticks slightly chunkier
+            // so they remain readable under stage lighting and motion blur.
+            rod(stick, [0, .015, .015], [0, -.195, .355], spec.family === 'kit' ? .011 : .007, darkWood);
             if (spec.family === 'mallets')
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
             moving.push((t, e) => {
