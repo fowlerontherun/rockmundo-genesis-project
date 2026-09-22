@@ -38,6 +38,76 @@ export function orderTotpEpisodeReplays(replays: TotpBroadcastReplay[]): TotpBro
   return orderTotpProgrammeReplays(replays);
 }
 
+
+function stableAudioIndex(value: string, length: number): number {
+  let hash = 2166136261;
+  for (const character of value) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % Math.max(1, length);
+}
+
+function phraseClip(
+  fragments: TotpPresenterFragmentBundle | null | undefined,
+  ids: string[],
+  stableKey: string,
+  gapAfterMs = 70,
+): TotpPresenterRecordedClip | null {
+  if (!fragments) return null;
+  const available = ids
+    .map((id) => ({ id, asset: fragments.phrases?.[id] }))
+    .filter((item): item is { id: string; asset: { storage_path: string; uploaded_at?: string | null } } => !!item.asset?.storage_path);
+  if (!available.length) return null;
+  const chosen = available[stableAudioIndex(stableKey, available.length)];
+  return { url: totpMediaPublicUrl(chosen.asset.storage_path), gapAfterMs };
+}
+
+function bandClip(
+  replay: TotpBroadcastReplay,
+  fragments: TotpPresenterFragmentBundle | null | undefined,
+  gapAfterMs = 90,
+): TotpPresenterRecordedClip | null {
+  const asset = fragments?.bands?.[replay.payload.band.id];
+  if (!asset?.audio_url) return null;
+  const recorded = asset.band_name.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  const current = replay.payload.band.name.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  return recorded === current ? { url: asset.audio_url, gapAfterMs } : null;
+}
+
+export function buildTotpBetweenPresenterSequence(
+  current: TotpBroadcastReplay,
+  next: TotpBroadcastReplay,
+  fragments: TotpPresenterFragmentBundle | null | undefined,
+): TotpPresenterRecordedClip[] | null {
+  if (!fragments) return null;
+  const currentBand = bandClip(current, fragments, 120);
+  const nextBand = bandClip(next, fragments, 0);
+  if (!currentBand && !nextBand) return null;
+
+  const reaction = currentBand
+    ? phraseClip(
+        fragments,
+        ["what-a-performance-from", "another-big-hand-for", "hear-it-for", "that-was", "fantastic-stuff-from", "give-it-up-for"],
+        `post:${current.performance_id}:${current.payload.band.id}`,
+        65,
+      )
+    : null;
+  const handoff = nextBand
+    ? phraseClip(
+        fragments,
+        ["up-next-its", "and-now-its", "next-on-stage", "studio-ready-for", "here-we-go-with", "crowd-ready-for", "live-tonight", "please-welcome"],
+        `next:${next.performance_id}:${next.payload.band.id}`,
+        65,
+      )
+    : null;
+
+  const clips = [reaction, currentBand, handoff, nextBand].filter(
+    (clip): clip is TotpPresenterRecordedClip => Boolean(clip),
+  );
+  return clips.length ? clips : null;
+}
+
 export function buildTotpActPresenterSequence(
   replay: TotpBroadcastReplay,
   script: string,
@@ -193,8 +263,10 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   );
   const nextReplay = ordered[currentIndex + 1] ?? null;
   const nextActPresenterSequence = useMemo(
-    () => nextReplay ? buildTotpActPresenterSequence(nextReplay, "", presenterFragments) : null,
-    [nextReplay, presenterFragments],
+    () => current && nextReplay
+      ? buildTotpBetweenPresenterSequence(current, nextReplay, presenterFragments)
+      : null,
+    [current, nextReplay, presenterFragments],
   );
 
   if (!current) return null;
