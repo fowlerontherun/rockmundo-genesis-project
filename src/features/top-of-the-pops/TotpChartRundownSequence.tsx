@@ -140,7 +140,7 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
       }
     }, 100);
     return () => window.clearInterval(timer);
-  }, [autoPlay, page, pageIndex]);
+  }, [autoPlay, page, pageDurationMs, pageIndex]);
 
   useEffect(() => {
     if (!autoPlay || !pageVisualComplete) return;
