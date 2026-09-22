@@ -89,62 +89,23 @@ function useLabelOverviewStats(labelId: string | undefined) {
     queryKey: ['label-overview-stats', labelId],
     queryFn: async () => {
       if (!labelId) return null;
-
-      const { data: activeContracts, error: contractError } = await supabase
-        .from('artist_label_contracts')
-        .select('id, band_id')
-        .eq('label_id', labelId)
-        .eq('status', 'active');
-      if (contractError) throw contractError;
-
-      const contractIds = (activeContracts || []).map(c => c.id);
-      const uniqueArtistIds = new Set((activeContracts || []).map(c => c.band_id).filter(Boolean));
-
-      let totalReleases = 0;
-      let releasedCount = 0;
-      let totalUnits = 0;
-      let grossReleaseRevenue = 0;
-
-      if (contractIds.length > 0) {
-        const { data: releases, error: releaseError } = await supabase
-          .from('releases')
-          .select('id, release_status, total_units_sold, total_revenue')
-          .in('label_contract_id', contractIds)
-          .neq('release_status', 'cancelled');
-        if (releaseError) throw releaseError;
-
-        totalReleases = releases?.length || 0;
-        releasedCount = releases?.filter(r => r.release_status === 'released').length || 0;
-        totalUnits = releases?.reduce((sum, r) => sum + Number(r.total_units_sold || 0), 0) || 0;
-        grossReleaseRevenue = releases?.reduce((sum, r) => sum + Number(r.total_revenue || 0), 0) || 0;
-      }
-
-      const [{ count: staffCount, error: staffError }, { data: financeRows, error: financeError }] = await Promise.all([
-        supabase.from('label_staff').select('*', { count: 'exact', head: true }).eq('label_id', labelId),
-        supabase.from('label_financial_transactions')
-          .select('transaction_type, amount')
-          .eq('label_id', labelId),
-      ]);
-      if (staffError) throw staffError;
-      if (financeError) throw financeError;
-
-      const labelRevenue = (financeRows || [])
-        .filter(tx => tx.transaction_type === 'revenue' || tx.transaction_type === 'royalty_payment')
-        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-
-      const totalExpenses = (financeRows || [])
-        .filter(tx => ['expense', 'marketing', 'overhead', 'advance', 'distribution'].includes(tx.transaction_type))
-        .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
-
+      const { data, error } = await (supabase as any).rpc('get_label_management_stats', {
+        p_label_id: labelId,
+      });
+      if (error) throw error;
       return {
-        activeArtists: uniqueArtistIds.size,
-        totalReleases,
-        releasedCount,
-        totalUnits,
-        labelRevenue,
-        grossReleaseRevenue,
-        totalExpenses,
-        staffCount: staffCount || 0,
+        activeArtists: Number(data?.active_artists ?? 0),
+        totalReleases: Number(data?.total_releases ?? 0),
+        releasedCount: Number(data?.released_count ?? 0),
+        totalUnits: Number(data?.total_units ?? 0),
+        labelRevenue: Number(data?.label_revenue ?? 0),
+        grossReleaseRevenue: Number(data?.gross_release_revenue ?? 0),
+        totalExpenses: Number(data?.total_expenses ?? 0),
+        netProfit: Number(data?.net_profit ?? 0),
+        marketingSpend: Number(data?.marketing_spend ?? 0),
+        advancesPaid: Number(data?.advances_paid ?? 0),
+        overhead: Number(data?.overhead ?? 0),
+        staffCount: Number(data?.staff_count ?? 0),
       };
     },
     enabled: !!labelId,
