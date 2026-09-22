@@ -82,19 +82,14 @@ export function usePromoTourCompletion(userId: string | undefined) {
             .eq("id", profile.id);
         }
 
-        // Add hype to release
         if (releaseId) {
-          const { data: rel } = await supabase
-            .from("releases")
-            .select("hype_score")
-            .eq("id", releaseId)
-            .single();
-          const currentHype = (rel as any)?.hype_score || 0;
-          const newHype = Math.min(1000, currentHype + hypeValue);
-          await supabase
-            .from("releases")
-            .update({ hype_score: newHype } as any)
-            .eq("id", releaseId);
+          await (supabase as any).rpc("apply_release_pr_reach", {
+            p_release_id: releaseId,
+            p_channel: "promo_tour",
+            p_reach_delta: Math.max(5, Math.min(18, Math.round(hypeValue / 2))),
+            p_hype_delta: hypeValue,
+            p_source_ref: activity.id,
+          });
         }
 
         // Small fame bonus (5-15)
@@ -122,16 +117,13 @@ export function usePromoTourCompletion(userId: string | undefined) {
         // Random viral event (10% chance — double hype)
         if (Math.random() < 0.1 && releaseId) {
           const bonusHype = hypeValue;
-          const { data: rel2 } = await supabase
-            .from("releases")
-            .select("hype_score")
-            .eq("id", releaseId)
-            .single();
-          const currentHype2 = (rel2 as any)?.hype_score || 0;
-          await supabase
-            .from("releases")
-            .update({ hype_score: Math.min(1000, currentHype2 + bonusHype) } as any)
-            .eq("id", releaseId);
+          await (supabase as any).rpc("apply_release_pr_reach", {
+            p_release_id: releaseId,
+            p_channel: "promo_tour_viral",
+            p_reach_delta: Math.max(8, Math.min(25, Math.round(hypeValue * 0.7))),
+            p_hype_delta: bonusHype,
+            p_source_ref: activity.id,
+          });
 
           toast.success("🔥 Viral Moment!", {
             description: `Your promo went viral! Double hype gained today (+${bonusHype} bonus)`,
