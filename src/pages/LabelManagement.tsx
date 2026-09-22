@@ -23,6 +23,7 @@ import { LabelReleasesTab } from "@/components/labels/management/LabelReleasesTa
 import { LabelStaffTab } from "@/components/labels/management/LabelStaffTab";
 import { LabelFinanceTab } from "@/components/labels/management/LabelFinanceTab";
 import { LabelMarketingBudgetCard } from "@/components/labels/management/LabelMarketingBudgetCard";
+import { LabelCampaignStrategyCard } from "@/components/labels/management/LabelCampaignStrategyCard";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -356,8 +357,9 @@ export default function LabelManagement() {
             <LabelReleasesTab labelId={label.id} />
           </TabsContent>
 
-          <TabsContent value="marketing">
+          <TabsContent value="marketing" className="space-y-4">
             <LabelMarketingBudgetCard labelId={label.id} labelBalance={label.balance} />
+            <LabelCampaignStrategyCard labelId={label.id} />
           </TabsContent>
 
           <TabsContent value="staff">
