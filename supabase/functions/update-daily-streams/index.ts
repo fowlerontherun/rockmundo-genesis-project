@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         user_id,
         created_at,
         release_id,
-        songs!inner(band_id)
+        songs!inner(band_id, quality_score)
       `)
       .eq('is_active', true)
       .eq('release_type', 'streaming');
@@ -295,15 +295,25 @@ Deno.serve(async (req) => {
         
         const songHype = releaseHypeMap.get(release.song_id) || 0;
         const streamHypeMultiplier = Math.min(3, 1 + (songHype / 500));
+
+        // Marketing buys reach; quality determines how strongly listeners convert and
+        // whether a song can break out organically. Support both the current 0-100
+        // quality scale and the expanded 0-1000 scale used by newer songwriting data.
+        const rawQuality = Number((release.songs as any)?.quality_score ?? 50);
+        const quality100 = Math.max(0, Math.min(100, rawQuality > 100 ? rawQuality / 10 : rawQuality));
+        const qualityDiscoveryMultiplier = 0.7 + (quality100 / 100) * 0.9; // 0.7x-1.6x
+        const breakoutT = Math.max(0, (quality100 - 75) / 25);
+        const organicBreakoutMultiplier = 1 + Math.pow(breakoutT, 2) * 1.5; // exceptional songs can reach 2.5x beyond discovery
+
         const labelMarketingPower = Math.max(0, Math.min(100, releaseMarketingPowerMap.get(release.song_id) || 0));
-        const paidLabelMarketingMultiplier = 1 + (labelMarketingPower / 250); // 0-100 power => 1.0x-1.4x
+        const paidLabelMarketingMultiplier = 1 + Math.pow(labelMarketingPower / 100, 1.2) * 2.5; // 0-100 power => 1.0x-3.5x
 
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.release_id);
         const hasTerritories = releaseTerritories.length > 0;
         const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * paidLabelMarketingMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
+        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * paidLabelMarketingMultiplier * qualityDiscoveryMultiplier * organicBreakoutMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
         const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
