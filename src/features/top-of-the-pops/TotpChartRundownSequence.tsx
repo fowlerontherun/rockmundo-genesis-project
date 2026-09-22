@@ -119,7 +119,7 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
 
   return (
     <section className="mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-xl border border-cyan-400/25 bg-slate-950 text-white shadow-2xl" data-totp-chart-rundown={page.chartType}>
-      <div className="relative h-[calc(100%-3.25rem)] overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.2),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,0.2),transparent_30%)] p-4 md:p-6">
+      <div className="relative h-[calc(100%_-_3.25rem)] overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.2),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,0.2),transparent_30%)] p-4 md:p-6">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-white to-fuchsia-500" />
 
         <div className="flex flex-wrap items-start justify-between gap-4">
