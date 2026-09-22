@@ -78,6 +78,8 @@ export class Musician {
     performing = true;
     walking = false;
     action: string | null = null;
+    interactionTarget: T.Vector3 | null = null;
+    interactionStrength = 0;
     private scale: number;
     private bodyBuild = 1;
     private vocalRole: VocalRole = null;
@@ -262,6 +264,11 @@ export class Musician {
         if (torso && performing && !reduced) {
             const flourishClock = ((t + this.phase * 1.7) % 13 + 13) % 13;
             const flourish = smoothMotion((flourishClock - 9.7) / .35) * (1 - smoothMotion((flourishClock - 11.15) / .45));
+            if (this.interactionTarget && this.interactionStrength > 0) {
+                const localTarget = this.root.worldToLocal(this.interactionTarget.clone());
+                const interactionTurn = T.MathUtils.clamp(Math.atan2(localTarget.x, Math.max(.001, localTarget.z)), -.36, .36);
+                torso.rotation.y += interactionTurn * this.interactionStrength * .42;
+            }
             if (this.role === 'guitar' || this.role === 'bass') {
                 torso.rotation.x += flourish * (this.role === 'bass' ? -.035 : -.055) * motionEnergy;
                 torso.rotation.y += flourish * (this.role === 'bass' ? .035 : .055) * Math.sin(this.phase + 1.2);
@@ -287,9 +294,17 @@ export class Musician {
             const drummerNod = this.role === 'drums' && !reduced && performing
                 ? Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 + this.phase)), 2) * .055 * motionEnergy
                 : 0;
+            let interactionYaw = 0;
+            let interactionPitch = 0;
+            if (this.interactionTarget && this.interactionStrength > 0 && performing && !reduced) {
+                const localTarget = this.root.worldToLocal(this.interactionTarget.clone());
+                interactionYaw = T.MathUtils.clamp(Math.atan2(localTarget.x, Math.max(.001, localTarget.z)), -.48, .48) * this.interactionStrength;
+                const horizontal = Math.max(.001, Math.hypot(localTarget.x, localTarget.z));
+                interactionPitch = T.MathUtils.clamp(-Math.atan2(localTarget.y - 1.42, horizontal), -.14, .14) * this.interactionStrength;
+            }
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod,
-                Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11) + glanceSide * glanceWindow * .18,
+                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod + interactionPitch,
+                Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11) + glanceSide * glanceWindow * .18 + interactionYaw,
                 (vocalActive ? Math.sin(t * .42 + this.phase) * .018 : 0) + glanceSide * glanceWindow * .025,
             )));
         }

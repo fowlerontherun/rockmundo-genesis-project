@@ -10,6 +10,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildVenue, cylinder, rod, matte } from './stage';
 import { loadBand, type Musician, type DemoCrowd } from './performers';
+import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stageTransform, type VenueProfile } from './venueProfile';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
@@ -361,7 +362,40 @@ export class ConcertScene {
     if (!this.options?.externalClock && this.settings.playing && this.loaded) this.seconds += dt;
     const t = this.settings.reducedMotion ? 0 : this.seconds;
     const energy = this.playback?.energy ?? this.settings.energy;
+    const visibleActors = this.actors.filter(actor => actor.root.visible);
+    const singer = visibleActors.find(actor => actor.hasVocals()) ?? visibleActors.find(actor => actor.role === 'vocals');
+    const drummer = visibleActors.find(actor => actor.role === 'drums');
+    const stringPlayers = visibleActors.filter(actor => actor.role === 'guitar' || actor.role === 'bass');
+    const interactionClock = ((t % 24) + 24) % 24;
+    const interactionWindow = this.settings.reducedMotion ? 0
+      : smoothMotion((interactionClock - 7.5) / .6) * (1 - smoothMotion((interactionClock - 10.5) / .7));
+    const fillWindow = this.settings.reducedMotion ? 0
+      : smoothMotion((interactionClock - 15.2) / .45) * (1 - smoothMotion((interactionClock - 17.5) / .55));
+
     this.actors.forEach(actor => {
+      actor.interactionTarget = null;
+      actor.interactionStrength = 0;
+      if (actor.root.visible && !actor.walking) {
+        if (interactionWindow > 0) {
+          if (actor === singer && stringPlayers.length) {
+            const featured = stringPlayers[Math.floor(t / 24) % stringPlayers.length];
+            actor.interactionTarget = featured.root.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 1.25, 0));
+            actor.interactionStrength = interactionWindow;
+          } else if (stringPlayers.includes(actor)) {
+            const partner = stringPlayers.find(other => other !== actor) ?? singer;
+            if (partner) {
+              actor.interactionTarget = partner.root.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 1.2, 0));
+              actor.interactionStrength = interactionWindow * .78;
+            }
+          }
+        } else if (fillWindow > 0 && drummer && actor !== drummer) {
+          actor.interactionTarget = drummer.root.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 1.15, 0));
+          actor.interactionStrength = fillWindow * (actor === singer ? .9 : .7);
+        } else if (fillWindow > 0 && actor === drummer && singer) {
+          actor.interactionTarget = singer.root.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 1.35, 0));
+          actor.interactionStrength = fillWindow * .55;
+        }
+      }
       const state = this.playback?.performers.find(p => p.id === actor.id);
       if (state) {
         const previousPosition = actor.root.position.clone();
