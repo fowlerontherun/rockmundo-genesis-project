@@ -170,34 +170,117 @@ INSERT INTO public.city_night_clubs (city_id, name, description, quality_level, 
 -- SEED QUESTS FOR LONDON CLUBS
 -- =============================================
 
--- Keep the Manchester quest seed reproducible on fresh databases. The live
--- database already had this club, but the historical migration never created
--- it before seeding its quest.
+-- Keep quest prerequisites reproducible on fresh databases. Some of these
+-- clubs existed in production with stable IDs, while older seeds generated IDs
+-- dynamically or did not create the Manchester club at all.
+WITH required_clubs (
+  seed_id, city_name, name, description, quality_level, capacity, cover_charge,
+  guest_actions, drink_menu, npc_profiles, dj_slot_config, metadata
+) AS (
+  VALUES
+    (
+      '63eb90b9-ee29-40bd-9aab-da76aac90d1b'::uuid,
+      'London',
+      'The Electric Basement',
+      'A gritty underground venue in Camden where emerging DJs spin late into the night.',
+      1, 150, 10,
+      $json$[{"id":"dance","label":"Hit the dance floor","energyCost":5,"description":"Burn energy and boost morale"}]$json$::jsonb,
+      $json$[{"id":"beer","name":"Camden Lager","price":6}]$json$::jsonb,
+      $json$[{"id":"dj1","name":"DJ Rebel","role":"Resident DJ","personality":"Edgy and unpredictable"}]$json$::jsonb,
+      $json${"perks":["Underground cred boost"],"payout":200,"schedule":"11pm-3am","minimum_fame":100,"set_length_minutes":45}$json$::jsonb,
+      $json${"live_interactions_enabled":true}$json$::jsonb
+    ),
+    (
+      '5b62aa41-f92f-4a16-b095-5ec80f91d54a'::uuid,
+      'London',
+      'Neon Dreams',
+      'Shoreditch''s premier electronic music venue with state-of-the-art sound system.',
+      3, 300, 25,
+      $json$[{"id":"vip","label":"VIP lounge access","energyCost":3,"description":"Network with industry insiders"},{"id":"dance","label":"Dance floor","energyCost":5}]$json$::jsonb,
+      $json$[{"id":"signature","name":"Electric Blue","price":15,"effect":"+15 morale"},{"id":"premium","name":"Velvet Night","price":22,"effect":"+10 energy"}]$json$::jsonb,
+      $json$[{"id":"dj2","name":"Synthia Vega","role":"Resident DJ","personality":"Charismatic and trend-setting","availability":"Thu-Sat"},{"id":"promoter","name":"Marcus Steel","role":"Promoter","personality":"Business-savvy"}]$json$::jsonb,
+      $json${"perks":["+4% night fan buzz","Audience energy boost"],"payout":800,"schedule":"10pm-2am","minimum_fame":750,"set_length_minutes":60}$json$::jsonb,
+      $json${"live_interactions_enabled":true}$json$::jsonb
+    ),
+    (
+      '5318c032-b3f7-4a46-86a1-7a8a82c877e8'::uuid,
+      'London',
+      'The Velvet Room',
+      'Exclusive Soho nightspot frequented by celebrities and industry elite.',
+      4, 200, 50,
+      $json$[{"id":"network","label":"Network with VIPs","energyCost":4,"description":"Build connections"},{"id":"champagne","label":"Order champagne service","energyCost":2}]$json$::jsonb,
+      $json$[{"id":"cristal","name":"Cristal","price":350},{"id":"signature","name":"Velvet Martini","price":28,"effect":"+20 morale"}]$json$::jsonb,
+      $json$[{"id":"owner","name":"Vincent Noir","role":"Club Owner","personality":"Discerning and influential","dialogueHooks":["Record deals","Industry gossip","Exclusive events"]}]$json$::jsonb,
+      $json${"perks":["VIP networking","Industry exposure","Fame multiplier x1.5"],"payout":1500,"schedule":"11pm-4am","minimum_fame":2000,"set_length_minutes":90}$json$::jsonb,
+      $json${"live_interactions_enabled":true}$json$::jsonb
+    ),
+    (
+      '9528ad61-7c28-4042-9f04-1c31d5d6c2aa'::uuid,
+      'Manchester',
+      'The Haccienda',
+      NULL,
+      5, 200, 50,
+      '[]'::jsonb,
+      '[]'::jsonb,
+      '[]'::jsonb,
+      '{"perks":[]}'::jsonb,
+      '{"live_interactions_enabled":true}'::jsonb
+    )
+)
 INSERT INTO public.city_night_clubs (
   id, city_id, name, description, quality_level, capacity, cover_charge,
   guest_actions, drink_menu, npc_profiles, dj_slot_config, metadata
 )
 SELECT
-  '9528ad61-7c28-4042-9f04-1c31d5d6c2aa'::uuid,
+  seed.seed_id,
   city.id,
-  'The Haccienda',
-  NULL,
-  5,
-  200,
-  50,
-  '[]'::jsonb,
-  '[]'::jsonb,
-  '[]'::jsonb,
-  '{"perks":[]}'::jsonb,
-  '{"live_interactions_enabled":true}'::jsonb
-FROM public.cities city
-WHERE lower(city.name) = 'manchester'
+  seed.name,
+  seed.description,
+  seed.quality_level,
+  seed.capacity,
+  seed.cover_charge,
+  seed.guest_actions,
+  seed.drink_menu,
+  seed.npc_profiles,
+  seed.dj_slot_config,
+  seed.metadata
+FROM required_clubs seed
+JOIN public.cities city ON lower(city.name) = lower(seed.city_name)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.city_night_clubs existing
+    WHERE lower(existing.name) = lower(seed.name)
+  )
   AND NOT EXISTS (
     SELECT 1
+    FROM public.city_night_clubs existing
+    WHERE existing.id = seed.seed_id
+  );
+
+DO $nightclub_seed_guard$
+DECLARE
+  missing_names text;
+BEGIN
+  SELECT string_agg(required.name, ', ' ORDER BY required.name)
+    INTO missing_names
+  FROM (
+    VALUES
+      ('The Electric Basement'),
+      ('Neon Dreams'),
+      ('The Velvet Room'),
+      ('The Haccienda')
+  ) AS required(name)
+  WHERE NOT EXISTS (
+    SELECT 1
     FROM public.city_night_clubs club
-    WHERE lower(club.name) = lower('The Haccienda')
-  )
-LIMIT 1;
+    WHERE lower(club.name) = lower(required.name)
+  );
+
+  IF missing_names IS NOT NULL THEN
+    RAISE EXCEPTION 'Nightclub quest seed prerequisites missing: %', missing_names;
+  END IF;
+END;
+$nightclub_seed_guard$;
 
 INSERT INTO public.nightclub_quests (club_id, npc_id, title, description, quest_type, chain_position, chain_id, requirements, dialogue, rewards, energy_cost, cooldown_hours) VALUES
 ((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Electric Basement') ORDER BY created_at LIMIT 1), 'rebel_dj', 'Prove Your Chops', 'DJ Rebel wants to see if you can handle the decks.', 'chain', 1, 'electric_basement_rebel', '{"min_fame":50}', '[{"speaker":"npc","text":"Oi, you. Yeah, you with the headphones. Think you can spin?"},{"speaker":"player_choice","options":[{"label":"I''ve been spinning since I was 15","next":2,"affinity_change":5},{"label":"I''m here to learn from the best","next":3,"affinity_change":3},{"label":"Just here for the vibes","next":4,"affinity_change":-2}]},{"speaker":"npc","text":"Ha! Big talk. I like that. Get on the decks for three tracks. Impress me."},{"speaker":"npc","text":"Humble. I respect that. Let me see what you can do. Three tracks."},{"speaker":"npc","text":"Fair enough, but fancy having a go? Three tracks, just for fun."},{"speaker":"npc","text":"Not bad at all. You''ve got potential. Come back for the real challenge.","quest_complete":true}]', '{"cash":100,"xp":50,"skill_boost":{"skill":"turntablism","amount":1},"npc_relationship":{"affinity":10,"trust":5}}', 10, 0),
