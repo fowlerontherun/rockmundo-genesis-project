@@ -8,7 +8,7 @@ import { buildInstrument, type InstrumentRig } from './instruments';
 import { stageAssignment, type InstrumentId, type VocalRole } from './instrumentCatalog';
 import { crowdAppearances, crowdMaterial, crowdMotion, CROWD_LIMIT, CROWD_VARIANTS } from './crowdAnimation';
 import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreography';
-import { singerGesture, vocalPhrase } from './performanceMotion';
+import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
 import { seededRandom } from './config';
 import { visibleTattoosForClothing } from '@/features/player-model/tattoos';
