@@ -10,7 +10,7 @@ import {
   ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown,
   Megaphone, Star, TrendingUp, Globe2, Building2, Search, Workflow, BarChart3,
 } from "lucide-react";
-import { LabelTierBadge } from "@/components/labels/LabelTierBadge";
+import { LabelTierBadge, calculateLabelTier } from "@/components/labels/LabelTierBadge";
 import { ScoutReportsPanel } from "@/components/labels/management/ScoutReportsPanel";
 import { ArtistDevelopmentTracker } from "@/components/labels/management/ArtistDevelopmentTracker";
 import { LabelGenreExpertise } from "@/components/labels/management/LabelGenreExpertise";
@@ -89,51 +89,23 @@ function useLabelOverviewStats(labelId: string | undefined) {
     queryKey: ['label-overview-stats', labelId],
     queryFn: async () => {
       if (!labelId) return null;
-
-      // Active contracts count
-      const { count: activeArtists } = await supabase
-        .from('artist_label_contracts')
-        .select('*', { count: 'exact', head: true })
-        .eq('label_id', labelId)
-        .eq('status', 'active');
-
-      // Releases count
-      const { data: contracts } = await supabase
-        .from('artist_label_contracts')
-        .select('id')
-        .eq('label_id', labelId);
-      const contractIds = contracts?.map(c => c.id) || [];
-
-      let totalReleases = 0;
-      let releasedCount = 0;
-      let totalUnits = 0;
-      let totalRevenue = 0;
-
-      if (contractIds.length > 0) {
-        const { data: releases } = await supabase
-          .from('label_releases')
-          .select('id, status, units_sold, revenue_generated')
-          .in('contract_id', contractIds);
-
-        totalReleases = releases?.length || 0;
-        releasedCount = releases?.filter(r => r.status === 'released').length || 0;
-        totalUnits = releases?.reduce((s, r) => s + (r.units_sold ?? 0), 0) || 0;
-        totalRevenue = releases?.reduce((s, r) => s + (r.revenue_generated ?? 0), 0) || 0;
-      }
-
-      // Staff count
-      const { count: staffCount } = await supabase
-        .from('label_staff')
-        .select('*', { count: 'exact', head: true })
-        .eq('label_id', labelId);
-
+      const { data, error } = await (supabase as any).rpc('get_label_management_stats', {
+        p_label_id: labelId,
+      });
+      if (error) throw error;
       return {
-        activeArtists: activeArtists || 0,
-        totalReleases,
-        releasedCount,
-        totalUnits,
-        totalRevenue,
-        staffCount: staffCount || 0,
+        activeArtists: Number(data?.active_artists ?? 0),
+        totalReleases: Number(data?.total_releases ?? 0),
+        releasedCount: Number(data?.released_count ?? 0),
+        totalUnits: Number(data?.total_units ?? 0),
+        labelRevenue: Number(data?.label_revenue ?? 0),
+        grossReleaseRevenue: Number(data?.gross_release_revenue ?? 0),
+        totalExpenses: Number(data?.total_expenses ?? 0),
+        netProfit: Number(data?.net_profit ?? 0),
+        marketingSpend: Number(data?.marketing_spend ?? 0),
+        advancesPaid: Number(data?.advances_paid ?? 0),
+        overhead: Number(data?.overhead ?? 0),
+        staffCount: Number(data?.staff_count ?? 0),
       };
     },
     enabled: !!labelId,
@@ -195,6 +167,11 @@ export default function LabelManagement() {
   };
 
   const repTier = getReputationTier(label.reputation_score || 0);
+  const calculatedLabelTier = calculateLabelTier(
+    Number(label.reputation_score || 0),
+    stats?.activeArtists ?? 0,
+    stats?.labelRevenue ?? 0,
+  );
   
   return (
     <VipGate feature="Record Label" description="Sign artists and oversee releases.">
@@ -211,7 +188,7 @@ export default function LabelManagement() {
               <Star className="h-3 w-3 mr-0.5" />
               {repTier.label} ({label.reputation_score || 0})
             </Badge>
-            <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
+            <LabelTierBadge tier={calculatedLabelTier} />
           </>
         }
       >
@@ -236,7 +213,7 @@ export default function LabelManagement() {
             <CardContent className="p-2.5 text-center">
               <DollarSign className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
               <p className={cn("text-sm font-bold tabular-nums", getHealthColor())}>
-                ${Math.abs(label.balance).toLocaleString()}
+                ${Number(label.balance || 0).toLocaleString()}
               </p>
               <p className="text-[10px] text-muted-foreground">Balance</p>
             </CardContent>
@@ -265,8 +242,8 @@ export default function LabelManagement() {
           <Card className="bg-card/60">
             <CardContent className="p-2.5 text-center">
               <DollarSign className="h-3.5 w-3.5 mx-auto mb-0.5 text-emerald-500" />
-              <p className="text-sm font-bold tabular-nums text-emerald-500">${(stats?.totalRevenue ?? 0).toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">Revenue</p>
+              <p className="text-sm font-bold tabular-nums text-emerald-500">${(stats?.labelRevenue ?? 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">Label Revenue</p>
             </CardContent>
           </Card>
           <Card className="bg-card/60">
