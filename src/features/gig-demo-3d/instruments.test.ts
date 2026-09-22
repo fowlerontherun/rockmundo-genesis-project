@@ -74,6 +74,19 @@ describe('complete stage instrument coverage', () => {
             expect(right.z, `${id} picking hand surface clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .34 : .30);
             expect(leftForearm.z, `${id} fretting forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .12 : .105);
             expect(rightForearm.z, `${id} picking forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .17 : .145);
+
+            const firstKnuckleZ = (side: 'L' | 'R') => ['Index1', 'Middle1', 'Ring1', 'Pinky1', 'Thumb1']
+                .map(name => actor.bones.get(`${name}.${side}`))
+                .filter((bone): bone is T.Bone => !!bone)
+                .map(bone => instrument.worldToLocal(bone.getWorldPosition(new T.Vector3())).z);
+            const leftKnuckles = firstKnuckleZ('L');
+            const rightKnuckles = firstKnuckleZ('R');
+            expect(leftKnuckles.length).toBeGreaterThan(0);
+            expect(rightKnuckles.length).toBeGreaterThan(0);
+            expect(Math.min(...leftKnuckles), `${id} fretting knuckle envelope clearance`)
+                .toBeGreaterThan(id === 'acoustic_guitar' ? .14 : .13);
+            expect(Math.min(...rightKnuckles), `${id} picking knuckle envelope clearance`)
+                .toBeGreaterThan(id === 'acoustic_guitar' ? .25 : id === 'bass_guitar' ? .21 : .22);
         }
         disposeModel(actor.root);
     });
@@ -93,9 +106,17 @@ describe('complete stage instrument coverage', () => {
             expect(stick.getObjectByName('playing-stick-tip')).toBeTruthy();
         }
         expect(sticks.map(stick => stick.parent)).toEqual([
-            actor.bones.get('Hand.L'),
-            actor.bones.get('Hand.R'),
+            actor.instrumentRig!.root,
+            actor.instrumentRig!.root,
         ]);
+        for (const [index, side] of ['L', 'R'].entries()) {
+            const hand = actor.bones.get(`Hand.${side}`)!;
+            const distance = sticks[index].getWorldPosition(new T.Vector3())
+                .distanceTo(hand.getWorldPosition(new T.Vector3()));
+            expect(distance, `${id} ${side} stick grip must stay beside the hand`).toBeLessThan(.12);
+            expect(sticks[index].userData.followsHand).toBe(true);
+            expect(sticks[index].userData.handSide).toBe(side);
+        }
         disposeModel(actor.root);
         if (actor.equipment) disposeModel(actor.equipment);
     });
