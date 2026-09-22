@@ -377,6 +377,22 @@ export class Musician {
         rig?.tools.forEach(tool => { tool.visible = this.root.visible && !this.walking; });
         if (rig && (!this.walking || !rig.stationary)) {
             rig.animate(t + (reduced ? 0 : this.phase * .13), performing ? energy : 0, reduced || !performing);
+            if (rig.family === 'kit' && !reduced && performing) {
+                const transitionSection = this.performanceSection === 'chorus' || this.performanceSection === 'outro';
+                const crash = transitionSection
+                    ? 1 - smoothMotion((this.sectionProgress - .02) / .12)
+                    : 0;
+                if (crash > .02) {
+                    const sticks = rig.tools.filter(tool => tool.name.startsWith('playing-stick'));
+                    const targets = [new T.Vector3(.7, 1.46, 1), new T.Vector3(-.75, 1.3, .65)];
+                    [rig.left, rig.right].forEach((grip, index) => {
+                        const target = targets[index];
+                        grip.position.set(target.x * .72, target.y + .16 * crash, target.z - .37);
+                        const stick = sticks[index];
+                        if (stick) stick.userData.strikeTarget = target;
+                    });
+                }
+            }
             if (rig.family === 'voice' && this.mouth) {
                 const target = this.mouth.getWorldPosition(new T.Vector3());
                 const offset = new T.Vector3(-.015, -.025 - (vocalActive ? vocals.breath * .08 * motionEnergy : .25), .14);
