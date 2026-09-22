@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.755",
+    date: "2026-09-22",
+    changes: [
+      { type: "fix", description: "Your character's fame now feeds into your act's fame — solo acts track the character's own fame (plus a solo bonus) and full bands use a weighted member average (leader and lead singer count for more) alongside fame earned together; every existing act has been brought up to date" },
+      { type: "improvement", description: "Ticket sales and record sales now grow properly as fame rises, and a big-name act is no longer penalised for booking large venues" },
+    ],
+  },
+  {
     version: "1.1.754",
     date: "2026-09-21",
     changes: [
