@@ -474,17 +474,33 @@ export class Musician {
                 leftTarget.addScaledVector(faceNormal, .045 + buildExtra);
                 rightTarget.addScaledVector(faceNormal, (acoustic ? .08 : .065) + buildExtra);
 
-                const solveOutside = (side: 'L' | 'R', target: T.Vector3, pole: T.Vector3, minimumZ: number) => {
+                const solveOutside = (
+                    side: 'L' | 'R',
+                    target: T.Vector3,
+                    pole: T.Vector3,
+                    minimumHandZ: number,
+                    minimumForearmZ: number,
+                ) => {
                     this.hand(side, target, pole);
                     const hand = this.bones.get(`Hand.${side}`);
-                    if (!hand) return;
+                    const forearm = this.bones.get(`LowerArm.${side}`);
+                    if (!hand || !forearm) return;
+
                     const localHand = instrumentSurface.worldToLocal(hand.getWorldPosition(new T.Vector3()));
-                    if (localHand.z >= minimumZ) return;
-                    localHand.z = minimumZ;
-                    this.hand(side, instrumentSurface.localToWorld(localHand), pole);
+                    const localForearm = instrumentSurface.worldToLocal(forearm.getWorldPosition(new T.Vector3()));
+                    const handCorrection = Math.max(0, minimumHandZ - localHand.z);
+                    const forearmCorrection = Math.max(0, minimumForearmZ - localForearm.z);
+                    if (handCorrection <= 0 && forearmCorrection <= 0) return;
+
+                    // Correct the wrist target and, crucially, move the elbow pole farther
+                    // forward. Fixing only the hand centre still allowed the forearm to cut
+                    // straight through large acoustic bodies in front-three-quarter views.
+                    const correctedTarget = target.clone().addScaledVector(faceNormal, handCorrection + forearmCorrection * .22);
+                    const correctedPole = pole.clone().addScaledVector(faceNormal, .1 + forearmCorrection * 1.35);
+                    this.hand(side, correctedTarget, correctedPole);
                 };
-                solveOutside('L', leftTarget, leftPole, acoustic ? .18 : .16);
-                solveOutside('R', rightTarget, rightPole, acoustic ? .27 : instrumentId === 'bass_guitar' ? .23 : .24);
+                solveOutside('L', leftTarget, leftPole, acoustic ? .18 : .16, acoustic ? .12 : .105);
+                solveOutside('R', rightTarget, rightPole, acoustic ? .27 : instrumentId === 'bass_guitar' ? .23 : .24, acoustic ? .17 : .145);
             } else {
                 this.hand('L', leftTarget, leftPole);
                 this.hand('R', rightTarget, rightPole);
