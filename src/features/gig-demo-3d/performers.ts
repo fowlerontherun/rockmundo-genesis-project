@@ -259,14 +259,46 @@ export class Musician {
                 sway + (vocalActive ? phrase * .018 * energy : 0),
                 (Math.sin(t * 1.35 + this.phase) * .012 + Math.sin(t * .48 + this.phase * .5) * .008) * energy * performanceScale,
             )));
+        if (torso && performing && !reduced) {
+            const flourishClock = ((t + this.phase * 1.7) % 13 + 13) % 13;
+            const flourish = smoothMotion((flourishClock - 9.7) / .35) * (1 - smoothMotion((flourishClock - 11.15) / .45));
+            if (this.role === 'guitar' || this.role === 'bass') {
+                torso.rotation.x += flourish * (this.role === 'bass' ? -.035 : -.055) * motionEnergy;
+                torso.rotation.y += flourish * (this.role === 'bass' ? .035 : .055) * Math.sin(this.phase + 1.2);
+            } else if (this.role === 'vocals') {
+                torso.rotation.x -= flourish * .045 * motionEnergy;
+                torso.rotation.y += flourish * .07 * Math.sin(this.phase * 1.3 + .4);
+            } else if (this.role === 'drums') {
+                torso.rotation.z += flourish * .028 * Math.sin(this.phase + .7);
+            }
+        }
         const head = this.bones.get('Head');
         if (head) {
             const singingLean = this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.075 : vocalActive ? -0.025 : 0;
+            const phraseSlot = Math.floor((t + this.phase * .83) / 5.5);
+            const phraseTime = ((t + this.phase * .83) % 5.5 + 5.5) % 5.5;
+            const glanceWindow = !reduced && performing
+                ? smoothMotion((phraseTime - 3.55) / .35) * (1 - smoothMotion((phraseTime - 4.75) / .35))
+                : 0;
+            const glanceSide = phraseSlot % 3 === 0 ? 1 : phraseSlot % 3 === 1 ? -1 : 0;
+            const fretLook = (this.role === 'guitar' || this.role === 'bass') && phraseSlot % 4 === 2
+                ? smoothMotion((phraseTime - 1.1) / .28) * (1 - smoothMotion((phraseTime - 2.35) / .3))
+                : 0;
+            const drummerNod = this.role === 'drums' && !reduced && performing
+                ? Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 + this.phase)), 2) * .055 * motionEnergy
+                : 0;
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07),
-                Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11),
-                vocalActive ? Math.sin(t * .42 + this.phase) * .018 : 0,
+                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod,
+                Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11) + glanceSide * glanceWindow * .18,
+                (vocalActive ? Math.sin(t * .42 + this.phase) * .018 : 0) + glanceSide * glanceWindow * .025,
             )));
+        }
+        if (this.role === 'drums' && performing && !reduced) {
+            const shoulderPulse = Math.pow(Math.max(0, Math.sin(t * Math.PI * 4 + this.phase)), 1.4) * motionEnergy;
+            const leftShoulder = this.bones.get('Shoulder.L') ?? this.bones.get('Clavicle.L');
+            const rightShoulder = this.bones.get('Shoulder.R') ?? this.bones.get('Clavicle.R');
+            leftShoulder?.rotateZ(.018 + shoulderPulse * .03);
+            rightShoulder?.rotateZ(-.018 - shoulderPulse * .03);
         }
         const jaw = this.bones.get('Jaw') ?? this.bones.get('jaw') ?? this.bones.get('Mouth');
         if (jaw && vocalActive && !reduced) {
