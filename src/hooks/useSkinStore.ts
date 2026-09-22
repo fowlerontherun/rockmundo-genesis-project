@@ -195,19 +195,21 @@ export const useSaveClothingCustomization = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
+      profileId: targetProfileId = profileId,
       itemId,
       variantKey,
       zoneColours,
       equipped = null,
     }: {
+      profileId?: string | null;
       itemId: string;
       variantKey?: string | null;
       zoneColours?: Record<string, string>;
       equipped?: boolean | null;
     }) => {
-      if (!profileId) throw new Error('No active character');
+      if (!targetProfileId) throw new Error('No active character');
       const { data, error } = await supabase.rpc('set_owned_clothing_customization' as any, {
-        p_profile_id: profileId,
+        p_profile_id: targetProfileId,
         p_item_id: itemId,
         p_variant_key: variantKey || null,
         p_zone_colors: zoneColours || {},
@@ -217,9 +219,10 @@ export const useSaveClothingCustomization = () => {
       return Array.isArray(data) ? data[0] : data;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['owned-skins', profileId] });
-      queryClient.invalidateQueries({ queryKey: ['player-owned-skins', profileId] });
-      queryClient.invalidateQueries({ queryKey: ['equipped-rich-clothing', profileId] });
+      const savedProfileId = variables.profileId ?? profileId;
+      queryClient.invalidateQueries({ queryKey: ['owned-skins', savedProfileId] });
+      queryClient.invalidateQueries({ queryKey: ['player-owned-skins', savedProfileId] });
+      queryClient.invalidateQueries({ queryKey: ['equipped-rich-clothing', savedProfileId] });
       queryClient.invalidateQueries({ queryKey: ['gig-player-appearances'] });
       toast.success(
         variables.equipped === true
