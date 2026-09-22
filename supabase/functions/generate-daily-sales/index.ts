@@ -152,6 +152,16 @@ serve(async (req) => {
     }
     console.log(`Game date: Month ${currentGameMonth}, Day ${currentGameDay}, Year ${currentGameYear} | Christmas multiplier: ${christmasMultiplier}x`);
 
+    // Charge label staff payroll once per real day before commercial settlement.
+    try {
+      const { data: payrollSummary, error: payrollError } = await supabaseClient.rpc("process_label_daily_finance");
+      if (payrollError) throw payrollError;
+      console.log("Label daily finance applied:", payrollSummary);
+    } catch (payrollError) {
+      console.error("Error processing label daily finance:", payrollError);
+      errorCount++;
+    }
+
     // Apply label marketing before this run calculates sales so the label's spend
     // has a visible same-day effect. The DB function also charges the label and
     // applies funded per-release campaigns using the marketing department level.
@@ -822,44 +832,14 @@ serve(async (req) => {
         const labelAmount = Math.round(labelRevenue.labelRevenue);
         const recoupAmount = Math.round(labelRevenue.recoupmentApplied);
 
-        // Credit label balance
-        const { data: currentLabel } = await supabaseClient
-          .from("labels")
-          .select("balance")
-          .eq("id", labelId)
-          .single();
-
-        if (currentLabel) {
-          await supabaseClient
-            .from("labels")
-            .update({ balance: (currentLabel.balance || 0) + labelAmount })
-            .eq("id", labelId);
-        }
-
-        // Record label financial transaction
-        await supabaseClient.from("label_financial_transactions").insert({
-          label_id: labelId,
-          transaction_type: "revenue",
-          amount: labelAmount,
-          description: `Daily sales royalty share${recoupAmount > 0 ? ` (includes $${recoupAmount} advance recoupment)` : ''}`,
-          related_contract_id: labelRevenue.contractId,
+        const { error: labelCreditError } = await supabaseClient.rpc("credit_label_revenue_atomic", {
+          p_label_id: labelId,
+          p_amount: labelAmount,
+          p_description: `Daily sales royalty share${recoupAmount > 0 ? ` (includes ${recoupAmount} advance recoupment)` : ''}`,
+          p_contract_id: labelRevenue.contractId,
+          p_recoup_amount: recoupAmount,
         });
-
-        // Update contract recouped_amount in database
-        if (recoupAmount > 0) {
-          const { data: currentContract } = await supabaseClient
-            .from("artist_label_contracts")
-            .select("recouped_amount")
-            .eq("id", labelRevenue.contractId)
-            .single();
-
-          if (currentContract) {
-            await supabaseClient
-              .from("artist_label_contracts")
-              .update({ recouped_amount: (currentContract.recouped_amount || 0) + recoupAmount })
-              .eq("id", labelRevenue.contractId);
-          }
-        }
+        if (labelCreditError) throw labelCreditError;
 
         labelsCredited++;
         console.log(`Credited label ${labelId}: $${labelAmount} (recouped: $${recoupAmount})`);
