@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { 
   Users, 
-  Megaphone, 
-  Star, 
+   Star, 
   Music, 
   CheckCircle,
   Lock
@@ -38,19 +37,9 @@ const AVAILABLE_UPGRADES: Upgrade[] = [
     name: "Roster Expansion",
     description: "Increase your label's roster capacity",
     cost: 250_000,
-    maxLevel: 5,
+    maxLevel: 10,
     icon: <Users className="h-5 w-5" />,
-    effect: "+5 roster slots per level",
-  },
-  {
-    id: "marketing_boost",
-    type: "marketing_boost",
-    name: "Marketing Power",
-    description: "Boost your marketing campaign effectiveness",
-    cost: 150_000,
-    maxLevel: 5,
-    icon: <Megaphone className="h-5 w-5" />,
-    effect: "+10% marketing effectiveness per level",
+    effect: "+3 roster slots per level",
   },
   {
     id: "reputation_boost",
@@ -58,9 +47,9 @@ const AVAILABLE_UPGRADES: Upgrade[] = [
     name: "Reputation Builder",
     description: "Increase your label's reputation score",
     cost: 200_000,
-    maxLevel: 5,
+    maxLevel: 10,
     icon: <Star className="h-5 w-5" />,
-    effect: "+5 reputation points per level",
+    effect: "+3 reputation points per level",
   },
   {
     id: "studio_discount",
@@ -68,7 +57,7 @@ const AVAILABLE_UPGRADES: Upgrade[] = [
     name: "Studio Partnership",
     description: "Get discounts on recording sessions",
     cost: 500_000,
-    maxLevel: 3,
+    maxLevel: 10,
     icon: <Music className="h-5 w-5" />,
     effect: "10% recording cost reduction per level",
   },
@@ -103,7 +92,8 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
 
   const handlePurchaseUpgrade = async (upgrade: Upgrade) => {
     const currentLevel = getUpgradeLevel(upgrade.type);
-    const cost = upgrade.cost * (currentLevel + 1); // Cost increases with level
+    const nextLevel = currentLevel + 1;
+    const cost = Math.round(upgrade.cost * (1 + (nextLevel - 1) * 0.65));
 
     if (labelBalance < cost) {
       toast({
@@ -115,88 +105,29 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
     }
 
     try {
-      // Deduct cost from label balance
-      const { error: balanceError } = await supabase
-        .from("labels")
-        .update({ balance: labelBalance - cost })
-        .eq("id", labelId);
-
-      if (balanceError) throw balanceError;
-
-      // Add or update upgrade
-      if (currentLevel === 0) {
-        const { error: upgradeError } = await supabase
-          .from("label_upgrades")
-          .insert({
-            label_id: labelId,
-            upgrade_type: upgrade.type,
-            upgrade_level: 1,
-          });
-
-        if (upgradeError) throw upgradeError;
-      } else {
-        const existingUpgrade = upgrades.find((u) => u.upgrade_type === upgrade.type);
-        const { error: upgradeError } = await supabase
-          .from("label_upgrades")
-          .update({ upgrade_level: currentLevel + 1 })
-          .eq("id", existingUpgrade!.id);
-
-        if (upgradeError) throw upgradeError;
-      }
-
-      // Record transaction
-      await supabase.from("label_transactions").insert({
-        label_id: labelId,
-        transaction_type: "upgrade",
-        amount: -cost,
-        description: `${upgrade.name} (Level ${currentLevel + 1})`,
-        initiated_by: profile?.id,
+      const { data, error } = await (supabase as any).rpc("purchase_label_upgrade", {
+        p_label_id: labelId,
+        p_upgrade_type: upgrade.type,
       });
-
-      // Apply upgrade effects
-      if (upgrade.type === "roster_expansion") {
-        const { data: labelData } = await supabase
-          .from("labels")
-          .select("roster_slot_capacity")
-          .eq("id", labelId)
-          .single();
-
-        if (labelData) {
-          await supabase
-            .from("labels")
-            .update({ roster_slot_capacity: (labelData.roster_slot_capacity ?? 5) + 5 })
-            .eq("id", labelId);
-        }
-      } else if (upgrade.type === "reputation_boost") {
-        const { data: labelData } = await supabase
-          .from("labels")
-          .select("reputation_score")
-          .eq("id", labelId)
-          .single();
-
-        if (labelData) {
-          await supabase
-            .from("labels")
-            .update({ reputation_score: (labelData.reputation_score ?? 0) + 5 })
-            .eq("id", labelId);
-        }
-      }
+      if (error) throw error;
 
       toast({
         title: "Upgrade purchased!",
-        description: `${upgrade.name} is now level ${currentLevel + 1}`,
+        description: `${upgrade.name} is now level ${data?.new_level ?? nextLevel}`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["label-upgrades", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-management"] });
       queryClient.invalidateQueries({ queryKey: ["label-finance", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-financials", labelId] });
       queryClient.invalidateQueries({ queryKey: ["labels-directory"] });
       queryClient.invalidateQueries({ queryKey: ["my-labels"] });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         title: "Purchase failed",
-        description: "Could not complete the upgrade purchase",
+        description: error?.message || "Could not complete the upgrade purchase",
         variant: "destructive",
       });
     }
@@ -211,7 +142,7 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
       {AVAILABLE_UPGRADES.map((upgrade) => {
         const currentLevel = getUpgradeLevel(upgrade.type);
         const isMaxLevel = currentLevel >= upgrade.maxLevel;
-        const nextCost = upgrade.cost * (currentLevel + 1);
+        const nextCost = Math.round(upgrade.cost * (1 + currentLevel * 0.65));
         const canAfford = labelBalance >= nextCost;
 
         return (
