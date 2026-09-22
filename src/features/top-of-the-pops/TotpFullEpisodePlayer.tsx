@@ -28,6 +28,7 @@ import { TOTP_CHART_PRESENTER_LINE } from "./presenterDialogue";
 import { matchTotpReusablePresenterPhrase } from "./presenterPhraseAudio";
 import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import type { TotpPresenterRecordedClip } from "./presenterVoice";
+import { primeTotpAudioPlayback } from "./useTotpAudienceAudio";
 
 export interface TotpFullEpisodePlayerProps {
   replays: TotpBroadcastReplay[];
@@ -38,22 +39,120 @@ export function orderTotpEpisodeReplays(replays: TotpBroadcastReplay[]): TotpBro
   return orderTotpProgrammeReplays(replays);
 }
 
+
+function stableAudioIndex(value: string, length: number): number {
+  let hash = 2166136261;
+  for (const character of value) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % Math.max(1, length);
+}
+
+function phraseClip(
+  fragments: TotpPresenterFragmentBundle | null | undefined,
+  ids: string[],
+  stableKey: string,
+  gapAfterMs = 70,
+): TotpPresenterRecordedClip | null {
+  if (!fragments) return null;
+  const available = ids
+    .map((id) => ({ id, asset: fragments.phrases?.[id] }))
+    .filter((item): item is { id: string; asset: { storage_path: string; uploaded_at?: string | null } } => !!item.asset?.storage_path);
+  if (!available.length) return null;
+  const chosen = available[stableAudioIndex(stableKey, available.length)];
+  return { url: totpMediaPublicUrl(chosen.asset.storage_path), gapAfterMs };
+}
+
+function bandClip(
+  replay: TotpBroadcastReplay,
+  fragments: TotpPresenterFragmentBundle | null | undefined,
+  gapAfterMs = 90,
+): TotpPresenterRecordedClip | null {
+  const asset = fragments?.bands?.[replay.payload.band.id];
+  if (!asset?.audio_url) return null;
+  const recorded = asset.band_name.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  const current = replay.payload.band.name.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  return recorded === current ? { url: asset.audio_url, gapAfterMs } : null;
+}
+
+export function buildTotpBetweenPresenterSequence(
+  current: TotpBroadcastReplay,
+  next: TotpBroadcastReplay,
+  fragments: TotpPresenterFragmentBundle | null | undefined,
+): TotpPresenterRecordedClip[] | null {
+  if (!fragments) return null;
+  const currentBand = bandClip(current, fragments, 120);
+  const nextBand = bandClip(next, fragments, 0);
+  if (!currentBand && !nextBand) return null;
+
+  const reaction = currentBand
+    ? phraseClip(
+        fragments,
+        ["what-a-performance-from", "another-big-hand-for", "hear-it-for", "that-was", "fantastic-stuff-from", "give-it-up-for"],
+        `post:${current.performance_id}:${current.payload.band.id}`,
+        65,
+      )
+    : null;
+  const handoff = nextBand
+    ? phraseClip(
+        fragments,
+        ["up-next-its", "and-now-its", "next-on-stage", "studio-ready-for", "here-we-go-with", "crowd-ready-for", "live-tonight", "please-welcome"],
+        `next:${next.performance_id}:${next.payload.band.id}`,
+        65,
+      )
+    : null;
+
+  const clips = [reaction, currentBand, handoff, nextBand].filter(
+    (clip): clip is TotpPresenterRecordedClip => Boolean(clip),
+  );
+  return clips.length ? clips : null;
+}
+
 export function buildTotpActPresenterSequence(
   replay: TotpBroadcastReplay,
   script: string,
   fragments: TotpPresenterFragmentBundle | null | undefined,
 ): TotpPresenterRecordedClip[] | null {
-  if (!fragments || !script.trim()) return null;
-  const phrase = matchTotpReusablePresenterPhrase(script, replay.payload.band.name);
-  if (!phrase) return null;
-
-  const phraseAsset = fragments.phrases?.[phrase.id];
+  if (!fragments) return null;
   const bandAsset = fragments.bands?.[replay.payload.band.id];
-  if (!phraseAsset?.storage_path || !bandAsset?.audio_url) return null;
-  if (bandAsset.band_name !== replay.payload.band.name) return null;
+  if (!bandAsset?.audio_url) return null;
 
+  const normalizedRecordedName = bandAsset.band_name.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  const normalizedCurrentName = replay.payload.band.name.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  if (normalizedRecordedName !== normalizedCurrentName) return null;
+
+  const matchedPhrase = script.trim()
+    ? matchTotpReusablePresenterPhrase(script, replay.payload.band.name)
+    : null;
+  const fallbackPhraseIds = [
+    "up-next-its",
+    "and-now-its",
+    "please-welcome",
+    "time-for",
+    "studio-ready-for",
+    "here-we-go-with",
+    "coming-live-from",
+    "next-on-stage",
+    "crowd-ready-for",
+    "live-tonight",
+    "take-it-away",
+  ];
+  const availableFallbacks = fallbackPhraseIds.filter((id) => !!fragments.phrases?.[id]?.storage_path);
+  let hash = 2166136261;
+  for (const character of `${replay.performance_id}:${replay.payload.runningOrder}:${replay.payload.band.id}`) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  const selectedPhraseId = matchedPhrase?.id
+    ?? availableFallbacks[(hash >>> 0) % Math.max(1, availableFallbacks.length)]
+    ?? null;
+  if (!selectedPhraseId) return [{ url: bandAsset.audio_url, gapAfterMs: 0 }];
+
+  const phraseAsset = fragments.phrases?.[selectedPhraseId];
+  if (!phraseAsset?.storage_path) return [{ url: bandAsset.audio_url, gapAfterMs: 0 }];
   return [
-    { url: totpMediaPublicUrl(phraseAsset.storage_path), gapAfterMs: 65 },
+    { url: totpMediaPublicUrl(phraseAsset.storage_path), gapAfterMs: 70 },
     { url: bandAsset.audio_url, gapAfterMs: 0 },
   ];
 }
@@ -163,6 +262,13 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     () => current ? buildTotpActPresenterSequence(current, actPresenterScript, presenterFragments) : null,
     [actPresenterScript, current, presenterFragments],
   );
+  const nextReplay = ordered[currentIndex + 1] ?? null;
+  const nextActPresenterSequence = useMemo(
+    () => current && nextReplay
+      ? buildTotpBetweenPresenterSequence(current, nextReplay, presenterFragments)
+      : null,
+    [current, nextReplay, presenterFragments],
+  );
 
   if (!current) return null;
 
@@ -195,6 +301,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   };
 
   const startFullEpisode = () => {
+    primeTotpAudioPlayback();
     setCurrentIndex(0);
     setShowIntro(false);
     setShowChartRundown(false);
@@ -343,6 +450,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
             currentIndex={currentIndex}
             autoPlay={continuous}
             recordedUrl={exactPresenterUrl(continuityPlanKey, continuityScript)}
+            recordedSequence={continuityKind === "between" ? nextActPresenterSequence : null}
             onEnded={finishContinuity}
           />
         ) : showChartRundown && chartRundown ? (
@@ -351,6 +459,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
             autoPlay={continuous}
             presenterKey={current.payload.presenterKey ?? current.presenter_key}
             recordedUrl={exactPresenterUrl("cue:chart", TOTP_CHART_PRESENTER_LINE)}
+            presenterFragments={presenterFragments}
             onEnded={finishChartRundown}
           />
         ) : showCredits ? (

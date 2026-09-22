@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Loader2, Mic2, Upload } from "lucide-react";
+import { CheckCircle2, Files, Loader2, Mic2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,8 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
   const requestIdRef = useRef(0);
   const [assets, setAssets] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [missingOnly, setMissingOnly] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -80,22 +82,73 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
     const order = ["general", "new_entry", "climber", "returning", "top_ten", "number_one", "continuity"] as const;
     return order.map((category) => ({
       category,
-      phrases: TOTP_REUSABLE_PRESENTER_PHRASES.filter((phrase) => phrase.category === category),
+      phrases: TOTP_REUSABLE_PRESENTER_PHRASES.filter(
+        (phrase) => phrase.category === category && (!missingOnly || !assets.has(phrase.id)),
+      ),
     })).filter((group) => group.phrases.length > 0);
-  }, []);
+  }, [assets, missingOnly]);
+
+
+  async function uploadPhraseAsset(id: string, file: File) {
+    const { mime, sha256 } = await validateAudio(file);
+    const extension = totpAudioFileExtension(mime);
+    const path = TOTP_MEDIA_PATHS.reusablePhrase(presenterKey, id, sha256, extension);
+    const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(path, file, {
+      contentType: mime,
+      cacheControl: "31536000",
+      upsert: false,
+    });
+    if (error && !/already exists/i.test(error.message)) throw new Error(error.message);
+    return path;
+  }
+
+  async function bulkImportPhrases(files: FileList | null) {
+    const selected = files ? Array.from(files) : [];
+    if (!selected.length) return;
+    const catalogue = new Map(TOTP_REUSABLE_PRESENTER_PHRASES.map((phrase) => [phrase.id, phrase]));
+    setBulkUploading(true);
+    let imported = 0;
+    const skipped: string[] = [];
+
+    for (const file of selected) {
+      const stem = file.name
+        .replace(/\.[^.]+$/, "")
+        .toLowerCase()
+        .replace(/[_\s]+/g, "-")
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const exact = catalogue.get(stem);
+      const prefix = !exact
+        ? TOTP_REUSABLE_PRESENTER_PHRASES.find((phrase) => stem.startsWith(`${phrase.id}-`) || stem.endsWith(`-${phrase.id}`))
+        : null;
+      const phrase = exact ?? prefix;
+      if (!phrase) {
+        skipped.push(file.name);
+        continue;
+      }
+      try {
+        await uploadPhraseAsset(phrase.id, file);
+        imported += 1;
+      } catch {
+        skipped.push(file.name);
+      }
+    }
+
+    setBulkUploading(false);
+    if (imported > 0) setRefreshKey((value) => value + 1);
+    toast({
+      title: skipped.length ? "Presenter phrase import completed with warnings" : "Presenter phrase pack imported",
+      description: skipped.length
+        ? `${imported} imported. Could not match or upload: ${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? "…" : ""}`
+        : `${imported} reusable presenter recordings imported.`,
+      variant: skipped.length && imported === 0 ? "destructive" : "default",
+    });
+  }
 
   async function savePhrase(id: string, file: File) {
     setUploadingId(id);
     try {
-      const { mime, sha256 } = await validateAudio(file);
-      const extension = totpAudioFileExtension(mime);
-      const path = TOTP_MEDIA_PATHS.reusablePhrase(presenterKey, id, sha256, extension);
-      const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(path, file, {
-        contentType: mime,
-        cacheControl: "31536000",
-        upsert: false,
-      });
-      if (error && !/already exists/i.test(error.message)) throw new Error(error.message);
+      await uploadPhraseAsset(id, file);
       toast({ title: "Presenter phrase saved", description: "The reusable take is ready for future shows." });
       setRefreshKey((value) => value + 1);
     } catch (error) {
@@ -169,12 +222,40 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
             <CardTitle>Reusable Presenter Phrase Library</CardTitle>
             <CardDescription className="mt-1 max-w-3xl">
               Record these splice-safe phrases once per presenter. Each phrase ends immediately before the recorded band name,
-              so song titles can remain visual-only on screen.
+              so song titles can remain visual-only on screen. Use Missing only to work through the gaps, or bulk import files named after the phrase ID (for example up-next-its.mp3).
             </CardDescription>
           </div>
-          <Badge variant={recordedCount === TOTP_REUSABLE_PRESENTER_PHRASES.length ? "secondary" : "outline"}>
-            {recordedCount}/{TOTP_REUSABLE_PRESENTER_PHRASES.length} recorded
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={missingOnly ? "default" : "outline"}
+              onClick={() => setMissingOnly((value) => !value)}
+            >
+              {missingOnly ? "Showing missing only" : "Show missing only"}
+            </Button>
+            <label className="inline-flex">
+              <input
+                className="sr-only"
+                type="file"
+                accept={ACCEPTED_AUDIO}
+                multiple
+                disabled={bulkUploading || !!recordingId}
+                onChange={(event) => {
+                  const files = event.currentTarget.files;
+                  void bulkImportPhrases(files);
+                  event.currentTarget.value = "";
+                }}
+              />
+              <span className="inline-flex h-9 cursor-pointer items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+                {bulkUploading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Files className="mr-1 h-4 w-4" />}
+                Bulk import
+              </span>
+            </label>
+            <Badge variant={recordedCount === TOTP_REUSABLE_PRESENTER_PHRASES.length ? "secondary" : "outline"}>
+              {recordedCount}/{TOTP_REUSABLE_PRESENTER_PHRASES.length} recorded
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">

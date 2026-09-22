@@ -4,6 +4,35 @@ import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { loadTotpCrowdSounds, pickTotpCrowdSound, type TotpCrowdSound } from "./crowdSoundLibrary";
 import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
 
+let sharedTotpAudioContext: AudioContext | null = null;
+
+function totpAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return null;
+  if (!sharedTotpAudioContext || sharedTotpAudioContext.state === "closed") sharedTotpAudioContext = new AC();
+  return sharedTotpAudioContext;
+}
+
+/**
+ * Call directly from the user's Play gesture. Keeping one shared running
+ * context prevents later presenter/crowd cues from being muted when browsers
+ * revoke transient user activation before those segments begin.
+ */
+export function primeTotpAudioPlayback(): void {
+  const ctx = totpAudioContext();
+  if (!ctx) return;
+  void ctx.resume().catch(() => undefined);
+  const source = ctx.createBufferSource();
+  source.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  source.connect(gain);
+  gain.connect(ctx.destination);
+  source.start();
+  source.stop(ctx.currentTime + 0.001);
+}
+
 export function useTotpAudienceAudio({
   playbackState,
   cue,
@@ -22,27 +51,43 @@ export function useTotpAudienceAudio({
   const lastPulseRef = useRef(0);
   const libraryRef = useRef<TotpCrowdSound[]>([]);
   const clipRef = useRef<HTMLAudioElement | null>(null);
+  const ambienceClipRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
     let cancelled = false;
     void loadTotpCrowdSounds()
-      .then((sounds) => { if (!cancelled) libraryRef.current = sounds; })
+      .then((sounds) => {
+        if (cancelled) return;
+        libraryRef.current = sounds;
+        const bed = pickTotpCrowdSound(
+          sounds,
+          ["ambient_chatter", "band_entrance"],
+          4,
+          "totp:studio-bed",
+        );
+        if (bed && typeof Audio !== "undefined") {
+          const audio = new Audio(bed.audio_url);
+          audio.preload = "auto";
+          audio.loop = true;
+          audio.volume = 0.14;
+          ambienceClipRef.current = audio;
+        }
+      })
       .catch(() => { if (!cancelled) libraryRef.current = []; });
     return () => { cancelled = true; };
   }, [enabled]);
 
   useEffect(() => {
     if (!enabled || !playbackState.isPlaying || typeof window === "undefined") return;
-    const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-
-    let ctx = ctxRef.current;
+    let ctx = ctxRef.current ?? totpAudioContext();
+    if (!ctx) return;
     let master = masterRef.current;
     let ambience = ambienceRef.current;
 
-    if (!ctx || ctx.state === "closed" || !master || !ambience) {
-      ctx = new AC();
+    if (ctx.state === "closed" || !master || !ambience) {
+      ctx = totpAudioContext();
+      if (!ctx) return;
       master = ctx.createGain();
       master.gain.value = 0.24;
       ambience = ctx.createGain();
@@ -75,7 +120,13 @@ export function useTotpAudienceAudio({
     const reaction = Math.max(-10, Math.min(10, audienceReaction));
     const performing = cue?.type === "performance" || playbackState.activePhase.includes("performance");
     const mix = totpMixLevels(cue?.type, reaction);
-    ambience.gain.setTargetAtTime(mix.audienceAmbience, ctx.currentTime, 0.25);
+    ambience.gain.setTargetAtTime(Math.max(0.10, mix.audienceAmbience * 2.4), ctx.currentTime, 0.25);
+
+    const recordedBed = ambienceClipRef.current;
+    if (recordedBed) {
+      recordedBed.volume = cue?.type === "presenter" ? 0.11 : performing ? 0.18 : 0.14;
+      if (recordedBed.paused) void recordedBed.play().catch(() => undefined);
+    }
 
     const cueId = cue?.id ?? null;
     if (cueId && cueId !== lastCueRef.current) {
@@ -89,7 +140,7 @@ export function useTotpAudienceAudio({
         const intensity = reaction >= 6 ? 9 : reaction >= 2 ? 7 : 5;
         const clip = pickTotpCrowdSound(
           libraryRef.current,
-          reaction >= 6 ? ["crowd_cheer_large", "crowd_cheer_medium"] : ["crowd_cheer_medium", "crowd_cheer_small"],
+          reaction >= 6 ? ["crowd_cheer_large", "crowd_cheer_medium", "band_entrance"] : ["crowd_cheer_medium", "crowd_cheer_small", "band_entrance"],
           intensity,
           `${cueId}:entrance`,
         );
@@ -102,8 +153,10 @@ export function useTotpAudienceAudio({
       if (cue?.type === "audience") {
         const clip = pickTotpCrowdSound(
           libraryRef.current,
-          ["applause", "crowd_cheer_large", "crowd_cheer_medium"],
-          9,
+          reaction >= 7
+            ? ["encore_request", "applause", "crowd_cheer_large", "band_exit", "band_entrance"]
+            : ["applause", "crowd_cheer_medium", "band_exit", "band_entrance"],
+          reaction >= 7 ? 9 : 7,
           `${cueId}:applause`,
         );
         const hit = clampTotpGain(mix.audienceHit);
@@ -117,7 +170,7 @@ export function useTotpAudienceAudio({
       lastPulseRef.current = playbackState.positionMs;
       const clip = pickTotpCrowdSound(
         libraryRef.current,
-        reaction >= 5 ? ["crowd_cheer_medium", "crowd_singing"] : ["crowd_cheer_small", "crowd_cheer_medium"],
+        reaction >= 5 ? ["crowd_cheer_medium", "crowd_singing", "band_entrance"] : ["crowd_cheer_small", "crowd_cheer_medium", "band_entrance"],
         reaction >= 5 ? 7 : 4,
         `${cueId ?? "performance"}:${Math.floor(playbackState.positionMs / 18_000)}`,
       );
@@ -130,7 +183,8 @@ export function useTotpAudienceAudio({
   useEffect(() => () => {
     clipRef.current?.pause();
     clipRef.current = null;
-    ctxRef.current?.close().catch(() => undefined);
+    ambienceClipRef.current?.pause();
+    ambienceClipRef.current = null;
     ctxRef.current = null;
     masterRef.current = null;
     ambienceRef.current = null;
@@ -236,7 +290,7 @@ export function useTotpContinuityAudienceAudio({
 
       const ambient = pickTotpCrowdSound(
         sounds,
-        ["ambient_chatter"],
+        ["ambient_chatter", "band_entrance"],
         Math.max(2, intensity - 2),
         `${seed}:presenter-bed`,
       );
@@ -251,7 +305,7 @@ export function useTotpContinuityAudienceAudio({
 
       const reaction = pickTotpCrowdSound(
         sounds,
-        intensity >= 8 ? ["applause", "crowd_cheer_large", "crowd_cheer_medium"] : ["applause", "crowd_cheer_medium", "crowd_cheer_small"],
+        intensity >= 8 ? ["applause", "crowd_cheer_large", "crowd_cheer_medium", "band_entrance"] : ["applause", "crowd_cheer_medium", "crowd_cheer_small", "band_entrance"],
         intensity,
         `${seed}:presenter-reaction`,
       );

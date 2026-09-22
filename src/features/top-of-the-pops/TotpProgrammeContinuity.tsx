@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
-import { playTotpPresenterLine } from "./presenterVoice";
+import { playTotpPresenterLine, type TotpPresenterRecordedClip } from "./presenterVoice";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl, type TotpPresenterAudioSlot } from "./totpMedia";
 import { useTotpContinuityAudienceAudio } from "./useTotpAudienceAudio";
 import {
@@ -27,6 +27,7 @@ export interface TotpProgrammeContinuityProps {
   currentIndex?: number;
   autoPlay?: boolean;
   recordedUrl?: string | null;
+  recordedSequence?: TotpPresenterRecordedClip[] | null;
   onEnded?: () => void;
 }
 
@@ -36,6 +37,7 @@ export function TotpProgrammeContinuity({
   currentIndex = 0,
   autoPlay = false,
   recordedUrl = null,
+  recordedSequence = null,
   onEnded,
 }: TotpProgrammeContinuityProps) {
   const orderedFirst = replays[0] ?? null;
@@ -64,7 +66,10 @@ export function TotpProgrammeContinuity({
     const line = playTotpPresenterLine({
       text: speech,
       presenterKey: presenter.key,
-      recordedUrl: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
+      recordedUrl: recordedSequence?.length
+        ? null
+        : recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
+      recordedSequence,
       volume: 0.95,
       onSpeakingChange: setSpeaking,
       onEnded: () => setNarrationComplete(true),
@@ -76,7 +81,7 @@ export function TotpProgrammeContinuity({
       line.stop();
       setSpeaking(false);
     };
-  }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key, recordedUrl]);
+  }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key, recordedSequence, recordedUrl]);
 
   useEffect(() => {
     if (!autoPlay) return;
@@ -103,13 +108,23 @@ export function TotpProgrammeContinuity({
   const progress = Math.min(100, elapsedMs / Math.max(1, durationMs) * 100);
   useTotpContinuityAudienceAudio({ active: autoPlay, seed: `${kind}:${currentIndex}:${orderedFirst?.id ?? "show"}`, intensity: kind === "closing" ? 8 : kind === "between" ? 6 : 5 });
   const showRundown = kind === "opening" || kind === "closing";
+  const presentationClass = copy.presentation === "audience_floor"
+    ? "bg-[radial-gradient(circle_at_50%_85%,rgba(244,114,182,0.28),transparent_38%),radial-gradient(circle_at_15%_15%,rgba(34,211,238,0.15),transparent_30%)]"
+    : copy.presentation === "side_stage"
+      ? "bg-[radial-gradient(circle_at_85%_25%,rgba(251,191,36,0.2),transparent_32%),radial-gradient(circle_at_15%_70%,rgba(217,70,239,0.18),transparent_34%)]"
+      : copy.presentation === "chart_wall"
+        ? "bg-[radial-gradient(circle_at_75%_20%,rgba(34,211,238,0.24),transparent_34%),radial-gradient(circle_at_25%_80%,rgba(59,130,246,0.18),transparent_32%)]"
+        : copy.presentation === "camera_walk"
+          ? "bg-[radial-gradient(circle_at_20%_45%,rgba(217,70,239,0.22),transparent_32%),radial-gradient(circle_at_80%_55%,rgba(34,211,238,0.18),transparent_34%)]"
+          : "bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_32%)]";
 
   return (
     <section
       className="mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-xl border border-fuchsia-500/25 bg-slate-950 text-white shadow-2xl"
       data-totp-programme-continuity={kind}
+      data-totp-presenter-presentation={copy.presentation}
     >
-      <div className="relative h-[calc(100%_-_3.25rem)] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_32%)] p-5 md:p-8">
+      <div className={`relative h-[calc(100%_-_3.25rem)] overflow-hidden p-5 md:p-8 ${presentationClass}`}>
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-amber-300 to-cyan-400" />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -131,6 +146,7 @@ export function TotpProgrammeContinuity({
 
         <div className="mx-auto mt-6 max-w-4xl">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-fuchsia-200">{copy.eyebrow}</p>
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">{copy.presentation.replaceAll("_", " ")}</p>
           <h3 className="mt-3 max-w-4xl text-3xl font-black tracking-tight md:text-5xl">{copy.headline}</h3>
           <div className="mt-5 max-w-3xl rounded-2xl border border-white/15 bg-black/35 p-4 shadow-xl backdrop-blur">
             <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-fuchsia-200">

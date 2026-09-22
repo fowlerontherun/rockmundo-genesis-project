@@ -262,15 +262,6 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
     });
   };
 
-  const playable = async (url: string): Promise<boolean> => {
-    try {
-      const response = await fetch(url, { method: "HEAD" });
-      return response.ok;
-    } catch {
-      return false;
-    }
-  };
-
   const playRecordedElement = (url: string): Promise<void> => new Promise((resolve, reject) => {
     if (cancelled) {
       resolve();
@@ -304,50 +295,50 @@ export function playTotpPresenterLine(options: TotpPresenterLineOptions): TotpPr
       return;
     }
 
-    const availability = await Promise.all(normalized.map((clip) => playable(clip.url)));
-    if (cancelled) return;
-    if (availability.some((available) => !available)) {
-      await speakWithBrowserVoice();
-      return;
+    setSpeaking(true);
+    let playedCount = 0;
+    for (let index = 0; index < normalized.length; index += 1) {
+      if (cancelled) return;
+      const clip = normalized[index];
+      try {
+        await playRecordedElement(clip.url);
+        playedCount += 1;
+      } catch {
+        // A missing/stale fragment must not suppress the rest of the recorded
+        // sequence. In particular, still play a valid band-name clip when a
+        // reusable phrase asset is unavailable.
+      }
+      if (cancelled) return;
+      if (index < normalized.length - 1 && clip.gapAfterMs > 0) {
+        await new Promise<void>((resolve) => {
+          resolveGap = resolve;
+          gapTimer = window.setTimeout(() => {
+            gapTimer = 0;
+            resolveGap = null;
+            resolve();
+          }, clip.gapAfterMs);
+        });
+      }
     }
 
-    setSpeaking(true);
-    try {
-      for (let index = 0; index < normalized.length; index += 1) {
-        if (cancelled) return;
-        const clip = normalized[index];
-        await playRecordedElement(clip.url);
-        if (cancelled) return;
-        if (index < normalized.length - 1 && clip.gapAfterMs > 0) {
-          await new Promise<void>((resolve) => {
-            resolveGap = resolve;
-            gapTimer = window.setTimeout(() => {
-              gapTimer = 0;
-              resolveGap = null;
-              resolve();
-            }, clip.gapAfterMs);
-          });
-        }
-      }
+    if (playedCount > 0) {
       finish();
-    } catch {
-      if (!cancelled) await speakWithBrowserVoice();
+      return;
     }
+    if (!cancelled) await speakWithBrowserVoice();
   };
 
   const startPlayback = async () => {
     if (options.recordedUrl) {
-      const available = await playable(options.recordedUrl);
-      if (cancelled) return;
-      if (available) {
-        setSpeaking(true);
-        try {
-          await playRecordedElement(options.recordedUrl);
-          if (!cancelled) finish();
-          return;
-        } catch {
-          // Fall through to fragments/browser voice.
-        }
+      setSpeaking(true);
+      try {
+        await playRecordedElement(options.recordedUrl);
+        if (!cancelled) finish();
+        return;
+      } catch {
+        // Fall through to fragments/browser voice. Do not HEAD-probe media
+        // first: some valid Storage/CDN audio endpoints reject or mishandle
+        // HEAD even though a normal media GET succeeds.
       }
     }
 

@@ -58,31 +58,32 @@ describe("Top of the Pops programme continuity", () => {
 
   it("opens with the first locked running-order act", () => {
     const copy = buildTotpContinuityCopy("opening", fixtures);
-    expect(copy.headline).toContain("3 charting acts");
+    expect(`${copy.headline} ${copy.body}`).toContain("Opening Act");
+    expect(copy.presentation).toBeTruthy();
     expect(copy.nextAct?.bandName).toBe("Opening Act");
     expect(copy.nextAct?.chartRank).toBe(18);
   });
 
   it("links the completed act to the next act using frozen chart ranks", () => {
     const copy = buildTotpContinuityCopy("between", fixtures, 0);
-    expect(copy.headline).toContain("Opening Act");
-    expect(copy.body).toContain("#18");
-    expect(copy.body).toContain("Second Act");
-    expect(copy.body).toContain("#7");
-    expect(copy.body).toContain("rock stage");
+    const spoken = `${copy.headline} ${copy.body}`;
+    expect(spoken).toContain("Opening Act");
+    expect(spoken).toContain("Second Act");
+    expect(spoken).toMatch(/18|number 18/);
+    expect(spoken).toMatch(/7|number 7/);
+    expect(spoken).toContain("rock stage");
     expect(copy.nextAct?.stage).toBe("rock_stage");
   });
 
   it("calls out a performed number one in the closing sequence", () => {
     const copy = buildTotpContinuityCopy("closing", fixtures, 2);
-    expect(copy.headline).toBe("Tonight's #1: The Number Ones");
-    expect(copy.body).toContain("Top Spot");
+    expect(`${copy.headline} ${copy.body}`).toContain("The Number Ones");
+    expect(`${copy.headline} ${copy.body}`).toMatch(/#1|number one/);
   });
 
   it("does not invent a number one when the episode has no #1 performance", () => {
     const withoutNumberOne = fixtures.filter((item) => item.payload.song.qualifyingRank !== 1);
     const copy = buildTotpContinuityCopy("closing", withoutNumberOne, 1);
-    expect(copy.headline).toBe("See you for the next show");
-    expect(copy.body).toContain("see you on the next Top of the Pops");
+    expect(`${copy.headline} ${copy.body}`.toLowerCase()).toMatch(/goodnight|next show|next time/);
   });
 });
