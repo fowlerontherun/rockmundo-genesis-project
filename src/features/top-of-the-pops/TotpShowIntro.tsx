@@ -67,8 +67,8 @@ export function TotpShowIntro({ playing, onEnded }: TotpShowIntroProps) {
   }, [failed, playing, onEnded]);
 
   return (
-    <section className="overflow-hidden rounded-xl border bg-black" data-totp-show-intro data-totp-intro-duration-ms={TOTP_INTRO_DURATION_MS}>
-      <div className="relative flex aspect-[4/3] max-h-[70vh] items-center justify-center bg-black">
+    <section className="mx-auto w-full max-w-5xl overflow-hidden rounded-xl border bg-black" data-totp-show-intro data-totp-intro-duration-ms={TOTP_INTRO_DURATION_MS}>
+      <div className="relative flex aspect-video items-center justify-center bg-black">
         {!failed ? (
           <video
             ref={videoRef}
