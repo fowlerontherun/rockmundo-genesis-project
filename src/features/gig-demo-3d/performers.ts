@@ -321,7 +321,8 @@ export class Musician {
                 // Offset the wrist centres slightly off the instrument face. The IK target
                 // marks the contact point, while the hand itself has thickness and otherwise
                 // cuts through the neck/body on broader avatar meshes.
-                const faceNormal = new T.Vector3(0, 0, 1).applyQuaternion(rig.root.getWorldQuaternion(new T.Quaternion())).normalize();
+                const instrumentSurface = rig.left.parent ?? rig.root;
+                const faceNormal = new T.Vector3(0, 0, 1).applyQuaternion(instrumentSurface.getWorldQuaternion(new T.Quaternion())).normalize();
                 leftTarget.addScaledVector(faceNormal, .035);
                 rightTarget.addScaledVector(faceNormal, .05);
             }
