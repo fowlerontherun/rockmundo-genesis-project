@@ -10,6 +10,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildVenue, cylinder, rod, matte } from './stage';
 import { loadBand, type Musician, type DemoCrowd } from './performers';
+import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stageTransform, type VenueProfile } from './venueProfile';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
