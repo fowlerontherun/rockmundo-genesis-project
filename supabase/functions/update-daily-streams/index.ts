@@ -164,10 +164,11 @@ Deno.serve(async (req) => {
     let releaseHypeMap = new Map<string, number>();
     let releaseMarketingPowerMap = new Map<string, number>();
     let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
+    let releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
     if (songIds.length > 0) {
       const { data: releaseSongData } = await supabase
         .from("release_songs")
-        .select("song_id, release:releases(id, hype_score, label_marketing_power, pr_reach_power, pr_reach_updated_at, manufacturing_complete_at)")
+        .select("song_id, release:releases(id, hype_score, label_marketing_power, pr_reach_power, pr_reach_updated_at, label_marketing_focus, label_marketing_regions, label_marketing_saturation, manufacturing_complete_at)")
         .in("song_id", songIds);
       
       if (releaseSongData) {
@@ -183,6 +184,11 @@ Deno.serve(async (req) => {
             if (!existingPr || candidatePr > existingPr.power) {
               releasePrReachMap.set(rs.song_id, { power: candidatePr, updatedAt: rel.pr_reach_updated_at || null });
             }
+            releaseMarketingStrategyMap.set(rs.song_id, {
+              focus: String(rel.label_marketing_focus || "balanced"),
+              regions: Array.isArray(rel.label_marketing_regions) ? rel.label_marketing_regions : ["global"],
+              saturation: Number(rel.label_marketing_saturation || 0),
+            });
           }
         }
       }
@@ -319,13 +325,21 @@ Deno.serve(async (req) => {
         const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
         const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
         const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
+        const marketingStrategy = releaseMarketingStrategyMap.get(release.song_id) || { focus: "balanced", regions: ["global"], saturation: 0 };
+        const saturation = Math.max(0, Math.min(100, marketingStrategy.saturation));
+        const saturationEfficiency = 1 - (saturation / 100) * 0.35;
+        const focusStreamMultiplier = marketingStrategy.focus === "playlist" ? 1.35
+          : marketingStrategy.focus === "social" ? 1.20
+          : marketingStrategy.focus === "radio" ? 1.15
+          : marketingStrategy.focus === "retail" ? 0.90
+          : 1.0;
 
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.release_id);
         const hasTerritories = releaseTerritories.length > 0;
         const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * paidLabelMarketingMultiplier * publicRelationsMultiplier * qualityDiscoveryMultiplier * organicBreakoutMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
+        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * paidLabelMarketingMultiplier * saturationEfficiency * focusStreamMultiplier * publicRelationsMultiplier * qualityDiscoveryMultiplier * organicBreakoutMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
         const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
