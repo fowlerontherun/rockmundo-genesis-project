@@ -153,8 +153,10 @@ export function useTotpAudienceAudio({
       if (cue?.type === "audience") {
         const clip = pickTotpCrowdSound(
           libraryRef.current,
-          ["applause", "crowd_cheer_large", "crowd_cheer_medium", "band_entrance"],
-          9,
+          reaction >= 7
+            ? ["encore_request", "applause", "crowd_cheer_large", "band_exit", "band_entrance"]
+            : ["applause", "crowd_cheer_medium", "band_exit", "band_entrance"],
+          reaction >= 7 ? 9 : 7,
           `${cueId}:applause`,
         );
         const hit = clampTotpGain(mix.audienceHit);
