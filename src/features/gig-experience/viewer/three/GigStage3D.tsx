@@ -7,6 +7,7 @@ import { useGigPlayerModels, type GigPlayerModelsData } from '@/features/player-
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
+import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import type { TotpCameraShot, TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
 import { resolveTotpPresenter, totpVariantLabel } from '@/features/top-of-the-pops/presenters';
 import { totpAudienceChoreography } from '@/features/top-of-the-pops/studioAudience';
@@ -21,6 +22,7 @@ import { buildStagePlan, concertFrame, concertOptions, type ConcertPresentationM
 const EMPTY_APPEARANCES: Record<string, PlayerAppearance> = {};
 const EMPTY_RICH_CLOTHING: Record<string, ResolvedEquippedClothing[]> = {};
 const EMPTY_TATTOOS: Record<string, ResolvedTattooVisual[]> = {};
+const EMPTY_INSTRUMENT_SKINS: Record<string, ResolvedInstrumentSkinVisual[]> = {};
 const CAMERAS: Record<GigViewerCameraMode, CameraShot> = { venue_wide: 'front', stage_focus: 'guitar', auto: 'director', drums: 'drums', band_pov: 'stage' };
 const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   presenter_wide: 'tv_presenter_wide', presenter_close: 'tv_presenter_close', crane_sweep: 'tv_crane', studio_master: 'front',
@@ -54,6 +56,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       presentationMode,
       totpStage,
       resolvedPlayerModels?.tattoos ?? EMPTY_TATTOOS,
+      resolvedPlayerModels?.instrumentSkins ?? EMPTY_INSTRUMENT_SKINS,
     );
     if (presentationMode !== 'totp') return base;
     return {

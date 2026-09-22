@@ -12,11 +12,15 @@ import {
   Crown,
   ArrowLeft,
   Shirt,
+  Guitar,
 } from "lucide-react";
 import { CollectionCard } from "@/components/skin-store/CollectionCard";
 import { StoreItemCard } from "@/components/skin-store/StoreItemCard";
 import { FeaturedCarousel } from "@/components/skin-store/FeaturedCarousel";
 import { ItemPreviewDialog, type ClothingPurchaseCustomization } from "@/components/skin-store/ItemPreviewDialog";
+import { InstrumentSkinCard } from "@/components/skin-store/InstrumentSkinCard";
+import { InstrumentSkinPreviewDialog, type InstrumentSkinPurchaseCustomization } from "@/components/skin-store/InstrumentSkinPreviewDialog";
+import type { InstrumentSkinItem } from "@/features/instrument-skins/instrumentSkin";
 import {
   useSkinCollections,
   useClothingItems,
@@ -24,6 +28,8 @@ import {
   useNewArrivals,
   useOwnedSkins,
   usePurchaseSkin,
+  useInstrumentSkinItems,
+  usePurchaseInstrumentSkin,
   ClothingItem,
 } from "@/hooks/useSkinStore";
 import { useVipStatus } from "@/hooks/useVipStatus";
@@ -35,19 +41,27 @@ const SkinStore = () => {
   const [activeTab, setActiveTab] = useState("featured");
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<ClothingItem | null>(null);
+  const [previewInstrument, setPreviewInstrument] = useState<InstrumentSkinItem | null>(null);
   const { data: collections = [], isLoading: collectionsLoading } = useSkinCollections();
   const { data: featuredItems = [] } = useFeaturedItems();
   const { data: newArrivals = [] } = useNewArrivals();
   const { data: collectionItems = [] } = useClothingItems(selectedCollection || undefined);
   const { data: allItems = [] } = useClothingItems();
   const { data: ownedSkins = [] } = useOwnedSkins();
+  const { data: instrumentItems = [] } = useInstrumentSkinItems();
   const { data: vipStatus } = useVipStatus();
   const purchaseMutation = usePurchaseSkin();
+  const instrumentPurchaseMutation = usePurchaseInstrumentSkin();
 
-  const ownedItemIds = ownedSkins.map((skin) => skin.item_id);
+  const ownedItemIds = ownedSkins.filter((skin) => skin.item_type === 'clothing').map((skin) => skin.item_id);
+  const ownedInstrumentIds = ownedSkins.filter((skin) => skin.item_type === 'instrument').map((skin) => skin.item_id);
   const ownedClothingItems = allItems.filter((item) => ownedItemIds.includes(item.id));
+  const ownedInstrumentItems = instrumentItems.filter((item) => ownedInstrumentIds.includes(item.id));
   const previewOwnedSkin = previewItem
-    ? ownedSkins.find((skin) => skin.item_id === previewItem.id) || null
+    ? ownedSkins.find((skin) => skin.item_type === 'clothing' && skin.item_id === previewItem.id) || null
+    : null;
+  const previewOwnedInstrument = previewInstrument
+    ? ownedSkins.find((skin) => skin.item_type === 'instrument' && skin.item_id === previewInstrument.id) || null
     : null;
 
   const handlePurchase = (item: ClothingItem, customization?: ClothingPurchaseCustomization) => {
@@ -64,6 +78,16 @@ const SkinStore = () => {
 
   const handlePreview = (item: ClothingItem) => {
     setPreviewItem(item);
+  };
+
+  const handleInstrumentPurchase = (item: InstrumentSkinItem, customization: InstrumentSkinPurchaseCustomization) => {
+    instrumentPurchaseMutation.mutate({
+      itemId: item.id,
+      variantKey: customization.variantKey,
+      zoneColours: customization.zoneColours,
+    }, {
+      onSuccess: () => setPreviewInstrument((current) => current?.id === item.id ? null : current),
+    });
   };
 
   const handleViewCollection = (collectionId: string) => {
@@ -89,7 +113,7 @@ const SkinStore = () => {
   return (
     <FMPageScaffold
       title="Skin Store"
-      subtitle="Customize your avatar with exclusive skins and outfits"
+      subtitle="Customize your avatar and stage instruments with exclusive skins, colours and designs"
       icon={ShoppingBag}
       backTo="/hub/premium-store"
       headerActions={
@@ -102,7 +126,7 @@ const SkinStore = () => {
       }
     >
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="featured" className="gap-1.5">
             <Star className="h-4 w-4 hidden sm:inline" />
             <span>Featured</span>
@@ -118,6 +142,10 @@ const SkinStore = () => {
           <TabsTrigger value="browse" className="gap-1.5">
             <Shirt className="h-4 w-4 hidden sm:inline" />
             <span>Browse</span>
+          </TabsTrigger>
+          <TabsTrigger value="instruments" className="gap-1.5">
+            <Guitar className="h-4 w-4 hidden sm:inline" />
+            <span>Instruments</span>
           </TabsTrigger>
           <TabsTrigger value="owned" className="gap-1.5">
             <Clock className="h-4 w-4 hidden sm:inline" />
@@ -276,6 +304,22 @@ const SkinStore = () => {
           </ScrollArea>
         </TabsContent>
 
+        <TabsContent value="instruments" className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2"><Guitar className="h-5 w-5 text-primary" />Instrument Skin Designer</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Choose a guitar or bass design, change unlocked finish zones, then save it as the instrument you take on stage.</p>
+          </div>
+          {instrumentItems.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {instrumentItems.map((item) => (
+                <InstrumentSkinCard key={item.id} item={item} isOwned={ownedInstrumentIds.includes(item.id)} onPreview={setPreviewInstrument} />
+              ))}
+            </div>
+          ) : (
+            <Card><CardContent className="p-12 text-center"><Guitar className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">No instrument skins are available yet.</p></CardContent></Card>
+          )}
+        </TabsContent>
+
         <TabsContent value="owned" className="space-y-6">
           {ownedClothingItems.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -291,15 +335,30 @@ const SkinStore = () => {
             </div>
           ) : (
             <Card>
-              <CardContent className="p-12 text-center">
-                <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">You don't own any clothing yet. Start shopping!</p>
-                <Button variant="default" className="mt-4" onClick={() => setActiveTab("featured")}>Browse Store</Button>
+              <CardContent className="p-8 text-center">
+                <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">You don't own any clothing yet.</p>
               </CardContent>
             </Card>
           )}
+          {ownedInstrumentItems.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2"><Guitar className="h-5 w-5" />Your instrument skins</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {ownedInstrumentItems.map((item) => <InstrumentSkinCard key={item.id} item={item} isOwned onPreview={setPreviewInstrument} />)}
+              </div>
+            </div>
+          )}
+          {ownedClothingItems.length === 0 && ownedInstrumentItems.length === 0 && <Button variant="default" onClick={() => setActiveTab("featured")}>Browse Store</Button>}
         </TabsContent>
       </Tabs>
+
+      <InstrumentSkinPreviewDialog
+        item={previewInstrument}
+        ownedSkin={previewOwnedInstrument}
+        onClose={() => setPreviewInstrument(null)}
+        onPurchase={handleInstrumentPurchase}
+      />
 
       <ItemPreviewDialog
         item={previewItem}

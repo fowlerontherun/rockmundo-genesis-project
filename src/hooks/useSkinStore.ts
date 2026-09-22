@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
+import type { InstrumentSkinItem } from "@/features/instrument-skins/instrumentSkin";
 
 export interface SkinCollection {
   id: string;
@@ -230,5 +231,99 @@ export const useSaveClothingCustomization = () => {
       );
     },
     onError: (error: Error) => toast.error(error.message || 'Could not save clothing customisation'),
+  });
+};
+
+
+export const useInstrumentSkinItems = () => useQuery({
+  queryKey: ['instrument-skin-items'],
+  queryFn: async () => {
+    const { data, error } = await (supabase.from as any)('instrument_skin_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('target_instrument')
+      .order('name');
+    if (error) throw error;
+    return (data || []) as InstrumentSkinItem[];
+  },
+  staleTime: 5 * 60 * 1000,
+});
+
+export const usePurchaseInstrumentSkin = () => {
+  const { profileId } = useActiveProfile();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      itemId,
+      variantKey,
+      zoneColours,
+    }: {
+      itemId: string;
+      variantKey?: string | null;
+      zoneColours?: Record<string, string>;
+    }) => {
+      if (!profileId) throw new Error('Not authenticated');
+      const { data, error } = await (supabase.rpc as any)('purchase_instrument_skin_atomic', {
+        p_profile_id: profileId,
+        p_item_id: itemId,
+        p_idempotency_key: crypto.randomUUID(),
+        p_variant_key: variantKey || null,
+        p_zone_colors: zoneColours || {},
+      });
+      if (error) throw error;
+      return data as Record<string, any>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owned-skins', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['instrument-skin-items'] });
+      queryClient.invalidateQueries({ queryKey: ['gig-player-appearances'] });
+      queryClient.invalidateQueries({ queryKey: ['active-profile'] });
+      toast.success('Instrument skin purchased');
+    },
+    onError: (error: Error) => {
+      const message = error.message.includes('insufficient_funds') ? 'Not enough cash for this instrument skin' : error.message;
+      toast.error(message || 'Could not purchase instrument skin');
+    },
+  });
+};
+
+export const useSaveInstrumentSkinCustomization = () => {
+  const { profileId } = useActiveProfile();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      itemId,
+      variantKey,
+      zoneColours,
+      equipped = null,
+    }: {
+      itemId: string;
+      variantKey?: string | null;
+      zoneColours?: Record<string, string>;
+      equipped?: boolean | null;
+    }) => {
+      if (!profileId) throw new Error('No active character');
+      const { data, error } = await (supabase.rpc as any)('set_owned_instrument_customization', {
+        p_profile_id: profileId,
+        p_item_id: itemId,
+        p_variant_key: variantKey || null,
+        p_zone_colors: zoneColours || {},
+        p_equipped: equipped,
+      });
+      if (error) throw error;
+      return Array.isArray(data) ? data[0] : data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['owned-skins', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['gig-player-appearances'] });
+      toast.success(
+        variables.equipped === true
+          ? 'Instrument finish saved and equipped'
+          : variables.equipped === false
+            ? 'Instrument skin unequipped'
+            : 'Instrument finish saved',
+      );
+    },
+    onError: (error: Error) => toast.error(error.message || 'Could not save instrument finish'),
   });
 };
