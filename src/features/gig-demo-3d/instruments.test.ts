@@ -59,6 +59,41 @@ describe('complete stage instrument coverage', () => {
                 disposeModel(actor.equipment);
         }
     });
+    it.each(['acoustic_guitar', 'electric_guitar', 'bass_guitar'] as const)('%s keeps both hand centres in front of the instrument surface', id => {
+        const role = id === 'bass_guitar' ? 'bass' : 'guitar';
+        const actor = new Musician(models[0], role, [0, 0, 0], 0, undefined, undefined, id);
+        const rig = actor.instrumentRig!;
+        const instrument = rig.left.parent!;
+        for (const t of [0, 2.17, 18.4, 48]) {
+            actor.update(t, .9, false);
+            const left = instrument.worldToLocal(actor.bones.get('Hand.L')!.getWorldPosition(new T.Vector3()));
+            const right = instrument.worldToLocal(actor.bones.get('Hand.R')!.getWorldPosition(new T.Vector3()));
+            expect(left.z, `${id} fretting hand surface clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .22 : id === 'bass_guitar' ? .20 : .205);
+            expect(right.z, `${id} picking hand surface clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .34 : .30);
+        }
+        disposeModel(actor.root);
+    });
+
+    it.each(['rock_drums', 'jazz_drums', 'electronic_drums'] as const)('%s always has two visible sticks outside the palms', id => {
+        const actor = new Musician(models[0], 'drums', [0, 0, 0], 0, undefined, undefined, id);
+        actor.update(8, .9, false);
+        const sticks = actor.instrumentRig!.tools.filter(tool => tool.name.startsWith('playing-stick'));
+        expect(sticks).toHaveLength(2);
+        for (const stick of sticks) {
+            expect(stick.visible).toBe(true);
+            expect(stick.position.z).toBeGreaterThanOrEqual(.05);
+            const bounds = new T.Box3().setFromObject(stick);
+            expect(bounds.isEmpty()).toBe(false);
+            expect(bounds.getSize(new T.Vector3()).length()).toBeGreaterThan(.35);
+        }
+        expect(sticks.map(stick => stick.parent)).toEqual([
+            actor.bones.get('Hand.L'),
+            actor.bones.get('Hand.R'),
+        ]);
+        disposeModel(actor.root);
+        if (actor.equipment) disposeModel(actor.equipment);
+    });
+
     it('retains combined instrument and vocal duties and safely handles unknown labels', () => {
         expect(stageAssignment('Bass Guitar / Backing Vocals')).toMatchObject({ instrument: 'bass_guitar', role: 'bass', vocal: 'backing' });
         expect(stageAssignment('Lead Vocals + Acoustic Guitar')).toMatchObject({ instrument: 'acoustic_guitar', role: 'guitar', vocal: 'lead' });

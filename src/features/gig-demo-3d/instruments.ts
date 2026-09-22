@@ -25,7 +25,7 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
     root.userData.instrumentId = id;
     const chrome = metal('#adb8c0'), brass = metal('#c9a151', .26), black = matte('#171b22', .44), ivory = matte('#e8debf', .51);
     const wood = new T.MeshPhysicalMaterial({ color: colour, roughness: .34, clearcoat: .72, clearcoatRoughness: .22 });
-    const darkWood = matte('#482d22', .55), head = matte('#d8cfb7', .74);
+    const darkWood = matte('#482d22', .55), head = matte('#d8cfb7', .74), stickWood = matte('#c9975e', .42);
     const tools: T.Object3D[] = [];
     const moving: ((t: number, energy: number) => void)[] = [];
     let l: Point = [.23, 1.1, .4], r: Point = [-.23, 1.1, .4], seated = false;
@@ -156,14 +156,18 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
         }
         // Keep the instrument body in front of the torso. The previous .16 depth
         // could put acoustic/electric bodies inside broader player-model chests.
-        g.position.set(-.07, 1.10, .25);
+        g.position.set(-.07, 1.10, .29);
         g.rotation.set(.035, -.045, -1.01);
         root.add(g);
-        // Grip points live just above the strings/instrument face so the wrist centre
-        // does not enter the fretboard or guitar body when the arm solver reaches them.
-        const left = marker(g, 'grip-left', [.015, .71, .155]), right = marker(g, 'grip-right', [0, .03, .225]);
+        // Keep wrist centres on the audience side of the strings/body. Acoustic
+        // instruments have a deeper body, so their picking hand needs more space.
+        const bass = id === 'bass_guitar';
+        const acoustic = !electric;
+        const leftRestZ = acoustic ? .17 : bass ? .165 : .17;
+        const rightRestZ = acoustic ? .265 : bass ? .245 : .255;
+        const left = marker(g, 'grip-left', [.015, .71, leftRestZ]);
+        const right = marker(g, 'grip-right', [0, .03, rightRestZ]);
         moving.push((t, e) => {
-            const bass = id === 'bass_guitar';
             const subdivision = bass ? 4 : 8;
             const step = Math.floor(t * subdivision) % 16;
             const phrase = Math.floor(t * subdivision / 16);
@@ -175,10 +179,10 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             const direction = step % 2 === 0 ? 1 : -1;
             left.position.y = .71 + (fretPosition(t, bass) - .71) * e;
             left.position.x = .015 + (Math.cos(t * .72) * .009 + Math.sin(t * 1.37) * .004) * e;
-            left.position.z = .155 + Math.sin(t * .58 + .8) * .004 * e;
+            left.position.z = leftRestZ + Math.sin(t * .58 + .8) * .004 * e;
             right.position.x = direction * pulse * accent * (bass ? .045 : .082) * e;
             right.position.y = .03 + pulse * accent * (bass ? .012 : .026) * e;
-            right.position.z = .225 + (Math.sin(t * .9) * .006 + pulse * accent * .005) * e;
+            right.position.z = rightRestZ + (Math.sin(t * .9) * .006 + pulse * accent * .005) * e;
             g.rotation.y = -.045 + (Math.sin(t * .55) * .018 + Math.sin(t * .21 + 1.4) * .01) * e;
             g.rotation.x = .035 + Math.cos(t * .7) * .009 * e;
         });
@@ -552,9 +556,12 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             stick.name = 'playing-stick';
             tools.push(stick);
             grip.add(stick);
-            // Start the shaft in front of the palm and make kit sticks slightly chunkier
-            // so they remain readable under stage lighting and motion blur.
-            rod(stick, [0, .015, .015], [0, -.195, .355], spec.family === 'kit' ? .011 : .007, darkWood);
+            // Use a lighter, thicker shaft and keep the whole stick in front of
+            // the palm. Dark thin sticks were effectively disappearing against the
+            // kit, hands and stage lighting in the live viewer.
+            rod(stick, [0, .018, .03], [0, -.22, .39], spec.family === 'kit' ? .013 : .008, stickWood);
+            stick.userData.shaftAxis = new T.Vector3(0, -.238, .36).normalize();
+            stick.userData.gripOffset = new T.Vector3(0, .018, .03);
             if (spec.family === 'mallets')
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
             moving.push((t, e) => {

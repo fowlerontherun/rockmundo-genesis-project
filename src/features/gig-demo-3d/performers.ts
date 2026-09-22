@@ -209,10 +209,13 @@ export class Musician {
                     this.root.updateMatrixWorld(true);
                     hand.attach(stick);
                     stick.name = `playing-stick-${side.toLowerCase()}`;
-                    // Keep the butt of the stick outside the palm so the shaft remains
-                    // visible instead of being swallowed by the hand mesh.
-                    stick.position.set(side === 'L' ? .018 : -.018, -.005, .035);
-                    stick.rotation.set(-.12, 0, side === 'L' ? -.08 : .08);
+                    // Keep the grip point outside the palm and bias the shaft
+                    // toward camera/stage-front. This prevents the whole stick sitting
+                    // inside the hand mesh on the shipped avatar rigs.
+                    stick.position.set(side === 'L' ? .026 : -.026, -.008, .052);
+                    stick.rotation.set(-.1, 0, side === 'L' ? -.065 : .065);
+                    stick.visible = true;
+                    stick.traverse(object => { object.frustumCulled = false; });
                     stick.userData.attachedToHand = true;
                 });
             }
@@ -452,20 +455,40 @@ export class Musician {
             const poleSpread = .65 + Math.max(0, this.bodyBuild - 1) * .32;
             const poleDrift = reduced ? 0 : Math.sin(t * .72 + this.phase) * .035 * motionEnergy;
             const poleLift = reduced ? 0 : Math.sin(t * .51 + this.phase * 1.4) * .025 * motionEnergy;
-            const poleForward = (rig.family === 'strum' || rig.family === 'bow' || rig.family === 'upright' ? .22 : .15) + poleDrift;
+            const poleForward = (rig.family === 'strum' ? .31 : rig.family === 'bow' || rig.family === 'upright' ? .22 : .15) + poleDrift;
             const leftTarget = rig.left.getWorldPosition(new T.Vector3());
             const rightTarget = rig.right.getWorldPosition(new T.Vector3());
+            const leftPole = this.point(poleSpread, .96 + poleLift, poleForward);
+            const rightPole = this.point(-poleSpread, .96 - poleLift * .6, poleForward - poleDrift * .45);
             if (rig.family === 'strum') {
-                // Offset the wrist centres slightly off the instrument face. The IK target
-                // marks the contact point, while the hand itself has thickness and otherwise
-                // cuts through the neck/body on broader avatar meshes.
+                // Keep both wrists and elbows on the audience side of the instrument.
+                // A second guarded IK solve catches poses where arm reach would otherwise
+                // pull a hand back through a deep acoustic body or fretboard.
                 const instrumentSurface = rig.left.parent ?? rig.root;
-                const faceNormal = new T.Vector3(0, 0, 1).applyQuaternion(instrumentSurface.getWorldQuaternion(new T.Quaternion())).normalize();
-                leftTarget.addScaledVector(faceNormal, .035);
-                rightTarget.addScaledVector(faceNormal, .05);
+                const instrumentId = String(rig.root.userData.instrumentId ?? '');
+                const acoustic = instrumentId !== 'electric_guitar' && instrumentId !== 'bass_guitar';
+                const buildExtra = Math.max(0, this.bodyBuild - 1) * .02;
+                const faceNormal = new T.Vector3(0, 0, 1)
+                    .applyQuaternion(instrumentSurface.getWorldQuaternion(new T.Quaternion()))
+                    .normalize();
+                leftTarget.addScaledVector(faceNormal, .045 + buildExtra);
+                rightTarget.addScaledVector(faceNormal, (acoustic ? .08 : .065) + buildExtra);
+
+                const solveOutside = (side: 'L' | 'R', target: T.Vector3, pole: T.Vector3, minimumZ: number) => {
+                    this.hand(side, target, pole);
+                    const hand = this.bones.get(`Hand.${side}`);
+                    if (!hand) return;
+                    const localHand = instrumentSurface.worldToLocal(hand.getWorldPosition(new T.Vector3()));
+                    if (localHand.z >= minimumZ) return;
+                    localHand.z = minimumZ;
+                    this.hand(side, instrumentSurface.localToWorld(localHand), pole);
+                };
+                solveOutside('L', leftTarget, leftPole, acoustic ? .18 : .16);
+                solveOutside('R', rightTarget, rightPole, acoustic ? .27 : instrumentId === 'bass_guitar' ? .23 : .24);
+            } else {
+                this.hand('L', leftTarget, leftPole);
+                this.hand('R', rightTarget, rightPole);
             }
-            this.hand('L', leftTarget, this.point(poleSpread, .96 + poleLift, poleForward));
-            this.hand('R', rightTarget, this.point(-poleSpread, .96 - poleLift * .6, poleForward - poleDrift * .45));
             if (rig.family === 'voice' && !reduced && performing) {
                 if (this.performanceSection === 'chorus') {
                     const sign = Math.sin(t * .7 + this.phase) >= 0 ? 1 : -1;
@@ -623,10 +646,12 @@ export class Musician {
             mic.updateWorldMatrix(false, true);
         }
         if (rig?.family === 'kit' && !this.walking) {
-            const shaftAxis = new T.Vector3(0, -.21, .34).normalize();
-            for (const stick of rig.tools) {
+            for (const stick of rig.tools.filter(tool => tool.name.startsWith('playing-stick'))) {
+                stick.visible = true;
                 const target = stick.userData.strikeTarget as T.Vector3 | undefined;
                 if (!target || !stick.parent) continue;
+                const shaftAxis = (stick.userData.shaftAxis as T.Vector3 | undefined)
+                    ?? new T.Vector3(0, -.238, .36).normalize();
                 aimAttachedTool(stick, shaftAxis, rig.root.localToWorld(target.clone()));
             }
         }
