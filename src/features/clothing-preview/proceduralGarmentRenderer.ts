@@ -1,5 +1,5 @@
 import * as T from 'three';
-import type { ClothingItem } from '@/hooks/useSkinStore';
+import type { ClothingDetailLayer, ClothingItem } from '@/hooks/useSkinStore';
 import type { ClothingPreviewVariant } from './clothingPreview';
 import { buildRichGarmentVisualSpec } from './richGarmentVisuals';
 
@@ -137,13 +137,13 @@ function addTopConstructionDetails(
   }
 }
 
-function addDetail(group: T.Group, detail: any, index: number, spec: RichGarmentVisualSpec) {
-  const color = /^#[0-9a-fA-F]{6}$/.test(String(detail?.color || '')) ? detail.color : spec.secondaryColor;
-  const scale = Math.max(.45, Math.min(1.8, Number(detail?.scale || 1)));
-  const x = Math.max(-.33, Math.min(.33, Number(detail?.offsetX ?? detail?.offset_x ?? ((index % 3) - 1) * .16)));
-  const yOffset = Math.max(-.34, Math.min(.34, Number(detail?.offsetY ?? detail?.offset_y ?? .14 - Math.floor(index / 3) * .12)));
+function addDetail(group: T.Group, detail: ClothingDetailLayer, index: number, spec: RichGarmentVisualSpec) {
+  const color = /^#[0-9a-fA-F]{6}$/.test(String(detail.color || '')) ? detail.color : spec.secondaryColor;
+  const scale = Math.max(.45, Math.min(1.8, Number(detail.scale || 1)));
+  const x = Math.max(-.33, Math.min(.33, Number(detail.offsetX ?? ((index % 3) - 1) * .16)));
+  const yOffset = Math.max(-.34, Math.min(.34, Number(detail.offsetY ?? .14 - Math.floor(index / 3) * .12)));
   const z = spec.scaleZ / 2 + .025 + index * .0005;
-  const type = String(detail?.type || 'badge').toLowerCase();
+  const type = String(detail.type || 'badge').toLowerCase();
   let mesh: T.Mesh;
 
   if (/stud|button/.test(type)) {
@@ -342,7 +342,7 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   if (spec.slot === 'top') {
     addTopGarment(item, spec, material, add);
   } else if (spec.slot === 'bottom') {
-    const garment = (item.garment_config || {}) as Record<string, any>;
+    const garment = (item.garment_config || {}) as Record<string, unknown>;
     const skirtLike = /skirt|dress|a-line|wide/.test(`${item.category} ${garment.silhouette || ''}`.toLowerCase());
     if (skirtLike) {
       const skirt = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .42, spec.scaleX * (.5 + spec.flare), spec.scaleY, 28, 1, false), material);
