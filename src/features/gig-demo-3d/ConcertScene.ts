@@ -362,14 +362,22 @@ export class ConcertScene {
     if (!this.options?.externalClock && this.settings.playing && this.loaded) this.seconds += dt;
     const t = this.settings.reducedMotion ? 0 : this.seconds;
     const energy = this.playback?.energy ?? this.settings.energy;
+    const section = this.playback?.section ?? 'idle';
+    const sectionScale = section === 'intro' ? .72
+      : section === 'verse' ? .84
+      : section === 'chorus' ? 1.08
+      : section === 'breakdown' ? .58
+      : section === 'solo' ? 1.02
+      : section === 'outro' ? 1.12
+      : 1;
     const visibleActors = this.actors.filter(actor => actor.root.visible);
     const singer = visibleActors.find(actor => actor.hasVocals()) ?? visibleActors.find(actor => actor.role === 'vocals');
     const drummer = visibleActors.find(actor => actor.role === 'drums');
     const stringPlayers = visibleActors.filter(actor => actor.role === 'guitar' || actor.role === 'bass');
     const interactionClock = ((t % 24) + 24) % 24;
-    const interactionWindow = this.settings.reducedMotion ? 0
+    const interactionWindow = this.settings.reducedMotion || section === 'breakdown' || section === 'intro' ? 0
       : smoothMotion((interactionClock - 7.5) / .6) * (1 - smoothMotion((interactionClock - 10.5) / .7));
-    const fillWindow = this.settings.reducedMotion ? 0
+    const fillWindow = this.settings.reducedMotion || section === 'verse' ? 0
       : smoothMotion((interactionClock - 15.2) / .45) * (1 - smoothMotion((interactionClock - 17.5) / .55));
 
     this.actors.forEach(actor => {
@@ -425,7 +433,14 @@ export class ConcertScene {
       }
       actor.restoreEquipmentAnchor();
       actor.performing = this.playback?.performing ?? true;
-      actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, energy, this.settings.reducedMotion);
+      const focused = !!this.playback?.focusId && actor.id === this.playback.focusId;
+      const soloScale = section === 'solo' ? (focused ? 1.2 : .78) : 1;
+      const roleScale = section === 'breakdown' && actor.role === 'drums' ? .82
+        : section === 'chorus' && (actor.role === 'vocals' || actor.role === 'guitar') ? 1.05
+        : section === 'outro' && actor.role === 'drums' ? 1.08
+        : 1;
+      const actorEnergy = T.MathUtils.clamp(energy * sectionScale * soloScale * roleScale, 0, 1.25);
+      actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, actorEnergy, this.settings.reducedMotion);
     });
     if (this.options?.television?.stageKey) this.crowd?.setTelevisionStage(this.options.television.stageKey);
     this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction), this.playback?.crowdCueProgress);

@@ -4,7 +4,7 @@ import type { GigExperienceDTO } from '../../types';
 import { buildPerformerPlan, reconstructPerformerState, type PerformerPlan, type PresentationRole } from '../engine/PerformerLifecycle';
 import type { DerivedPlaybackState } from '../engine/PlaybackController';
 import { replayResultAttendance, resolvePresentationAttendance } from '../engine/AuthoritativeMetric';
-import type { ConcertFrame, ConcertOptions, ConcertVenue, StageRole } from '@/features/gig-demo-3d/liveTypes';
+import type { ConcertFrame, ConcertOptions, ConcertVenue, PerformanceSection, StageRole } from '@/features/gig-demo-3d/liveTypes';
 import { resolveVenueProfile, stagePosition, type VenueProfile } from '@/features/gig-demo-3d/venueProfile';
 import { resolveTotpStudioStageGeometry } from '@/features/gig-demo-3d/totpStudioGeometry';
 import { defaultAppearance, type PlayerAppearance } from '@/features/player-model/appearance';
@@ -407,8 +407,32 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
   const lightLevel = songPlaying ? 1 : opening?.visualPayload.type === 'venue_open' ? Math.max(.3, opening.visualPayload.lightLevel) : .5;
   const spotlight = [...active].reverse().find(e => e.visualPayload.type === 'spotlight');
   const focusId = itemPayload?.performerId ?? (spotlight?.visualPayload.type === 'spotlight' ? spotlight.visualPayload.performerId : null) ?? playback.performerFocusId;
+  const songStart = [...active].reverse().find(e => e.visualPayload.type === 'song_start');
+  const phaseText = String(playback.activePhase ?? '').toLowerCase();
+  let section: PerformanceSection = 'idle';
+  if (songPlaying) {
+    const explicit = /intro|verse|chorus|breakdown|solo|outro|finale/.exec(phaseText)?.[0];
+    if (explicit === 'finale') section = 'outro';
+    else if (explicit) section = explicit as PerformanceSection;
+    else if (focusId && spotlight) section = 'solo';
+    else if (songStart && songStart.durationMs >= 20_000) {
+      const p = progress(songStart);
+      if (p < .08) section = 'intro';
+      else if (p < .32) section = 'verse';
+      else if (p < .52) section = 'chorus';
+      else if (p < .66) section = 'verse';
+      else if (p < .76 && (playback.crowdEnergy ?? 30) < 45) section = 'breakdown';
+      else if (p < .82 && focusId) section = 'solo';
+      else if (p < .94) section = 'chorus';
+      else section = 'outro';
+    } else {
+      const cycle = ((positionMs / 1000) % 40 + 40) % 40;
+      section = cycle < 4 ? 'intro' : cycle < 16 ? 'verse' : cycle < 26 ? 'chorus' : cycle < 32 ? 'verse' : cycle < 36 ? 'breakdown' : 'outro';
+    }
+  }
   return {
     positionMs,
+    section,
     occupancy: attendance.state === 'valid' ? clamp(attendance.value / profile.capacity) * filling * dispersed : 0,
     energy: clamp((playback.crowdEnergy ?? 30) / 100),
     crowdReaction: itemPayload?.action === 'phone_lights' ? 'phone_lights' : itemPayload?.action === 'mosh_pit' ? 'mosh_pit' : itemPayload?.action === 'crowd_surf' ? 'crowd_surf' : itemPayload?.action === 'crowd_wave' ? 'wave' : reaction?.visualPayload.type === 'crowd_reaction' ? reaction.visualPayload.reaction : 'still',
