@@ -602,19 +602,23 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d', skin?: Res
             stick.name = 'playing-stick';
             tools.push(stick);
             grip.add(stick);
-            // Use a lighter, thicker shaft and keep the whole stick in front of
-            // the palm. Dark thin sticks were effectively disappearing against the
-            // kit, hands and stage lighting in the live viewer.
-            const shaft = rod(stick, [0, .018, .03], [0, -.22, .39], spec.family === 'kit' ? .013 : .008, stickWood);
-            shaft.name = 'playing-stick-shaft';
+            // Kit sticks use their group origin as the actual hand grip and point
+            // along local +Z. This lets the performer place/aim them in stage space
+            // without inheriting the imported avatar wrist's arbitrary local axes.
             if (spec.family === 'kit') {
-                const tip = ellipsoid(stick, [.017, .024, .03], [0, -.22, .39], stickWood);
+                const shaft = rod(stick, [0, 0, .012], [0, 0, .47], .014, stickWood);
+                shaft.name = 'playing-stick-shaft';
+                const tip = ellipsoid(stick, [.018, .018, .03], [0, 0, .485], stickWood);
                 tip.name = 'playing-stick-tip';
-            }
-            stick.userData.shaftAxis = new T.Vector3(0, -.238, .36).normalize();
-            stick.userData.gripOffset = new T.Vector3(0, .018, .03);
-            if (spec.family === 'mallets')
+                stick.userData.shaftAxis = new T.Vector3(0, 0, 1);
+                stick.userData.gripOffset = new T.Vector3(0, 0, 0);
+            } else {
+                const shaft = rod(stick, [0, .018, .03], [0, -.22, .39], .008, stickWood);
+                shaft.name = 'playing-stick-shaft';
+                stick.userData.shaftAxis = new T.Vector3(0, -.238, .36).normalize();
+                stick.userData.gripOffset = new T.Vector3(0, .018, .03);
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
+            }
             moving.push((t, e) => {
                 const base = sign === 1 ? l[1] : r[1];
                 const barTime = ((t % 8) + 8) % 8;
@@ -645,8 +649,6 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d', skin?: Res
                     stick.userData.strikeTarget = target;
                     const lift = .09 + hit * accent * e + (fill > .05 ? .035 : 0);
                     grip.position.set(target.x * .72, target.y + lift, target.z - .37);
-                    stick.rotation.x = -.16 + hit * .28 * e;
-                    stick.rotation.z = sign * (.07 + Math.sin(t * .65) * .015);
                 }
             });
         }
