@@ -152,6 +152,16 @@ serve(async (req) => {
     }
     console.log(`Game date: Month ${currentGameMonth}, Day ${currentGameDay}, Year ${currentGameYear} | Christmas multiplier: ${christmasMultiplier}x`);
 
+    // Charge label staff payroll once per real day before commercial settlement.
+    try {
+      const { data: payrollSummary, error: payrollError } = await supabaseClient.rpc("process_label_daily_finance");
+      if (payrollError) throw payrollError;
+      console.log("Label daily finance applied:", payrollSummary);
+    } catch (payrollError) {
+      console.error("Error processing label daily finance:", payrollError);
+      errorCount++;
+    }
+
     // Apply label marketing before this run calculates sales so the label's spend
     // has a visible same-day effect. The DB function also charges the label and
     // applies funded per-release campaigns using the marketing department level.
@@ -177,6 +187,9 @@ serve(async (req) => {
         label_marketing_power,
         pr_reach_power,
         pr_reach_updated_at,
+        label_marketing_focus,
+        label_marketing_regions,
+        label_marketing_saturation,
         manufacturing_complete_at,
         home_country,
         label_contract_id,
@@ -433,6 +446,14 @@ serve(async (req) => {
           const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
           const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
           const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
+          const marketingFocus = String((release as any).label_marketing_focus || "balanced");
+          const saturation = Math.max(0, Math.min(100, Number((release as any).label_marketing_saturation || 0)));
+          const saturationEfficiency = 1 - (saturation / 100) * 0.35;
+          const focusSalesMultiplier = marketingFocus === "retail" ? 1.25
+            : marketingFocus === "radio" ? 1.08
+            : marketingFocus === "social" ? 1.10
+            : marketingFocus === "playlist" ? 0.92
+            : 1.0;
 
           const territoriesToProcess = hasTerritories 
             ? releaseTerritories 
@@ -455,7 +476,7 @@ serve(async (req) => {
             const salesSentMod = parseFloat((0.7 + salesSentT * 0.6).toFixed(2)); // 0.7x–1.3x
 
             const calculatedSales = Math.floor(
-              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * paidLabelMarketingMultiplier * publicRelationsMultiplier * salesSentMod
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * paidLabelMarketingMultiplier * saturationEfficiency * focusSalesMultiplier * publicRelationsMultiplier * salesSentMod
               / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1)
             );
 
@@ -811,44 +832,14 @@ serve(async (req) => {
         const labelAmount = Math.round(labelRevenue.labelRevenue);
         const recoupAmount = Math.round(labelRevenue.recoupmentApplied);
 
-        // Credit label balance
-        const { data: currentLabel } = await supabaseClient
-          .from("labels")
-          .select("balance")
-          .eq("id", labelId)
-          .single();
-
-        if (currentLabel) {
-          await supabaseClient
-            .from("labels")
-            .update({ balance: (currentLabel.balance || 0) + labelAmount })
-            .eq("id", labelId);
-        }
-
-        // Record label financial transaction
-        await supabaseClient.from("label_financial_transactions").insert({
-          label_id: labelId,
-          transaction_type: "revenue",
-          amount: labelAmount,
-          description: `Daily sales royalty share${recoupAmount > 0 ? ` (includes $${recoupAmount} advance recoupment)` : ''}`,
-          related_contract_id: labelRevenue.contractId,
+        const { error: labelCreditError } = await supabaseClient.rpc("credit_label_revenue_atomic", {
+          p_label_id: labelId,
+          p_amount: labelAmount,
+          p_description: `Daily sales royalty share${recoupAmount > 0 ? ` (includes ${recoupAmount} advance recoupment)` : ''}`,
+          p_contract_id: labelRevenue.contractId,
+          p_recoup_amount: recoupAmount,
         });
-
-        // Update contract recouped_amount in database
-        if (recoupAmount > 0) {
-          const { data: currentContract } = await supabaseClient
-            .from("artist_label_contracts")
-            .select("recouped_amount")
-            .eq("id", labelRevenue.contractId)
-            .single();
-
-          if (currentContract) {
-            await supabaseClient
-              .from("artist_label_contracts")
-              .update({ recouped_amount: (currentContract.recouped_amount || 0) + recoupAmount })
-              .eq("id", labelRevenue.contractId);
-          }
-        }
+        if (labelCreditError) throw labelCreditError;
 
         labelsCredited++;
         console.log(`Credited label ${labelId}: $${labelAmount} (recouped: $${recoupAmount})`);

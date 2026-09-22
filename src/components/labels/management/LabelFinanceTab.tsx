@@ -229,21 +229,20 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     }
     setIsProcessing(true);
     try {
-      await supabase.from("profiles").update({ cash: personalBalance - amount }).eq("id", profileData!.id);
-      const newBalance = balance + amount;
-      await supabase.from("labels").update({
-        balance: newBalance,
-        balance_went_negative_at: newBalance >= 0 ? null : balanceWentNegativeAt,
-        is_bankrupt: newBalance >= MINIMUM_BALANCE ? false : isBankrupt,
-      }).eq("id", labelId);
-      await supabase.from("label_transactions").insert({
-        label_id: labelId, transaction_type: "deposit", amount, description: "Owner deposit", initiated_by: profileData!.id,
+      const { error } = await (supabase as any).rpc("transfer_label_owner_funds", {
+        p_label_id: labelId,
+        p_amount: amount,
+        p_direction: "deposit",
       });
+      if (error) throw error;
       toast.success(`$${amount.toLocaleString()} deposited`);
       setDepositAmount("");
       invalidateAll();
-    } catch { toast.error("Deposit failed"); }
-    finally { setIsProcessing(false); }
+    } catch (error: any) {
+      toast.error(error?.message || "Deposit failed");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const maxWithdraw = Math.max(0, balance - MINIMUM_BALANCE);
@@ -256,16 +255,20 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     }
     setIsProcessing(true);
     try {
-      await supabase.from("profiles").update({ cash: personalBalance + amount }).eq("id", profileData!.id);
-      await supabase.from("labels").update({ balance: balance - amount }).eq("id", labelId);
-      await supabase.from("label_transactions").insert({
-        label_id: labelId, transaction_type: "withdrawal", amount: -amount, description: "Owner withdrawal", initiated_by: profileData!.id,
+      const { error } = await (supabase as any).rpc("transfer_label_owner_funds", {
+        p_label_id: labelId,
+        p_amount: amount,
+        p_direction: "withdrawal",
       });
+      if (error) throw error;
       toast.success(`$${amount.toLocaleString()} withdrawn`);
       setWithdrawAmount("");
       invalidateAll();
-    } catch { toast.error("Withdrawal failed"); }
-    finally { setIsProcessing(false); }
+    } catch (error: any) {
+      toast.error(error?.message || "Withdrawal failed");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const getTxColor = (type: string, amount: number) => {

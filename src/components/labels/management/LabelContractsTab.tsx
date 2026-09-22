@@ -74,68 +74,17 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
     mutationFn: async (contractId: string) => {
       const contract = contracts.find(c => c.id === contractId);
       if (!contract) throw new Error("Contract not found");
-
-      // Only allow activation if artist has accepted
       if (contract.status !== "accepted_by_artist") {
         throw new Error("Artist must accept the offer before the label can activate it");
       }
 
-      const startDate = new Date();
-      const termMonths = contract?.end_date && contract?.start_date
-        ? Math.round((new Date(contract.end_date).getTime() - new Date(contract.start_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
-        : 24;
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + termMonths);
-
-      // Activate the contract
-      const { error } = await supabase
-        .from("artist_label_contracts")
-        .update({
-          status: "active",
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-        })
-        .eq("id", contractId);
+      const { data, error } = await (supabase as any).rpc("activate_label_contract_atomic", {
+        p_contract_id: contractId,
+      });
       if (error) throw error;
 
-      // Pay the advance: credit band balance, debit label balance
-      const advanceAmount = contract.advance_amount || 0;
-      if (advanceAmount > 0 && contract.band_id) {
-        // Credit band
-        const { data: band } = await supabase
-          .from("bands")
-          .select("band_balance")
-          .eq("id", contract.band_id)
-          .single();
-        if (band) {
-          await supabase
-            .from("bands")
-            .update({ band_balance: (band.band_balance || 0) + advanceAmount })
-            .eq("id", contract.band_id);
-        }
-
-        // Debit label
-        const { data: label } = await supabase
-          .from("labels")
-          .select("balance")
-          .eq("id", labelId)
-          .single();
-        if (label) {
-          await supabase
-            .from("labels")
-            .update({ balance: (label.balance || 0) - advanceAmount })
-            .eq("id", labelId);
-        }
-
-        // Log earnings
-        await supabase.from("band_earnings").insert({
-          band_id: contract.band_id,
-          amount: advanceAmount,
-          source: "label_advance",
-          description: `Advance payment from ${contract.bands?.name ? "contract with " : ""}label contract`,
-        });
-
-        // Send inbox notification to band leader
+      // Notification is non-financial and can safely follow the atomic activation.
+      if (contract.band_id) {
         const { data: leader } = await supabase
           .from("band_members")
           .select("user_id")
@@ -150,7 +99,7 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
             category: "record_label" as any,
             priority: "high" as any,
             title: "Contract Activated! 🎉",
-            message: `Your contract has been activated! You've received a $${advanceAmount.toLocaleString()} advance. Time to start delivering releases!`,
+            message: `Your contract has been activated!${contract.advance_amount ? ` A $${Number(contract.advance_amount).toLocaleString()} advance has been paid.` : ""} Time to start delivering releases!`,
             related_entity_id: contractId,
             related_entity_type: "contract",
             action_type: "navigate",
@@ -158,12 +107,15 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
           });
         }
       }
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["label-all-contracts", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-pending-contract-count", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-roster-contracts", labelId] });
-      toast.success("Contract activated! Advance paid to the band.");
+      queryClient.invalidateQueries({ queryKey: ["label-financials", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-management"] });
+      toast.success("Contract activated and advance settled atomically.");
     },
     onError: (err: Error) => toast.error(err.message || "Failed to activate contract"),
   });
