@@ -276,6 +276,17 @@ export class Musician {
                 const finish = smoothMotion((sectionProgress - .72) / .28);
                 torso.rotation.x -= finish * (this.role === 'vocals' ? .09 : .055) * motionEnergy;
                 torso.rotation.z += Math.sin(this.phase + 1.1) * finish * .035 * motionEnergy;
+            } else if (section === 'release') {
+                const settle = 1 - smoothMotion(sectionProgress);
+                if (this.role === 'vocals') {
+                    torso.rotation.x -= .045 * settle;
+                    torso.rotation.y += Math.sin(this.phase + .6) * .035 * settle;
+                } else if (this.role === 'guitar' || this.role === 'bass') {
+                    torso.rotation.x -= (this.role === 'bass' ? .025 : .035) * settle;
+                    torso.rotation.z += Math.sin(this.phase + 1.1) * .02 * settle;
+                } else if (this.role === 'drums') {
+                    torso.rotation.x += .025 * settle;
+                }
             }
             const flourishClock = ((t + this.phase * 1.7) % 13 + 13) % 13;
             const flourish = smoothMotion((flourishClock - 9.7) / .35) * (1 - smoothMotion((flourishClock - 11.15) / .45));
@@ -312,6 +323,7 @@ export class Musician {
             const sectionLook = this.performanceSection === 'chorus' ? -.035 * motionEnergy
                 : this.performanceSection === 'breakdown' ? .055 * motionEnergy
                 : this.performanceSection === 'outro' ? -.06 * smoothMotion((this.sectionProgress - .7) / .3) * motionEnergy
+                : this.performanceSection === 'release' ? -.035 * (1 - smoothMotion(this.sectionProgress))
                 : 0;
             let interactionYaw = 0;
             let interactionPitch = 0;
@@ -376,12 +388,24 @@ export class Musician {
         const rig = this.instrumentRig;
         rig?.tools.forEach(tool => { tool.visible = this.root.visible && !this.walking; });
         if (rig && (!this.walking || !rig.stationary)) {
-            rig.animate(t + (reduced ? 0 : this.phase * .13), performing ? energy : 0, reduced || !performing);
+            const releaseHold = this.performanceSection === 'release' ? 1 - smoothMotion(this.sectionProgress) : 0;
+            rig.animate(t + (reduced ? 0 : this.phase * .13), performing ? energy * (1 - releaseHold * .72) : 0, reduced || !performing);
+            if (rig.family === 'strum' && releaseHold > .02) {
+                // Hold the final fretted note/chord while the picking hand relaxes
+                // instead of continuing to strum through the applause gap.
+                rig.right.position.x *= 1 - releaseHold;
+                rig.right.position.y *= 1 - releaseHold;
+                rig.right.position.z = T.MathUtils.lerp(rig.right.position.z, .225, releaseHold);
+            }
             if (rig.family === 'kit' && !reduced && performing) {
                 const transitionSection = this.performanceSection === 'chorus' || this.performanceSection === 'outro';
-                const crash = transitionSection
+                const transitionCrash = transitionSection
                     ? 1 - smoothMotion((this.sectionProgress - .02) / .12)
                     : 0;
+                const releaseCrash = this.performanceSection === 'release'
+                    ? 1 - smoothMotion(this.sectionProgress / .34)
+                    : 0;
+                const crash = Math.max(transitionCrash, releaseCrash);
                 if (crash > .02) {
                     const sticks = rig.tools.filter(tool => tool.name.startsWith('playing-stick'));
                     const targets = [new T.Vector3(.7, 1.46, 1), new T.Vector3(-.75, 1.3, .65)];
@@ -449,6 +473,10 @@ export class Musician {
                 } else if (this.performanceSection === 'outro' && this.sectionProgress > .74) {
                     const finish = smoothMotion((this.sectionProgress - .74) / .26);
                     this.hand('L', this.point(.34, 1.36 + finish * .52, .22), this.point(.68, 1.38, .18));
+                } else if (this.performanceSection === 'release') {
+                    const acknowledge = 1 - smoothMotion((this.sectionProgress - .58) / .42);
+                    const height = 1.48 + acknowledge * .24;
+                    this.hand('L', this.point(.34, height, .25), this.point(.67, 1.4, .18));
                 } else {
                     this.hand('L', this.point(...singerGesture(t, this.phase)), this.point(.68, 1.18, .12));
                 }
