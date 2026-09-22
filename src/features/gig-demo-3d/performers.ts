@@ -242,7 +242,8 @@ export class Musician {
         const performing = this.performing && !this.walking;
         const motionEnergy = reduced ? 0 : energy;
         const performanceScale = this.role === 'fan' ? 1 : this.role === 'drums' ? .7 : this.role === 'vocals' ? 1.5 : this.role === 'guitar' || this.role === 'bass' ? 1.2 : 1.1;
-        const sway = Math.sin(t * (this.role === 'vocals' ? 1.05 : 1.6) + this.phase) * 0.026 * energy * performanceScale;
+        const swayRate = this.role === 'vocals' ? 1.05 : this.role === 'drums' ? .92 : 1.35;
+        const sway = (Math.sin(t * swayRate + this.phase) * .019 + Math.sin(t * .41 + this.phase * 1.7) * .009) * energy * performanceScale;
         this.rest.forEach(({ bone, quaternion, position }) => { bone.quaternion.copy(quaternion); bone.position.copy(position); });
         const vocalActive = this.hasVocals() && performing;
         const vocals = vocalPhrase(t, this.phase);
@@ -252,11 +253,11 @@ export class Musician {
         const torso = this.bones.get('Torso');
         if (torso)
             torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat / 2 + this.phase) * 0.032 * energy * performanceScale
+                (Math.sin(beat / 2 + this.phase) * .022 + Math.sin(t * .63 + this.phase) * .012) * energy * performanceScale
                   + (this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.032 - vocalAccent * .016 : 0)
-                  + (this.role === 'guitar' || this.role === 'bass' ? emphasis * .06 : 0),
+                  + (this.role === 'guitar' || this.role === 'bass' ? emphasis * .045 : 0),
                 sway + (vocalActive ? phrase * .018 * energy : 0),
-                Math.sin(t * 2.2 + this.phase) * 0.018 * energy * performanceScale,
+                (Math.sin(t * 1.35 + this.phase) * .012 + Math.sin(t * .48 + this.phase * .5) * .008) * energy * performanceScale,
             )));
         const head = this.bones.get('Head');
         if (head) {
@@ -314,7 +315,9 @@ export class Musician {
                 }
             }
             const poleSpread = .65 + Math.max(0, this.bodyBuild - 1) * .32;
-            const poleForward = rig.family === 'strum' || rig.family === 'bow' || rig.family === 'upright' ? .22 : .15;
+            const poleDrift = reduced ? 0 : Math.sin(t * .72 + this.phase) * .035 * motionEnergy;
+            const poleLift = reduced ? 0 : Math.sin(t * .51 + this.phase * 1.4) * .025 * motionEnergy;
+            const poleForward = (rig.family === 'strum' || rig.family === 'bow' || rig.family === 'upright' ? .22 : .15) + poleDrift;
             const leftTarget = rig.left.getWorldPosition(new T.Vector3());
             const rightTarget = rig.right.getWorldPosition(new T.Vector3());
             if (rig.family === 'strum') {
@@ -326,8 +329,8 @@ export class Musician {
                 leftTarget.addScaledVector(faceNormal, .035);
                 rightTarget.addScaledVector(faceNormal, .05);
             }
-            this.hand('L', leftTarget, this.point(poleSpread, .96, poleForward));
-            this.hand('R', rightTarget, this.point(-poleSpread, .96, poleForward));
+            this.hand('L', leftTarget, this.point(poleSpread, .96 + poleLift, poleForward));
+            this.hand('R', rightTarget, this.point(-poleSpread, .96 - poleLift * .6, poleForward - poleDrift * .45));
             if (rig.family === 'voice' && !reduced && performing) {
                 this.hand('L', this.point(...singerGesture(t, this.phase)), this.point(.68, 1.18, .12));
             }

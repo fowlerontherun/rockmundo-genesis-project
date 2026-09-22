@@ -163,14 +163,24 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
         // does not enter the fretboard or guitar body when the arm solver reaches them.
         const left = marker(g, 'grip-left', [.015, .71, .155]), right = marker(g, 'grip-right', [0, .03, .225]);
         moving.push((t, e) => {
-            const subdivision = id === 'bass_guitar' ? 4.2 : 7.6;
-            left.position.y = .71 + (fretPosition(t, id === 'bass_guitar') - .71) * e;
-            left.position.x = .015 + Math.cos(t * .72) * .012 * e;
-            right.position.x = Math.sin(t * Math.PI * subdivision) * (id === 'bass_guitar' ? .052 : .092) * e;
-            right.position.y = .03 + Math.cos(t * Math.PI * subdivision) * .022 * e;
-            right.position.z = .18 + Math.sin(t * .9) * .008 * e;
-            g.rotation.y = -.045 + Math.sin(t * .55) * .025 * e;
-            g.rotation.x = .035 + Math.cos(t * .7) * .012 * e;
+            const bass = id === 'bass_guitar';
+            const subdivision = bass ? 4 : 8;
+            const step = Math.floor(t * subdivision) % 16;
+            const phrase = Math.floor(t * subdivision / 16);
+            const pattern = bass
+                ? [1, 0, .72, 0, .9, 0, .62, 0, 1, 0, .78, 0, .88, .55, .72, 0]
+                : [1, .55, .82, 0, .72, .46, .92, .38, 1, 0, .68, .5, .86, .42, .96, .58];
+            const pulse = Math.sin((t * subdivision % 1) * Math.PI);
+            const accent = pattern[step] * (phrase % 4 === 3 && step >= 12 ? 1.12 : 1);
+            const direction = step % 2 === 0 ? 1 : -1;
+            left.position.y = .71 + (fretPosition(t, bass) - .71) * e;
+            left.position.x = .015 + (Math.cos(t * .72) * .009 + Math.sin(t * 1.37) * .004) * e;
+            left.position.z = .155 + Math.sin(t * .58 + .8) * .004 * e;
+            right.position.x = direction * pulse * accent * (bass ? .045 : .082) * e;
+            right.position.y = .03 + pulse * accent * (bass ? .012 : .026) * e;
+            right.position.z = .225 + (Math.sin(t * .9) * .006 + pulse * accent * .005) * e;
+            g.rotation.y = -.045 + (Math.sin(t * .55) * .018 + Math.sin(t * .21 + 1.4) * .01) * e;
+            g.rotation.x = .035 + Math.cos(t * .7) * .009 * e;
         });
         return finish(left, right);
     }
@@ -549,18 +559,36 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
             moving.push((t, e) => {
                 const base = sign === 1 ? l[1] : r[1];
-                const fill = smoothMotion(((t % 8) - 6.5) / .4) * (1 - smoothMotion(((t % 8) - 7.7) / .3));
+                const barTime = ((t % 8) + 8) % 8;
+                const fill = smoothMotion((barTime - 6.35) / .35) * (1 - smoothMotion((barTime - 7.85) / .15));
                 const stroke = t * Math.PI * 4 + (sign === 1 ? 0 : Math.PI);
-                const hit = Math.pow(Math.max(0, Math.sin(stroke)), .65);
-                const accent = spec.family === 'kit' ? .14 + fill * .045 : .06 + fill * .025;
+                const hit = Math.pow(Math.max(0, Math.sin(stroke)), .72);
+                const accent = spec.family === 'kit' ? .13 + fill * .065 : .06 + fill * .025;
                 grip.position.y = base + hit * accent * e;
-                grip.position.x = (sign === 1 ? l[0] : r[0]) + Math.sin(t * 3.1 + sign) * (spec.family === 'kit' ? .055 : .022) * e;
+                grip.position.x = (sign === 1 ? l[0] : r[0]) + Math.sin(t * 3.1 + sign) * (spec.family === 'kit' ? .045 : .022) * e;
                 if (spec.family === 'kit') {
-                    const target = sign === 1 ? new T.Vector3(.29 + fill * .16, 1.12 - fill * .08, .8) : new T.Vector3(-.39 - fill * .10, .94 + fill * .12, .43);
+                    const beatIndex = Math.floor(t * 2) % 16;
+                    const fillStep = Math.floor(Math.max(0, barTime - 6.35) * 5);
+                    let target: T.Vector3;
+                    if (fill > .05) {
+                        const fillTargets = sign === 1
+                            ? [new T.Vector3(.29, 1.12, .8), new T.Vector3(0, 1.12, 1), new T.Vector3(.68, .86, .79), new T.Vector3(.7, 1.46, 1)]
+                            : [new T.Vector3(-.39, .94, .43), new T.Vector3(-.52, 1.04, .38), new T.Vector3(.29, 1.12, .8), new T.Vector3(-.75, 1.3, .65)];
+                        target = fillTargets[fillStep % fillTargets.length].clone();
+                    } else if (sign === 1) {
+                        target = (beatIndex === 0 || beatIndex === 8)
+                            ? new T.Vector3(.7, 1.46, 1)
+                            : new T.Vector3(.29, 1.12, .8);
+                    } else {
+                        target = (beatIndex === 4 || beatIndex === 12)
+                            ? new T.Vector3(-.52, 1.04, .38)
+                            : new T.Vector3(-.39, .94, .43);
+                    }
                     stick.userData.strikeTarget = target;
-                    grip.position.set(target.x * .72, target.y + .10 + hit * accent * e, target.z - .37);
-                    stick.rotation.x = -.18 + hit * .34 * e;
-                    stick.rotation.z = sign * .08;
+                    const lift = .09 + hit * accent * e + (fill > .05 ? .035 : 0);
+                    grip.position.set(target.x * .72, target.y + lift, target.z - .37);
+                    stick.rotation.x = -.16 + hit * .28 * e;
+                    stick.rotation.z = sign * (.07 + Math.sin(t * .65) * .015);
                 }
             });
         }
