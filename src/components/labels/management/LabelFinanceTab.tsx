@@ -148,9 +148,9 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
         if (!cid) return;
         if (!contractRevMap.has(cid)) contractRevMap.set(cid, { revenue: 0, marketing: 0, expenses: 0 });
         const entry = contractRevMap.get(cid)!;
-        if (tx.transaction_type === "revenue") entry.revenue += tx.amount;
-        else if (tx.transaction_type === "marketing") entry.marketing += Math.abs(tx.amount);
-        else entry.expenses += Math.abs(tx.amount);
+        if (tx.transaction_type === "revenue" || tx.transaction_type === "royalty_payment") entry.revenue += Number(tx.amount || 0);
+        else if (tx.transaction_type === "marketing") entry.marketing += Math.abs(Number(tx.amount || 0));
+        else entry.expenses += Math.abs(Number(tx.amount || 0));
       });
 
       return contracts.map(c => ({
