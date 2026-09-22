@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
 import { formatTotpCountdown, totpCountdownRemainingMs, totpEasedProgress, totpTransitionDipOpacity } from "./broadcastCountdown";
+import { useTotpContinuityAudienceAudio } from "./useTotpAudienceAudio";
 
 const DURATION_MS = 3_200;
 
@@ -48,6 +49,11 @@ export function TotpStageTransition({
   const progress = eased * 100;
   const remainingMs = totpCountdownRemainingMs(DURATION_MS, elapsedMs);
   const dipOpacity = autoPlay ? totpTransitionDipOpacity(DURATION_MS, elapsedMs) : 0;
+  useTotpContinuityAudienceAudio({
+    active: autoPlay,
+    seed: `transition:${from.id}:${to.id}`,
+    intensity: transitionStyle === "audience_cutaway" ? 7 : 4,
+  });
   const copy = useMemo(() => {
     const next = to.payload.band.name;
     if (transitionStyle === "audience_cutaway") {
