@@ -281,13 +281,30 @@ export class Musician {
         }
         const hips = this.bones.get('Hips');
         if (hips && this.role !== 'fan' && this.role !== 'drums' && !this.walking && !reduced) {
-            // Instrument players should read as playing, not pogoing. Keep their
-            // feet/hips vertically planted while allowing lateral performance sway.
-            // Stage travel is handled by the performance blocking system. Keep feet
-            // planted vertically so singers/guitarists do not look like they are
-            // bouncing on a spring, while allowing a natural twist into the song.
             const roleTwist = this.role === 'vocals' ? .055 : this.role === 'guitar' || this.role === 'bass' ? .035 : .018;
             hips.rotation.y += Math.sin(t * (this.role === 'vocals' ? .82 : 1.12) + this.phase) * roleTwist * energy;
+
+            if (this.role === 'guitar' || this.role === 'bass') {
+                const bass = this.role === 'bass';
+                const weight = Math.sin(t * (bass ? .46 : .62) + this.phase);
+                const settle = Math.sin(t * (bass ? .91 : 1.18) + this.phase * .7);
+                hips.rotation.z += weight * (bass ? .024 : .034) * energy;
+                hips.rotation.x += (Math.max(0, settle) * (bass ? .015 : .024) - .008) * energy;
+
+                // Keep both shoes planted while the body shifts its weight between them.
+                for (const side of ['L', 'R'] as const) {
+                    const sign = side === 'L' ? 1 : -1;
+                    const stance = bass ? .19 : .22;
+                    const forward = sign * weight * (bass ? .018 : .028) + settle * .014;
+                    reach(
+                        this.bones.get(`UpperLeg.${side}`),
+                        this.bones.get(`LowerLeg.${side}`),
+                        this.bones.get(`Foot.${side}`),
+                        this.point(sign * stance, .045, .035 + forward),
+                        this.point(sign * (stance + .07), .48, .36),
+                    );
+                }
+            }
         }
         this.root.updateMatrixWorld(true);
         const rig = this.instrumentRig;
@@ -311,7 +328,19 @@ export class Musician {
                 }
                 for (const side of ['L', 'R'] as const) {
                     const sign = side === 'L' ? 1 : -1;
-                    reach(this.bones.get(`UpperLeg.${side}`), this.bones.get(`LowerLeg.${side}`), this.bones.get(`Foot.${side}`), this.point(sign * .22, .09, .34), this.point(sign * .27, .55, .8));
+                    const kit = rig.family === 'kit';
+                    const pedal = kit && !reduced && performing
+                        ? Math.pow(Math.max(0, Math.sin(t * Math.PI * (side === 'R' ? 4 : 2) + (side === 'L' ? 1.1 : 0))), 2) * .055 * motionEnergy
+                        : 0;
+                    const footX = sign * (kit ? .24 : .22);
+                    const footZ = kit ? (side === 'R' ? .42 : .34) : .34;
+                    reach(
+                        this.bones.get(`UpperLeg.${side}`),
+                        this.bones.get(`LowerLeg.${side}`),
+                        this.bones.get(`Foot.${side}`),
+                        this.point(footX, .07 + pedal, footZ),
+                        this.point(sign * .29, .55, kit ? .76 : .8),
+                    );
                 }
             }
             const poleSpread = .65 + Math.max(0, this.bodyBuild - 1) * .32;
