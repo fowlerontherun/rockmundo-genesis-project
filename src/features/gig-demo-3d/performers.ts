@@ -54,6 +54,17 @@ function reach(upper: T.Bone | undefined, lower: T.Bone | undefined, hand: T.Bon
     aim(upper, lower, elbow);
     aim(lower, hand, target);
 }
+function aimAttachedTool(tool: T.Object3D, localAxis: T.Vector3, worldTarget: T.Vector3) {
+    if (!tool.parent) return;
+    const start = tool.getWorldPosition(new T.Vector3());
+    const direction = worldTarget.clone().sub(start);
+    if (direction.lengthSq() < 1e-6) return;
+    direction.normalize();
+    const worldRotation = new T.Quaternion().setFromUnitVectors(localAxis, direction);
+    const parentWorld = tool.parent.getWorldQuaternion(new T.Quaternion());
+    tool.quaternion.copy(parentWorld.invert().multiply(worldRotation));
+    tool.updateWorldMatrix(false, true);
+}
 export class Musician {
     root = new T.Group();
     model: T.Object3D;
@@ -194,8 +205,10 @@ export class Musician {
                     this.root.updateMatrixWorld(true);
                     hand.attach(stick);
                     stick.name = `playing-stick-${side.toLowerCase()}`;
-                    stick.position.set(side === 'L' ? .012 : -.012, -.015, -.04);
-                    stick.rotation.set(-.22, 0, side === 'L' ? -.08 : .08);
+                    // Keep the butt of the stick outside the palm so the shaft remains
+                    // visible instead of being swallowed by the hand mesh.
+                    stick.position.set(side === 'L' ? .018 : -.018, -.005, .035);
+                    stick.rotation.set(-.12, 0, side === 'L' ? -.08 : .08);
                     stick.userData.attachedToHand = true;
                 });
             }
@@ -302,8 +315,19 @@ export class Musician {
             }
             const poleSpread = .65 + Math.max(0, this.bodyBuild - 1) * .32;
             const poleForward = rig.family === 'strum' || rig.family === 'bow' || rig.family === 'upright' ? .22 : .15;
-            this.hand('L', rig.left.getWorldPosition(new T.Vector3()), this.point(poleSpread, .96, poleForward));
-            this.hand('R', rig.right.getWorldPosition(new T.Vector3()), this.point(-poleSpread, .96, poleForward));
+            const leftTarget = rig.left.getWorldPosition(new T.Vector3());
+            const rightTarget = rig.right.getWorldPosition(new T.Vector3());
+            if (rig.family === 'strum') {
+                // Offset the wrist centres slightly off the instrument face. The IK target
+                // marks the contact point, while the hand itself has thickness and otherwise
+                // cuts through the neck/body on broader avatar meshes.
+                const instrumentSurface = rig.left.parent ?? rig.root;
+                const faceNormal = new T.Vector3(0, 0, 1).applyQuaternion(instrumentSurface.getWorldQuaternion(new T.Quaternion())).normalize();
+                leftTarget.addScaledVector(faceNormal, .035);
+                rightTarget.addScaledVector(faceNormal, .05);
+            }
+            this.hand('L', leftTarget, this.point(poleSpread, .96, poleForward));
+            this.hand('R', rightTarget, this.point(-poleSpread, .96, poleForward));
             if (rig.family === 'voice' && !reduced && performing) {
                 this.hand('L', this.point(...singerGesture(t, this.phase)), this.point(.68, 1.18, .12));
             }
@@ -379,13 +403,11 @@ export class Musician {
             mic.updateWorldMatrix(false, true);
         }
         if (rig?.family === 'kit' && !this.walking) {
+            const shaftAxis = new T.Vector3(0, -.21, .34).normalize();
             for (const stick of rig.tools) {
                 const target = stick.userData.strikeTarget as T.Vector3 | undefined;
                 if (!target || !stick.parent) continue;
-                const direction = rig.root.localToWorld(target.clone()).sub(stick.getWorldPosition(new T.Vector3())).normalize();
-                const orientation = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, -.19, .31).normalize(), direction);
-                stick.quaternion.copy(stick.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(orientation));
-                stick.updateWorldMatrix(false, true);
+                aimAttachedTool(stick, shaftAxis, rig.root.localToWorld(target.clone()));
             }
         }
     }
