@@ -28,7 +28,7 @@ export interface ConcertVenue {
   presenterKey?: string | null;
   showVariant?: string | null;
 }
-export type PerformanceSection = 'idle' | 'intro' | 'verse' | 'chorus' | 'breakdown' | 'solo' | 'outro';
+export type PerformanceSection = 'idle' | 'intro' | 'verse' | 'chorus' | 'breakdown' | 'solo' | 'outro' | 'release';
 
 export interface ConcertFrame {
   positionMs: number;
