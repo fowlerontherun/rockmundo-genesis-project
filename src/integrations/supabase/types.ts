@@ -68091,6 +68091,18 @@ export type Database = {
           song_id: string
         }[]
       }
+      get_stage_tattoo_visuals: {
+        Args: { p_profile_ids: string[] }
+        Returns: {
+          body_slot: string
+          category: string
+          id: string
+          ink_color: string
+          is_infected: boolean
+          profile_id: string
+          quality_score: number
+        }[]
+      }
       get_support_band_setlist: {
         Args: { p_support_slot_id: string }
         Returns: Json
@@ -71584,6 +71596,14 @@ export type Database = {
         Returns: Json
       }
       totp_admin_band_name_audio_catalog: { Args: never; Returns: Json }
+      totp_admin_book_band: {
+        Args: { p_band_id: string; p_episode_id: string; p_song_id: string }
+        Returns: Json
+      }
+      totp_admin_booking_catalog: {
+        Args: { p_episode_id: string }
+        Returns: Json
+      }
       totp_admin_broadcast_schedule: {
         Args: { p_from?: string; p_weeks?: number }
         Returns: Json
@@ -71805,6 +71825,10 @@ export type Database = {
           p_reason: string
           p_replacement_note?: string
         }
+        Returns: Json
+      }
+      totp_admin_resend_invitation: {
+        Args: { p_invitation_id: string }
         Returns: Json
       }
       totp_admin_save_band_name_audio: {
@@ -72215,6 +72239,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      totp_deliver_invitation_notification: {
+        Args: { p_force?: boolean; p_invitation_id: string }
+        Returns: number
       }
       totp_episode_compliance_report: {
         Args: { p_episode_id: string }
