@@ -128,7 +128,7 @@ export const TravelNotificationPreferences = () => {
   const saveVipConcierge = useMutation({
     mutationFn: async (enabled: boolean) => {
       if (!profileId) throw new Error("No active profile");
-      if (!vipStatus?.isVip) throw new Error("VIP Gig Concierge requires an active VIP membership");
+      if (!vipStatus?.isVip) throw new Error("VIP Travel Concierge requires an active VIP membership");
       const { error } = await (supabase as any)
         .from("profiles")
         .update({ vip_gig_concierge_enabled: enabled })
@@ -139,13 +139,13 @@ export const TravelNotificationPreferences = () => {
     onSuccess: (enabled) => {
       queryClient.setQueryData(["vip-gig-concierge", profileId], enabled);
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast.success(enabled ? "VIP Gig Concierge enabled" : "VIP Gig Concierge disabled", {
+      toast.success(enabled ? "VIP Travel Concierge enabled" : "VIP Travel Concierge disabled", {
         description: enabled
-          ? "Your concierge will automatically dispatch a chauffeur or private jet when a gig needs travel."
+          ? "Your concierge will automatically dispatch a chauffeur or private jet for booked gigs and accepted Top of the Pops appearances."
           : "You can still travel manually, but the VIP safety net will not move you automatically.",
       });
     },
-    onError: (err: Error) => toast.error(err.message || "Failed to update VIP Gig Concierge"),
+    onError: (err: Error) => toast.error(err.message || "Failed to update VIP Travel Concierge"),
   });
 
   const update = (patch: Partial<Prefs>) => setPrefs((p) => ({ ...p, ...patch }));
@@ -156,21 +156,21 @@ export const TravelNotificationPreferences = () => {
         <Card className="border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-background to-background">
           <CardHeader className="pb-2">
             <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-              <Crown className="w-4 h-4 text-amber-500" /> VIP Gig Concierge
+              <Crown className="w-4 h-4 text-amber-500" /> VIP Travel Concierge
               <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30" variant="outline">
                 Included with VIP
               </Badge>
             </CardTitle>
             <CardDescription className="text-xs">
-              The simplest travel option: your concierge watches every booked gig and gets you to the venue city automatically.
+              The simplest travel option: your concierge watches booked gigs and accepted Top of the Pops appearances, then gets you to the right city automatically.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label className="text-sm">Never miss a gig</Label>
+                <Label className="text-sm">Never miss a show or studio call</Label>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Enabled by default for VIPs. The concierge chooses the fastest sensible service, books close to departure so your location stays accurate, and can rescue an overdue wrong-city show. The show waits until you physically arrive.
+                  Enabled by default for VIPs. The concierge chooses the fastest sensible service, books close to departure so your location stays accurate, and covers both gigs and accepted Top of the Pops studio calls. For TOTP it targets arrival before check-in.
                 </p>
               </div>
               {vipStatusLoading || vipConciergeLoading ? (
@@ -180,7 +180,7 @@ export const TravelNotificationPreferences = () => {
                   checked={vipConcierge}
                   onCheckedChange={(value) => saveVipConcierge.mutate(value)}
                   disabled={!profileId || saveVipConcierge.isPending}
-                  aria-label="VIP Gig Concierge"
+                  aria-label="VIP Travel Concierge"
                 />
               )}
             </div>
@@ -199,7 +199,7 @@ export const TravelNotificationPreferences = () => {
                   <Plane className="h-4 w-4 text-amber-500" /> Private jet + pilot
                 </div>
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  Used for longer or urgent journeys. The concierge can dispatch immediately when showtime is close.
+                  Used for longer or urgent journeys. The concierge can dispatch immediately when a gig or Top of the Pops studio call is close.
                 </p>
               </div>
             </div>
