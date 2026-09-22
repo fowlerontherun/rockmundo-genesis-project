@@ -8,7 +8,7 @@ export class GigAudioController {
     if (!source.available || !source.url) { this.stop(); this.status = "unavailable"; return; }
     if (this.audio && this.sourceKey === key) return;
     this.stop(); this.sourceKey = key; this.audio = new Audio(source.url); this.audio.preload = "metadata"; this.audio.volume = muted ? 0 : volume; this.audio.muted = muted; this.audio.playbackRate = playbackRate; this.audio.currentTime = source.excerptStartSeconds; this.stopAt = source.excerptStartSeconds + source.excerptDurationSeconds; this.status = "loading";
-    this.audio.addEventListener("canplay", () => { this.status = "ready"; });
+    this.audio.addEventListener("canplay", () => { if (this.status === "loading") this.status = "ready"; });
     this.audio.addEventListener("timeupdate", () => { if (this.audio && this.audio.currentTime >= this.stopAt) this.pause(); });
     this.audio.addEventListener("error", () => { this.status = "error"; this.error = "Audio failed to load."; });
   }
