@@ -10,7 +10,7 @@ import {
   ArrowLeft, Disc, Users, FileText, DollarSign, Music, Crown,
   Megaphone, Star, TrendingUp, Globe2, Building2, Search, Workflow, BarChart3,
 } from "lucide-react";
-import { LabelTierBadge } from "@/components/labels/LabelTierBadge";
+import { LabelTierBadge, calculateLabelTier } from "@/components/labels/LabelTierBadge";
 import { ScoutReportsPanel } from "@/components/labels/management/ScoutReportsPanel";
 import { ArtistDevelopmentTracker } from "@/components/labels/management/ArtistDevelopmentTracker";
 import { LabelGenreExpertise } from "@/components/labels/management/LabelGenreExpertise";
@@ -90,49 +90,60 @@ function useLabelOverviewStats(labelId: string | undefined) {
     queryFn: async () => {
       if (!labelId) return null;
 
-      // Active contracts count
-      const { count: activeArtists } = await supabase
+      const { data: activeContracts, error: contractError } = await supabase
         .from('artist_label_contracts')
-        .select('*', { count: 'exact', head: true })
+        .select('id, band_id')
         .eq('label_id', labelId)
         .eq('status', 'active');
+      if (contractError) throw contractError;
 
-      // Releases count
-      const { data: contracts } = await supabase
-        .from('artist_label_contracts')
-        .select('id')
-        .eq('label_id', labelId);
-      const contractIds = contracts?.map(c => c.id) || [];
+      const contractIds = (activeContracts || []).map(c => c.id);
+      const uniqueArtistIds = new Set((activeContracts || []).map(c => c.band_id).filter(Boolean));
 
       let totalReleases = 0;
       let releasedCount = 0;
       let totalUnits = 0;
-      let totalRevenue = 0;
+      let grossReleaseRevenue = 0;
 
       if (contractIds.length > 0) {
-        const { data: releases } = await supabase
-          .from('label_releases')
-          .select('id, status, units_sold, revenue_generated')
-          .in('contract_id', contractIds);
+        const { data: releases, error: releaseError } = await supabase
+          .from('releases')
+          .select('id, release_status, total_units_sold, total_revenue')
+          .in('label_contract_id', contractIds)
+          .neq('release_status', 'cancelled');
+        if (releaseError) throw releaseError;
 
         totalReleases = releases?.length || 0;
-        releasedCount = releases?.filter(r => r.status === 'released').length || 0;
-        totalUnits = releases?.reduce((s, r) => s + (r.units_sold ?? 0), 0) || 0;
-        totalRevenue = releases?.reduce((s, r) => s + (r.revenue_generated ?? 0), 0) || 0;
+        releasedCount = releases?.filter(r => r.release_status === 'released').length || 0;
+        totalUnits = releases?.reduce((sum, r) => sum + Number(r.total_units_sold || 0), 0) || 0;
+        grossReleaseRevenue = releases?.reduce((sum, r) => sum + Number(r.total_revenue || 0), 0) || 0;
       }
 
-      // Staff count
-      const { count: staffCount } = await supabase
-        .from('label_staff')
-        .select('*', { count: 'exact', head: true })
-        .eq('label_id', labelId);
+      const [{ count: staffCount, error: staffError }, { data: financeRows, error: financeError }] = await Promise.all([
+        supabase.from('label_staff').select('*', { count: 'exact', head: true }).eq('label_id', labelId),
+        supabase.from('label_financial_transactions')
+          .select('transaction_type, amount')
+          .eq('label_id', labelId),
+      ]);
+      if (staffError) throw staffError;
+      if (financeError) throw financeError;
+
+      const labelRevenue = (financeRows || [])
+        .filter(tx => tx.transaction_type === 'revenue' || tx.transaction_type === 'royalty_payment')
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+      const totalExpenses = (financeRows || [])
+        .filter(tx => ['expense', 'marketing', 'overhead', 'advance', 'distribution'].includes(tx.transaction_type))
+        .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
 
       return {
-        activeArtists: activeArtists || 0,
+        activeArtists: uniqueArtistIds.size,
         totalReleases,
         releasedCount,
         totalUnits,
-        totalRevenue,
+        labelRevenue,
+        grossReleaseRevenue,
+        totalExpenses,
         staffCount: staffCount || 0,
       };
     },
@@ -195,6 +206,11 @@ export default function LabelManagement() {
   };
 
   const repTier = getReputationTier(label.reputation_score || 0);
+  const calculatedLabelTier = calculateLabelTier(
+    Number(label.reputation_score || 0),
+    stats?.activeArtists ?? 0,
+    stats?.labelRevenue ?? 0,
+  );
   
   return (
     <VipGate feature="Record Label" description="Sign artists and oversee releases.">
@@ -211,7 +227,7 @@ export default function LabelManagement() {
               <Star className="h-3 w-3 mr-0.5" />
               {repTier.label} ({label.reputation_score || 0})
             </Badge>
-            <LabelTierBadge tier={(label as any).label_tier || 'indie'} />
+            <LabelTierBadge tier={calculatedLabelTier} />
           </>
         }
       >
@@ -236,7 +252,7 @@ export default function LabelManagement() {
             <CardContent className="p-2.5 text-center">
               <DollarSign className="h-3.5 w-3.5 mx-auto mb-0.5 text-muted-foreground" />
               <p className={cn("text-sm font-bold tabular-nums", getHealthColor())}>
-                ${Math.abs(label.balance).toLocaleString()}
+                ${Number(label.balance || 0).toLocaleString()}
               </p>
               <p className="text-[10px] text-muted-foreground">Balance</p>
             </CardContent>
@@ -265,8 +281,8 @@ export default function LabelManagement() {
           <Card className="bg-card/60">
             <CardContent className="p-2.5 text-center">
               <DollarSign className="h-3.5 w-3.5 mx-auto mb-0.5 text-emerald-500" />
-              <p className="text-sm font-bold tabular-nums text-emerald-500">${(stats?.totalRevenue ?? 0).toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">Revenue</p>
+              <p className="text-sm font-bold tabular-nums text-emerald-500">${(stats?.labelRevenue ?? 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">Label Revenue</p>
             </CardContent>
           </Card>
           <Card className="bg-card/60">
