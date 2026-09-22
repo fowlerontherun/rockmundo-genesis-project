@@ -196,7 +196,7 @@ serve(async (req) => {
         label_revenue_share_pct,
         revenue_share_enabled,
         revenue_share_percentage,
-        bands(id, fame, popularity, chemistry_level, home_city_id),
+        bands(id, fame, popularity, total_fans, chemistry_level, home_city_id),
         release_formats(id, format_type, retail_price, quantity, stockout_demand, distribution_fee_percentage),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
@@ -322,7 +322,12 @@ serve(async (req) => {
 
         const band = release.bands?.[0];
         const artistFame = band?.fame || profile?.fame || 0;
-        const artistPopularity = band?.popularity || profile?.popularity || 0;
+        const storedPopularity = band?.popularity || profile?.popularity || 0;
+        // Historical fame migrations can leave popularity far behind an artist's
+        // commercial stature. Use a conservative fame-derived floor for demand
+        // without mutating the stored popularity stat.
+        const famePopularityFloor = Math.min(100, Math.log1p(Math.max(artistFame, 0)) * 4.5);
+        const artistPopularity = Math.max(storedPopularity, famePopularityFloor);
         const homeCityId = band?.home_city_id || null;
 
         // Get city sales tax rate
@@ -379,9 +384,12 @@ serve(async (req) => {
         const breakoutT = Math.max(0, (quality100 - 75) / 25);
         const organicBreakoutMultiplier = 1 + Math.pow(breakoutT, 2) * 1.5;
         const qualityMultiplier = qualityDiscoveryMultiplier * organicBreakoutMultiplier;
-        const totalFans = countryFansMap.size > 0 
+        const regionalFans = countryFansMap.size > 0
           ? Array.from(countryFansMap.values()).reduce((sum, cf) => sum + (cf.total_fans || 0), 0)
           : 0;
+        // Regional fan rows improve territory weighting, but missing/stale rows
+        // must never erase the band's known global audience.
+        const totalFans = Math.max(regionalFans, Number((band as any)?.total_fans || 0));
         // Old: sqrt(500K)*0.005 = 3.5x. New: log10-based with cap — 1K→4x, 100K→6x, 1M→7x
         const fansMultiplier = totalFans > 0 ? 1 + Math.min(Math.log10(totalFans) * 1.5, 10) : 1.0;
 
