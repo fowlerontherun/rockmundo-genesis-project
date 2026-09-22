@@ -116,7 +116,7 @@ export function resolveInstrumentSkinVisual(
   customization?: Record<string, string> | null,
 ): ResolvedInstrumentSkinVisual {
   const variants = instrumentSkinVariants(item);
-  const variant = variants.find(candidate => candidate.id === selectedVariantKey) || variants[0] || {};
+  const variant = (variants.find(candidate => candidate.id === selectedVariantKey) ?? variants[0] ?? {}) as InstrumentSkinVariant;
   const zones = sanitizeInstrumentZoneColours(item, customization);
 
   return {
