@@ -207,17 +207,16 @@ export class Musician {
                     const hand = this.bones.get(`Hand.${side}`);
                     const stick = sticks[index];
                     if (!hand || !stick) return;
-                    this.root.updateMatrixWorld(true);
-                    hand.attach(stick);
+                    // Keep the stick under the drum rig, not the wrist bone. Imported
+                    // avatar wrists use different local axes, which could rotate or bury
+                    // the stick inside the palm. Each frame we copy the hand's world
+                    // position into drum-rig space and aim the shaft at its strike target.
+                    this.instrumentRig!.root.attach(stick);
                     stick.name = `playing-stick-${side.toLowerCase()}`;
-                    // Keep the grip point outside the palm and bias the shaft
-                    // toward camera/stage-front. This prevents the whole stick sitting
-                    // inside the hand mesh on the shipped avatar rigs.
-                    stick.position.set(side === 'L' ? .026 : -.026, -.008, .052);
-                    stick.rotation.set(-.1, 0, side === 'L' ? -.065 : .065);
                     stick.visible = true;
                     stick.traverse(object => { object.frustumCulled = false; });
-                    stick.userData.attachedToHand = true;
+                    stick.userData.followsHand = true;
+                    stick.userData.handSide = side;
                 });
             }
             if (this.equipment) {
@@ -654,6 +653,54 @@ export class Musician {
             }
         }
         this.root.updateMatrixWorld(true);
+        if (strum && rig && !this.walking) {
+            const instrumentSurface = rig.left.parent ?? rig.root;
+            const instrumentId = String(rig.root.userData.instrumentId ?? '');
+            const acoustic = instrumentId !== 'electric_guitar' && instrumentId !== 'bass_guitar';
+            const faceNormal = new T.Vector3(0, 0, 1)
+                .applyQuaternion(instrumentSurface.getWorldQuaternion(new T.Quaternion()))
+                .normalize();
+
+            const keepVisibleHandOutside = (side: 'L' | 'R', minimumKnuckleZ: number) => {
+                const hand = this.bones.get(`Hand.${side}`);
+                if (!hand) return;
+                const envelopeBones = [
+                    hand,
+                    this.bones.get(`Index1.${side}`),
+                    this.bones.get(`Middle1.${side}`),
+                    this.bones.get(`Ring1.${side}`),
+                    this.bones.get(`Pinky1.${side}`),
+                    this.bones.get(`Thumb1.${side}`),
+                ].filter((bone): bone is T.Bone => !!bone);
+
+                // Wrist-centre checks can pass while the visible palm/knuckles still
+                // cut through the guitar after wrist/finger rotations. Correct against
+                // the front-most envelope after those rotations have been applied.
+                for (let pass = 0; pass < 2; pass++) {
+                    let minimumZ = Infinity;
+                    for (const bone of envelopeBones) {
+                        const local = instrumentSurface.worldToLocal(bone.getWorldPosition(new T.Vector3()));
+                        minimumZ = Math.min(minimumZ, local.z);
+                    }
+                    const correction = Math.max(0, minimumKnuckleZ - minimumZ);
+                    if (correction <= .002) break;
+
+                    const sign = side === 'L' ? 1 : -1;
+                    const target = hand.getWorldPosition(new T.Vector3())
+                        .addScaledVector(faceNormal, correction + .014);
+                    const pole = this.point(
+                        sign * (.7 + Math.max(0, this.bodyBuild - 1) * .35),
+                        .98,
+                        .38,
+                    ).addScaledVector(faceNormal, .12 + correction);
+                    this.hand(side, target, pole);
+                    this.root.updateMatrixWorld(true);
+                }
+            };
+
+            keepVisibleHandOutside('L', acoustic ? .145 : .135);
+            keepVisibleHandOutside('R', acoustic ? .255 : instrumentId === 'bass_guitar' ? .215 : .225);
+        }
         // Imported wrist axes differ between avatars. Keep the grille pointing
         // towards the face instead of inheriting an arbitrary wrist orientation.
         const mic = rig?.family === 'voice' ? this.bones.get('Hand.R')?.getObjectByName('playing-handheld-microphone') : null;
@@ -663,12 +710,30 @@ export class Musician {
             mic.updateWorldMatrix(false, true);
         }
         if (rig?.family === 'kit' && !this.walking) {
+            const rootRotation = this.root.getWorldQuaternion(new T.Quaternion());
+            const forward = new T.Vector3(0, 0, 1).applyQuaternion(rootRotation).normalize();
+            const lateral = new T.Vector3(1, 0, 0).applyQuaternion(rootRotation).normalize();
+            const up = new T.Vector3(0, 1, 0).applyQuaternion(rootRotation).normalize();
+
             for (const stick of rig.tools.filter(tool => tool.name.startsWith('playing-stick'))) {
                 stick.visible = true;
+                const side = stick.userData.handSide as 'L' | 'R' | undefined;
+                const hand = side ? this.bones.get(`Hand.${side}`) : undefined;
                 const target = stick.userData.strikeTarget as T.Vector3 | undefined;
-                if (!target || !stick.parent) continue;
+                if (!side || !hand || !target || !stick.parent) continue;
+
+                // Follow the actual hand in world space, then move the grip a few
+                // centimetres toward the kit/camera so the shaft starts visibly
+                // outside the palm instead of being occluded by the hand mesh.
+                const gripWorld = hand.getWorldPosition(new T.Vector3())
+                    .addScaledVector(forward, .045)
+                    .addScaledVector(lateral, side === 'L' ? .012 : -.012)
+                    .addScaledVector(up, .008);
+                stick.position.copy(stick.parent.worldToLocal(gripWorld));
+                stick.updateWorldMatrix(false, true);
+
                 const shaftAxis = (stick.userData.shaftAxis as T.Vector3 | undefined)
-                    ?? new T.Vector3(0, -.238, .36).normalize();
+                    ?? new T.Vector3(0, 0, 1);
                 aimAttachedTool(stick, shaftAxis, rig.root.localToWorld(target.clone()));
             }
         }
