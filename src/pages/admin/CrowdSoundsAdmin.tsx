@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Volume2, Upload, Trash2, Play, Pause, Plus, 
-  Music, Users, Mic2, PartyPopper, Loader2 
+  Music, Users, Mic2, PartyPopper, Loader2, Files, Sparkles
 } from "lucide-react";
 import {
   Dialog,
@@ -48,6 +48,72 @@ const SOUND_TYPES = [
   { value: 'lighter_moment', label: 'Lighter Moment', icon: Music },
 ] as const;
 
+type CrowdSoundType = typeof SOUND_TYPES[number]["value"];
+
+function inferCrowdSoundMetadata(fileName: string): { soundType: CrowdSoundType; intensity: number; name: string } {
+  const base = fileName
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const value = base.toLowerCase();
+
+  let soundType: CrowdSoundType = "crowd_cheer_medium";
+  let intensity = 5;
+
+  if (/pre.?gig|pub background|gig background|background|ambient|chatter/.test(value)) {
+    soundType = "ambient_chatter";
+    intensity = /large|stadium|festival/.test(value) ? 6 : /pub|small/.test(value) ? 3 : 4;
+  } else if (/encore/.test(value)) {
+    soundType = "encore_request";
+    intensity = /small/.test(value) ? 5 : 8;
+  } else if (/end of gig|gig end|band exit|exit/.test(value)) {
+    soundType = "band_exit";
+    intensity = /large|festival/.test(value) ? 9 : 7;
+  } else if (/clap|applause/.test(value)) {
+    soundType = "applause";
+    intensity = /large|festival/.test(value) ? 9 : /medium|indoor/.test(value) ? 6 : /small/.test(value) ? 4 : 6;
+  } else if (/sing|chant/.test(value)) {
+    soundType = "crowd_singing";
+    intensity = 7;
+  } else if (/boo/.test(value)) {
+    soundType = "booing";
+    intensity = 6;
+  } else if (/cheer|roar/.test(value)) {
+    soundType = /large|stadium|festival/.test(value)
+      ? "crowd_cheer_large"
+      : /small/.test(value)
+        ? "crowd_cheer_small"
+        : "crowd_cheer_medium";
+    intensity = soundType === "crowd_cheer_large" ? 9 : soundType === "crowd_cheer_small" ? 4 : 7;
+  } else if (/entrance|band enters|walk on/.test(value)) {
+    soundType = "band_entrance";
+    intensity = 7;
+  }
+
+  return {
+    soundType,
+    intensity,
+    name: base.replace(/\b\w/g, (letter) => letter.toUpperCase()),
+  };
+}
+
+async function crowdAudioDurationSeconds(url: string): Promise<number | null> {
+  if (typeof Audio === "undefined") return null;
+  const audio = new Audio(url);
+  return await new Promise<number | null>((resolve) => {
+    const finish = (value: number | null) => {
+      audio.onloadedmetadata = null;
+      audio.onerror = null;
+      resolve(value);
+    };
+    audio.onloadedmetadata = () => finish(Number.isFinite(audio.duration) ? Math.round(audio.duration) : null);
+    audio.onerror = () => finish(null);
+    audio.load();
+    window.setTimeout(() => finish(null), 5_000);
+  });
+}
+
 interface CrowdSound {
   id: string;
   name: string;
@@ -68,6 +134,8 @@ export default function CrowdSoundsAdmin() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -197,6 +265,58 @@ export default function CrowdSoundsAdmin() {
     }
   };
 
+  const handleBulkUpload = async (files: FileList | null) => {
+    const selected = files ? Array.from(files).filter((file) => file.type.startsWith("audio/") || /\.(mp3|wav|ogg|webm|m4a|mp4)$/i.test(file.name)) : [];
+    if (!selected.length) return;
+
+    setBulkUploading(true);
+    setBulkProgress({ done: 0, total: selected.length });
+    let succeeded = 0;
+    const failures: string[] = [];
+
+    for (let index = 0; index < selected.length; index += 1) {
+      const file = selected[index];
+      try {
+        const inferred = inferCrowdSoundMetadata(file.name);
+        const safeOriginal = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");
+        const fileName = `${Date.now()}-${index}-${safeOriginal}`;
+        const { error: uploadError } = await supabase.storage
+          .from("crowd-sounds")
+          .upload(fileName, file, { upsert: false, contentType: file.type || undefined });
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from("crowd-sounds").getPublicUrl(fileName);
+        const duration = await crowdAudioDurationSeconds(urlData.publicUrl);
+        const { error: insertError } = await supabase.from("gig_crowd_sounds").insert({
+          name: inferred.name,
+          description: `Bulk imported from ${file.name}`,
+          sound_type: inferred.soundType,
+          audio_url: urlData.publicUrl,
+          duration_seconds: duration,
+          intensity_level: inferred.intensity,
+          is_active: true,
+        });
+        if (insertError) throw insertError;
+        succeeded += 1;
+      } catch (error) {
+        failures.push(`${file.name}: ${error instanceof Error ? error.message : "upload failed"}`);
+      } finally {
+        setBulkProgress({ done: index + 1, total: selected.length });
+      }
+    }
+
+    setBulkUploading(false);
+    setBulkProgress(null);
+    void queryClient.invalidateQueries({ queryKey: ["crowd-sounds"] });
+    toast({
+      title: failures.length ? "Crowd sound import completed with warnings" : "Crowd sound pack imported",
+      description: failures.length
+        ? `${succeeded}/${selected.length} imported. ${failures.slice(0, 2).join(" · ")}`
+        : `${succeeded} crowd recordings are now active and available to gigs and Top of the Pops.`,
+      variant: failures.length && succeeded === 0 ? "destructive" : "default",
+    });
+  };
+
   const filteredSounds = sounds?.filter(s => 
     filterType === "all" || s.sound_type === filterType
   );
@@ -213,7 +333,26 @@ export default function CrowdSoundsAdmin() {
           <p className="text-muted-foreground">Manage audio effects for live gigs and Top of the Pops studio audiences</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex">
+            <input
+              className="sr-only"
+              type="file"
+              accept="audio/*,.mp3,.wav,.ogg,.webm,.m4a"
+              multiple
+              disabled={bulkUploading}
+              onChange={(event) => {
+                const files = event.currentTarget.files;
+                void handleBulkUpload(files);
+                event.currentTarget.value = "";
+              }}
+            />
+            <span className="inline-flex h-10 cursor-pointer items-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+              {bulkUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4" />}
+              {bulkProgress ? `Importing ${bulkProgress.done}/${bulkProgress.total}` : "Bulk import pack"}
+            </span>
+          </label>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -312,10 +451,18 @@ export default function CrowdSoundsAdmin() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
       
       <Card>
         <CardHeader>
+          <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium"><Sparkles className="h-4 w-4" /> Smart bulk import</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Drop a whole crowd pack at once. Filenames such as “pre gig crowd”, “medium crowd clapping”, “small encore”,
+              “large gig background” and “end of gig” are automatically mapped to ambience, applause, encore and exit categories with sensible intensity.
+            </p>
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Sound Library</CardTitle>
