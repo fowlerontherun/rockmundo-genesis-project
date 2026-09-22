@@ -210,3 +210,68 @@ function playBroadcastSting(
     oscillator.stop(now + 0.36);
   });
 }
+
+export function useTotpContinuityAudienceAudio({
+  active,
+  seed,
+  intensity = 5,
+}: {
+  active: boolean;
+  seed: string;
+  intensity?: number;
+}) {
+  const ambientRef = useRef<HTMLAudioElement | null>(null);
+  const reactionRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    ambientRef.current?.pause();
+    reactionRef.current?.pause();
+    ambientRef.current = null;
+    reactionRef.current = null;
+    if (!active || typeof Audio === "undefined") return;
+
+    let cancelled = false;
+    void loadTotpCrowdSounds().then((sounds) => {
+      if (cancelled) return;
+
+      const ambient = pickTotpCrowdSound(
+        sounds,
+        ["ambient_chatter"],
+        Math.max(2, intensity - 2),
+        `${seed}:presenter-bed`,
+      );
+      if (ambient) {
+        const audio = new Audio(ambient.audio_url);
+        audio.preload = "auto";
+        audio.loop = true;
+        audio.volume = 0.14;
+        ambientRef.current = audio;
+        void audio.play().catch(() => undefined);
+      }
+
+      const reaction = pickTotpCrowdSound(
+        sounds,
+        intensity >= 8 ? ["applause", "crowd_cheer_large", "crowd_cheer_medium"] : ["applause", "crowd_cheer_medium", "crowd_cheer_small"],
+        intensity,
+        `${seed}:presenter-reaction`,
+      );
+      if (reaction) {
+        const audio = new Audio(reaction.audio_url);
+        audio.preload = "auto";
+        audio.volume = Math.min(0.42, 0.22 + intensity * 0.02);
+        reactionRef.current = audio;
+        window.setTimeout(() => {
+          if (!cancelled) void audio.play().catch(() => undefined);
+        }, 250);
+      }
+    }).catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      ambientRef.current?.pause();
+      reactionRef.current?.pause();
+      ambientRef.current = null;
+      reactionRef.current = null;
+    };
+  }, [active, intensity, seed]);
+}
