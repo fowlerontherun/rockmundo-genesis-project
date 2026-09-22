@@ -5,7 +5,7 @@ ALTER TABLE songs ADD CONSTRAINT songs_version_check CHECK (version = ANY (ARRAY
 -- Insert the missing cover song for "Blue" by Mr. Blue
 INSERT INTO songs (
   title, genre, quality_score, duration_seconds, lyrics,
-  band_id, user_id, parent_song_id, ownership_type, version, status,
+  band_id, artist_id, parent_song_id, ownership_type, version, status,
   added_to_repertoire_at, added_to_repertoire_by
 ) VALUES (
   'Blue (Cover)', 'Rock', 153, 315,
