@@ -369,6 +369,7 @@ export class ConcertScene {
       : section === 'breakdown' ? .58
       : section === 'solo' ? 1.02
       : section === 'outro' ? 1.12
+      : section === 'release' ? .24
       : 1;
     const visibleActors = this.actors.filter(actor => actor.root.visible);
     const singer = visibleActors.find(actor => actor.hasVocals()) ?? visibleActors.find(actor => actor.role === 'vocals');
@@ -447,6 +448,12 @@ export class ConcertScene {
           actor.root.rotation.y += crowdOpen;
         } else if (section === 'breakdown' && actor.role !== 'drums') {
           actor.root.position.y -= .018 * Math.sin(Math.PI * (this.playback?.sectionProgress ?? 0));
+        } else if (section === 'release') {
+          const release = smoothMotion(this.playback?.sectionProgress ?? 0);
+          actor.root.rotation.y *= 1 - release;
+          if (actor.role === 'vocals') {
+            actor.root.position.z += .05 * (1 - release);
+          }
         }
       }
       const soloScale = section === 'solo' ? (focused ? 1.2 : .78) : 1;
