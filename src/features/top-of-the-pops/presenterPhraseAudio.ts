@@ -157,34 +157,34 @@ export function selectTotpReusablePresenterPhrase(
   const key = `${context.stableKey}:${rank}`;
 
   if (context.isDebut) {
-    return choosePhrase(["debut-its"], key);
+    return choosePhrase(["debut-its", "first-time-charting", "new-this-week"], key);
   }
 
   if (context.isNewEntry) {
     if (rank <= 10) {
-      return choosePhrase(["straight-top-ten-its", "latest-entry-from", "brand-new-entry-from"], key);
+      return choosePhrase(["straight-top-ten-its", "latest-entry-from", "brand-new-entry-from", "new-this-week", "fresh-into-chart"], key);
     }
-    return choosePhrase(["latest-entry-from", "brand-new-entry-from"], key);
+    return choosePhrase(["latest-entry-from", "brand-new-entry-from", "new-this-week", "fresh-into-chart"], key);
   }
 
   const movement = Number(context.chartMovement ?? 0);
   if (movement >= 10) {
-    return choosePhrase(["biggest-movers-its", "climbing-chart-its"], key);
+    return choosePhrase(["biggest-movers-its", "climbing-chart-its", "charging-up-chart", "still-climbing"], key);
   }
   if (movement > 0) {
-    return choosePhrase(["climbing-chart-its", "moving-up-its"], key);
+    return choosePhrase(["climbing-chart-its", "moving-up-its", "still-climbing", "on-the-rise"], key);
   }
 
   if (context.isReturning) {
-    return choosePhrase(["back-on-totp-its", "returning-studio-its"], key);
+    return choosePhrase(["back-on-totp-its", "returning-studio-its", "back-again", "another-week-for", "welcome-back-to-stage"], key);
   }
 
   if (rank === 1) {
-    return choosePhrase(["number-one-its"], key);
+    return choosePhrase(["number-one-its", "top-of-chart", "country-number-one", "number-one-again"], key);
   }
 
   if (rank <= 10) {
-    return choosePhrase(["top-ten-this-week-its", "up-next-its", "and-now-its", "please-welcome"], key);
+    return choosePhrase(["top-ten-this-week-its", "inside-top-ten", "one-of-biggest", "top-ten-hit-from", "up-next-its", "and-now-its", "please-welcome"], key);
   }
 
   return choosePhrase([
@@ -194,6 +194,12 @@ export function selectTotpReusablePresenterPhrase(
     "time-for",
     "another-hit-from",
     "studio-ready-for",
+    "here-we-go-with",
+    "coming-live-from",
+    "take-it-away",
+    "next-on-stage",
+    "crowd-ready-for",
+    "live-tonight",
   ], key);
 }
 
