@@ -25,18 +25,27 @@ interface DailySalesResult {
  * A large band at a small venue = high draw power (potential sellout)
  */
 export function calculateDrawPower(bandFame: number, bandTotalFans: number, venueCapacity: number): number {
+  const fame = Math.max(0, bandFame || 0);
+  const fans = Math.max(0, bandTotalFans || 0);
+  const capacity = Math.max(1, venueCapacity || 1);
+
   // Base draw from fame (0-100 scale normalized)
-  const fameDrawBase = Math.min(1, bandFame / 5000);
-  
+  const fameDrawBase = Math.min(1, fame / 5000);
+
   // Fan-based draw (fans in area could attend)
-  const fanDrawBase = Math.min(1, bandTotalFans / (venueCapacity * 3));
-  
+  const fanDrawBase = Math.min(1, fans / (capacity * 3));
+
   // Combined draw power (0-1 scale)
   const combinedDraw = (fameDrawBase * 0.6) + (fanDrawBase * 0.4);
-  
-  // Adjust for venue size - harder to fill bigger venues
-  const venueSizeModifier = Math.max(0.3, 1 - (venueCapacity / 10000) * 0.5);
-  
+
+  // Venue size only holds an act back when the room is bigger than the crowd the
+  // act's own fame and fanbase can realistically pull. Big rooms are hard for
+  // small acts, but a stadium-level act is not penalised for playing arenas.
+  const reachableCrowd = Math.max(50, fame / 30 + fans / 3);
+  const venueSizeModifier = capacity > reachableCrowd
+    ? Math.max(0.3, Math.min(1, reachableCrowd / capacity))
+    : 1;
+
   return Math.min(1.2, combinedDraw * venueSizeModifier); // Cap at 1.2 for very popular acts
 }
 
