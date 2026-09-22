@@ -38,7 +38,7 @@ describe("performer instrument body clearance", () => {
     expect(b.instrumentRig!.root.position.z).toBeGreaterThan(a.instrumentRig!.root.position.z);
   });
 
-  it("parents drumsticks directly to the drummer hands", () => {
+  it("keeps drumsticks in stable rig space while following the drummer hands", () => {
     const actor = new Musician(simpleRiggedModel(), "drums", [0, 0, 0], 0, undefined, defaultAppearance("drummer-sticks"), "rock_drums");
 
     const left = actor.instrumentRig!.tools.find((tool) => tool.name === "playing-stick-l");
@@ -46,14 +46,16 @@ describe("performer instrument body clearance", () => {
 
     expect(left).toBeTruthy();
     expect(right).toBeTruthy();
-    expect(left!.parent).toBe(actor.bones.get("Hand.L"));
-    expect(right!.parent).toBe(actor.bones.get("Hand.R"));
-    expect(left!.userData.attachedToHand).toBe(true);
-    expect(right!.userData.attachedToHand).toBe(true);
+    expect(left!.parent).toBe(actor.instrumentRig!.root);
+    expect(right!.parent).toBe(actor.instrumentRig!.root);
+    expect(left!.userData.followsHand).toBe(true);
+    expect(right!.userData.followsHand).toBe(true);
+    expect(left!.userData.handSide).toBe("L");
+    expect(right!.userData.handSide).toBe("R");
 
     actor.update(2.2, .9, false);
-    expect(left!.getWorldPosition(new T.Vector3()).distanceTo(actor.bones.get("Hand.L")!.getWorldPosition(new T.Vector3()))).toBeLessThan(.4);
-    expect(right!.getWorldPosition(new T.Vector3()).distanceTo(actor.bones.get("Hand.R")!.getWorldPosition(new T.Vector3()))).toBeLessThan(.4);
+    expect(left!.getWorldPosition(new T.Vector3()).distanceTo(actor.bones.get("Hand.L")!.getWorldPosition(new T.Vector3()))).toBeLessThan(.12);
+    expect(right!.getWorldPosition(new T.Vector3()).distanceTo(actor.bones.get("Hand.R")!.getWorldPosition(new T.Vector3()))).toBeLessThan(.12);
   });
 
   it("keeps arm IK finite after applying wider pole clearance", () => {
