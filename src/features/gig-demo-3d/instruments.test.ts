@@ -68,8 +68,12 @@ describe('complete stage instrument coverage', () => {
             actor.update(t, .9, false);
             const left = instrument.worldToLocal(actor.bones.get('Hand.L')!.getWorldPosition(new T.Vector3()));
             const right = instrument.worldToLocal(actor.bones.get('Hand.R')!.getWorldPosition(new T.Vector3()));
+            const leftForearm = instrument.worldToLocal(actor.bones.get('LowerArm.L')!.getWorldPosition(new T.Vector3()));
+            const rightForearm = instrument.worldToLocal(actor.bones.get('LowerArm.R')!.getWorldPosition(new T.Vector3()));
             expect(left.z, `${id} fretting hand surface clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .22 : id === 'bass_guitar' ? .20 : .205);
             expect(right.z, `${id} picking hand surface clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .34 : .30);
+            expect(leftForearm.z, `${id} fretting forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .12 : .105);
+            expect(rightForearm.z, `${id} picking forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .17 : .145);
         }
         disposeModel(actor.root);
     });
@@ -85,6 +89,8 @@ describe('complete stage instrument coverage', () => {
             const bounds = new T.Box3().setFromObject(stick);
             expect(bounds.isEmpty()).toBe(false);
             expect(bounds.getSize(new T.Vector3()).length()).toBeGreaterThan(.35);
+            expect(stick.getObjectByName('playing-stick-shaft')).toBeTruthy();
+            expect(stick.getObjectByName('playing-stick-tip')).toBeTruthy();
         }
         expect(sticks.map(stick => stick.parent)).toEqual([
             actor.bones.get('Hand.L'),
