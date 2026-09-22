@@ -24,28 +24,56 @@ export const TOTP_REUSABLE_PRESENTER_PHRASES: TotpReusablePresenterPhrase[] = [
   { id: "another-smash-from", label: "Another smash hit", script: "Here's another smash hit from", category: "general", usage: "Higher-energy established-act introduction." },
   { id: "one-you-know-from", label: "One you know", script: "Here's one you know from", category: "general", usage: "Familiar returning song or act." },
   { id: "studio-ready-for", label: "Studio ready", script: "The studio's ready for", category: "general", usage: "Crowd/studio handoff." },
+  { id: "here-we-go-with", label: "Here we go", script: "Here we go with", category: "general", usage: "Upbeat neutral introduction." },
+  { id: "coming-live-from", label: "Coming live", script: "Coming live from our studio, it's", category: "general", usage: "Television-style live handoff." },
+  { id: "take-it-away", label: "Take it away", script: "Take it away", category: "general", usage: "Very short introduction before the band name." },
+  { id: "next-on-stage", label: "Next on stage", script: "Next on stage, it's", category: "general", usage: "Stage-change introduction." },
+  { id: "welcome-back", label: "Welcome back", script: "Welcome back", category: "general", usage: "Friendly returning-act introduction." },
+  { id: "crowd-ready-for", label: "Crowd ready", script: "The crowd are ready for", category: "general", usage: "Audience-led introduction." },
+  { id: "live-tonight", label: "Live tonight", script: "Live tonight, it's", category: "general", usage: "Simple live-show introduction." },
 
   { id: "latest-entry-from", label: "Latest entry", script: "Here's the latest entry from", category: "new_entry", usage: "For a new chart entry." },
   { id: "brand-new-entry-from", label: "Brand-new entry", script: "A brand-new chart entry from", category: "new_entry", usage: "Alternative new-entry line." },
+  { id: "new-this-week", label: "New this week", script: "New to the chart this week, it's", category: "new_entry", usage: "New-entry alternative." },
+  { id: "first-time-charting", label: "First chart appearance", script: "Making their first chart appearance, it's", category: "new_entry", usage: "First chart appearance." },
+  { id: "fresh-into-chart", label: "Fresh into chart", script: "Fresh into the chart this week, it's", category: "new_entry", usage: "Energetic new-entry line." },
   { id: "debut-its", label: "TOTP debut", script: "Making their Top of the Pops debut, it's", category: "new_entry", usage: "First-ever Top of the Pops appearance." },
 
   { id: "climbing-chart-its", label: "Climbing the chart", script: "Climbing the chart this week, it's", category: "climber", usage: "For an act moving upward." },
   { id: "biggest-movers-its", label: "Biggest mover", script: "One of this week's biggest movers, it's", category: "climber", usage: "For a large week-on-week rise." },
   { id: "moving-up-its", label: "Moving up", script: "Moving up this week, it's", category: "climber", usage: "Short upward-movement cue." },
+  { id: "still-climbing", label: "Still climbing", script: "Still climbing the chart, it's", category: "climber", usage: "Repeat-climber variation." },
+  { id: "charging-up-chart", label: "Charging upward", script: "Charging up the chart this week, it's", category: "climber", usage: "High-energy chart climb." },
+  { id: "on-the-rise", label: "On the rise", script: "On the rise this week, it's", category: "climber", usage: "Compact climb introduction." },
 
   { id: "back-on-totp-its", label: "Back on TOTP", script: "Back on Top of the Pops, it's", category: "returning", usage: "For a returning act." },
   { id: "returning-studio-its", label: "Returning to studio", script: "Returning to the studio, it's", category: "returning", usage: "Alternative returning-act link." },
   { id: "still-riding-high-its", label: "Still riding high", script: "Still riding high this week, it's", category: "returning", usage: "For an act holding a strong chart position." },
+  { id: "back-again", label: "Back again", script: "Back again this week, it's", category: "returning", usage: "Short returning-act line." },
+  { id: "another-week-for", label: "Another week", script: "Another week on the show for", category: "returning", usage: "Repeat appearance variation." },
+  { id: "welcome-back-to-stage", label: "Welcome back to stage", script: "Welcome back to the Top of the Pops stage", category: "returning", usage: "Warm return introduction." },
 
   { id: "straight-top-ten-its", label: "Straight into Top Ten", script: "Straight into the Top Ten, it's", category: "top_ten", usage: "New entry directly inside the Top Ten." },
   { id: "top-ten-this-week-its", label: "Top Ten this week", script: "In the Top Ten this week, it's", category: "top_ten", usage: "Generic Top Ten introduction." },
+  { id: "inside-top-ten", label: "Inside Top Ten", script: "Inside the Top Ten tonight, it's", category: "top_ten", usage: "Top Ten variation." },
+  { id: "one-of-biggest", label: "One of the biggest", script: "One of the biggest records in the country, from", category: "top_ten", usage: "Strong chart-position variation." },
+  { id: "top-ten-hit-from", label: "Top Ten hit", script: "Here's a Top Ten hit from", category: "top_ten", usage: "Top Ten band-led cue." },
 
   { id: "number-one-its", label: "Number one", script: "At number one, it's", category: "number_one", usage: "Use before the recorded band name for the chart topper." },
   { id: "still-number-one-its", label: "Still number one", script: "Still at number one, it's", category: "number_one", usage: "For a non-mover at number one." },
+  { id: "top-of-chart", label: "Top of chart", script: "Right at the top of the chart, it's", category: "number_one", usage: "Number-one variation." },
+  { id: "country-number-one", label: "Country's number one", script: "The country's number one act this week is", category: "number_one", usage: "Number-one announcement." },
+  { id: "number-one-again", label: "Number one again", script: "Number one again this week, it's", category: "number_one", usage: "Repeat chart-topper variation." },
 
   { id: "one-more-time-for", label: "One more time", script: "One more time for", category: "continuity", usage: "Post-performance crowd link." },
   { id: "make-some-noise-for", label: "Make some noise", script: "Make some noise for", category: "continuity", usage: "High-energy crowd cue." },
   { id: "give-it-up-for", label: "Give it up", script: "Give it up for", category: "continuity", usage: "Post-performance or introduction cue." },
+  { id: "what-a-performance-from", label: "What a performance", script: "What a performance from", category: "continuity", usage: "Post-performance reaction." },
+  { id: "another-big-hand-for", label: "Big hand", script: "Another big hand for", category: "continuity", usage: "Applause-led post-performance link." },
+  { id: "hear-it-for", label: "Let's hear it", script: "Let's hear it for", category: "continuity", usage: "Classic crowd response line." },
+  { id: "that-was", label: "That was", script: "That was", category: "continuity", usage: "Short post-performance band-name link." },
+  { id: "fantastic-stuff-from", label: "Fantastic stuff", script: "Fantastic stuff from", category: "continuity", usage: "High-energy post-performance line." },
+  { id: "stay-with-us-after", label: "Stay with us", script: "Stay with us after", category: "continuity", usage: "Bridge into the next programme beat." },
 ];
 
 export function totpReusablePresenterPhrase(id: string): TotpReusablePresenterPhrase | undefined {
@@ -129,34 +157,34 @@ export function selectTotpReusablePresenterPhrase(
   const key = `${context.stableKey}:${rank}`;
 
   if (context.isDebut) {
-    return choosePhrase(["debut-its"], key);
+    return choosePhrase(["debut-its", "first-time-charting", "new-this-week"], key);
   }
 
   if (context.isNewEntry) {
     if (rank <= 10) {
-      return choosePhrase(["straight-top-ten-its", "latest-entry-from", "brand-new-entry-from"], key);
+      return choosePhrase(["straight-top-ten-its", "latest-entry-from", "brand-new-entry-from", "new-this-week", "fresh-into-chart"], key);
     }
-    return choosePhrase(["latest-entry-from", "brand-new-entry-from"], key);
+    return choosePhrase(["latest-entry-from", "brand-new-entry-from", "new-this-week", "fresh-into-chart"], key);
   }
 
   const movement = Number(context.chartMovement ?? 0);
   if (movement >= 10) {
-    return choosePhrase(["biggest-movers-its", "climbing-chart-its"], key);
+    return choosePhrase(["biggest-movers-its", "climbing-chart-its", "charging-up-chart", "still-climbing"], key);
   }
   if (movement > 0) {
-    return choosePhrase(["climbing-chart-its", "moving-up-its"], key);
+    return choosePhrase(["climbing-chart-its", "moving-up-its", "still-climbing", "on-the-rise"], key);
   }
 
   if (context.isReturning) {
-    return choosePhrase(["back-on-totp-its", "returning-studio-its"], key);
+    return choosePhrase(["back-on-totp-its", "returning-studio-its", "back-again", "another-week-for", "welcome-back-to-stage"], key);
   }
 
   if (rank === 1) {
-    return choosePhrase(["number-one-its"], key);
+    return choosePhrase(["number-one-its", "top-of-chart", "country-number-one", "number-one-again"], key);
   }
 
   if (rank <= 10) {
-    return choosePhrase(["top-ten-this-week-its", "up-next-its", "and-now-its", "please-welcome"], key);
+    return choosePhrase(["top-ten-this-week-its", "inside-top-ten", "one-of-biggest", "top-ten-hit-from", "up-next-its", "and-now-its", "please-welcome"], key);
   }
 
   return choosePhrase([
@@ -166,6 +194,12 @@ export function selectTotpReusablePresenterPhrase(
     "time-for",
     "another-hit-from",
     "studio-ready-for",
+    "here-we-go-with",
+    "coming-live-from",
+    "take-it-away",
+    "next-on-stage",
+    "crowd-ready-for",
+    "live-tonight",
   ], key);
 }
 

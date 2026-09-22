@@ -7,6 +7,7 @@ import type { TotpBroadcastReplay } from "./api";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
 import { playTotpPresenterLine } from "./presenterVoice";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl, type TotpPresenterAudioSlot } from "./totpMedia";
+import { useTotpContinuityAudienceAudio } from "./useTotpAudienceAudio";
 import {
   buildTotpContinuityCopy,
   buildTotpProgrammeRundown,
@@ -100,14 +101,15 @@ export function TotpProgrammeContinuity({
   }, [autoPlay, narrationComplete, onEnded, visualComplete]);
 
   const progress = Math.min(100, elapsedMs / Math.max(1, durationMs) * 100);
+  useTotpContinuityAudienceAudio({ active: autoPlay, seed: `${kind}:${currentIndex}:${orderedFirst?.id ?? "show"}`, intensity: kind === "closing" ? 8 : kind === "between" ? 6 : 5 });
   const showRundown = kind === "opening" || kind === "closing";
 
   return (
     <section
-      className="overflow-hidden rounded-xl border border-fuchsia-500/25 bg-slate-950 text-white shadow-2xl"
+      className="mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-xl border border-fuchsia-500/25 bg-slate-950 text-white shadow-2xl"
       data-totp-programme-continuity={kind}
     >
-      <div className="relative min-h-[28rem] bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_32%)] p-5 md:p-8">
+      <div className="relative h-[calc(100%_-_3.25rem)] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_32%)] p-5 md:p-8">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-amber-300 to-cyan-400" />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -127,7 +129,7 @@ export function TotpProgrammeContinuity({
           </div>
         </div>
 
-        <div className="mx-auto mt-12 max-w-5xl">
+        <div className="mx-auto mt-6 max-w-4xl">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-fuchsia-200">{copy.eyebrow}</p>
           <h3 className="mt-3 max-w-4xl text-3xl font-black tracking-tight md:text-5xl">{copy.headline}</h3>
           <div className="mt-5 max-w-3xl rounded-2xl border border-white/15 bg-black/35 p-4 shadow-xl backdrop-blur">
@@ -153,7 +155,7 @@ export function TotpProgrammeContinuity({
           ) : null}
 
           {showRundown ? (
-            <div className="mt-8 rounded-xl border border-white/10 bg-black/25 p-4">
+            <div className="mt-5 rounded-xl border border-white/10 bg-black/25 p-3">
               <div className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-white/55">Tonight's charting performers</div>
               <div className="grid gap-2 md:grid-cols-2">
                 {rundown.map((item) => (

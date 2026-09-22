@@ -118,8 +118,8 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
     : "locked episode snapshot";
 
   return (
-    <section className="overflow-hidden rounded-xl border border-cyan-400/25 bg-slate-950 text-white shadow-2xl" data-totp-chart-rundown={page.chartType}>
-      <div className="relative min-h-[31rem] bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.2),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,0.2),transparent_30%)] p-5 md:p-8">
+    <section className="mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-xl border border-cyan-400/25 bg-slate-950 text-white shadow-2xl" data-totp-chart-rundown={page.chartType}>
+      <div className="relative h-[calc(100%_-_3.25rem)] overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.2),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(217,70,239,0.2),transparent_30%)] p-4 md:p-6">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-white to-fuchsia-500" />
 
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -136,14 +136,14 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
           </div>
         </div>
 
-        <div className="mt-8 grid gap-2">
+        <div className="mt-5 grid gap-1.5">
           {page.entries.map((entry) => {
             const trend = trendLabel(entry);
             const TrendIcon = trend.icon;
             return (
               <div
                 key={`${page.chartType}:${entry.rank}:${entry.song_id ?? entry.song_title}`}
-                className={`grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 rounded-lg border px-3 py-2.5 md:grid-cols-[4.5rem_minmax(0,1fr)_8rem_6rem] ${entry.rank === 1 ? "border-amber-300/40 bg-amber-300/10" : "border-white/10 bg-white/[0.06]"}`}
+                className={`grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 rounded-lg border px-3 py-2 md:grid-cols-[4.5rem_minmax(0,1fr)_8rem_6rem] ${entry.rank === 1 ? "border-amber-300/40 bg-amber-300/10" : "border-white/10 bg-white/[0.06]"}`}
               >
                 <div className={`text-2xl font-black tabular-nums ${entry.rank === 1 ? "text-amber-200" : "text-white"}`}>#{entry.rank}</div>
                 <div className="min-w-0">

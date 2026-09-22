@@ -120,10 +120,10 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
 
   return <div className="relative h-full min-h-0 w-full bg-slate-950" data-renderer="three" data-renderer-status={status} data-presentation-mode={presentationMode} data-totp-camera-shot={totpCameraShot ?? undefined} data-totp-stage={isTotp ? totpStage : undefined} data-totp-presenter={isTotp ? presenter.key : undefined} data-totp-show-variant={isTotp ? totpShowVariant ?? 'regular' : undefined} data-totp-audience-choreography={isTotp ? frame.crowdReaction : undefined} data-player-model-source={playerModelsSnapshot ? 'snapshot' : 'live'}>
     <canvas ref={canvas} className="block h-full min-h-0 w-full" role="img" aria-label={ariaLabel} />
-    <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3 text-xs text-white/80" aria-hidden="true">
+    {!isTotp && <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3 text-xs text-white/80" aria-hidden="true">
       <span className="rounded bg-black/40 px-3 py-2 backdrop-blur">{venueLabel}</span>
-      <span className="rounded bg-black/40 px-3 py-2">{isTotp ? `TOP OF THE POPS · ${variantLabel ? `${variantLabel.toUpperCase()} · ` : ''}${totpStage.replaceAll('_', ' ').toUpperCase()}` : `${venueProfile.label}${options.venue.capacity && options.venue.capacity > 0 ? ` · ${options.venue.capacity.toLocaleString()} capacity` : ''}`}</span>
-    </div>
+      <span className="rounded bg-black/40 px-3 py-2">{`${venueProfile.label}${options.venue.capacity && options.venue.capacity > 0 ? ` · ${options.venue.capacity.toLocaleString()} capacity` : ''}`}</span>
+    </div>}
     {(status !== 'ready' || waiting) && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-8 text-center text-slate-100" role={status === 'error' ? 'alert' : 'status'}>
       <strong className="text-lg">{status === 'error' ? 'The stage could not load' : isTotp ? `Preparing ${presenter.displayName}'s television studio` : 'Setting the stage'}</strong>
       <p className="max-w-md text-sm text-slate-300">{status === 'error' ? message : isTotp ? 'Loading the performers, outfits, tattoos, studio lights, cameras and audience…' : 'Loading the performers, outfits, tattoos, lighting and venue materials…'}</p>
