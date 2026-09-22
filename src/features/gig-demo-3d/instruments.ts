@@ -2,6 +2,7 @@ import * as T from 'three';
 import { batchStaticMeshes, box, cylinder, rod, matte, metal, buildGuitar, buildHandInstrument } from './stage';
 import { STAGE_INSTRUMENTS, type InstrumentId, type PlayingStyle } from './instrumentCatalog';
 import { fretPosition, smoothMotion } from './performanceMotion';
+import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 type Point = [
     number,
     number,
@@ -18,14 +19,58 @@ export interface InstrumentRig {
     animate: (seconds: number, energy: number, reduced: boolean) => void;
 }
 const marker = (root: T.Object3D, name: string, position: Point) => { const point = new T.Object3D(); point.name = name; point.position.set(...position); root.add(point); return point; };
+
+function applyElectricInstrumentSkin(root: T.Group, skin?: ResolvedInstrumentSkinVisual | null) {
+    if (!skin) return;
+    const body = root.getObjectByName('instrument-body') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
+    const guard = root.getObjectByName('instrument-pickguard') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
+    if (body?.material?.isMeshStandardMaterial) body.material.color.set(skin.bodyColor);
+    if (guard?.material?.isMeshStandardMaterial) guard.material.color.set(skin.pickguardColor);
+    root.traverse(object => {
+        if (!(object instanceof T.Mesh) || object === body || object === guard) return;
+        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+            const mat = material as T.MeshStandardMaterial;
+            if (mat.isMeshStandardMaterial && mat.metalness > .55) mat.color.set(skin.hardwareColor);
+        }
+    });
+    if (skin.designKey === 'solid') return;
+    const ink = new T.MeshStandardMaterial({ color: skin.secondaryColor, roughness: .34, metalness: .08, side: T.DoubleSide });
+    const addPlate = (width: number, height: number, x: number, y: number, rotation = 0) => {
+        const plate = new T.Mesh(new T.PlaneGeometry(width, height), ink);
+        plate.position.set(x, y, .151); plate.rotation.z = rotation; plate.name = 'instrument-skin-graphic'; root.add(plate); return plate;
+    };
+    if (skin.designKey === 'two_tone') {
+        const accent = new T.Mesh(new T.CircleGeometry(.19, 40), ink);
+        accent.scale.set(1.25, .72, 1); accent.position.set(-.04, -.18, .151); accent.name = 'instrument-skin-graphic'; root.add(accent);
+    } else if (skin.designKey === 'sunburst') {
+        const centre = new T.Mesh(new T.CircleGeometry(.205, 48), ink);
+        centre.scale.set(1.15, 1.42, 1); centre.position.set(0, -.04, .151); centre.name = 'instrument-skin-graphic'; root.add(centre);
+    } else if (skin.designKey === 'racing_stripes') {
+        addPlate(.055, .62, -.055, -.04, -.04); addPlate(.055, .62, .045, -.04, -.04);
+    } else if (skin.designKey === 'checker') {
+        const size = .072;
+        for (let row = 0; row < 5; row++) for (let col = 0; col < 5; col++) if ((row + col) % 2 === 0) addPlate(size, size, -.145 + col * size, -.27 + row * size);
+    } else if (skin.designKey === 'lightning') {
+        const shape = new T.Shape();
+        shape.moveTo(-.035, .27); shape.lineTo(.10, .08); shape.lineTo(.025, .08); shape.lineTo(.13, -.25); shape.lineTo(-.08, -.02); shape.lineTo(0, -.02); shape.closePath();
+        const bolt = new T.Mesh(new T.ShapeGeometry(shape), ink); bolt.position.set(-.03, -.02, .151); bolt.rotation.z = -.13; bolt.name = 'instrument-skin-graphic'; root.add(bolt);
+    } else if (skin.designKey === 'flames') {
+        for (const [x, height, lean] of [[-.13,.32,-.08],[-.04,.42,.04],[.055,.34,-.03],[.13,.27,.08]] as const) {
+            const shape = new T.Shape();
+            shape.moveTo(-.045, -.20); shape.bezierCurveTo(-.055, -.04, -.01, height * .22, lean, height); shape.bezierCurveTo(.045, height * .18, .07, -.05, .045, -.20); shape.closePath();
+            const flame = new T.Mesh(new T.ShapeGeometry(shape), ink); flame.position.set(x, -.12, .151); flame.scale.set(.7, .7, 1); flame.name = 'instrument-skin-graphic'; root.add(flame);
+        }
+    }
+}
+
 /** Stage-sized, locally generated instruments. Grip markers drive the same IK as the avatar preview. */
-export function buildInstrument(id: InstrumentId, colour = '#ab713d'): InstrumentRig {
+export function buildInstrument(id: InstrumentId, colour = '#ab713d', skin?: ResolvedInstrumentSkinVisual | null): InstrumentRig {
     const spec = STAGE_INSTRUMENTS[id], root = new T.Group();
     root.name = `instrument-${id}`;
     root.userData.instrumentId = id;
     const chrome = metal('#adb8c0'), brass = metal('#c9a151', .26), black = matte('#171b22', .44), ivory = matte('#e8debf', .51);
     const wood = new T.MeshPhysicalMaterial({ color: colour, roughness: .34, clearcoat: .72, clearcoatRoughness: .22 });
-    const darkWood = matte('#482d22', .55), head = matte('#d8cfb7', .74);
+    const darkWood = matte('#482d22', .55), head = matte('#d8cfb7', .74), stickWood = matte('#c9975e', .42);
     const tools: T.Object3D[] = [];
     const moving: ((t: number, energy: number) => void)[] = [];
     let l: Point = [.23, 1.1, .4], r: Point = [-.23, 1.1, .4], seated = false;
@@ -152,18 +197,23 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
         }
         if (electric) {
             const body = g.getObjectByName('instrument-body') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>;
-            body.material.color.set(colour);
+            body.material.color.set(skin?.bodyColor || colour);
+            applyElectricInstrumentSkin(g, skin);
         }
         // Keep the instrument body in front of the torso. The previous .16 depth
         // could put acoustic/electric bodies inside broader player-model chests.
-        g.position.set(-.07, 1.10, .25);
+        g.position.set(-.07, 1.10, .29);
         g.rotation.set(.035, -.045, -1.01);
         root.add(g);
-        // Grip points live just above the strings/instrument face so the wrist centre
-        // does not enter the fretboard or guitar body when the arm solver reaches them.
-        const left = marker(g, 'grip-left', [.015, .71, .155]), right = marker(g, 'grip-right', [0, .03, .225]);
+        // Keep wrist centres on the audience side of the strings/body. Acoustic
+        // instruments have a deeper body, so their picking hand needs more space.
+        const bass = id === 'bass_guitar';
+        const acoustic = !electric;
+        const leftRestZ = acoustic ? .17 : bass ? .165 : .17;
+        const rightRestZ = acoustic ? .265 : bass ? .245 : .255;
+        const left = marker(g, 'grip-left', [.015, .71, leftRestZ]);
+        const right = marker(g, 'grip-right', [0, .03, rightRestZ]);
         moving.push((t, e) => {
-            const bass = id === 'bass_guitar';
             const subdivision = bass ? 4 : 8;
             const step = Math.floor(t * subdivision) % 16;
             const phrase = Math.floor(t * subdivision / 16);
@@ -175,10 +225,10 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             const direction = step % 2 === 0 ? 1 : -1;
             left.position.y = .71 + (fretPosition(t, bass) - .71) * e;
             left.position.x = .015 + (Math.cos(t * .72) * .009 + Math.sin(t * 1.37) * .004) * e;
-            left.position.z = .155 + Math.sin(t * .58 + .8) * .004 * e;
+            left.position.z = leftRestZ + Math.sin(t * .58 + .8) * .004 * e;
             right.position.x = direction * pulse * accent * (bass ? .045 : .082) * e;
             right.position.y = .03 + pulse * accent * (bass ? .012 : .026) * e;
-            right.position.z = .225 + (Math.sin(t * .9) * .006 + pulse * accent * .005) * e;
+            right.position.z = rightRestZ + (Math.sin(t * .9) * .006 + pulse * accent * .005) * e;
             g.rotation.y = -.045 + (Math.sin(t * .55) * .018 + Math.sin(t * .21 + 1.4) * .01) * e;
             g.rotation.x = .035 + Math.cos(t * .7) * .009 * e;
         });
@@ -552,9 +602,17 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             stick.name = 'playing-stick';
             tools.push(stick);
             grip.add(stick);
-            // Start the shaft in front of the palm and make kit sticks slightly chunkier
-            // so they remain readable under stage lighting and motion blur.
-            rod(stick, [0, .015, .015], [0, -.195, .355], spec.family === 'kit' ? .011 : .007, darkWood);
+            // Use a lighter, thicker shaft and keep the whole stick in front of
+            // the palm. Dark thin sticks were effectively disappearing against the
+            // kit, hands and stage lighting in the live viewer.
+            const shaft = rod(stick, [0, .018, .03], [0, -.22, .39], spec.family === 'kit' ? .013 : .008, stickWood);
+            shaft.name = 'playing-stick-shaft';
+            if (spec.family === 'kit') {
+                const tip = ellipsoid(stick, [.017, .024, .03], [0, -.22, .39], stickWood);
+                tip.name = 'playing-stick-tip';
+            }
+            stick.userData.shaftAxis = new T.Vector3(0, -.238, .36).normalize();
+            stick.userData.gripOffset = new T.Vector3(0, .018, .03);
             if (spec.family === 'mallets')
                 ellipsoid(stick, [.025, .025, .025], [0, -.13, .19], id === 'vibraphone' ? head : ivory);
             moving.push((t, e) => {

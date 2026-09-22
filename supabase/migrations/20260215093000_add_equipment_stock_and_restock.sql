@@ -108,18 +108,19 @@ $$;
 
 COMMENT ON FUNCTION public.restock_equipment_items IS 'Resets equipment stock levels up to the provided amount.';
 
--- Ensure pg_cron is available for scheduling the restock job
-CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
-
--- Schedule daily restocking at 3 AM UTC if not already scheduled
-DO $$
+-- pg_cron is established earlier in the canonical migration chain. Do not
+-- reinstall or relocate it here: Supabase-managed extension privileges can make
+-- CREATE EXTENSION ... WITH SCHEMA fail when the extension already exists.
+-- Schedule daily restocking at 3 AM UTC when pg_cron is available.
+DO $schedule$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'equipment_items_restock_daily') THEN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron')
+     AND NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'equipment_items_restock_daily') THEN
     PERFORM cron.schedule(
       'equipment_items_restock_daily',
       '0 3 * * *',
-      $$SELECT public.restock_equipment_items();$$
+      'SELECT public.restock_equipment_items();'
     );
   END IF;
 END;
-$$;
+$schedule$;

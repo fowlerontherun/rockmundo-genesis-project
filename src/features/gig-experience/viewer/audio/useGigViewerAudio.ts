@@ -137,8 +137,18 @@ export function useGigViewerAudio({ experience, snapshot, replaySeed, isPlaying,
     enable: async () => {
       setActivated(true);
       setPrefs((p) => ({ ...p, enabled: true, muted: false }));
-      controller.current?.setVolume(prefs.volume, false);
-      if (!silentForSpeed && source.available) await controller.current?.play().catch(() => {});
+      const activeController = controller.current;
+      activeController?.setVolume(prefs.volume, false);
+
+      // Prime the real media element inside the user's click gesture so later
+      // replay playback is allowed by browser autoplay policy. If the replay is
+      // currently paused, immediately return the element to paused state instead
+      // of leaving a play->effect-pause race behind.
+      if (!silentForSpeed && source.available && activeController) {
+        activeController.load(source, prefs.volume, false, speed);
+        await activeController.play().catch(() => {});
+        if (!isPlaying) activeController.pause();
+      }
       rerender((value) => value + 1);
     },
     disable: () => {

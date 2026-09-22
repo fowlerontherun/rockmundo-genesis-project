@@ -207,6 +207,10 @@ export class ConcertScene {
     const { camera, reducedMotion } = this.settings;
     const sequence: Exclude<CameraShot, 'director'>[] = ['front', 'guitar', 'front', 'drums', 'guitar', 'stage'];
     let selected = camera === 'director' ? reducedMotion ? 'front' : sequence[Math.floor(this.seconds / 16) % sequence.length] : camera;
+    if (camera === 'director' && !reducedMotion && this.playback?.section === 'release') {
+      const release = this.playback.sectionProgress ?? 0;
+      selected = release < .5 ? 'front' : this.options?.television ? 'tv_audience_reverse' : 'stage';
+    }
     const shot = CAMERAS[selected];
     this.cameraPos.fromArray(shot.position); this.targetPos.fromArray(shot.target);
     if (this.options && (selected === 'guitar' || selected === 'drums')) {
@@ -465,16 +469,24 @@ export class ConcertScene {
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, actorEnergy, this.settings.reducedMotion);
     });
     if (this.options?.television?.stageKey) this.crowd?.setTelevisionStage(this.options.television.stageKey);
-    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, energy, this.settings.reducedMotion, this.crowdTuning, this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction), this.playback?.crowdCueProgress);
+    const releaseProgress = section === 'release' ? (this.playback?.sectionProgress ?? 0) : 0;
+    const crowdEnergy = section === 'release'
+      ? Math.max(energy, T.MathUtils.lerp(.82, .52, smoothMotion(releaseProgress)))
+      : energy;
+    const crowdReaction = section === 'release'
+      ? 'applause'
+      : this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction);
+    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, crowdEnergy, this.settings.reducedMotion, this.crowdTuning, crowdReaction, this.playback?.crowdCueProgress);
     if (this.distantAudience) {
       const occupancy = this.playback?.occupancy ?? this.settings.crowd;
-      updateVenueAudience(this.distantAudience, occupancy, t, this.settings.reducedMotion, energy, Math.round(160 * (this.playback?.crowd ?? this.settings.crowd)));
+      updateVenueAudience(this.distantAudience, occupancy, t, this.settings.reducedMotion, crowdEnergy, Math.round(160 * (this.playback?.crowd ?? this.settings.crowd)));
     }
     this.updateTelevisionPresenter(t);
     this.updateTelevisionCrew(t);
     this.updateEffects();
     this.lights.forEach((light, i) => {
-      light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight-this.venueProfile.stageHeight)/5.3,1.3) : 1) * (this.playback?.lightLevel ?? 1);
+      const releaseLight = section === 'release' ? T.MathUtils.lerp(1, .72, smoothMotion(releaseProgress)) : 1;
+      light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight-this.venueProfile.stageHeight)/5.3,1.3) : 1) * (this.playback?.lightLevel ?? 1) * releaseLight;
       if (i < 4) { light.target.position.x = ((i - 1.5) * 1.4 + Math.sin(t * 0.35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4)) * (this.venueProfile ? this.venueProfile.stageWidth / 11.6 : 1); const beam = this.beams[i]; const reach=light.position.distanceTo(light.target.position)/5.6;beam.scale.set(Math.max(1,reach*.62),reach,Math.max(1,reach*.62));beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), light.target.position.clone().sub(light.position).normalize()); } });
     if(this.venueProfile) this.beams.slice(4).forEach((beam,i)=>{
       const p=this.venueProfile!,target=new T.Vector3(beam.position.x*.6+(this.settings.reducedMotion ? 0 : Math.sin(t*.3+i)*Math.min(3,p.stageWidth*.1)),p.stageHeight,.65-p.stageDepth*.28);

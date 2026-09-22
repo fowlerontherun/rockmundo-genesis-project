@@ -12,6 +12,7 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
 import type { CrowdTuningOptions } from '../engine/CrowdTuning';
 import type { TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
+import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 
 const clamp = (n: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
 const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backing_vocals: 'vocals', lead_guitar: 'guitar', rhythm_guitar: 'guitar', guitar: 'guitar', bass: 'bass', drums: 'drums', keyboard: 'keyboard', piano: 'keyboard', dj: 'dj', electronic: 'dj', percussion: 'percussion', strings: 'strings', brass: 'brass', woodwind: 'woodwind', other: 'other', unknown: 'other' };
@@ -346,6 +347,7 @@ export function concertOptions(
   presentationMode: ConcertPresentationMode = 'gig',
   totpStage: TotpStageKey = 'main_stage',
   tattoos: Record<string, ResolvedTattooVisual[]> = {},
+  instrumentSkins: Record<string, ResolvedInstrumentSkinVisual[]> = {},
 ): ConcertOptions {
   const totp = presentationMode === 'totp';
   const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
@@ -369,15 +371,17 @@ export function concertOptions(
     venue,
     performers: plan.entities.map(p => {
       const profileId = p.profileId ?? p.id;
+      const assignment = stageAssignment(p.instrument, roleMap[p.role]);
       return {
         id: p.id,
         displayName: p.displayName,
-        ...stageAssignment(p.instrument, roleMap[p.role]),
+        ...assignment,
         phase: p.idlePhase,
         position: totp ? totpStagePoint(plan, p.id, profile, totpStage, 0, false, totpLayoutSeed) : stagePoint(plan, p.stageSlot, profile, presentationMode, totpStage),
         appearance: appearances[profileId] ?? defaultAppearance(profileId),
         richClothing: richClothing[profileId] ?? [],
         tattoos: tattoos[profileId] ?? [],
+        instrumentSkin: instrumentSkins[profileId]?.find(skin => skin.instrumentId === assignment.instrument) ?? null,
       };
     }),
   };
@@ -404,7 +408,7 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
   const fxPayload = fx?.visualPayload.type === 'moment_effect' ? fx.visualPayload : null;
   const songPlaying = /song_intro|song_performance|highlight_moment|encore|finale|performance_item/.test(playback.activePhase ?? '') || active.some(e => e.visualPayload.type === 'song_start');
   const opening = [...past].reverse().find(e => e.visualPayload.type === 'venue_open');
-  const lightLevel = songPlaying ? 1 : opening?.visualPayload.type === 'venue_open' ? Math.max(.3, opening.visualPayload.lightLevel) : .5;
+  const baseLightLevel = songPlaying ? 1 : opening?.visualPayload.type === 'venue_open' ? Math.max(.3, opening.visualPayload.lightLevel) : .5;
   const spotlight = [...active].reverse().find(e => e.visualPayload.type === 'spotlight');
   const focusId = itemPayload?.performerId ?? (spotlight?.visualPayload.type === 'spotlight' ? spotlight.visualPayload.performerId : null) ?? playback.performerFocusId;
   const songStart = [...active].reverse().find(e => e.visualPayload.type === 'song_start');
@@ -454,12 +458,12 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
     sectionProgress,
     occupancy: attendance.state === 'valid' ? clamp(attendance.value / profile.capacity) * filling * dispersed : 0,
     energy: clamp((playback.crowdEnergy ?? 30) / 100),
-    crowdReaction: itemPayload?.action === 'phone_lights' ? 'phone_lights' : itemPayload?.action === 'mosh_pit' ? 'mosh_pit' : itemPayload?.action === 'crowd_surf' ? 'crowd_surf' : itemPayload?.action === 'crowd_wave' ? 'wave' : reaction?.visualPayload.type === 'crowd_reaction' ? reaction.visualPayload.reaction : 'still',
+    crowdReaction: releaseActive ? 'applause' : itemPayload?.action === 'phone_lights' ? 'phone_lights' : itemPayload?.action === 'mosh_pit' ? 'mosh_pit' : itemPayload?.action === 'crowd_surf' ? 'crowd_surf' : itemPayload?.action === 'crowd_wave' ? 'wave' : reaction?.visualPayload.type === 'crowd_reaction' ? reaction.visualPayload.reaction : 'still',
     performing: songPlaying || releaseActive,
     crowdCueProgress: item && /mosh_pit|crowd_surf/.test(itemPayload?.action ?? '') ? progress(item) : undefined,
     crowd: clamp(count / 160 * filling * dispersed * tuning.densityMultiplier / 2),
     look: /encore|finale/.test(playback.activePhase ?? '') ? 'encore' : songPlaying ? 'electric' : 'amber',
-    lightLevel,
+    lightLevel: releaseActive ? 1 - .32 * smoothStep(sectionProgress) : baseLightLevel,
     focusId,
     effect: fxPayload && fx ? { type: fxPayload.effect, intensity: clamp(fxPayload.intensity), progress: progress(fx) } : itemPayload?.action === 'special_effect' && item ? { type: 'special_effect', intensity: clamp(itemPayload.intensity), progress: progress(item) } : null,
     performers: reconstructPerformerState(plan, replay, positionMs, { reducedMotion }).map(p => {

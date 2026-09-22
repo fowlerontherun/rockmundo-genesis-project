@@ -4,7 +4,7 @@ import { ListVideo, PauseCircle, PlayCircle, SkipBack, SkipForward } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { getTotpEpisodePresenterAudio, getTotpEpisodePresenterFragments, type TotpBroadcastReplay, type TotpPresenterFragmentBundle } from "./api";
+import { getTotpEpisodePresenterAudio, getTotpEpisodePresenterFragments, type TotpBroadcastReplay, type TotpPresenterFragmentBundle, type TotpPresenterFragmentPhraseAsset } from "./api";
 import { getTotpBandNameAudioCatalog } from "./bandNameAudioApi";
 import { supabase } from "@/integrations/supabase/client";
 import type { TotpChartRundown } from "./chartRundownApi";
@@ -58,7 +58,7 @@ function phraseClip(
   if (!fragments) return null;
   const available = ids
     .map((id) => ({ id, asset: fragments.phrases?.[id] }))
-    .filter((item): item is { id: string; asset: { storage_path: string; uploaded_at?: string | null } } => !!item.asset?.storage_path);
+    .filter((item): item is { id: string; asset: TotpPresenterFragmentPhraseAsset } => !!item.asset?.storage_path);
   if (!available.length) return null;
   const chosen = available[stableAudioIndex(stableKey, available.length)];
   return { url: totpMediaPublicUrl(chosen.asset.storage_path), gapAfterMs };

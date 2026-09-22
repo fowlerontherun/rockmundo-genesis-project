@@ -5,6 +5,7 @@ import type { ClothingItem } from '@/hooks/useSkinStore';
 import { resolveEquippedClothingVisual, type ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { appearanceFromLegacy, appearanceSchema, resolveAppearance, type PlayerAppearance } from './appearance';
 import { normalizeTattooVisual, type ResolvedTattooVisual, type TattooVisualInput } from './tattoos';
+import { resolveStageInstrumentSkin, type EquippedInstrumentSkinRow, type ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 
 export const playerModelKey = (profileId: string | null) => ['player-stage-appearance', profileId] as const;
 export const equippedRichClothingKey = (profileId: string | null) => ['equipped-rich-clothing', profileId] as const;
@@ -15,6 +16,8 @@ export interface GigPlayerModelsData {
   richClothing: Record<string, ResolvedEquippedClothing[]>;
   /** Render-only tattoo projection. Older replay snapshots may omit this field. */
   tattoos?: Record<string, ResolvedTattooVisual[]>;
+  /** Optional so replay snapshots captured before instrument skins remain compatible. */
+  instrumentSkins?: Record<string, ResolvedInstrumentSkinVisual[]>;
 }
 
 interface EquippedClothingRow {
@@ -24,7 +27,7 @@ interface EquippedClothingRow {
   customization_config?: Record<string, string> | null;
 }
 
-type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing';
+type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing' | 'get_equipped_stage_instrument_skins';
 type StageRpcArgs = { p_profile_ids: string[] };
 type StageRpcResult = { data: unknown; error: { message?: string } | null };
 
@@ -34,6 +37,15 @@ async function callStageRpc(name: StageRpcName, args: StageRpcArgs): Promise<Sta
     functionArgs: StageRpcArgs,
   ) => Promise<StageRpcResult>;
   return rpc(name, args);
+}
+
+function resolveInstrumentSkinRows(rows: EquippedInstrumentSkinRow[]) {
+  const result: Record<string, ResolvedInstrumentSkinVisual[]> = {};
+  for (const row of rows) {
+    if (!row?.profile_id || !row?.item_id || !row?.instrument_id) continue;
+    (result[row.profile_id] ??= []).push(resolveStageInstrumentSkin(row));
+  }
+  return result;
 }
 
 function resolveTattooRows(rows: TattooVisualInput[]) {
@@ -131,15 +143,17 @@ export function useGigPlayerModels(profileIds: string[]) {
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceResult, clothingResult, tattooResult] = await Promise.all([
+      const [appearanceResult, clothingResult, tattooResult, instrumentResult] = await Promise.all([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
         callStageRpc('get_equipped_stage_clothing', { p_profile_ids: ids }),
         callStageRpc('get_stage_tattoo_visuals', { p_profile_ids: ids }),
+        callStageRpc('get_equipped_stage_instrument_skins', { p_profile_ids: ids }),
       ]);
 
       if (appearanceResult.error) throw appearanceResult.error;
       if (clothingResult.error) console.warn('[gig-player-models] equipped rich clothing could not load', clothingResult.error);
       if (tattooResult.error) console.warn('[gig-player-models] tattoo visuals could not load', tattooResult.error);
+      if (instrumentResult.error) console.warn('[gig-player-models] instrument skins could not load', instrumentResult.error);
 
       const appearances = Object.fromEntries(
         (appearanceResult.data || []).map(row => [row.profile_id, resolveAppearance(row.appearance, row.profile_id)]),
@@ -155,7 +169,8 @@ export function useGigPlayerModels(profileIds: string[]) {
       }
 
       const tattoos = tattooResult.error ? {} : resolveTattooRows((tattooResult.data || []) as TattooVisualInput[]);
-      return { appearances, richClothing, tattoos };
+      const instrumentSkins = instrumentResult.error ? {} : resolveInstrumentSkinRows((instrumentResult.data || []) as EquippedInstrumentSkinRow[]);
+      return { appearances, richClothing, tattoos, instrumentSkins };
     },
   });
 }
