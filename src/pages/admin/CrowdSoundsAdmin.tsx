@@ -67,12 +67,12 @@ function inferCrowdSoundMetadata(fileName: string): { soundType: CrowdSoundType;
   } else if (/encore/.test(value)) {
     soundType = "encore_request";
     intensity = /small/.test(value) ? 5 : 8;
-  } else if (/end of gig|gig end|band exit|exit/.test(value)) {
-    soundType = "band_exit";
-    intensity = /large|festival/.test(value) ? 9 : 7;
   } else if (/clap|applause/.test(value)) {
     soundType = "applause";
     intensity = /large|festival/.test(value) ? 9 : /medium|indoor/.test(value) ? 6 : /small/.test(value) ? 4 : 6;
+  } else if (/end of gig|gig end|band exit|exit/.test(value)) {
+    soundType = "band_exit";
+    intensity = /large|festival/.test(value) ? 9 : 7;
   } else if (/sing|chant/.test(value)) {
     soundType = "crowd_singing";
     intensity = 7;
