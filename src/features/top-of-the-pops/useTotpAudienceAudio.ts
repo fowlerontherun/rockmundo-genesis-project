@@ -4,6 +4,35 @@ import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { loadTotpCrowdSounds, pickTotpCrowdSound, type TotpCrowdSound } from "./crowdSoundLibrary";
 import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
 
+let sharedTotpAudioContext: AudioContext | null = null;
+
+function totpAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return null;
+  if (!sharedTotpAudioContext || sharedTotpAudioContext.state === "closed") sharedTotpAudioContext = new AC();
+  return sharedTotpAudioContext;
+}
+
+/**
+ * Call directly from the user's Play gesture. Keeping one shared running
+ * context prevents later presenter/crowd cues from being muted when browsers
+ * revoke transient user activation before those segments begin.
+ */
+export function primeTotpAudioPlayback(): void {
+  const ctx = totpAudioContext();
+  if (!ctx) return;
+  void ctx.resume().catch(() => undefined);
+  const source = ctx.createBufferSource();
+  source.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  source.connect(gain);
+  gain.connect(ctx.destination);
+  source.start();
+  source.stop(ctx.currentTime + 0.001);
+}
+
 export function useTotpAudienceAudio({
   playbackState,
   cue,
@@ -51,15 +80,14 @@ export function useTotpAudienceAudio({
 
   useEffect(() => {
     if (!enabled || !playbackState.isPlaying || typeof window === "undefined") return;
-    const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-
-    let ctx = ctxRef.current;
+    let ctx = ctxRef.current ?? totpAudioContext();
+    if (!ctx) return;
     let master = masterRef.current;
     let ambience = ambienceRef.current;
 
-    if (!ctx || ctx.state === "closed" || !master || !ambience) {
-      ctx = new AC();
+    if (ctx.state === "closed" || !master || !ambience) {
+      ctx = totpAudioContext();
+      if (!ctx) return;
       master = ctx.createGain();
       master.gain.value = 0.24;
       ambience = ctx.createGain();
@@ -155,7 +183,6 @@ export function useTotpAudienceAudio({
     clipRef.current = null;
     ambienceClipRef.current?.pause();
     ambienceClipRef.current = null;
-    ctxRef.current?.close().catch(() => undefined);
     ctxRef.current = null;
     masterRef.current = null;
     ambienceRef.current = null;
