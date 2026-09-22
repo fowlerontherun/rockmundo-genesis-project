@@ -55,23 +55,30 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch current upgrades
-  const { data: upgrades = [], isLoading } = useQuery({
-    queryKey: ["label-upgrades", labelId],
+  const { data: upgradeState, isLoading } = useQuery({
+    queryKey: ["label-upgrade-state", labelId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("label_upgrades")
-        .select("*")
-        .eq("label_id", labelId);
-
+      const { data, error } = await (supabase as any).rpc("get_label_upgrade_state", {
+        p_label_id: labelId,
+      });
       if (error) throw error;
-      return data;
+      return data as any;
     },
+    refetchInterval: 60_000,
   });
 
-  const getUpgradeLevel = (type: string): number => {
-    const upgrade = upgrades.find((u) => u.upgrade_type === type);
-    return upgrade?.upgrade_level ?? 0;
+  const getUpgradeLevel = (type: string): number =>
+    Number(upgradeState?.generic?.[type]?.level ?? 0);
+
+  const getCooldown = (type: string) => {
+    const raw = upgradeState?.generic?.[type]?.cooldown_until;
+    if (!raw) return { onCooldown: false, label: null as string | null, until: null as Date | null };
+    const until = new Date(raw);
+    const remaining = Math.max(0, until.getTime() - Date.now());
+    if (remaining <= 0) return { onCooldown: false, label: null as string | null, until };
+    const days = Math.floor(remaining / 86_400_000);
+    const hours = Math.ceil((remaining % 86_400_000) / 3_600_000);
+    return { onCooldown: true, label: `${days}d ${hours}h`, until };
   };
 
   const handlePurchaseUpgrade = async (upgrade: Upgrade) => {
@@ -100,7 +107,7 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
         description: `${upgrade.name} is now level ${data?.new_level ?? nextLevel}`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["label-upgrades", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-upgrade-state", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-management"] });
       queryClient.invalidateQueries({ queryKey: ["label-finance", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
@@ -128,6 +135,7 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
         const isMaxLevel = currentLevel >= upgrade.maxLevel;
         const nextCost = Math.round(upgrade.cost * (1 + currentLevel * 0.65));
         const canAfford = labelBalance >= nextCost;
+        const cooldown = getCooldown(upgrade.type);
 
         return (
           <Card key={upgrade.id} className={cn(isMaxLevel && "opacity-75")}>
@@ -163,6 +171,12 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
                 ))}
               </div>
 
+              {cooldown.onCooldown && !isMaxLevel && (
+                <p className="text-xs text-muted-foreground">
+                  3-day cooldown active · next upgrade {cooldown.until?.toLocaleString()}
+                </p>
+              )}
+
               {isMaxLevel ? (
                 <div className="flex items-center gap-2 text-sm text-emerald-500">
                   <CheckCircle className="h-4 w-4" />
@@ -176,9 +190,11 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
                   <Button
                     size="sm"
                     onClick={() => handlePurchaseUpgrade(upgrade)}
-                    disabled={!canAfford}
+                    disabled={!canAfford || cooldown.onCooldown}
                   >
-                    {canAfford ? (
+                    {cooldown.onCooldown ? (
+                      <>Available in {cooldown.label}</>
+                    ) : canAfford ? (
                       "Purchase"
                     ) : (
                       <>
