@@ -61,6 +61,9 @@ describe('canonical replay to 3D stage', () => {
     const idle = frame(songEnd + 2600);
     expect(releaseStart.section).toBe('release');
     expect(releaseStart.performing).toBe(true);
+    expect(releaseStart.crowdReaction).toBe('applause');
+    expect(releaseStart.lightLevel).toBeGreaterThan(releaseMiddle.lightLevel);
+    expect(releaseMiddle.crowdReaction).toBe('applause');
     expect(releaseMiddle.sectionProgress).toBeGreaterThan(releaseStart.sectionProgress);
     expect(releaseMiddle.sectionProgress).toBeLessThan(1);
     expect(idle.section).not.toBe('release');
