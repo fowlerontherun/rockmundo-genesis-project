@@ -89,6 +89,19 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
   }, [assets, missingOnly]);
 
 
+  async function uploadPhraseAsset(id: string, file: File) {
+    const { mime, sha256 } = await validateAudio(file);
+    const extension = totpAudioFileExtension(mime);
+    const path = TOTP_MEDIA_PATHS.reusablePhrase(presenterKey, id, sha256, extension);
+    const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(path, file, {
+      contentType: mime,
+      cacheControl: "31536000",
+      upsert: false,
+    });
+    if (error && !/already exists/i.test(error.message)) throw new Error(error.message);
+    return path;
+  }
+
   async function bulkImportPhrases(files: FileList | null) {
     const selected = files ? Array.from(files) : [];
     if (!selected.length) return;
@@ -114,7 +127,7 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
         continue;
       }
       try {
-        await savePhrase(phrase.id, file);
+        await uploadPhraseAsset(phrase.id, file);
         imported += 1;
       } catch {
         skipped.push(file.name);
@@ -122,10 +135,11 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
     }
 
     setBulkUploading(false);
+    if (imported > 0) setRefreshKey((value) => value + 1);
     toast({
       title: skipped.length ? "Presenter phrase import completed with warnings" : "Presenter phrase pack imported",
       description: skipped.length
-        ? `${imported} imported. Could not match: ${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? "…" : ""}`
+        ? `${imported} imported. Could not match or upload: ${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? "…" : ""}`
         : `${imported} reusable presenter recordings imported.`,
       variant: skipped.length && imported === 0 ? "destructive" : "default",
     });
@@ -134,15 +148,7 @@ export function TotpReusablePhraseLibrary({ presenterKey }: { presenterKey: stri
   async function savePhrase(id: string, file: File) {
     setUploadingId(id);
     try {
-      const { mime, sha256 } = await validateAudio(file);
-      const extension = totpAudioFileExtension(mime);
-      const path = TOTP_MEDIA_PATHS.reusablePhrase(presenterKey, id, sha256, extension);
-      const { error } = await supabase.storage.from(TOTP_MEDIA_BUCKET).upload(path, file, {
-        contentType: mime,
-        cacheControl: "31536000",
-        upsert: false,
-      });
-      if (error && !/already exists/i.test(error.message)) throw new Error(error.message);
+      await uploadPhraseAsset(id, file);
       toast({ title: "Presenter phrase saved", description: "The reusable take is ready for future shows." });
       setRefreshKey((value) => value + 1);
     } catch (error) {
