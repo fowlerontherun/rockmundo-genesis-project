@@ -38,13 +38,13 @@ export const HAIR_STYLES = [
   'ponytail', 'high_ponytail', 'side_braid', 'twin_ponytails', 'bun', 'curls', 'long',
 ] as const;
 export const FACIAL_HAIR_STYLES = ['none', 'stubble', 'moustache', 'goatee', 'short_beard', 'full_beard', 'long_beard', 'sideburns'] as const;
-export const HAT_STYLES = ['none', 'beanie', 'baseball_cap', 'bucket_hat', 'fedora'] as const;
+export const HAT_STYLES = ['none', 'beanie', 'baseball_cap', 'bucket_hat', 'fedora', 'cowboy'] as const;
 export const GLASSES_STYLES = ['none', 'round', 'square', 'aviator', 'sunglasses'] as const;
 export const EARRING_STYLES = ['none', 'studs', 'hoops', 'drops'] as const;
 export const FACE_SHAPES = ['classic', 'oval', 'angular', 'soft', 'wide'] as const;
 export const EYEBROW_STYLES = ['natural', 'straight', 'arched', 'bold', 'soft'] as const;
 export const SKIN_DETAILS = ['smooth', 'freckles', 'beauty_marks', 'weathered'] as const;
-export const HAT_LABELS: Record<typeof HAT_STYLES[number], string> = { none: 'No hat', beanie: 'Beanie', baseball_cap: 'Baseball cap', bucket_hat: 'Bucket hat', fedora: 'Fedora' };
+export const HAT_LABELS: Record<typeof HAT_STYLES[number], string> = { none: 'No hat', beanie: 'Beanie', baseball_cap: 'Baseball cap', bucket_hat: 'Bucket hat', fedora: 'Fedora', cowboy: 'Cowboy hat' };
 export const GLASSES_LABELS: Record<typeof GLASSES_STYLES[number], string> = { none: 'No glasses', round: 'Round glasses', square: 'Square glasses', aviator: 'Aviators', sunglasses: 'Sunglasses' };
 export const EARRING_LABELS: Record<typeof EARRING_STYLES[number], string> = { none: 'No earrings', studs: 'Studs', hoops: 'Hoops', drops: 'Drop earrings' };
 export const FACE_SHAPE_LABELS: Record<typeof FACE_SHAPES[number], string> = { classic: 'Classic', oval: 'Oval', angular: 'Angular', soft: 'Soft', wide: 'Wide' };
@@ -77,6 +77,8 @@ export const appearanceSchema = z.object({
     hatColor: color,
     glasses: z.enum(GLASSES_STYLES),
     glassesColor: color,
+    lensTint: z.enum(['clear', 'tinted']).optional(),
+    lensColor: color.optional(),
     earrings: z.enum(EARRING_STYLES).optional(),
     earringColor: color.optional(),
   }).strict().optional(),
@@ -116,6 +118,8 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
       hatColor: parsed.data.accessories?.hatColor ?? '#20232b',
       glasses: parsed.data.accessories?.glasses ?? 'none',
       glassesColor: parsed.data.accessories?.glassesColor ?? '#20232b',
+      ...(parsed.data.accessories?.lensTint ? { lensTint: parsed.data.accessories.lensTint } : {}),
+      ...(parsed.data.accessories?.lensColor ? { lensColor: parsed.data.accessories.lensColor } : {}),
       earrings: parsed.data.accessories?.earrings ?? 'none',
       earringColor: parsed.data.accessories?.earringColor ?? '#d8ad49',
     },
