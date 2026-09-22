@@ -173,3 +173,52 @@ Tattoo surfaces use smoother curved geometry, stable per-tattoo orientation and 
 style masks for cleaner close-up rendering. The authoritative tattoo record remains in the
 Tattoo Parlour; no ownership, pricing, artist or private minigame data is copied into avatar
 appearance JSON.
+
+## Accessory polish — 22 September 2026
+
+The existing appearance contract now also accepts `cowboy`, optional
+`accessories.lensTint` (`clear`/`tinted`) and `accessories.lensColor`. Old appearances
+and old TOTP snapshots remain valid; absent lens settings retain tinted sunglasses
+and clear regular glasses. The creator exposes these controls and a collection
+panel for immediately equipping/removing already owned hats and eyewear. Inventory
+mutations capture the character ID and preserve the item's variant/custom colours.
+Starter accessories still save with the whole appearance and its revision.
+
+Starter glasses have shaped frames, lenses, bridges, side arms and ear hooks.
+Caps have a curved visor and seams; fedora/cowboy crowns have a crease. Hats tuck
+procedural hair above the brim, keeping lower long hair. Imported scalp hair is
+hidden while hatted; eyebrows, face details and facial hair remain visible. Removing
+the hat rebuilds the unchanged saved haircut. This is stylised geometry, not hair
+simulation. The shared fitting-room/performer assembly suppresses starter headwear
+and eyewear when an owned item occupies that slot, without changing the saved choice.
+Purchased garments keep their existing renderer and customisation behaviour.
+
+The face, earrings, tattoo rendering/occlusion, and TOTP tattoo snapshots already
+on main are retained. No tattoo purchases or tattoo records are changed by this PR.
+
+Visual check: [both body frames and all five hats](../../../docs/qa/avatar-accessory-polish.html).
+The image comes from the actual GLB models and shared renderer in local Chromium.
+This is not a live account screenshot or an end-to-end broadcast recording.
+
+Database: the existing clothing prerequisite migrations `20260910165000`,
+`20260910172000`, `20260910184000`, and `20260910184200` were missing on the connected
+project and were applied on 22 September (recorded versions `20260922093609`,
+`20260922093611`, `20260922093613`, `20260922093614`). Inventory was empty beforehand.
+The new appearance validator is recorded as `20260922094106_avatar_accessory_polish`.
+The rollback-only `supabase/tests/avatar_accessory_polish.sql` passed against that
+project: 120 frame/hat/glasses/lens combinations, legacy/existing appearances,
+malformed input rejection, owner equip/remove, slot conflicts, cross-owner denial.
+No test inventory or cash changes persist. The security advisor's warnings for the
+two authenticated clothing SECURITY DEFINER RPCs are expected: public stage reads
+exclude private inventory, and writes explicitly verify character and item ownership.
+
+Validation: all 39 player-model tests and 11 performer tests passed after rebasing
+onto main at `02fdfe6`, and the build passed. Repository typecheck now reports an
+unrelated TS2677 predicate error at `TotpFullEpisodePlayer.tsx:61`, whose contents
+are identical to `02fdfe6`; it passed before rebasing onto these newer TOTP changes.
+The check required `NODE_OPTIONS=--max-old-space-size=6144` in this environment.
+The lint baseline
+check reports 2,891 errors versus its saved 2,872 baseline; untouched `02fdfe6` has
+the identical count, so this branch adds none. The wider stage suite previously
+showed nine pre-existing failures in four gig/TV tests;
+the same nine failures were reproduced on untouched main at `37015dc`.
