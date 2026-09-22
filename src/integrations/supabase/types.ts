@@ -71537,6 +71537,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sync_band_fame_from_members: {
+        Args: { p_band_id: string }
+        Returns: undefined
+      }
       sync_child_progression: {
         Args: { p_child_id: string }
         Returns: {
