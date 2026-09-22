@@ -463,7 +463,7 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
     crowdCueProgress: item && /mosh_pit|crowd_surf/.test(itemPayload?.action ?? '') ? progress(item) : undefined,
     crowd: clamp(count / 160 * filling * dispersed * tuning.densityMultiplier / 2),
     look: /encore|finale/.test(playback.activePhase ?? '') ? 'encore' : songPlaying ? 'electric' : 'amber',
-    lightLevel: releaseActive ? T.MathUtils.lerp(1, .68, smoothStep(sectionProgress)) : baseLightLevel,
+    lightLevel: releaseActive ? 1 - .32 * smoothStep(sectionProgress) : baseLightLevel,
     focusId,
     effect: fxPayload && fx ? { type: fxPayload.effect, intensity: clamp(fxPayload.intensity), progress: progress(fx) } : itemPayload?.action === 'special_effect' && item ? { type: 'special_effect', intensity: clamp(itemPayload.intensity), progress: progress(item) } : null,
     performers: reconstructPerformerState(plan, replay, positionMs, { reducedMotion }).map(p => {
