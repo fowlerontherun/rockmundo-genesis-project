@@ -117,7 +117,7 @@ export function TotpStageTransition({
         : <RadioTower className="mr-1.5 h-3.5 w-3.5" />;
 
   return (
-    <div className="relative min-h-[24rem] overflow-hidden rounded-xl border bg-slate-950 text-white" data-totp-stage-transition data-transition-style={transitionStyle}>
+    <div className="relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-xl border bg-slate-950 text-white" data-totp-stage-transition data-transition-style={transitionStyle}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(34,211,238,.18),transparent_35%),radial-gradient(circle_at_80%_50%,rgba(244,114,182,.18),transparent_35%)]" />
       {transitionStyle === "camera_sweep" ? (
         <>
@@ -145,7 +145,7 @@ export function TotpStageTransition({
         </>
       ) : null}
 
-      <div className="relative z-10 flex min-h-[24rem] flex-col items-center justify-center px-6 text-center">
+      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pb-14 text-center">
         <Badge className="mb-4 bg-white/10 text-white hover:bg-white/10">
           {icon} {copy.eyebrow}
         </Badge>
