@@ -1,3 +1,4 @@
+vi.mock('./OwnedAccessories', () => ({ OwnedAccessories: () => <div>Your collection</div> }));
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PlayerModelEditor from './PlayerModelEditor';
@@ -99,10 +100,12 @@ it('passes currently equipped rich clothing into the shared animated preview', (
 });
 
 
-it('saves hats, glasses and earrings as one shared stage appearance', async () => {
+it('saves hats, glasses, lens choices and earrings as one shared stage appearance', async () => {
   render(<PlayerModelEditor />);
   fireEvent.change(screen.getByLabelText('Hat'), { target: { value: 'bucket_hat' } });
   fireEvent.change(screen.getByLabelText('Glasses'), { target: { value: 'aviator' } });
+  fireEvent.change(screen.getByLabelText('Lenses'), { target: { value: 'tinted' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Lens colour: Blue' }));
   fireEvent.change(screen.getByLabelText('Earrings'), { target: { value: 'drops' } });
   fireEvent.click(screen.getByRole('button', { name: 'Hat colour: Red' }));
   fireEvent.click(screen.getByRole('button', { name: 'Glasses colour: Gold' }));
@@ -115,6 +118,8 @@ it('saves hats, glasses and earrings as one shared stage appearance', async () =
         hatColor: '#bd3548',
         glasses: 'aviator',
         glassesColor: '#d8ad49',
+        lensTint: 'tinted',
+        lensColor: '#426baa',
         earrings: 'drops',
         earringColor: '#8055a2',
       },
