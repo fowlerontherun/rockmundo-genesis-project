@@ -163,10 +163,11 @@ Deno.serve(async (req) => {
     const songIds = (streamingReleases || []).map(r => r.song_id).filter(Boolean);
     let releaseHypeMap = new Map<string, number>();
     let releaseMarketingPowerMap = new Map<string, number>();
+    let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
     if (songIds.length > 0) {
       const { data: releaseSongData } = await supabase
         .from("release_songs")
-        .select("song_id, release:releases(id, hype_score, label_marketing_power, manufacturing_complete_at)")
+        .select("song_id, release:releases(id, hype_score, label_marketing_power, pr_reach_power, pr_reach_updated_at, manufacturing_complete_at)")
         .in("song_id", songIds);
       
       if (releaseSongData) {
@@ -177,6 +178,11 @@ Deno.serve(async (req) => {
             releaseHypeMap.set(rs.song_id, Math.max(existingHype, rel.hype_score || 0));
             const existingPower = releaseMarketingPowerMap.get(rs.song_id) || 0;
             releaseMarketingPowerMap.set(rs.song_id, Math.max(existingPower, rel.label_marketing_power || 0));
+            const existingPr = releasePrReachMap.get(rs.song_id);
+            const candidatePr = Number(rel.pr_reach_power || 0);
+            if (!existingPr || candidatePr > existingPr.power) {
+              releasePrReachMap.set(rs.song_id, { power: candidatePr, updatedAt: rel.pr_reach_updated_at || null });
+            }
           }
         }
       }
@@ -307,13 +313,19 @@ Deno.serve(async (req) => {
 
         const labelMarketingPower = Math.max(0, Math.min(100, releaseMarketingPowerMap.get(release.song_id) || 0));
         const paidLabelMarketingMultiplier = 1 + Math.pow(labelMarketingPower / 100, 1.2) * 2.5; // 0-100 power => 1.0x-3.5x
+        const prReach = releasePrReachMap.get(release.song_id);
+        const storedPrReach = Math.max(0, Math.min(100, Number(prReach?.power || 0)));
+        const prUpdatedAt = prReach?.updatedAt ? new Date(prReach.updatedAt).getTime() : Date.now();
+        const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
+        const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
+        const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
 
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.release_id);
         const hasTerritories = releaseTerritories.length > 0;
         const bandFans = bandId ? bandCountryFansMap.get(bandId) : undefined;
         const territoryBonus = hasTerritories ? Math.sqrt(releaseTerritories.length) : 1;
 
-        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * paidLabelMarketingMultiplier * qualityDiscoveryMultiplier * organicBreakoutMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
+        const dailyStreamsRaw = Math.floor(baseStreams * marketMultiplier * streamHypeMultiplier * paidLabelMarketingMultiplier * publicRelationsMultiplier * qualityDiscoveryMultiplier * organicBreakoutMultiplier * ageDecay * territoryBonus * genreTrendMult * seasonalStreamMod * streamLoyaltyMod * streamRepMod);
         const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 

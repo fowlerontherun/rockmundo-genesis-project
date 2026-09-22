@@ -307,14 +307,15 @@ serve(async (req) => {
           const baseHypeBoost = isViral ? 12 : 5;
           const engagementScale = Math.min(1 + (finalMetrics.likes + finalMetrics.retwaats * 2) / 50, 3);
           const hypeBoost = Math.floor(baseHypeBoost * engagementScale);
-          const { data: release } = await supabase.from("releases").select("hype_score").eq("id", releaseId).maybeSingle();
-
-          if (release) {
-            await supabase
-              .from("releases")
-              .update({ hype_score: (Number((release as any).hype_score) || 0) + hypeBoost } as any)
-              .eq("id", releaseId);
-          }
+          const reachBoost = Math.max(2, Math.min(28, Math.round(engagementScale * (isViral ? 9 : 4))));
+          const { error: reachError } = await supabase.rpc("apply_release_pr_reach", {
+            p_release_id: releaseId,
+            p_channel: "twaater",
+            p_reach_delta: reachBoost,
+            p_hype_delta: hypeBoost,
+            p_source_ref: twaatId,
+          });
+          if (reachError) throw reachError;
         }
       }
     } catch (hypeError) {

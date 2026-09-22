@@ -175,6 +175,8 @@ serve(async (req) => {
         release_type,
         hype_score,
         label_marketing_power,
+        pr_reach_power,
+        pr_reach_updated_at,
         manufacturing_complete_at,
         home_country,
         label_contract_id,
@@ -425,6 +427,13 @@ serve(async (req) => {
           const labelMarketingPower = Math.max(0, Math.min(100, Number((release as any).label_marketing_power || 0)));
           const paidLabelMarketingMultiplier = 1 + Math.pow(labelMarketingPower / 100, 1.2) * 2.5;
 
+          // Earned/owned PR is separate from paid label reach and naturally fades.
+          const storedPrReach = Math.max(0, Math.min(100, Number((release as any).pr_reach_power || 0)));
+          const prUpdatedAt = (release as any).pr_reach_updated_at ? new Date((release as any).pr_reach_updated_at).getTime() : Date.now();
+          const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
+          const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
+          const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
+
           const territoriesToProcess = hasTerritories 
             ? releaseTerritories 
             : [{ country: null, distance_tier: 'domestic', cost_multiplier: 1.0 }];
@@ -446,7 +455,7 @@ serve(async (req) => {
             const salesSentMod = parseFloat((0.7 + salesSentT * 0.6).toFixed(2)); // 0.7x–1.3x
 
             const calculatedSales = Math.floor(
-              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * paidLabelMarketingMultiplier * salesSentMod
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * paidLabelMarketingMultiplier * publicRelationsMultiplier * salesSentMod
               / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1)
             );
 

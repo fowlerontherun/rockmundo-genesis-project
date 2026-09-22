@@ -291,14 +291,24 @@ export default function ReleaseDetail() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3 mb-3">
                 <Flame className="h-5 w-5 text-orange-500" />
-                <h3 className="font-semibold text-lg">Release Hype</h3>
+                <h3 className="font-semibold text-lg">Release Promotion</h3>
                 <Badge variant="outline" className="ml-auto text-sm">
-                  {(release as any).hype_score ?? 0} / 1000
+                  {(release as any).hype_score ?? 0} / 1000 hype
                 </Badge>
               </div>
               <HypeMeter hypeScore={(release as any).hype_score ?? 0} />
+              <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                <div className="rounded border p-2">
+                  <p className="text-muted-foreground">PR reach</p>
+                  <p className="font-semibold">{Math.round(Number((release as any).pr_reach_power ?? 0))} / 100</p>
+                </div>
+                <div className="rounded border p-2">
+                  <p className="text-muted-foreground">Paid label reach</p>
+                  <p className="font-semibold">{Math.round(Number((release as any).label_marketing_power ?? 0))} / 100</p>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Boost hype by posting on Twaater, creating DikCok videos, and submitting to media outlets.
+                PR reach comes from media, social and promo activity and fades over time. Paid label reach is funded separately by the record label. Both expand discovery; song quality still determines breakout strength.
               </p>
             </CardContent>
           </Card>
