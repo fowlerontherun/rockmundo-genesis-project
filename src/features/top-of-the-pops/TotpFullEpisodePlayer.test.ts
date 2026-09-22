@@ -68,11 +68,11 @@ describe("Top of the Pops full episode ordering", () => {
     const sequence = buildTotpActPresenterSequence(item, "And now, it's Band first!", fragments);
     expect(sequence).toHaveLength(2);
     expect(sequence?.[0].url).toContain("and-now-its-deadbeef.webm");
-    expect(sequence?.[0].gapAfterMs).toBe(65);
+    expect(sequence?.[0].gapAfterMs).toBe(70);
     expect(sequence?.[1].url).toBe("https://media.example/band-first.webm");
   });
 
-  it("does not assemble fragments when the authored line or recorded band name does not match", () => {
+  it("falls back to an available reusable phrase when the authored wording is not spliceable", () => {
     const item = replay("first", 1);
     const fragments: TotpPresenterFragmentBundle = {
       presenter_key: "alex_rayne",
@@ -96,6 +96,12 @@ describe("Top of the Pops full episode ordering", () => {
 
     expect(buildTotpActPresenterSequence(item, "Christmas number one: Band first!", fragments)).toBeNull();
     expect(buildTotpActPresenterSequence(item, "And now, it's Band first!", fragments)).toBeNull();
+
+    fragments.bands["band-first"].band_name = "Band first";
+    const fallback = buildTotpActPresenterSequence(item, "Christmas number one: Band first!", fragments);
+    expect(fallback).toHaveLength(2);
+    expect(fallback?.[0].url).toContain("and-now-its-deadbeef.webm");
+    expect(fallback?.[1].url).toBe("https://media.example/band-first.webm");
   });
 
   it("uses replay id as a stable tie-breaker without mutating the source array", () => {
