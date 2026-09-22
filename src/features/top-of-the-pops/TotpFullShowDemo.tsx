@@ -27,11 +27,16 @@ export function TotpFullShowDemo({
   onExit: () => void;
 }) {
   const replays = useMemo(
-    () => performances
-      .slice()
-      .sort((a, b) => a.running_order - b.running_order)
-      .map((performance, index) => {
-        const bookedPerformance = { ...performance, running_order: index + 1 };
+    () => {
+      const ordered = performances.slice().sort((a, b) => a.running_order - b.running_order);
+      const distinctStages = new Set(ordered.map((performance) => performance.stage_key)).size;
+      const demoStageCycle = ["main_stage", "stage_b", "studio_floor", "rock_stage"] as const;
+      return ordered.map((performance, index) => {
+        const bookedPerformance = {
+          ...performance,
+          running_order: index + 1,
+          stage_key: distinctStages <= 1 ? demoStageCycle[index % demoStageCycle.length] : performance.stage_key,
+        };
         const style = getTotpTestStyleOutcome(seed, bookedPerformance, "polished");
         const incident = getTotpTestIncident(seed, bookedPerformance);
         const audienceReaction = combineTotpTestEffects(
@@ -39,7 +44,8 @@ export function TotpFullShowDemo({
           style?.effects ?? { reputation: 0, fan_sentiment: 0, media_intensity: 0, audience_reaction: 0 },
         ).audience_reaction;
         return buildTotpTestReplay(bookedPerformance, seed, generatedAt, audienceReaction);
-      }),
+      });
+    },
     [generatedAt, performances, seed],
   );
 
