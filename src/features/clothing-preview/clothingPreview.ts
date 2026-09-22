@@ -58,12 +58,19 @@ export function clothingPreviewVariants(item: ClothingItem): ClothingPreviewVari
   const secondary = validColor(firstString(material.secondaryColor, material.secondary_color), '#d8ad49');
 
   const fromMatrix = matrix.map((variant, index) => {
+    const variantRecord = variant as unknown as Record<string, unknown>;
     const label = firstString(variant.name, variant.label) ?? `Variant ${index + 1}`;
     return {
       id: firstString(variant.id, variant.key, variant.name, variant.label) ?? `variant-${index}`,
       label,
-      color: validColor(firstString(variant.primaryColor, variant.color, variant.primary_color), primary),
-      secondaryColor: validColor(firstString(variant.secondaryColor, variant.secondary_color), secondary),
+      color: validColor(
+        firstString(variant.primaryColor, variantRecord.color, variantRecord.primary_color),
+        primary,
+      ),
+      secondaryColor: validColor(
+        firstString(variant.secondaryColor, variantRecord.secondary_color),
+        secondary,
+      ),
       material: firstString(variant.material, material.fabric),
       pattern: firstString(variant.pattern, pattern.type),
     };
