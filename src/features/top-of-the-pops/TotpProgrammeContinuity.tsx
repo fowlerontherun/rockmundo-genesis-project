@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { TotpBroadcastReplay } from "./api";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
-import { playTotpPresenterLine } from "./presenterVoice";
+import { playTotpPresenterLine, type TotpPresenterRecordedClip } from "./presenterVoice";
 import { TOTP_MEDIA_PATHS, totpMediaPublicUrl, type TotpPresenterAudioSlot } from "./totpMedia";
 import { useTotpContinuityAudienceAudio } from "./useTotpAudienceAudio";
 import {
@@ -27,6 +27,7 @@ export interface TotpProgrammeContinuityProps {
   currentIndex?: number;
   autoPlay?: boolean;
   recordedUrl?: string | null;
+  recordedSequence?: TotpPresenterRecordedClip[] | null;
   onEnded?: () => void;
 }
 
@@ -36,6 +37,7 @@ export function TotpProgrammeContinuity({
   currentIndex = 0,
   autoPlay = false,
   recordedUrl = null,
+  recordedSequence = null,
   onEnded,
 }: TotpProgrammeContinuityProps) {
   const orderedFirst = replays[0] ?? null;
@@ -64,7 +66,10 @@ export function TotpProgrammeContinuity({
     const line = playTotpPresenterLine({
       text: speech,
       presenterKey: presenter.key,
-      recordedUrl: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
+      recordedUrl: recordedSequence?.length
+        ? null
+        : recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, slot)),
+      recordedSequence,
       volume: 0.95,
       onSpeakingChange: setSpeaking,
       onEnded: () => setNarrationComplete(true),
@@ -76,7 +81,7 @@ export function TotpProgrammeContinuity({
       line.stop();
       setSpeaking(false);
     };
-  }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key, recordedUrl]);
+  }, [autoPlay, copy.body, copy.headline, currentIndex, kind, presenter.key, recordedSequence, recordedUrl]);
 
   useEffect(() => {
     if (!autoPlay) return;
