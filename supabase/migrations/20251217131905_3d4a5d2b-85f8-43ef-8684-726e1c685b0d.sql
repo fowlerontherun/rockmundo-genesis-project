@@ -14,8 +14,21 @@ UPDATE cities SET latitude = 48.8566, longitude = 2.3522, region = 'Europe', tim
 UPDATE cities SET latitude = 52.5200, longitude = 13.4050, region = 'Europe', timezone = 'Europe/Berlin' WHERE name = 'Berlin';
 UPDATE cities SET latitude = 35.6762, longitude = 139.6503, region = 'Asia', timezone = 'Asia/Tokyo' WHERE name = 'Tokyo';
 
--- Insert new cities (using ON CONFLICT to skip existing)
-INSERT INTO cities (name, country, region, latitude, longitude, music_scene, population, cost_of_living, dominant_genre, venues, timezone) VALUES
+-- Insert new cities without duplicating natural city identities on clean databases
+INSERT INTO cities (name, country, region, latitude, longitude, music_scene, population, cost_of_living, dominant_genre, venues, timezone)
+SELECT
+  v.name,
+  v.country,
+  v.region,
+  v.latitude,
+  v.longitude,
+  v.music_scene,
+  v.population,
+  v.cost_of_living,
+  v.dominant_genre,
+  v.venues,
+  v.timezone
+FROM (VALUES
 -- EUROPE
 ('Liverpool', 'United Kingdom', 'Europe', 53.4084, -2.9916, 85, 500000, 55, 'Rock', 60, 'Europe/London'),
 ('Glasgow', 'United Kingdom', 'Europe', 55.8642, -4.2518, 80, 635000, 55, 'Indie', 50, 'Europe/London'),
@@ -100,4 +113,13 @@ INSERT INTO cities (name, country, region, latitude, longitude, music_scene, pop
 ('Sydney', 'Australia', 'Oceania', -33.8688, 151.2093, 88, 5300000, 82, 'Pop', 100, 'Australia/Sydney'),
 ('Melbourne', 'Australia', 'Oceania', -37.8136, 144.9631, 90, 5100000, 78, 'Indie', 110, 'Australia/Melbourne'),
 ('Auckland', 'New Zealand', 'Oceania', -36.8509, 174.7645, 78, 1660000, 75, 'Indie', 50, 'Pacific/Auckland')
-ON CONFLICT DO NOTHING;
+) AS v(
+  name, country, region, latitude, longitude, music_scene, population,
+  cost_of_living, dominant_genre, venues, timezone
+)
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM cities existing
+  WHERE lower(existing.name) = lower(v.name)
+    AND lower(existing.country) = lower(v.country)
+);

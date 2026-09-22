@@ -1,3 +1,4 @@
+import * as T from 'three';
 import { describe, expect, it } from 'vitest';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
@@ -30,7 +31,7 @@ function anchors(clothing: ClothingItem) {
   const garment = buildProceduralGarment(clothing);
   const result: string[] = [];
   garment.traverse(object => {
-    if ((object as any).isMesh) result.push(String(object.userData.rigAnchor || ''));
+    if (object instanceof T.Mesh) result.push(String(object.userData.rigAnchor || ''));
   });
   disposeProceduralGarment(garment);
   return result;
@@ -39,10 +40,14 @@ function anchors(clothing: ClothingItem) {
 describe('procedural garment stage rig anchors', () => {
   it('builds top garments from an extruded clothing panel rather than a primitive capsule or cylinder', () => {
     const garment = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'short', silhouette: 'classic', collar: 'crew' }));
-    const torso = garment.children.find(child => child.userData.rigAnchor === 'Torso') as any;
-    expect(torso?.geometry?.type).toBe('ExtrudeGeometry');
+    const torso = garment.children.find(
+      (child): child is T.Mesh => child instanceof T.Mesh && child.userData.rigAnchor === 'Torso',
+    );
+    expect(torso?.geometry.type).toBe('ExtrudeGeometry');
+    if (!torso) throw new Error('Expected torso mesh');
     torso.geometry.computeBoundingBox();
     const box = torso.geometry.boundingBox;
+    if (!box) throw new Error('Expected torso bounds');
     expect(box.max.x - box.min.x).toBeGreaterThan(box.max.z - box.min.z);
     expect(box.max.y - box.min.y).toBeGreaterThan(.5);
     disposeProceduralGarment(garment);
@@ -51,8 +56,13 @@ describe('procedural garment stage rig anchors', () => {
   it('creates a real neckline notch in the top panel', () => {
     const crew = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'none', collar: 'crew' }));
     const vneck = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'none', collar: 'v-neck' }));
-    const crewTorso = crew.children.find(child => child.userData.rigAnchor === 'Torso') as any;
-    const vTorso = vneck.children.find(child => child.userData.rigAnchor === 'Torso') as any;
+    const crewTorso = crew.children.find(
+      (child): child is T.Mesh => child instanceof T.Mesh && child.userData.rigAnchor === 'Torso',
+    );
+    const vTorso = vneck.children.find(
+      (child): child is T.Mesh => child instanceof T.Mesh && child.userData.rigAnchor === 'Torso',
+    );
+    if (!crewTorso || !vTorso) throw new Error('Expected neckline torso meshes');
     expect(crewTorso.geometry.attributes.position.count).toBeGreaterThan(20);
     expect(vTorso.geometry.attributes.position.count).toBeGreaterThan(20);
     expect(vTorso.geometry.attributes.position.count).not.toBe(crewTorso.geometry.attributes.position.count);
@@ -62,7 +72,9 @@ describe('procedural garment stage rig anchors', () => {
 
   it('lays sleeves along the avatar arms instead of vertically', () => {
     const garment = buildProceduralGarment(item('shirt', 'top', { sleeve: 'elbow' }));
-    const sleeves = garment.children.filter(child => String(child.userData.rigAnchor).startsWith('UpperArm')) as any[];
+    const sleeves = garment.children.filter(
+      (child): child is T.Mesh => child instanceof T.Mesh && String(child.userData.rigAnchor).startsWith('UpperArm'),
+    );
     expect(sleeves).toHaveLength(2);
     expect(Math.abs(sleeves[0].rotation.z)).toBeCloseTo(Math.PI / 2);
     disposeProceduralGarment(garment);

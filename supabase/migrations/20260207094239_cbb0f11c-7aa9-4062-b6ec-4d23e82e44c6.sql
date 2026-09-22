@@ -170,13 +170,125 @@ INSERT INTO public.city_night_clubs (city_id, name, description, quality_level, 
 -- SEED QUESTS FOR LONDON CLUBS
 -- =============================================
 
+-- Keep quest prerequisites reproducible on fresh databases. Some of these
+-- clubs existed in production with stable IDs, while older seeds generated IDs
+-- dynamically or did not create the Manchester club at all.
+WITH required_clubs (
+  seed_id, city_name, name, description, quality_level, capacity, cover_charge,
+  guest_actions, drink_menu, npc_profiles, dj_slot_config, metadata
+) AS (
+  VALUES
+    (
+      '63eb90b9-ee29-40bd-9aab-da76aac90d1b'::uuid,
+      'London',
+      'The Electric Basement',
+      'A gritty underground venue in Camden where emerging DJs spin late into the night.',
+      1, 150, 10,
+      $json$[{"id":"dance","label":"Hit the dance floor","energyCost":5,"description":"Burn energy and boost morale"}]$json$::jsonb,
+      $json$[{"id":"beer","name":"Camden Lager","price":6}]$json$::jsonb,
+      $json$[{"id":"dj1","name":"DJ Rebel","role":"Resident DJ","personality":"Edgy and unpredictable"}]$json$::jsonb,
+      $json${"perks":["Underground cred boost"],"payout":200,"schedule":"11pm-3am","minimum_fame":100,"set_length_minutes":45}$json$::jsonb,
+      $json${"live_interactions_enabled":true}$json$::jsonb
+    ),
+    (
+      '5b62aa41-f92f-4a16-b095-5ec80f91d54a'::uuid,
+      'London',
+      'Neon Dreams',
+      'Shoreditch''s premier electronic music venue with state-of-the-art sound system.',
+      3, 300, 25,
+      $json$[{"id":"vip","label":"VIP lounge access","energyCost":3,"description":"Network with industry insiders"},{"id":"dance","label":"Dance floor","energyCost":5}]$json$::jsonb,
+      $json$[{"id":"signature","name":"Electric Blue","price":15,"effect":"+15 morale"},{"id":"premium","name":"Velvet Night","price":22,"effect":"+10 energy"}]$json$::jsonb,
+      $json$[{"id":"dj2","name":"Synthia Vega","role":"Resident DJ","personality":"Charismatic and trend-setting","availability":"Thu-Sat"},{"id":"promoter","name":"Marcus Steel","role":"Promoter","personality":"Business-savvy"}]$json$::jsonb,
+      $json${"perks":["+4% night fan buzz","Audience energy boost"],"payout":800,"schedule":"10pm-2am","minimum_fame":750,"set_length_minutes":60}$json$::jsonb,
+      $json${"live_interactions_enabled":true}$json$::jsonb
+    ),
+    (
+      '5318c032-b3f7-4a46-86a1-7a8a82c877e8'::uuid,
+      'London',
+      'The Velvet Room',
+      'Exclusive Soho nightspot frequented by celebrities and industry elite.',
+      4, 200, 50,
+      $json$[{"id":"network","label":"Network with VIPs","energyCost":4,"description":"Build connections"},{"id":"champagne","label":"Order champagne service","energyCost":2}]$json$::jsonb,
+      $json$[{"id":"cristal","name":"Cristal","price":350},{"id":"signature","name":"Velvet Martini","price":28,"effect":"+20 morale"}]$json$::jsonb,
+      $json$[{"id":"owner","name":"Vincent Noir","role":"Club Owner","personality":"Discerning and influential","dialogueHooks":["Record deals","Industry gossip","Exclusive events"]}]$json$::jsonb,
+      $json${"perks":["VIP networking","Industry exposure","Fame multiplier x1.5"],"payout":1500,"schedule":"11pm-4am","minimum_fame":2000,"set_length_minutes":90}$json$::jsonb,
+      $json${"live_interactions_enabled":true}$json$::jsonb
+    ),
+    (
+      '9528ad61-7c28-4042-9f04-1c31d5d6c2aa'::uuid,
+      'Manchester',
+      'The Haccienda',
+      NULL,
+      5, 200, 50,
+      '[]'::jsonb,
+      '[]'::jsonb,
+      '[]'::jsonb,
+      '{"perks":[]}'::jsonb,
+      '{"live_interactions_enabled":true}'::jsonb
+    )
+)
+INSERT INTO public.city_night_clubs (
+  id, city_id, name, description, quality_level, capacity, cover_charge,
+  guest_actions, drink_menu, npc_profiles, dj_slot_config, metadata
+)
+SELECT
+  seed.seed_id,
+  city.id,
+  seed.name,
+  seed.description,
+  seed.quality_level,
+  seed.capacity,
+  seed.cover_charge,
+  seed.guest_actions,
+  seed.drink_menu,
+  seed.npc_profiles,
+  seed.dj_slot_config,
+  seed.metadata
+FROM required_clubs seed
+JOIN public.cities city ON lower(city.name) = lower(seed.city_name)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.city_night_clubs existing
+    WHERE lower(existing.name) = lower(seed.name)
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.city_night_clubs existing
+    WHERE existing.id = seed.seed_id
+  );
+
+DO $nightclub_seed_guard$
+DECLARE
+  missing_names text;
+BEGIN
+  SELECT string_agg(required.name, ', ' ORDER BY required.name)
+    INTO missing_names
+  FROM (
+    VALUES
+      ('The Electric Basement'),
+      ('Neon Dreams'),
+      ('The Velvet Room'),
+      ('The Haccienda')
+  ) AS required(name)
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.city_night_clubs club
+    WHERE lower(club.name) = lower(required.name)
+  );
+
+  IF missing_names IS NOT NULL THEN
+    RAISE EXCEPTION 'Nightclub quest seed prerequisites missing: %', missing_names;
+  END IF;
+END;
+$nightclub_seed_guard$;
+
 INSERT INTO public.nightclub_quests (club_id, npc_id, title, description, quest_type, chain_position, chain_id, requirements, dialogue, rewards, energy_cost, cooldown_hours) VALUES
-('63eb90b9-ee29-40bd-9aab-da76aac90d1b', 'rebel_dj', 'Prove Your Chops', 'DJ Rebel wants to see if you can handle the decks.', 'chain', 1, 'electric_basement_rebel', '{"min_fame":50}', '[{"speaker":"npc","text":"Oi, you. Yeah, you with the headphones. Think you can spin?"},{"speaker":"player_choice","options":[{"label":"I''ve been spinning since I was 15","next":2,"affinity_change":5},{"label":"I''m here to learn from the best","next":3,"affinity_change":3},{"label":"Just here for the vibes","next":4,"affinity_change":-2}]},{"speaker":"npc","text":"Ha! Big talk. I like that. Get on the decks for three tracks. Impress me."},{"speaker":"npc","text":"Humble. I respect that. Let me see what you can do. Three tracks."},{"speaker":"npc","text":"Fair enough, but fancy having a go? Three tracks, just for fun."},{"speaker":"npc","text":"Not bad at all. You''ve got potential. Come back for the real challenge.","quest_complete":true}]', '{"cash":100,"xp":50,"skill_boost":{"skill":"turntablism","amount":1},"npc_relationship":{"affinity":10,"trust":5}}', 10, 0),
-('63eb90b9-ee29-40bd-9aab-da76aac90d1b', 'rebel_dj', 'Underground Connections', 'Help DJ Rebel track down a rare vinyl pressing.', 'chain', 2, 'electric_basement_rebel', '{"min_fame":150}', '[{"speaker":"npc","text":"You proved yourself. Now I need a favour. There''s a rare pressing of Strings of Life — original Detroit pressing."},{"speaker":"player_choice","options":[{"label":"I''ll find it. What''s it worth?","next":2,"affinity_change":3},{"label":"Strings of Life? Holy grail!","next":3,"affinity_change":8}]},{"speaker":"npc","text":"Straight to business. Find it and I''ll give you something money can''t buy."},{"speaker":"npc","text":"You KNOW your records! Bring it back and I''ll hook you up proper."},{"speaker":"npc","text":"You absolute legend! Here — I recorded something special for you.","quest_complete":true}]', '{"cash":250,"fame":50,"xp":75,"gifted_song":true,"npc_relationship":{"affinity":15,"trust":10,"respect":10}}', 15, 0),
-('5b62aa41-f92f-4a16-b095-5ec80f91d54a', 'synthia_vega', 'Synthia''s Challenge', 'Resident DJ Synthia Vega wants you to remix her latest track.', 'chain', 1, 'neon_dreams_synthia', '{"min_fame":200}', '[{"speaker":"npc","text":"Hey! You''re that new DJ everyone''s talking about. I''ve got a proposition."},{"speaker":"player_choice","options":[{"label":"What kind of proposition?","next":2,"affinity_change":3},{"label":"What''s in it for me?","next":3,"affinity_change":1}]},{"speaker":"npc","text":"I''ve got this track that needs a fresh perspective. A remix. Think you can handle it?"},{"speaker":"npc","text":"Direct. Here''s the deal — remix my latest track. If it''s good, people hear YOUR version."},{"speaker":"npc","text":"This is incredible. You''ve completely transformed it. I''m playing this tonight.","quest_complete":true}]', '{"cash":300,"fame":75,"xp":75,"gifted_song":true,"skill_boost":{"skill":"production","amount":1},"npc_relationship":{"affinity":12,"respect":8}}', 12, 0),
-('5b62aa41-f92f-4a16-b095-5ec80f91d54a', 'marcus_steel', 'Steel''s Proposition', 'Promoter Marcus Steel has a deal: promote Neon Dreams on social media.', 'one_time', null, null, '{"min_fame":100}', '[{"speaker":"npc","text":"Yo! Marcus Steel, promoter extraordinaire. Got a business opportunity."},{"speaker":"player_choice","options":[{"label":"I''m listening...","next":2,"affinity_change":3},{"label":"Not my thing","next":3,"affinity_change":-3}]},{"speaker":"npc","text":"Post about Neon Dreams on socials. Tag us. I''ll pay £500 and boost your followers."},{"speaker":"npc","text":"Your loss. Find me if you change your mind.","quest_complete":true},{"speaker":"npc","text":"Legend! Posts are getting traction. Here''s your cut.","quest_complete":true}]', '{"cash":500,"fans":50,"fame":30,"npc_relationship":{"affinity":8,"trust":5}}', 8, 0),
-('5318c032-b3f7-4a46-86a1-7a8a82c877e8', 'vincent_noir', 'Vincent''s Test', 'Club owner Vincent Noir wants you to entertain his VIP guests.', 'chain', 1, 'velvet_room_vincent', '{"min_fame":1000}', '[{"speaker":"npc","text":"You must be the one everyone''s whispering about. I''m Vincent Noir. Welcome to The Velvet Room."},{"speaker":"player_choice","options":[{"label":"It''s an honour","next":2,"affinity_change":5},{"label":"Nice place. Could use better music","next":3,"affinity_change":8}]},{"speaker":"npc","text":"Charming. But charm won''t cut it here. I have important guests tonight. Can you deliver?"},{"speaker":"npc","text":"Ha! Audacious. Most people grovel. You might be what this place needs."},{"speaker":"npc","text":"My guests are raving about you. You''ve earned this.","quest_complete":true}]', '{"cash":2000,"fame":100,"xp":100,"npc_relationship":{"affinity":15,"trust":10,"respect":15}}', 20, 0),
-('5318c032-b3f7-4a46-86a1-7a8a82c877e8', 'vincent_noir', 'Industry Insider', 'Network with 3 VIPs at The Velvet Room.', 'chain', 2, 'velvet_room_vincent', '{"min_fame":1500}', '[{"speaker":"npc","text":"You''ve proven you can perform. Now let''s see if you can network. Three people to meet tonight."},{"speaker":"player_choice","options":[{"label":"Who are they?","next":2,"affinity_change":3},{"label":"I work better alone","next":3,"affinity_change":-2}]},{"speaker":"npc","text":"A label exec, a festival booker, and a journalist. Impress all three."},{"speaker":"npc","text":"Nobody works alone in this business. Trust me."},{"speaker":"npc","text":"All three are singing your praises. Welcome to the inside.","quest_complete":true}]', '{"cash":1000,"fame":150,"fans":100,"xp":100,"npc_relationship":{"affinity":10,"trust":15,"respect":10}}', 18, 0),
-('5318c032-b3f7-4a46-86a1-7a8a82c877e8', 'vincent_noir', 'The Velvet Residency', 'Secure a recurring DJ residency at The Velvet Room.', 'chain', 3, 'velvet_room_vincent', '{"min_fame":2500}', '[{"speaker":"npc","text":"You''ve entertained my guests. You''ve networked with the elite. Now... one final proposition."},{"speaker":"player_choice","options":[{"label":"A residency?","next":2,"affinity_change":5},{"label":"Name your price","next":3,"affinity_change":3}]},{"speaker":"npc","text":"A weekly residency at The Velvet Room. Guaranteed slot, pay, and prestige."},{"speaker":"npc","text":"It''s not about price. It''s about prestige. Are you in?"},{"speaker":"npc","text":"Welcome to the family. Your residency starts next week.","quest_complete":true}]', '{"cash":5000,"fame":300,"fans":200,"xp":200,"skill_boost":{"skill":"performance","amount":2},"equipment_reward":true,"npc_relationship":{"affinity":20,"trust":20,"respect":20}}', 25, 0),
-('9528ad61-7c28-4042-9f04-1c31d5d6c2aa', 'hacc_dj', 'Madchester Memories', 'Recreate the spirit of the original Madchester movement at The Haccienda.', 'one_time', null, null, '{"min_fame":3000}', '[{"speaker":"npc","text":"This building has history, mate. The Smiths, Joy Division, Happy Mondays — they all came through here."},{"speaker":"player_choice","options":[{"label":"I''m here to make new history","next":2,"affinity_change":10},{"label":"Tell me about the old days","next":3,"affinity_change":5}]},{"speaker":"npc","text":"That''s what I want to hear! Play a set that honours the past but pushes forward."},{"speaker":"npc","text":"Where do I begin? It was magic. But prove the magic isn''t dead."},{"speaker":"npc","text":"That was something special. The Haccienda lives on through people like you.","quest_complete":true}]', '{"cash":3000,"fame":200,"xp":150,"fans":150,"skill_boost":{"skill":"performance","amount":2},"npc_relationship":{"affinity":20,"trust":15,"respect":20}}', 20, 0),
-('63eb90b9-ee29-40bd-9aab-da76aac90d1b', 'rebel_dj', 'Open Deck Night', 'DJ Rebel is hosting an open deck night. Step up for one track.', 'repeatable', null, null, '{"min_fame":0}', '[{"speaker":"npc","text":"Open deck night! Step up, play one track, show us what you''ve got."},{"speaker":"player_choice","options":[{"label":"Let me on those decks!","next":2,"affinity_change":2},{"label":"Maybe next time","next":3,"affinity_change":0}]},{"speaker":"npc","text":"Get up there! One track, make it count."},{"speaker":"npc","text":"No worries, next time."},{"speaker":"npc","text":"Solid track choice. Getting better every time.","quest_complete":true}]', '{"cash":50,"xp":25,"fame":10,"npc_relationship":{"affinity":3}}', 5, 24);
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Electric Basement') ORDER BY created_at LIMIT 1), 'rebel_dj', 'Prove Your Chops', 'DJ Rebel wants to see if you can handle the decks.', 'chain', 1, 'electric_basement_rebel', '{"min_fame":50}', '[{"speaker":"npc","text":"Oi, you. Yeah, you with the headphones. Think you can spin?"},{"speaker":"player_choice","options":[{"label":"I''ve been spinning since I was 15","next":2,"affinity_change":5},{"label":"I''m here to learn from the best","next":3,"affinity_change":3},{"label":"Just here for the vibes","next":4,"affinity_change":-2}]},{"speaker":"npc","text":"Ha! Big talk. I like that. Get on the decks for three tracks. Impress me."},{"speaker":"npc","text":"Humble. I respect that. Let me see what you can do. Three tracks."},{"speaker":"npc","text":"Fair enough, but fancy having a go? Three tracks, just for fun."},{"speaker":"npc","text":"Not bad at all. You''ve got potential. Come back for the real challenge.","quest_complete":true}]', '{"cash":100,"xp":50,"skill_boost":{"skill":"turntablism","amount":1},"npc_relationship":{"affinity":10,"trust":5}}', 10, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Electric Basement') ORDER BY created_at LIMIT 1), 'rebel_dj', 'Underground Connections', 'Help DJ Rebel track down a rare vinyl pressing.', 'chain', 2, 'electric_basement_rebel', '{"min_fame":150}', '[{"speaker":"npc","text":"You proved yourself. Now I need a favour. There''s a rare pressing of Strings of Life — original Detroit pressing."},{"speaker":"player_choice","options":[{"label":"I''ll find it. What''s it worth?","next":2,"affinity_change":3},{"label":"Strings of Life? Holy grail!","next":3,"affinity_change":8}]},{"speaker":"npc","text":"Straight to business. Find it and I''ll give you something money can''t buy."},{"speaker":"npc","text":"You KNOW your records! Bring it back and I''ll hook you up proper."},{"speaker":"npc","text":"You absolute legend! Here — I recorded something special for you.","quest_complete":true}]', '{"cash":250,"fame":50,"xp":75,"gifted_song":true,"npc_relationship":{"affinity":15,"trust":10,"respect":10}}', 15, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('Neon Dreams') ORDER BY created_at LIMIT 1), 'synthia_vega', 'Synthia''s Challenge', 'Resident DJ Synthia Vega wants you to remix her latest track.', 'chain', 1, 'neon_dreams_synthia', '{"min_fame":200}', '[{"speaker":"npc","text":"Hey! You''re that new DJ everyone''s talking about. I''ve got a proposition."},{"speaker":"player_choice","options":[{"label":"What kind of proposition?","next":2,"affinity_change":3},{"label":"What''s in it for me?","next":3,"affinity_change":1}]},{"speaker":"npc","text":"I''ve got this track that needs a fresh perspective. A remix. Think you can handle it?"},{"speaker":"npc","text":"Direct. Here''s the deal — remix my latest track. If it''s good, people hear YOUR version."},{"speaker":"npc","text":"This is incredible. You''ve completely transformed it. I''m playing this tonight.","quest_complete":true}]', '{"cash":300,"fame":75,"xp":75,"gifted_song":true,"skill_boost":{"skill":"production","amount":1},"npc_relationship":{"affinity":12,"respect":8}}', 12, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('Neon Dreams') ORDER BY created_at LIMIT 1), 'marcus_steel', 'Steel''s Proposition', 'Promoter Marcus Steel has a deal: promote Neon Dreams on social media.', 'one_time', null, null, '{"min_fame":100}', '[{"speaker":"npc","text":"Yo! Marcus Steel, promoter extraordinaire. Got a business opportunity."},{"speaker":"player_choice","options":[{"label":"I''m listening...","next":2,"affinity_change":3},{"label":"Not my thing","next":3,"affinity_change":-3}]},{"speaker":"npc","text":"Post about Neon Dreams on socials. Tag us. I''ll pay £500 and boost your followers."},{"speaker":"npc","text":"Your loss. Find me if you change your mind.","quest_complete":true},{"speaker":"npc","text":"Legend! Posts are getting traction. Here''s your cut.","quest_complete":true}]', '{"cash":500,"fans":50,"fame":30,"npc_relationship":{"affinity":8,"trust":5}}', 8, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Velvet Room') ORDER BY created_at LIMIT 1), 'vincent_noir', 'Vincent''s Test', 'Club owner Vincent Noir wants you to entertain his VIP guests.', 'chain', 1, 'velvet_room_vincent', '{"min_fame":1000}', '[{"speaker":"npc","text":"You must be the one everyone''s whispering about. I''m Vincent Noir. Welcome to The Velvet Room."},{"speaker":"player_choice","options":[{"label":"It''s an honour","next":2,"affinity_change":5},{"label":"Nice place. Could use better music","next":3,"affinity_change":8}]},{"speaker":"npc","text":"Charming. But charm won''t cut it here. I have important guests tonight. Can you deliver?"},{"speaker":"npc","text":"Ha! Audacious. Most people grovel. You might be what this place needs."},{"speaker":"npc","text":"My guests are raving about you. You''ve earned this.","quest_complete":true}]', '{"cash":2000,"fame":100,"xp":100,"npc_relationship":{"affinity":15,"trust":10,"respect":15}}', 20, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Velvet Room') ORDER BY created_at LIMIT 1), 'vincent_noir', 'Industry Insider', 'Network with 3 VIPs at The Velvet Room.', 'chain', 2, 'velvet_room_vincent', '{"min_fame":1500}', '[{"speaker":"npc","text":"You''ve proven you can perform. Now let''s see if you can network. Three people to meet tonight."},{"speaker":"player_choice","options":[{"label":"Who are they?","next":2,"affinity_change":3},{"label":"I work better alone","next":3,"affinity_change":-2}]},{"speaker":"npc","text":"A label exec, a festival booker, and a journalist. Impress all three."},{"speaker":"npc","text":"Nobody works alone in this business. Trust me."},{"speaker":"npc","text":"All three are singing your praises. Welcome to the inside.","quest_complete":true}]', '{"cash":1000,"fame":150,"fans":100,"xp":100,"npc_relationship":{"affinity":10,"trust":15,"respect":10}}', 18, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Velvet Room') ORDER BY created_at LIMIT 1), 'vincent_noir', 'The Velvet Residency', 'Secure a recurring DJ residency at The Velvet Room.', 'chain', 3, 'velvet_room_vincent', '{"min_fame":2500}', '[{"speaker":"npc","text":"You''ve entertained my guests. You''ve networked with the elite. Now... one final proposition."},{"speaker":"player_choice","options":[{"label":"A residency?","next":2,"affinity_change":5},{"label":"Name your price","next":3,"affinity_change":3}]},{"speaker":"npc","text":"A weekly residency at The Velvet Room. Guaranteed slot, pay, and prestige."},{"speaker":"npc","text":"It''s not about price. It''s about prestige. Are you in?"},{"speaker":"npc","text":"Welcome to the family. Your residency starts next week.","quest_complete":true}]', '{"cash":5000,"fame":300,"fans":200,"xp":200,"skill_boost":{"skill":"performance","amount":2},"equipment_reward":true,"npc_relationship":{"affinity":20,"trust":20,"respect":20}}', 25, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Haccienda') ORDER BY created_at LIMIT 1), 'hacc_dj', 'Madchester Memories', 'Recreate the spirit of the original Madchester movement at The Haccienda.', 'one_time', null, null, '{"min_fame":3000}', '[{"speaker":"npc","text":"This building has history, mate. The Smiths, Joy Division, Happy Mondays — they all came through here."},{"speaker":"player_choice","options":[{"label":"I''m here to make new history","next":2,"affinity_change":10},{"label":"Tell me about the old days","next":3,"affinity_change":5}]},{"speaker":"npc","text":"That''s what I want to hear! Play a set that honours the past but pushes forward."},{"speaker":"npc","text":"Where do I begin? It was magic. But prove the magic isn''t dead."},{"speaker":"npc","text":"That was something special. The Haccienda lives on through people like you.","quest_complete":true}]', '{"cash":3000,"fame":200,"xp":150,"fans":150,"skill_boost":{"skill":"performance","amount":2},"npc_relationship":{"affinity":20,"trust":15,"respect":20}}', 20, 0),
+((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Electric Basement') ORDER BY created_at LIMIT 1), 'rebel_dj', 'Open Deck Night', 'DJ Rebel is hosting an open deck night. Step up for one track.', 'repeatable', null, null, '{"min_fame":0}', '[{"speaker":"npc","text":"Open deck night! Step up, play one track, show us what you''ve got."},{"speaker":"player_choice","options":[{"label":"Let me on those decks!","next":2,"affinity_change":2},{"label":"Maybe next time","next":3,"affinity_change":0}]},{"speaker":"npc","text":"Get up there! One track, make it count."},{"speaker":"npc","text":"No worries, next time."},{"speaker":"npc","text":"Solid track choice. Getting better every time.","quest_complete":true}]', '{"cash":50,"xp":25,"fame":10,"npc_relationship":{"affinity":3}}', 5, 24);

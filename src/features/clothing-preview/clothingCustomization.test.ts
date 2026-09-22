@@ -58,7 +58,7 @@ describe('clothing customisation', () => {
 
   it('applies editable colours to material and matching detail layers only', () => {
     const applied = applyClothingZoneColours(item(), { main: '#abcdef', patch: '#00ff00', trim: '#123456' });
-    expect((applied.material_config as any).primaryColor).toBe('#abcdef');
+    expect((applied.material_config as Record<string, unknown> | null)?.primaryColor).toBe('#abcdef');
     expect(applied.detail_layers?.find(detail => detail.id === 'detail-main')?.color).toBe('#abcdef');
     expect(applied.detail_layers?.find(detail => detail.id === 'detail-patch')?.color).toBe('#00ff00');
     expect(applied.detail_layers?.find(detail => detail.id === 'detail-trim')?.color).toBe('#eeeeee');
@@ -77,7 +77,7 @@ describe('clothing customisation', () => {
       variant_matrix: [
         { id: 'midnight', name: 'Midnight', primaryColor: '#101010' },
         { name: 'Stage Red', primaryColor: '#990000' },
-        { name: '', label: 'Label Only', primaryColor: '#005599' } as any,
+        { name: '', label: 'Label Only', primaryColor: '#005599' },
       ],
     });
     const variants = clothingPreviewVariants(clothing);

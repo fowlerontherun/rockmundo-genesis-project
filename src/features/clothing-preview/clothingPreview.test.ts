@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { ClothingItem } from '@/hooks/useSkinStore';
 import { buildClothingPreviewAppearance, clothingPreviewVariants, previewFidelity } from './clothingPreview';
 
-const baseItem: any = {
+const baseItem: ClothingItem = {
   id: 'item-1',
   name: 'Leather Jacket',
   description: null,

@@ -24,6 +24,18 @@ interface EquippedClothingRow {
   customization_config?: Record<string, string> | null;
 }
 
+type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing';
+type StageRpcArgs = { p_profile_ids: string[] };
+type StageRpcResult = { data: unknown; error: { message?: string } | null };
+
+async function callStageRpc(name: StageRpcName, args: StageRpcArgs): Promise<StageRpcResult> {
+  const rpc = supabase.rpc as unknown as (
+    functionName: StageRpcName,
+    functionArgs: StageRpcArgs,
+  ) => Promise<StageRpcResult>;
+  return rpc(name, args);
+}
+
 function resolveTattooRows(rows: TattooVisualInput[]) {
   const result: Record<string, ResolvedTattooVisual[]> = {};
   for (const row of rows) {
@@ -37,7 +49,7 @@ function resolveTattooRows(rows: TattooVisualInput[]) {
 async function resolveRichClothingRows(rows: EquippedClothingRow[]) {
   const itemIds = [...new Set(rows.map(row => row.item_id).filter(Boolean))];
   if (!itemIds.length) return {} as Record<string, ResolvedEquippedClothing[]>;
-  const { data, error } = await (supabase.from('avatar_clothing_items') as any).select('*').in('id', itemIds);
+  const { data, error } = await supabase.from('avatar_clothing_items').select('*').in('id', itemIds);
   if (error) throw error;
   const items = (data || []) as ClothingItem[];
   const itemById = new Map(items.map(item => [item.id, item]));
@@ -89,7 +101,7 @@ export function usePlayerStageTattoos(profileId: string | null | undefined) {
     enabled: !!profileId,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_stage_tattoo_visuals' as any, { p_profile_ids: [profileId] } as any);
+      const { data, error } = await callStageRpc('get_stage_tattoo_visuals', { p_profile_ids: [profileId!] });
       if (error) throw error;
       return resolveTattooRows((data || []) as TattooVisualInput[])[profileId!] ?? [];
     },
@@ -102,7 +114,7 @@ export function useEquippedRichClothing(profileId: string | null | undefined) {
     enabled: !!profileId,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_equipped_stage_clothing' as any, { p_profile_ids: [profileId] } as any);
+      const { data, error } = await callStageRpc('get_equipped_stage_clothing', { p_profile_ids: [profileId!] });
       if (error) throw error;
       const map = await resolveRichClothingRows((data || []) as EquippedClothingRow[]);
       return map[profileId!] ?? [];
@@ -121,8 +133,8 @@ export function useGigPlayerModels(profileIds: string[]) {
     queryFn: async (): Promise<GigPlayerModelsData> => {
       const [appearanceResult, clothingResult, tattooResult] = await Promise.all([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
-        supabase.rpc('get_equipped_stage_clothing' as any, { p_profile_ids: ids } as any),
-        supabase.rpc('get_stage_tattoo_visuals' as any, { p_profile_ids: ids } as any),
+        callStageRpc('get_equipped_stage_clothing', { p_profile_ids: ids }),
+        callStageRpc('get_stage_tattoo_visuals', { p_profile_ids: ids }),
       ]);
 
       if (appearanceResult.error) throw appearanceResult.error;

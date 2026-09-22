@@ -70,6 +70,33 @@ VALUES
 ('Brisbane', 'Australia', 'Oceania', -27.4698, 153.0251, 2500000, 64, 48, 'Rock', 35, true, false, 'Australia/Brisbane');
 
 -- Ensure key cities exist (New York, Los Angeles, Berlin, Tokyo may already exist)
+-- Manchester was already present in the live world when this migration was
+-- originally deployed, but the clean migration history did not seed it. Give
+-- fresh databases the same canonical city and ID before later nightclub,
+-- tattoo, mentor and radio seeds reference it.
+INSERT INTO cities (
+  id, name, country, region, latitude, longitude, population, music_scene,
+  cost_of_living, dominant_genre, venues, is_coastal, has_train_network, timezone
+)
+SELECT
+  '8bb73a75-bd57-49b3-9a03-a68f37a19f56'::uuid,
+  'Manchester',
+  'United Kingdom',
+  'Europe',
+  53.4808,
+  -2.2426,
+  3000000,
+  85,
+  70,
+  'Rock',
+  20,
+  false,
+  true,
+  'Europe/London'
+WHERE NOT EXISTS (
+  SELECT 1 FROM cities WHERE lower(name) = 'manchester'
+);
+
 INSERT INTO cities (name, country, region, latitude, longitude, population, music_scene, cost_of_living, dominant_genre, venues, is_coastal, has_train_network, timezone)
 SELECT 'New York', 'USA', 'North America', 40.7128, -74.0060, 8340000, 92, 80, 'Hip Hop', 200, true, true, 'America/New_York'
 WHERE NOT EXISTS (SELECT 1 FROM cities WHERE name = 'New York');

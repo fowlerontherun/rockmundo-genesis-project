@@ -12,7 +12,7 @@ const validColour = (value: unknown): value is string => typeof value === 'strin
 
 export function playerEditableClothingZones(item: ClothingItem) {
   const zones = Array.isArray(item.customization_zones) ? item.customization_zones : [];
-  return zones.filter(zone => zone && (zone.playerEditable === true || (zone as any).player_editable === true));
+  return zones.filter(zone => zone && (zone.playerEditable === true || zone.player_editable === true));
 }
 
 export function sanitizeClothingZoneColours(item: ClothingItem, colours: unknown): ClothingZoneColours {
@@ -67,7 +67,7 @@ export function applyClothingZoneColours(item: ClothingItem, colours: ClothingZo
     return override ? { ...detail, color: override } : detail;
   });
 
-  const material = { ...(item.material_config || {}) } as Record<string, any>;
+  const material = { ...(item.material_config || {}) } as Record<string, unknown>;
   const editableZones = playerEditableClothingZones(item);
   const primaryZone = editableZones.find(zone => zone.id === 'main') || editableZones[0];
   const secondaryZone = editableZones.find(zone => zone.id === 'trim') || editableZones[1];
