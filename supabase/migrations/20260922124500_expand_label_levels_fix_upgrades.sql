@@ -103,6 +103,16 @@ end $$;
 revoke all on function public.upgrade_label_marketing(uuid) from public,anon;
 grant execute on function public.upgrade_label_marketing(uuid) to authenticated;
 
+-- Collapse any historical duplicate upgrade rows before enforcing one row per type.
+delete from public.label_upgrades a
+using public.label_upgrades b
+where a.label_id=b.label_id
+  and a.upgrade_type=b.upgrade_type
+  and (a.upgrade_level<b.upgrade_level or (a.upgrade_level=b.upgrade_level and a.id>b.id));
+
+create unique index if not exists uq_label_upgrades_label_type
+  on public.label_upgrades(label_id,upgrade_type);
+
 -- Generic label upgrades: atomic, server-authoritative, and ten levels deep.
 create or replace function public.purchase_label_upgrade(p_label_id uuid,p_upgrade_type text)
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
