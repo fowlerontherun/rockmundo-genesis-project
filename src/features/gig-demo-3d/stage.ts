@@ -179,7 +179,7 @@ export function buildGuitar(bass = false) {
   outline.bezierCurveTo(0.3, -0.42, 0.43, -0.17, 0.28, 0.01); outline.bezierCurveTo(0.16, 0.12, 0.22, 0.24, 0.12, 0.32); outline.bezierCurveTo(0.04, 0.23, 0.07, 0.27, 0, 0.36);
   const body = new T.Mesh(new T.ExtrudeGeometry(outline, { depth: 0.095, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.025, bevelThickness: 0.025, curveSegments: 16 }), new T.MeshPhysicalMaterial({ color: bass ? '#602322' : '#d09a45', metalness: 0.23, roughness: 0.24, clearcoat: 0.7 }));
   body.name = 'instrument-body'; root.add(body);
-  const guard = new T.Mesh(new T.CircleGeometry(0.175, 24), matte(bass ? '#101113' : '#e0d2aa', 0.28)); guard.scale.set(0.75, 1.4, 1); guard.position.set(0.075, -0.005, 0.125); root.add(guard);
+  const guard = new T.Mesh(new T.CircleGeometry(0.175, 24), matte(bass ? '#101113' : '#e0d2aa', 0.28)); guard.name = 'instrument-pickguard'; guard.scale.set(0.75, 1.4, 1); guard.position.set(0.075, -0.005, 0.125); root.add(guard);
   const length = bass ? 0.81 : 0.68;
   box(root, [0.09, length, 0.045], [0, 0.3 + length / 2, 0.09], neck);
   box(root, [0.082, length, 0.012], [0, 0.3 + length / 2, 0.12], matte('#30271f', 0.45)).name = 'fretboard';
