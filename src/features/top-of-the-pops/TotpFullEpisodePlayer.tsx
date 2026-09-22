@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { getTotpEpisodePresenterAudio, getTotpEpisodePresenterFragments, type TotpBroadcastReplay, type TotpPresenterFragmentBundle } from "./api";
+import { getTotpBandNameAudioCatalog } from "./bandNameAudioApi";
+import { supabase } from "@/integrations/supabase/client";
 import type { TotpChartRundown } from "./chartRundownApi";
 import { totpRundownHasRealPositions } from "./chartRundown";
 import { TotpArchivePlayer } from "./TotpArchivePlayer";
@@ -24,7 +26,7 @@ import {
 import { canonicalise, manifestChecksum } from "./episodeManifest";
 import { TOTP_CHART_PRESENTER_LINE } from "./presenterDialogue";
 import { matchTotpReusablePresenterPhrase } from "./presenterPhraseAudio";
-import { totpMediaPublicUrl } from "./totpMedia";
+import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import type { TotpPresenterRecordedClip } from "./presenterVoice";
 
 export interface TotpFullEpisodePlayerProps {
@@ -57,6 +59,51 @@ export function buildTotpActPresenterSequence(
 }
 
 
+async function loadTotpDemoPresenterFragments(presenterKey: string): Promise<TotpPresenterFragmentBundle> {
+  const [bands, phraseListing] = await Promise.all([
+    getTotpBandNameAudioCatalog(),
+    supabase.storage.from(TOTP_MEDIA_BUCKET).list(TOTP_MEDIA_PATHS.reusablePhraseFolder(presenterKey), { limit: 500 }),
+  ]);
+  if (phraseListing.error) throw new Error(phraseListing.error.message);
+
+  const newest = new Map<string, { storage_path: string; uploaded_at: string | null; stamp: number }>();
+  for (const item of phraseListing.data ?? []) {
+    const match = /^([a-z0-9-]+)-([a-f0-9]{8,64})\.(mp3|wav|ogg|webm|m4a|mp4)$/i.exec(item.name);
+    if (!match) continue;
+    const id = match[1];
+    const uploadedAt = item.created_at ?? item.updated_at ?? null;
+    const stamp = Date.parse(uploadedAt ?? "") || 0;
+    const current = newest.get(id);
+    if (!current || stamp >= current.stamp) {
+      newest.set(id, {
+        storage_path: `${TOTP_MEDIA_PATHS.reusablePhraseFolder(presenterKey)}/${item.name}`,
+        uploaded_at: uploadedAt,
+        stamp,
+      });
+    }
+  }
+
+  return {
+    presenter_key: presenterKey,
+    phrases: Object.fromEntries([...newest.entries()].map(([id, asset]) => [id, {
+      storage_path: asset.storage_path,
+      uploaded_at: asset.uploaded_at,
+    }])),
+    bands: Object.fromEntries(
+      bands
+        .filter((band) => band.status === "recorded" && !!band.audio_url)
+        .map((band) => [band.band_id, {
+          band_id: band.band_id,
+          band_name: band.band_name,
+          audio_url: band.audio_url!,
+          duration_ms: Number(band.duration_ms ?? 0),
+          sha256: band.sha256 ?? "",
+          version: Number(band.version ?? 1),
+        }]),
+    ),
+  };
+}
+
 export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFullEpisodePlayerProps) {
   const ordered = useMemo(() => orderTotpEpisodeReplays(replays), [replays]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -84,7 +131,14 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
     enabled: episodeIdIsPersisted,
     staleTime: 60_000,
   });
-  const presenterFragments = presenterFragmentsQuery.data ?? null;
+  const demoPresenterKey = current?.payload.presenterKey ?? current?.presenter_key ?? "alex_rayne";
+  const demoPresenterFragmentsQuery = useQuery({
+    queryKey: ["totp", "presenter-fragments-library", demoPresenterKey],
+    queryFn: () => loadTotpDemoPresenterFragments(demoPresenterKey),
+    enabled: !episodeIdIsPersisted && !!current,
+    staleTime: 60_000,
+  });
+  const presenterFragments = presenterFragmentsQuery.data ?? demoPresenterFragmentsQuery.data ?? null;
 
   const exactPresenterUrl = (key: string, script: string): string | null => {
     if (!script.trim()) return null;
