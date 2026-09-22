@@ -1,7 +1,10 @@
 -- Authoritative label management/finance summaries so UI totals do not depend on client row limits.
 
 create or replace function public.get_label_management_stats(p_label_id uuid)
-returns jsonb language sql stable security definer set search_path=public,pg_temp as $$
+returns jsonb language plpgsql stable security definer set search_path=public,pg_temp as $
+declare v_result jsonb;
+begin
+  if not public._can_manage_label(p_label_id) then raise exception 'Not authorised'; end if;
   with active_contracts as (
     select id,band_id from public.artist_label_contracts
     where label_id=p_label_id and status='active'
@@ -39,7 +42,10 @@ returns jsonb language sql stable security definer set search_path=public,pg_tem
     'staff_count',(select count(*) from public.label_staff where label_id=p_label_id)
   )
   from release_stats rs cross join finance_stats fs
-$$;
+  into v_result;
+  return v_result;
+end
+$;
 
 revoke all on function public.get_label_management_stats(uuid) from public,anon;
 grant execute on function public.get_label_management_stats(uuid) to authenticated,service_role;
