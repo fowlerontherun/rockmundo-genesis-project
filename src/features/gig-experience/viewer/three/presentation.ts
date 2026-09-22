@@ -76,9 +76,9 @@ type TotpPerformerFootprint = { u: number; v: number };
 
 function totpPerformerFootprint(role: PresentationRole, instrument?: string | null): TotpPerformerFootprint {
   const text = (instrument ?? '').toLowerCase();
-  if (role === 'drums' || /drums?|drummer|drum kit/.test(text)) return { u: .17, v: .23 };
-  if (role === 'keyboard' || role === 'piano' || role === 'electronic') return { u: .16, v: .17 };
-  if (role === 'guitar' || role === 'lead_guitar' || role === 'rhythm_guitar' || role === 'bass') return { u: .14, v: .14 };
+  if (role === 'drums' || /drums?|drummer|drum kit/.test(text)) return { u: .22, v: .29 };
+  if (role === 'keyboard' || role === 'piano' || role === 'electronic') return { u: .20, v: .22 };
+  if (role === 'guitar' || role === 'lead_guitar' || role === 'rhythm_guitar' || role === 'bass') return { u: .155, v: .155 };
   if (role === 'percussion') return { u: .14, v: .16 };
   if (role === 'vocalist') return { u: .115, v: .12 };
   return { u: .12, v: .125 };
@@ -271,7 +271,7 @@ export function totpLiveMarks(
   // Resolve residual occupied-volume overlaps caused by live choreography.
   // Fixed rigs (drums/keys) and singer-at-stand-mic positions stay anchored;
   // movable players absorb the separation instead.
-  for (let pass = 0; pass < 4; pass += 1) {
+  for (let pass = 0; pass < 7; pass += 1) {
     for (let i = 0; i < states.length; i += 1) {
       for (let j = i + 1; j < states.length; j += 1) {
         const a = states[i], b = states[j];
