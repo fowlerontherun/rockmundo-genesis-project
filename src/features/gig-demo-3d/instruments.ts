@@ -559,7 +559,12 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d'): Instrumen
             // Use a lighter, thicker shaft and keep the whole stick in front of
             // the palm. Dark thin sticks were effectively disappearing against the
             // kit, hands and stage lighting in the live viewer.
-            rod(stick, [0, .018, .03], [0, -.22, .39], spec.family === 'kit' ? .013 : .008, stickWood);
+            const shaft = rod(stick, [0, .018, .03], [0, -.22, .39], spec.family === 'kit' ? .013 : .008, stickWood);
+            shaft.name = 'playing-stick-shaft';
+            if (spec.family === 'kit') {
+                const tip = ellipsoid(stick, [.017, .024, .03], [0, -.22, .39], stickWood);
+                tip.name = 'playing-stick-tip';
+            }
             stick.userData.shaftAxis = new T.Vector3(0, -.238, .36).normalize();
             stick.userData.gripOffset = new T.Vector3(0, .018, .03);
             if (spec.family === 'mallets')
