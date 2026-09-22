@@ -4,8 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   useMajorEventPerformance, 
-  useMajorEventSongPerformances,
-  useStartMajorEventPerformance 
+  useMajorEventSongPerformances
 } from "@/hooks/useMajorEvents";
 import { MajorEventOutcomeReport } from "@/components/major-events/MajorEventOutcomeReport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,8 +39,7 @@ export default function PerformMajorEvent() {
   
   const { data: performance, isLoading, refetch } = useMajorEventPerformance(performanceId || null);
   const { data: songPerformances = [], refetch: refetchSongs } = useMajorEventSongPerformances(performanceId || null);
-  const startPerformance = useStartMajorEventPerformance();
-  
+
   const [commentary, setCommentary] = useState<LiveCommentary[]>([]);
   const [currentSongProgress, setCurrentSongProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -174,11 +172,6 @@ export default function PerformMajorEvent() {
     };
   }, [performance?.status, performance?.current_song_position, currentSong?.id]);
 
-  const handleStart = () => {
-    if (!performanceId) return;
-    startPerformance.mutate(performanceId);
-  };
-
   if (isLoading) {
     return (
       <FMPageScaffold title="Major Event" icon={Trophy} backTo="/major-events">
@@ -257,24 +250,15 @@ export default function PerformMajorEvent() {
             </div>
 
             <Alert>
-              <Sparkles className="h-4 w-4" />
+              <Clock className="h-4 w-4" />
               <AlertDescription>
-                This is the big stage! Your performance will earn you cash, fame, and fans based on how well you do.
+                Your place and setlist are locked in. This performance will run automatically at the scheduled event time; there is nothing to start manually. Once it finishes, the full result and rewards will be sent to your inbox.
               </AlertDescription>
             </Alert>
 
-            <Button 
-              size="lg" 
-              className="w-full" 
-              onClick={handleStart}
-              disabled={startPerformance.isPending}
-            >
-              {startPerformance.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : (
-                <Play className="h-5 w-5 mr-2" />
-              )}
-              Start Performance
+            <Button size="lg" className="w-full" disabled>
+              <Clock className="h-5 w-5 mr-2" />
+              Scheduled — automatic performance
             </Button>
           </CardContent>
         </Card>
