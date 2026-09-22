@@ -48,8 +48,21 @@ export function createClothingPreviewManifest(itemId: string, frameUrls: Partial
 }
 
 export function usablePreviewFrames(manifest: unknown): ClothingPreviewFrame[] {
-  if (!manifest || typeof manifest !== 'object' || (manifest as any).stale === true) return [];
-  const frames = (manifest as any).frames;
-  if (!Array.isArray(frames)) return [];
-  return frames.filter(frame => frame && typeof frame.url === 'string' && /^https?:\/\//.test(frame.url));
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) return [];
+  const record = manifest as Record<string, unknown>;
+  if (record.stale === true || !Array.isArray(record.frames)) return [];
+
+  const validKeys = new Set<string>(CLOTHING_TURNTABLE_VIEWS.map(view => view.key));
+  return record.frames.filter((frame): frame is ClothingPreviewFrame => {
+    if (!frame || typeof frame !== 'object' || Array.isArray(frame)) return false;
+    const candidate = frame as Record<string, unknown>;
+    return (
+      typeof candidate.key === 'string' &&
+      validKeys.has(candidate.key) &&
+      typeof candidate.yaw === 'number' &&
+      Number.isFinite(candidate.yaw) &&
+      typeof candidate.url === 'string' &&
+      /^https?:\/\//.test(candidate.url)
+    );
+  });
 }
