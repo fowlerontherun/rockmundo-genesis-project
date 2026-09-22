@@ -342,21 +342,9 @@ export function useAcceptMajorEvent() {
 }
 
 export function useStartMajorEventPerformance() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (performanceId: string) => {
-      const { data, error } = await (supabase as any)
-        .from('major_event_performances')
-        .update({ status: 'in_progress', started_at: new Date().toISOString(), current_song_position: 1 })
-        .eq('id', performanceId)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['major-event-performances'] });
-      queryClient.invalidateQueries({ queryKey: ['major-event-performance'] });
+    mutationFn: async (_performanceId: string) => {
+      throw new Error('Major-event performances run automatically at their scheduled time.');
     },
   });
 }

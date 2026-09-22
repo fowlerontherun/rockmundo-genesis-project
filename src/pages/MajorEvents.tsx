@@ -157,7 +157,9 @@ export default function MajorEvents() {
 
                     <div className="flex min-w-[180px] flex-col items-stretch gap-2 lg:items-end">
                       {performance ? (
-                        performance.status === 'completed' ? <Badge className="bg-green-600"><CheckCircle className="mr-1 h-3 w-3" /> Completed</Badge> : <Button onClick={() => navigate(`/major-events/perform/${performance.id}`)} className="gap-2"><Play className="h-4 w-4" /> {performance.status === 'in_progress' ? 'Watch Live' : 'Perform'}</Button>
+                        performance.status === 'completed'
+                          ? <Button variant="outline" onClick={() => navigate(`/major-events/perform/${performance.id}`)} className="gap-2"><CheckCircle className="h-4 w-4" /> View result</Button>
+                          : <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" /> Scheduled — performs automatically</Badge>
                       ) : blocked ? (
                         <TooltipProvider><Tooltip><TooltipTrigger><Badge variant="secondary" className="gap-1"><Ban className="h-3 w-3" /> Blocked</Badge></TooltipTrigger><TooltipContent className="max-w-[260px]">{blocked}</TooltipContent></Tooltip></TooltipProvider>
                       ) : accessAccepted ? (
@@ -180,7 +182,7 @@ export default function MajorEvents() {
         </TabsContent>
 
         <TabsContent value="my-performances" className="space-y-4">
-          {performances.length === 0 ? <Card><CardContent className="py-8 text-center"><Trophy className="mx-auto mb-2 h-8 w-8 text-muted-foreground" /><p className="text-muted-foreground">No confirmed major event performances yet.</p></CardContent></Card> : performances.map((performance) => <Card key={performance.id}><CardContent className="flex flex-wrap items-center justify-between gap-4 py-5"><div><h3 className="font-semibold">{performance.instance?.event?.name || 'Major Event'}</h3><p className="text-sm text-muted-foreground">Year {performance.instance?.year} · Status: {performance.status.replace('_', ' ')}</p>{performance.status === 'completed' && <p className="mt-1 text-sm">Rating {performance.overall_rating ?? 0} · ${performance.cash_earned.toLocaleString()} · +{performance.fame_gained.toLocaleString()} fame · +{performance.fans_gained.toLocaleString()} fans</p>}</div>{performance.status !== 'completed' && <Button onClick={() => navigate(`/major-events/perform/${performance.id}`)}><Play className="mr-2 h-4 w-4" /> Open performance</Button>}</CardContent></Card>)}
+          {performances.length === 0 ? <Card><CardContent className="py-8 text-center"><Trophy className="mx-auto mb-2 h-8 w-8 text-muted-foreground" /><p className="text-muted-foreground">No confirmed major event performances yet.</p></CardContent></Card> : performances.map((performance) => <Card key={performance.id}><CardContent className="flex flex-wrap items-center justify-between gap-4 py-5"><div><h3 className="font-semibold">{performance.instance?.event?.name || 'Major Event'}</h3><p className="text-sm text-muted-foreground">Year {performance.instance?.year} · Status: {performance.status.replace('_', ' ')}</p>{performance.status === 'completed' ? <p className="mt-1 text-sm">Rating {performance.overall_rating ?? 0} · ${performance.cash_earned.toLocaleString()} · +{performance.fame_gained.toLocaleString()} fame · +{performance.fans_gained.toLocaleString()} fans</p> : <p className="mt-1 text-sm text-muted-foreground">This performance runs automatically at the scheduled time. The result will be sent to your inbox.</p>}</div>{performance.status === 'completed' && <Button variant="outline" onClick={() => navigate(`/major-events/perform/${performance.id}`)}><CheckCircle className="mr-2 h-4 w-4" /> View result</Button>}</CardContent></Card>)}
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
