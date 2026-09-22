@@ -3,19 +3,23 @@ import { BarChart3, ChevronRight, Minus, Radio, TrendingDown, TrendingUp } from 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 import type { TotpChartRundown, TotpChartRundownEntry } from "./chartRundownApi";
+import type { TotpPresenterFragmentBundle } from "./api";
 import { buildTotpChartRundownPages } from "./chartRundown";
 import { resolveTotpPresenter } from "./presenters";
-import { playTotpPresenterLine } from "./presenterVoice";
-import { TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
+import { playTotpPresenterLine, type TotpPresenterRecordedClip } from "./presenterVoice";
+import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
+import { totpChartPositionScript } from "./chartPositionAudio";
 
-const PAGE_DURATION_MS = 5_000;
+const PAGE_VISUAL_MINIMUM_MS = 6_000;
 
 export interface TotpChartRundownSequenceProps {
   rundown: TotpChartRundown;
   autoPlay?: boolean;
   presenterKey?: string | null;
   recordedUrl?: string | null;
+  presenterFragments?: TotpPresenterFragmentBundle | null;
   onEnded?: () => void;
 }
 
@@ -35,15 +39,55 @@ function formatActivity(value: number) {
   return new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
 }
 
-export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterKey = "alex_rayne", recordedUrl = null, onEnded }: TotpChartRundownSequenceProps) {
+export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterKey = "alex_rayne", recordedUrl = null, presenterFragments = null, onEnded }: TotpChartRundownSequenceProps) {
   const pages = useMemo(() => buildTotpChartRundownPages(rundown), [rundown]);
   const [pageIndex, setPageIndex] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [pageVisualComplete, setPageVisualComplete] = useState(false);
-  const [introNarrationComplete, setIntroNarrationComplete] = useState(false);
+  const [pageNarrationComplete, setPageNarrationComplete] = useState(false);
+  const [chartPositionPaths, setChartPositionPaths] = useState<Map<number, string>>(new Map());
   const advanceGuardRef = useRef(false);
   const page = pages[pageIndex] ?? null;
   const presenter = resolveTotpPresenter(presenterKey);
+  const pageDurationMs = Math.max(PAGE_VISUAL_MINIMUM_MS, (page?.entries.length ?? 0) * 2_300 + (pageIndex === 0 ? 3_500 : 0));
+
+  useEffect(() => {
+    let active = true;
+    const folder = TOTP_MEDIA_PATHS.chartPositionFolder(presenter.key);
+    void supabase.storage.from(TOTP_MEDIA_BUCKET).list(folder, { limit: 200 }).then(({ data, error }) => {
+      if (!active || error) return;
+      const newest = new Map<number, { path: string; stamp: number }>();
+      for (const item of data ?? []) {
+        const match = /^(\d+)-([a-f0-9]{8,64})\.(mp3|wav|ogg|webm|m4a|mp4)$/i.exec(item.name);
+        if (!match) continue;
+        const rank = Number(match[1]);
+        if (!Number.isInteger(rank) || rank < 1 || rank > 40) continue;
+        const stamp = Date.parse(item.created_at ?? item.updated_at ?? "") || 0;
+        const current = newest.get(rank);
+        if (!current || stamp >= current.stamp) newest.set(rank, { path: `${folder}/${item.name}`, stamp });
+      }
+      setChartPositionPaths(new Map([...newest.entries()].map(([rank, value]) => [rank, value.path])));
+    });
+    return () => { active = false; };
+  }, [presenter.key]);
+
+  const pageRecordedSequence = useMemo<TotpPresenterRecordedClip[]>(() => {
+    if (!page) return [];
+    const clips: TotpPresenterRecordedClip[] = [];
+    if (pageIndex === 0) {
+      clips.push({
+        url: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart")),
+        gapAfterMs: 180,
+      });
+    }
+    for (const entry of page.entries) {
+      const positionPath = chartPositionPaths.get(entry.rank);
+      if (positionPath) clips.push({ url: totpMediaPublicUrl(positionPath), gapAfterMs: 85 });
+      const bandAsset = entry.band_id ? presenterFragments?.bands?.[entry.band_id] : null;
+      if (bandAsset?.audio_url) clips.push({ url: bandAsset.audio_url, gapAfterMs: 180 });
+    }
+    return clips;
+  }, [chartPositionPaths, page, pageIndex, presenter.key, presenterFragments, recordedUrl]);
 
   const advance = useCallback(() => {
     if (advanceGuardRef.current) return;
@@ -60,33 +104,37 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
   useEffect(() => {
     advanceGuardRef.current = false;
     setPageVisualComplete(false);
-    if (pageIndex !== 0) setIntroNarrationComplete(true);
+    setPageNarrationComplete(false);
   }, [pageIndex]);
 
   useEffect(() => {
-    if (!autoPlay || !page || pageIndex !== 0 || typeof window === "undefined") return;
-    setIntroNarrationComplete(false);
+    if (!autoPlay || !page || typeof window === "undefined") return;
+    setPageNarrationComplete(false);
+    const fallback = [
+      pageIndex === 0 ? "And now, let's take a look at this week's UK charts." : "",
+      ...page.entries.map((entry) => `${totpChartPositionScript(entry.rank)} ${entry.artist_name}.`),
+    ].filter(Boolean).join(" ");
     const line = playTotpPresenterLine({
-      text: "And now, let's take a look at this week's UK charts.",
+      text: fallback,
       presenterKey: presenter.key,
-      recordedUrl: recordedUrl || totpMediaPublicUrl(TOTP_MEDIA_PATHS.presenter(presenter.key, "chart")),
+      recordedSequence: pageRecordedSequence.length ? pageRecordedSequence : null,
       volume: 0.95,
-      onEnded: () => setIntroNarrationComplete(true),
+      onEnded: () => setPageNarrationComplete(true),
     });
-    const safety = window.setTimeout(() => setIntroNarrationComplete(true), 20_000);
+    const safety = window.setTimeout(() => setPageNarrationComplete(true), 45_000);
     return () => {
       window.clearTimeout(safety);
       line.stop();
     };
-  }, [autoPlay, page, pageIndex, presenter.key, recordedUrl]);
+  }, [autoPlay, page, pageIndex, pageRecordedSequence, presenter.key]);
 
   useEffect(() => {
     if (!autoPlay || !page) return;
     const startedAt = performance.now();
     const timer = window.setInterval(() => {
-      const nextElapsed = Math.min(PAGE_DURATION_MS, performance.now() - startedAt);
+      const nextElapsed = Math.min(pageDurationMs, performance.now() - startedAt);
       setElapsedMs(nextElapsed);
-      if (nextElapsed >= PAGE_DURATION_MS) {
+      if (nextElapsed >= pageDurationMs) {
         window.clearInterval(timer);
         setPageVisualComplete(true);
       }
@@ -96,9 +144,9 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
 
   useEffect(() => {
     if (!autoPlay || !pageVisualComplete) return;
-    if (pageIndex === 0 && !introNarrationComplete) return;
+    if (!pageNarrationComplete) return;
     queueMicrotask(advance);
-  }, [advance, autoPlay, introNarrationComplete, pageIndex, pageVisualComplete]);
+  }, [advance, autoPlay, pageNarrationComplete, pageVisualComplete]);
 
   if (!page) {
     return (
@@ -112,7 +160,7 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
   }
 
   const isFinalPage = pageIndex === pages.length - 1;
-  const pageProgress = Math.min(100, elapsedMs / PAGE_DURATION_MS * 100);
+  const pageProgress = Math.min(100, elapsedMs / pageDurationMs * 100);
   const snapshotLabel = rundown.chart_snapshot_date
     ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Europe/London" }).format(new Date(`${rundown.chart_snapshot_date}T12:00:00Z`))
     : "locked episode snapshot";
