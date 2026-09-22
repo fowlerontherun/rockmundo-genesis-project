@@ -518,41 +518,14 @@ Deno.serve(async (req) => {
         const [labelId] = labelKey.split(":");
         const labelAmount = Math.round(labelRevenue.labelRevenue);
         const recoupAmount = Math.round(labelRevenue.recoupmentApplied);
-        const { data: currentLabel } = await supabase
-          .from("labels")
-          .select("balance")
-          .eq("id", labelId)
-          .single();
-
-        if (currentLabel) {
-          await supabase
-            .from("labels")
-            .update({ balance: (currentLabel.balance || 0) + labelAmount })
-            .eq("id", labelId);
-        }
-
-        await supabase.from("label_financial_transactions").insert({
-          label_id: labelId,
-          transaction_type: "revenue",
-          amount: labelAmount,
-          description: `Daily streaming royalty share${recoupAmount > 0 ? ` (includes $${recoupAmount} advance recoupment)` : ''}`,
-          related_contract_id: labelRevenue.contractId,
+        const { error: labelCreditError } = await supabase.rpc("credit_label_revenue_atomic", {
+          p_label_id: labelId,
+          p_amount: labelAmount,
+          p_description: `Daily streaming royalty share${recoupAmount > 0 ? ` (includes ${recoupAmount} advance recoupment)` : ''}`,
+          p_contract_id: labelRevenue.contractId,
+          p_recoup_amount: recoupAmount,
         });
-
-        if (recoupAmount > 0) {
-          const { data: currentContract } = await supabase
-            .from("artist_label_contracts")
-            .select("recouped_amount")
-            .eq("id", labelRevenue.contractId)
-            .single();
-
-          if (currentContract) {
-            await supabase
-              .from("artist_label_contracts")
-              .update({ recouped_amount: (currentContract.recouped_amount || 0) + recoupAmount })
-              .eq("id", labelRevenue.contractId);
-          }
-        }
+        if (labelCreditError) throw labelCreditError;
 
         labelsCredited++;
         console.log(`Credited label ${labelId}: $${labelAmount} streaming (recouped: $${recoupAmount})`);
