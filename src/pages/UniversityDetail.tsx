@@ -27,6 +27,7 @@ import {
   getUniversityQualityBand,
   normalizeUniversityRating,
 } from "@/lib/universityBalance";
+import { getEquivalentSkillLevel } from "@/lib/skillSlugAliases";
 
 const formatClassWindowLabel = (startHour: number, endHour: number) => {
   const sanitizedStart = Math.min(Math.max(Math.floor(startHour), 0), 23);
@@ -65,13 +66,21 @@ interface Course {
 }
 
 interface SkillProgress {
+  skill_slug: string;
   current_level: number;
 }
 
 interface SkillDefinition {
+  id: string;
   slug: string;
   display_name: string | null;
   tier_caps: Record<string, unknown> | null;
+}
+
+interface SkillParentLink {
+  skill_id: string;
+  parent_skill_id: string;
+  unlock_threshold: number | null;
 }
 
 interface CoursePrerequisite {
@@ -212,9 +221,25 @@ export default function UniversityDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("skill_definitions")
-        .select("slug, display_name, tier_caps");
+        .select("id, slug, display_name, tier_caps");
       if (error) throw error;
       return (data || []) as SkillDefinition[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const {
+    data: skillParentLinks,
+    isLoading: skillParentLinksLoading,
+    isError: skillParentLinksError,
+  } = useQuery({
+    queryKey: ["skill_parent_links", "university_prerequisites"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("skill_parent_links")
+        .select("skill_id, parent_skill_id, unlock_threshold");
+      if (error) throw error;
+      return (data || []) as SkillParentLink[];
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -274,10 +299,15 @@ export default function UniversityDetail() {
       const course = courses?.find((c) => c.id === courseId);
       if (!course) throw new Error("Course not found");
 
-      if (skillDefinitionsLoading) {
+      if (skillDefinitionsLoading || skillParentLinksLoading) {
         throw new Error("Course requirements are still loading. Please try again in a moment.");
       }
-      if (skillDefinitionsError || !skillDefinitions) {
+      if (
+        skillDefinitionsError ||
+        skillParentLinksError ||
+        !skillDefinitions ||
+        !skillParentLinks
+      ) {
         throw new Error("Course requirements could not be loaded. Please refresh and try again.");
       }
 
@@ -397,9 +427,8 @@ export default function UniversityDetail() {
     );
   };
 
-  const getSkillLevel = (skillSlug: string) => {
-    return skillProgress?.find((sp) => sp.skill_slug === skillSlug)?.current_level || 0;
-  };
+  const getSkillLevel = (skillSlug: string) =>
+    getEquivalentSkillLevel(skillProgress as SkillProgress[] | undefined, skillSlug);
 
   const getSkillDefinition = (skillSlug: string) =>
     skillDefinitions?.find((definition) => definition.slug === skillSlug);
@@ -415,8 +444,39 @@ export default function UniversityDetail() {
       : 20;
   };
 
-  const getCoursePrerequisite = (course: Course): CoursePrerequisite | null => {
+  const getCoursePrerequisites = (course: Course): CoursePrerequisite[] => {
     const definition = getSkillDefinition(course.skill_slug);
+
+    // The database relationship is authoritative. In particular, genre tier
+    // links currently unlock at level 10; using the previous skill's max level
+    // here would incorrectly turn that into level 20.
+    if (definition && skillParentLinks) {
+      const linked = skillParentLinks
+        .filter((link) => link.skill_id === definition.id)
+        .map((link) => {
+          const prerequisiteDefinition = skillDefinitions?.find(
+            (candidate) => candidate.id === link.parent_skill_id,
+          );
+          if (!prerequisiteDefinition) return null;
+
+          const linkedThreshold = Number(link.unlock_threshold);
+          const requiredLevel = Number.isFinite(linkedThreshold) && linkedThreshold > 0
+            ? Math.max(1, Math.floor(linkedThreshold))
+            : getSkillMaxLevel(prerequisiteDefinition.slug);
+
+          return {
+            slug: prerequisiteDefinition.slug,
+            requiredLevel,
+            label: prerequisiteDefinition.display_name || formatSkillSlug(prerequisiteDefinition.slug),
+            currentLevel: getSkillLevel(prerequisiteDefinition.slug),
+          } satisfies CoursePrerequisite;
+        })
+        .filter((prerequisite): prerequisite is CoursePrerequisite => prerequisite !== null);
+
+      if (linked.length > 0) return linked;
+    }
+
+    // Backwards-compatible fallback for definitions that pre-date parent links.
     const tierCaps = definition?.tier_caps || {};
     const explicitPrerequisite =
       typeof tierCaps.requires === "string" && tierCaps.requires.trim()
@@ -451,7 +511,7 @@ export default function UniversityDetail() {
     }
 
     if (!prerequisiteSlug || !getSkillDefinition(prerequisiteSlug)) {
-      return null;
+      return [];
     }
 
     if (requiredLevel === null) {
@@ -459,16 +519,30 @@ export default function UniversityDetail() {
     }
 
     const prerequisiteDefinition = getSkillDefinition(prerequisiteSlug);
-    return {
+    return [{
       slug: prerequisiteSlug,
       requiredLevel,
       label: prerequisiteDefinition?.display_name || formatSkillSlug(prerequisiteSlug),
       currentLevel: getSkillLevel(prerequisiteSlug),
-    };
+    }];
+  };
+
+  const getCoursePrerequisite = (course: Course): CoursePrerequisite | null => {
+    const prerequisites = getCoursePrerequisites(course);
+    return prerequisites.find(
+      (prerequisite) => prerequisite.currentLevel < prerequisite.requiredLevel,
+    ) || prerequisites[0] || null;
   };
 
   const canEnroll = (course: Course) => {
-    if (skillDefinitionsLoading || skillDefinitionsError || !skillDefinitions) {
+    if (
+      skillDefinitionsLoading ||
+      skillParentLinksLoading ||
+      skillDefinitionsError ||
+      skillParentLinksError ||
+      !skillDefinitions ||
+      !skillParentLinks
+    ) {
       return false;
     }
 
@@ -486,10 +560,15 @@ export default function UniversityDetail() {
   };
 
   const getEnrollmentMessage = (course: Course) => {
-    if (skillDefinitionsLoading) {
+    if (skillDefinitionsLoading || skillParentLinksLoading) {
       return "Checking course requirements...";
     }
-    if (skillDefinitionsError || !skillDefinitions) {
+    if (
+      skillDefinitionsError ||
+      skillParentLinksError ||
+      !skillDefinitions ||
+      !skillParentLinks
+    ) {
       return "Unable to load course requirements. Refresh the page to try again.";
     }
 
