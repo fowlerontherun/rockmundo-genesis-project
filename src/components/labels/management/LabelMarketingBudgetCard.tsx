@@ -53,6 +53,29 @@ export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketi
   const dailyCost = Math.round((displayBudget / 7) * 100) / 100;
   const monthlyCost = Math.round(dailyCost * 30 * 100) / 100;
 
+  const { data: upgradeState } = useQuery({
+    queryKey: ["label-upgrade-state", labelId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("get_label_upgrade_state", {
+        p_label_id: labelId,
+      });
+      if (error) throw error;
+      return data as any;
+    },
+    refetchInterval: 60_000,
+  });
+
+  const marketingCooldownUntil = upgradeState?.marketing?.cooldown_until
+    ? new Date(upgradeState.marketing.cooldown_until)
+    : null;
+  const marketingCooldownMs = marketingCooldownUntil
+    ? Math.max(0, marketingCooldownUntil.getTime() - Date.now())
+    : 0;
+  const marketingOnCooldown = marketingCooldownMs > 0;
+  const marketingCooldownLabel = marketingOnCooldown
+    ? `${Math.floor(marketingCooldownMs / 86_400_000)}d ${Math.ceil((marketingCooldownMs % 86_400_000) / 3_600_000)}h`
+    : null;
+
   const { data: signedCount = 0 } = useQuery({
     queryKey: ["label-signed-count", labelId],
     queryFn: async () => {
@@ -94,6 +117,9 @@ export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketi
       queryClient.invalidateQueries({ queryKey: ["label-marketing-budget", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-management"] });
       queryClient.invalidateQueries({ queryKey: ["label-finances"] });
+      queryClient.invalidateQueries({ queryKey: ["label-finance-summary", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-overview-stats", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-upgrade-state", labelId] });
       toast.success(`Marketing department upgraded to level ${result?.new_level ?? marketingLevel + 1}`);
       setBudget(null);
     },
@@ -193,14 +219,25 @@ export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketi
               </div>
               <Badge variant="outline">${levelConfig.upgradeCost.toLocaleString()}</Badge>
             </div>
+            {marketingOnCooldown && (
+              <p className="text-xs text-muted-foreground">
+                Upgrades have a 3-day cooldown. Next marketing upgrade available {marketingCooldownUntil?.toLocaleString()}.
+              </p>
+            )}
             <Button
               variant="secondary"
               className="w-full gap-2"
               onClick={() => upgradeMutation.mutate()}
-              disabled={upgradeMutation.isPending || !canAffordUpgrade}
+              disabled={upgradeMutation.isPending || !canAffordUpgrade || marketingOnCooldown}
             >
               <ArrowUpCircle className="h-4 w-4" />
-              {upgradeMutation.isPending ? "Upgrading..." : canAffordUpgrade ? "Upgrade Marketing Department" : "Insufficient Label Funds"}
+              {upgradeMutation.isPending
+                ? "Upgrading..."
+                : marketingOnCooldown
+                  ? `Available in ${marketingCooldownLabel}`
+                  : canAffordUpgrade
+                    ? "Upgrade Marketing Department"
+                    : "Insufficient Label Funds"}
             </Button>
           </div>
         ) : (
