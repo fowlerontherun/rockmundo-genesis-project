@@ -109,7 +109,7 @@ export function TotpProgrammeContinuity({
       className="mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-xl border border-fuchsia-500/25 bg-slate-950 text-white shadow-2xl"
       data-totp-programme-continuity={kind}
     >
-      <div className="relative h-[calc(100%-3.25rem)] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_32%)] p-5 md:p-8">
+      <div className="relative h-[calc(100%_-_3.25rem)] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.18),transparent_32%)] p-5 md:p-8">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-500 via-amber-300 to-cyan-400" />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
