@@ -18,6 +18,10 @@ async function expectNoSeriousOrCritical(page: import('@playwright/test').Page) 
 test('admin demo and viewer states have no serious or critical axe findings', async ({ page }) => {
   test.setTimeout(90_000);
   await prepareLightweightViewer(page);
+  const previewScroll = page.getByLabel('Scrollable device preview', { exact: true });
+  await expect(previewScroll).toHaveAttribute('tabindex', '0');
+  await previewScroll.focus();
+  await expect(previewScroll).toBeFocused();
   await expectNoSeriousOrCritical(page);
   await page.getByRole('button', { name: 'Launch viewer' }).click();
   await expect(page.getByRole('heading', { name: 'Gig Replay' })).toBeVisible();
