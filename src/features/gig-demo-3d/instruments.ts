@@ -70,7 +70,13 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d', skin?: Res
     root.userData.instrumentId = id;
     const chrome = metal('#adb8c0'), brass = metal('#c9a151', .26), black = matte('#171b22', .44), ivory = matte('#e8debf', .51);
     const wood = new T.MeshPhysicalMaterial({ color: colour, roughness: .34, clearcoat: .72, clearcoatRoughness: .22 });
-    const darkWood = matte('#482d22', .55), head = matte('#d8cfb7', .74), stickWood = matte('#c9975e', .42);
+    const darkWood = matte('#482d22', .55), head = matte('#d8cfb7', .74);
+    const stickWood = new T.MeshStandardMaterial({
+        color: '#dfb47a',
+        roughness: .4,
+        emissive: '#3a2415',
+        emissiveIntensity: .08,
+    });
     const tools: T.Object3D[] = [];
     const moving: ((t: number, energy: number) => void)[] = [];
     let l: Point = [.23, 1.1, .4], r: Point = [-.23, 1.1, .4], seated = false;
