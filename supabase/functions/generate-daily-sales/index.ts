@@ -177,6 +177,9 @@ serve(async (req) => {
         label_marketing_power,
         pr_reach_power,
         pr_reach_updated_at,
+        label_marketing_focus,
+        label_marketing_regions,
+        label_marketing_saturation,
         manufacturing_complete_at,
         home_country,
         label_contract_id,
@@ -433,6 +436,14 @@ serve(async (req) => {
           const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
           const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
           const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
+          const marketingFocus = String((release as any).label_marketing_focus || "balanced");
+          const saturation = Math.max(0, Math.min(100, Number((release as any).label_marketing_saturation || 0)));
+          const saturationEfficiency = 1 - (saturation / 100) * 0.35;
+          const focusSalesMultiplier = marketingFocus === "retail" ? 1.25
+            : marketingFocus === "radio" ? 1.08
+            : marketingFocus === "social" ? 1.10
+            : marketingFocus === "playlist" ? 0.92
+            : 1.0;
 
           const territoriesToProcess = hasTerritories 
             ? releaseTerritories 
@@ -455,7 +466,7 @@ serve(async (req) => {
             const salesSentMod = parseFloat((0.7 + salesSentT * 0.6).toFixed(2)); // 0.7x–1.3x
 
             const calculatedSales = Math.floor(
-              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * paidLabelMarketingMultiplier * publicRelationsMultiplier * salesSentMod
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * paidLabelMarketingMultiplier * saturationEfficiency * focusSalesMultiplier * publicRelationsMultiplier * salesSentMod
               / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1)
             );
 
