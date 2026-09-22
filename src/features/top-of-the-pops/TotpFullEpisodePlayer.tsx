@@ -28,6 +28,7 @@ import { TOTP_CHART_PRESENTER_LINE } from "./presenterDialogue";
 import { matchTotpReusablePresenterPhrase } from "./presenterPhraseAudio";
 import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import type { TotpPresenterRecordedClip } from "./presenterVoice";
+import { primeTotpAudioPlayback } from "./useTotpAudienceAudio";
 
 export interface TotpFullEpisodePlayerProps {
   replays: TotpBroadcastReplay[];
@@ -300,6 +301,7 @@ export function TotpFullEpisodePlayer({ replays, chartRundown = null }: TotpFull
   };
 
   const startFullEpisode = () => {
+    primeTotpAudioPlayback();
     setCurrentIndex(0);
     setShowIntro(false);
     setShowChartRundown(false);
