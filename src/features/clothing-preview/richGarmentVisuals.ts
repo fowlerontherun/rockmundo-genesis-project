@@ -79,12 +79,12 @@ function materialDefaults(material: string) {
 }
 
 export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: ClothingPreviewVariant): RichGarmentVisualSpec {
-  const garment = (item.garment_config || {}) as Record<string, any>;
-  const materialConfig = (item.material_config || {}) as Record<string, any>;
-  const patternConfig = (item.pattern_config || {}) as Record<string, any>;
-  const fit = (item.fit_config || {}) as Record<string, any>;
-  const wear = (item.wear_config || {}) as Record<string, any>;
-  const render = (item.render_config || {}) as Record<string, any>;
+  const garment = (item.garment_config || {}) as Record<string, unknown>;
+  const materialConfig = (item.material_config || {}) as Record<string, unknown>;
+  const patternConfig = (item.pattern_config || {}) as Record<string, unknown>;
+  const fit = (item.fit_config || {}) as Record<string, unknown>;
+  const wear = (item.wear_config || {}) as Record<string, unknown>;
+  const render = (item.render_config || {}) as Record<string, unknown>;
   const slot = richGarmentSlot(item);
   const material = String(variant?.material || materialConfig.fabric || 'cotton');
   const defaults = materialDefaults(material);
@@ -111,7 +111,7 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
   return {
     slot,
     primaryColor: hex(variant?.color || materialConfig.primaryColor || materialConfig.primary_color, '#20232b'),
-    secondaryColor: hex((variant as any)?.secondaryColor || materialConfig.secondaryColor || materialConfig.secondary_color, '#d8ad49'),
+    secondaryColor: hex(variant?.secondaryColor || materialConfig.secondaryColor || materialConfig.secondary_color, '#d8ad49'),
     pattern: String(variant?.pattern || patternConfig.type || 'solid'),
     material,
     roughness: Math.max(.02, percent01(materialConfig.roughness, defaults.roughness)),
