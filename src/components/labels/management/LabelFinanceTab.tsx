@@ -97,6 +97,22 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     },
   });
 
+  const { data: financeSummary } = useQuery({
+    queryKey: ["label-finance-summary", labelId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("get_label_management_stats", {
+        p_label_id: labelId,
+      });
+      if (error) throw error;
+      return {
+        totalRevenue: Number(data?.label_revenue ?? 0),
+        totalMarketing: Number(data?.marketing_spend ?? 0),
+        totalExpenses: Number(data?.total_expenses ?? 0),
+        netPL: Number(data?.net_profit ?? 0),
+      };
+    },
+  });
+
   // Per-artist revenue breakdown: contracts + band names
   const { data: artistBreakdown = [] } = useQuery({
     queryKey: ["label-artist-breakdown", labelId],
@@ -179,20 +195,13 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     return merged.slice(0, 100);
   }, [depositTransactions, financialTransactions]);
 
-  // Summary stats from financial transactions
-  const summaryStats = useMemo(() => {
-    let totalRevenue = 0;
-    let totalMarketing = 0;
-    let totalExpenses = 0;
-    financialTransactions.forEach((tx: any) => {
-      if (tx.transaction_type === "revenue") totalRevenue += tx.amount;
-      else if (tx.transaction_type === "marketing") totalMarketing += Math.abs(tx.amount);
-      else if (["expense", "overhead", "advance", "royalty_payment"].includes(tx.transaction_type)) {
-        totalExpenses += Math.abs(tx.amount);
-      }
-    });
-    return { totalRevenue, totalMarketing, totalExpenses, netPL: totalRevenue - totalMarketing - totalExpenses };
-  }, [financialTransactions]);
+  // Headline finance totals come from the database aggregate, not the 200-row activity feed.
+  const summaryStats = financeSummary ?? {
+    totalRevenue: 0,
+    totalMarketing: 0,
+    totalExpenses: 0,
+    netPL: 0,
+  };
 
   const personalBalance = Number(profileData?.cash ?? 0);
   const balance = labelBalance;
@@ -217,6 +226,8 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
     queryClient.invalidateQueries({ queryKey: ["user-balance", profileId] });
     queryClient.invalidateQueries({ queryKey: ["label-transactions", labelId] });
     queryClient.invalidateQueries({ queryKey: ["label-financials", labelId] });
+    queryClient.invalidateQueries({ queryKey: ["label-finance-summary", labelId] });
+    queryClient.invalidateQueries({ queryKey: ["label-overview-stats", labelId] });
     queryClient.invalidateQueries({ queryKey: ["label-artist-breakdown", labelId] });
     queryClient.invalidateQueries({ queryKey: ["my-labels"] });
   };
