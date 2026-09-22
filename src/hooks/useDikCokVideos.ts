@@ -126,23 +126,20 @@ export const useDikCokVideos = (bandId?: string) => {
         })
         .eq("id", insertData.band_id);
 
-      // If linked to a release, boost its hype_score
       if (insertData.release_id) {
         try {
-          const { data: rel } = await supabase
-            .from("releases")
-            .select("hype_score")
-            .eq("id", insertData.release_id)
-            .single();
-          if (rel) {
-            const hypeBoost = Math.floor(10 + Math.random() * 16); // +10 to +25
-            await supabase
-              .from("releases")
-              .update({ hype_score: ((rel as any).hype_score || 0) + hypeBoost } as any)
-              .eq("id", insertData.release_id);
-          }
+          const hypeBoost = Math.floor(10 + Math.random() * 16);
+          const reachBoost = Math.max(4, Math.min(24, Math.round(4 + Math.log10(Math.max(outcome.views, 10)) * 4)));
+          const { error: reachError } = await (supabase as any).rpc("apply_release_pr_reach", {
+            p_release_id: insertData.release_id,
+            p_channel: "dikcok",
+            p_reach_delta: reachBoost,
+            p_hype_delta: hypeBoost,
+            p_source_ref: data.id,
+          });
+          if (reachError) throw reachError;
         } catch (e) {
-          console.warn("DikCok release hype boost failed:", e);
+          console.warn("DikCok release PR reach boost failed:", e);
         }
       }
 
