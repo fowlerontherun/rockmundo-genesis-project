@@ -6,6 +6,7 @@ import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from '
 import { defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
 import { HeadStyling } from './HeadStyling';
 import { AccessoryStyling } from './AccessoryStyling';
+import { OwnedAccessories } from './OwnedAccessories';
 import { StarterWardrobe } from './StarterWardrobe';
 import './player-model.css';
 
@@ -56,7 +57,8 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <label className="player-model-editor__range">Build <output>{Math.round(draft.body.build * 100)}%</output><input type="range" min="0.85" max="1.15" step="0.01" value={draft.body.build} onChange={event => setBody({ build: Number(event.target.value) })} /></label>
           <div className="player-model-editor__skin"><span>Skin tone</span><div role="group" aria-label="Skin tones">{SKIN_COLORS.map((color, index) => <button key={color} type="button" aria-label={`Skin tone ${index + 1}`} aria-pressed={draft.body.skin === color} style={{ backgroundColor: color }} onClick={() => setBody({ skin: color })} />)}<input type="color" aria-label="Custom skin tone" value={draft.body.skin} onChange={event => setBody({ skin: event.target.value })} /></div></div>
           <HeadStyling appearance={draft} onChange={change} />
-          <AccessoryStyling appearance={draft} onChange={change} />
+          <AccessoryStyling appearance={draft} onChange={change} richClothing={richClothing} />
+          <OwnedAccessories profileId={profileId} />
         </fieldset>
         <fieldset disabled={model.save.isPending}>
           <legend>02 <span>Wardrobe</span></legend>
