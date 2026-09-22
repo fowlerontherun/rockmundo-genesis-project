@@ -41,6 +41,9 @@ describe('canonical replay to 3D stage', () => {
     const earlier = frame(song.scheduledOffsetMs + 100); const later = frame(song.scheduledOffsetMs + 1000);
     expect(earlier.section).not.toBe('idle');
     expect(later.section).not.toBe('idle');
+    expect(earlier.sectionProgress).toBeGreaterThanOrEqual(0);
+    expect(earlier.sectionProgress).toBeLessThanOrEqual(1);
+    expect(later.sectionProgress).toBeGreaterThanOrEqual(earlier.sectionProgress);
     expect(earlier.performers[3].position).toEqual(later.performers[3].position);
     expect(earlier.performers[1].position).not.toEqual(later.performers[1].position);
     frame(replay.durationMs); expect(frame(song.scheduledOffsetMs + 100)).toEqual(earlier);
