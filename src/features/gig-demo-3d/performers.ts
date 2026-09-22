@@ -857,7 +857,7 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
     const cymbals: T.Object3D[] = [];
     try {
         const actors = lineup ? lineup.map(p => {
-            const assembled = assemblePlayerModel(library, p.appearance, visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []));
+            const assembled = assemblePlayerModel(library, p.appearance, visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []), p.richClothing);
             const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing);
             disposeModel(assembled);
             actor.id = p.id;
