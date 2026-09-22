@@ -174,6 +174,7 @@ serve(async (req) => {
         created_at,
         release_type,
         hype_score,
+        label_marketing_power,
         manufacturing_complete_at,
         home_country,
         label_contract_id,
@@ -358,7 +359,11 @@ serve(async (req) => {
         const fameMultiplier = 1 + Math.min(Math.pow(logFame, 2) * 0.5, 30);
         const logPop = Math.log10(Math.max(artistPopularity, 1));
         const popularityMultiplier = 1 + Math.min(Math.pow(logPop, 2) * 0.3, 20);
-        const qualityMultiplier = 0.5 + (avgQuality / 100) * 1.0;
+        const quality100 = Math.max(0, Math.min(100, avgQuality > 100 ? avgQuality / 10 : avgQuality));
+        const qualityDiscoveryMultiplier = 0.7 + (quality100 / 100) * 0.9;
+        const breakoutT = Math.max(0, (quality100 - 75) / 25);
+        const organicBreakoutMultiplier = 1 + Math.pow(breakoutT, 2) * 1.5;
+        const qualityMultiplier = qualityDiscoveryMultiplier * organicBreakoutMultiplier;
         const totalFans = countryFansMap.size > 0 
           ? Array.from(countryFansMap.values()).reduce((sum, cf) => sum + (cf.total_fans || 0), 0)
           : 0;
@@ -413,8 +418,12 @@ serve(async (req) => {
             : gameDaysSinceRelease <= 360 ? 0.2
             : 0.1;
 
-          // Contract marketing support remains a separate deal benefit.
+          // Contract support is a deal benefit; funded label marketing is today's
+          // paid reach. Popular artists already convert this reach through fame/fans,
+          // while the independent quality multiplier allows exceptional songs to break out.
           const labelMarketingBonus = contract ? 1 + (contract.marketing_support / 10000) : 1.0;
+          const labelMarketingPower = Math.max(0, Math.min(100, Number((release as any).label_marketing_power || 0)));
+          const paidLabelMarketingMultiplier = 1 + Math.pow(labelMarketingPower / 100, 1.2) * 2.5;
 
           const territoriesToProcess = hasTerritories 
             ? releaseTerritories 
@@ -437,7 +446,7 @@ serve(async (req) => {
             const salesSentMod = parseFloat((0.7 + salesSentT * 0.6).toFixed(2)); // 0.7x–1.3x
 
             const calculatedSales = Math.floor(
-              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * salesSentMod
+              baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier * fansMultiplier * marketMultiplier * territoryRegionalMult * hypeMultiplier * ageDecay * christmasMultiplier * labelMarketingBonus * paidLabelMarketingMultiplier * salesSentMod
               / (hasTerritories ? Math.max(1, releaseTerritories.length * 0.5) : 1)
             );
 
