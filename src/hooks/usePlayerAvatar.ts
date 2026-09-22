@@ -280,7 +280,7 @@ export const usePlayerAvatar = () => {
   const { data: purchasedClothing = [] } = useQuery({
     queryKey: ['player-purchased-clothing', profileId],
     queryFn: async () => {
-      if (!profileId) return [];
+      if (!profileId || !profile?.user_id) return [];
       const { data, error } = await supabase
         .from('player_clothing_purchases' as never)
         .select('*, item:player_clothing_items!inner(*)')
@@ -289,7 +289,7 @@ export const usePlayerAvatar = () => {
       if (error) throw error;
       return (data ?? []) as Array<{ item: Record<string, unknown> }>;
     },
-    enabled: !!profileId,
+    enabled: !!profileId && !!profile?.user_id,
   });
 
   const saveConfigMutation = useMutation({
