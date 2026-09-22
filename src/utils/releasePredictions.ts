@@ -54,12 +54,19 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
     'mega-label': 2.0,
   };
   const labelMultiplier = labelTier ? (labelTierMultipliers[labelTier] || 1.0) : 1.0;
-  const marketingBoost = 1 + Math.min(labelMarketingSpend / 10000, 0.5); // up to +50% from marketing
+  // Rich campaigns can create major reach, but diminishing returns stop spend from
+  // becoming a guaranteed hit. Authoritative daily engines also apply song-quality
+  // breakout independently so great songs are not gated by marketing.
+  const marketingSpendPower = Math.max(0, Math.min(1, Math.sqrt(labelMarketingSpend / 500_000)));
+  const marketingBoost = 1 + marketingSpendPower * 2.5; // up to 3.5x
 
   // Base multipliers (conservative)
   const fameMultiplier = Math.max(1, artistFame / 100);
   const popularityMultiplier = Math.max(1, artistPopularity / 100);
-  const qualityMultiplier = Math.max(0.5, songQuality / 100);
+  const quality100 = Math.max(0, Math.min(100, songQuality > 100 ? songQuality / 10 : songQuality));
+  const qualityDiscoveryMultiplier = 0.7 + (quality100 / 100) * 0.9;
+  const breakoutT = Math.max(0, (quality100 - 75) / 25);
+  const qualityMultiplier = qualityDiscoveryMultiplier * (1 + Math.pow(breakoutT, 2) * 1.5);
   const chemistryMultiplier = Math.max(0.8, (bandChemistry || 50) / 100);
 
   // Release type multipliers
