@@ -1,0 +1,83 @@
+// @vitest-environment node
+import { readFileSync } from 'node:fs';
+import * as T from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { assemblePlayerModel, disposeModel, type ModelLibrary } from './model';
+import { appearanceSchema, defaultAppearance, resolveAppearance, HAT_STYLES, GLASSES_STYLES, modelFile, STYLES, HAIR_STYLES } from './appearance';
+import { Musician } from '@/features/gig-demo-3d/performers';
+import type { ClothingItem } from '@/hooks/useSkinStore';
+
+const library: ModelLibrary = new Map();
+beforeAll(async () => {
+  for (const frame of ['masculine', 'feminine'] as const) for (const style of STYLES) {
+    const file = modelFile(frame, style), data = readFileSync(`public/gig-demo-3d/${file}`);
+    library.set(file, (await new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer, '')).scene);
+  }
+});
+afterAll(() => library.forEach(disposeModel));
+
+it.each(['masculine', 'feminine'] as const)('keeps detailed accessories attached during %s performances, including a translated stage', frame => {
+  for (const hat of HAT_STYLES) for (const glasses of GLASSES_STYLES) {
+    const a = defaultAppearance(); a.body.frame = frame;
+    a.accessories = { ...a.accessories!, hat, glasses, lensTint: 'tinted', lensColor: '#bd3548' };
+    const model = assemblePlayerModel(library, a);
+    const actor = new Musician(model, 'guitar', [3, .9, -2], 0, undefined, a);
+    disposeModel(model);
+    const anchor = actor.root.getObjectByName('avatar-accessories');
+    if (hat !== 'none' || glasses !== 'none') {
+      expect(anchor?.parent).toBe(actor.bones.get('Head'));
+      actor.update(.2, .8, false); actor.root.updateMatrixWorld(true);
+      const local = anchor!.matrix.clone();
+      actor.update(3, .8, false); actor.root.updateMatrixWorld(true);
+      expect(anchor!.matrix.equals(local)).toBe(true);
+      const box = new T.Box3().setFromObject(anchor!);
+      expect(box.getCenter(new T.Vector3()).distanceTo(actor.bones.get('Head')!.getWorldPosition(new T.Vector3()))).toBeLessThan(.6);
+    }
+    if (glasses !== 'none') {
+      const lens = actor.root.getObjectByName('glasses-lens-1') as T.Mesh;
+      expect(lens).toBeTruthy();
+      expect((lens.material as T.MeshPhysicalMaterial).color.getHexString()).toBe('bd3548');
+      expect(actor.root.getObjectByName('glasses-arm-1')).toBeTruthy();
+      expect(actor.root.getObjectByName('glasses-ear-hook-1')).toBeTruthy();
+    }
+    disposeModel(actor.root); if (actor.equipment) disposeModel(actor.equipment);
+  }
+});
+
+it('restores the saved hairstyle after removing a hat and never alters source geometry', () => {
+  for (const frame of ['masculine', 'feminine'] as const) for (const hairStyle of HAIR_STYLES) {
+    const a = defaultAppearance(); a.body.frame = frame; a.head.hairStyle = hairStyle;
+    const original = assemblePlayerModel(library, a);
+    a.accessories!.hat = 'baseball_cap';
+    const hatted = assemblePlayerModel(library, a);
+    a.accessories!.hat = 'none';
+    const restored = assemblePlayerModel(library, a);
+    const originalHair = original.getObjectByName('avatar-hairstyle') as T.Mesh | undefined;
+    const restoredHair = restored.getObjectByName('avatar-hairstyle') as T.Mesh | undefined;
+    if (originalHair) expect(Array.from(restoredHair!.geometry.attributes.position.array)).toEqual(Array.from(originalHair.geometry.attributes.position.array));
+    expect(a.head.hairStyle).toBe(hairStyle);
+    [original, hatted, restored].forEach(disposeModel);
+  }
+});
+
+it('lets owned accessories replace starters without changing the saved choice or earrings', () => {
+  const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'beanie', glasses: 'round', earrings: 'hoops' };
+  const clothing = ['headwear', 'eyewear'].map(slot => ({ item: { id: slot, category: slot, wearable_slot: slot } as ClothingItem }));
+  const assembled = assemblePlayerModel(library, a, [], clothing);
+  expect(assembled.getObjectByName('avatar-hat-beanie')).toBeUndefined();
+  expect(assembled.getObjectByName('avatar-glasses-round')).toBeUndefined();
+  expect(assembled.getObjectByName('avatar-earrings-hoops')).toBeTruthy();
+  expect(a.accessories.hat).toBe('beanie');
+  const actor = new Musician(assembled, 'other', [0, 0, 0], 0, undefined, a, undefined, undefined, clothing);
+  expect(actor.bones.get('Head')!.children.some(child => child instanceof T.Mesh)).toBe(true);
+  disposeModel(assembled); disposeModel(actor.root);
+});
+
+it('round-trips lens controls and rejects unknown paid IDs and invalid lens settings', () => {
+  const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'cowboy', glasses: 'aviator', lensTint: 'clear', lensColor: '#338b8d' };
+  expect(resolveAppearance(JSON.parse(JSON.stringify(a)))).toEqual(a);
+  for (const extra of [{ lensTint: 'opaque' }, { lensColor: 'red' }, { hat: 'paid-hat-id' }, { lensColor: null }, { unexpected: true }]) {
+    expect(appearanceSchema.safeParse({ ...a, accessories: { ...a.accessories, ...extra } }).success).toBe(false);
+  }
+});

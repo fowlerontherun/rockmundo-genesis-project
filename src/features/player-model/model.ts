@@ -6,6 +6,7 @@ import { headModelStyle, equipmentItem, equipmentStyle, modelFile, type PlayerAp
 
 import { addHair, isScalpHair } from './hair';
 import { addAccessories } from './accessories';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
@@ -25,7 +26,7 @@ export async function loadModelLibrary(files: string[], manager?: T.LoadingManag
 
 /** Each part keeps its donor inverse binds and local transform. This matters for
  * the small body offset in the original casual/suit assets. Rig families never mix. */
-export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerAppearance, tattoos: ResolvedTattooVisual[] = []): T.Object3D {
+export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerAppearance, tattoos: ResolvedTattooVisual[] = [], richClothing: ResolvedEquippedClothing[] = []): T.Object3D {
   const source = (style: Parameters<typeof modelFile>[1]) => {
     const model = library.get(modelFile(appearance.body.frame, style));
     if (!model) throw new Error('The selected character model could not load.');
@@ -123,7 +124,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
   if (headBone) {
     addFaceDetails(result, appearance, headBone);
     addHair(result, appearance, headBone);
-    addAccessories(result, appearance, headBone);
+    addAccessories(result, appearance, headBone, richClothing);
   }
   addTattoos(result, tattoos, bones);
   result.updateMatrixWorld(true);

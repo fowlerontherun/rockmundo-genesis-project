@@ -50,7 +50,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
         api.current = {
           replace: (value, nextRole, nextInstrument, nextRichClothing = [], nextTattoos = []) => {
             if (actor) disposeModel(actor.root); if (equipment) disposeModel(equipment);
-            const assembled = assemblePlayerModel(library!, value, visibleTattoosForClothing(nextTattoos, nextRichClothing));
+            const assembled = assemblePlayerModel(library!, value, visibleTattoosForClothing(nextTattoos, nextRichClothing), nextRichClothing);
             actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument, undefined, nextRichClothing); disposeModel(assembled); scene.add(actor.root);
             equipment = actor.equipment; if(equipment)scene.add(equipment);
           },
