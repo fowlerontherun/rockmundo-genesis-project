@@ -143,6 +143,66 @@ serve(async (req) => {
         });
     }
 
+    // Mark the scheduled activity complete and send the player a persistent inbox result.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('id', performance.user_id)
+      .maybeSingle();
+
+    await supabase
+      .from('player_scheduled_activities')
+      .update({ status: 'completed', completed_at: new Date().toISOString() })
+      .eq('activity_type', 'major_event')
+      .eq('band_id', performance.band_id)
+      .contains('metadata', { major_event_instance_id: performance.instance_id });
+
+    if (profile?.user_id) {
+      const eventName = event?.name || 'Major Event';
+      const ratingLabel =
+        overallRating >= 85 ? 'an outstanding' :
+        overallRating >= 70 ? 'a great' :
+        overallRating >= 55 ? 'a solid' :
+        overallRating >= 40 ? 'a mixed' : 'a difficult';
+
+      const { data: existingInbox } = await supabase
+        .from('player_inbox')
+        .select('id')
+        .eq('user_id', profile.user_id)
+        .eq('related_entity_type', 'major_event_performance')
+        .eq('related_entity_id', performanceId)
+        .maybeSingle();
+
+      if (!existingInbox) {
+        await supabase.from('player_inbox').insert({
+          user_id: profile.user_id,
+          category: 'gig_result',
+          priority: overallRating >= 85 ? 'high' : 'normal',
+          title: `🏟️ ${eventName} — performance result`,
+          message:
+            `Your band has automatically performed at ${eventName} and delivered ${ratingLabel} show.\n\n` +
+            `Overall rating: ${overallRating.toFixed(1)}%\n` +
+            `Cash earned: ${cashEarned.toLocaleString()}\n` +
+            `Fame gained: +${fameGained.toLocaleString()}\n` +
+            `Fans gained: +${fansGained.toLocaleString()}\n\n` +
+            `Open Major Events to see the full song-by-song result.`,
+          metadata: {
+            major_event_performance_id: performanceId,
+            major_event_instance_id: performance.instance_id,
+            event_name: eventName,
+            overall_rating: overallRating,
+            cash_earned: cashEarned,
+            fame_gained: fameGained,
+            fans_gained: fansGained,
+          },
+          action_type: 'navigate',
+          action_data: { path: `/major-events/perform/${performanceId}` },
+          related_entity_type: 'major_event_performance',
+          related_entity_id: performanceId,
+        });
+      }
+    }
+
     console.log('Major event completed:', { overallRating, cashEarned, fameGained, fansGained });
 
     return new Response(
