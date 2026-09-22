@@ -1,5 +1,8 @@
 import * as T from 'three';
 import type { PlayerAppearance } from './appearance';
+import { buildHeadAccessory, tuckHair } from './accessoryGeometry';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 
 function headSkinBounds(root: T.Object3D) {
   const bounds = new T.Box3();
@@ -33,105 +36,35 @@ function mesh(geometry: T.BufferGeometry, mat: T.Material, name: string) {
   return result;
 }
 
-export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, head: T.Bone) {
+export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, head: T.Bone, richClothing: ResolvedEquippedClothing[] = []) {
   const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) };
-  if (accessories.hat === 'none' && accessories.glasses === 'none' && accessories.earrings === 'none') return;
+  const storeSlots = new Set(richClothing.map(row => richGarmentSlot(row.item)));
+  if (storeSlots.has('headwear')) accessories.hat = 'none';
+  if (storeSlots.has('eyewear')) accessories.glasses = 'none';
+  if (accessories.hat === 'none' && accessories.glasses === 'none' && accessories.earrings === 'none' && !storeSlots.has('headwear')) return;
 
   const bounds = headSkinBounds(root);
   if (bounds.isEmpty()) return;
   const center = bounds.getCenter(new T.Vector3()), size = bounds.getSize(new T.Vector3());
-  const rx = size.x * .5, rz = size.z * .5, top = bounds.max.y, front = bounds.max.z;
+  const rx = size.x * .5, rz = size.z * .5;
   const anchor = new T.Group();
   anchor.name = 'avatar-accessories';
 
+  if (accessories.hat !== 'none' || storeSlots.has('headwear')) tuckHair(root, bounds, appearance.body.frame);
   if (accessories.hat !== 'none') {
-    const hat = new T.Group();
+    const style = accessories.hat === 'baseball_cap' ? 'cap' : accessories.hat === 'bucket_hat' ? 'bucket' : accessories.hat;
+    const hat = buildHeadAccessory({ slot: 'headwear', style, color: accessories.hatColor }, bounds);
     hat.name = `avatar-hat-${accessories.hat}`;
-    const hatMaterial = material(accessories.hatColor, 'AccessoryHat');
-    if (accessories.hat === 'beanie') {
-      const crown = mesh(new T.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI * .62), hatMaterial, 'beanie-crown');
-      crown.scale.set(rx * 1.08, size.y * .22, rz * 1.08);
-      crown.position.set(center.x, top - size.y * .15, center.z - rz * .02);
-      hat.add(crown);
-      const band = mesh(new T.CylinderGeometry(rx * 1.04, rx * 1.04, size.y * .08, 28, 1, true), hatMaterial.clone(), 'beanie-band');
-      band.scale.z = rz / rx;
-      band.position.set(center.x, top - size.y * .23, center.z);
-      hat.add(band);
-    } else if (accessories.hat === 'baseball_cap') {
-      const crown = mesh(new T.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI * .58), hatMaterial, 'cap-crown');
-      crown.scale.set(rx * 1.06, size.y * .18, rz * 1.08);
-      crown.position.set(center.x, top - size.y * .13, center.z);
-      hat.add(crown);
-      const brim = mesh(new T.BoxGeometry(rx * 1.4, size.y * .025, rz * .72), hatMaterial.clone(), 'cap-brim');
-      brim.position.set(center.x, top - size.y * .20, front + rz * .28);
-      brim.rotation.x = -.08;
-      hat.add(brim);
-    } else if (accessories.hat === 'bucket_hat') {
-      const crown = mesh(new T.CylinderGeometry(rx * .82, rx * 1.0, size.y * .24, 28, 1, false), hatMaterial, 'bucket-crown');
-      crown.scale.z = rz / rx;
-      crown.position.set(center.x, top - size.y * .10, center.z);
-      hat.add(crown);
-      const brim = mesh(new T.CylinderGeometry(rx * 1.32, rx * 1.12, size.y * .045, 32, 1, false), hatMaterial.clone(), 'bucket-brim');
-      brim.scale.z = rz / rx;
-      brim.position.set(center.x, top - size.y * .23, center.z);
-      hat.add(brim);
-    } else {
-      const crown = mesh(new T.CylinderGeometry(rx * .68, rx * .82, size.y * .21, 28, 1, false), hatMaterial, 'fedora-crown');
-      crown.scale.z = rz / rx;
-      crown.position.set(center.x, top - size.y * .08, center.z);
-      hat.add(crown);
-      const brim = mesh(new T.CylinderGeometry(rx * 1.35, rx * 1.35, size.y * .025, 32, 1, false), hatMaterial.clone(), 'fedora-brim');
-      brim.scale.z = rz / rx;
-      brim.position.set(center.x, top - size.y * .19, center.z);
-      hat.add(brim);
-      const band = mesh(new T.TorusGeometry(rx * .78, size.y * .018, 8, 36), material('#111318', 'AccessoryHatBand'), 'fedora-band');
-      band.scale.z = rz / rx;
-      band.rotation.x = Math.PI / 2;
-      band.position.set(center.x, top - size.y * .16, center.z);
-      hat.add(band);
-    }
     anchor.add(hat);
   }
-
   if (accessories.glasses !== 'none') {
-    const glasses = new T.Group();
+    const style = accessories.glasses === 'square' ? 'rectangle' : accessories.glasses === 'sunglasses' ? 'wayfarer' : accessories.glasses;
+    const glasses = buildHeadAccessory({
+      slot: 'eyewear', style, color: accessories.glassesColor,
+      lenses: appearance.accessories?.lensTint ?? (accessories.glasses === 'sunglasses' ? 'tinted' : 'clear'),
+      lensColor: appearance.accessories?.lensColor ?? '#40566d',
+    }, bounds);
     glasses.name = `avatar-glasses-${accessories.glasses}`;
-    const frame = material(accessories.glassesColor, 'AccessoryGlasses', .25, .35);
-    const lensY = center.y + size.y * .11, lensZ = front + rz * .045, lensX = rx * .42;
-    const round = accessories.glasses === 'round' || accessories.glasses === 'aviator';
-    const sunglasses = accessories.glasses === 'sunglasses';
-    const addLens = (side: number) => {
-      if (round) {
-        const ring = mesh(new T.TorusGeometry(rx * (accessories.glasses === 'aviator' ? .29 : .25), size.x * .018, 8, 24), frame.clone(), 'glasses-frame');
-        ring.position.set(center.x + side * lensX, lensY, lensZ);
-        if (accessories.glasses === 'aviator') ring.scale.y = .82;
-        glasses.add(ring);
-      } else {
-        const width = rx * .56, height = size.y * (sunglasses ? .18 : .15), thickness = size.x * .026;
-        for (const [dx, dy, sx, sy] of [[0, height / 2, width, thickness], [0, -height / 2, width, thickness], [-width / 2, 0, thickness, height], [width / 2, 0, thickness, height]] as const) {
-          const bar = mesh(new T.BoxGeometry(sx, sy, size.z * .02), frame.clone(), 'glasses-frame');
-          bar.position.set(center.x + side * lensX + dx, lensY + dy, lensZ);
-          glasses.add(bar);
-        }
-      }
-      if (sunglasses) {
-        const lensMaterial = new T.MeshStandardMaterial({ color: '#111722', roughness: .15, metalness: .15, transparent: true, opacity: .76, side: T.DoubleSide });
-        lensMaterial.name = 'AccessoryLens';
-        const lens = mesh(new T.PlaneGeometry(rx * .54, size.y * .16), lensMaterial, 'sunglasses-lens');
-        lens.position.set(center.x + side * lensX, lensY, lensZ + .004);
-        glasses.add(lens);
-      }
-    };
-    addLens(-1); addLens(1);
-    const bridge = mesh(new T.BoxGeometry(rx * .30, size.y * .018, size.z * .025), frame.clone(), 'glasses-bridge');
-    bridge.position.set(center.x, lensY, lensZ);
-    glasses.add(bridge);
-    for (const side of [-1, 1]) {
-      const arm = mesh(new T.BoxGeometry(rx * .7, size.y * .018, size.z * .018), frame.clone(), 'glasses-arm');
-      arm.position.set(center.x + side * rx * .74, lensY, center.z + rz * .10);
-      arm.rotation.y = side * .56;
-      glasses.add(arm);
-    }
     anchor.add(glasses);
   }
 
