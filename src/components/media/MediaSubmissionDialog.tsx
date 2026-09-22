@@ -144,23 +144,22 @@ export function MediaSubmissionDialog({
       }
     },
     onSuccess: async () => {
-      // If linked to a release, boost its hype_score
+      // A linked pitch creates modest awareness immediately; accepted/completed
+      // appearances can build further reach elsewhere in the media workflow.
       if (linkedReleaseId) {
         try {
-          const { data: rel } = await supabase
-            .from("releases")
-            .select("hype_score")
-            .eq("id", linkedReleaseId)
-            .single();
-          if (rel) {
-            const hypeBoost = Math.floor(8 + Math.random() * 13); // +8 to +20
-            await supabase
-              .from("releases")
-              .update({ hype_score: (rel.hype_score || 0) + hypeBoost })
-              .eq("id", linkedReleaseId);
-          }
+          const hypeBoost = Math.floor(8 + Math.random() * 13);
+          const typeReach = selectedType.includes("cover") ? 10 : selectedType.includes("interview") || selectedType === "new_release" ? 7 : 4;
+          const { error: reachError } = await (supabase as any).rpc("apply_release_pr_reach", {
+            p_release_id: linkedReleaseId,
+            p_channel: mediaType,
+            p_reach_delta: typeReach,
+            p_hype_delta: hypeBoost,
+            p_source_ref: mediaItem.id,
+          });
+          if (reachError) throw reachError;
         } catch (e) {
-          console.warn("Media submission release hype boost failed:", e);
+          console.warn("Media submission PR reach boost failed:", e);
         }
       }
       toast.success("Submission sent!", {
@@ -240,7 +239,7 @@ export function MediaSubmissionDialog({
               <Disc className="h-3 w-3" />
               Promote a Release (optional)
             </label>
-            <p className="text-xs text-muted-foreground">Linking a release boosts its hype score!</p>
+            <p className="text-xs text-muted-foreground">Linking a release builds PR reach and short-term hype.</p>
             <ReleaseSelector
               bandId={bandId}
               value={linkedReleaseId}
