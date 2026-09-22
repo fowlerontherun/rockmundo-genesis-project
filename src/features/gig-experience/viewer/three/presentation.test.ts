@@ -50,6 +50,22 @@ describe('canonical replay to 3D stage', () => {
     expect(frame(replay.durationMs).performers.every(p => !p.visible)).toBe(true);
     expect(frame(song.scheduledOffsetMs + 100, true).performers).toEqual(frame(song.scheduledOffsetMs + 1000, true).performers);
   });
+  it('adds a deterministic post-song release window before returning to idle', async () => {
+    const replay = await makeStageReplay(), plan = buildStagePlan(replay, null);
+    const song = replay.events.find(e => e.visualPayload.type === 'song_start')!;
+    const songEnd = song.scheduledOffsetMs + song.durationMs;
+    const frame = (time: number) => concertFrame(plan, replay, null, derivePlaybackState(replay, time), false, DEFAULT_CROWD_TUNING);
+
+    const releaseStart = frame(songEnd + 100);
+    const releaseMiddle = frame(songEnd + 1200);
+    const idle = frame(songEnd + 2600);
+    expect(releaseStart.section).toBe('release');
+    expect(releaseStart.performing).toBe(true);
+    expect(releaseMiddle.sectionProgress).toBeGreaterThan(releaseStart.sectionProgress);
+    expect(releaseMiddle.sectionProgress).toBeLessThan(1);
+    expect(idle.section).not.toBe('release');
+  });
+
   it('keeps an authoritative empty venue empty and animates actual crowd arrival', async () => {
     const empty = await makeStageReplay(undefined, 0), plan = buildStagePlan(empty, null);
     for (const time of [0, 30_000, 60_000]) expect(concertFrame(plan, empty, null, derivePlaybackState(empty, time), false, DEFAULT_CROWD_TUNING).crowd).toBe(0);
