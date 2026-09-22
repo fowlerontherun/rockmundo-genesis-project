@@ -11,6 +11,7 @@ import { resolveTotpPresenter } from "./presenters";
 import { playTotpPresenterLine, type TotpPresenterRecordedClip } from "./presenterVoice";
 import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS, totpMediaPublicUrl } from "./totpMedia";
 import { totpChartPositionScript } from "./chartPositionAudio";
+import { useTotpContinuityAudienceAudio } from "./useTotpAudienceAudio";
 
 const PAGE_VISUAL_MINIMUM_MS = 6_000;
 
@@ -49,6 +50,11 @@ export function TotpChartRundownSequence({ rundown, autoPlay = false, presenterK
   const advanceGuardRef = useRef(false);
   const page = pages[pageIndex] ?? null;
   const presenter = resolveTotpPresenter(presenterKey);
+  useTotpContinuityAudienceAudio({
+    active: autoPlay && !!page,
+    seed: `chart:${page?.id ?? "none"}:${pageIndex}`,
+    intensity: page?.minRank === 1 ? 6 : 3,
+  });
   const pageDurationMs = Math.max(PAGE_VISUAL_MINIMUM_MS, (page?.entries.length ?? 0) * 2_300 + (pageIndex === 0 ? 3_500 : 0));
 
   useEffect(() => {
