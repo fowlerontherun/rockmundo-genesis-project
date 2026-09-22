@@ -20,6 +20,7 @@ export default function TopOfThePopsControlRoom() {
   const episode = useQuery({
     queryKey: ["totp", "episode", "admin-current"],
     queryFn: () => getTotpEpisode(),
+    refetchInterval: 15_000,
   });
 
   const current = episode.data ?? null;
