@@ -16,10 +16,10 @@ interface LabelMarketingBudgetCardProps {
 
 const MARKETING_LEVELS: Record<number, { multiplier: number; cap: number; upgradeCost: number | null }> = {
   1: { multiplier: 1, cap: 10_000, upgradeCost: 25_000 },
-  2: { multiplier: 1.25, cap: 20_000, upgradeCost: 75_000 },
-  3: { multiplier: 1.55, cap: 35_000, upgradeCost: 175_000 },
-  4: { multiplier: 1.9, cap: 50_000, upgradeCost: 400_000 },
-  5: { multiplier: 2.3, cap: 75_000, upgradeCost: null },
+  2: { multiplier: 1.25, cap: 25_000, upgradeCost: 75_000 },
+  3: { multiplier: 1.55, cap: 60_000, upgradeCost: 175_000 },
+  4: { multiplier: 1.9, cap: 150_000, upgradeCost: 400_000 },
+  5: { multiplier: 2.3, cap: 500_000, upgradeCost: null },
 };
 
 export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketingBudgetCardProps) {
