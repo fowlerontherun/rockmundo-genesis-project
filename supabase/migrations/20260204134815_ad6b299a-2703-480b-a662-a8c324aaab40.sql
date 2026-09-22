@@ -6,15 +6,36 @@
 -- Part 1: Add missing cities for mentor locations
 -- ======================================================
 
+WITH seed(name, country, population, cost_of_living, music_scene, local_bonus, dominant_genre, latitude, longitude, region, timezone) AS (
+  VALUES
+    ('Memphis', 'USA', 633104, 65, 85, 15, 'blues', 35.1495, -90.0490, 'North America', 'America/Chicago'),
+    ('Kingston', 'Jamaica', 1041203, 55, 90, 20, 'reggae', 17.9714, -76.7936, 'Caribbean', 'America/Jamaica'),
+    ('Havana', 'Cuba', 2130517, 45, 88, 18, 'latin', 23.1136, -82.3666, 'Caribbean', 'America/Havana'),
+    ('Detroit', 'USA', 639111, 60, 87, 16, 'hip_hop', 42.3314, -83.0458, 'North America', 'America/Detroit'),
+    ('Nashville', 'USA', 715884, 70, 92, 18, 'country', 36.1627, -86.7816, 'North America', 'America/Chicago'),
+    ('Atlanta', 'USA', 498715, 72, 88, 17, 'hip_hop', 33.7490, -84.3880, 'North America', 'America/New_York')
+)
 INSERT INTO cities (id, name, country, population, cost_of_living, music_scene, local_bonus, dominant_genre, latitude, longitude, region, timezone)
-VALUES 
-  (gen_random_uuid(), 'Memphis', 'USA', 633104, 65, 85, 15, 'blues', 35.1495, -90.0490, 'North America', 'America/Chicago'),
-  (gen_random_uuid(), 'Kingston', 'Jamaica', 1041203, 55, 90, 20, 'reggae', 17.9714, -76.7936, 'Caribbean', 'America/Jamaica'),
-  (gen_random_uuid(), 'Havana', 'Cuba', 2130517, 45, 88, 18, 'latin', 23.1136, -82.3666, 'Caribbean', 'America/Havana'),
-  (gen_random_uuid(), 'Detroit', 'USA', 639111, 60, 87, 16, 'hip_hop', 42.3314, -83.0458, 'North America', 'America/Detroit'),
-  (gen_random_uuid(), 'Nashville', 'USA', 715884, 70, 92, 18, 'country', 36.1627, -86.7816, 'North America', 'America/Chicago'),
-  (gen_random_uuid(), 'Atlanta', 'USA', 498715, 72, 88, 17, 'hip_hop', 33.7490, -84.3880, 'North America', 'America/New_York')
-ON CONFLICT DO NOTHING;
+SELECT
+  gen_random_uuid(),
+  seed.name,
+  seed.country,
+  seed.population,
+  seed.cost_of_living,
+  seed.music_scene,
+  seed.local_bonus,
+  seed.dominant_genre,
+  seed.latitude,
+  seed.longitude,
+  seed.region,
+  seed.timezone
+FROM seed
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM cities existing
+  WHERE lower(trim(existing.name)) = lower(trim(seed.name))
+    AND lower(trim(existing.country)) = lower(trim(seed.country))
+);
 
 -- Part 2: Add achievement discovery column to education_mentors
 -- ======================================================
