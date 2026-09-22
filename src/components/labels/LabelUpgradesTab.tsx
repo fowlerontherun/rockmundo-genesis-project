@@ -1,14 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { 
-  Users, 
-   Star, 
-  Music, 
+import {
+  Users,
+  Star,
   CheckCircle,
   Lock
 } from "lucide-react";
@@ -51,20 +49,9 @@ const AVAILABLE_UPGRADES: Upgrade[] = [
     icon: <Star className="h-5 w-5" />,
     effect: "+3 reputation points per level",
   },
-  {
-    id: "studio_discount",
-    type: "studio_discount",
-    name: "Studio Partnership",
-    description: "Get discounts on recording sessions",
-    cost: 500_000,
-    maxLevel: 10,
-    icon: <Music className="h-5 w-5" />,
-    effect: "10% recording cost reduction per level",
-  },
 ];
 
 export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProps) {
-  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -81,9 +68,6 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
       return data;
     },
   });
-
-  // Use profileId directly from useActiveProfile
-  const profile = profileId ? { id: profileId } : null;
 
   const getUpgradeLevel = (type: string): number => {
     const upgrade = upgrades.find((u) => u.upgrade_type === type);
