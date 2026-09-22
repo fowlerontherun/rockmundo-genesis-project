@@ -11,6 +11,7 @@ import type { TotpTestPreviewPerformance } from "./testPreviewApi";
 import { getTotpBandNameAudioCatalog } from "./bandNameAudioApi";
 import { loadTotpCrowdSounds } from "./crowdSoundLibrary";
 import { TOTP_MEDIA_BUCKET, TOTP_MEDIA_PATHS } from "./totpMedia";
+import { TOTP_REUSABLE_PRESENTER_PHRASES } from "./presenterPhraseAudio";
 import {
   buildTotpTestReplay,
   combineTotpTestEffects,
@@ -143,7 +144,7 @@ export function TotpFullShowDemo({
                   <FileAudio2 className="mr-1 h-3 w-3" /> band names {bookedBandAudioCount}/{bookedBandIds.size}
                 </Badge>
                 <Badge variant={Number(audioCoverageQuery.data?.reusablePhraseCount ?? 0) > 0 ? "secondary" : "destructive"}>
-                  presenter phrases {audioCoverageQuery.data?.reusablePhraseCount ?? 0}
+                  presenter phrases {audioCoverageQuery.data?.reusablePhraseCount ?? 0}/{TOTP_REUSABLE_PRESENTER_PHRASES.length}
                 </Badge>
                 <Badge variant={audioCoverageQuery.data?.chartPositionCount === 40 ? "secondary" : "outline"}>
                   chart positions {audioCoverageQuery.data?.chartPositionCount ?? 0}/40
