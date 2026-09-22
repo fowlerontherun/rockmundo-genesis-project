@@ -36,7 +36,7 @@ const VIP_FEATURES = [
   { icon: Music, title: "Song Recording & Release", description: "Record in studios, release singles and albums, and collect royalties from sales and streams." },
   { icon: Mic2, title: "Live Gig Audio", description: "AI-generated audio plays during gig reviews — a fully immersive VIP-only playback experience." },
   { icon: MapPin, title: "World Touring", description: "Book shows across the globe, tour with your band and grow regional fame city by city." },
-  { icon: Car, title: "VIP Gig Concierge", description: "Never miss a booked show — chauffeured limo or private jet travel is arranged automatically." },
+  { icon: Car, title: "VIP Travel Concierge", description: "Never miss a booked show or accepted Top of the Pops appearance — chauffeured limo or private jet travel is arranged automatically." },
   { icon: Users, title: "Hire Employees & Crew", description: "Staff your businesses and hire touring crew: managers, engineers, guards and roadies." },
   { icon: Radio, title: "Radio Chart Voting", description: "Vote on radio rankings and directly influence the in-game music charts." },
   { icon: Heart, title: "Social & Relationships", description: "Deeper relationships — romance, rivalries, band drama and multi-generation family legacies." },
