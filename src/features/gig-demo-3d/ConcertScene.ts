@@ -433,7 +433,22 @@ export class ConcertScene {
       }
       actor.restoreEquipmentAnchor();
       actor.performing = this.playback?.performing ?? true;
+      actor.performanceSection = section;
+      actor.sectionProgress = this.playback?.sectionProgress ?? 0;
       const focused = !!this.playback?.focusId && actor.id === this.playback.focusId;
+
+      if (!this.settings.reducedMotion && actor.performing && !actor.walking) {
+        if (section === 'solo' && focused && !actor.instrumentRig?.stationary) {
+          const step = smoothMotion(Math.min(1, (this.playback?.sectionProgress ?? 0) / .18))
+            * (1 - smoothMotion(((this.playback?.sectionProgress ?? 0) - .82) / .18));
+          actor.root.position.z += .28 * step;
+        } else if (section === 'chorus') {
+          const crowdOpen = Math.sin(t * .72 + actor.phase) * .045;
+          actor.root.rotation.y += crowdOpen;
+        } else if (section === 'breakdown' && actor.role !== 'drums') {
+          actor.root.position.y -= .018 * Math.sin(Math.PI * (this.playback?.sectionProgress ?? 0));
+        }
+      }
       const soloScale = section === 'solo' ? (focused ? 1.2 : .78) : 1;
       const roleScale = section === 'breakdown' && actor.role === 'drums' ? .82
         : section === 'chorus' && (actor.role === 'vocals' || actor.role === 'guitar') ? 1.05

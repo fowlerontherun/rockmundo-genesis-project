@@ -19,7 +19,7 @@ import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothi
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import type { VenueProfile } from './venueProfile';
-import type { ConcertPerformer, StageRole } from './liveTypes';
+import type { ConcertPerformer, PerformanceSection, StageRole } from './liveTypes';
 type Role = StageRole;
 interface RestBone {
     bone: T.Bone;
@@ -80,6 +80,8 @@ export class Musician {
     action: string | null = null;
     interactionTarget: T.Vector3 | null = null;
     interactionStrength = 0;
+    performanceSection: PerformanceSection = 'idle';
+    sectionProgress = 0;
     private scale: number;
     private bodyBuild = 1;
     private vocalRole: VocalRole = null;
@@ -262,6 +264,19 @@ export class Musician {
                 (Math.sin(t * 1.35 + this.phase) * .012 + Math.sin(t * .48 + this.phase * .5) * .008) * energy * performanceScale,
             )));
         if (torso && performing && !reduced) {
+            const section = this.performanceSection;
+            const sectionProgress = T.MathUtils.clamp(this.sectionProgress, 0, 1);
+            if (section === 'chorus') {
+                torso.rotation.x -= .025 * motionEnergy;
+                torso.rotation.y += Math.sin(t * .9 + this.phase) * .025 * motionEnergy;
+            } else if (section === 'breakdown') {
+                torso.rotation.x += (this.role === 'drums' ? .035 : .07) * motionEnergy;
+                torso.rotation.z += Math.sin(t * .55 + this.phase) * .018 * motionEnergy;
+            } else if (section === 'outro') {
+                const finish = smoothMotion((sectionProgress - .72) / .28);
+                torso.rotation.x -= finish * (this.role === 'vocals' ? .09 : .055) * motionEnergy;
+                torso.rotation.z += Math.sin(this.phase + 1.1) * finish * .035 * motionEnergy;
+            }
             const flourishClock = ((t + this.phase * 1.7) % 13 + 13) % 13;
             const flourish = smoothMotion((flourishClock - 9.7) / .35) * (1 - smoothMotion((flourishClock - 11.15) / .45));
             if (this.interactionTarget && this.interactionStrength > 0) {
@@ -294,6 +309,10 @@ export class Musician {
             const drummerNod = this.role === 'drums' && !reduced && performing
                 ? Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 + this.phase)), 2) * .055 * motionEnergy
                 : 0;
+            const sectionLook = this.performanceSection === 'chorus' ? -.035 * motionEnergy
+                : this.performanceSection === 'breakdown' ? .055 * motionEnergy
+                : this.performanceSection === 'outro' ? -.06 * smoothMotion((this.sectionProgress - .7) / .3) * motionEnergy
+                : 0;
             let interactionYaw = 0;
             let interactionPitch = 0;
             if (this.interactionTarget && this.interactionStrength > 0 && performing && !reduced) {
@@ -303,7 +322,7 @@ export class Musician {
                 interactionPitch = T.MathUtils.clamp(-Math.atan2(localTarget.y - 1.42, horizontal), -.14, .14) * this.interactionStrength;
             }
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod + interactionPitch,
+                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod + sectionLook + interactionPitch,
                 Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11) + glanceSide * glanceWindow * .18 + interactionYaw,
                 (vocalActive ? Math.sin(t * .42 + this.phase) * .018 : 0) + glanceSide * glanceWindow * .025,
             )));
@@ -358,6 +377,22 @@ export class Musician {
         rig?.tools.forEach(tool => { tool.visible = this.root.visible && !this.walking; });
         if (rig && (!this.walking || !rig.stationary)) {
             rig.animate(t + (reduced ? 0 : this.phase * .13), performing ? energy : 0, reduced || !performing);
+            if (rig.family === 'kit' && !reduced && performing) {
+                const transitionSection = this.performanceSection === 'chorus' || this.performanceSection === 'outro';
+                const crash = transitionSection
+                    ? 1 - smoothMotion((this.sectionProgress - .02) / .12)
+                    : 0;
+                if (crash > .02) {
+                    const sticks = rig.tools.filter(tool => tool.name.startsWith('playing-stick'));
+                    const targets = [new T.Vector3(.7, 1.46, 1), new T.Vector3(-.75, 1.3, .65)];
+                    [rig.left, rig.right].forEach((grip, index) => {
+                        const target = targets[index];
+                        grip.position.set(target.x * .72, target.y + .16 * crash, target.z - .37);
+                        const stick = sticks[index];
+                        if (stick) stick.userData.strikeTarget = target;
+                    });
+                }
+            }
             if (rig.family === 'voice' && this.mouth) {
                 const target = this.mouth.getWorldPosition(new T.Vector3());
                 const offset = new T.Vector3(-.015, -.025 - (vocalActive ? vocals.breath * .08 * motionEnergy : .25), .14);
@@ -408,7 +443,15 @@ export class Musician {
             this.hand('L', leftTarget, this.point(poleSpread, .96 + poleLift, poleForward));
             this.hand('R', rightTarget, this.point(-poleSpread, .96 - poleLift * .6, poleForward - poleDrift * .45));
             if (rig.family === 'voice' && !reduced && performing) {
-                this.hand('L', this.point(...singerGesture(t, this.phase)), this.point(.68, 1.18, .12));
+                if (this.performanceSection === 'chorus') {
+                    const sign = Math.sin(t * .7 + this.phase) >= 0 ? 1 : -1;
+                    this.hand('L', this.point(.38 * sign, 1.62, .34), this.point(.66 * sign, 1.36, .24));
+                } else if (this.performanceSection === 'outro' && this.sectionProgress > .74) {
+                    const finish = smoothMotion((this.sectionProgress - .74) / .26);
+                    this.hand('L', this.point(.34, 1.36 + finish * .52, .22), this.point(.68, 1.38, .18));
+                } else {
+                    this.hand('L', this.point(...singerGesture(t, this.phase)), this.point(.68, 1.18, .12));
+                }
             }
         }
         else {

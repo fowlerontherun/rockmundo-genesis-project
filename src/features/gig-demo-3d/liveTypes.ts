@@ -33,6 +33,7 @@ export type PerformanceSection = 'idle' | 'intro' | 'verse' | 'chorus' | 'breakd
 export interface ConcertFrame {
   positionMs: number;
   section: PerformanceSection;
+  sectionProgress: number;
   energy: number;
   crowd: number;
   occupancy?: number;

@@ -410,29 +410,40 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
   const songStart = [...active].reverse().find(e => e.visualPayload.type === 'song_start');
   const phaseText = String(playback.activePhase ?? '').toLowerCase();
   let section: PerformanceSection = 'idle';
+  let sectionProgress = 0;
   if (songPlaying) {
     const explicit = /intro|verse|chorus|breakdown|solo|outro|finale/.exec(phaseText)?.[0];
-    if (explicit === 'finale') section = 'outro';
-    else if (explicit) section = explicit as PerformanceSection;
-    else if (focusId && spotlight) section = 'solo';
-    else if (songStart && songStart.durationMs >= 20_000) {
+    if (explicit) {
+      section = explicit === 'finale' ? 'outro' : explicit as PerformanceSection;
+      const activePhaseEvent = [...active].reverse().find(e => String(e.phase ?? '').toLowerCase().includes(explicit));
+      sectionProgress = activePhaseEvent ? progress(activePhaseEvent) : ((positionMs / 1000) % 8) / 8;
+    } else if (focusId && spotlight) {
+      section = 'solo';
+      sectionProgress = progress(spotlight);
+    } else if (songStart && songStart.durationMs >= 20_000) {
       const p = progress(songStart);
-      if (p < .08) section = 'intro';
-      else if (p < .32) section = 'verse';
-      else if (p < .52) section = 'chorus';
-      else if (p < .66) section = 'verse';
-      else if (p < .76 && (playback.crowdEnergy ?? 30) < 45) section = 'breakdown';
-      else if (p < .82 && focusId) section = 'solo';
-      else if (p < .94) section = 'chorus';
-      else section = 'outro';
+      const ranges: Array<[number, number, PerformanceSection]> = [
+        [0, .08, 'intro'], [.08, .32, 'verse'], [.32, .52, 'chorus'], [.52, .66, 'verse'],
+        [.66, .76, (playback.crowdEnergy ?? 30) < 45 ? 'breakdown' : 'verse'],
+        [.76, .82, focusId ? 'solo' : 'chorus'], [.82, .94, 'chorus'], [.94, 1, 'outro'],
+      ];
+      const range = ranges.find(([start, end]) => p >= start && p < end) ?? ranges[ranges.length - 1];
+      section = range[2];
+      sectionProgress = clamp((p - range[0]) / Math.max(.001, range[1] - range[0]));
     } else {
       const cycle = ((positionMs / 1000) % 40 + 40) % 40;
-      section = cycle < 4 ? 'intro' : cycle < 16 ? 'verse' : cycle < 26 ? 'chorus' : cycle < 32 ? 'verse' : cycle < 36 ? 'breakdown' : 'outro';
+      const ranges: Array<[number, number, PerformanceSection]> = [
+        [0, 4, 'intro'], [4, 16, 'verse'], [16, 26, 'chorus'], [26, 32, 'verse'], [32, 36, 'breakdown'], [36, 40, 'outro'],
+      ];
+      const range = ranges.find(([start, end]) => cycle >= start && cycle < end) ?? ranges[0];
+      section = range[2];
+      sectionProgress = clamp((cycle - range[0]) / Math.max(.001, range[1] - range[0]));
     }
   }
   return {
     positionMs,
     section,
+    sectionProgress,
     occupancy: attendance.state === 'valid' ? clamp(attendance.value / profile.capacity) * filling * dispersed : 0,
     energy: clamp((playback.crowdEnergy ?? 30) / 100),
     crowdReaction: itemPayload?.action === 'phone_lights' ? 'phone_lights' : itemPayload?.action === 'mosh_pit' ? 'mosh_pit' : itemPayload?.action === 'crowd_surf' ? 'crowd_surf' : itemPayload?.action === 'crowd_wave' ? 'wave' : reaction?.visualPayload.type === 'crowd_reaction' ? reaction.visualPayload.reaction : 'still',
