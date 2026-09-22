@@ -109,7 +109,7 @@ export default function TopOfThePopsAdmin() {
   const lockOrder = useMutation({
     mutationFn: adminLockTotpRunningOrder,
     onSuccess: (count) => {
-      toast({ title: "Running order locked", description: `${count} checked-in act${count === 1 ? "" : "s"} added to the broadcast.` });
+      toast({ title: "Running order locked", description: `${count} confirmed act${count === 1 ? "" : "s"} added to the broadcast.` });
       void queryClient.invalidateQueries({ queryKey: ["totp"] });
     },
     onError: (error: Error) => toast({ title: "Could not lock running order", description: error.message, variant: "destructive" }),

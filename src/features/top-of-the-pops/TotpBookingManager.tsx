@@ -38,7 +38,8 @@ export function TotpBookingManager({ episodeId }: { episodeId: string }) {
   const catalog = useQuery({
     queryKey: ["totp", "admin-bookings", episodeId],
     queryFn: () => getTotpAdminBookingCatalog(episodeId),
-    staleTime: 15_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
 
   const booking = useMutation({
