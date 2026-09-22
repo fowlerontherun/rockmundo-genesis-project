@@ -47,6 +47,22 @@ describe('performance poses using the shipped rigs', () => {
     }
   });
 
+  it('turns toward an interaction target without breaking the rig and ignores it in reduced motion', () => {
+    const musician = new Musician(models[0], 'guitar', [0, 0, 0]);
+    musician.interactionTarget = new T.Vector3(2.5, 1.4, 1.5);
+    musician.interactionStrength = 1;
+    musician.update(8, .9, false);
+    const interactive = musician.bones.get('Head')!.quaternion.clone();
+    expect(interactive.length()).toBeCloseTo(1, 5);
+
+    musician.update(8, .9, true);
+    const reduced = musician.bones.get('Head')!.quaternion.clone();
+    musician.interactionTarget = null;
+    musician.interactionStrength = 0;
+    musician.update(8, .9, true);
+    expect(musician.bones.get('Head')!.quaternion.toArray()).toEqual(reduced.toArray());
+  });
+
   it('reduced motion holds a fixed pose, and animating a clone does not move another musician', () => {
     const a = new Musician(models[0], 'guitar', [0, 0, 0]), b = new Musician(models[0], 'guitar', [0, 0, 0]);
     const matrices = (actor: Musician) => [...actor.bones.values()].flatMap(bone => bone.matrixWorld.toArray());
