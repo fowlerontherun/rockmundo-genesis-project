@@ -7,7 +7,9 @@ export type TotpCrowdSoundType =
   | "crowd_singing"
   | "applause"
   | "ambient_chatter"
-  | "band_entrance";
+  | "band_entrance"
+  | "band_exit"
+  | "encore_request";
 
 export interface TotpCrowdSound {
   id: string;
@@ -25,6 +27,8 @@ const TYPES: TotpCrowdSoundType[] = [
   "applause",
   "ambient_chatter",
   "band_entrance",
+  "band_exit",
+  "encore_request",
 ];
 
 let cached: TotpCrowdSound[] | null = null;
