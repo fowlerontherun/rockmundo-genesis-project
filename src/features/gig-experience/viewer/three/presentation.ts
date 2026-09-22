@@ -409,9 +409,17 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
   const focusId = itemPayload?.performerId ?? (spotlight?.visualPayload.type === 'spotlight' ? spotlight.visualPayload.performerId : null) ?? playback.performerFocusId;
   const songStart = [...active].reverse().find(e => e.visualPayload.type === 'song_start');
   const phaseText = String(playback.activePhase ?? '').toLowerCase();
+  const recentSong = [...past].reverse().find(e => e.visualPayload.type === 'song_start');
+  const releaseDurationMs = 2400;
+  const recentSongEndMs = recentSong ? recentSong.scheduledOffsetMs + Math.max(1, recentSong.durationMs) : -Infinity;
+  const releaseActive = !songPlaying && !!recentSong && positionMs >= recentSongEndMs && positionMs <= recentSongEndMs + releaseDurationMs;
+
   let section: PerformanceSection = 'idle';
   let sectionProgress = 0;
-  if (songPlaying) {
+  if (releaseActive) {
+    section = 'release';
+    sectionProgress = clamp((positionMs - recentSongEndMs) / releaseDurationMs);
+  } else if (songPlaying) {
     const explicit = /intro|verse|chorus|breakdown|solo|outro|finale/.exec(phaseText)?.[0];
     if (explicit) {
       section = explicit === 'finale' ? 'outro' : explicit as PerformanceSection;
@@ -447,7 +455,7 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
     occupancy: attendance.state === 'valid' ? clamp(attendance.value / profile.capacity) * filling * dispersed : 0,
     energy: clamp((playback.crowdEnergy ?? 30) / 100),
     crowdReaction: itemPayload?.action === 'phone_lights' ? 'phone_lights' : itemPayload?.action === 'mosh_pit' ? 'mosh_pit' : itemPayload?.action === 'crowd_surf' ? 'crowd_surf' : itemPayload?.action === 'crowd_wave' ? 'wave' : reaction?.visualPayload.type === 'crowd_reaction' ? reaction.visualPayload.reaction : 'still',
-    performing: songPlaying,
+    performing: songPlaying || releaseActive,
     crowdCueProgress: item && /mosh_pit|crowd_surf/.test(itemPayload?.action ?? '') ? progress(item) : undefined,
     crowd: clamp(count / 160 * filling * dispersed * tuning.densityMultiplier / 2),
     look: /encore|finale/.test(playback.activePhase ?? '') ? 'encore' : songPlaying ? 'electric' : 'amber',
