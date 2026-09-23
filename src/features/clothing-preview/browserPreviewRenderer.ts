@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import { clothingPreviewVariants, type ClothingPreviewVariant } from './clothingPreview';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
@@ -88,9 +89,10 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number) {
 
 export async function renderClothingTurntable(item: ClothingItem, options: BrowserPreviewRenderOptions = {}): Promise<RenderedPreviewFrame[]> {
   if (typeof document === 'undefined') throw new Error('Clothing preview rendering requires a browser environment.');
-  const width = Math.max(320, Math.min(1200, Math.round(options.width || 640)));
-  const height = Math.max(400, Math.min(1400, Math.round(options.height || 800)));
-  const quality = Math.max(.55, Math.min(.95, options.quality ?? .86));
+  const curated = isCuratedClothing(item);
+  const width = Math.max(320, Math.min(1200, Math.round(options.width || (curated ? 800 : 640))));
+  const height = Math.max(400, Math.min(1400, Math.round(options.height || (curated ? 1000 : 800))));
+  const quality = Math.max(.55, Math.min(.95, options.quality ?? (curated ? .92 : .86)));
   const views = options.views?.length ? options.views : CLOTHING_TURNTABLE_VIEWS;
 
   const canvas = document.createElement('canvas');
@@ -103,8 +105,15 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
   renderer.toneMapping = T.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.24;
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = T.PCFSoftShadowMap;
 
   const scene = new T.Scene();
+  const pmrem = new T.PMREMGenerator(renderer);
+  const room = new RoomEnvironment();
+  const environment = pmrem.fromScene(room, .04);
+  scene.environment = environment.texture;
+  room.dispose();
+  pmrem.dispose();
   scene.background = new T.Color('#101823');
   const camera = new T.PerspectiveCamera(32, width / height, .05, 20);
   const target = new T.Vector3(0, .98, 0);
@@ -113,6 +122,8 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
   const key = new T.DirectionalLight('#ffe5cb', 3.7);
   key.position.set(-2.4, 4.2, 3.8);
   key.castShadow = true;
+  key.shadow.mapSize.set(curated ? 2048 : 1024, curated ? 2048 : 1024);
+  key.shadow.normalBias = .02;
   scene.add(key);
   const fill = new T.DirectionalLight('#76d9ef', 1.45);
   fill.position.set(2.8, 2.6, -2.5);
@@ -192,6 +203,7 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       materials.forEach(material => material.dispose());
     });
+    environment.dispose();
     renderer.dispose();
   }
 }
