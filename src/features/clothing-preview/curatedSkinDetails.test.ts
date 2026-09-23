@@ -52,6 +52,7 @@ describe('curated punk detail skins', () => {
     addCuratedSkinDetails(root, rig, clothing([
       'clothing.punk.safety-pin-tee',
       'clothing.punk.patch-jacket',
+      'clothing.punk.biker-jacket',
     ]), 'ultra');
 
     const pins: T.Object3D[] = [];
@@ -59,12 +60,14 @@ describe('curated punk detail skins', () => {
     const studs: T.Object3D[] = [];
     const stitches: T.Object3D[] = [];
     const clasps: T.Object3D[] = [];
+    const bikerHardware: T.Object3D[] = [];
     root.traverse(node => {
       if (node.name === 'curated-safety-pin') pins.push(node);
       if (node.name === 'curated-jacket-patch') patches.push(node);
       if (node.name === 'curated-jacket-stud') studs.push(node);
       if (node.name === 'curated-jacket-patch-stitching') stitches.push(node);
       if (node.name === 'curated-safety-pin-clasp') clasps.push(node);
+      if (node.name === 'curated-biker-zipper-pull' || node.name === 'curated-biker-lapel-snap') bikerHardware.push(node);
     });
 
     expect(pins).toHaveLength(3);
@@ -72,7 +75,8 @@ describe('curated punk detail skins', () => {
     expect(studs).toHaveLength(6);
     expect(stitches).toHaveLength(3);
     expect(clasps).toHaveLength(3);
-    [...pins, ...patches, ...studs].forEach(node => {
+    expect(bikerHardware).toHaveLength(5);
+    [...pins, ...patches, ...studs, ...bikerHardware].forEach(node => {
       expect(node.userData.surfaceBound).toBe(true);
       expect(node.userData.surfaceMesh).toBe('Casual_body_mesh');
     });
