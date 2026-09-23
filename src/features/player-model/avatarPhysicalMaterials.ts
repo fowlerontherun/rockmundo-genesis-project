@@ -37,7 +37,6 @@ function copyStandardSurface(source: T.MeshStandardMaterial, target: T.MeshPhysi
   target.metalnessMap = source.metalnessMap;
   target.alphaMap = source.alphaMap;
   target.envMap = source.envMap;
-  target.envMapRotation.copy(source.envMapRotation);
   target.envMapIntensity = source.envMapIntensity;
   target.wireframe = source.wireframe;
   target.wireframeLinewidth = source.wireframeLinewidth;
