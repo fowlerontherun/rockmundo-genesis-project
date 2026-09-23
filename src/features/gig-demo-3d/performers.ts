@@ -12,7 +12,7 @@ import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
 import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { seededRandom } from './config';
-import { visibleTattoosForClothing } from '@/features/player-model/tattoos';
+import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import { assembleAvatarMesh } from '@/features/player-model/v2/avatarMeshEngine';
 import { requiredAvatarV2ModelFiles } from '@/features/player-model/v2/avatarV2Model';
@@ -1022,7 +1022,7 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
             const assembled = assembleAvatarMesh(
                 library,
                 p.appearance,
-                visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []),
+                visibleTattoosForPresentation(p.tattoos ?? [], { appearance: p.appearance, clothing: p.richClothing ?? [], presentation: 'stage' }),
                 p.richClothing,
                 'high',
             );

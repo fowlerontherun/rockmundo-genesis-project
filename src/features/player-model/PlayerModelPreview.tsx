@@ -11,7 +11,7 @@ import { disposeModel, loadModelLibrary, type ModelLibrary, type PlayerModelPres
 import { assembleAvatarMesh } from './v2/avatarMeshEngine';
 import { avatarV2LodForQuality, requiredAvatarV2ModelFiles } from './v2/avatarV2Model';
 import { requiredAvatarV2GarmentFiles } from './v2/avatarV2Garments';
-import { visibleTattoosForClothing, type ResolvedTattooVisual } from './tattoos';
+import { visibleTattoosForPresentation, type ResolvedTattooVisual } from './tattoos';
 import { avatarQualityProfile, recommendedAvatarPreviewQuality, type AvatarVisualQuality } from './avatarVisualQuality';
 
 interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[], presentation?: PlayerModelPresentation) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
@@ -89,7 +89,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
           replace: (value, nextRole, nextInstrument, nextRichClothing = [], nextTattoos = [], nextPresentation = 'stage') => {
             if (actor) disposeModel(actor.root); if (equipment) disposeModel(equipment);
             const shownClothing = nextPresentation === 'tattoo' ? [] : nextRichClothing;
-            const shownTattoos = nextPresentation === 'tattoo' ? nextTattoos : visibleTattoosForClothing(nextTattoos, shownClothing);
+            const shownTattoos = visibleTattoosForPresentation(nextTattoos, { appearance: value, clothing: shownClothing, presentation: nextPresentation });
             const assembled = assembleAvatarMesh(
               library!,
               value,
