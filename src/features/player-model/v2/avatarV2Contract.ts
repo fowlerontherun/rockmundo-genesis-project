@@ -305,39 +305,40 @@ export function validateAvatarV2Scene(
     }
   }
 
-  if (lod <= 1) {
-    const regions = new Set<AvatarV2BodyRegion>();
-    const unskinnedRegions = new Set<AvatarV2BodyRegion>();
-    const bareSkinRegions = new Set<AvatarV2BodyRegion>();
-    scene.traverse(node => {
-      if (!(node instanceof T.Mesh)) return;
-      const region = avatarV2BodyRegion(node);
-      if (!region) return;
-      regions.add(region);
-      if (!(node instanceof T.SkinnedMesh)) unskinnedRegions.add(region);
-      const materials = Array.isArray(node.material) ? node.material : [node.material];
-      if (materials.some(material => hasMaterialRole([material.name], 'skin'))) bareSkinRegions.add(region);
-    });
-    for (const region of AVATAR_V2_BODY_REGIONS) {
-      if (!regions.has(region)) {
-        issues.push({
-          level: 'error',
-          code: `missing-body-region:${region}`,
-          message: `LOD${lod} needs an authored body region for garment occlusion: ${region}.`,
-        });
-      } else if (unskinnedRegions.has(region)) {
-        issues.push({
-          level: 'error',
-          code: `unskinned-body-region:${region}`,
-          message: `Avatar V2 body region must be skinned to the humanoid rig: ${region}.`,
-        });
-      } else if (!bareSkinRegions.has(region)) {
-        issues.push({
-          level: 'error',
-          code: `missing-bare-skin-region:${region}`,
-          message: `Avatar V2 body region needs a skin material so topless and Tattoo Parlour unclothed views never expose a garment-shaped hole: ${region}.`,
-        });
-      }
+  // Every LOD can be used by Topless or Tattoo Parlour views, so the complete
+  // body/skin contract is universal. Only close-up articulation/material checks
+  // remain restricted to LOD0/1 below.
+  const regions = new Set<AvatarV2BodyRegion>();
+  const unskinnedRegions = new Set<AvatarV2BodyRegion>();
+  const bareSkinRegions = new Set<AvatarV2BodyRegion>();
+  scene.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    const region = avatarV2BodyRegion(node);
+    if (!region) return;
+    regions.add(region);
+    if (!(node instanceof T.SkinnedMesh)) unskinnedRegions.add(region);
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    if (materials.some(material => hasMaterialRole([material.name], 'skin'))) bareSkinRegions.add(region);
+  });
+  for (const region of AVATAR_V2_BODY_REGIONS) {
+    if (!regions.has(region)) {
+      issues.push({
+        level: 'error',
+        code: `missing-body-region:${region}`,
+        message: `LOD${lod} needs an authored body region for garment occlusion: ${region}.`,
+      });
+    } else if (unskinnedRegions.has(region)) {
+      issues.push({
+        level: 'error',
+        code: `unskinned-body-region:${region}`,
+        message: `Avatar V2 body region must be skinned to the humanoid rig: ${region}.`,
+      });
+    } else if (!bareSkinRegions.has(region)) {
+      issues.push({
+        level: 'error',
+        code: `missing-bare-skin-region:${region}`,
+        message: `Avatar V2 body region needs a skin material so topless and Tattoo Parlour unclothed views never expose a garment-shaped hole: ${region}.`,
+      });
     }
   }
 

@@ -19,6 +19,22 @@ describe('canonical replay to 3D stage', () => {
     const empty = await makeStageReplay([]); expect(concertOptions(buildStagePlan(empty, null), {}, empty, null, 'pub').performers).toEqual([]);
   });
 
+  it('preserves muscle definition and Topless in both gig and TOTP performer options', async () => {
+    const replay = await makeStageReplay(['Vocals']);
+    const plan = buildStagePlan(replay, null);
+    const appearance = defaultAppearance(performerId(0));
+    appearance.body.muscle = 'muscular';
+    appearance.equipment.top.itemId = 'starter.top.topless';
+
+    const gig = concertOptions(plan, { [performerId(0)]: appearance }, replay, null, 'club');
+    const totp = concertOptions(plan, { [performerId(0)]: appearance }, replay, null, 'tv_studio', {}, 'totp');
+
+    expect(gig.performers[0].appearance.body.muscle).toBe('muscular');
+    expect(gig.performers[0].appearance.equipment.top.itemId).toBe('starter.top.topless');
+    expect(totp.performers[0].appearance.body.muscle).toBe('muscular');
+    expect(totp.performers[0].appearance.equipment.top.itemId).toBe('starter.top.topless');
+  });
+
   it('propagates equipped rich clothing to the matching performer only', async () => {
     const replay = await makeStageReplay(['Vocals', 'Guitar']);
     const plan = buildStagePlan(replay, null);
