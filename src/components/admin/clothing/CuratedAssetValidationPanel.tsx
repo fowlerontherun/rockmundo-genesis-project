@@ -23,6 +23,9 @@ const checks = [
   ['drums', 'Drums / seated'],
   ['clipping', 'No major clipping'],
   ['stretching', 'No extreme stretching'],
+  ['surface_attachment', 'Details surface-bound'],
+  ['graphic_alignment', 'Graphics aligned'],
+  ['distance_readability', 'Readable at gameplay distance'],
 ] as const;
 
 function checkState(item: any, key: string) {
@@ -34,6 +37,9 @@ function checkState(item: any, key: string) {
   if (key === 'guitar') return poses.includes('guitar') || poses.includes('bass');
   if (key === 'drums') return poses.includes('drums') || poses.includes('seated');
   if (key === 'clipping' || key === 'stretching') return notes.result === 'pass';
+  if (key === 'surface_attachment' || key === 'graphic_alignment' || key === 'distance_readability') {
+    return notes.checks?.[key] === true;
+  }
   return false;
 }
 
@@ -86,7 +92,7 @@ export function CuratedAssetValidationPanel({ collectionId, items, onChanged }: 
   return <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />Curated asset validation</CardTitle>
-      <p className="text-sm text-muted-foreground">Curated skins never use the old procedural garment generator. Publish only after both avatar frames and performance poses pass.</p>
+      <p className="text-sm text-muted-foreground">Curated skins never use the old procedural garment generator. Publish only after both avatar frames, performance poses, surface attachment, graphic alignment and gameplay-distance readability pass.</p>
     </CardHeader>
     <CardContent className="space-y-4">
       <div className="flex flex-wrap gap-2">
