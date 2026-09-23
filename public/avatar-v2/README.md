@@ -37,6 +37,24 @@ such as `RMV2_Skin`. If a player uses a non-original saved hairstyle, a
 separate authored hair mesh/material such as `RMV2_Hair` can be suppressed
 cleanly before the selected hairstyle is rebuilt.
 
+## Body and muscle contract
+
+The base GLB must be a complete skinned body even when no garment is present.
+Every body-region mesh listed below must have a skin material (normally
+`RMV2_Skin`) rather than relying on a shirt/trouser surface to fill the character.
+
+All LODs require these muscle-definition targets:
+
+- `muscleToned`
+- `muscleAthletic`
+- `muscleMuscular`
+- `muscleBodybuilder`
+
+Natural uses the basis shape. Body width is controlled separately by
+`bodySlim`/`bodyBroad`; do not use bone or whole-skeleton scaling to fake muscle
+definition. This separation is required so Topless, Tattoo Parlour close-ups and
+garment fitting all share the same body.
+
 ## Facial contract
 
 LOD0/LOD1 require morph targets equivalent to:
@@ -120,9 +138,11 @@ name the objects `RMV2_Body_<Region>` or set the glTF/Blender custom property
 `torso`, `upper-arms`, `lower-arms`, `hands`, `hips`, `upper-legs`,
 `lower-legs`, `feet`.
 
-These meshes must remain armature-bound. The garment system hides only the
-regions declared by a validated garment, which prevents body/clothing
-interpenetration without hiding unrelated skin.
+These meshes must remain armature-bound **and must carry a skin material**. The
+garment system hides only the regions declared by a validated garment, which
+prevents body/clothing interpenetration without hiding unrelated skin. The skin
+requirement also guarantees that Topless and the Tattoo Parlour's unclothed
+inspection presentation never reveal a missing-body hole.
 
 The first V2 clothing proof set and per-garment budgets are defined in
 `public/avatar-v2/clothing/manifest.json`. Garment hardware and prints must be
