@@ -17,7 +17,7 @@ import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedRe
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 import { applyCuratedMacroShading } from './curatedMacroShading';
 import { curatedMaterialProfile } from './curatedMaterialProfile';
-import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, createAvatarSkinTextureCache } from './avatarMaterialQuality';
+import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, createAvatarHairTextureCache, createAvatarSkinTextureCache } from './avatarMaterialQuality';
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial } from './avatarPhysicalMaterials';
@@ -150,6 +150,7 @@ export function assemblePlayerModel(
     }
   }
   const skinTextureCache = createAvatarSkinTextureCache(appearance, quality);
+  const hairTextureCache = createAvatarHairTextureCache(quality);
   const starterFabricCache = new Map<string, { map: T.DataTexture; normal: T.DataTexture }>();
   const curatedSurfaceCache = new Map<string, {
     map: T.DataTexture;
@@ -271,10 +272,10 @@ export function assemblePlayerModel(
               applyAvatarEyeQuality(material, quality);
             } else if (/eyebrow|brow|hair_brown/.test(name)) {
               material.color.set(appearance.head.eyebrowColor ?? appearance.head.hair);
-              applyAvatarHairQuality(material, quality);
+              applyAvatarHairQuality(material, quality, hairTextureCache);
             } else if (/hair|pink|red/.test(name)) {
               material.color.set(appearance.head.hair);
-              applyAvatarHairQuality(material, quality);
+              applyAvatarHairQuality(material, quality, hairTextureCache);
             }
           } else if (!/earring|metal/.test(name) && !(name === 'white' && (choice.style !== 'casual' || choice.part === 'feet'))) {
             material.color.set(choice.dye);
@@ -361,7 +362,7 @@ export function assemblePlayerModel(
   const headBone = bones.get('Head');
   if (headBone) {
     addFaceDetails(result, appearance, headBone, quality);
-    addHair(result, appearance, headBone, quality);
+    addHair(result, appearance, headBone, quality, hairTextureCache);
     addAccessories(result, appearance, headBone, richClothing, quality);
   }
   addStarterLogoTee(result, appearance, bones, richClothing);
