@@ -158,7 +158,9 @@ The V2 body can now use the saved RockMundo appearance systems without bringing
 the legacy V1 body mesh back into the scene:
 
 - saved procedural hairstyles and facial hair are rebuilt around the authored V2
-  head/face surface and remain attached to the normalized `Head` bone;
+  head/face surface and remain attached to the normalized `Head` bone. LOD0/LOD1
+  certification now fails if that skinned head surface (and a skin material) is
+  missing, so a candidate cannot pass QA and then lose fitted cosmetics at runtime;
 - hats, glasses and left/right earrings use the same measured face/ear fitting
   logic as V1, but V2 head meshes are recognised through explicit
   `RMV2_Head...` / `RMV2_Face...` naming or
