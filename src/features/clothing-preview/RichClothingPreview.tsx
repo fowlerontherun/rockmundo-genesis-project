@@ -7,6 +7,7 @@ import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary 
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ClothingPreviewVariant } from './clothingPreview';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
+import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable } from './curatedGarmentAssets';
 
 interface PreviewApi {
   rotate: (angle: number) => void;
@@ -26,7 +27,7 @@ interface Props {
 export function RichClothingPreview({ appearance, item, variant, onStatusChange }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const api = useRef<PreviewApi | null>(null);
-  const liveScene = useRef<{ scene: T.Scene; garment: T.Group | null; ready: boolean } | null>(null);
+  const liveScene = useRef<{ scene: T.Scene; garment: T.Group | null; avatar: T.Object3D | null; library: ModelLibrary | null; ready: boolean } | null>(null);
   const latestPreview = useRef({ item, variant });
   latestPreview.current = { item, variant };
   const [status, setStatus] = useState<RichClothingPreviewStatus>('loading');
@@ -45,7 +46,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     let controls: OrbitControls | undefined;
     let observer: ResizeObserver | undefined;
     const scene = new T.Scene();
-    liveScene.current = { scene, garment: null, ready: false };
+    liveScene.current = { scene, garment: null, avatar: null, library: null, ready: false };
     const camera = new T.PerspectiveCamera(35, 1, .05, 30);
     const element = canvas.current;
     const onContextLost = (event: Event) => {
@@ -114,7 +115,10 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       };
       raf = requestAnimationFrame(frame);
 
-      void loadModelLibrary((['masculine', 'feminine'] as const).flatMap(frameType => STYLES.map(style => modelFile(frameType, style)))).then(loaded => {
+      const garmentFile = isCuratedClothingRenderable(item) ? curatedGarmentFile(item, appearance.body.frame) : null;
+      const modelFiles = (['masculine', 'feminine'] as const).flatMap(frameType => STYLES.map(style => modelFile(frameType, style)));
+      if (garmentFile) modelFiles.push(garmentFile);
+      void loadModelLibrary(modelFiles).then(loaded => {
         if (!alive) {
           loaded.forEach(disposeModel);
           return;
@@ -123,11 +127,20 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
         const base = assemblePlayerModel(library, appearance);
         scene.add(base);
         const currentPreview = latestPreview.current;
-        garment = buildProceduralGarment(currentPreview.item, currentPreview.variant);
-        garment.scale.y *= appearance.body.height;
+        if (isCuratedClothing(currentPreview.item)) {
+          if (!isCuratedClothingRenderable(currentPreview.item)) {
+            throw new Error('This curated skin is not validated for preview yet.');
+          }
+          garment = buildCuratedGarment(library, base, currentPreview.item, appearance.body.frame);
+        } else {
+          garment = buildProceduralGarment(currentPreview.item, currentPreview.variant);
+          garment.scale.y *= appearance.body.height;
+        }
         scene.add(garment);
         if (liveScene.current) {
           liveScene.current.garment = garment;
+          liveScene.current.avatar = base;
+          liveScene.current.library = library;
           liveScene.current.ready = true;
         }
         api.current = {
@@ -157,7 +170,8 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       element.removeEventListener('webglcontextlost', onContextLost);
       if (garment) {
         scene.remove(garment);
-        disposeProceduralGarment(garment);
+        if (isCuratedClothing(latestPreview.current.item)) disposeCuratedGarment(garment);
+        else disposeProceduralGarment(garment);
       }
       disposeModel(scene);
       library?.forEach(disposeModel);
@@ -173,12 +187,31 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     if (!live?.ready) return;
     if (live.garment) {
       live.scene.remove(live.garment);
-      disposeProceduralGarment(live.garment);
+      if (isCuratedClothing(latestPreview.current.item)) disposeCuratedGarment(live.garment);
+      else disposeProceduralGarment(live.garment);
+    }
+    if (isCuratedClothing(item)) {
+      if (!isCuratedClothingRenderable(item) || !live.avatar || !live.library) {
+        live.garment = null;
+        setStatus('error');
+        return;
+      }
+      try {
+        const next = buildCuratedGarment(live.library, live.avatar, item, appearance.body.frame);
+        live.scene.add(next);
+        live.garment = next;
+        setStatus('ready');
+      } catch {
+        live.garment = null;
+        setStatus('error');
+      }
+      return;
     }
     const next = buildProceduralGarment(item, variant);
     next.scale.y *= appearance.body.height;
     live.scene.add(next);
     live.garment = next;
+    setStatus('ready');
   }, [item, variant, appearance.body.height]);
 
   return <div className="player-model-preview" style={{ position: "relative", width: "100%", height: "100%", minHeight: 520 }}>
@@ -194,7 +227,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     />
     <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>RICH GARMENT FITTING ROOM</span></div>
     {status !== 'ready' && <div className="player-model-preview__overlay">
-      <strong>{status === 'error' ? 'Rich garment preview could not load' : 'Building garment preview…'}</strong>
+      <strong>{status === 'error' ? (isCuratedClothing(item) && !isCuratedClothingRenderable(item) ? 'Curated skin is awaiting validation' : 'Garment preview could not load') : 'Loading garment preview…'}</strong>
       {status === 'error' && <button type="button" onClick={() => setAttempt(value => value + 1)}>Retry</button>}
     </div>}
     <div className="player-model-preview__controls" aria-label="Model camera">

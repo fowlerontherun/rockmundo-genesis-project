@@ -16,6 +16,7 @@ import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
+import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from '@/features/clothing-preview/curatedGarmentAssets';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
@@ -91,7 +92,7 @@ export class Musician {
         number,
         number,
         number
-    ], public phase = 0, tint = '#728092', appearance?: PlayerAppearance, instrument?: InstrumentId | null, vocal?: VocalRole, richClothing: ResolvedEquippedClothing[] = [], instrumentSkin?: ResolvedInstrumentSkinVisual | null) {
+    ], public phase = 0, tint = '#728092', appearance?: PlayerAppearance, instrument?: InstrumentId | null, vocal?: VocalRole, richClothing: ResolvedEquippedClothing[] = [], instrumentSkin?: ResolvedInstrumentSkinVisual | null, curatedLibrary?: ModelLibrary) {
         this.vocalRole = vocal ?? null;
         this.model = clone(source);
         this.root.add(this.model);
@@ -133,13 +134,27 @@ export class Musician {
                 object.material = Array.isArray(object.material) ? object.material.map(configure) : configure(object.material);
             }
         });
-        // Procedural garments are authored in the same normalized rest-space used by
-        // the live fitting room. Attach their individual pieces to the performer
-        // skeleton before applying non-uniform body scaling so sleeves, legs, shoes,
-        // hats and torso pieces inherit the same animation as the character.
+        // Curated clothing is authored as skinned GLB geometry against the same
+        // Rockmundo skeleton as the performer. Legacy clothing keeps the old
+        // procedural fallback so existing player inventories remain compatible.
+        // A curated item that has not passed validation is never procedurally
+        // reconstructed: skipping it is safer than showing malformed geometry.
         if (richClothing.length) {
             this.root.updateMatrixWorld(true);
             for (const resolved of richClothing) {
+                if (isCuratedClothing(resolved.item)) {
+                    if (!appearance || !curatedLibrary || !isCuratedClothingRenderable(resolved.item))
+                        continue;
+                    try {
+                        const garment = buildCuratedGarment(curatedLibrary, this.model, resolved.item, appearance.body.frame);
+                        this.root.add(garment);
+                    }
+                    catch (error) {
+                        console.warn('[curated-clothing] could not attach garment', resolved.item.curated_asset_key, error);
+                    }
+                    continue;
+                }
+
                 const garment = buildProceduralGarment(resolved.item, resolved.variant);
                 this.root.add(garment);
                 this.root.updateMatrixWorld(true);
@@ -959,13 +974,15 @@ export class DemoCrowd {
     dispose() { this.batches = []; this.allFans = []; }
 }
 export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup?: ConcertPerformer[], seed?: number, venue?: VenueProfile) {
+    const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const library = await loadModelLibrary(['casual.glb', 'punk.glb', 'suit.glb', ...requiredModelFiles([...(lineup?.map(p => p.appearance) ?? []), ...crowdAppearances(seed ?? 85043)])], manager);
+    await loadOptionalCuratedGarments(library, curatedFiles, manager);
     const casual = library.get('casual.glb')!, punk = library.get('punk.glb')!, suit = library.get('suit.glb')!;
     const cymbals: T.Object3D[] = [];
     try {
         const actors = lineup ? lineup.map(p => {
             const assembled = assemblePlayerModel(library, p.appearance, visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []), p.richClothing);
-            const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing, p.instrumentSkin);
+            const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing, p.instrumentSkin, library);
             disposeModel(assembled);
             actor.id = p.id;
             actor.root.name = p.displayName;
