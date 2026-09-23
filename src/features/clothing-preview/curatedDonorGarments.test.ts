@@ -30,6 +30,7 @@ describe('curated donor garments', () => {
   it('parses a validated avatar-part source', () => {
     expect(curatedDonorSource(item())).toEqual({
       kind: 'avatar-part',
+      assetKey: undefined,
       style: 'casual',
       part: 'body',
       color: '#151515',
