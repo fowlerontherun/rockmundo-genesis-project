@@ -104,18 +104,21 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
       dye: curatedTop?.source.color ?? appearance.equipment.top.color,
       fabric: curatedTop?.source.fabric ?? equipmentItem(appearance, 'top').fabric,
+      finish: curatedTop?.source.finish,
     },
     {
       part: 'legs',
       style: curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
       dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
       fabric: curatedBottom?.source.fabric ?? equipmentItem(appearance, 'bottom').fabric,
+      finish: curatedBottom?.source.finish,
     },
     {
       part: 'feet',
       style: curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear'),
       dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
       fabric: curatedFootwear?.source.fabric ?? equipmentItem(appearance, 'footwear').fabric,
+      finish: curatedFootwear?.source.finish,
     },
   ];
   for (const choice of choices) {
@@ -137,6 +140,15 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
           const name = material.name.toLowerCase();
           material.roughness = /skin/.test(name) ? skinRoughness(appearance) : .84;
           material.metalness = /earring|metal/.test(name) ? .65 : 0;
+          if (!/skin|earring|metal/.test(name) && choice.finish) {
+            if (choice.finish === 'cotton') material.roughness = .9;
+            if (choice.finish === 'vintage-cotton') material.roughness = .97;
+            if (choice.finish === 'denim') material.roughness = .96;
+            if (choice.finish === 'tartan') material.roughness = .91;
+            if (choice.finish === 'canvas') material.roughness = .94;
+            if (choice.finish === 'leather') { material.roughness = .38; material.metalness = .03; }
+            if (choice.finish === 'polished-leather') { material.roughness = .24; material.metalness = .04; }
+          }
           if (/skin/.test(name)) material.color.set(appearance.body.skin);
           else if (choice.part === 'head') {
             // The source rigs use slightly different material names. Keep iris,
