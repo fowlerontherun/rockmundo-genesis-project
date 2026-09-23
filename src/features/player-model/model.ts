@@ -9,6 +9,7 @@ import { addAccessories } from './accessories';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { curatedDonorForSlot } from '@/features/clothing-preview/curatedDonorGarments';
+import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDetails';
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
@@ -191,6 +192,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
     addAccessories(result, appearance, headBone, richClothing);
   }
   addStarterLogoTee(result, appearance, bones, richClothing);
+  addCuratedSkinDetails(result, bones, richClothing);
   addTattoos(result, tattoos, bones);
   result.updateMatrixWorld(true);
   return result;

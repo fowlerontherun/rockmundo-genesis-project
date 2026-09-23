@@ -102,6 +102,26 @@ const SkinCollectionsAdmin = () => {
     },
   });
 
+  const { data: curatedStats } = useQuery({
+    queryKey: ["admin-curated-skin-stats"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("avatar_clothing_items") as any)
+        .select("collection_id, curated_asset_key, curated_asset_status");
+      if (error) throw error;
+      const stats: Record<string, { curated: number; published: number; qa: number; blocked: number; planned: number }> = {};
+      for (const item of (data || []) as any[]) {
+        if (!item.collection_id || !item.curated_asset_key) continue;
+        const row = stats[item.collection_id] ||= { curated: 0, published: 0, qa: 0, blocked: 0, planned: 0 };
+        row.curated += 1;
+        if (item.curated_asset_status === "published") row.published += 1;
+        else if (item.curated_asset_status === "blocked") row.blocked += 1;
+        else if (item.curated_asset_status === "validated" || item.curated_asset_status === "asset_ready") row.qa += 1;
+        else row.planned += 1;
+      }
+      return stats;
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase.from("skin_collections").insert({
@@ -226,8 +246,8 @@ const SkinCollectionsAdmin = () => {
         <div className="flex items-center gap-3">
           <Sparkles className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">Skin Collections</h1>
-            <p className="text-muted-foreground">Manage themed skin collections and releases</p>
+            <h1 className="text-2xl font-bold">Curated Skin Packs</h1>
+            <p className="text-muted-foreground">Manage curated clothing packs, asset readiness, QA and store releases</p>
           </div>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
@@ -331,6 +351,31 @@ const SkinCollectionsAdmin = () => {
         </Dialog>
       </div>
 
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" />Curated clothing workflow</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">Open a pack to see every curated asset, its stable asset key, lifecycle state, masculine/feminine support and the full performance QA checklist. Curated skins are kept out of the legacy procedural garment renderer.</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(collections || []).filter(collection => ["starter wardrobe", "punk essentials"].includes(collection.name.toLowerCase())).map(collection => {
+              const stats = curatedStats?.[collection.id] || { curated: 0, published: 0, qa: 0, blocked: 0, planned: 0 };
+              return <button key={collection.id} type="button" onClick={() => navigate(`/admin/skin-collections/${collection.id}/items`)} className="rounded-lg border bg-background p-4 text-left transition-colors hover:border-primary/50">
+                <div className="font-semibold">{collection.name}</div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <Badge variant="outline">{stats.curated} curated</Badge>
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">{stats.published} published</Badge>
+                  {stats.qa > 0 && <Badge variant="outline" className="border-amber-500/30 text-amber-600">{stats.qa} in QA</Badge>}
+                  {stats.planned > 0 && <Badge variant="secondary">{stats.planned} planned</Badge>}
+                  {stats.blocked > 0 && <Badge variant="destructive">{stats.blocked} blocked</Badge>}
+                </div>
+                <div className="mt-3 text-xs text-primary">Open asset manager →</div>
+              </button>;
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -348,6 +393,7 @@ const SkinCollectionsAdmin = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Theme</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead>Curated assets</TableHead>
                   <TableHead>Dates</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -371,6 +417,16 @@ const SkinCollectionsAdmin = () => {
                       <Badge variant="outline">{itemCounts?.[collection.id] || 0} items</Badge>
                     </TableCell>
                     <TableCell>
+                      {(() => {
+                        const stats = curatedStats?.[collection.id];
+                        return stats?.curated ? <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline">{stats.published}/{stats.curated} published</Badge>
+                          {stats.qa > 0 && <Badge variant="outline" className="border-amber-500/30 text-amber-600">{stats.qa} QA</Badge>}
+                          {stats.blocked > 0 && <Badge variant="destructive">{stats.blocked} blocked</Badge>}
+                        </div> : <span className="text-xs text-muted-foreground">Legacy / none</span>;
+                      })()}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         {format(new Date(collection.starts_at), "MMM d")}
@@ -384,8 +440,9 @@ const SkinCollectionsAdmin = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/skin-collections/${collection.id}/items`)}>
-                          <ExternalLink className="h-4 w-4" />
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/admin/skin-collections/${collection.id}/items`)}>
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Manage skins
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(collection)}>
                           <Edit className="h-4 w-4" />
