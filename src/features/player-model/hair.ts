@@ -2,7 +2,7 @@ import * as T from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { PlayerAppearance } from './appearance';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
-import { applyAvatarHairQuality } from './avatarMaterialQuality';
+import { applyAvatarHairQuality, type AvatarHairTextureCache } from './avatarMaterialQuality';
 
 /** Authored meshes split scalp hair from brows and eyes. New cuts use the
  * complete casual scalp, leaving all skin, eyebrows and facial details intact. */
@@ -14,6 +14,7 @@ export function addHair(
   appearance: PlayerAppearance,
   head: T.Bone,
   quality: AvatarVisualQuality = 'balanced',
+  hairTextureCache?: AvatarHairTextureCache,
 ) {
   const profile = avatarQualityProfile(quality);
   const cut = appearance.head.hairStyle ?? 'original', facial = appearance.head.facialHair ?? 'none';
@@ -250,7 +251,7 @@ export function addHair(
       material.anisotropy = quality === 'cinematic' ? .82 : quality === 'ultra' ? .7 : quality === 'high' ? .5 : .28;
       material.anisotropyRotation = 0;
     }
-    applyAvatarHairQuality(material, quality);
+    applyAvatarHairQuality(material, quality, hairTextureCache);
     if(facial==='stubble'&&name==='FacialHair') {
       const stubbleSize = quality === 'cinematic' ? 512 : quality === 'ultra' ? 256 : quality === 'high' ? 128 : 64;
       const data=new Uint8Array(stubbleSize*stubbleSize*4);
