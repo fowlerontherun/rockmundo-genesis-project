@@ -152,6 +152,31 @@ Crowds never need the same topology or 2K textures as a singer in a close-up.
 - first V2 tee, jeans and boots;
 - guitar/bass/drum grip certification.
 
+#### Phase C1 — shared appearance bridge
+
+The V2 body can now use the saved RockMundo appearance systems without bringing
+the legacy V1 body mesh back into the scene:
+
+- saved procedural hairstyles and facial hair are rebuilt around the authored V2
+  head/face surface and remain attached to the normalized `Head` bone;
+- hats, glasses and left/right earrings use the same measured face/ear fitting
+  logic as V1, but V2 head meshes are recognised through explicit
+  `RMV2_Head...` / `RMV2_Face...` naming or
+  `rockmundoHeadSurface=true` metadata;
+- Tattoo Parlour visuals attach to the normalized V2 skeleton instead of forcing
+  the whole avatar back to V1;
+- authored V2 clothing mappings now also accept headwear, eyewear and accessory
+  slots. These assets must still be bone-weighted GLBs; detached rigid details
+  remain rejected;
+- body occlusion metadata is mandatory for tops, bottoms and footwear, but is
+  deliberately optional for hats/glasses/accessories that do not cover a body
+  region.
+
+This is a compatibility bridge, not a rollout switch. Any missing head surface,
+unknown garment bone, absent exact LOD asset or failed contract still causes a
+clean V1 fallback. The registry remains locked until real masculine/feminine
+base assets and the proof garments are validated.
+
 ### Phase D — production rollout
 
 - LOD2/3;
