@@ -90,9 +90,9 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number) {
 export async function renderClothingTurntable(item: ClothingItem, options: BrowserPreviewRenderOptions = {}): Promise<RenderedPreviewFrame[]> {
   if (typeof document === 'undefined') throw new Error('Clothing preview rendering requires a browser environment.');
   const curated = isCuratedClothing(item);
-  const width = Math.max(320, Math.min(1600, Math.round(options.width || (curated ? 1200 : 640))));
-  const height = Math.max(400, Math.min(2000, Math.round(options.height || (curated ? 1500 : 800))));
-  const quality = Math.max(.55, Math.min(.97, options.quality ?? (curated ? .95 : .86)));
+  const width = Math.max(320, Math.min(1600, Math.round(options.width || (curated ? 1440 : 640))));
+  const height = Math.max(400, Math.min(2000, Math.round(options.height || (curated ? 1800 : 800))));
+  const quality = Math.max(.55, Math.min(.98, options.quality ?? (curated ? .96 : .86)));
   const views = options.views?.length ? options.views : CLOTHING_TURNTABLE_VIEWS;
 
   const canvas = document.createElement('canvas');
@@ -157,7 +157,7 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
       if (garmentFile) files.push(garmentFile);
       library = await loadModelLibrary(files);
       const donor = curatedDonorSource(item);
-      curatedAvatar = assemblePlayerModel(library, appearance, [], donor ? [{ item, variant }] : [], 'ultra');
+      curatedAvatar = assemblePlayerModel(library, appearance, [], donor ? [{ item, variant }] : [], 'cinematic');
       curatedAvatar.traverse(object => {
         if (!(object instanceof T.Mesh)) return;
         object.castShadow = true;
