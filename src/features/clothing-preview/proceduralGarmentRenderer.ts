@@ -264,7 +264,7 @@ function addTopGarment(
   const drapeSpread = T.MathUtils.lerp(.96, 1.06, spec.drape);
   const taper = T.MathUtils.lerp(1.02, .76, spec.taper);
   const halfShoulder = spec.scaleX * (isBoxy ? .52 : isFitted ? .46 : .49) * drapeSpread;
-  const halfHem = halfShoulder * (isDress ? 1.04 : isBoxy ? .94 : isFitted ? .84 : taper);
+  const halfHem = halfShoulder * (isDress ? 1.04 + spec.customFlare * .24 : isBoxy ? .94 : isFitted ? .84 : taper) * spec.waistScale;
   const torsoDepth = Math.max(.105, spec.scaleZ * (isOuterwear ? .76 : .64) * T.MathUtils.lerp(.9, 1.12, spec.thickness));
 
   const torso = new T.Mesh(
@@ -288,12 +288,13 @@ function addTopGarment(
 
   const sleeves = spec.sleeve;
   if (sleeves !== 'sleeveless' && sleeves !== 'none') {
-    const sleeveLength =
+    const sleeveLength = (
       /long|full/.test(sleeves) ? .64 :
       /three-quarter/.test(sleeves) ? .5 :
       /elbow/.test(sleeves) ? .39 :
-      /cap/.test(sleeves) ? .18 : .29;
-    const sleeveRadius = spec.scaleX * (isOuterwear ? .082 : .068) * T.MathUtils.lerp(.92, 1.08, spec.drape);
+      /cap/.test(sleeves) ? .18 : .29
+    ) * spec.sleeveLengthScale;
+    const sleeveRadius = spec.scaleX * (isOuterwear ? .082 : .068) * T.MathUtils.lerp(.92, 1.08, spec.drape) * spec.sleeveWidthScale;
     const shoulderY = spec.y + bodyHeight * .35;
     const sleeveDepthScale = Math.max(.72, torsoDepth / Math.max(.01, sleeveRadius * 2.25));
     for (const side of [-1, 1]) {
@@ -375,7 +376,7 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     const garment = (item.garment_config || {}) as Record<string, unknown>;
     const skirtLike = /skirt|dress|a-line|wide/.test(`${item.category} ${garment.silhouette || ''}`.toLowerCase());
     if (skirtLike) {
-      const skirt = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .42, spec.scaleX * (.5 + spec.flare), spec.scaleY, 28, 1, false), material);
+      const skirt = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .42 * spec.waistScale, spec.scaleX * (.5 + spec.flare + spec.customFlare * .22), spec.scaleY, 32, 3, false), material);
       skirt.position.set(0, spec.y, spec.z);
       add(skirt, 'Hips');
     } else {
