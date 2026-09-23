@@ -39,7 +39,7 @@ function faceBounds(root: T.Object3D) {
   return bounds;
 }
 
-function detailMaterial(color: T.Color, opacity: number, quality: AvatarVisualQuality, quality) {
+function detailMaterial(color: T.Color, opacity: number, quality: AvatarVisualQuality) {
   if (quality === 'crowd') {
     return new T.MeshBasicMaterial({
       color,
