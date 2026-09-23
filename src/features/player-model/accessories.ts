@@ -55,6 +55,61 @@ function fittedEarPoint(
   return best.clone().add(new T.Vector3(side * size.x * .012, -size.y * .01, size.z * .006));
 }
 
+
+
+function fittedEyeCenters(
+  root: T.Object3D,
+  bounds: T.Box3,
+  frame: PlayerAppearance['body']['frame'],
+) {
+  if (bounds.isEmpty()) return { leftEye: null, rightEye: null };
+  const strong: T.Vector3[] = [];
+  const fallback: T.Vector3[] = [];
+  const center = bounds.getCenter(new T.Vector3());
+  const size = bounds.getSize(new T.Vector3());
+
+  root.updateMatrixWorld(true);
+  root.traverse(node => {
+    if (!(node instanceof T.SkinnedMesh)) return;
+    let parent: T.Object3D | null = node;
+    while (parent && !/_Head(?:_|$)/i.test(parent.name)) parent = parent.parent;
+    if (!parent) return;
+
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    const groups = node.geometry.groups.length
+      ? node.geometry.groups
+      : [{ start: 0, count: node.geometry.index?.count ?? node.geometry.attributes.position.count, materialIndex: 0 }];
+    node.skeleton.update();
+
+    for (const group of groups) {
+      const material = materials[group.materialIndex ?? 0];
+      if (!material) continue;
+      const name = material.name.toLowerCase();
+      const isStrong = /iris|pupil|eye/.test(name) || (frame === 'feminine' && name === 'brown');
+      const isFallback = name === 'white';
+      if (!isStrong && !isFallback) continue;
+
+      const target = isStrong ? strong : fallback;
+      const end = Math.min(group.start + group.count, node.geometry.index?.count ?? node.geometry.attributes.position.count);
+      for (let cursor = group.start; cursor < end; cursor++) {
+        const vertexIndex = node.geometry.index ? node.geometry.index.getX(cursor) : cursor;
+        const point = node.getVertexPosition(vertexIndex, new T.Vector3()).applyMatrix4(node.matrixWorld);
+        if (isFallback && point.y < center.y + size.y * .02) continue;
+        target.push(point);
+      }
+    }
+  });
+
+  const points = strong.length ? strong : fallback;
+  const average = (side: -1 | 1) => {
+    const selected = points.filter(point => side < 0 ? point.x < center.x : point.x > center.x);
+    if (!selected.length) return null;
+    return selected.reduce((sum, point) => sum.add(point), new T.Vector3()).multiplyScalar(1 / selected.length);
+  };
+
+  return { leftEye: average(-1), rightEye: average(1) };
+}
+
 function material(color: string, name: string, metalness = 0, roughness = .78) {
   const result = new T.MeshStandardMaterial({ color, metalness, roughness });
   result.name = name;
@@ -88,6 +143,9 @@ export function addAccessories(
   if (bounds.isEmpty()) return;
   const center = bounds.getCenter(new T.Vector3()), size = bounds.getSize(new T.Vector3());
   const rx = size.x * .5, rz = size.z * .5;
+  const leftEarFit = fittedEarPoint(headSurface.points, bounds, -1);
+  const rightEarFit = fittedEarPoint(headSurface.points, bounds, 1);
+  const eyeFit = fittedEyeCenters(root, bounds, appearance.body.frame);
   const anchor = new T.Group();
   anchor.name = 'avatar-accessories';
 
@@ -104,7 +162,11 @@ export function addAccessories(
       slot: 'eyewear', style, color: accessories.glassesColor,
       lenses: appearance.accessories?.lensTint ?? (accessories.glasses === 'sunglasses' ? 'tinted' : 'clear'),
       lensColor: appearance.accessories?.lensColor ?? '#40566d',
-    }, bounds, quality);
+    }, bounds, quality, {
+      ...eyeFit,
+      leftEar: leftEarFit,
+      rightEar: rightEarFit,
+    });
     glasses.name = `avatar-glasses-${accessories.glasses}`;
     anchor.add(glasses);
   }
@@ -128,7 +190,7 @@ export function addAccessories(
     for (const side of [-1, 1] as const) {
       const style = side < 0 ? leftStyle : rightStyle;
       if (style === 'none') continue;
-      const fitted = fittedEarPoint(headSurface.points, bounds, side);
+      const fitted = side < 0 ? leftEarFit : rightEarFit;
       const earX = fitted?.x ?? center.x + side * rx * .965;
       const earY = fitted?.y ?? center.y - size.y * .055;
       const earZ = fitted?.z ?? center.z + rz * .10;
