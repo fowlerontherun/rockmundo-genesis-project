@@ -13,7 +13,7 @@ import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDe
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
-import { curatedAlbedoTexture, curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture, type CuratedFinish } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, type CuratedFinish } from './curatedSurfaceMaps';
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 
 export type ModelLibrary = Map<string, T.Object3D>;
@@ -212,10 +212,12 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
             if (choice.assetKey && choice.finish) {
               const finish = choice.finish as CuratedFinish;
               material.map = curatedAlbedoTexture(choice.assetKey, finish);
+              material.normalMap = curatedNormalTexture(choice.assetKey, finish);
+              material.normalScale.set(finish === 'denim' || finish === 'canvas' ? .8 : .58, finish === 'denim' || finish === 'canvas' ? .8 : .58);
               material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
-              material.bumpScale = curatedBumpScale(finish);
+              material.bumpScale = curatedBumpScale(finish) * .4;
               material.roughnessMap = curatedRoughnessTexture(choice.assetKey, finish);
-              material.envMapIntensity = finish === 'polished-leather' ? 1.35 : finish === 'leather' ? 1.12 : .92;
+              material.envMapIntensity = finish === 'polished-leather' ? 1.45 : finish === 'leather' ? 1.2 : .96;
               material.needsUpdate = true;
             }
           }
