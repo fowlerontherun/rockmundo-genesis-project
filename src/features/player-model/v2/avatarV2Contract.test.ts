@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { defaultAppearance } from '../appearance';
 import {
+  AVATAR_V2_BODY_REGIONS,
   AVATAR_V2_CLOSEUP_BONE_ALIASES,
   AVATAR_V2_REQUIRED_BONES,
   validateAvatarV2Scene,
@@ -52,6 +53,17 @@ function validScene() {
   mesh.morphTargetInfluences = [0, 0, 0, 0];
   mesh.bind(new T.Skeleton(bones));
   root.add(mesh);
+
+  for (const region of AVATAR_V2_BODY_REGIONS) {
+    const part = new T.Mesh(
+      new T.BoxGeometry(.02, .02, .02),
+      new T.MeshStandardMaterial({ color: '#cccccc' }),
+    );
+    part.name = `RMV2_Body_${region}`;
+    part.userData.rockmundoBodyRegion = region;
+    root.add(part);
+  }
+
   root.updateMatrixWorld(true);
   return root;
 }
