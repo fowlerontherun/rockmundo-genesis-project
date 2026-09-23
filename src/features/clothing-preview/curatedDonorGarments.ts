@@ -1,6 +1,6 @@
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ResolvedEquippedClothing } from './equippedClothing';
-import type { Style } from '@/features/player-model/appearance';
+import { modelFile, type PlayerAppearance, type Style } from '@/features/player-model/appearance';
 import { richGarmentSlot } from './richGarmentVisuals';
 
 export type CuratedDonorPart = 'body' | 'legs' | 'feet';
@@ -52,4 +52,15 @@ export function curatedDonorForSlot(
       fabric: variantFabric || source.fabric,
     },
   };
+}
+
+
+export function requiredCuratedDonorModelFiles(
+  richClothing: ResolvedEquippedClothing[],
+  frame: PlayerAppearance['body']['frame'],
+) {
+  return [...new Set(richClothing
+    .map(entry => curatedDonorSource(entry.item))
+    .filter((source): source is CuratedDonorSource => !!source)
+    .map(source => modelFile(frame, source.style)))];
 }
