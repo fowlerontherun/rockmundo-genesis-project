@@ -1,12 +1,47 @@
 import { STAGE_INSTRUMENTS, type InstrumentId } from './instrumentCatalog';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Camera, Expand, Loader2, Pause, Play, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { ConcertScene } from './ConcertScene';
 import { DEFAULT_SETTINGS, DEMO_DURATION, LOOKS, SHOTS, songSection, type DemoSettings, type DemoStats, type LightingLook } from './config';
 import { VENUE_TYPES, type VenueKind } from './venueProfile';
 import { venuePreviewOptions } from './venuePreview';
+import { supabase } from '@/integrations/supabase/client';
+import { resolveSongAudioDescriptor } from '@/features/gig-experience/viewer/audio/audioSourceResolver';
+import {
+  GIG_CROWD_SOUND_TYPES,
+  loadGigCrowdSounds,
+  pickGigCrowdSound,
+  type GigCrowdSound,
+} from '@/features/gig-experience/viewer/audio/crowdSoundLibrary';
 import './concert-demo.css';
+
+type DemoSong = {
+  id: string;
+  title: string;
+  audio_url: string | null;
+  extended_audio_url: string | null;
+  audio_generation_status: string | null;
+  duration_seconds: number | null;
+};
+
+async function loadAllDemoSongs(): Promise<DemoSong[]> {
+  const pageSize = 1000;
+  const rows: DemoSong[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await (supabase as any)
+      .from('songs')
+      .select('id,title,audio_url,extended_audio_url,audio_generation_status,duration_seconds')
+      .or('archived.is.null,archived.eq.false')
+      .order('title')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as DemoSong[];
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+  return rows;
+}
 
 export default function Concert3DDemo() {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -22,6 +57,15 @@ export default function Concert3DDemo() {
   const [capacity, setCapacity] = useState(700);
   const [instrument, setInstrument] = useState<InstrumentId | ''>('');
   const [reaction, setReaction] = useState('auto');
+  const [songs, setSongs] = useState<DemoSong[]>([]);
+  const [crowdSounds, setCrowdSounds] = useState<GigCrowdSound[]>([]);
+  const [selectedSongId, setSelectedSongId] = useState('');
+  const [selectedCrowdSoundId, setSelectedCrowdSoundId] = useState('auto');
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const songAudio = useRef<HTMLAudioElement | null>(null);
+  const crowdAudio = useRef<HTMLAudioElement | null>(null);
+  const selectedSong = useMemo(() => songs.find(song => song.id === selectedSongId) ?? null, [songs, selectedSongId]);
+  const selectedCrowdSound = useMemo(() => crowdSounds.find(sound => sound.id === selectedCrowdSoundId) ?? null, [crowdSounds, selectedCrowdSoundId]);
   const venueLabel = venueType === 'original' ? 'The Live Room' : VENUE_TYPES[venueType][0];
   const [stats, setStats] = useState<DemoStats>({ fps: 0, drawCalls: 0, triangles: 0, seconds: 0 });
   const [showStats, setShowStats] = useState(false);
@@ -40,6 +84,101 @@ export default function Concert3DDemo() {
   }, [attempt, venueType, capacity, instrument]);
   useEffect(() => { engine.current?.setPreviewCrowdReaction(reaction); }, [reaction, attempt, venueType, capacity, instrument]);
   useEffect(() => { engine.current?.setSettings(settings); }, [settings]);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([loadAllDemoSongs(), loadGigCrowdSounds()])
+      .then(([songRows, soundRows]) => {
+        if (cancelled) return;
+        setSongs(songRows);
+        setCrowdSounds(soundRows);
+        setSelectedSongId(current => current || songRows.find(song => resolveSongAudioDescriptor(song, 'admin_demo').available)?.id || songRows[0]?.id || '');
+      })
+      .catch(error => {
+        if (!cancelled) setMessage(error instanceof Error ? `Audio catalogue failed to load: ${error.message}` : 'Audio catalogue failed to load.');
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    songAudio.current?.pause();
+    songAudio.current = null;
+    if (!audioEnabled || !selectedSong || typeof Audio === 'undefined') return;
+    const descriptor = resolveSongAudioDescriptor(selectedSong, 'admin_demo');
+    if (!descriptor.available || !descriptor.url) return;
+    const audio = new Audio(descriptor.url);
+    audio.preload = 'auto';
+    audio.loop = true;
+    audio.volume = 0.72;
+    songAudio.current = audio;
+    if (settings.playing) void audio.play().catch(() => undefined);
+    return () => {
+      audio.pause();
+      if (songAudio.current === audio) songAudio.current = null;
+    };
+  }, [audioEnabled, selectedSongId]);
+
+  useEffect(() => {
+    const audio = songAudio.current;
+    if (!audio) return;
+    if (audioEnabled && settings.playing) void audio.play().catch(() => undefined);
+    else audio.pause();
+  }, [audioEnabled, settings.playing]);
+
+  useEffect(() => {
+    crowdAudio.current?.pause();
+    crowdAudio.current = null;
+    if (!audioEnabled || selectedCrowdSoundId === 'auto' || !selectedCrowdSound || typeof Audio === 'undefined') return;
+    const audio = new Audio(selectedCrowdSound.audio_url);
+    audio.preload = 'auto';
+    audio.loop = selectedCrowdSound.sound_type === 'ambient_chatter' || selectedCrowdSound.sound_type === 'crowd_singing';
+    audio.volume = 0.34;
+    crowdAudio.current = audio;
+    if (settings.playing) void audio.play().catch(() => undefined);
+    return () => {
+      audio.pause();
+      if (crowdAudio.current === audio) crowdAudio.current = null;
+    };
+  }, [audioEnabled, selectedCrowdSoundId]);
+
+  useEffect(() => {
+    const audio = crowdAudio.current;
+    if (!audio) return;
+    if (audioEnabled && settings.playing) void audio.play().catch(() => undefined);
+    else audio.pause();
+  }, [audioEnabled, settings.playing]);
+
+  const crowdPulseBucket = Math.floor(stats.seconds / 12);
+  useEffect(() => {
+    if (!audioEnabled || !settings.playing || selectedCrowdSoundId !== 'auto' || !crowdSounds.length || typeof Audio === 'undefined') return;
+    const intensity = Math.max(1, Math.min(10, Math.round(2 + settings.crowd * 8)));
+    const reactionTypes = reaction === 'mosh_pit' || reaction === 'jump'
+      ? ['mosh_pit', 'crowd_cheer_large', 'crowd_cheer_medium'] as const
+      : reaction === 'applause'
+        ? ['applause', 'crowd_cheer_medium'] as const
+        : reaction === 'phone_lights' || reaction === 'sway' || reaction === 'still'
+          ? ['lighter_moment', 'crowd_singing', 'ambient_chatter'] as const
+          : reaction === 'cheer' || reaction === 'crowd_surf'
+            ? ['crowd_cheer_large', 'crowd_cheer_medium', 'applause'] as const
+            : settings.crowd > 0.72
+              ? ['crowd_cheer_large', 'crowd_singing', 'mosh_pit'] as const
+              : settings.crowd > 0.4
+                ? ['crowd_cheer_medium', 'applause', 'song_recognition'] as const
+                : ['ambient_chatter', 'crowd_cheer_small', 'lighter_moment'] as const;
+    const clip = pickGigCrowdSound(crowdSounds, [...reactionTypes], intensity, `3d-demo:${reaction}:${crowdPulseBucket}:${venueType}`);
+    if (!clip) return;
+
+    crowdAudio.current?.pause();
+    const audio = new Audio(clip.audio_url);
+    audio.preload = 'auto';
+    audio.loop = clip.sound_type === 'ambient_chatter' || clip.sound_type === 'crowd_singing';
+    audio.volume = Math.max(0.08, Math.min(0.5, 0.16 + settings.crowd * 0.28));
+    crowdAudio.current = audio;
+    void audio.play().catch(() => undefined);
+    return () => {
+      audio.pause();
+      if (crowdAudio.current === audio) crowdAudio.current = null;
+    };
+  }, [audioEnabled, settings.playing, selectedCrowdSoundId, crowdSounds, crowdPulseBucket, reaction, settings.crowd, venueType]);
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const change = () => setSettings(previous => ({ ...previous, reducedMotion: media.matches }));
@@ -72,14 +211,17 @@ export default function Concert3DDemo() {
       <label htmlFor="demo-venue-capacity">Venue capacity<select id="demo-venue-capacity" disabled={venueType === 'original'} value={capacity} onChange={event => setCapacity(Number(event.target.value))}>{[...new Set([40,150,500,2000,10000,50000,100000,capacity])].sort((a,b)=>a-b).map(value => <option key={value} value={value}>{value.toLocaleString()} people</option>)}</select></label>
       <label htmlFor="demo-instrument">Featured instrument<select id="demo-instrument" value={instrument} onChange={event => setInstrument(event.target.value as InstrumentId | '')}><option value="">Standard band</option>{Object.entries(STAGE_INSTRUMENTS).map(([id,spec]) => <option key={id} value={id}>{spec.label}</option>)}</select></label>
       <label htmlFor="demo-crowd-reaction">Crowd reaction<select id="demo-crowd-reaction" value={reaction} onChange={event => setReaction(event.target.value)}>{[['auto','Follow energy'],['sway','Sway'],['applause','Clap'],['cheer','Cheer'],['jump','Jump and headbang'],['mosh_pit','Circle pit'],['crowd_surf','Crowd surfing'],['wave','Crowd wave'],['phone_lights','Phone lights'],['still','Watch quietly']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <p>Compare stage size, instruments and crowd reactions. Preview changes do not edit game venues.</p>
+<label htmlFor="demo-song">In-game song<select id="demo-song" value={selectedSongId} onChange={event => setSelectedSongId(event.target.value)}><option value="">No song selected</option>{songs.map(song => { const audio = resolveSongAudioDescriptor(song, 'admin_demo'); return <option key={song.id} value={song.id}>{song.title}{audio.available ? '' : ' · no playable audio'}</option>; })}</select></label>
+      <label htmlFor="demo-crowd-sound">Crowd audio<select id="demo-crowd-sound" value={selectedCrowdSoundId} onChange={event => setSelectedCrowdSoundId(event.target.value)}><option value="auto">Automatic mix from all crowd sounds</option>{GIG_CROWD_SOUND_TYPES.map(type => <optgroup key={type} label={type.replaceAll('_', ' ')}>{crowdSounds.filter(sound => sound.sound_type === type).map(sound => <option key={sound.id} value={sound.id}>{sound.name} · intensity {sound.intensity_level}</option>)}</optgroup>)}</select></label>
+      <label htmlFor="demo-audio-enabled">Audio<select id="demo-audio-enabled" value={audioEnabled ? 'on' : 'off'} onChange={event => setAudioEnabled(event.target.value === 'on')}><option value="on">On</option><option value="off">Off</option></select></label>
+      <p>{songs.length.toLocaleString()} in-game songs · {crowdSounds.length.toLocaleString()} active crowd sounds loaded. Automatic mode uses the full crowd library during gig playback.</p>
     </div>
     <section className="concert-demo__experience" ref={stage} aria-label="Interactive concert preview">
       <div className="concert-demo__viewport">
         <canvas ref={canvas} className="concert-demo__canvas" aria-label={`3D ${venueLabel} with a four-piece band, stage lighting and an animated audience`} aria-describedby="concert-scene-description" />
         <div className="concert-demo__topline" aria-hidden="true"><span><i /> {venueLabel.toUpperCase()}</span><span>{venueType === 'original' ? 'CLUB SESSION / 001' : `${capacity.toLocaleString()} CAPACITY`}</span></div>
         <div className="concert-demo__scene-caption" aria-hidden="true"><span>NEON HOURS</span><strong>{songSection(stats.seconds)}</strong></div>
-        <p id="concert-scene-description" className="sr-only">A {venueLabel} scene with a vocalist, {instrument ? STAGE_INSTRUMENTS[instrument].label : 'guitar'} player, bassist and drummer. Camera buttons change your viewpoint. Lighting, audience and motion controls are below the preview. This is a silent visual demo using fictional performers.</p>
+        <p id="concert-scene-description" className="sr-only">A {venueLabel} scene with a vocalist, {instrument ? STAGE_INSTRUMENTS[instrument].label : 'guitar'} player, bassist and drummer. Camera buttons change your viewpoint. Lighting, audience and motion controls are below the preview. The demo can play real in-game song audio and the active RockMundo crowd-sound library while using fictional performers.</p>
 
         {state !== 'ready' && <div className="concert-demo__overlay" role={state === 'error' ? 'alert' : 'status'}>
           {state === 'loading' ? <><Loader2 size={28} className="concert-demo__spinner" /><h2>Setting the stage</h2><p>Loading the band, materials and lights…</p></> : <><h2>The scene needs a restart</h2><p>{message}</p><button className="concert-demo__primary" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={16} /> Retry 3D demo</button></>}
@@ -90,9 +232,9 @@ export default function Concert3DDemo() {
       <div className="concert-demo__transport">
         <div className="concert-demo__playback">
           <button className="concert-demo__play" aria-label={settings.playing ? 'Pause performance' : 'Play performance'} disabled={state !== 'ready'} onClick={() => update('playing', !settings.playing)}>{settings.playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button>
-          <button className="concert-demo__icon" aria-label="Restart performance" disabled={state !== 'ready'} onClick={() => { engine.current?.restart(); setStats(previous => ({ ...previous, seconds: 0 })); }}><RotateCcw size={17} /></button>
+          <button className="concert-demo__icon" aria-label="Restart performance" disabled={state !== 'ready'} onClick={() => { engine.current?.restart(); if (songAudio.current) songAudio.current.currentTime = 0; if (crowdAudio.current) crowdAudio.current.currentTime = 0; setStats(previous => ({ ...previous, seconds: 0 })); }}><RotateCcw size={17} /></button>
           <span className="concert-demo__time">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')} <span>/ 1:36</span></span>
-          <span className="concert-demo__silent">Visual demo</span>
+          <span className="concert-demo__silent">{audioEnabled ? (selectedSong ? selectedSong.title : 'Audio on') : 'Audio off'}</span>
         </div>
         <div className="concert-demo__cameras" role="group" aria-label="Camera viewpoint"><Camera size={16} aria-hidden="true" />{SHOTS.map(shot => <button key={shot.id} aria-pressed={settings.camera === shot.id} onClick={() => update('camera', shot.id)}>{shot.label}</button>)}</div>
         {document.fullscreenEnabled && <button className="concert-demo__icon" onClick={toggleFullscreen} aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>{fullscreen ? <X size={18} /> : <Expand size={18} />}</button>}
@@ -108,7 +250,7 @@ export default function Concert3DDemo() {
       </div>
     </section>
 
-    <footer className="concert-demo__footer"><p>Four-piece band · 21 venue settings · five camera views <span>Local preview. No game records are changed.</span></p><button aria-pressed={showStats} onClick={() => setShowStats(value => !value)}><SlidersHorizontal size={14} /> Performance stats</button></footer>
+    <footer className="concert-demo__footer"><p>Four-piece band · 21 venue settings · five camera views · {songs.length.toLocaleString()} songs · {crowdSounds.length.toLocaleString()} crowd sounds <span>Local preview. No game records are changed.</span></p><button aria-pressed={showStats} onClick={() => setShowStats(value => !value)}><SlidersHorizontal size={14} /> Performance stats</button></footer>
     {message && state !== 'error' && <p className="concert-demo__notice" role="status">{message}</p>}
   </main>;
 }
