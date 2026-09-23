@@ -20,6 +20,7 @@ import { curatedMaterialProfile } from './curatedMaterialProfile';
 import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, createAvatarSkinTextureCache } from './avatarMaterialQuality';
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
+import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial } from './avatarPhysicalMaterials';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -189,6 +190,7 @@ export function assemblePlayerModel(
     if (!containers.length) throw new Error(`Missing character part: ${choice.part}`);
     for (const container of containers) {
       const part = container.clone(true), removeHair: T.Object3D[] = [];
+      const corneaOverlays: Array<{ parent: T.Object3D; overlay: T.SkinnedMesh }> = [];
       part.traverse(clonedNode => {
         if (!(clonedNode instanceof T.SkinnedMesh)) return;
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
@@ -268,6 +270,22 @@ export function assemblePlayerModel(
               material.needsUpdate = true;
             }
           }
+          if (/skin/.test(name)) {
+            return upgradeSkinMaterial(material, appearance, quality);
+          }
+          if (
+            choice.assetKey &&
+            choice.finish &&
+            (choice.finish === 'leather' || choice.finish === 'polished-leather') &&
+            !/earring|metal/.test(name)
+          ) {
+            return upgradeCuratedGarmentMaterial(
+              material,
+              choice.finish as CuratedFinish,
+              curatedMaterialProfile(choice.assetKey, choice.finish as CuratedFinish),
+              quality,
+            );
+          }
           return material;
         };
         if (choice.part === 'head' && appearance.head.hairStyle && appearance.head.hairStyle !== 'original' && !Array.isArray(original.material) && isScalpHair(original.material, appearance.body.frame)) removeHair.push(clonedNode);
@@ -276,7 +294,12 @@ export function assemblePlayerModel(
           const match = bones.get(bone.name); if (!match) throw new Error(`Incompatible character part: ${bone.name}`); return match;
         });
         clonedNode.bind(new T.Skeleton(boundBones, original.skeleton.boneInverses.map(matrix => matrix.clone())), original.bindMatrix.clone());
+        if (choice.part === 'head' && clonedNode.parent) {
+          const overlay = createCorneaOverlay(clonedNode, appearance.body.frame, quality);
+          if (overlay) corneaOverlays.push({ parent: clonedNode.parent, overlay });
+        }
       });
+      corneaOverlays.forEach(({ parent, overlay }) => parent.add(overlay));
       removeHair.forEach(disposeModel);
       const parent = container.parent?.name ? result.getObjectByName(container.parent.name) : result;
       (parent ?? result).add(part);
