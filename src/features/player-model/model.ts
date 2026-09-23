@@ -17,6 +17,8 @@ import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedRe
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 import { applyCuratedMacroShading } from './curatedMacroShading';
 import { curatedMaterialProfile } from './curatedMaterialProfile';
+import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality } from './avatarMaterialQuality';
+import type { AvatarVisualQuality } from './avatarVisualQuality';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -118,7 +120,13 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
 
 /** Each part keeps its donor inverse binds and local transform. This matters for
  * the small body offset in the original casual/suit assets. Rig families never mix. */
-export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerAppearance, tattoos: ResolvedTattooVisual[] = [], richClothing: ResolvedEquippedClothing[] = []): T.Object3D {
+export function assemblePlayerModel(
+  library: ModelLibrary,
+  appearance: PlayerAppearance,
+  tattoos: ResolvedTattooVisual[] = [],
+  richClothing: ResolvedEquippedClothing[] = [],
+  quality: AvatarVisualQuality = 'balanced',
+): T.Object3D {
   const source = (style: Parameters<typeof modelFile>[1]) => {
     const model = library.get(modelFile(appearance.body.frame, style));
     if (!model) throw new Error('The selected character model could not load.');
@@ -201,14 +209,25 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
             if (choice.finish === 'leather') { material.roughness = .38; material.metalness = .03; }
             if (choice.finish === 'polished-leather') { material.roughness = .24; material.metalness = .04; }
           }
-          if (/skin/.test(name)) material.color.set(appearance.body.skin);
-          else if (choice.part === 'head') {
+          if (/skin/.test(name)) {
+            material.color.set(appearance.body.skin);
+            applyAvatarSkinQuality(material, appearance, quality);
+          } else if (choice.part === 'head') {
             // The source rigs use slightly different material names. Keep iris,
             // brows and hair independently tintable while preserving eye whites.
             const isFeminineIris = appearance.body.frame === 'feminine' && name === 'brown';
-            if (/iris|pupil/.test(name) || isFeminineIris) material.color.set(appearance.head.eyeColor ?? '#65442d');
-            else if (/eyebrow|brow|hair_brown/.test(name)) material.color.set(appearance.head.eyebrowColor ?? appearance.head.hair);
-            else if (/hair|pink|red/.test(name)) material.color.set(appearance.head.hair);
+            if (/iris|pupil/.test(name) || isFeminineIris) {
+              material.color.set(appearance.head.eyeColor ?? '#65442d');
+              applyAvatarEyeQuality(material, quality);
+            } else if (/white|eye/.test(name) && !/eyebrow/.test(name)) {
+              applyAvatarEyeQuality(material, quality);
+            } else if (/eyebrow|brow|hair_brown/.test(name)) {
+              material.color.set(appearance.head.eyebrowColor ?? appearance.head.hair);
+              applyAvatarHairQuality(material, quality);
+            } else if (/hair|pink|red/.test(name)) {
+              material.color.set(appearance.head.hair);
+              applyAvatarHairQuality(material, quality);
+            }
           } else if (!/earring|metal/.test(name) && !(name === 'white' && (choice.style !== 'casual' || choice.part === 'feet'))) {
             material.color.set(choice.dye);
             if (choice.fabric !== 'plain') {
@@ -271,9 +290,9 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
   }
   const headBone = bones.get('Head');
   if (headBone) {
-    addFaceDetails(result, appearance, headBone);
-    addHair(result, appearance, headBone);
-    addAccessories(result, appearance, headBone, richClothing);
+    addFaceDetails(result, appearance, headBone, quality);
+    addHair(result, appearance, headBone, quality);
+    addAccessories(result, appearance, headBone, richClothing, quality);
   }
   addStarterLogoTee(result, appearance, bones, richClothing);
   addCuratedSkinDetails(result, bones, richClothing);
