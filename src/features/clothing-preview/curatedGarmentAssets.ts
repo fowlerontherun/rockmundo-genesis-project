@@ -1,5 +1,7 @@
 import * as T from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { demoAssetUrl } from '@/features/gig-demo-3d/assets';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
@@ -30,6 +32,20 @@ export function requiredCuratedGarmentFiles(
     .filter(row => isCuratedClothingRenderable(row.item))
     .map(row => curatedGarmentFile(row.item, frame))
     .filter((value): value is string => !!value))];
+}
+
+export async function loadOptionalCuratedGarments(library: ModelLibrary, files: string[], manager?: T.LoadingManager) {
+  const loader = new GLTFLoader(manager);
+  await Promise.all([...new Set(files)].map(async file => {
+    if (library.has(file)) return;
+    try {
+      const gltf = await loader.loadAsync(demoAssetUrl(file));
+      library.set(file, gltf.scene);
+    } catch (error) {
+      // A bad cosmetic must never prevent the whole gig from loading.
+      console.warn('[curated-clothing] optional asset unavailable', file, error);
+    }
+  }));
 }
 
 function targetBones(root: T.Object3D) {
