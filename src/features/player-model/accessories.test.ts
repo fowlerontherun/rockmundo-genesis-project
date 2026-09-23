@@ -87,6 +87,37 @@ it('round-trips lens and independent earring controls and rejects malformed sett
   }
 });
 
+
+
+it.each(['masculine', 'feminine'] as const)('fits high-quality earrings to the %s head surface with physical metal', frame => {
+  const a = defaultAppearance('ear-fit');
+  a.body.frame = frame;
+  a.accessories = { ...a.accessories!, leftEarring: 'studs', rightEarring: 'drops', earringColor: '#d8ad49' };
+  const assembled = assemblePlayerModel(library, a, [], [], 'high');
+  assembled.updateMatrixWorld(true);
+
+  const left = assembled.getObjectByName('avatar-earring-left-studs')!;
+  const right = assembled.getObjectByName('avatar-earring-right-drops')!;
+  const leftStud = left.getObjectByName('earring-stud') as T.Mesh<T.BufferGeometry, T.MeshPhysicalMaterial>;
+  const rightStud = right.getObjectByName('earring-drop-stud') as T.Mesh<T.BufferGeometry, T.MeshPhysicalMaterial>;
+
+  expect(leftStud.material).toBeInstanceOf(T.MeshPhysicalMaterial);
+  expect(rightStud.material).toBeInstanceOf(T.MeshPhysicalMaterial);
+  expect(leftStud.material.clearcoat).toBeGreaterThan(.5);
+  expect(rightStud.material.metalness).toBeGreaterThan(.9);
+
+  const head = assembled.getObjectByName('Head') as T.Bone;
+  const headPosition = head.getWorldPosition(new T.Vector3());
+  const leftPosition = leftStud.getWorldPosition(new T.Vector3());
+  const rightPosition = rightStud.getWorldPosition(new T.Vector3());
+  expect(leftPosition.x).toBeLessThan(headPosition.x);
+  expect(rightPosition.x).toBeGreaterThan(headPosition.x);
+  expect(leftPosition.distanceTo(headPosition)).toBeLessThan(.5);
+  expect(rightPosition.distanceTo(headPosition)).toBeLessThan(.5);
+
+  disposeModel(assembled);
+});
+
 it('prints the Rockmundo wordmark on the default tee and hides it under a rich top', () => {
   const a = defaultAppearance('logo-test');
   expect(a.equipment.top.itemId).toBe('starter.top.casual');
