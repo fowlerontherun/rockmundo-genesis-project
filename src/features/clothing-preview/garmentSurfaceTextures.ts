@@ -46,8 +46,28 @@ function drawRockMundoMark(ctx: CanvasRenderingContext2D, width: number, height:
   ctx.restore();
 }
 
-function drawGraphic(ctx: CanvasRenderingContext2D, detail: ClothingDetailLayer, width: number, height: number) {
-  const asset = String(detail.asset || detail.name || "graphic").toLowerCase();
+function isRemoteArtwork(asset: string) {
+  return /^https?:\/\//i.test(asset) || /^data:image\//i.test(asset);
+}
+
+function drawGraphic(
+  ctx: CanvasRenderingContext2D,
+  detail: ClothingDetailLayer,
+  width: number,
+  height: number,
+  loadedImages?: Map<string, HTMLImageElement>,
+) {
+  const rawAsset = String(detail.asset || detail.name || "graphic");
+  const asset = rawAsset.toLowerCase();
+  if (isRemoteArtwork(rawAsset)) {
+    const image = loadedImages?.get(rawAsset);
+    if (!image) return;
+    const ratio = Math.min(width / Math.max(1, image.naturalWidth), height / Math.max(1, image.naturalHeight));
+    const drawWidth = image.naturalWidth * ratio;
+    const drawHeight = image.naturalHeight * ratio;
+    ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+    return;
+  }
   if (/rockmundo|rock mundo/.test(asset)) {
     drawRockMundoMark(ctx, width, height);
     return;
@@ -95,7 +115,12 @@ function fontCss(style: ClothingDetailLayer["fontStyle"], size: number) {
   }
 }
 
-function drawLayer(ctx: CanvasRenderingContext2D, detail: ClothingDetailLayer, size: number) {
+function drawLayer(
+  ctx: CanvasRenderingContext2D,
+  detail: ClothingDetailLayer,
+  size: number,
+  loadedImages?: Map<string, HTMLImageElement>,
+) {
   const rawScale = Number(detail.scale ?? 100);
   const scale = clamp(Math.abs(rawScale) > 10 ? rawScale / 100 : rawScale, .15, 3);
   const widthScale = clamp(Number(detail.widthScale ?? 100) / 100, .2, 2.5);
@@ -132,7 +157,7 @@ function drawLayer(ctx: CanvasRenderingContext2D, detail: ClothingDetailLayer, s
     }
     ctx.fillText(text, 0, 0, width);
   } else {
-    drawGraphic(ctx, detail, width, height);
+    drawGraphic(ctx, detail, width, height, loadedImages);
   }
 
   ctx.restore();
@@ -151,13 +176,37 @@ export function buildCompositeGarmentSurfaceTexture(
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  ctx.clearRect(0, 0, size, size);
-
-  layers.forEach(detail => drawLayer(ctx, detail, size));
+  const loadedImages = new Map<string, HTMLImageElement>();
+  const render = () => {
+    ctx.clearRect(0, 0, size, size);
+    layers.forEach(detail => drawLayer(ctx, detail, size, loadedImages));
+  };
+  render();
 
   const texture = new T.CanvasTexture(canvas);
   texture.colorSpace = T.SRGBColorSpace;
   texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
   texture.needsUpdate = true;
+
+  const remoteAssets = [...new Set(
+    layers
+      .map(detail => String(detail.asset || ""))
+      .filter(asset => isRemoteArtwork(asset)),
+  )];
+
+  remoteAssets.forEach(asset => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      loadedImages.set(asset, image);
+      render();
+      texture.needsUpdate = true;
+    };
+    image.onerror = () => {
+      console.warn("[garment-surface] Could not load uploaded artwork", asset);
+    };
+    image.src = asset;
+  });
+
   return texture;
 }
