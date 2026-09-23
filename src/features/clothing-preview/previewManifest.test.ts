@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOTHING_TURNTABLE_VIEWS, createClothingPreviewManifest, usablePreviewFrames } from './previewManifest';
+import { CLOTHING_PREVIEW_RENDERER_VERSION, CLOTHING_TURNTABLE_VIEWS, createClothingPreviewManifest, usablePreviewFrames } from './previewManifest';
 
 describe('clothing preview manifest', () => {
   it('defines a stable eight-angle turntable', () => {
@@ -18,11 +18,18 @@ describe('clothing preview manifest', () => {
   });
 
   it('only exposes frames with http(s) asset URLs as usable fallbacks', () => {
-    expect(usablePreviewFrames({ frames: [
+    expect(usablePreviewFrames({ rendererVersion: CLOTHING_PREVIEW_RENDERER_VERSION, frames: [
       { key: 'front', yaw: 0, url: 'https://cdn.example/front.webp' },
       { key: 'back', yaw: 180 },
       { key: 'left', yaw: 270, url: 'javascript:alert(1)' },
     ] })).toHaveLength(1);
+  });
+
+  it('rejects previews made by an older renderer version', () => {
+    expect(usablePreviewFrames({
+      rendererVersion: 'fitted-curated-v2',
+      frames: [{ key: 'front', yaw: 0, url: 'https://cdn.example/old-front.webp' }],
+    })).toEqual([]);
   });
 
   it('does not expose retained stale frames while a garment is pending regeneration', () => {
