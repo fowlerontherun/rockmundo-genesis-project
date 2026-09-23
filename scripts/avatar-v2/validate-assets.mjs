@@ -50,6 +50,7 @@ const closeupBoneAliases = {
 };
 
 const recommendedExpressions = ['visemeAA','visemeEE','visemeIH','visemeOH','visemeOU','mouthFunnel','mouthPucker'];
+const customizationMorphs = ['bodySlim','bodyBroad','faceOval','faceAngular','faceSoft','faceWide'];
 
 const expressionAliases = {
   blinkLeft: ['blinkleft','blink_l','eyeBlinkLeft','eye_blink_l'],
@@ -175,6 +176,9 @@ function validateAsset(gltf, entry) {
   if (entry.lod <= 1) {
     for (const expression of recommendedExpressions) {
       if (!containsAlias(report.morphTargets, [expression])) warnings.push(`Missing recommended singing expression: ${expression}`);
+    }
+    for (const morph of customizationMorphs) {
+      if (!containsAlias(report.morphTargets, [morph])) warnings.push(`Missing Avatar Designer customization morph: ${morph}`);
     }
   }
 
