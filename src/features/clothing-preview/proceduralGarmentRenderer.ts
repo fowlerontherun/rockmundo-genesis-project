@@ -299,7 +299,9 @@ function addTopGarment(
   add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
 ) {
   const category = String(item.category || '').toLowerCase();
-  const isDress = /dress/.test(category);
+  const garmentConfig = (item.garment_config || {}) as Record<string, unknown>;
+  const templateKey = String(garmentConfig.templateKey || garmentConfig.template_key || '').toLowerCase();
+  const isDress = templateKey === 'dress' || /dress/.test(category);
   const isOuterwear = /hoodie|jacket|coat|vest/.test(category);
   const isBoxy = /boxy|oversized|structured/.test(`${spec.silhouette} ${spec.cut}`);
   const isFitted = /slim|skinny|fitted|tailored/.test(`${spec.silhouette} ${spec.cut}`);
@@ -419,7 +421,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   } else if (spec.slot === 'bottom') {
     const garment = (item.garment_config || {}) as Record<string, unknown>;
     const category = String(item.category || '').toLowerCase();
-    const skirtLike = /skirt|dress|a-line|wide/.test(`${category} ${garment.silhouette || ''}`.toLowerCase());
+    const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
+    const skirtLike = templateKey === 'skirt' || /skirt|dress|a-line|wide/.test(`${category} ${garment.silhouette || ''}`.toLowerCase());
     if (skirtLike) {
       const waist = spec.scaleX * .39 * spec.waistScale;
       const hem = spec.scaleX * (.48 + spec.flare + spec.customFlare * .24);
@@ -446,8 +449,10 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     }
   } else if (spec.slot === 'footwear') {
     const category = String(item.category || '').toLowerCase();
-    const isBoot = /boot/.test(category);
-    const isTrainer = /trainer|sneaker/.test(category);
+    const garment = (item.garment_config || {}) as Record<string, unknown>;
+    const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
+    const isBoot = templateKey === 'boots' || /boot/.test(category);
+    const isTrainer = templateKey === 'trainers' || /trainer|sneaker/.test(category);
     for (const side of [-1, 1]) {
       const anchor = side > 0 ? 'Foot.L' : 'Foot.R';
       const upper = new T.Mesh(
@@ -470,10 +475,12 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       add(sole, anchor);
     }
   } else if (spec.slot === 'headwear') {
+    const garment = (item.garment_config || {}) as Record<string, unknown>;
+    const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
     const description = `${item.name} ${item.category} ${spec.silhouette}`.toLowerCase();
-    const isBeanie = /beanie|wool|knit/.test(description);
-    const isCap = /cap|baseball|trucker/.test(description);
-    const isWideBrim = /fedora|cowboy|sun|wide|witch/.test(description);
+    const isBeanie = templateKey === 'beanie' || /beanie|wool|knit/.test(description);
+    const isCap = templateKey === 'cap' || /cap|baseball|trucker/.test(description);
+    const isWideBrim = templateKey === 'wide-brim-hat' || /fedora|cowboy|sun|wide|witch/.test(description);
     const crownHeight = isBeanie ? spec.scaleY * 1.12 : isWideBrim ? spec.scaleY * .92 : spec.scaleY * .78;
     const crownTop = spec.scaleX * (isBeanie ? .5 : isWideBrim ? .46 : .52);
     const crownBottom = spec.scaleX * (isBeanie ? .6 : .58);
@@ -497,9 +504,11 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       }
     }
   } else if (spec.slot === 'eyewear') {
+    const garment = (item.garment_config || {}) as Record<string, unknown>;
+    const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
     const description = `${item.name} ${item.category} ${spec.silhouette}`.toLowerCase();
-    const isSquare = /square|wayfarer|rect/.test(description);
-    const isAviator = /aviator/.test(description);
+    const isSquare = templateKey === 'square-glasses' || /square|wayfarer|rect/.test(description);
+    const isAviator = templateKey === 'aviators' || /aviator/.test(description);
     const isSunglasses = /sun|shade|dark/.test(description);
     const frameMaterial = new T.MeshStandardMaterial({ color: spec.primaryColor, roughness: .28, metalness: .45 });
     const lensMaterial = new T.MeshPhysicalMaterial({
