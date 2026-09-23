@@ -5,7 +5,7 @@ export function StarterWardrobe({ slot, appearance, onChange }: { slot: Equipmen
   const equipped = appearance.equipment[slot];
   const edit = (value: Partial<typeof equipped>) => onChange({ ...appearance, equipment: { ...appearance.equipment, [slot]: { ...equipped, ...value } } });
   return <div className="player-model-wardrobe" role="group" aria-label={SLOT_LABELS[slot]}>
-    <div className="player-model-wardrobe__heading"><h3>{SLOT_LABELS[slot]}</h3><span>6 included</span></div>
+    <div className="player-model-wardrobe__heading"><h3>{SLOT_LABELS[slot]}</h3><span>{STARTER_ITEMS[slot].length} included</span></div>
     <div className="player-model-wardrobe__grid">
       {STARTER_ITEMS[slot].map(item => <button key={item.id} type="button" aria-pressed={equipped.itemId === item.id} onClick={() => edit({ itemId: item.id })}>
         <span aria-hidden="true" className={`player-model-wardrobe__tile fabric-${item.fabric}`} style={{ color: equipped.color }}>
