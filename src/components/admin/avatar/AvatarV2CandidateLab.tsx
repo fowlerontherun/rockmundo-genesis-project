@@ -29,7 +29,7 @@ function CandidateCanvas({
   onError,
   animateFace,
   appearance,
-  performance,
+  performancePreset,
 }: {
   file: File | null;
   frame: AvatarV2Frame;
@@ -38,7 +38,7 @@ function CandidateCanvas({
   onError: (message: string) => void;
   animateFace: boolean;
   appearance: ReturnType<typeof defaultAppearance>;
-  performance: 'backstage' | 'vocals' | 'electric_guitar' | 'bass_guitar' | 'rock_drums';
+  performancePreset: 'backstage' | 'vocals' | 'electric_guitar' | 'bass_guitar' | 'rock_drums';
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -157,9 +157,9 @@ function CandidateCanvas({
           if (report.valid) {
             const prepared = prepareAvatarV2CandidateModel(source, appearance, lod);
             if (prepared.model) {
-              const assignment = performance === 'backstage'
+              const assignment = performancePreset === 'backstage'
                 ? stageAssignment(null, 'other')
-                : stageAssignment(performance);
+                : stageAssignment(performancePreset);
               actor = new Musician(
                 prepared.model,
                 assignment.role,
@@ -234,7 +234,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, frame, lod, onError, onReport, animateFace, appearance, performance]);
+  }, [file, frame, lod, onError, onReport, animateFace, appearance, performancePreset]);
 
   return (
     <canvas
@@ -364,7 +364,7 @@ export function AvatarV2CandidateLab() {
               onError={setError}
               animateFace={animateFace}
               appearance={appearance}
-              performance={performance}
+              performancePreset={performance}
             />
           </div>
         </div>
