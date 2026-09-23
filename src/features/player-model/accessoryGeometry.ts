@@ -42,9 +42,9 @@ export function buildHeadAccessory(
   const w = size.x, h = size.y, d = size.z, top = bounds.max.y;
   const material = new T.MeshStandardMaterial({
     color: spec.color,
-    roughness: spec.slot === 'headwear' ? .86 : (quality === 'ultra' ? .2 : .28),
+    roughness: spec.slot === 'headwear' ? .86 : (quality === 'cinematic' ? .16 : quality === 'ultra' ? .2 : .28),
     metalness: spec.slot === 'eyewear' ? .5 : 0,
-    envMapIntensity: spec.slot === 'eyewear' ? (quality === 'ultra' ? 1.5 : 1.2) : .9,
+    envMapIntensity: spec.slot === 'eyewear' ? (quality === 'cinematic' ? 1.7 : quality === 'ultra' ? 1.5 : 1.2) : .9,
   });
   material.name = 'AvatarAccessory';
   const add = (geometry: T.BufferGeometry, name: string, x: number, y: number, z: number, mat: T.Material = material) => {
@@ -58,19 +58,19 @@ export function buildHeadAccessory(
       color: spec.lensColor ?? '#40566d',
       transparent: true,
       opacity: spec.lenses === 'tinted' ? .72 : .13,
-      roughness: quality === 'ultra' ? .035 : .07,
+      roughness: quality === 'cinematic' ? .025 : quality === 'ultra' ? .035 : .07,
       metalness: 0,
       clearcoat: quality === 'crowd' ? 0 : 1,
-      clearcoatRoughness: quality === 'ultra' ? .025 : .06,
+      clearcoatRoughness: quality === 'cinematic' ? .018 : quality === 'ultra' ? .025 : .06,
       ior: 1.45,
-      envMapIntensity: quality === 'ultra' ? 1.6 : 1.25,
+      envMapIntensity: quality === 'cinematic' ? 1.8 : quality === 'ultra' ? 1.6 : 1.25,
       depthWrite: false,
       side: T.DoubleSide,
     });
     lensMaterial.name = 'AvatarLens';
     for (const side of [-1, 1]) {
       const shape = lensShape(spec.style, lensW, lensH);
-      const curvePoints = quality === 'ultra' ? 64 : quality === 'high' ? 48 : 32;
+      const curvePoints = quality === 'cinematic' ? 80 : quality === 'ultra' ? 64 : quality === 'high' ? 48 : 32;
       const points = shape.getPoints(curvePoints).map(p => new T.Vector3(p.x, p.y, 0));
       const curve = new T.CatmullRomCurve3(points, true);
       add(new T.TubeGeometry(curve, Math.max(48, profile.accessorySegments * 3), w * (spec.style === 'wayfarer' ? .015 : .010), Math.max(6, Math.floor(profile.accessorySegments / 2)), true), `glasses-frame-${side}`, c.x + side * w * .235, eyeY, front);
@@ -125,7 +125,7 @@ export function buildHeadAccessory(
         }
         crown.geometry.computeVertexNormals();
       }
-      const brim = new T.RingGeometry(rx * .94, rx * (bucket ? 1.32 : spec.style === 'cowboy' ? 1.65 : 1.48), Math.max(48, profile.accessorySegments * 3), quality === 'ultra' ? 6 : quality === 'high' ? 4 : 3);
+      const brim = new T.RingGeometry(rx * .94, rx * (bucket ? 1.32 : spec.style === 'cowboy' ? 1.65 : 1.48), Math.max(48, profile.accessorySegments * 3), quality === 'cinematic' ? 8 : quality === 'ultra' ? 6 : quality === 'high' ? 4 : 3);
       brim.rotateX(-Math.PI / 2); brim.scale(1, 1, rz / rx);
       const vertices = brim.attributes.position;
       for (let i = 0; i < vertices.count; i++) {
