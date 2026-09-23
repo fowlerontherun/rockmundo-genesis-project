@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ClothingItem } from '@/hooks/useSkinStore';
-import { curatedDonorForSlot, curatedDonorSource } from './curatedDonorGarments';
+import { curatedDonorForSlot, curatedDonorSource, requiredCuratedDonorModelFiles } from './curatedDonorGarments';
 
 function item(overrides: Partial<ClothingItem> = {}): ClothingItem {
   return {
@@ -47,6 +47,24 @@ describe('curated donor garments', () => {
   it('rejects unsupported donor definitions', () => {
     expect(curatedDonorSource(item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'unknown', part: 'body' } } }))).toBeNull();
     expect(curatedDonorSource(item({ render_config: { curatedSource: { kind: 'procedural', style: 'casual', part: 'body' } } }))).toBeNull();
+  });
+
+  it('applies the selected colour and material variant to donor geometry', () => {
+    const top = item();
+    const rows = [{
+      item: top,
+      variant: { id: 'color-1', label: 'Colour 2', color: '#eeeeee', material: 'stripe', pattern: 'solid' },
+    }] as any;
+    const resolved = curatedDonorForSlot(rows, 'top');
+    expect(resolved?.source.color).toBe('#eeeeee');
+    expect(resolved?.source.fabric).toBe('stripe');
+  });
+
+  it('loads the correct frame-specific donor model for live performance', () => {
+    const punkTop = item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'punk', part: 'body', color: '#111111', fabric: 'plain' } } });
+    const rows = [{ item: punkTop, variant: undefined }] as any;
+    expect(requiredCuratedDonorModelFiles(rows, 'feminine')).toEqual(['female-punk.glb']);
+    expect(requiredCuratedDonorModelFiles(rows, 'masculine')).toEqual(['punk.glb']);
   });
 
   it('selects the matching clothing slot and donor body part', () => {
