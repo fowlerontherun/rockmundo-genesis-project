@@ -4,20 +4,16 @@ import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { disposeModel, type ModelLibrary } from '../model';
-import type { AvatarV2Frame, AvatarV2Lod } from './avatarV2Contract';
-import { avatarV2RuntimeBoneName, cleanAvatarV2Name } from './avatarV2Contract';
+import type { AvatarV2BodyRegion, AvatarV2Frame, AvatarV2Lod } from './avatarV2Contract';
+import {
+  AVATAR_V2_BODY_REGIONS,
+  avatarV2BodyRegion,
+  avatarV2RuntimeBoneName,
+  cleanAvatarV2Name,
+} from './avatarV2Contract';
 import { AVATAR_V2_ROLLOUT } from './avatarV2Registry';
 
 export type AvatarV2GarmentStatus = 'planned' | 'asset_ready' | 'validated' | 'blocked';
-export type AvatarV2BodyRegion =
-  | 'torso'
-  | 'upper-arms'
-  | 'lower-arms'
-  | 'hands'
-  | 'hips'
-  | 'upper-legs'
-  | 'lower-legs'
-  | 'feet';
 
 export interface AvatarV2GarmentFrameAssets {
   lod0?: string;
@@ -38,9 +34,7 @@ export interface AvatarV2GarmentConfig {
   };
 }
 
-const BODY_REGIONS = new Set<AvatarV2BodyRegion>([
-  'torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet',
-]);
+const BODY_REGIONS = new Set<AvatarV2BodyRegion>(AVATAR_V2_BODY_REGIONS);
 const STATUSES = new Set<AvatarV2GarmentStatus>(['planned','asset_ready','validated','blocked']);
 const clean = cleanAvatarV2Name;
 
@@ -164,21 +158,11 @@ function targetBones(root: T.Object3D) {
   return { exact, cleaned };
 }
 
-function bodyRegion(node: T.Object3D): AvatarV2BodyRegion | null {
-  const explicit = String(node.userData?.rockmundoBodyRegion || '').toLowerCase();
-  if (BODY_REGIONS.has(explicit as AvatarV2BodyRegion)) return explicit as AvatarV2BodyRegion;
-  const name = node.name.toLowerCase().replace(/_/g, '-');
-  const match = [...BODY_REGIONS].find(region =>
-    name.includes(`body-${region}`) || name.includes(`body${region.replace(/-/g, '')}`)
-  );
-  return match ?? null;
-}
-
 function availableBodyRegions(root: T.Object3D) {
   const found = new Set<AvatarV2BodyRegion>();
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    const region = bodyRegion(node);
+    const region = avatarV2BodyRegion(node);
     if (region) found.add(region);
   });
   return found;
@@ -188,7 +172,7 @@ function applyBodyOcclusion(root: T.Object3D, regions: AvatarV2BodyRegion[]) {
   const wanted = new Set(regions);
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    const region = bodyRegion(node);
+    const region = avatarV2BodyRegion(node);
     if (!region || !wanted.has(region)) return;
     node.visible = false;
     node.userData.rockmundoV2OccludedByGarment = true;
