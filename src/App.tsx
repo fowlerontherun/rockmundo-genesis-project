@@ -274,6 +274,7 @@ const GameBalanceAdmin = lazyWithRetry(() => import("./pages/admin/GameBalanceAd
 const TutorialsAdmin = lazyWithRetry(() => import("./pages/admin/TutorialsAdmin"));
 const VipManagement = lazyWithRetry(() => import("./pages/admin/VipManagement"));
 const SkinCollectionsAdmin = lazyWithRetry(() => import("./pages/admin/SkinCollectionsAdmin"));
+const AvatarV2Admin = lazyWithRetry(() => import("./pages/admin/AvatarV2Admin"));
 const AISongGeneration = lazyWithRetry(() => import("./pages/admin/AISongGeneration"));
 const MusicVideosAdmin = lazyWithRetry(() => import("./pages/admin/MusicVideosAdmin"));
 const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEventsAdmin"));
@@ -990,6 +991,7 @@ function App() {
                     <Route path="admin/logistics-companies" element={<LogisticsCompaniesAdmin />} />
                     <Route path="admin/skin-collections" element={<SkinCollectionsAdmin />} />
                     <Route path="admin/skin-collections/:collectionId/items" element={<CollectionItemsAdmin />} />
+                    <Route path="admin/avatar-v2" element={<AvatarV2Admin />} />
                     <Route path="admin/random-events" element={<RandomEventsAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
                     <Route path="admin/stream-multiplier" element={<StreamMultiplier />} />
