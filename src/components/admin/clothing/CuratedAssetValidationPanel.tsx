@@ -26,6 +26,8 @@ const checks = [
   ['surface_attachment', 'Details surface-bound'],
   ['graphic_alignment', 'Graphics aligned'],
   ['distance_readability', 'Readable at gameplay distance'],
+  ['silhouette_readability', 'Silhouette / construction readable'],
+  ['material_readability', 'Material reads correctly'],
 ] as const;
 
 function checkState(item: any, key: string) {
@@ -37,7 +39,7 @@ function checkState(item: any, key: string) {
   if (key === 'guitar') return poses.includes('guitar') || poses.includes('bass');
   if (key === 'drums') return poses.includes('drums') || poses.includes('seated');
   if (key === 'clipping' || key === 'stretching') return notes.result === 'pass';
-  if (key === 'surface_attachment' || key === 'graphic_alignment' || key === 'distance_readability') {
+  if (key === 'surface_attachment' || key === 'graphic_alignment' || key === 'distance_readability' || key === 'silhouette_readability' || key === 'material_readability') {
     return notes.checks?.[key] === true;
   }
   return false;
@@ -92,7 +94,7 @@ export function CuratedAssetValidationPanel({ collectionId, items, onChanged }: 
   return <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />Curated asset validation</CardTitle>
-      <p className="text-sm text-muted-foreground">Curated skins never use the old procedural garment generator. Publish only after both avatar frames, performance poses, surface attachment, graphic alignment and gameplay-distance readability pass.</p>
+      <p className="text-sm text-muted-foreground">Curated skins never use the old procedural garment generator. Publish only after both avatar frames, performance poses, attachment/alignment, silhouette construction and material readability pass.</p>
     </CardHeader>
     <CardContent className="space-y-4">
       <div className="flex flex-wrap gap-2">
