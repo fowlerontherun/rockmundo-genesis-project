@@ -39,6 +39,9 @@ export interface ClothingDetailLayer {
   opacity?: number;
   offsetX?: number;
   offsetY?: number;
+  surface?: "front" | "back" | "left-sleeve" | "right-sleeve";
+  widthScale?: number;
+  heightScale?: number;
 }
 
 export interface ClothingItem {
