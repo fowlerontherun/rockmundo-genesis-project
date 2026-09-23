@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { defaultAppearance } from './appearance';
 import { curatedMaterialProfile } from './curatedMaterialProfile';
-import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial } from './avatarPhysicalMaterials';
+import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
 
 function skinnedEye(materialName = 'Iris') {
   const geometry = new T.BoxGeometry(.1, .1, .02);
@@ -40,6 +40,14 @@ describe('avatar physical materials', () => {
     const upgraded = upgradeCuratedGarmentMaterial(standard, 'leather', profile, 'ultra');
     expect(upgraded).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect((upgraded as T.MeshPhysicalMaterial).clearcoat).toBeGreaterThan(.3);
+  });
+
+  it('gives patent starter shoes a physical clearcoat at close-up quality', () => {
+    const source = new T.MeshStandardMaterial({ color: '#151515', roughness: .2 });
+    const upgraded = upgradeStarterFabricMaterial(source, 'patent', 'high');
+    expect(upgraded).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect((upgraded as T.MeshPhysicalMaterial).clearcoat).toBeGreaterThan(.5);
+    expect((upgraded as T.MeshPhysicalMaterial).roughness).toBeLessThan(.2);
   });
 
   it('creates a rig-bound physical cornea layer only for close-up eye groups', () => {
