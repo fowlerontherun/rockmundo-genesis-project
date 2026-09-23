@@ -835,7 +835,7 @@ export class DemoCrowd {
             [places[i], places[j]] = [places[j], places[i]];
         }
         for (let kind = 0; kind < CROWD_VARIANTS; kind++) {
-            const appearance = appearances[kind], assembled = library ? assemblePlayerModel(library, appearance) : null;
+            const appearance = appearances[kind], assembled = library ? assemblePlayerModel(library, appearance, [], [], 'crowd') : null;
             const actor = new Musician(assembled ?? sources[kind % sources.length], 'fan', [0, 0, 0], 0, undefined, assembled ? appearance : undefined);
             if (assembled)
                 disposeModel(assembled);
@@ -985,7 +985,13 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
     const cymbals: T.Object3D[] = [];
     try {
         const actors = lineup ? lineup.map(p => {
-            const assembled = assemblePlayerModel(library, p.appearance, visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []), p.richClothing);
+            const assembled = assemblePlayerModel(
+                library,
+                p.appearance,
+                visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []),
+                p.richClothing,
+                'high',
+            );
             const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing, p.instrumentSkin, library);
             disposeModel(assembled);
             actor.id = p.id;

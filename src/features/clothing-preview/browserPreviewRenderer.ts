@@ -90,9 +90,9 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number) {
 export async function renderClothingTurntable(item: ClothingItem, options: BrowserPreviewRenderOptions = {}): Promise<RenderedPreviewFrame[]> {
   if (typeof document === 'undefined') throw new Error('Clothing preview rendering requires a browser environment.');
   const curated = isCuratedClothing(item);
-  const width = Math.max(320, Math.min(1200, Math.round(options.width || (curated ? 800 : 640))));
-  const height = Math.max(400, Math.min(1400, Math.round(options.height || (curated ? 1000 : 800))));
-  const quality = Math.max(.55, Math.min(.95, options.quality ?? (curated ? .92 : .86)));
+  const width = Math.max(320, Math.min(1600, Math.round(options.width || (curated ? 1200 : 640))));
+  const height = Math.max(400, Math.min(2000, Math.round(options.height || (curated ? 1500 : 800))));
+  const quality = Math.max(.55, Math.min(.97, options.quality ?? (curated ? .95 : .86)));
   const views = options.views?.length ? options.views : CLOTHING_TURNTABLE_VIEWS;
 
   const canvas = document.createElement('canvas');
@@ -122,7 +122,7 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
   const key = new T.DirectionalLight('#ffe5cb', 3.7);
   key.position.set(-2.4, 4.2, 3.8);
   key.castShadow = true;
-  key.shadow.mapSize.set(curated ? 2048 : 1024, curated ? 2048 : 1024);
+  key.shadow.mapSize.set(curated ? 4096 : 1024, curated ? 4096 : 1024);
   key.shadow.normalBias = .02;
   scene.add(key);
   const fill = new T.DirectionalLight('#76d9ef', 1.45);
@@ -157,7 +157,7 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
       if (garmentFile) files.push(garmentFile);
       library = await loadModelLibrary(files);
       const donor = curatedDonorSource(item);
-      curatedAvatar = assemblePlayerModel(library, appearance, [], donor ? [{ item, variant }] : []);
+      curatedAvatar = assemblePlayerModel(library, appearance, [], donor ? [{ item, variant }] : [], 'ultra');
       curatedAvatar.traverse(object => {
         if (!(object instanceof T.Mesh)) return;
         object.castShadow = true;

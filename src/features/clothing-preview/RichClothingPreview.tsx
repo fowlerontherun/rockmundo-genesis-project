@@ -9,6 +9,7 @@ import type { ClothingPreviewVariant } from './clothingPreview';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
 import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable } from './curatedGarmentAssets';
 import { curatedDonorSource } from './curatedDonorGarments';
+import { avatarQualityProfile, recommendedAvatarPreviewQuality } from '@/features/player-model/avatarVisualQuality';
 
 interface PreviewApi {
   rotate: (angle: number) => void;
@@ -47,6 +48,8 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     let controls: OrbitControls | undefined;
     let observer: ResizeObserver | undefined;
     const scene = new T.Scene();
+    const visualQuality = recommendedAvatarPreviewQuality();
+    const qualityProfile = avatarQualityProfile(visualQuality);
     liveScene.current = { scene, garment: null, avatar: null, library: null, ready: false };
     const camera = new T.PerspectiveCamera(35, 1, .05, 30);
     const element = canvas.current;
@@ -78,6 +81,8 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       key.position.set(-2.4, 4.3, 4);
       key.target.position.set(0, 1, 0);
       key.castShadow = true;
+      key.shadow.mapSize.set(qualityProfile.shadowMapSize, qualityProfile.shadowMapSize);
+      key.shadow.normalBias = .018;
       scene.add(key, key.target);
       const rim = new T.DirectionalLight('#66d4ee', 2);
       rim.position.set(2.5, 3, -2);
@@ -101,7 +106,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
 
       observer = new ResizeObserver(() => {
         const rect = element.getBoundingClientRect();
-        renderer!.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        renderer!.setPixelRatio(Math.min(window.devicePixelRatio || 1, qualityProfile.previewPixelRatioCap));
         renderer!.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
         camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
         camera.updateProjectionMatrix();
@@ -128,7 +133,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
         const currentPreview = latestPreview.current;
         const donor = curatedDonorSource(currentPreview.item);
         const previewClothing = donor ? [{ item: currentPreview.item, variant: currentPreview.variant }] as any : [];
-        const base = assemblePlayerModel(library, appearance, [], previewClothing);
+        const base = assemblePlayerModel(library, appearance, [], previewClothing, visualQuality);
         scene.add(base);
         if (donor) {
           garment = null;
