@@ -29,10 +29,10 @@ describe('Top of the Pops archived performer visuals', () => {
   it('uses the frozen stage appearance instead of deriving a current player model', () => {
     const appearance = {
       version: 1,
-      body: { frame: 'feminine', height: 1.04, build: 1, skin: '#edc7a5' },
+      body: { frame: 'feminine', height: 1.04, build: 1, muscle: 'bodybuilder', skin: '#edc7a5' },
       head: { style: 'punk', hair: '#54372a' },
       equipment: {
-        top: { itemId: 'starter.top.punk', color: '#bd3548' },
+        top: { itemId: 'starter.top.topless', color: '#bd3548' },
         bottom: { itemId: 'starter.bottom.punk', color: '#272e39' },
         footwear: { itemId: 'starter.footwear.punk', color: '#25232b' },
         instrument: { itemId: 'starter.instrument.standard', color: '#b97536' },
@@ -50,6 +50,8 @@ describe('Top of the Pops archived performer visuals', () => {
       },
     }));
     expect(result?.appearances[PROFILE_ID]).toMatchObject(appearance);
+    expect(result?.appearances[PROFILE_ID].body.muscle).toBe('bodybuilder');
+    expect(result?.appearances[PROFILE_ID].equipment.top.itemId).toBe('starter.top.topless');
     expect(result?.appearances[PROFILE_ID].accessories).toEqual({ hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b' });
     expect(result?.richClothing[PROFILE_ID]).toEqual([]);
     expect(result?.tattoos?.[PROFILE_ID]).toEqual([{

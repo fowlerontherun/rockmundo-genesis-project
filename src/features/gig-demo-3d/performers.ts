@@ -121,9 +121,11 @@ export class Musician {
                 const configure = (sourceMat: T.Material) => {
                     const mat = sourceMat.clone() as T.MeshStandardMaterial;
                     if (mat.isMeshStandardMaterial) {
-                        for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const) {
-                            const value = mat[key];
-                            if (value instanceof T.Texture) (mat as any)[key] = value.clone();
+                        type TextureMapKey = 'map' | 'normalMap' | 'roughnessMap' | 'bumpMap' | 'metalnessMap' | 'alphaMap' | 'aoMap' | 'emissiveMap';
+                        const textureMaterial = mat as T.MeshStandardMaterial & Partial<Record<TextureMapKey, T.Texture | null>>;
+                        for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const satisfies readonly TextureMapKey[]) {
+                            const value = textureMaterial[key];
+                            if (value instanceof T.Texture) textureMaterial[key] = value.clone();
                         }
                         const skin = /skin|eye|hair/i.test(mat.name);
                         if (!appearance) {
