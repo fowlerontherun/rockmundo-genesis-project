@@ -1,5 +1,5 @@
 import * as T from 'three';
-import type { PlayerAppearance } from './appearance';
+import type { Fabric, PlayerAppearance } from './appearance';
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import type { CuratedFinish } from './curatedSurfaceMaps';
 import type { CuratedMaterialProfile } from './curatedMaterialProfile';
@@ -84,6 +84,28 @@ export function upgradeSkinMaterial(
   material.clearcoat = .015 + weight * .018;
   material.clearcoatRoughness = .5;
   material.envMapIntensity = Math.max(material.envMapIntensity, .82 + weight * .16);
+  material.needsUpdate = true;
+  source.dispose();
+  return material;
+}
+
+export function upgradeStarterFabricMaterial(
+  source: T.MeshStandardMaterial,
+  fabric: Fabric,
+  quality: AvatarVisualQuality,
+): T.MeshStandardMaterial {
+  const weight = qualityWeight(quality);
+  if (weight < .6 || (fabric !== 'patent' && fabric !== 'two-tone')) return source;
+
+  const material = copyStandardSurface(source, new T.MeshPhysicalMaterial());
+  const patent = fabric === 'patent';
+  material.clearcoat = (patent ? .9 : .4) * weight;
+  material.clearcoatRoughness = patent ? .045 : .16;
+  material.roughness = patent ? .16 : .32;
+  material.metalness = patent ? .025 : .01;
+  material.ior = 1.48;
+  material.reflectivity = patent ? .62 : .42;
+  material.envMapIntensity = patent ? 1.65 : 1.25;
   material.needsUpdate = true;
   source.dispose();
   return material;
