@@ -150,6 +150,46 @@ export function assemblePlayerModel(
     }
   }
   const skinTextureCache = createAvatarSkinTextureCache(appearance, quality);
+  const starterFabricCache = new Map<string, { map: T.DataTexture; normal: T.DataTexture }>();
+  const curatedSurfaceCache = new Map<string, {
+    map: T.DataTexture;
+    normal: T.DataTexture;
+    bump: T.DataTexture;
+    roughness: T.DataTexture;
+  }>();
+  const starterFabricMaps = (fabric: Parameters<typeof fabricTexture>[0]) => {
+    const key = `${fabric}:${quality}`;
+    const cached = starterFabricCache.get(key);
+    if (cached) return cached;
+    const created = {
+      map: fabricTexture(fabric, quality),
+      normal: fabricNormalTexture(fabric, quality),
+    };
+    starterFabricCache.set(key, created);
+    return created;
+  };
+  const curatedSurfaceMaps = (
+    assetKey: string,
+    finish: CuratedFinish,
+    dye: string,
+    secondaryColor?: string,
+  ) => {
+    const key = [assetKey, finish, dye, secondaryColor ?? '', quality].join(':');
+    const cached = curatedSurfaceCache.get(key);
+    if (cached) return cached;
+    const map = finish === 'tartan'
+      ? curatedTextureForQuality(curatedTartanTexture(assetKey, dye, secondaryColor || '#171717'), quality, 'color')
+      : curatedTextureForQuality(curatedAlbedoTexture(assetKey, finish), quality, 'color');
+    const created = {
+      map,
+      normal: curatedTextureForQuality(curatedNormalTexture(assetKey, finish), quality, 'normal'),
+      bump: curatedTextureForQuality(curatedReliefTexture(assetKey, finish), quality, 'height'),
+      roughness: curatedTextureForQuality(curatedRoughnessTexture(assetKey, finish), quality, 'roughness'),
+    };
+    curatedSurfaceCache.set(key, created);
+    return created;
+  };
+
   const curatedTop = curatedDonorForSlot(richClothing, 'top');
   const curatedBottom = curatedDonorForSlot(richClothing, 'bottom');
   const curatedFootwear = curatedDonorForSlot(richClothing, 'footwear');
@@ -238,9 +278,10 @@ export function assemblePlayerModel(
             }
           } else if (!/earring|metal/.test(name) && !(name === 'white' && (choice.style !== 'casual' || choice.part === 'feet'))) {
             material.color.set(choice.dye);
-            if (choice.fabric !== 'plain') {
-              material.map = fabricTexture(choice.fabric, quality);
-              material.normalMap = fabricNormalTexture(choice.fabric, quality);
+            if (choice.fabric !== 'plain' && !choice.assetKey) {
+              const fabricMaps = starterFabricMaps(choice.fabric);
+              material.map = fabricMaps.map;
+              material.normalMap = fabricMaps.normal;
               const starterNormal = choice.fabric === 'canvas' ? .42 : choice.fabric === 'denim' ? .36 : .2;
               material.normalScale.set(starterNormal, starterNormal);
               material.roughness = choice.fabric === 'patent' ? .2 : choice.fabric === 'canvas' || choice.fabric === 'denim' ? .95 : .84;
@@ -248,22 +289,15 @@ export function assemblePlayerModel(
             if (choice.assetKey) material.vertexColors = true;
             if (choice.assetKey && choice.finish) {
               const finish = choice.finish as CuratedFinish;
-              if (finish === 'tartan') {
-                material.map = curatedTextureForQuality(
-                  curatedTartanTexture(choice.assetKey, choice.dye, choice.secondaryColor || '#171717'),
-                  quality,
-                  'color',
-                );
-                material.color.set('#ffffff');
-              } else {
-                material.map = curatedTextureForQuality(curatedAlbedoTexture(choice.assetKey, finish), quality, 'color');
-              }
+              const maps = curatedSurfaceMaps(choice.assetKey, finish, choice.dye, choice.secondaryColor);
+              material.map = maps.map;
+              if (finish === 'tartan') material.color.set('#ffffff');
               const profile = curatedMaterialProfile(choice.assetKey, finish);
-              material.normalMap = curatedTextureForQuality(curatedNormalTexture(choice.assetKey, finish), quality, 'normal');
+              material.normalMap = maps.normal;
               material.normalScale.set(profile.normalStrength, profile.normalStrength);
-              material.bumpMap = curatedTextureForQuality(curatedReliefTexture(choice.assetKey, finish), quality, 'height');
+              material.bumpMap = maps.bump;
               material.bumpScale = curatedBumpScale(finish) * profile.bumpMultiplier;
-              material.roughnessMap = curatedTextureForQuality(curatedRoughnessTexture(choice.assetKey, finish), quality, 'roughness');
+              material.roughnessMap = maps.roughness;
               material.roughness = profile.roughness;
               material.metalness = profile.metalness;
               material.envMapIntensity = profile.envMapIntensity;
