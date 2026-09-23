@@ -8,11 +8,13 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Layers3, Palette, Scissors, Sparkles, Shirt, Wand2 } from "lucide-react";
 import { GarmentSurfaceEditor } from "@/components/admin/clothing/GarmentSurfaceEditor";
+import { GARMENT_TEMPLATES, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
 
 export type DetailLayerType = "decal" | "graphic" | "text" | "patch" | "embroidery" | "trim" | "studs" | "zip" | "buttons" | "distress" | "stitching" | "badge";
 
 export interface ClothingDesignConfig {
   garment: {
+    templateKey: string;
     silhouette: string;
     cut: string;
     length: string;
@@ -93,7 +95,7 @@ export interface ClothingDesignConfig {
 }
 
 export const DEFAULT_CLOTHING_DESIGN: ClothingDesignConfig = {
-  garment: { silhouette: "classic", cut: "regular", length: "standard", sleeve: "standard", collar: "crew", closure: "none", hem: "straight", asymmetry: false, widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 100, sleeveWidthScale: 100, waistScale: 100, flare: 0 },
+  garment: { templateKey: "tshirt", silhouette: "classic", cut: "regular", length: "standard", sleeve: "standard", collar: "crew", closure: "none", hem: "straight", asymmetry: false, widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 100, sleeveWidthScale: 100, waistScale: 100, flare: 0 },
   material: { fabric: "cotton", primaryColor: "#111111", secondaryColor: "#ffffff", roughness: 65, sheen: 10, metallic: 0, textureScale: 100, thickness: 50 },
   pattern: { type: "solid", color: "#111111", secondaryColor: "#ffffff", scale: 100, rotation: 0, opacity: 100, repeat: "tile" },
   fit: { fit: "regular", waist: "natural", rise: "mid", drape: 50, oversized: 0, taper: 25 },
@@ -149,7 +151,7 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
   const preset = CATEGORY_PRESETS[String(category || "").toLowerCase()];
   const applyCategoryPreset = () => {
     if (!preset) return;
-    onChange({ ...value, garment: { ...value.garment, ...preset } });
+    onChange({ ...value, garment: { ...value.garment, ...preset, templateKey: inferGarmentTemplateKey(category) } });
   };
 
   return <div className="space-y-5">
@@ -158,6 +160,7 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
       <Button type="button" size="sm" variant="outline" onClick={applyCategoryPreset}><Wand2 className="h-4 w-4 mr-1"/>Apply garment preset</Button>
     </CardContent></Card>
     <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Scissors className="h-4 w-4"/>Garment construction</CardTitle></CardHeader><CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="space-y-2"><Label>Garment template</Label><Select value={value.garment.templateKey || inferGarmentTemplateKey(category)} onValueChange={v=>set("garment",{templateKey:v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{GARMENT_TEMPLATES.map(template=><SelectItem key={template.key} value={template.key}>{template.label}</SelectItem>)}</SelectContent></Select><p className="text-[11px] text-muted-foreground">Controls the base garment family used by the renderer.</p></div>
       <FieldSelect label="Silhouette" value={value.garment.silhouette} values={SILHOUETTES} onChange={v=>set("garment",{silhouette:v})}/>
       <FieldSelect label="Cut" value={value.garment.cut} values={CUTS} onChange={v=>set("garment",{cut:v})}/>
       <FieldSelect label="Sleeve" value={value.garment.sleeve} values={SLEEVES} onChange={v=>set("garment",{sleeve:v})}/>
