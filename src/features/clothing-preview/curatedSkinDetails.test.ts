@@ -57,15 +57,21 @@ describe('curated punk detail skins', () => {
     const pins: T.Object3D[] = [];
     const patches: T.Object3D[] = [];
     const studs: T.Object3D[] = [];
+    const stitches: T.Object3D[] = [];
+    const clasps: T.Object3D[] = [];
     root.traverse(node => {
       if (node.name === 'curated-safety-pin') pins.push(node);
       if (node.name === 'curated-jacket-patch') patches.push(node);
       if (node.name === 'curated-jacket-stud') studs.push(node);
+      if (node.name === 'curated-jacket-patch-stitching') stitches.push(node);
+      if (node.name === 'curated-safety-pin-clasp') clasps.push(node);
     });
 
     expect(pins).toHaveLength(3);
     expect(patches).toHaveLength(3);
     expect(studs).toHaveLength(6);
+    expect(stitches).toHaveLength(3);
+    expect(clasps).toHaveLength(3);
     [...pins, ...patches, ...studs].forEach(node => {
       expect(node.userData.surfaceBound).toBe(true);
       expect(node.userData.surfaceMesh).toBe('Casual_body_mesh');
