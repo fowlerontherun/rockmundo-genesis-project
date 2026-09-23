@@ -123,6 +123,31 @@ export interface AvatarV2AssemblyResult {
   reason?: string;
 }
 
+export function prepareAvatarV2CandidateModel(
+  source: T.Object3D,
+  appearance: PlayerAppearance,
+  lod: AvatarV2Lod,
+): AvatarV2AssemblyResult {
+  const model = clone(source);
+  const report = validateAvatarV2Scene(model, appearance.body.frame, lod);
+  if (!report.valid) {
+    return { model: null, report, reason: 'Avatar V2 asset failed the runtime mesh contract.' };
+  }
+
+  normalizeRigNames(model, report);
+  tuneV2Materials(model, appearance);
+  normalizeScale(model, appearance);
+  model.name = `rockmundo-avatar-v2-${appearance.body.frame}-lod${lod}`;
+  model.userData.rockmundoAvatarEngine = 'rockmundo-v2';
+  model.userData.rockmundoAvatarV2 = {
+    ...(model.userData.rockmundoAvatarV2 ?? {}),
+    version: '2.0',
+    frame: appearance.body.frame,
+    lod,
+  };
+  return { model, report };
+}
+
 /**
  * Safe opt-in path for the new mesh system. Until the registry marks an asset
  * validated and rollout is enabled, every production surface continues using V1.
@@ -143,25 +168,5 @@ export function tryAssembleAvatarV2Model(
   const source = library.get(asset.file);
   if (!source) return { model: null, report: null, reason: `Avatar V2 asset was not preloaded: ${asset.file}` };
 
-  const model = clone(source);
-  const report = validateAvatarV2Scene(model, appearance.body.frame, lod);
-  if (!report.valid) {
-    // The clone still shares source geometry/materials at this point. Do not
-    // dispose them here: the ModelLibrary owns those resources and V1 fallback
-    // or another V2 attempt may still need them.
-    return { model: null, report, reason: 'Avatar V2 asset failed the runtime mesh contract.' };
-  }
-
-  normalizeRigNames(model, report);
-  tuneV2Materials(model, appearance);
-  normalizeScale(model, appearance);
-  model.name = `rockmundo-avatar-v2-${appearance.body.frame}-lod${lod}`;
-  model.userData.rockmundoAvatarEngine = 'v2';
-  model.userData.rockmundoAvatarV2 = {
-    ...(model.userData.rockmundoAvatarV2 ?? {}),
-    version: '2.0',
-    frame: appearance.body.frame,
-    lod,
-  };
-  return { model, report };
+  return prepareAvatarV2CandidateModel(source, appearance, lod);
 }
