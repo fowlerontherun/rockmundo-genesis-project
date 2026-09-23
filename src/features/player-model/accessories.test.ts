@@ -67,17 +67,34 @@ it('lets owned accessories replace starters without changing the saved choice or
   const assembled = assemblePlayerModel(library, a, [], clothing);
   expect(assembled.getObjectByName('avatar-hat-beanie')).toBeUndefined();
   expect(assembled.getObjectByName('avatar-glasses-round')).toBeUndefined();
-  expect(assembled.getObjectByName('avatar-earrings-hoops')).toBeTruthy();
+  expect(assembled.getObjectByName('avatar-earring-left-hoops')).toBeTruthy();
+  expect(assembled.getObjectByName('avatar-earring-right-hoops')).toBeTruthy();
   expect(a.accessories.hat).toBe('beanie');
   const actor = new Musician(assembled, 'other', [0, 0, 0], 0, undefined, a, undefined, undefined, clothing);
   expect(actor.bones.get('Head')!.children.some(child => child instanceof T.Mesh)).toBe(true);
   disposeModel(assembled); disposeModel(actor.root);
 });
 
-it('round-trips lens controls and rejects unknown paid IDs and invalid lens settings', () => {
-  const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'cowboy', glasses: 'aviator', lensTint: 'clear', lensColor: '#338b8d' };
+it('round-trips lens and independent earring controls and rejects malformed settings', () => {
+  const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'cowboy', glasses: 'aviator', lensTint: 'clear', lensColor: '#338b8d', leftEarring: 'studs', rightEarring: 'drops' };
   expect(resolveAppearance(JSON.parse(JSON.stringify(a)))).toEqual(a);
-  for (const extra of [{ lensTint: 'opaque' }, { lensColor: 'red' }, { hat: 'paid-hat-id' }, { lensColor: null }, { unexpected: true }]) {
+  const assembled = assemblePlayerModel(library, a);
+  expect(assembled.getObjectByName('avatar-earring-left-studs')).toBeTruthy();
+  expect(assembled.getObjectByName('avatar-earring-right-drops')).toBeTruthy();
+  disposeModel(assembled);
+  for (const extra of [{ lensTint: 'opaque' }, { lensColor: 'red' }, { hat: 'paid-hat-id' }, { lensColor: null }, { leftEarring: 'chain' }, { rightEarring: null }, { unexpected: true }]) {
     expect(appearanceSchema.safeParse({ ...a, accessories: { ...a.accessories, ...extra } }).success).toBe(false);
   }
+});
+
+it('prints the Rockmundo wordmark on the default tee and hides it under a rich top', () => {
+  const a = defaultAppearance('logo-test');
+  expect(a.equipment.top.itemId).toBe('starter.top.casual');
+  const assembled = assemblePlayerModel(library, a);
+  expect(assembled.getObjectByName('avatar-rockmundo-logo')).toBeTruthy();
+  disposeModel(assembled);
+  const clothing = [{ item: { id: 'rich-top', category: 'top', wearable_slot: 'top' } as ClothingItem }];
+  const covered = assemblePlayerModel(library, a, [], clothing);
+  expect(covered.getObjectByName('avatar-rockmundo-logo')).toBeUndefined();
+  disposeModel(covered);
 });
