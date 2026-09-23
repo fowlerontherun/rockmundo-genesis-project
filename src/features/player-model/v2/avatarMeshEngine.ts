@@ -9,9 +9,11 @@ import {
   type ModelLibrary,
 } from '../model';
 import {
+  avatarV2LodForQuality,
   requiredAvatarV2ModelFiles,
   tryAssembleAvatarV2Model,
 } from './avatarV2Model';
+import { avatarV2ClothingCompatibilityReason, buildAvatarV2Garments } from './avatarV2Garments';
 
 export type AvatarMeshEngine = 'legacy-v1' | 'rockmundo-v2';
 
@@ -32,12 +34,17 @@ export function requiredAvatarMeshFiles(
 }
 
 function v2CompatibilityReason(
+  appearance: PlayerAppearance,
+  quality: AvatarVisualQuality,
   clothing: ResolvedEquippedClothing[],
   tattoos: ResolvedTattooVisual[],
 ) {
-  if (clothing.length) return 'Avatar V2 garment adapter has not been enabled yet.';
   if (tattoos.length) return 'Avatar V2 tattoo projection has not been enabled yet.';
-  return null;
+  return avatarV2ClothingCompatibilityReason(
+    clothing,
+    appearance.body.frame,
+    avatarV2LodForQuality(quality),
+  );
 }
 
 /**
@@ -54,7 +61,7 @@ export function assembleAvatarMesh(
   options: AvatarMeshAssemblyOptions = {},
 ): T.Object3D {
   const wantsV2 = options.forceEngine === 'rockmundo-v2' || options.forceEngine == null;
-  const incompatible = v2CompatibilityReason(clothing, tattoos);
+  let incompatible = v2CompatibilityReason(appearance, quality, clothing, tattoos);
 
   if (wantsV2 && !incompatible) {
     const result = tryAssembleAvatarV2Model(
@@ -64,9 +71,24 @@ export function assembleAvatarMesh(
       { force: options.forceEngine === 'rockmundo-v2' },
     );
     if (result.model) {
-      result.model.userData.rockmundoAvatarEngine = 'rockmundo-v2';
-      result.model.userData.rockmundoAvatarV2Report = result.report;
-      return result.model;
+      try {
+        if (clothing.length) {
+          const garments = buildAvatarV2Garments(
+            library,
+            result.model,
+            clothing,
+            appearance.body.frame,
+            avatarV2LodForQuality(quality),
+          );
+          result.model.add(garments.group);
+          result.model.userData.rockmundoAvatarV2OccludedBodyRegions = garments.hiddenBodyRegions;
+        }
+        result.model.userData.rockmundoAvatarEngine = 'rockmundo-v2';
+        result.model.userData.rockmundoAvatarV2Report = result.report;
+        return result.model;
+      } catch (error) {
+        incompatible = error instanceof Error ? error.message : 'Avatar V2 garment assembly failed.';
+      }
     }
   }
 
