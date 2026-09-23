@@ -195,7 +195,7 @@ export function assemblePlayerModel(
         clonedNode.geometry = original.geometry.clone();
         if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
-        if (choice.part === 'head' || choice.part === 'body') {
+        if (choice.part === 'head' || (choice.part === 'body' && !choice.assetKey)) {
           applyAvatarSkinMacroShading(clonedNode.geometry, choice.part, appearance, quality);
         }
         const dyeMaterial = (originalMaterial: T.Material) => {
@@ -215,7 +215,7 @@ export function assemblePlayerModel(
           }
           if (/skin/.test(name)) {
             material.color.set(appearance.body.skin);
-            if (clonedNode.geometry.getAttribute('color')) material.vertexColors = true;
+            if (clonedNode.geometry.getAttribute('color') && (choice.part === 'head' || !choice.assetKey)) material.vertexColors = true;
             applyAvatarSkinQuality(material, appearance, quality);
           } else if (choice.part === 'head') {
             // The source rigs use slightly different material names. Keep iris,
