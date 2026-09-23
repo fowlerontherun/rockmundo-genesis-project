@@ -15,6 +15,7 @@ import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
 import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, type CuratedFinish } from './curatedSurfaceMaps';
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
+import { applyCuratedMacroShading } from './curatedMacroShading';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -183,6 +184,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
         if (!original?.isSkinnedMesh) throw new Error('Incompatible character geometry');
         clonedNode.geometry = original.geometry.clone();
         if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
+        if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
         const dyeMaterial = (originalMaterial: T.Material) => {
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
@@ -212,6 +214,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
               material.map = fabricTexture(choice.fabric);
               material.roughness = choice.fabric === 'patent' ? .2 : choice.fabric === 'canvas' || choice.fabric === 'denim' ? .95 : .84;
             }
+            if (choice.assetKey) material.vertexColors = true;
             if (choice.assetKey && choice.finish) {
               const finish = choice.finish as CuratedFinish;
               if (finish === 'tartan') {
