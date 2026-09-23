@@ -205,33 +205,35 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not has_alias(bone_names, aliases):
                 errors.append(f"Missing close-up articulation bone: {semantic}.")
 
-        authored_regions = set()
-        unskinned_regions = set()
-        bare_skin_regions = set()
-        for obj in meshes:
-            matched_regions = set()
-            explicit = str(obj.get("rockmundoBodyRegion", "")).lower()
-            if explicit in BODY_REGIONS:
-                matched_regions.add(explicit)
-            cleaned_name = clean(obj.name)
-            for region in BODY_REGIONS:
-                cleaned_region = clean(region)
-                if f"rmv2body{cleaned_region}" in cleaned_name or f"body{cleaned_region}" in cleaned_name:
-                    matched_regions.add(region)
-            object_materials = [slot.material.name for slot in obj.material_slots if slot.material]
-            for region in matched_regions:
-                authored_regions.add(region)
-                if not any(modifier.type == "ARMATURE" for modifier in obj.modifiers):
-                    unskinned_regions.add(region)
-                if any(MATERIAL_ROLES["skin"].search(name) for name in object_materials):
-                    bare_skin_regions.add(region)
+    # Topless and Tattoo Parlour can select any LOD, so every export must remain a
+    # complete skinned bare body. Close-up-only articulation stays gated above.
+    authored_regions = set()
+    unskinned_regions = set()
+    bare_skin_regions = set()
+    for obj in meshes:
+        matched_regions = set()
+        explicit = str(obj.get("rockmundoBodyRegion", "")).lower()
+        if explicit in BODY_REGIONS:
+            matched_regions.add(explicit)
+        cleaned_name = clean(obj.name)
         for region in BODY_REGIONS:
-            if region not in authored_regions:
-                errors.append(f"Missing garment-occlusion body region mesh: {region}.")
-            elif region in unskinned_regions:
-                errors.append(f"Garment-occlusion body region has no Armature modifier: {region}.")
-            elif region not in bare_skin_regions:
-                errors.append(f"Body region has no skin material for topless/tattoo preview: {region}.")
+            cleaned_region = clean(region)
+            if f"rmv2body{cleaned_region}" in cleaned_name or f"body{cleaned_region}" in cleaned_name:
+                matched_regions.add(region)
+        object_materials = [slot.material.name for slot in obj.material_slots if slot.material]
+        for region in matched_regions:
+            authored_regions.add(region)
+            if not any(modifier.type == "ARMATURE" for modifier in obj.modifiers):
+                unskinned_regions.add(region)
+            if any(MATERIAL_ROLES["skin"].search(name) for name in object_materials):
+                bare_skin_regions.add(region)
+    for region in BODY_REGIONS:
+        if region not in authored_regions:
+            errors.append(f"Missing garment-occlusion body region mesh: {region}.")
+        elif region in unskinned_regions:
+            errors.append(f"Garment-occlusion body region has no Armature modifier: {region}.")
+        elif region not in bare_skin_regions:
+            errors.append(f"Body region has no skin material for topless/tattoo preview: {region}.")
 
     for morph in REQUIRED_MUSCLE_MORPHS:
         if not has_alias(morphs, [morph]):
