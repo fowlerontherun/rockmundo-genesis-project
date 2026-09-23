@@ -2,6 +2,7 @@ import * as T from 'three';
 import { describe, expect, it } from 'vitest';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
+import { isCompositeSurfaceLayer } from './garmentSurfaceTextures';
 
 function item(category: string, wearableSlot: string, garment: Record<string, unknown> = {}): ClothingItem {
   return {
@@ -71,19 +72,12 @@ describe('procedural garment stage rig anchors', () => {
     disposeProceduralGarment(garment);
   });
 
-  it('composites flat chest artwork into one garment surface texture', () => {
-    const clothing = item('t-shirt', 'top', { sleeve: 'short' });
-    clothing.detail_layers = [
-      { id: 'text-1', type: 'text', name: 'Title', zone: 'main', color: '#ffffff', text: 'ROCKMUNDO', scale: 100, rotation: 0, opacity: 100, offsetX: 0, offsetY: 10, surface: 'front', widthScale: 100, heightScale: 100 },
-      { id: 'badge-1', type: 'badge', name: 'Badge', zone: 'main', color: '#ff0000', asset: 'star', scale: 80, rotation: 12, opacity: 90, offsetX: 25, offsetY: -20, surface: 'front', widthScale: 100, heightScale: 100 },
-    ] as any;
-    const garment = buildProceduralGarment(clothing);
-    const composite = garment.getObjectByName('garment-composite-front') as T.Mesh | undefined;
-    expect(composite).toBeTruthy();
-    expect(composite?.userData.surfaceTexture).toBeTruthy();
-    const flatMeshes = garment.children.filter(child => child instanceof T.Mesh && child.userData.detailTexture);
-    expect(flatMeshes).toHaveLength(0);
-    disposeProceduralGarment(garment);
+  it('classifies printable artwork separately from structural garment details', () => {
+    expect(isCompositeSurfaceLayer({ type: 'text' } as any)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'graphic' } as any)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'badge' } as any)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'zip' } as any)).toBe(false);
+    expect(isCompositeSurfaceLayer({ type: 'studs' } as any)).toBe(false);
   });
 
   it('keeps structural details as geometry while compositing flat artwork', () => {
