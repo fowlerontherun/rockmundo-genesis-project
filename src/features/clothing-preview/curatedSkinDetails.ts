@@ -79,6 +79,94 @@ function attachToBodySurface(
   return true;
 }
 
+function attachToFootSurface(
+  root: T.Object3D,
+  bone: T.Bone,
+  object: T.Object3D,
+  around: T.Vector3,
+  yOffset = .012,
+  offset = .002,
+) {
+  const attachment = findFrontSurfaceAttachment(root, 'feet', around, yOffset);
+  if (!attachment) {
+    object.traverse(node => {
+      if (!(node instanceof T.Mesh) && !(node instanceof T.Line)) return;
+      node.geometry.dispose();
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach(material => material.dispose());
+    });
+    return false;
+  }
+  attachSurfaceGraphic(root, bone, object, attachment, offset);
+  return true;
+}
+
+function laceMaterial(color: string) {
+  return new T.MeshStandardMaterial({
+    color,
+    roughness: .86,
+    metalness: 0,
+  });
+}
+
+function addShoeLaces(
+  root: T.Object3D,
+  bones: Map<string, T.Bone>,
+  quality: AvatarVisualQuality,
+  rows: number,
+  color: string,
+  prefix: string,
+) {
+  const profile = avatarQualityProfile(quality);
+  for (const side of ['L', 'R'] as const) {
+    const foot = findBone(bones, [`Foot.${side}`, `Foot_${side}`, side === 'L' ? 'LeftFoot' : 'RightFoot']);
+    if (!foot) continue;
+    const base = foot.getWorldPosition(new T.Vector3());
+    const group = new T.Group();
+    group.name = `${prefix}-laces-${side.toLowerCase()}`;
+
+    const width = .056;
+    const spacing = .025;
+    for (let row = 0; row < rows; row++) {
+      const y = (row - (rows - 1) / 2) * spacing;
+      for (const direction of [-1, 1] as const) {
+        const from = new T.Vector3(direction * -width, y - spacing * .38, 0);
+        const to = new T.Vector3(direction * width, y + spacing * .38, 0);
+        const curve = new T.LineCurve3(from, to);
+        const lace = new T.Mesh(
+          new T.TubeGeometry(
+            curve,
+            quality === 'cinematic' ? 8 : quality === 'ultra' ? 6 : 4,
+            .0025,
+            Math.max(5, Math.floor(profile.accessorySegments / 3)),
+            false,
+          ),
+          laceMaterial(color),
+        );
+        lace.name = `${prefix}-lace`;
+        group.add(lace);
+      }
+
+      for (const x of [-width, width]) {
+        const eyelet = new T.Mesh(
+          new T.TorusGeometry(
+            .006,
+            .0018,
+            Math.max(5, Math.floor(profile.accessorySegments / 3)),
+            Math.max(10, profile.accessorySegments),
+          ),
+          metalMaterial('#aeb4bc'),
+        );
+        eyelet.name = `${prefix}-eyelet`;
+        eyelet.position.set(x, y, .001);
+        group.add(eyelet);
+      }
+    }
+
+    attachToFootSurface(root, foot, group, base, rows >= 5 ? .035 : .018, .0025);
+  }
+}
+
 function addSafetyPins(root: T.Object3D, bones: Map<string, T.Bone>, quality: AvatarVisualQuality) {
   const profile = avatarQualityProfile(quality);
   const chest = findBone(bones, ['Spine2','Spine.002','Chest','UpperChest']) ?? findBone(bones, ['Spine1','Spine.001']);
@@ -242,6 +330,8 @@ export function addCuratedSkinDetails(
   if (keys.has('clothing.punk.safety-pin-tee')) addSafetyPins(root, bones, quality);
   if (keys.has('clothing.punk.patch-jacket')) addPatchJacketDetails(root, bones, quality);
   if (keys.has('clothing.punk.biker-jacket')) addBikerJacketHardware(root, bones, quality);
+  if (keys.has('clothing.starter.canvas-trainers')) addShoeLaces(root, bones, quality, 3, '#e7e1d8', 'curated-trainer');
+  if (keys.has('clothing.punk.combat-boots')) addShoeLaces(root, bones, quality, 6, '#262626', 'curated-combat-boot');
   if (keys.has('clothing.punk.double-eyelet-belt')) addEyeletBelt(root, bones, quality);
   if (keys.has('clothing.punk.wrist-cuffs')) addWristCuffs(root, bones, quality);
 }
