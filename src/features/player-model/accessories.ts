@@ -61,7 +61,7 @@ export function addAccessories(
   if (accessories.hat !== 'none' || storeSlots.has('headwear')) tuckHair(root, bounds, appearance.body.frame);
   if (accessories.hat !== 'none') {
     const style = accessories.hat === 'baseball_cap' ? 'cap' : accessories.hat === 'bucket_hat' ? 'bucket' : accessories.hat;
-    const hat = buildHeadAccessory({ slot: 'headwear', style, color: accessories.hatColor }, bounds);
+    const hat = buildHeadAccessory({ slot: 'headwear', style, color: accessories.hatColor }, bounds, quality);
     hat.name = `avatar-hat-${accessories.hat}`;
     anchor.add(hat);
   }
@@ -71,7 +71,7 @@ export function addAccessories(
       slot: 'eyewear', style, color: accessories.glassesColor,
       lenses: appearance.accessories?.lensTint ?? (accessories.glasses === 'sunglasses' ? 'tinted' : 'clear'),
       lensColor: appearance.accessories?.lensColor ?? '#40566d',
-    }, bounds);
+    }, bounds, quality);
     glasses.name = `avatar-glasses-${accessories.glasses}`;
     anchor.add(glasses);
   }
