@@ -32,7 +32,7 @@ export interface StageAppearanceRow {
   appearance: unknown;
 }
 
-export interface LegacyStageAppearanceRow {
+export interface LegacyStageAppearanceRow extends Record<string, unknown> {
   profile_id: string;
   gender?: string | null;
   skin_tone?: string | null;
