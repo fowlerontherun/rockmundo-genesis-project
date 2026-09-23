@@ -16,6 +16,7 @@ import { visibleTattoosForClothing } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import { assembleAvatarMesh } from '@/features/player-model/v2/avatarMeshEngine';
 import { requiredAvatarV2ModelFiles } from '@/features/player-model/v2/avatarV2Model';
+import { requiredAvatarV2GarmentFiles } from '@/features/player-model/v2/avatarV2Garments';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
@@ -1000,12 +1001,16 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
     const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const donorFiles = lineup?.flatMap(p => requiredCuratedDonorModelFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const lineupAppearances = lineup?.map(p => p.appearance) ?? [];
+    const v2GarmentFiles = lineup?.flatMap(p =>
+        requiredAvatarV2GarmentFiles(p.richClothing ?? [], p.appearance.body.frame, 1)
+    ) ?? [];
     const library = await loadModelLibrary([
         'casual.glb',
         'punk.glb',
         'suit.glb',
         ...requiredModelFiles([...lineupAppearances, ...crowdAppearances(seed ?? 85043)]),
         ...requiredAvatarV2ModelFiles(lineupAppearances, 'high'),
+        ...v2GarmentFiles,
         ...donorFiles,
     ], manager);
     await loadOptionalCuratedGarments(library, curatedFiles, manager);
