@@ -12,7 +12,7 @@ export interface StarterItem { id: string; style: Style; label: string; fabric: 
 const wardrobe = (slot: EquipmentSlot, rows: [string, Style, string, Fabric][]): StarterItem[] => rows.map(([key, style, label, fabric]) => ({ id: `starter.${slot}.${key}`, style, label, fabric }));
 export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
   top: wardrobe('top', [
-    ['casual', 'casual', 'Everyday top', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
+    ['casual', 'casual', 'Rockmundo logo T-shirt', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
     ['stripe', 'casual', 'Striped top', 'stripe'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
   ]),
   bottom: wardrobe('bottom', [
