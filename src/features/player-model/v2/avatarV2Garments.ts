@@ -6,6 +6,7 @@ import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals'
 import type { ModelLibrary } from '../model';
 import type { AvatarV2Frame, AvatarV2Lod } from './avatarV2Contract';
 import { avatarV2RuntimeBoneName, cleanAvatarV2Name } from './avatarV2Contract';
+import { AVATAR_V2_ROLLOUT } from './avatarV2Registry';
 
 export type AvatarV2GarmentStatus = 'planned' | 'asset_ready' | 'validated' | 'blocked';
 export type AvatarV2BodyRegion =
@@ -119,6 +120,7 @@ export function requiredAvatarV2GarmentFiles(
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
+  if (!AVATAR_V2_ROLLOUT.enabled) return [];
   return [...new Set(clothing
     .map(row => avatarV2GarmentFile(row.item, frame, lod))
     .filter((file): file is string => !!file))];
