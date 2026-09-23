@@ -532,6 +532,47 @@ function addBottomSurfaceComposites(
   }
 }
 
+
+function addFootwearSurfaceComposite(
+  details: ClothingDetailLayer[],
+  spec: RichGarmentVisualSpec,
+  add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
+) {
+  const baseTexture = buildCompositeGarmentSurfaceTexture(details, 'front');
+  if (!baseTexture) return;
+  for (const side of [-1, 1]) {
+    const texture = baseTexture.clone();
+    texture.needsUpdate = true;
+    const mesh = new T.Mesh(
+      new T.PlaneGeometry(spec.scaleX * .5, spec.scaleY * .34),
+      surfaceCompositeMaterial(texture, spec),
+    );
+    mesh.name = `garment-composite-footwear-${side > 0 ? 'left' : 'right'}`;
+    mesh.position.set(side * .2, spec.y + .02, spec.z + .285);
+    mesh.rotation.x = -.18;
+    mesh.userData.surfaceTexture = texture;
+    add(mesh, side > 0 ? 'Foot.L' : 'Foot.R');
+  }
+  baseTexture.dispose();
+}
+
+function addHeadwearSurfaceComposite(
+  details: ClothingDetailLayer[],
+  spec: RichGarmentVisualSpec,
+  add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
+) {
+  const texture = buildCompositeGarmentSurfaceTexture(details, 'front');
+  if (!texture) return;
+  const mesh = new T.Mesh(
+    new T.PlaneGeometry(spec.scaleX * .62, spec.scaleY * .46),
+    surfaceCompositeMaterial(texture, spec),
+  );
+  mesh.name = 'garment-composite-headwear-front';
+  mesh.position.set(0, spec.y + spec.scaleY * .04, spec.z + spec.scaleZ * .42);
+  mesh.userData.surfaceTexture = texture;
+  add(mesh, 'Head');
+}
+
 export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPreviewVariant) {
   const spec = buildRichGarmentVisualSpec(item, variant);
   const group = new T.Group();
@@ -607,6 +648,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       sole.position.set(side * .2, spec.y - spec.scaleY * .34, .14 + spec.z);
       add(sole, anchor);
     }
+    const flatDetails = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
+    addFootwearSurfaceComposite(flatDetails, spec, add);
   } else if (spec.slot === 'headwear') {
     const garment = (item.garment_config || {}) as Record<string, unknown>;
     const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
@@ -636,6 +679,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
         add(brim, 'Head');
       }
     }
+    const flatDetails = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
+    addHeadwearSurfaceComposite(flatDetails, spec, add);
   } else if (spec.slot === 'eyewear') {
     const garment = (item.garment_config || {}) as Record<string, unknown>;
     const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
@@ -703,7 +748,7 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   );
 
   const details = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
-  details.filter(detail => !(['top', 'bottom'].includes(spec.slot) && isCompositeSurfaceLayer(detail))).forEach((detail, index) => addDetail(group, detail, index, spec));
+  details.filter(detail => !(['top', 'bottom', 'footwear', 'headwear'].includes(spec.slot) && isCompositeSurfaceLayer(detail))).forEach((detail, index) => addDetail(group, detail, index, spec));
   if (spec.distress > .05) {
     const distressMaterial = new T.MeshBasicMaterial({ color: '#151515', transparent: true, opacity: Math.min(.5, .12 + spec.distress * .35), wireframe: true });
     const distress = new T.Mesh(new T.SphereGeometry(Math.max(.3, spec.scaleX * .58), 12, 8), distressMaterial);
