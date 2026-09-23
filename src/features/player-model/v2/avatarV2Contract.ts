@@ -5,6 +5,18 @@ import { AVATAR_V2_CUSTOMIZATION_MORPHS } from './avatarV2Customization';
 export type AvatarV2Frame = PlayerAppearance['body']['frame'];
 export type AvatarV2Lod = 0 | 1 | 2 | 3;
 
+export const AVATAR_V2_BODY_REGIONS = [
+  'torso',
+  'upper-arms',
+  'lower-arms',
+  'hands',
+  'hips',
+  'upper-legs',
+  'lower-legs',
+  'feet',
+] as const;
+export type AvatarV2BodyRegion = typeof AVATAR_V2_BODY_REGIONS[number];
+
 export interface AvatarV2Budget {
   maxTriangles: number;
   maxVertices: number;
@@ -126,6 +138,17 @@ const EXPRESSION_ALIASES: Record<typeof AVATAR_V2_REQUIRED_EXPRESSIONS[number], 
 
 export const cleanAvatarV2Name = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
 const clean = cleanAvatarV2Name;
+
+export function avatarV2BodyRegion(node: T.Object3D): AvatarV2BodyRegion | null {
+  const explicit = String(node.userData?.rockmundoBodyRegion || '').toLowerCase();
+  if ((AVATAR_V2_BODY_REGIONS as readonly string[]).includes(explicit)) {
+    return explicit as AvatarV2BodyRegion;
+  }
+  const name = clean(node.name);
+  return AVATAR_V2_BODY_REGIONS.find(region =>
+    name.includes(`rmv2body${clean(region)}`) || name.includes(`body${clean(region)}`)
+  ) ?? null;
+}
 
 export function avatarV2BoneSemantic(name: string): AvatarV2Bone | null {
   const wanted = clean(name);
@@ -254,6 +277,24 @@ export function validateAvatarV2Scene(
   for (const bone of AVATAR_V2_REQUIRED_BONES) {
     if (!boneMap[bone]) {
       issues.push({ level: 'error', code: `missing-bone:${bone}`, message: `Required humanoid bone is missing: ${bone}.` });
+    }
+  }
+
+  if (lod <= 1) {
+    const regions = new Set<AvatarV2BodyRegion>();
+    scene.traverse(node => {
+      if (!(node instanceof T.Mesh)) return;
+      const region = avatarV2BodyRegion(node);
+      if (region) regions.add(region);
+    });
+    for (const region of AVATAR_V2_BODY_REGIONS) {
+      if (!regions.has(region)) {
+        issues.push({
+          level: 'error',
+          code: `missing-body-region:${region}`,
+          message: `LOD${lod} needs an authored body region for garment occlusion: ${region}.`,
+        });
+      }
     }
   }
 
