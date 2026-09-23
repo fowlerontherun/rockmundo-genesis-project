@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 
 export type CuratedFinish =
   | 'cotton'
@@ -278,4 +279,86 @@ export function curatedTartanTexture(assetKey: string, primary: string, secondar
   const texture = dataTexture(`curated-tartan-${assetKey}`, pixels, size);
   texture.colorSpace = T.SRGBColorSpace;
   return texture;
+}
+
+
+function textureHash(value: string) {
+  let h = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function targetCuratedSize(quality: AvatarVisualQuality, baseSize: number) {
+  if (quality === 'crowd') return Math.min(baseSize, 128);
+  if (quality === 'balanced') return baseSize;
+  if (quality === 'high') return Math.max(baseSize, 512);
+  return Math.max(baseSize, 1024);
+}
+
+/**
+ * Upscales procedural curated surface maps only for close-up tiers and injects
+ * restrained micro-variation so 512/1024 textures carry real extra detail
+ * rather than simply stretching the existing 256px map.
+ */
+export function curatedTextureForQuality(
+  source: T.DataTexture,
+  quality: AvatarVisualQuality,
+  kind: 'color' | 'normal' | 'roughness',
+) {
+  const src = source.image?.data as Uint8Array | undefined;
+  const sw = Number(source.image?.width || 0);
+  const sh = Number(source.image?.height || 0);
+  if (!src || !sw || !sh) return source;
+
+  const target = targetCuratedSize(quality, Math.max(sw, sh));
+  if (target === sw && target === sh) {
+    source.anisotropy = avatarQualityProfile(quality).anisotropy;
+    return source;
+  }
+
+  const pixels = new Uint8Array(target * target * 4);
+  const seed = textureHash(source.name || 'curated');
+  const sample = (channel: number, x: number, y: number) => {
+    const sx = Math.min(sw - 1, Math.max(0, Math.floor((x / target) * sw)));
+    const sy = Math.min(sh - 1, Math.max(0, Math.floor((y / target) * sh)));
+    return src[(sy * sw + sx) * 4 + channel];
+  };
+
+  for (let y = 0; y < target; y++) {
+    for (let x = 0; x < target; x++) {
+      const offset = (y * target + x) * 4;
+      const micro = (noise(x, y, seed) - .5);
+      if (kind === 'normal') {
+        const nx = sample(0, x, y) / 127.5 - 1 + micro * .028;
+        const ny = sample(1, x, y) / 127.5 - 1 + (noise(y, x, seed + 31) - .5) * .028;
+        const nz = sample(2, x, y) / 127.5 - 1;
+        const normal = new T.Vector3(nx, ny, nz).normalize();
+        pixels[offset] = Math.round((normal.x * .5 + .5) * 255);
+        pixels[offset + 1] = Math.round((normal.y * .5 + .5) * 255);
+        pixels[offset + 2] = Math.round((normal.z * .5 + .5) * 255);
+      } else {
+        const amplitude = kind === 'color' ? 5 : 8;
+        pixels[offset] = T.MathUtils.clamp(sample(0, x, y) + micro * amplitude, 0, 255);
+        pixels[offset + 1] = T.MathUtils.clamp(sample(1, x, y) + micro * amplitude, 0, 255);
+        pixels[offset + 2] = T.MathUtils.clamp(sample(2, x, y) + micro * amplitude, 0, 255);
+      }
+      pixels[offset + 3] = 255;
+    }
+  }
+
+  const result = new T.DataTexture(pixels, target, target, T.RGBAFormat);
+  result.name = `${source.name}-${quality}`;
+  result.wrapS = source.wrapS;
+  result.wrapT = source.wrapT;
+  result.magFilter = T.LinearFilter;
+  result.minFilter = T.LinearMipmapLinearFilter;
+  result.generateMipmaps = true;
+  result.anisotropy = avatarQualityProfile(quality).anisotropy;
+  result.colorSpace = source.colorSpace;
+  result.needsUpdate = true;
+  source.dispose();
+  return result;
 }
