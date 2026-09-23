@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { curatedAlbedoTexture, curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture } from './curatedSurfaceMaps';
 
 describe('curated surface maps', () => {
   it('builds high-resolution deterministic relief for current curated items', () => {
@@ -18,6 +18,14 @@ describe('curated surface maps', () => {
     expect(jacket.name).not.toBe(jeans.name);
     jacket.dispose();
     jeans.dispose();
+  });
+
+  it('builds a tangent-space normal map so weave and grain react to stage lighting', () => {
+    const texture = curatedNormalTexture('clothing.punk.biker-jacket', 'leather');
+    expect(texture.image.width).toBe(256);
+    expect(texture.image.height).toBe(256);
+    expect(texture.name).toContain('curated-normal');
+    texture.dispose();
   });
 
   it('builds a separate roughness map so stage light reveals material variation', () => {
