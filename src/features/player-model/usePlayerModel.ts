@@ -143,17 +143,29 @@ export function useGigPlayerModels(profileIds: string[]) {
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceResult, clothingResult, tattooResult, instrumentResult] = await Promise.all([
+      const [appearanceSettled, clothingSettled, tattooSettled, instrumentSettled] = await Promise.allSettled([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
         callStageRpc('get_equipped_stage_clothing', { p_profile_ids: ids }),
         callStageRpc('get_stage_tattoo_visuals', { p_profile_ids: ids }),
         callStageRpc('get_equipped_stage_instrument_skins', { p_profile_ids: ids }),
       ]);
 
+      if (appearanceSettled.status === 'rejected') throw appearanceSettled.reason;
+      const appearanceResult = appearanceSettled.value;
       if (appearanceResult.error) throw appearanceResult.error;
-      if (clothingResult.error) console.warn('[gig-player-models] equipped rich clothing could not load', clothingResult.error);
-      if (tattooResult.error) console.warn('[gig-player-models] tattoo visuals could not load', tattooResult.error);
-      if (instrumentResult.error) console.warn('[gig-player-models] instrument skins could not load', instrumentResult.error);
+
+      const optionalStageResult = (label: string, settled: PromiseSettledResult<StageRpcResult>): StageRpcResult => {
+        if (settled.status === 'rejected') {
+          console.warn(`[gig-player-models] ${label} request could not load`, settled.reason);
+          return { data: [], error: { message: settled.reason instanceof Error ? settled.reason.message : String(settled.reason) } };
+        }
+        if (settled.value.error) console.warn(`[gig-player-models] ${label} could not load`, settled.value.error);
+        return settled.value;
+      };
+
+      const clothingResult = optionalStageResult('equipped rich clothing', clothingSettled);
+      const tattooResult = optionalStageResult('tattoo visuals', tattooSettled);
+      const instrumentResult = optionalStageResult('instrument skins', instrumentSettled);
 
       const appearances = Object.fromEntries(
         (appearanceResult.data || []).map(row => [row.profile_id, resolveAppearance(row.appearance, row.profile_id)]),
