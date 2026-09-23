@@ -402,7 +402,9 @@ export function validateAvatarV2Scene(
         });
       }
     }
+    const requiredMuscles = new Set(AVATAR_V2_REQUIRED_MUSCLE_MORPHS.map(clean));
     for (const morph of AVATAR_V2_CUSTOMIZATION_MORPHS) {
+      if (requiredMuscles.has(clean(morph))) continue;
       if (!available.has(clean(morph))) {
         issues.push({
           level: 'warning',
