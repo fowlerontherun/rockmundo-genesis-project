@@ -57,7 +57,7 @@ function detailMaterial(color: T.Color, opacity: number, quality: AvatarVisualQu
     transparent: true,
     opacity,
     depthWrite: false,
-    roughness: quality === 'ultra' ? .72 : .78,
+    roughness: quality === 'cinematic' ? .68 : quality === 'ultra' ? .72 : .78,
     metalness: 0,
     polygonOffset: true,
     polygonOffsetFactor: -2,
