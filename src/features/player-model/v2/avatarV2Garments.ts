@@ -36,6 +36,8 @@ export interface AvatarV2GarmentConfig {
 
 const BODY_REGIONS = new Set<AvatarV2BodyRegion>(AVATAR_V2_BODY_REGIONS);
 const STATUSES = new Set<AvatarV2GarmentStatus>(['planned','asset_ready','validated','blocked']);
+const SUPPORTED_SLOTS = new Set(['top', 'bottom', 'footwear', 'headwear', 'eyewear', 'accessory']);
+const BODY_OCCLUSION_SLOTS = new Set(['top', 'bottom', 'footwear']);
 const clean = cleanAvatarV2Name;
 
 function record(value: unknown): Record<string, unknown> {
@@ -128,8 +130,8 @@ export function avatarV2ClothingCompatibilityReason(
 ) {
   for (const row of clothing) {
     const slot = richGarmentSlot(row.item);
-    if (!['top', 'bottom', 'footwear'].includes(slot)) {
-      return `Avatar V2 garment adapter does not yet support ${slot}: ${row.item.name}.`;
+    if (!SUPPORTED_SLOTS.has(slot)) {
+      return `Avatar V2 garment adapter does not support ${slot}: ${row.item.name}.`;
     }
     const config = avatarV2GarmentConfig(row.item);
     if (!config) return `${row.item.name} has no Avatar V2 garment mapping.`;
@@ -137,7 +139,7 @@ export function avatarV2ClothingCompatibilityReason(
     if (!avatarV2GarmentFile(row.item, frame, lod)) {
       return `${row.item.name} has no validated Avatar V2 ${frame} LOD${lod} asset.`;
     }
-    if (!config.occludeBodyRegions.length) {
+    if (BODY_OCCLUSION_SLOTS.has(slot) && !config.occludeBodyRegions.length) {
       return `${row.item.name} has no Avatar V2 body occlusion regions.`;
     }
     if (config.colourMode === 'zones' && !config.materialZones.main.length) {
