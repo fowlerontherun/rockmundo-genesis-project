@@ -32,6 +32,25 @@ const requiredBoneAliases = {
   rightFoot: ['rightfoot','foot_r','right_foot','j_bip_r_foot'],
 };
 
+const closeupBoneAliases = {
+  leftShoulder: ['leftShoulder','shoulder_l','clavicle_l','mixamorigLeftShoulder'],
+  rightShoulder: ['rightShoulder','shoulder_r','clavicle_r','mixamorigRightShoulder'],
+  leftToes: ['leftToes','toe_l','toebase_l','mixamorigLeftToeBase'],
+  rightToes: ['rightToes','toe_r','toebase_r','mixamorigRightToeBase'],
+  leftThumb: ['leftThumbProximal','leftHandThumb1','thumb_01_l','mixamorigLeftHandThumb1'],
+  leftIndex: ['leftIndexProximal','leftHandIndex1','index_01_l','mixamorigLeftHandIndex1'],
+  leftMiddle: ['leftMiddleProximal','leftHandMiddle1','middle_01_l','mixamorigLeftHandMiddle1'],
+  leftRing: ['leftRingProximal','leftHandRing1','ring_01_l','mixamorigLeftHandRing1'],
+  leftLittle: ['leftLittleProximal','leftHandPinky1','pinky_01_l','mixamorigLeftHandPinky1'],
+  rightThumb: ['rightThumbProximal','rightHandThumb1','thumb_01_r','mixamorigRightHandThumb1'],
+  rightIndex: ['rightIndexProximal','rightHandIndex1','index_01_r','mixamorigRightHandIndex1'],
+  rightMiddle: ['rightMiddleProximal','rightHandMiddle1','middle_01_r','mixamorigRightHandMiddle1'],
+  rightRing: ['rightRingProximal','rightHandRing1','ring_01_r','mixamorigRightHandRing1'],
+  rightLittle: ['rightLittleProximal','rightHandPinky1','pinky_01_r','mixamorigRightHandPinky1'],
+};
+
+const recommendedExpressions = ['visemeAA','visemeEE','visemeIH','visemeOH','visemeOU','mouthFunnel','mouthPucker'];
+
 const expressionAliases = {
   blinkLeft: ['blinkleft','blink_l','eyeBlinkLeft','eye_blink_l'],
   blinkRight: ['blinkright','blink_r','eyeBlinkRight','eye_blink_r'],
@@ -114,6 +133,7 @@ function inspect(gltf) {
     skinnedMeshes,
     jointNames,
     morphTargets: [...morphTargets],
+    materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
   };
 }
 
@@ -138,11 +158,44 @@ function validateAsset(gltf, entry) {
     if (!containsAlias(report.jointNames, [semantic, ...aliases])) errors.push(`Missing required bone: ${semantic}`);
   }
 
+  if (entry.lod <= 1) {
+    for (const [semantic, aliases] of Object.entries(closeupBoneAliases)) {
+      if (!containsAlias(report.jointNames, aliases)) errors.push(`Missing close-up articulation bone: ${semantic}`);
+    }
+  }
+
   for (const [expression, aliases] of Object.entries(expressionAliases)) {
     if (!containsAlias(report.morphTargets, [expression, ...aliases])) {
       const message = `Missing expression target: ${expression}`;
       if (entry.lod <= 1) errors.push(message);
       else warnings.push(message);
+    }
+  }
+
+  if (entry.lod <= 1) {
+    for (const expression of recommendedExpressions) {
+      if (!containsAlias(report.morphTargets, [expression])) warnings.push(`Missing recommended singing expression: ${expression}`);
+    }
+  }
+
+  const materialRoles = {
+    skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
+    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|cornea)($|[_-])/i,
+    teeth: /rmv2[_-]?teeth|teeth/i,
+    tongue: /rmv2[_-]?tongue|tongue/i,
+  };
+  if (entry.lod <= 1) {
+    for (const role of ['skin','eyes']) {
+      if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`Missing named close-up material role: ${role}`);
+    }
+  }
+  if (entry.lod === 0) {
+    for (const role of ['teeth','tongue']) {
+      if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`LOD0 missing separate ${role} material/mesh role`);
+    }
+  } else if (entry.lod === 1) {
+    for (const role of ['teeth','tongue']) {
+      if (!report.materialNames.some(name => materialRoles[role].test(name))) warnings.push(`LOD1 should retain separate ${role} material/mesh role`);
     }
   }
 
