@@ -34,8 +34,10 @@ export function equipmentItem(appearance: PlayerAppearance, slot: EquipmentSlot)
   return STARTER_ITEMS[slot].find(item => item.id === appearance.equipment[slot].itemId) ?? STARTER_ITEMS[slot][0];
 }
 export const HAIR_STYLES = [
-  'original', 'bald', 'buzz', 'quiff', 'mohawk', 'bob', 'shoulder', 'layered_long', 'long_waves',
-  'ponytail', 'high_ponytail', 'side_braid', 'twin_ponytails', 'bun', 'curls', 'long',
+  'original', 'bald', 'buzz', 'quiff', 'mohawk', 'faux_hawk', 'undercut', 'slick_back', 'side_part', 'curtain',
+  'pixie', 'bob', 'shoulder', 'shag', 'mullet', 'layered_long', 'long_waves', 'long',
+  'ponytail', 'high_ponytail', 'side_braid', 'box_braids', 'cornrows', 'locs_short', 'locs_long',
+  'twin_ponytails', 'bun', 'messy_bun', 'space_buns', 'curls', 'afro', 'afro_puffs',
 ] as const;
 export const FACIAL_HAIR_STYLES = ['none', 'stubble', 'moustache', 'goatee', 'short_beard', 'full_beard', 'long_beard', 'sideburns'] as const;
 export const HAT_STYLES = ['none', 'beanie', 'baseball_cap', 'bucket_hat', 'fedora', 'cowboy'] as const;
@@ -52,9 +54,12 @@ export const EYEBROW_LABELS: Record<typeof EYEBROW_STYLES[number], string> = { n
 export const SKIN_DETAIL_LABELS: Record<typeof SKIN_DETAILS[number], string> = { smooth: 'Smooth', freckles: 'Freckles', beauty_marks: 'Beauty marks', weathered: 'Weathered' };
 export const ACCESSORY_COLORS = [['Black', '#20232b'], ['Chalk', '#eee8db'], ['Red', '#bd3548'], ['Gold', '#d8ad49'], ['Green', '#3d795b'], ['Blue', '#426baa'], ['Purple', '#8055a2'], ['Pink', '#d376a1']] as const;
 export const HAIR_LABELS: Record<typeof HAIR_STYLES[number], string> = {
-  original: 'Original haircut', bald: 'Bald', buzz: 'Buzz cut', quiff: 'Quiff', mohawk: 'Mohawk', bob: 'Bob',
-  shoulder: 'Shoulder length', layered_long: 'Layered long hair', long_waves: 'Long waves', ponytail: 'Ponytail',
-  high_ponytail: 'High ponytail', side_braid: 'Side braid', twin_ponytails: 'Twin ponytails', bun: 'Bun', curls: 'Curls', long: 'Long hair',
+  original: 'Original haircut', bald: 'Bald', buzz: 'Buzz cut', quiff: 'Quiff', mohawk: 'Mohawk', faux_hawk: 'Faux hawk',
+  undercut: 'Undercut', slick_back: 'Slicked back', side_part: 'Side part', curtain: 'Curtain cut', pixie: 'Pixie cut', bob: 'Bob',
+  shoulder: 'Shoulder length', shag: 'Shag', mullet: 'Mullet', layered_long: 'Layered long hair', long_waves: 'Long waves', long: 'Long hair',
+  ponytail: 'Ponytail', high_ponytail: 'High ponytail', side_braid: 'Side braid', box_braids: 'Box braids', cornrows: 'Cornrows',
+  locs_short: 'Short locs', locs_long: 'Long locs', twin_ponytails: 'Twin ponytails', bun: 'Bun', messy_bun: 'Messy bun',
+  space_buns: 'Space buns', curls: 'Curls', afro: 'Afro', afro_puffs: 'Afro puffs',
 };
 export const FACIAL_HAIR_LABELS: Record<typeof FACIAL_HAIR_STYLES[number], string> = { none: 'Clean shaven', stubble: 'Stubble', moustache: 'Moustache', goatee: 'Goatee', short_beard: 'Short beard', full_beard: 'Full beard', long_beard: 'Long beard', sideburns: 'Sideburns' };
 export const HAIR_COLORS = [['Black', '#221f24'], ['Brown', '#54372a'], ['Chestnut', '#854b32'], ['Ginger', '#b75e32'], ['Blond', '#d5b474'], ['Silver', '#aeb5bd'], ['White', '#eee8db'], ['Pink', '#d376a1'], ['Blue', '#426baa'], ['Purple', '#8055a2']] as const;
@@ -80,6 +85,8 @@ export const appearanceSchema = z.object({
     lensTint: z.enum(['clear', 'tinted']).optional(),
     lensColor: color.optional(),
     earrings: z.enum(EARRING_STYLES).optional(),
+    leftEarring: z.enum(EARRING_STYLES).optional(),
+    rightEarring: z.enum(EARRING_STYLES).optional(),
     earringColor: color.optional(),
   }).strict().optional(),
 }).strict();
@@ -93,12 +100,12 @@ export function defaultAppearance(seed = ''): PlayerAppearance {
     body: { frame: 'masculine', height: 1, build: 1, skin: ['#d4a373', '#8d5524', '#edc7a5', '#593a2d'][hash % 4] },
     head: { style, hair: '#282027', faceShape: 'classic', eyeColor: '#65442d', eyebrowStyle: 'natural', skinDetail: 'smooth' },
     equipment: {
-      top: { itemId: `starter.top.${style}`, color: ['#496c7d', '#683c57', '#334f49'][hash % 3] },
+      top: { itemId: 'starter.top.casual', color: '#eee8db' },
       bottom: { itemId: `starter.bottom.${style}`, color: '#272e39' },
       footwear: { itemId: `starter.footwear.${style}`, color: '#25232b' },
       instrument: { itemId: 'starter.instrument.standard', color: '#b97536' },
     },
-    accessories: { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', earringColor: '#d8ad49' },
+    accessories: { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', leftEarring: 'none', rightEarring: 'none', earringColor: '#d8ad49' },
   };
 }
 export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
@@ -121,6 +128,8 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
       ...(parsed.data.accessories?.lensTint ? { lensTint: parsed.data.accessories.lensTint } : {}),
       ...(parsed.data.accessories?.lensColor ? { lensColor: parsed.data.accessories.lensColor } : {}),
       earrings: parsed.data.accessories?.earrings ?? 'none',
+      leftEarring: parsed.data.accessories?.leftEarring ?? parsed.data.accessories?.earrings ?? 'none',
+      rightEarring: parsed.data.accessories?.rightEarring ?? parsed.data.accessories?.earrings ?? 'none',
       earringColor: parsed.data.accessories?.earringColor ?? '#d8ad49',
     },
   };
