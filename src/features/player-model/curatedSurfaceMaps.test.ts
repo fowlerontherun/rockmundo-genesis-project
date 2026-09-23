@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, curatedTextureForQuality } from './curatedSurfaceMaps';
 
 describe('curated surface maps', () => {
   it('builds high-resolution deterministic relief for current curated items', () => {
@@ -44,6 +44,17 @@ describe('curated surface maps', () => {
     expect(texture.image.width).toBe(128);
     expect(texture.image.height).toBe(128);
     texture.dispose();
+  });
+
+  it('scales current clothing detail to 512px high and 1024px ultra maps', () => {
+    const high = curatedTextureForQuality(curatedAlbedoTexture('clothing.punk.biker-jacket', 'leather'), 'high', 'color');
+    const ultra = curatedTextureForQuality(curatedNormalTexture('clothing.starter.blue-straight-jeans', 'denim'), 'ultra', 'normal');
+    expect(high.image.width).toBe(512);
+    expect(ultra.image.width).toBe(1024);
+    expect(high.anisotropy).toBe(8);
+    expect(ultra.anisotropy).toBe(16);
+    high.dispose();
+    ultra.dispose();
   });
 
   it('keeps relief subtle for polished leather and stronger for canvas/denim', () => {
