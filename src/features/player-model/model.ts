@@ -256,7 +256,7 @@ export function assemblePlayerModel(
               const profile = curatedMaterialProfile(choice.assetKey, finish);
               material.normalMap = curatedTextureForQuality(curatedNormalTexture(choice.assetKey, finish), quality, 'normal');
               material.normalScale.set(profile.normalStrength, profile.normalStrength);
-              material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
+              material.bumpMap = curatedTextureForQuality(curatedReliefTexture(choice.assetKey, finish), quality, 'height');
               material.bumpScale = curatedBumpScale(finish) * profile.bumpMultiplier;
               material.roughnessMap = curatedTextureForQuality(curatedRoughnessTexture(choice.assetKey, finish), quality, 'roughness');
               material.roughness = profile.roughness;
