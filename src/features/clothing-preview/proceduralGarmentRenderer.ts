@@ -302,7 +302,7 @@ function addTopGarment(
   const garmentConfig = (item.garment_config || {}) as Record<string, unknown>;
   const templateKey = String(garmentConfig.templateKey || garmentConfig.template_key || '').toLowerCase();
   const isDress = templateKey === 'dress' || /dress/.test(category);
-  const isOuterwear = /hoodie|jacket|coat|vest/.test(category);
+  const isOuterwear = ['hoodie','jacket','coat','vest'].includes(templateKey) || /hoodie|jacket|coat|vest/.test(category);
   const isBoxy = /boxy|oversized|structured/.test(`${spec.silhouette} ${spec.cut}`);
   const isFitted = /slim|skinny|fitted|tailored/.test(`${spec.silhouette} ${spec.cut}`);
   const isCropped = /crop/.test(spec.length);
@@ -373,7 +373,7 @@ function addTopGarment(
     }
   }
 
-  if (/hood/.test(spec.collar) || /hoodie/.test(category)) {
+  if (/hood/.test(spec.collar) || templateKey === 'hoodie' || /hoodie/.test(category)) {
     const hood = new T.Mesh(new T.TorusGeometry(.23, .065, 10, 32, Math.PI * 1.55), material);
     hood.rotation.x = Math.PI / 2;
     hood.rotation.z = Math.PI * .22;
@@ -431,7 +431,7 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       skirt.position.set(0, spec.y, spec.z);
       add(skirt, 'Hips');
     } else {
-      const shortFactor = /short/.test(category) ? .52 : 1;
+      const shortFactor = templateKey === 'shorts' || /short/.test(category) ? .52 : 1;
       const legHeight = spec.scaleY * shortFactor;
       const topRadius = spec.scaleX * .18 * spec.waistScale;
       const bottomRadius = topRadius * T.MathUtils.lerp(1.02, .74, spec.taper);
