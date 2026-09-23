@@ -228,7 +228,11 @@ serve(async (req) => {
     
     // Build comprehensive prompt for MiniMax Music-1.5
     const songTitle = project?.title || song.title || 'Untitled'
-    const primaryGenre = (song.genre || project?.genres?.[0] || 'pop').replace(/^Style:\s*/i, '').trim()
+    // Keep the original song genre in-game, but force acoustic versions to
+    // use an acoustic generation genre so the rendered audio is stripped back.
+    const storedGenre = (song.genre || project?.genres?.[0] || 'pop').replace(/^Style:\s*/i, '').trim()
+    const isAcousticVersion = String(song.version || '').toLowerCase() === 'acoustic'
+    const primaryGenre = isAcousticVersion ? 'acoustic' : storedGenre
     const chordProgression = project?.chord_progressions?.progression || null
     const chordName = project?.chord_progressions?.name || null
     const themeName = project?.song_themes?.name || null
@@ -338,8 +342,17 @@ serve(async (req) => {
     // Build style prompt for MiniMax Music-1.5
     let styleParts: string[] = []
 
-    // Primary genre
+    // Primary generation genre
     styleParts.push(primaryGenre)
+    if (isAcousticVersion) {
+      styleParts.push(
+        'stripped-back acoustic arrangement',
+        'acoustic guitar-led',
+        'minimal organic instrumentation',
+        'intimate live performance',
+        'no heavy electronic production',
+      )
+    }
 
     // Add gender-based vocal style
     const genderVocalStyle = getGenderVocalStyle(creatorGender)
@@ -352,8 +365,10 @@ serve(async (req) => {
       styleParts.push(`${chordName || chordProgression}`)
     }
 
-    // Add band sound description (first 100 chars for relevance)
-    if (bandSoundDescription) {
+    // Keep the band's normal sound for standard/remix generation. Acoustic
+    // versions skip this so heavy-production descriptors cannot override the
+    // stripped-back acoustic prompt.
+    if (bandSoundDescription && !isAcousticVersion) {
       const truncatedDesc = bandSoundDescription.substring(0, 100).trim()
       styleParts.push(truncatedDesc)
     }
