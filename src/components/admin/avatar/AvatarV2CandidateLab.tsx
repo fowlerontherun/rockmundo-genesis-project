@@ -13,6 +13,7 @@ import { defaultAppearance } from '@/features/player-model/appearance';
 import { disposeModel } from '@/features/player-model/model';
 import { AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { prepareAvatarV2CandidateModel } from '@/features/player-model/v2/avatarV2Model';
+import { applyAvatarV2Compatibility } from '@/features/player-model/v2/avatarV2Compatibility';
 import {
   inspectAvatarV2Performance,
   type AvatarV2PerformancePreset,
@@ -165,6 +166,8 @@ function CandidateCanvas({
           if (report.valid) {
             const prepared = prepareAvatarV2CandidateModel(source, appearance, lod);
             if (prepared.model) {
+              const compatibilityQuality = lod === 0 ? 'cinematic' : lod === 1 ? 'high' : lod === 2 ? 'balanced' : 'crowd';
+              applyAvatarV2Compatibility(prepared.model, appearance, [], [], compatibilityQuality);
               const assignment = performancePreset === 'backstage'
                 ? stageAssignment(null, 'other')
                 : stageAssignment(performancePreset);
@@ -269,6 +272,11 @@ export function AvatarV2CandidateLab() {
     const next = defaultAppearance('avatar-v2-side-by-side');
     next.body.frame = frame;
     next.head.hairStyle = 'quiff';
+    if (next.accessories) {
+      next.accessories.glasses = 'square';
+      next.accessories.leftEarring = 'hoops';
+      next.accessories.rightEarring = 'studs';
+    }
     return next;
   }, [frame]);
 
@@ -282,8 +290,10 @@ export function AvatarV2CandidateLab() {
       <CardHeader>
         <CardTitle>V1 ↔ V2 candidate lab</CardTitle>
         <CardDescription>
-          Load a GLB locally for side-by-side visual inspection. The file stays in this browser session
-          and is not published, uploaded or made available to players.
+          Load a GLB locally for side-by-side visual inspection. The lab applies the same saved-hair and
+          accessory bridge as the live V2 path, using a quiff, square glasses and independent earrings as
+          visible fit checks. The file stays in this browser session and is not published, uploaded or made
+          available to players.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
