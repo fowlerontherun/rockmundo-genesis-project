@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { PlayerAppearance } from './appearance';
+import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 
 type FaceShape = NonNullable<PlayerAppearance['head']['faceShape']>;
 type SkinDetail = NonNullable<PlayerAppearance['head']['skinDetail']>;
@@ -38,12 +39,26 @@ function faceBounds(root: T.Object3D) {
   return bounds;
 }
 
-function detailMaterial(color: T.Color, opacity: number) {
-  return new T.MeshBasicMaterial({
+function detailMaterial(color: T.Color, opacity: number, quality: AvatarVisualQuality) {
+  if (quality === 'crowd') {
+    return new T.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+      toneMapped: true,
+    });
+  }
+  return new T.MeshStandardMaterial({
     color,
     transparent: true,
     opacity,
     depthWrite: false,
+    roughness: quality === 'ultra' ? .72 : .78,
+    metalness: 0,
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
@@ -51,8 +66,8 @@ function detailMaterial(color: T.Color, opacity: number) {
   });
 }
 
-function addFaceMark(group: T.Group, name: string, position: T.Vector3, radius: number, material: T.Material) {
-  const mesh = new T.Mesh(new T.CircleGeometry(radius, 12), material);
+function addFaceMark(group: T.Group, name: string, position: T.Vector3, radius: number, material: T.Material, segments: number) {
+  const mesh = new T.Mesh(new T.CircleGeometry(radius, segments), material);
   mesh.name = name;
   mesh.position.copy(position);
   group.add(mesh);
@@ -76,7 +91,13 @@ function browCurve(style: EyebrowStyle, center: T.Vector3, width: number, side: 
  * skeleton. The Head bone remains authoritative, so the same details follow
  * creator previews, gigs and Top of the Pops performance animation.
  */
-export function addFaceDetails(root: T.Object3D, appearance: PlayerAppearance, head: T.Bone) {
+export function addFaceDetails(
+  root: T.Object3D,
+  appearance: PlayerAppearance,
+  head: T.Bone,
+  quality: AvatarVisualQuality = 'balanced',
+) {
+  const profile = avatarQualityProfile(quality);
   const faceShape = appearance.head.faceShape ?? 'classic';
   const scale = FACE_SCALE[faceShape];
   head.scale.multiply(new T.Vector3(...scale));
@@ -99,13 +120,13 @@ export function addFaceDetails(root: T.Object3D, appearance: PlayerAppearance, h
   const browStyle = appearance.head.eyebrowStyle ?? 'natural';
   if (browStyle !== 'natural') {
     const browColor = new T.Color(appearance.head.eyebrowColor ?? appearance.head.hair);
-    const material = detailMaterial(browColor, browStyle === 'soft' ? .58 : .9);
+    const material = detailMaterial(browColor, browStyle === 'soft' ? .58 : .9, quality);
     const browY = center.y + size.y * .145;
     const radius = size.x * (browStyle === 'bold' ? .012 : .008);
     for (const side of [-1, 1] as const) {
       const curveCenter = local(new T.Vector3(center.x, browY, front + size.z * .002));
       const curve = browCurve(browStyle, curveCenter, size.x, side);
-      const brow = new T.Mesh(new T.TubeGeometry(curve, 10, radius, 5, false), material.clone());
+      const brow = new T.Mesh(new T.TubeGeometry(curve, profile.faceCurveSegments, radius, Math.max(5, Math.floor(profile.faceCurveSegments / 2)), false), material.clone());
       brow.name = `avatar-eyebrow-${side < 0 ? 'left' : 'right'}`;
       group.add(brow);
     }
@@ -116,7 +137,7 @@ export function addFaceDetails(root: T.Object3D, appearance: PlayerAppearance, h
   const mark = skin.clone().multiplyScalar(skinDetail === 'weathered' ? .54 : .62);
   const cheekY = center.y - size.y * .02;
   if (skinDetail === 'freckles') {
-    const material = detailMaterial(mark, .45);
+    const material = detailMaterial(mark, .45, quality);
     const positions = [
       [-.23, .005], [-.18, -.012], [-.13, .016], [-.08, -.006], [-.035, .01],
       [.035, .012], [.08, -.008], [.13, .017], [.18, -.01], [.23, .006],
@@ -128,13 +149,14 @@ export function addFaceDetails(root: T.Object3D, appearance: PlayerAppearance, h
       local(new T.Vector3(center.x + size.x * x, cheekY + size.y * y, front + size.z * .003)),
       size.x * (.006 + (index % 3) * .0015),
       material,
+      profile.faceCurveSegments,
     ));
   } else if (skinDetail === 'beauty_marks') {
-    const material = detailMaterial(mark.clone().multiplyScalar(.78), .72);
-    addFaceMark(group, 'avatar-beauty-mark-left', local(new T.Vector3(center.x - size.x * .18, cheekY - size.y * .055, front + size.z * .003)), size.x * .009, material);
-    addFaceMark(group, 'avatar-beauty-mark-right', local(new T.Vector3(center.x + size.x * .14, cheekY + size.y * .018, front + size.z * .003)), size.x * .0065, material.clone());
+    const material = detailMaterial(mark.clone().multiplyScalar(.78), .72, quality);
+    addFaceMark(group, 'avatar-beauty-mark-left', local(new T.Vector3(center.x - size.x * .18, cheekY - size.y * .055, front + size.z * .003)), size.x * .009, material, profile.faceCurveSegments);
+    addFaceMark(group, 'avatar-beauty-mark-right', local(new T.Vector3(center.x + size.x * .14, cheekY + size.y * .018, front + size.z * .003)), size.x * .0065, material.clone(), profile.faceCurveSegments);
   } else if (skinDetail === 'weathered') {
-    const material = detailMaterial(mark, .24);
+    const material = detailMaterial(mark, .24, quality);
     for (const side of [-1, 1] as const) {
       for (let row = 0; row < 2; row++) {
         const y = center.y + size.y * (.025 - row * .027);
@@ -145,7 +167,7 @@ export function addFaceDetails(root: T.Object3D, appearance: PlayerAppearance, h
           local(new T.Vector3(x, y - size.y * .008, z)),
           local(new T.Vector3(x + side * size.x * .055, y + size.y * .002, z)),
         ]);
-        const line = new T.Mesh(new T.TubeGeometry(curve, 8, size.x * .0033, 4, false), material.clone());
+        const line = new T.Mesh(new T.TubeGeometry(curve, profile.faceCurveSegments, size.x * .0033, Math.max(4, Math.floor(profile.faceCurveSegments / 3)), false), material.clone());
         line.name = `avatar-weather-line-${side < 0 ? 'left' : 'right'}-${row}`;
         group.add(line);
       }

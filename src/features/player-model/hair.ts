@@ -1,13 +1,21 @@
 import * as T from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { PlayerAppearance } from './appearance';
+import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
+import { applyAvatarHairQuality } from './avatarMaterialQuality';
 
 /** Authored meshes split scalp hair from brows and eyes. New cuts use the
  * complete casual scalp, leaving all skin, eyebrows and facial details intact. */
 export function isScalpHair(material: T.Material, frame: PlayerAppearance['body']['frame']) {
   return frame === 'feminine' ? material.name === 'Hair_Blond' : material.name === 'Hair';
 }
-export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.Bone) {
+export function addHair(
+  root: T.Object3D,
+  appearance: PlayerAppearance,
+  head: T.Bone,
+  quality: AvatarVisualQuality = 'balanced',
+) {
+  const profile = avatarQualityProfile(quality);
   const cut = appearance.head.hairStyle ?? 'original', facial = appearance.head.facialHair ?? 'none';
   if (cut === 'original' && facial === 'none') return;
   root.updateMatrixWorld(true);
@@ -31,7 +39,7 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
   // All additions are built in rest world space before attachment to Head.
   const strands: T.BufferGeometry[] = [], beard: T.BufferGeometry[] = [];
   const ellipsoid = (list: T.BufferGeometry[], x: number, y: number, z: number, sx: number, sy: number, sz: number, tilt = 0) => {
-    const g = new T.SphereGeometry(1,16,10).toNonIndexed(); g.scale(sx,sy,sz); g.rotateZ(tilt); g.translate(x,y,z); list.push(g);
+    const g = new T.SphereGeometry(1, profile.hairSphereSegments, profile.hairSphereRings).toNonIndexed(); g.scale(sx,sy,sz); g.rotateZ(tilt); g.translate(x,y,z); list.push(g);
   };
   const surfaceZ = (x: number, y: number): number | null => {
     let z = -Infinity;
@@ -52,12 +60,22 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
       for(let i=1;i<polygon.length-1;i++) for(const v of [polygon[0],polygon[i],polygon[i+1]]) points.push(center.x+(v.x-center.x)*1.055,v.y+.006,center.z+(v.z-center.z)*1.055);
     }
     if(points.length) {
-      const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(points,3));g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(points.length/3*2),2));g.computeVertexNormals();strands.push(g);
+      const g=new T.BufferGeometry();
+      g.setAttribute('position',new T.Float32BufferAttribute(points,3));
+      const uv = new Float32Array(points.length / 3 * 2);
+      for (let i = 0; i < points.length / 3; i++) {
+        const px = points[i * 3], py = points[i * 3 + 1];
+        uv[i * 2] = T.MathUtils.clamp((px - (center.x - rx)) / Math.max(.001, rx * 2), 0, 1);
+        uv[i * 2 + 1] = T.MathUtils.clamp((py - hairline) / Math.max(.001, top - hairline), 0, 1);
+      }
+      g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+      g.computeVertexNormals();
+      strands.push(g);
     }
     // Some feminine head exports do not expose enough crown skin triangles for
     // the clipped cap above. This shallow shell guarantees a closed crown while
     // retaining the face-conforming hairline and stays outside the skin surface.
-    const crown=new T.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI*.64).toNonIndexed();
+    const crown=new T.SphereGeometry(1, Math.max(16, profile.hairSphereSegments), Math.max(10, profile.hairSphereRings),0,Math.PI*2,0,Math.PI*.64).toNonIndexed();
     crown.scale(rx*1.065,h*.195,rz*1.06); crown.translate(center.x,top-h*.18,center.z-rz*.025); strands.push(crown);
   };
   if(cut !== 'original' && cut !== 'bald') cap();
@@ -174,6 +192,28 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
       ellipsoid(strands,center.x+side*rx*(.76+Math.cos(a)*.18),top-h*.03+Math.sin(a)*h*.11,center.z-rz*.2+Math.cos(a)*rz*.12,rx*.19,h*.09,rz*.18);
     }
   }
+  if ((quality === 'high' || quality === 'ultra') && ['long','layered_long','long_waves','shoulder','ponytail','high_ponytail','side_braid','twin_ponytails','mullet'].includes(cut)) {
+    const flyawayCount = quality === 'ultra' ? 8 : 4;
+    for (let i = 0; i < flyawayCount; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const phase = i * 1.37;
+      const start = new T.Vector3(
+        center.x + side * rx * (.72 + (i % 3) * .08),
+        top - h * (.18 + (i % 4) * .07),
+        center.z - rz * (.30 + (i % 3) * .15),
+      );
+      const end = start.clone().add(new T.Vector3(
+        side * rx * (.10 + .025 * Math.sin(phase)),
+        -h * (.16 + .025 * Math.cos(phase)),
+        -rz * (.04 + .02 * Math.sin(phase * .7)),
+      ));
+      const middle = start.clone().lerp(end, .5).add(new T.Vector3(side * rx * .045, h * .018, rz * .015));
+      const curve = new T.CatmullRomCurve3([start, middle, end]);
+      const strand = new T.TubeGeometry(curve, quality === 'ultra' ? 14 : 10, rx * (quality === 'ultra' ? .012 : .014), 5, false).toNonIndexed();
+      strands.push(strand);
+    }
+  }
+
   const chin=appearance.body.frame==='masculine'?.27:.14, lipY=base+h*.34, lipZ=(surfaceZ(center.x,lipY)??front)+.002;
   const moustache = () => { for(const side of [-1,1]) ellipsoid(beard,center.x+side*rx*.25,lipY,lipZ,rx*.36,h*.047,rz*.12,side*.16); };
   if(['moustache','goatee','short_beard','full_beard','long_beard'].includes(facial)) moustache();
@@ -194,10 +234,35 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
   const add = (parts: T.BufferGeometry[], name: string, color: string) => {
     if(!parts.length) return;
     const geometry=mergeGeometries(parts,false)!;parts.forEach(g=>g.dispose());
-    const material=new T.MeshStandardMaterial({color,roughness:.96,side:T.DoubleSide});material.name=name;
+    const material = quality === 'crowd'
+      ? new T.MeshStandardMaterial({ color, roughness: .9, side: T.DoubleSide })
+      : new T.MeshPhysicalMaterial({
+          color,
+          roughness: quality === 'ultra' ? .48 : quality === 'high' ? .54 : .62,
+          metalness: 0,
+          sheen: quality === 'ultra' ? .5 : .35,
+          sheenRoughness: .72,
+          sheenColor: new T.Color(color).lerp(new T.Color('#ffffff'), .08),
+          side: T.DoubleSide,
+        });
+    material.name=name;
+    applyAvatarHairQuality(material, quality);
     if(facial==='stubble'&&name==='FacialHair') {
-      const data=new Uint8Array(64*64*4);for(let i=0;i<4096;i++){data[i*4]=data[i*4+1]=data[i*4+2]=255;data[i*4+3]=(i*31+Math.floor(i/64)*17)%11<4?255:0;}
-      const texture=new T.DataTexture(data,64,64);texture.needsUpdate=true;material.map=texture;material.alphaTest=.5;
+      const stubbleSize = quality === 'ultra' ? 256 : quality === 'high' ? 128 : 64;
+      const data=new Uint8Array(stubbleSize*stubbleSize*4);
+      for(let i=0;i<stubbleSize*stubbleSize;i++){
+        data[i*4]=data[i*4+1]=data[i*4+2]=255;
+        data[i*4+3]=(i*31+Math.floor(i/stubbleSize)*17)%11<4?255:0;
+      }
+      const texture=new T.DataTexture(data,stubbleSize,stubbleSize);
+      texture.minFilter=T.LinearMipmapLinearFilter;
+      texture.magFilter=T.LinearFilter;
+      texture.generateMipmaps=true;
+      texture.anisotropy=profile.anisotropy;
+      texture.needsUpdate=true;
+      material.map=texture;
+      material.transparent=true;
+      material.alphaTest=.42;
     }
     const mesh=new T.Mesh(geometry,material);mesh.name=name==='Hair'?'avatar-hairstyle':'avatar-facial-hair';mesh.castShadow=true;anchor.add(mesh);
   };
