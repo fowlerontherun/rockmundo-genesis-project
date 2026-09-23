@@ -2,6 +2,7 @@ import * as T from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { PlayerAppearance } from './appearance';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
+import { applyAvatarHairQuality } from './avatarMaterialQuality';
 
 /** Authored meshes split scalp hair from brows and eyes. New cuts use the
  * complete casual scalp, leaving all skin, eyebrows and facial details intact. */
@@ -59,7 +60,17 @@ export function addHair(
       for(let i=1;i<polygon.length-1;i++) for(const v of [polygon[0],polygon[i],polygon[i+1]]) points.push(center.x+(v.x-center.x)*1.055,v.y+.006,center.z+(v.z-center.z)*1.055);
     }
     if(points.length) {
-      const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(points,3));g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(points.length/3*2),2));g.computeVertexNormals();strands.push(g);
+      const g=new T.BufferGeometry();
+      g.setAttribute('position',new T.Float32BufferAttribute(points,3));
+      const uv = new Float32Array(points.length / 3 * 2);
+      for (let i = 0; i < points.length / 3; i++) {
+        const px = points[i * 3], py = points[i * 3 + 1];
+        uv[i * 2] = T.MathUtils.clamp((px - (center.x - rx)) / Math.max(.001, rx * 2), 0, 1);
+        uv[i * 2 + 1] = T.MathUtils.clamp((py - hairline) / Math.max(.001, top - hairline), 0, 1);
+      }
+      g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+      g.computeVertexNormals();
+      strands.push(g);
     }
     // Some feminine head exports do not expose enough crown skin triangles for
     // the clipped cap above. This shallow shell guarantees a closed crown while
@@ -213,6 +224,7 @@ export function addHair(
           side: T.DoubleSide,
         });
     material.name=name;
+    applyAvatarHairQuality(material, quality);
     if(facial==='stubble'&&name==='FacialHair') {
       const stubbleSize = quality === 'ultra' ? 256 : quality === 'high' ? 128 : 64;
       const data=new Uint8Array(stubbleSize*stubbleSize*4);
