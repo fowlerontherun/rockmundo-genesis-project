@@ -47,18 +47,18 @@ SET
     ELSE '{"silhouette":"fitted stage basic","construction":"curated textile","visualRead":"high-detail woven surface"}'::jsonb
   END,
   detail_layers = CASE curated_asset_key
-    WHEN 'clothing.punk.biker-jacket' THEN '[{"type":"panel_seams"},{"type":"centre_zip"},{"type":"leather_grain"}]'::jsonb
-    WHEN 'clothing.punk.red-tartan-trousers' THEN '[{"type":"woven_tartan"},{"type":"leg_seams"},{"type":"fabric_relief"}]'::jsonb
-    WHEN 'clothing.punk.black-tartan-trousers' THEN '[{"type":"woven_tartan"},{"type":"leg_seams"},{"type":"fabric_relief"}]'::jsonb
-    WHEN 'clothing.punk.combat-boots' THEN '[{"type":"toe_seams"},{"type":"lace_zone"},{"type":"leather_grain"}]'::jsonb
-    WHEN 'clothing.starter.black-boots' THEN '[{"type":"toe_seams"},{"type":"polished_leather"}]'::jsonb
-    WHEN 'clothing.starter.brown-boots' THEN '[{"type":"toe_seams"},{"type":"leather_grain"}]'::jsonb
-    WHEN 'clothing.starter.canvas-trainers' THEN '[{"type":"canvas_weave"},{"type":"sole_seam"}]'::jsonb
-    WHEN 'clothing.starter.dark-slim-jeans' THEN '[{"type":"denim_twill"},{"type":"leg_seams"},{"type":"whisker_wear"}]'::jsonb
-    WHEN 'clothing.starter.blue-straight-jeans' THEN '[{"type":"denim_twill"},{"type":"leg_seams"},{"type":"whisker_wear"}]'::jsonb
-    WHEN 'clothing.starter.black-straight-jeans' THEN '[{"type":"denim_twill"},{"type":"leg_seams"},{"type":"whisker_wear"}]'::jsonb
-    WHEN 'clothing.starter.vintage-charcoal-tee' THEN '[{"type":"cotton_weave"},{"type":"faded_wear"}]'::jsonb
-    ELSE '[{"type":"textile_surface"}]'::jsonb
+    WHEN 'clothing.punk.biker-jacket' THEN '[{"type":"stitching","name":"Panel seams"},{"type":"zip","name":"Centre zip"},{"type":"distress","name":"Leather grain"}]'::jsonb
+    WHEN 'clothing.punk.red-tartan-trousers' THEN '[{"type":"trim","name":"Woven tartan structure"},{"type":"stitching","name":"Leg seams"},{"type":"embroidery","name":"Fabric relief"}]'::jsonb
+    WHEN 'clothing.punk.black-tartan-trousers' THEN '[{"type":"trim","name":"Woven tartan structure"},{"type":"stitching","name":"Leg seams"},{"type":"embroidery","name":"Fabric relief"}]'::jsonb
+    WHEN 'clothing.punk.combat-boots' THEN '[{"type":"stitching","name":"Toe seams"},{"type":"trim","name":"Lace zone"},{"type":"distress","name":"Leather grain"}]'::jsonb
+    WHEN 'clothing.starter.black-boots' THEN '[{"type":"stitching","name":"Toe seams"},{"type":"distress","name":"Polished leather grain"}]'::jsonb
+    WHEN 'clothing.starter.brown-boots' THEN '[{"type":"stitching","name":"Toe seams"},{"type":"distress","name":"Leather grain"}]'::jsonb
+    WHEN 'clothing.starter.canvas-trainers' THEN '[{"type":"embroidery","name":"Canvas weave"},{"type":"stitching","name":"Sole seam"}]'::jsonb
+    WHEN 'clothing.starter.dark-slim-jeans' THEN '[{"type":"embroidery","name":"Denim twill"},{"type":"stitching","name":"Leg seams"},{"type":"distress","name":"Whisker wear"}]'::jsonb
+    WHEN 'clothing.starter.blue-straight-jeans' THEN '[{"type":"embroidery","name":"Denim twill"},{"type":"stitching","name":"Leg seams"},{"type":"distress","name":"Whisker wear"}]'::jsonb
+    WHEN 'clothing.starter.black-straight-jeans' THEN '[{"type":"embroidery","name":"Denim twill"},{"type":"stitching","name":"Leg seams"},{"type":"distress","name":"Whisker wear"}]'::jsonb
+    WHEN 'clothing.starter.vintage-charcoal-tee' THEN '[{"type":"embroidery","name":"Cotton weave"},{"type":"distress","name":"Faded wear"}]'::jsonb
+    ELSE '[{"type":"stitching","name":"Textile surface detail"}]'::jsonb
   END
 WHERE curated_asset_status='published'
   AND curated_asset_key IS NOT NULL;
