@@ -1,6 +1,8 @@
 import * as T from 'three';
 import { BODY_SLOTS, TATTOO_CATEGORIES, type BodySlot, type TattooCategory } from '@/data/tattooDesigns';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
+import { equipmentStyle, type PlayerAppearance } from './appearance';
 
 export interface ResolvedTattooVisual {
   id: string;
@@ -52,16 +54,84 @@ function clothingCoverageSlots(clothing: ResolvedEquippedClothing): BodySlot[] {
   return raw.filter((slot): slot is BodySlot => typeof slot === 'string' && tattooSlots.has(slot as BodySlot));
 }
 
-/** Clothing metadata is authoritative for tattoo occlusion. We never infer coverage
- * from item names, so new garments can define sleeves/necklines precisely. */
+const STARTER_TORSO_COVERAGE: BodySlot[] = [
+  'left_shoulder', 'left_upper_arm', 'left_inner_arm',
+  'right_shoulder', 'right_upper_arm', 'right_inner_arm',
+  'chest', 'stomach', 'back',
+];
+const STARTER_LONG_SLEEVE_COVERAGE: BodySlot[] = [
+  ...STARTER_TORSO_COVERAGE,
+  'left_forearm', 'right_forearm',
+];
+const STARTER_BOTTOM_COVERAGE: BodySlot[] = [
+  'left_thigh', 'left_calf', 'right_thigh', 'right_calf',
+];
+
+export type TattooVisibilityPresentation = 'stage' | 'tattoo';
+
+export interface TattooVisibilityContext {
+  appearance?: PlayerAppearance | null;
+  clothing?: ResolvedEquippedClothing[];
+  presentation?: TattooVisibilityPresentation;
+}
+
+/** Returns body slots covered by the appearance that is actually being rendered.
+ *
+ * Starter clothing has stable coverage rules because it has no database garment
+ * metadata. Rich clothing remains metadata-driven so future sleeves, crop tops and
+ * necklines can be precise without guessing from product names.
+ */
+export function coveredTattooSlotsForAppearance({
+  appearance,
+  clothing = [],
+  presentation = 'stage',
+}: TattooVisibilityContext): Set<BodySlot> {
+  const covered = new Set<BodySlot>();
+  if (presentation === 'tattoo') return covered;
+
+  if (appearance) {
+    const richSlots = new Set(clothing.map(item => richGarmentSlot(item.item)));
+    const topless = appearance.equipment.top.itemId === 'starter.top.topless';
+    if (!topless && !richSlots.has('top')) {
+      const topCoverage = equipmentStyle(appearance, 'top') === 'suit'
+        ? STARTER_LONG_SLEEVE_COVERAGE
+        : STARTER_TORSO_COVERAGE;
+      for (const slot of topCoverage) covered.add(slot);
+    }
+
+    // All current starter bottoms are full-length trousers/jeans. Once a rich
+    // bottom is equipped its metadata becomes authoritative instead.
+    if (!richSlots.has('bottom')) {
+      for (const slot of STARTER_BOTTOM_COVERAGE) covered.add(slot);
+    }
+  }
+
+  for (const item of clothing) {
+    for (const slot of clothingCoverageSlots(item)) covered.add(slot);
+  }
+  return covered;
+}
+
+/** Shared visibility rule used by previews, gigs and broadcast renderers.
+ * Tattoo Parlour deliberately bypasses clothing occlusion; stage presentation
+ * combines starter-clothing defaults with precise rich-garment metadata.
+ */
+export function visibleTattoosForPresentation(
+  tattoos: ResolvedTattooVisual[] = [],
+  context: TattooVisibilityContext = {},
+): ResolvedTattooVisual[] {
+  if (!tattoos.length || context.presentation === 'tattoo') return tattoos;
+  const covered = coveredTattooSlotsForAppearance(context);
+  return covered.size ? tattoos.filter(tattoo => !covered.has(tattoo.body_slot)) : tattoos;
+}
+
+/** Backward-compatible metadata-only filter for callers that do not yet have a
+ * resolved player appearance. New render paths should use visibleTattoosForPresentation. */
 export function visibleTattoosForClothing(
   tattoos: ResolvedTattooVisual[] = [],
   clothing: ResolvedEquippedClothing[] = [],
 ): ResolvedTattooVisual[] {
-  if (!tattoos.length || !clothing.length) return tattoos;
-  const covered = new Set<BodySlot>();
-  for (const item of clothing) for (const slot of clothingCoverageSlots(item)) covered.add(slot);
-  return covered.size ? tattoos.filter(tattoo => !covered.has(tattoo.body_slot)) : tattoos;
+  return visibleTattoosForPresentation(tattoos, { clothing, presentation: 'stage' });
 }
 
 const childBone = (bone: T.Bone, names: string[]) => bone.children.find(child => child instanceof T.Bone && names.some(name => cleanName(child.name).includes(cleanName(name)))) as T.Bone | undefined;
