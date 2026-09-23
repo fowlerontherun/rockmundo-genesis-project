@@ -340,7 +340,7 @@ export function assemblePlayerModel(
 export function disposeModel(root: T.Object3D) {
   const geometries = new Set<T.BufferGeometry>(), materials = new Set<T.Material>(), textures = new Set<T.Texture>(), skeletons = new Set<T.Skeleton>();
   root.traverse(node => {
-    if (!(node instanceof T.Mesh)) return;
+    if (!(node instanceof T.Mesh) && !(node instanceof T.Line)) return;
     geometries.add(node.geometry);
     for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
       materials.add(material); Object.values(material).forEach(value => { if (value instanceof T.Texture) textures.add(value); });
