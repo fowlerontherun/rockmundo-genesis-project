@@ -147,7 +147,8 @@ export class Musician {
         // procedural fallback so existing player inventories remain compatible.
         // A curated item that has not passed validation is never procedurally
         // reconstructed: skipping it is safer than showing malformed geometry.
-        if (richClothing.length) {
+        const v2GarmentsPreassembled = this.model.userData.rockmundoAvatarEngine === 'rockmundo-v2';
+        if (richClothing.length && !v2GarmentsPreassembled) {
             this.root.updateMatrixWorld(true);
             for (const resolved of richClothing) {
                 if (isCuratedClothing(resolved.item)) {
