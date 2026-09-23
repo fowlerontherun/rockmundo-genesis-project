@@ -4,22 +4,15 @@ import { buildHeadAccessory, tuckHair } from './accessoryGeometry';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
+import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
 
 function isHeadSurfaceMesh(root: T.Object3D, node: T.SkinnedMesh) {
   let parent: T.Object3D | null = node;
   while (parent) {
     if (/_Head(?:_|$)/i.test(parent.name)) return true;
-    if (
-      root.userData.rockmundoAvatarEngine === 'rockmundo-v2' &&
-      (
-        parent.userData?.rockmundoHeadSurface === true ||
-        /(?:rmv2|rockmundo)[_-]?(?:head|face)(?:surface)?/i.test(parent.name) ||
-        /(?:head|face)[_-]?surface/i.test(parent.name)
-      )
-    ) return true;
     parent = parent.parent;
   }
-  return false;
+  return root.userData.rockmundoAvatarEngine === 'rockmundo-v2' && isAvatarV2HeadSurfaceNode(node);
 }
 
 function headSkinSurface(root: T.Object3D) {
