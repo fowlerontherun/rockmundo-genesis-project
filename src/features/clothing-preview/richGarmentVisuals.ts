@@ -35,6 +35,10 @@ export interface RichGarmentVisualSpec {
   thickness: number;
   asymmetry: boolean;
   hem: string;
+  sleeveLengthScale: number;
+  sleeveWidthScale: number;
+  waistScale: number;
+  customFlare: number;
 }
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => {
@@ -133,8 +137,8 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
     metalness: percent01(materialConfig.metallic ?? materialConfig.metalness, defaults.metalness),
     sheen: percent01(materialConfig.sheen, defaults.sheen),
     opacity: Math.max(.08, percent01(patternConfig.opacity, 1)),
-    scaleX: baseScale[0] * oversize * clamp(render.scale ? Number(render.scale) / 100 : 1, 0.7, 1.4, 1),
-    scaleY: baseScale[1] * clamp(garment.lengthScale ?? garment.length_scale, 0.7, 1.35, 1),
+    scaleX: baseScale[0] * oversize * clamp(render.scale ? Number(render.scale) / 100 : 1, 0.7, 1.4, 1) * clamp(Number(garment.widthScale ?? garment.width_scale ?? 100) / 100, .7, 1.4, 1),
+    scaleY: baseScale[1] * clamp(garment.lengthScale ?? garment.length_scale, 0.7, 1.35, 1) * clamp(Number(garment.bodyLengthScale ?? garment.body_length_scale ?? 100) / 100, .65, 1.5, 1),
     scaleZ: baseScale[2] * (fitName === 'oversized' ? 1.12 : fitName === 'skinny' ? 0.92 : 1),
     y: baseY + signedPercent(render.bodyOffsetY ?? render.body_offset_y ?? render.offsetY ?? render.offset_y, .35),
     z: signedPercent(render.depthOffset ?? render.depth_offset, .2),
@@ -155,5 +159,9 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
     thickness: percent01(materialConfig.thickness, .5),
     asymmetry: Boolean(garment.asymmetry),
     hem: String(garment.hem || 'straight').toLowerCase(),
+    sleeveLengthScale: clamp(Number(garment.sleeveLengthScale ?? garment.sleeve_length_scale ?? 100) / 100, .4, 1.6, 1),
+    sleeveWidthScale: clamp(Number(garment.sleeveWidthScale ?? garment.sleeve_width_scale ?? 100) / 100, .6, 1.5, 1),
+    waistScale: clamp(Number(garment.waistScale ?? garment.waist_scale ?? 100) / 100, .6, 1.5, 1),
+    customFlare: percent01(garment.flare, 0),
   };
 }
