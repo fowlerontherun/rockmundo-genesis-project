@@ -30,11 +30,20 @@ describe('curated donor garments', () => {
   it('parses a validated avatar-part source', () => {
     expect(curatedDonorSource(item())).toEqual({
       kind: 'avatar-part',
+      assetKey: undefined,
       style: 'casual',
       part: 'body',
       color: '#151515',
       fabric: 'plain',
     });
+  });
+
+  it('reads curated premium material finishes', () => {
+    const jacket = item({
+      material_config: { fabric: 'plain', finish: 'leather' },
+      render_config: { curatedSource: { kind: 'avatar-part', style: 'punk', part: 'body', color: '#111111', fabric: 'plain' }, curatedFinish: 'leather' },
+    });
+    expect(curatedDonorSource(jacket)?.finish).toBe('leather');
   });
 
   it('supports safe textile variants on validated donor geometry', () => {

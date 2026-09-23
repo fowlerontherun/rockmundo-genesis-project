@@ -7,10 +7,12 @@ export type CuratedDonorPart = 'body' | 'legs' | 'feet';
 
 export interface CuratedDonorSource {
   kind: 'avatar-part';
+  assetKey?: string;
   style: Style;
   part: CuratedDonorPart;
   color?: string;
   fabric?: 'plain' | 'stripe' | 'plaid' | 'pinstripe' | 'denim' | 'canvas' | 'two-tone' | 'patent';
+  finish?: 'cotton' | 'vintage-cotton' | 'denim' | 'tartan' | 'leather' | 'canvas' | 'polished-leather';
 }
 
 export function curatedDonorSource(item: ClothingItem): CuratedDonorSource | null {
@@ -18,12 +20,17 @@ export function curatedDonorSource(item: ClothingItem): CuratedDonorSource | nul
   if (!raw || raw.kind !== 'avatar-part') return null;
   if (!['casual', 'punk', 'suit'].includes(String(raw.style))) return null;
   if (!['body', 'legs', 'feet'].includes(String(raw.part))) return null;
+  const material = item.material_config || {};
+  const finish = String(raw.finish || material.finish || '').toLowerCase();
+  const allowedFinishes = new Set(['cotton','vintage-cotton','denim','tartan','leather','canvas','polished-leather']);
   return {
     kind: 'avatar-part',
+    assetKey: item.curated_asset_key || undefined,
     style: raw.style as Style,
     part: raw.part as CuratedDonorPart,
     color: typeof raw.color === 'string' ? raw.color : undefined,
     fabric: typeof raw.fabric === 'string' ? raw.fabric as CuratedDonorSource['fabric'] : undefined,
+    finish: allowedFinishes.has(finish) ? finish as CuratedDonorSource['finish'] : undefined,
   };
 }
 

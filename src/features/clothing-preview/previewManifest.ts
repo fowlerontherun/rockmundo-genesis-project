@@ -1,4 +1,4 @@
-export const CLOTHING_PREVIEW_RENDERER_VERSION = 'rich-procedural-v1';
+export const CLOTHING_PREVIEW_RENDERER_VERSION = 'fitted-curated-v2';
 
 export const CLOTHING_TURNTABLE_VIEWS = [
   { key: 'front', yaw: 0 },

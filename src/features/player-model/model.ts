@@ -13,6 +13,7 @@ import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDe
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
+import { curatedAlbedoTexture, curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture, type CuratedFinish } from './curatedSurfaceMaps';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -34,11 +35,16 @@ function findPlayerBone(bones: Map<string, T.Bone>, names: string[]) {
 
 function rockmundoWordmarkTexture() {
   const glyphs: Record<string, string[]> = {
-    R:['110','101','110','101','101'], O:['111','101','101','101','111'], C:['111','100','100','100','111'],
-    K:['101','101','110','101','101'], M:['101','111','111','101','101'], U:['101','101','101','101','111'],
-    N:['101','111','111','111','101'], D:['110','101','101','101','110'],
+    R:['11110','10001','10001','11110','10100','10010','10001'],
+    O:['01110','10001','10001','10001','10001','10001','01110'],
+    C:['01111','10000','10000','10000','10000','10000','01111'],
+    K:['10001','10010','10100','11000','10100','10010','10001'],
+    M:['10001','11011','10101','10101','10001','10001','10001'],
+    U:['10001','10001','10001','10001','10001','10001','01110'],
+    N:['10001','11001','11001','10101','10011','10011','10001'],
+    D:['11110','10001','10001','10001','10001','10001','11110'],
   };
-  const word='ROCKMUNDO', scale=2, gap=1, glyphW=3, glyphH=5;
+  const word='ROCKMUNDO', scale=4, gap=1, glyphW=5, glyphH=7;
   const width=(word.length*(glyphW+gap)-gap)*scale, height=glyphH*scale;
   const data=new Uint8Array(width*height*4);
   for(let i=0;i<word.length;i++) {
@@ -46,12 +52,17 @@ function rockmundoWordmarkTexture() {
     for(let y=0;y<glyphH;y++) for(let x=0;x<glyphW;x++) if(glyph[y][x]==='1') {
       for(let sy=0;sy<scale;sy++) for(let sx=0;sx<scale;sx++) {
         const px=(i*(glyphW+gap)+x)*scale+sx, py=(glyphH-1-y)*scale+sy, index=(py*width+px)*4;
-        data[index]=238; data[index+1]=232; data[index+2]=219; data[index+3]=255;
+        data[index]=244; data[index+1]=239; data[index+2]=226; data[index+3]=255;
       }
     }
   }
   const texture=new T.DataTexture(data,width,height,T.RGBAFormat);
-  texture.name='RockmundoWordmark'; texture.colorSpace=T.SRGBColorSpace; texture.magFilter=T.NearestFilter; texture.minFilter=T.LinearFilter; texture.needsUpdate=true;
+  texture.name='RockmundoWordmarkHD';
+  texture.colorSpace=T.SRGBColorSpace;
+  texture.magFilter=T.LinearFilter;
+  texture.minFilter=T.LinearMipmapLinearFilter;
+  texture.generateMipmaps=true;
+  texture.needsUpdate=true;
   return texture;
 }
 
@@ -104,18 +115,24 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
       dye: curatedTop?.source.color ?? appearance.equipment.top.color,
       fabric: curatedTop?.source.fabric ?? equipmentItem(appearance, 'top').fabric,
+      finish: curatedTop?.source.finish,
+      assetKey: curatedTop?.source.assetKey,
     },
     {
       part: 'legs',
       style: curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
       dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
       fabric: curatedBottom?.source.fabric ?? equipmentItem(appearance, 'bottom').fabric,
+      finish: curatedBottom?.source.finish,
+      assetKey: curatedBottom?.source.assetKey,
     },
     {
       part: 'feet',
       style: curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear'),
       dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
       fabric: curatedFootwear?.source.fabric ?? equipmentItem(appearance, 'footwear').fabric,
+      finish: curatedFootwear?.source.finish,
+      assetKey: curatedFootwear?.source.assetKey,
     },
   ];
   for (const choice of choices) {
@@ -130,13 +147,22 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
         if (!original?.isSkinnedMesh) throw new Error('Incompatible character geometry');
         clonedNode.geometry = original.geometry.clone();
-        if (choice.fabric !== 'plain') fabricUVs(clonedNode.geometry, choice.part === 'feet');
+        if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
         const dyeMaterial = (originalMaterial: T.Material) => {
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
           const name = material.name.toLowerCase();
           material.roughness = /skin/.test(name) ? skinRoughness(appearance) : .84;
           material.metalness = /earring|metal/.test(name) ? .65 : 0;
+          if (!/skin|earring|metal/.test(name) && choice.finish) {
+            if (choice.finish === 'cotton') material.roughness = .9;
+            if (choice.finish === 'vintage-cotton') material.roughness = .97;
+            if (choice.finish === 'denim') material.roughness = .96;
+            if (choice.finish === 'tartan') material.roughness = .91;
+            if (choice.finish === 'canvas') material.roughness = .94;
+            if (choice.finish === 'leather') { material.roughness = .38; material.metalness = .03; }
+            if (choice.finish === 'polished-leather') { material.roughness = .24; material.metalness = .04; }
+          }
           if (/skin/.test(name)) material.color.set(appearance.body.skin);
           else if (choice.part === 'head') {
             // The source rigs use slightly different material names. Keep iris,
@@ -150,6 +176,15 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
             if (choice.fabric !== 'plain') {
               material.map = fabricTexture(choice.fabric);
               material.roughness = choice.fabric === 'patent' ? .2 : choice.fabric === 'canvas' || choice.fabric === 'denim' ? .95 : .84;
+            }
+            if (choice.assetKey && choice.finish) {
+              const finish = choice.finish as CuratedFinish;
+              material.map = curatedAlbedoTexture(choice.assetKey, finish);
+              material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
+              material.bumpScale = curatedBumpScale(finish);
+              material.roughnessMap = curatedRoughnessTexture(choice.assetKey, finish);
+              material.envMapIntensity = finish === 'polished-leather' ? 1.35 : finish === 'leather' ? 1.12 : .92;
+              material.needsUpdate = true;
             }
           }
           return material;

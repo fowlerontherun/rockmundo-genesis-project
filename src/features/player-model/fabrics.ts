@@ -4,15 +4,27 @@ import type { Fabric } from './appearance';
 /** Small, deterministic, locally generated textile maps. No network or canvas
  * dependency; rest-space UVs keep the weave attached to animated clothing. */
 export function fabricTexture(fabric: Fabric): T.DataTexture {
-  const size = 128, pixels = new Uint8Array(size * size * 4);
+  const size = 256, pixels = new Uint8Array(size * size * 4);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const grain = ((x * 17 + y * 31 + x * y * 7) % 13) - 6;
     let value = 244 + grain;
     if (fabric === 'stripe') value = (y % 64 < 24 ? 105 : 247) + grain;
-    if (fabric === 'plaid') value = 244 - (x % 64 < 22 ? 65 : 0) - (y % 64 < 22 ? 65 : 0) + grain;
+    if (fabric === 'plaid') {
+      const broad = (x % 72 < 20 ? 58 : 0) + (y % 72 < 20 ? 58 : 0);
+      const fine = (x % 18 < 3 ? 24 : 0) + (y % 18 < 3 ? 24 : 0);
+      value = 246 - broad - fine + grain;
+    }
     if (fabric === 'pinstripe') value = (x % 32 < 3 ? 250 : 155) + grain;
-    if (fabric === 'denim') value = 187 + ((x + y) % 8 < 3 ? 42 : 0) + grain;
-    if (fabric === 'canvas') value = 218 + (x % 4 < 2 ? 15 : 0) + (y % 4 < 2 ? 15 : 0);
+    if (fabric === 'denim') {
+      const diagonal = ((x + y) % 10 < 3 ? 34 : 0);
+      const cross = ((x - y + size) % 22 < 2 ? 12 : 0);
+      value = 178 + diagonal + cross + grain;
+    }
+    if (fabric === 'canvas') {
+      const warp = x % 6 < 2 ? 18 : 0;
+      const weft = y % 6 < 2 ? 18 : 0;
+      value = 210 + warp + weft + grain;
+    }
     if (fabric === 'two-tone') value = y < 64 ? 250 : 95;
     const offset = (y * size + x) * 4;
     pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = Math.min(255, value); pixels[offset + 3] = 255;
