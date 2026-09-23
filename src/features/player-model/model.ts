@@ -13,7 +13,8 @@ import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDe
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
-import { curatedAlbedoTexture, curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture, type CuratedFinish } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, type CuratedFinish } from './curatedSurfaceMaps';
+import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -70,16 +71,47 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
   const curatedLogo = richClothing.some(row => row.item.curated_asset_key === 'clothing.starter.logo-tee');
   const hasOtherTop = richClothing.some(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key !== 'clothing.starter.logo-tee');
   if (!curatedLogo && (appearance.equipment.top.itemId !== 'starter.top.casual' || hasOtherTop)) return;
-  const chest=findPlayerBone(bones,['Spine2','Spine.002','Chest','UpperChest']) ?? findPlayerBone(bones,['Spine1','Spine.001']);
-  if(!chest) return;
-  root.updateMatrixWorld(true);
-  const texture=rockmundoWordmarkTexture();
-  const material=new T.MeshStandardMaterial({map:texture,transparent:true,alphaTest:.08,roughness:.78,metalness:0,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
-  material.name='RockmundoLogoPrint';
-  const mark=new T.Mesh(new T.PlaneGeometry(.34,.072),material);
-  mark.name='avatar-rockmundo-logo';
-  mark.position.copy(chest.getWorldPosition(new T.Vector3())).add(new T.Vector3(0,.02,.155));
-  root.add(mark); root.updateMatrixWorld(true); chest.attach(mark);
+
+  const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
+    ?? findPlayerBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+
+  const attachment = findFrontSurfaceAttachment(
+    root,
+    'body',
+    chest.getWorldPosition(new T.Vector3()),
+    appearance.body.frame === 'feminine' ? .018 : .025,
+  );
+  // Never fall back to an arbitrary forward offset: if the fitted shirt surface
+  // cannot be resolved, omitting the print is safer than showing a floating logo.
+  if (!attachment) {
+    console.warn('[curated-clothing] Rockmundo logo surface could not be resolved');
+    return;
+  }
+
+  const texture = rockmundoWordmarkTexture();
+  const material = new T.MeshStandardMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: .12,
+    roughness: .86,
+    metalness: 0,
+    side: T.DoubleSide,
+    depthWrite: false,
+    depthTest: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  material.name = 'RockmundoLogoPrint';
+
+  const mark = new T.Mesh(
+    curvedGraphicGeometry(appearance.body.frame === 'feminine' ? .305 : .33, .07, .009),
+    material,
+  );
+  mark.name = 'avatar-rockmundo-logo';
+  mark.renderOrder = 3;
+  attachSurfaceGraphic(root, chest, mark, attachment, .0018);
 }
 
 /** Each part keeps its donor inverse binds and local transform. This matters for
@@ -114,6 +146,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       part: 'body',
       style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
       dye: curatedTop?.source.color ?? appearance.equipment.top.color,
+      secondaryColor: curatedTop?.source.secondaryColor,
       fabric: curatedTop?.source.fabric ?? equipmentItem(appearance, 'top').fabric,
       finish: curatedTop?.source.finish,
       assetKey: curatedTop?.source.assetKey,
@@ -122,6 +155,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       part: 'legs',
       style: curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
       dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
+      secondaryColor: curatedBottom?.source.secondaryColor,
       fabric: curatedBottom?.source.fabric ?? equipmentItem(appearance, 'bottom').fabric,
       finish: curatedBottom?.source.finish,
       assetKey: curatedBottom?.source.assetKey,
@@ -130,6 +164,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       part: 'feet',
       style: curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear'),
       dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
+      secondaryColor: curatedFootwear?.source.secondaryColor,
       fabric: curatedFootwear?.source.fabric ?? equipmentItem(appearance, 'footwear').fabric,
       finish: curatedFootwear?.source.finish,
       assetKey: curatedFootwear?.source.assetKey,
@@ -179,11 +214,18 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
             }
             if (choice.assetKey && choice.finish) {
               const finish = choice.finish as CuratedFinish;
-              material.map = curatedAlbedoTexture(choice.assetKey, finish);
+              if (finish === 'tartan') {
+                material.map = curatedTartanTexture(choice.assetKey, choice.dye, choice.secondaryColor || '#171717');
+                material.color.set('#ffffff');
+              } else {
+                material.map = curatedAlbedoTexture(choice.assetKey, finish);
+              }
+              material.normalMap = curatedNormalTexture(choice.assetKey, finish);
+              material.normalScale.set(finish === 'denim' || finish === 'canvas' ? .8 : .58, finish === 'denim' || finish === 'canvas' ? .8 : .58);
               material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
-              material.bumpScale = curatedBumpScale(finish);
+              material.bumpScale = curatedBumpScale(finish) * .4;
               material.roughnessMap = curatedRoughnessTexture(choice.assetKey, finish);
-              material.envMapIntensity = finish === 'polished-leather' ? 1.35 : finish === 'leather' ? 1.12 : .92;
+              material.envMapIntensity = finish === 'polished-leather' ? 1.45 : finish === 'leather' ? 1.2 : .96;
               material.needsUpdate = true;
             }
           }

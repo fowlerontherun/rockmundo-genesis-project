@@ -32,6 +32,7 @@ function dataTexture(name: string, pixels: Uint8Array, size: number) {
   texture.magFilter = T.LinearFilter;
   texture.minFilter = T.LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
+  texture.anisotropy = 8;
   texture.needsUpdate = true;
   return texture;
 }
@@ -198,6 +199,83 @@ export function curatedAlbedoTexture(assetKey: string, finish: CuratedFinish) {
     return value;
   });
   const texture = dataTexture(`curated-albedo-${assetKey}`, pixels, size);
+  texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
+
+
+export function curatedNormalTexture(assetKey: string, finish: CuratedFinish) {
+  const relief = curatedReliefTexture(assetKey, finish);
+  const source = relief.image.data as Uint8Array;
+  const size = relief.image.width as number;
+  const pixels = new Uint8Array(size * size * 4);
+  const strength = finish === 'canvas' || finish === 'denim'
+    ? 2.2
+    : finish === 'leather'
+      ? 1.55
+      : finish === 'polished-leather'
+        ? .9
+        : 1.3;
+
+  const height = (x: number, y: number) => {
+    const wrappedX = (x + size) % size;
+    const wrappedY = (y + size) % size;
+    return source[(wrappedY * size + wrappedX) * 4] / 255;
+  };
+
+  const normal = new T.Vector3();
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = (height(x + 1, y) - height(x - 1, y)) * strength;
+      const dy = (height(x, y + 1) - height(x, y - 1)) * strength;
+      normal.set(-dx, -dy, 1).normalize();
+      const offset = (y * size + x) * 4;
+      pixels[offset] = Math.round((normal.x * .5 + .5) * 255);
+      pixels[offset + 1] = Math.round((normal.y * .5 + .5) * 255);
+      pixels[offset + 2] = Math.round((normal.z * .5 + .5) * 255);
+      pixels[offset + 3] = 255;
+    }
+  }
+
+  relief.dispose();
+  const texture = dataTexture(`curated-normal-${assetKey}`, pixels, size);
+  texture.colorSpace = T.NoColorSpace;
+  return texture;
+}
+
+
+export function curatedTartanTexture(assetKey: string, primary: string, secondary = '#171717') {
+  const size = 256;
+  const seed = hash(assetKey) + 313;
+  const base = new T.Color(primary);
+  const accent = new T.Color(secondary);
+  const light = new T.Color('#e7dfcf');
+  const pixels = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const broadX = x % 72 < 18;
+      const broadY = y % 72 < 18;
+      const fineX = x % 18 < 3;
+      const fineY = y % 18 < 3;
+      const cross = broadX && broadY;
+      const thread = ((x + y + (seed % 11)) % 9) < 3;
+      const colour = base.clone();
+
+      if (broadX || broadY) colour.lerp(accent, cross ? .78 : .58);
+      if (fineX || fineY) colour.lerp(accent, .72);
+      if ((x % 36 < 2 || y % 36 < 2) && !cross) colour.lerp(light, .18);
+      colour.multiplyScalar(thread ? 1.055 : .96);
+
+      const offset = (y * size + x) * 4;
+      pixels[offset] = Math.round(T.MathUtils.clamp(colour.r, 0, 1) * 255);
+      pixels[offset + 1] = Math.round(T.MathUtils.clamp(colour.g, 0, 1) * 255);
+      pixels[offset + 2] = Math.round(T.MathUtils.clamp(colour.b, 0, 1) * 255);
+      pixels[offset + 3] = 255;
+    }
+  }
+
+  const texture = dataTexture(`curated-tartan-${assetKey}`, pixels, size);
   texture.colorSpace = T.SRGBColorSpace;
   return texture;
 }

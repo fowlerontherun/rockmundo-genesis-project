@@ -109,7 +109,10 @@ export function addCuratedSkinDetails(
   bones: Map<string, T.Bone>,
   clothing: ResolvedEquippedClothing[],
 ) {
-  const keys = new Set(clothing.map(row => row.item.curated_asset_key).filter(Boolean));
+  const keys = new Set(clothing
+    .filter(row => row.item.curated_asset_status === 'published')
+    .map(row => row.item.curated_asset_key)
+    .filter(Boolean));
   if (keys.has('clothing.punk.safety-pin-tee')) addSafetyPins(root,bones);
   if (keys.has('clothing.punk.patch-jacket')) addPatchJacketDetails(root,bones);
   if (keys.has('clothing.punk.double-eyelet-belt')) addEyeletBelt(root,bones);
