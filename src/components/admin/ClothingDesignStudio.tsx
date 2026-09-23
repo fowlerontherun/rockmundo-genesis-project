@@ -221,6 +221,7 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
         <p className="text-sm text-muted-foreground">Design directly on the front, back and sleeves. Drag elements on the garment and the live 3D preview updates from the same saved detail data.</p>
         <GarmentSurfaceEditor
           category={category}
+          templateKey={value.garment.templateKey}
           layers={value.details}
           onChange={details => onChange({ ...value, details: details as ClothingDesignConfig["details"] })}
         />
