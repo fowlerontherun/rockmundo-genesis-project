@@ -218,7 +218,7 @@ function addLegacyBareBodyUnderlay(
     const toe = bone(`ToeBase.${side}`, `ToeBase_${side}`, `ToeBase${side}`);
     addEllipsoid(`upper-leg-${side.toLowerCase()}`, upperLeg, upperLeg, lowerLeg, .083 * frameScale * muscleScale, .078 * (1 + (muscleScale - 1) * .8));
     addEllipsoid(`lower-leg-${side.toLowerCase()}`, lowerLeg, lowerLeg, foot, .059 * frameScale * (1 + (muscleScale - 1) * .75), .057 * (1 + (muscleScale - 1) * .75));
-    addEllipsoid(`foot-${side.toLowerCase()}`, foot, foot, toe ?? hand, .058 * frameScale, .075 * frameScale, .95);
+    addEllipsoid(`foot-${side.toLowerCase()}`, foot, foot, toe, .058 * frameScale, .075 * frameScale, .95);
   }
 }
 
