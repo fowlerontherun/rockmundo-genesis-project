@@ -10,9 +10,13 @@ import { crowdAppearances, crowdMaterial, crowdMotion, CROWD_LIMIT, CROWD_VARIAN
 import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreography';
 import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
+import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { seededRandom } from './config';
 import { visibleTattoosForClothing } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
+import { assembleAvatarMesh } from '@/features/player-model/v2/avatarMeshEngine';
+import { requiredAvatarV2ModelFiles } from '@/features/player-model/v2/avatarV2Model';
+import { requiredAvatarV2GarmentFiles } from '@/features/player-model/v2/avatarV2Garments';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
@@ -89,6 +93,7 @@ export class Musician {
     private bodyBuild = 1;
     private vocalRole: VocalRole = null;
     private mouth: T.Mesh | null = null;
+    private faceExpressions: AvatarV2ExpressionController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -142,7 +147,8 @@ export class Musician {
         // procedural fallback so existing player inventories remain compatible.
         // A curated item that has not passed validation is never procedurally
         // reconstructed: skipping it is safer than showing malformed geometry.
-        if (richClothing.length) {
+        const v2GarmentsPreassembled = this.model.userData.rockmundoAvatarEngine === 'rockmundo-v2';
+        if (richClothing.length && !v2GarmentsPreassembled) {
             this.root.updateMatrixWorld(true);
             for (const resolved of richClothing) {
                 if (isCuratedClothing(resolved.item)) {
@@ -180,12 +186,16 @@ export class Musician {
                 garment.removeFromParent();
             }
         }
-        if (this.hasVocals() && this.bones.has('Head')) {
+        this.faceExpressions = createAvatarV2ExpressionController(this.model);
+        if (this.hasVocals() && this.bones.has('Head') && !this.faceExpressions) {
             this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
         if (appearance) {
             this.bodyBuild = appearance.body.build;
-            this.root.scale.set(appearance.body.build, appearance.body.height, appearance.body.build);
+            const authoredBuild = this.model.userData.rockmundoAvatarEngine === 'rockmundo-v2'
+                && this.model.userData.rockmundoV2UsesBuildMorph === true;
+            const widthScale = authoredBuild ? 1 : appearance.body.build;
+            this.root.scale.set(widthScale, appearance.body.height, widthScale);
         }
         const assignment = stageAssignment(instrument, role);
         if (assignment.instrument && role !== 'fan') {
@@ -277,7 +287,7 @@ export class Musician {
         const phrase = Math.sin(t * .54 + this.phase);
         const vocalAccent = vocalActive ? Math.max(0, Math.sin(t * 1.08 + this.phase)) : 0;
         const emphasis = performing && !reduced ? Math.pow(Math.max(0, Math.sin(t * .71 + this.phase)), 3) * energy : 0;
-        const torso = this.bones.get('Torso');
+        const torso = this.bones.get('Torso') ?? this.bones.get('Spine2') ?? this.bones.get('Spine1');
         if (torso)
             torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
                 (Math.sin(beat / 2 + this.phase) * .022 + Math.sin(t * .63 + this.phase) * .012) * energy * performanceScale
@@ -370,8 +380,18 @@ export class Musician {
             rightShoulder?.rotateZ(-.018 - shoulderPulse * .03);
         }
         const jaw = this.bones.get('Jaw') ?? this.bones.get('jaw') ?? this.bones.get('Mouth');
-        if (jaw && vocalActive && !reduced) {
+        if (jaw && vocalActive && !reduced && !this.faceExpressions) {
             jaw.rotation.x += vocals.opening * .13 * energy;
+        }
+        if (this.faceExpressions) {
+            this.faceExpressions.update({
+                seconds: t,
+                phase: this.phase,
+                vocalActive,
+                opening: vocals.opening,
+                energy,
+                reducedMotion: reduced,
+            });
         }
         if (this.mouth) {
             const restScale = this.mouth.userData.restScale as T.Vector3;
@@ -982,12 +1002,16 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
     const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const donorFiles = lineup?.flatMap(p => requiredCuratedDonorModelFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const lineupAppearances = lineup?.map(p => p.appearance) ?? [];
+    const v2GarmentFiles = lineup?.flatMap(p =>
+        requiredAvatarV2GarmentFiles(p.richClothing ?? [], p.appearance.body.frame, 1)
+    ) ?? [];
     const library = await loadModelLibrary([
         'casual.glb',
         'punk.glb',
         'suit.glb',
         ...requiredModelFiles([...lineupAppearances, ...crowdAppearances(seed ?? 85043)]),
         ...requiredAvatarV2ModelFiles(lineupAppearances, 'high'),
+        ...v2GarmentFiles,
         ...donorFiles,
     ], manager);
     await loadOptionalCuratedGarments(library, curatedFiles, manager);

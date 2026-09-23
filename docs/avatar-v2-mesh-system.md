@@ -160,3 +160,74 @@ Crowds never need the same topology or 2K textures as a singer in a close-up.
 - staged player opt-in;
 - default V2 after telemetry/QA;
 - retain V1 fallback for old replay snapshots until no longer needed.
+
+
+## Phase B2 — authored garment compatibility
+
+The V2 renderer now has a fail-closed skinned-garment adapter. Existing live
+clothing remains on Avatar V1 until an item has an explicit validated V2 mapping.
+
+V2 garment metadata lives inside the existing `garment_config.avatarV2` JSON, so
+the catalogue does not need a parallel ownership or purchase system. A future
+validated item uses this shape:
+
+```json
+{
+  "avatarV2": {
+    "version": 1,
+    "status": "validated",
+    "frames": {
+      "masculine": {
+        "lod0": "avatar-v2/clothing/masculine/example-lod0.glb",
+        "lod1": "avatar-v2/clothing/masculine/example-lod1.glb"
+      },
+      "feminine": {
+        "lod0": "avatar-v2/clothing/feminine/example-lod0.glb",
+        "lod1": "avatar-v2/clothing/feminine/example-lod1.glb"
+      }
+    },
+    "occludeBodyRegions": ["torso"],
+    "colourMode": "zones",
+    "materialZones": {
+      "main": ["RMV2_Garment_Main"],
+      "trim": ["RMV2_Garment_Trim"]
+    }
+  }
+}
+```
+
+Every visible garment object must be a `SkinnedMesh`. Rigid details such as
+zips, studs, badges and eyelets are still bone-weighted (usually 100% to one
+bone) rather than being loose scene objects. The runtime and offline validator
+reject unskinned garment details so the V2 pipeline cannot reintroduce floating
+logos/hardware.
+
+The base body is divided into skinned garment-occlusion regions:
+
+- torso
+- upper arms
+- lower arms
+- hands
+- hips
+- upper legs
+- lower legs
+- feet
+
+LOD0/LOD1 cannot pass the base contract without all eight regions. Garments
+declare which regions they cover; those body meshes are hidden before rendering,
+preventing skin from clipping through shirts, jeans and boots during performance
+animation.
+
+The first authored proof set is reserved in
+`public/avatar-v2/clothing/manifest.json`:
+
+1. Rockmundo Logo Tee
+2. Dark Slim Jeans
+3. Black Boots
+
+All remain `planned` until real GLBs exist and pass both
+`npm run validate:avatar-v2` and visual performance QA.
+
+Avatar V2 assets resolve from `/avatar-v2/...`; they are intentionally separate
+from the legacy `/gig-demo-3d/...` donor directory. The loader understands both
+roots so V1 and V2 can coexist during migration.

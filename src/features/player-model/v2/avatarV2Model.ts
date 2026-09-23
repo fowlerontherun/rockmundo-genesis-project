@@ -5,8 +5,8 @@ import type { AvatarVisualQuality } from '../avatarVisualQuality';
 import type { ModelLibrary } from '../model';
 import {
   AVATAR_V2_REQUIRED_BONES,
+  AVATAR_V2_RUNTIME_BONE_NAMES,
   validateAvatarV2Scene,
-  type AvatarV2Bone,
   type AvatarV2Lod,
   type AvatarV2ValidationReport,
 } from './avatarV2Contract';
@@ -14,26 +14,8 @@ import {
   AVATAR_V2_ROLLOUT,
   validatedAvatarV2Asset,
 } from './avatarV2Registry';
+import { applyAvatarV2Customization } from './avatarV2Customization';
 
-const LEGACY_BONE_NAMES: Record<AvatarV2Bone, string> = {
-  hips: 'Hips',
-  spine: 'Spine1',
-  chest: 'Spine2',
-  neck: 'Neck',
-  head: 'Head',
-  leftUpperArm: 'UpperArm.L',
-  leftLowerArm: 'LowerArm.L',
-  leftHand: 'Hand.L',
-  rightUpperArm: 'UpperArm.R',
-  rightLowerArm: 'LowerArm.R',
-  rightHand: 'Hand.R',
-  leftUpperLeg: 'UpperLeg.L',
-  leftLowerLeg: 'LowerLeg.L',
-  leftFoot: 'Foot.L',
-  rightUpperLeg: 'UpperLeg.R',
-  rightLowerLeg: 'LowerLeg.R',
-  rightFoot: 'Foot.R',
-};
 
 export function avatarV2LodForQuality(quality: AvatarVisualQuality): AvatarV2Lod {
   if (quality === 'cinematic' || quality === 'ultra') return 0;
@@ -55,15 +37,30 @@ function materialName(material: T.Material) {
   return material.name.toLowerCase();
 }
 
+function ownV2MeshResources(root: T.Object3D) {
+  root.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    // SkeletonUtils shares geometry, materials and textures. The assembled model
+    // is disposed after the stage performer clones it, so it must own every
+    // disposable GPU resource rather than invalidating the cached source GLB.
+    node.geometry = node.geometry.clone();
+    const ownMaterial = (source: T.Material) => {
+      const material = source.clone();
+      for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const) {
+        const value = (material as T.MeshStandardMaterial)[key];
+        if (value instanceof T.Texture) (material as T.MeshStandardMaterial)[key] = value.clone();
+      }
+      return material;
+    };
+    node.material = Array.isArray(node.material)
+      ? node.material.map(ownMaterial)
+      : ownMaterial(node.material);
+  });
+}
+
 function tuneV2Materials(root: T.Object3D, appearance: PlayerAppearance) {
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    // SkeletonUtils intentionally shares geometry/material references. V2
-    // instances may have different skin/hair/eye colours, so clone materials
-    // before applying character-specific tuning.
-    node.material = Array.isArray(node.material)
-      ? node.material.map(material => material.clone())
-      : node.material.clone();
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     for (const material of materials) {
       if (!(material instanceof T.MeshStandardMaterial)) continue;
@@ -93,7 +90,7 @@ function normalizeRigNames(root: T.Object3D, report: AvatarV2ValidationReport) {
     const sourceName = report.boneMap[canonical];
     if (!sourceName) continue;
     const bone = byOriginal.get(sourceName);
-    if (bone) bone.name = LEGACY_BONE_NAMES[canonical];
+    if (bone) bone.name = AVATAR_V2_RUNTIME_BONE_NAMES[canonical];
   }
 }
 
@@ -123,6 +120,33 @@ export interface AvatarV2AssemblyResult {
   reason?: string;
 }
 
+export function prepareAvatarV2CandidateModel(
+  source: T.Object3D,
+  appearance: PlayerAppearance,
+  lod: AvatarV2Lod,
+): AvatarV2AssemblyResult {
+  const model = clone(source);
+  const report = validateAvatarV2Scene(model, appearance.body.frame, lod);
+  if (!report.valid) {
+    return { model: null, report, reason: 'Avatar V2 asset failed the runtime mesh contract.' };
+  }
+
+  ownV2MeshResources(model);
+  normalizeRigNames(model, report);
+  tuneV2Materials(model, appearance);
+  applyAvatarV2Customization(model, appearance);
+  normalizeScale(model, appearance);
+  model.name = `rockmundo-avatar-v2-${appearance.body.frame}-lod${lod}`;
+  model.userData.rockmundoAvatarEngine = 'rockmundo-v2';
+  model.userData.rockmundoAvatarV2 = {
+    ...(model.userData.rockmundoAvatarV2 ?? {}),
+    version: '2.0',
+    frame: appearance.body.frame,
+    lod,
+  };
+  return { model, report };
+}
+
 /**
  * Safe opt-in path for the new mesh system. Until the registry marks an asset
  * validated and rollout is enabled, every production surface continues using V1.
@@ -143,25 +167,5 @@ export function tryAssembleAvatarV2Model(
   const source = library.get(asset.file);
   if (!source) return { model: null, report: null, reason: `Avatar V2 asset was not preloaded: ${asset.file}` };
 
-  const model = clone(source);
-  const report = validateAvatarV2Scene(model, appearance.body.frame, lod);
-  if (!report.valid) {
-    // The clone still shares source geometry/materials at this point. Do not
-    // dispose them here: the ModelLibrary owns those resources and V1 fallback
-    // or another V2 attempt may still need them.
-    return { model: null, report, reason: 'Avatar V2 asset failed the runtime mesh contract.' };
-  }
-
-  normalizeRigNames(model, report);
-  tuneV2Materials(model, appearance);
-  normalizeScale(model, appearance);
-  model.name = `rockmundo-avatar-v2-${appearance.body.frame}-lod${lod}`;
-  model.userData.rockmundoAvatarEngine = 'v2';
-  model.userData.rockmundoAvatarV2 = {
-    ...(model.userData.rockmundoAvatarV2 ?? {}),
-    version: '2.0',
-    frame: appearance.body.frame,
-    lod,
-  };
-  return { model, report };
+  return prepareAvatarV2CandidateModel(source, appearance, lod);
 }

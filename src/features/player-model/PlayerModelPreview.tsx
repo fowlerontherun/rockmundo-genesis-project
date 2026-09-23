@@ -9,7 +9,8 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import { STYLES, modelFile, type PlayerAppearance } from './appearance';
 import { disposeModel, loadModelLibrary, type ModelLibrary } from './model';
 import { assembleAvatarMesh } from './v2/avatarMeshEngine';
-import { requiredAvatarV2ModelFiles } from './v2/avatarV2Model';
+import { avatarV2LodForQuality, requiredAvatarV2ModelFiles } from './v2/avatarV2Model';
+import { requiredAvatarV2GarmentFiles } from './v2/avatarV2Garments';
 import { visibleTattoosForClothing, type ResolvedTattooVisual } from './tattoos';
 import { avatarQualityProfile, recommendedAvatarPreviewQuality, type AvatarVisualQuality } from './avatarVisualQuality';
 
@@ -73,6 +74,13 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       const previewFiles = [
         ...(['masculine', 'feminine'] as const).flatMap(frame => STYLES.map(style => modelFile(frame, style))),
         ...requiredAvatarV2ModelFiles(v2Appearances, visualQuality),
+        ...(['masculine', 'feminine'] as const).flatMap(frame =>
+          requiredAvatarV2GarmentFiles(
+            latest.current.richClothing,
+            frame,
+            avatarV2LodForQuality(visualQuality),
+          )
+        ),
       ];
       void loadModelLibrary(previewFiles).then(loaded => {
         if (!alive) { loaded.forEach(disposeModel); return; }

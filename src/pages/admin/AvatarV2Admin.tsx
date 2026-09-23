@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, CheckCircle2, Cuboid, Gauge, ShieldCheck } from 'lucide-react';
+import { AvatarV2CandidateLab } from '@/components/admin/avatar/AvatarV2CandidateLab';
 import { AVATAR_V2_BUDGETS } from '@/features/player-model/v2/avatarV2Contract';
 import {
   AVATAR_V2_BASE_ASSETS,
@@ -71,6 +72,8 @@ export default function AvatarV2Admin() {
           </CardContent>
         </Card>
       </div>
+
+      <AvatarV2CandidateLab />
 
       <Card>
         <CardHeader>

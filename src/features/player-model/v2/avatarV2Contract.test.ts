@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { defaultAppearance } from '../appearance';
 import {
+  AVATAR_V2_BODY_REGIONS,
+  AVATAR_V2_CLOSEUP_BONE_ALIASES,
   AVATAR_V2_REQUIRED_BONES,
   validateAvatarV2Scene,
 } from './avatarV2Contract';
@@ -21,6 +23,12 @@ function validScene() {
     root.add(bone);
     return bone;
   });
+  for (const aliases of Object.values(AVATAR_V2_CLOSEUP_BONE_ALIASES)) {
+    const bone = new T.Bone();
+    bone.name = aliases[0];
+    root.add(bone);
+    bones.push(bone);
+  }
 
   const geometry = new T.BoxGeometry(.5, 1.7, .25, 2, 4, 2);
   const count = geometry.getAttribute('position').count;
@@ -29,7 +37,12 @@ function validScene() {
   for (let i = 0; i < count; i++) weights[i * 4] = 1;
   geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
 
-  const mesh = new T.SkinnedMesh(geometry, new T.MeshStandardMaterial({ color: '#cccccc' }));
+  const materials = ['RMV2_Skin', 'RMV2_Eyes', 'RMV2_Teeth', 'RMV2_Tongue'].map(name => {
+    const material = new T.MeshStandardMaterial({ color: '#cccccc' });
+    material.name = name;
+    return material;
+  });
+  const mesh = new T.SkinnedMesh(geometry, materials);
   mesh.name = 'RMV2_Body';
   mesh.morphTargetDictionary = {
     blinkLeft: 0,
@@ -40,6 +53,24 @@ function validScene() {
   mesh.morphTargetInfluences = [0, 0, 0, 0];
   mesh.bind(new T.Skeleton(bones));
   root.add(mesh);
+
+  for (const region of AVATAR_V2_BODY_REGIONS) {
+    const partGeometry = new T.BoxGeometry(.02, .02, .02);
+    const partCount = partGeometry.attributes.position.count;
+    partGeometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(partCount * 4), 4));
+    const partWeights = new Float32Array(partCount * 4);
+    for (let index = 0; index < partCount; index++) partWeights[index * 4] = 1;
+    partGeometry.setAttribute('skinWeight', new T.Float32BufferAttribute(partWeights, 4));
+    const part = new T.SkinnedMesh(
+      partGeometry,
+      new T.MeshStandardMaterial({ color: '#cccccc' }),
+    );
+    part.name = `RMV2_Body_${region}`;
+    part.userData.rockmundoBodyRegion = region;
+    part.bind(new T.Skeleton(bones));
+    root.add(part);
+  }
+
   root.updateMatrixWorld(true);
   return root;
 }

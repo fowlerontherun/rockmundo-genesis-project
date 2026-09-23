@@ -33,9 +33,14 @@ LOD0/LOD1 require morph targets equivalent to:
 - jawOpen
 - mouthSmile
 
-Additional expressions are encouraged: frown, mouth funnel/pucker, brow up/down,
-eye look directions and phoneme/viseme shapes. Teeth and tongue should be
-separate meshes/materials so singing close-ups do not expose a hollow mouth.
+Additional expressions are encouraged: frown, brow up/down and eye look directions.
+LOD0/LOD1 should include mouth funnel/pucker plus AA, EE, IH, OH and OU visemes;
+the stage renderer already drives those targets during singing. Teeth and tongue
+must be separate at LOD0 so close-up vocals never expose a hollow mouth.
+
+LOD0/LOD1 also require shoulder, toe-base and all five proximal finger bones on
+both hands. This is deliberate: the new mesh system must improve guitar, bass,
+drumstick and microphone grips rather than only increasing face resolution.
 
 ## LOD budgets
 
@@ -74,3 +79,39 @@ additional runtime physical-material treatment.
 
 Until then the live fitting room and gig viewer automatically keep using Avatar
 V1. There is no player-facing partial migration.
+
+
+## Blender validation/export helper
+
+A Blender-side gate is included so bad topology/rig exports can be rejected before
+they reach the browser validator.
+
+```bash
+blender avatar.blend --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_export.py -- \
+  --frame masculine --lod 0 \
+  --output public/avatar-v2/masculine/base-lod0.glb
+```
+
+The helper checks geometry budgets, one-armature structure, required humanoid and
+close-up bones, facial morphs, material roles, unapplied/negative scale and the
+four-influence skin-weight limit before invoking Blender's GLB exporter.
+
+
+## Body regions for clothing
+
+LOD0 and LOD1 base bodies must expose eight **skinned** occlusion regions. Either
+name the objects `RMV2_Body_<Region>` or set the glTF/Blender custom property
+`rockmundoBodyRegion` to one of:
+
+`torso`, `upper-arms`, `lower-arms`, `hands`, `hips`, `upper-legs`,
+`lower-legs`, `feet`.
+
+These meshes must remain armature-bound. The garment system hides only the
+regions declared by a validated garment, which prevents body/clothing
+interpenetration without hiding unrelated skin.
+
+The first V2 clothing proof set and per-garment budgets are defined in
+`public/avatar-v2/clothing/manifest.json`. Garment hardware and prints must be
+part of a skinned mesh or be rigidly weighted to the appropriate bone; loose
+unskinned detail objects fail validation.
