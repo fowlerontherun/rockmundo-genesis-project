@@ -68,7 +68,7 @@ function attachToBodySurface(
   const attachment = findFrontSurfaceAttachment(root, 'body', around);
   if (!attachment) {
     object.traverse(node => {
-      if (!(node instanceof T.Mesh)) return;
+      if (!(node instanceof T.Mesh) && !(node instanceof T.Line)) return;
       node.geometry.dispose();
       const materials = Array.isArray(node.material) ? node.material : [node.material];
       materials.forEach(material => material.dispose());
