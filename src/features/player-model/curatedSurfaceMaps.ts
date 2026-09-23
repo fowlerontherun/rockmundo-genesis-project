@@ -242,3 +242,40 @@ export function curatedNormalTexture(assetKey: string, finish: CuratedFinish) {
   texture.colorSpace = T.NoColorSpace;
   return texture;
 }
+
+
+export function curatedTartanTexture(assetKey: string, primary: string, secondary = '#171717') {
+  const size = 256;
+  const seed = hash(assetKey) + 313;
+  const base = new T.Color(primary);
+  const accent = new T.Color(secondary);
+  const light = new T.Color('#e7dfcf');
+  const pixels = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const broadX = x % 72 < 18;
+      const broadY = y % 72 < 18;
+      const fineX = x % 18 < 3;
+      const fineY = y % 18 < 3;
+      const cross = broadX && broadY;
+      const thread = ((x + y + (seed % 11)) % 9) < 3;
+      const colour = base.clone();
+
+      if (broadX || broadY) colour.lerp(accent, cross ? .78 : .58);
+      if (fineX || fineY) colour.lerp(accent, .72);
+      if ((x % 36 < 2 || y % 36 < 2) && !cross) colour.lerp(light, .18);
+      colour.multiplyScalar(thread ? 1.055 : .96);
+
+      const offset = (y * size + x) * 4;
+      pixels[offset] = Math.round(T.MathUtils.clamp(colour.r, 0, 1) * 255);
+      pixels[offset + 1] = Math.round(T.MathUtils.clamp(colour.g, 0, 1) * 255);
+      pixels[offset + 2] = Math.round(T.MathUtils.clamp(colour.b, 0, 1) * 255);
+      pixels[offset + 3] = 255;
+    }
+  }
+
+  const texture = dataTexture(`curated-tartan-${assetKey}`, pixels, size);
+  texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
