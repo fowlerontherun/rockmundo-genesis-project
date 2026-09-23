@@ -5,8 +5,8 @@ import type { AvatarVisualQuality } from '../avatarVisualQuality';
 import type { ModelLibrary } from '../model';
 import {
   AVATAR_V2_REQUIRED_BONES,
+  AVATAR_V2_RUNTIME_BONE_NAMES,
   validateAvatarV2Scene,
-  type AvatarV2Bone,
   type AvatarV2Lod,
   type AvatarV2ValidationReport,
 } from './avatarV2Contract';
@@ -16,25 +16,6 @@ import {
 } from './avatarV2Registry';
 import { applyAvatarV2Customization } from './avatarV2Customization';
 
-const LEGACY_BONE_NAMES: Record<AvatarV2Bone, string> = {
-  hips: 'Hips',
-  spine: 'Spine1',
-  chest: 'Spine2',
-  neck: 'Neck',
-  head: 'Head',
-  leftUpperArm: 'UpperArm.L',
-  leftLowerArm: 'LowerArm.L',
-  leftHand: 'Hand.L',
-  rightUpperArm: 'UpperArm.R',
-  rightLowerArm: 'LowerArm.R',
-  rightHand: 'Hand.R',
-  leftUpperLeg: 'UpperLeg.L',
-  leftLowerLeg: 'LowerLeg.L',
-  leftFoot: 'Foot.L',
-  rightUpperLeg: 'UpperLeg.R',
-  rightLowerLeg: 'LowerLeg.R',
-  rightFoot: 'Foot.R',
-};
 
 export function avatarV2LodForQuality(quality: AvatarVisualQuality): AvatarV2Lod {
   if (quality === 'cinematic' || quality === 'ultra') return 0;
@@ -94,7 +75,7 @@ function normalizeRigNames(root: T.Object3D, report: AvatarV2ValidationReport) {
     const sourceName = report.boneMap[canonical];
     if (!sourceName) continue;
     const bone = byOriginal.get(sourceName);
-    if (bone) bone.name = LEGACY_BONE_NAMES[canonical];
+    if (bone) bone.name = AVATAR_V2_RUNTIME_BONE_NAMES[canonical];
   }
 }
 
