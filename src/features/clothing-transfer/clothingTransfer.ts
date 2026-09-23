@@ -5,7 +5,7 @@ export const CLOTHING_EXPORT_VERSION = 1;
 
 const PORTABLE_FIELDS = [
   'name','description','category','wearable_slot','price','is_premium','rarity','color_variants',
-  'release_date','expiry_date','is_limited_edition','featured','rpm_asset_id','bonus_enabled','bonus_config',
+  'release_date','expiry_date','is_limited_edition','featured','rpm_asset_id','curated_asset_key','curated_asset_status','supported_frames','validation_notes','bonus_enabled','bonus_config',
   'shape_config','garment_config','material_config','pattern_config','detail_layers','fit_config','wear_config',
   'customization_zones','render_config','variant_matrix','preview_status','preview_manifest',
 ] as const;
@@ -85,6 +85,9 @@ export function validatePortableItem(entry: PortableClothingItem) {
   if (!String((item as any).category || '').trim()) errors.push('Missing category');
   if (!String((item as any).wearable_slot || '').trim()) errors.push('Missing wearable slot');
   if (!entry.externalKey) errors.push('Missing external key');
+  const status = String((item as any).curated_asset_status || 'legacy');
+  if (status !== 'legacy' && !String((item as any).curated_asset_key || '').trim()) errors.push('Curated item is missing asset key');
+  if (!['legacy','planned','asset_ready','validated','published','blocked'].includes(status)) errors.push('Invalid curated asset status');
   if (Array.isArray((item as any).detail_layers) && (item as any).detail_layers.length > 24) errors.push('More than 24 detail layers');
   if (Array.isArray((item as any).customization_zones) && (item as any).customization_zones.length > 12) errors.push('More than 12 customization zones');
   if (Array.isArray((item as any).variant_matrix) && (item as any).variant_matrix.length > 40) errors.push('More than 40 variants');

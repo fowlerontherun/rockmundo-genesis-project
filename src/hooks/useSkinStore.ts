@@ -63,6 +63,10 @@ export interface ClothingItem {
   is_limited_edition: boolean | null;
   featured: boolean | null;
   rpm_asset_id: string | null;
+  curated_asset_key?: string | null;
+  curated_asset_status?: 'legacy' | 'planned' | 'asset_ready' | 'validated' | 'published' | 'blocked' | null;
+  supported_frames?: string[] | null;
+  validation_notes?: Record<string, any> | null;
   bonus_enabled?: boolean | null;
   bonus_config?: ClothingBonusConfig | null;
   garment_config?: Record<string, any> | null;
