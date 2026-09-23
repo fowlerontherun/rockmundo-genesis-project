@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture } from './curatedSurfaceMaps';
 
 describe('curated surface maps', () => {
   it('builds high-resolution deterministic relief for current curated items', () => {
@@ -8,6 +8,16 @@ describe('curated surface maps', () => {
     expect(texture.image.height).toBe(256);
     expect(texture.name).toContain('clothing.punk.biker-jacket');
     texture.dispose();
+  });
+
+  it('builds item-specific albedo detail for seams, weave and wear', () => {
+    const jacket = curatedAlbedoTexture('clothing.punk.biker-jacket', 'leather');
+    const jeans = curatedAlbedoTexture('clothing.starter.blue-straight-jeans', 'denim');
+    expect(jacket.image.width).toBe(256);
+    expect(jeans.image.width).toBe(256);
+    expect(jacket.name).not.toBe(jeans.name);
+    jacket.dispose();
+    jeans.dispose();
   });
 
   it('builds a separate roughness map so stage light reveals material variation', () => {
