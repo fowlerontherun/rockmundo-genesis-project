@@ -13,7 +13,7 @@ import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDe
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
-import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, type CuratedFinish } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, type CuratedFinish } from './curatedSurfaceMaps';
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 
 export type ModelLibrary = Map<string, T.Object3D>;
@@ -146,6 +146,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       part: 'body',
       style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
       dye: curatedTop?.source.color ?? appearance.equipment.top.color,
+      secondaryColor: curatedTop?.source.secondaryColor,
       fabric: curatedTop?.source.fabric ?? equipmentItem(appearance, 'top').fabric,
       finish: curatedTop?.source.finish,
       assetKey: curatedTop?.source.assetKey,
@@ -154,6 +155,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       part: 'legs',
       style: curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
       dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
+      secondaryColor: curatedBottom?.source.secondaryColor,
       fabric: curatedBottom?.source.fabric ?? equipmentItem(appearance, 'bottom').fabric,
       finish: curatedBottom?.source.finish,
       assetKey: curatedBottom?.source.assetKey,
@@ -162,6 +164,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       part: 'feet',
       style: curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear'),
       dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
+      secondaryColor: curatedFootwear?.source.secondaryColor,
       fabric: curatedFootwear?.source.fabric ?? equipmentItem(appearance, 'footwear').fabric,
       finish: curatedFootwear?.source.finish,
       assetKey: curatedFootwear?.source.assetKey,
@@ -211,7 +214,12 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
             }
             if (choice.assetKey && choice.finish) {
               const finish = choice.finish as CuratedFinish;
-              material.map = curatedAlbedoTexture(choice.assetKey, finish);
+              if (finish === 'tartan') {
+                material.map = curatedTartanTexture(choice.assetKey, choice.dye, choice.secondaryColor || '#171717');
+                material.color.set('#ffffff');
+              } else {
+                material.map = curatedAlbedoTexture(choice.assetKey, finish);
+              }
               material.normalMap = curatedNormalTexture(choice.assetKey, finish);
               material.normalScale.set(finish === 'denim' || finish === 'canvas' ? .8 : .58, finish === 'denim' || finish === 'canvas' ? .8 : .58);
               material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
