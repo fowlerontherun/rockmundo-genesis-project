@@ -46,15 +46,18 @@ describe('curated surface maps', () => {
     texture.dispose();
   });
 
-  it('scales current clothing detail to 512px high and 1024px ultra maps', () => {
+  it('scales current clothing detail through 512px, 1024px and cinematic 2048px maps', () => {
     const high = curatedTextureForQuality(curatedAlbedoTexture('clothing.punk.biker-jacket', 'leather'), 'high', 'color');
     const ultra = curatedTextureForQuality(curatedNormalTexture('clothing.starter.blue-straight-jeans', 'denim'), 'ultra', 'normal');
+    const cinematic = curatedTextureForQuality(curatedAlbedoTexture('clothing.punk.biker-jacket', 'leather'), 'cinematic', 'color');
     expect(high.image.width).toBe(512);
     expect(ultra.image.width).toBe(1024);
+    expect(cinematic.image.width).toBe(2048);
     expect(high.anisotropy).toBe(8);
     expect(ultra.anisotropy).toBe(16);
     high.dispose();
     ultra.dispose();
+    cinematic.dispose();
   });
 
   it('keeps relief subtle for polished leather and stronger for canvas/denim', () => {

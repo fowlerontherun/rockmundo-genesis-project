@@ -12,7 +12,7 @@ import { curatedDonorForSlot } from '@/features/clothing-preview/curatedDonorGar
 import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDetails';
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
-import { fabricTexture, fabricUVs } from './fabrics';
+import { fabricNormalTexture, fabricTexture, fabricUVs } from './fabrics';
 import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, curatedTextureForQuality, type CuratedFinish } from './curatedSurfaceMaps';
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 import { applyCuratedMacroShading } from './curatedMacroShading';
@@ -237,7 +237,10 @@ export function assemblePlayerModel(
           } else if (!/earring|metal/.test(name) && !(name === 'white' && (choice.style !== 'casual' || choice.part === 'feet'))) {
             material.color.set(choice.dye);
             if (choice.fabric !== 'plain') {
-              material.map = fabricTexture(choice.fabric);
+              material.map = fabricTexture(choice.fabric, quality);
+              material.normalMap = fabricNormalTexture(choice.fabric, quality);
+              const starterNormal = choice.fabric === 'canvas' ? .42 : choice.fabric === 'denim' ? .36 : .2;
+              material.normalScale.set(starterNormal, starterNormal);
               material.roughness = choice.fabric === 'patent' ? .2 : choice.fabric === 'canvas' || choice.fabric === 'denim' ? .95 : .84;
             }
             if (choice.assetKey) material.vertexColors = true;
@@ -256,7 +259,7 @@ export function assemblePlayerModel(
               const profile = curatedMaterialProfile(choice.assetKey, finish);
               material.normalMap = curatedTextureForQuality(curatedNormalTexture(choice.assetKey, finish), quality, 'normal');
               material.normalScale.set(profile.normalStrength, profile.normalStrength);
-              material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
+              material.bumpMap = curatedTextureForQuality(curatedReliefTexture(choice.assetKey, finish), quality, 'height');
               material.bumpScale = curatedBumpScale(finish) * profile.bumpMultiplier;
               material.roughnessMap = curatedTextureForQuality(curatedRoughnessTexture(choice.assetKey, finish), quality, 'roughness');
               material.roughness = profile.roughness;

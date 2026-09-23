@@ -1,7 +1,7 @@
-export type AvatarVisualQuality = 'crowd' | 'balanced' | 'high' | 'ultra';
+export type AvatarVisualQuality = 'crowd' | 'balanced' | 'high' | 'ultra' | 'cinematic';
 
 export interface AvatarVisualQualityProfile {
-  textureSize: 0 | 256 | 512 | 1024;
+  textureSize: 0 | 256 | 512 | 1024 | 2048;
   hairSphereSegments: number;
   hairSphereRings: number;
   faceCurveSegments: number;
@@ -48,6 +48,19 @@ const PROFILES: Record<AvatarVisualQuality, AvatarVisualQualityProfile> = {
     hairSphereRings: 18,
     faceCurveSegments: 24,
     accessorySegments: 24,
+    previewPixelRatioCap: 2.5,
+    shadowMapSize: 4096,
+    anisotropy: 16,
+  },
+  // Offline/admin turntables only. Keeping this out of automatic interactive
+  // quality selection gives us 2K materials without making normal gameplay
+  // allocate cinematic textures every frame.
+  cinematic: {
+    textureSize: 2048,
+    hairSphereSegments: 40,
+    hairSphereRings: 22,
+    faceCurveSegments: 32,
+    accessorySegments: 32,
     previewPixelRatioCap: 2.5,
     shadowMapSize: 4096,
     anisotropy: 16,

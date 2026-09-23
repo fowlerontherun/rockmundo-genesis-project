@@ -33,7 +33,7 @@ export function applyAvatarSkinMacroShading(
   if (!bounds || bounds.isEmpty()) return;
 
   const colors = new Float32Array(position.count * 3);
-  const highStrength = quality === 'ultra' ? 1 : .72;
+  const highStrength = quality === 'cinematic' ? 1.08 : quality === 'ultra' ? 1 : .72;
   const warm = appearance.body.frame === 'feminine' ? 1.03 : 1.025;
 
   for (let i = 0; i < position.count; i++) {

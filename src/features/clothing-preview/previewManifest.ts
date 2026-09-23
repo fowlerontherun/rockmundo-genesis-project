@@ -1,4 +1,4 @@
-export const CLOTHING_PREVIEW_RENDERER_VERSION = 'fitted-curated-v2';
+export const CLOTHING_PREVIEW_RENDERER_VERSION = 'fitted-curated-v3-cinematic';
 
 export const CLOTHING_TURNTABLE_VIEWS = [
   { key: 'front', yaw: 0 },
@@ -50,7 +50,11 @@ export function createClothingPreviewManifest(itemId: string, frameUrls: Partial
 export function usablePreviewFrames(manifest: unknown): ClothingPreviewFrame[] {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) return [];
   const record = manifest as Record<string, unknown>;
-  if (record.stale === true || !Array.isArray(record.frames)) return [];
+  if (
+    record.stale === true ||
+    record.rendererVersion !== CLOTHING_PREVIEW_RENDERER_VERSION ||
+    !Array.isArray(record.frames)
+  ) return [];
 
   const validKeys = new Set<string>(CLOTHING_TURNTABLE_VIEWS.map(view => view.key));
   return record.frames.filter((frame): frame is ClothingPreviewFrame => {

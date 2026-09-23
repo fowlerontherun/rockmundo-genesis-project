@@ -295,18 +295,19 @@ function targetCuratedSize(quality: AvatarVisualQuality, baseSize: number) {
   if (quality === 'crowd') return Math.min(baseSize, 128);
   if (quality === 'balanced') return baseSize;
   if (quality === 'high') return Math.max(baseSize, 512);
-  return Math.max(baseSize, 1024);
+  if (quality === 'ultra') return Math.max(baseSize, 1024);
+  return Math.max(baseSize, 2048);
 }
 
 /**
  * Upscales procedural curated surface maps only for close-up tiers and injects
- * restrained micro-variation so 512/1024 textures carry real extra detail
- * rather than simply stretching the existing 256px map.
+ * restrained micro-variation so 512/1024/2048 textures carry real extra
+ * detail rather than simply stretching the existing 256px map.
  */
 export function curatedTextureForQuality(
   source: T.DataTexture,
   quality: AvatarVisualQuality,
-  kind: 'color' | 'normal' | 'roughness',
+  kind: 'color' | 'normal' | 'roughness' | 'height',
 ) {
   const src = source.image?.data as Uint8Array | undefined;
   const sw = Number(source.image?.width || 0);
@@ -322,9 +323,17 @@ export function curatedTextureForQuality(
   const pixels = new Uint8Array(target * target * 4);
   const seed = textureHash(source.name || 'curated');
   const sample = (channel: number, x: number, y: number) => {
-    const sx = Math.min(sw - 1, Math.max(0, Math.floor((x / target) * sw)));
-    const sy = Math.min(sh - 1, Math.max(0, Math.floor((y / target) * sh)));
-    return src[(sy * sw + sx) * 4 + channel];
+    // Bilinear filtering during generation avoids magnifying the original
+    // 128/256px texels into visible square blocks in 1K/2K store artwork.
+    const fx = T.MathUtils.clamp(((x + .5) / target) * sw - .5, 0, sw - 1);
+    const fy = T.MathUtils.clamp(((y + .5) / target) * sh - .5, 0, sh - 1);
+    const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const x1 = Math.min(sw - 1, x0 + 1), y1 = Math.min(sh - 1, y0 + 1);
+    const tx = fx - x0, ty = fy - y0;
+    const at = (px: number, py: number) => src[(py * sw + px) * 4 + channel];
+    const a = T.MathUtils.lerp(at(x0, y0), at(x1, y0), tx);
+    const b = T.MathUtils.lerp(at(x0, y1), at(x1, y1), tx);
+    return T.MathUtils.lerp(a, b, ty);
   };
 
   for (let y = 0; y < target; y++) {
@@ -340,7 +349,7 @@ export function curatedTextureForQuality(
         pixels[offset + 1] = Math.round((normal.y * .5 + .5) * 255);
         pixels[offset + 2] = Math.round((normal.z * .5 + .5) * 255);
       } else {
-        const amplitude = kind === 'color' ? 5 : 8;
+        const amplitude = kind === 'color' ? 5 : kind === 'height' ? 6 : 8;
         pixels[offset] = T.MathUtils.clamp(sample(0, x, y) + micro * amplitude, 0, 255);
         pixels[offset + 1] = T.MathUtils.clamp(sample(1, x, y) + micro * amplitude, 0, 255);
         pixels[offset + 2] = T.MathUtils.clamp(sample(2, x, y) + micro * amplitude, 0, 255);

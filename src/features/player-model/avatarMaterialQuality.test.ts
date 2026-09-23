@@ -7,10 +7,13 @@ describe('avatar material quality', () => {
     const appearance = defaultAppearance('visual-quality');
     const high = avatarSkinNormalTexture(appearance, 'high');
     const ultra = avatarSkinNormalTexture(appearance, 'ultra');
+    const cinematic = avatarSkinNormalTexture(appearance, 'cinematic');
     expect(high?.image.width).toBe(512);
     expect(ultra?.image.width).toBe(1024);
+    expect(cinematic?.image.width).toBe(2048);
     high?.dispose();
     ultra?.dispose();
+    cinematic?.dispose();
   });
 
   it('keeps crowds free of expensive skin texture maps', () => {
@@ -22,10 +25,13 @@ describe('avatar material quality', () => {
   it('adds high-resolution strand maps for close-up hair', () => {
     const high = avatarHairNormalTexture('high');
     const ultra = avatarHairRoughnessTexture('ultra');
+    const cinematic = avatarHairRoughnessTexture('cinematic');
     expect(high?.image.width).toBe(256);
     expect(ultra?.image.width).toBe(512);
+    expect(cinematic?.image.width).toBe(1024);
     high?.dispose();
     ultra?.dispose();
+    cinematic?.dispose();
   });
 
   it('adds a separate roughness surface at half skin-normal resolution', () => {
