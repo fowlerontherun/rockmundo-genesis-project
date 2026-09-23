@@ -3,6 +3,10 @@ import { z } from 'zod';
 /** Stable cosmetic IDs. New paid/unlocked items must be granted by the server,
  * never added to this free starter allow-list to bypass an ownership check. */
 export const STYLES = ['casual', 'punk', 'suit'] as const;
+export const BODY_MUSCLE_TYPES = ['natural', 'toned', 'athletic', 'muscular', 'bodybuilder'] as const;
+export const BODY_MUSCLE_LABELS: Record<typeof BODY_MUSCLE_TYPES[number], string> = {
+  natural: 'Natural', toned: 'Toned', athletic: 'Athletic', muscular: 'Muscular', bodybuilder: 'Bodybuilder',
+};
 export const SLOTS = ['top', 'bottom', 'footwear'] as const;
 export type Style = typeof STYLES[number];
 export type EquipmentSlot = typeof SLOTS[number];
@@ -12,7 +16,7 @@ export interface StarterItem { id: string; style: Style; label: string; fabric: 
 const wardrobe = (slot: EquipmentSlot, rows: [string, Style, string, Fabric][]): StarterItem[] => rows.map(([key, style, label, fabric]) => ({ id: `starter.${slot}.${key}`, style, label, fabric }));
 export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
   top: wardrobe('top', [
-    ['casual', 'casual', 'Rockmundo logo T-shirt', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
+    ['casual', 'casual', 'Rockmundo logo T-shirt', 'plain'], ['topless', 'casual', 'Topless', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
     ['stripe', 'casual', 'Striped top', 'stripe'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
   ]),
   bottom: wardrobe('bottom', [
@@ -69,7 +73,7 @@ const color = z.string().regex(/^#[0-9a-fA-F]{6}$/).transform(value => value.toL
 const item = (slot: EquipmentSlot) => z.string().refine(value => STARTER_ITEMS[slot].some(entry => entry.id === value), 'Choose an available starter item');
 export const appearanceSchema = z.object({
   version: z.literal(1),
-  body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), skin: color }).strict(),
+  body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), muscle: z.enum(BODY_MUSCLE_TYPES).optional(), skin: color }).strict(),
   head: z.object({ style: z.enum(STYLES), hair: color, hairStyle: z.enum(HAIR_STYLES).optional(), facialHair: z.enum(FACIAL_HAIR_STYLES).optional(), facialHairColor: color.optional(), faceShape: z.enum(FACE_SHAPES).optional(), eyeColor: color.optional(), eyebrowStyle: z.enum(EYEBROW_STYLES).optional(), eyebrowColor: color.optional(), skinDetail: z.enum(SKIN_DETAILS).optional() }).strict(),
   equipment: z.object({
     top: z.object({ itemId: item('top'), color }).strict(),
@@ -97,7 +101,7 @@ export function defaultAppearance(seed = ''): PlayerAppearance {
   const style = STYLES[hash % STYLES.length];
   return {
     version: 1,
-    body: { frame: 'masculine', height: 1, build: 1, skin: ['#d4a373', '#8d5524', '#edc7a5', '#593a2d'][hash % 4] },
+    body: { frame: 'masculine', height: 1, build: 1, muscle: 'natural', skin: ['#d4a373', '#8d5524', '#edc7a5', '#593a2d'][hash % 4] },
     head: { style, hair: '#282027', faceShape: 'classic', eyeColor: '#65442d', eyebrowStyle: 'natural', skinDetail: 'smooth' },
     equipment: {
       top: { itemId: 'starter.top.casual', color: '#eee8db' },
@@ -113,6 +117,7 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   if (!parsed.success) return defaultAppearance(seed);
   return {
     ...parsed.data,
+    body: { ...parsed.data.body, muscle: parsed.data.body.muscle ?? 'natural' },
     head: {
       ...parsed.data.head,
       faceShape: parsed.data.head.faceShape ?? 'classic',
