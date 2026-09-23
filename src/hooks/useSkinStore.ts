@@ -139,7 +139,8 @@ export const useStoreClothingItems = (collectionId?: string) => useQuery({
 export const useFeaturedItems = () => useQuery({
   queryKey: ["featured-items"],
   queryFn: async () => {
-    const { data, error } = await supabase.from("avatar_clothing_items").select("*").eq("featured", true).eq("curated_asset_status", "published").not("curated_asset_key", "is", null).order("created_at", { ascending: false }).limit(10);
+    const query: any = (supabase.from("avatar_clothing_items") as any).select("*");
+    const { data, error } = await query.eq("featured", true).eq("curated_asset_status", "published").not("curated_asset_key", "is", null).order("created_at", { ascending: false }).limit(10);
     if (error) throw error;
     return data as ClothingItem[];
   },
@@ -152,7 +153,8 @@ export const useNewArrivals = () => {
   return useQuery({
     queryKey: ["new-arrivals"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("avatar_clothing_items").select("*").eq("curated_asset_status", "published").not("curated_asset_key", "is", null).gte("release_date", thirtyDaysAgo.toISOString().split("T")[0]).order("release_date", { ascending: false }).limit(12);
+      const query: any = (supabase.from("avatar_clothing_items") as any).select("*");
+      const { data, error } = await query.eq("curated_asset_status", "published").not("curated_asset_key", "is", null).gte("release_date", thirtyDaysAgo.toISOString().split("T")[0]).order("release_date", { ascending: false }).limit(12);
       if (error) throw error;
       return data as ClothingItem[];
     },
