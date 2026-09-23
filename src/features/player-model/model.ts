@@ -13,6 +13,7 @@ import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDe
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
+import { curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture, type CuratedFinish } from './curatedSurfaceMaps';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -105,6 +106,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       dye: curatedTop?.source.color ?? appearance.equipment.top.color,
       fabric: curatedTop?.source.fabric ?? equipmentItem(appearance, 'top').fabric,
       finish: curatedTop?.source.finish,
+      assetKey: curatedTop?.source.assetKey,
     },
     {
       part: 'legs',
@@ -112,6 +114,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
       fabric: curatedBottom?.source.fabric ?? equipmentItem(appearance, 'bottom').fabric,
       finish: curatedBottom?.source.finish,
+      assetKey: curatedBottom?.source.assetKey,
     },
     {
       part: 'feet',
@@ -119,6 +122,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
       fabric: curatedFootwear?.source.fabric ?? equipmentItem(appearance, 'footwear').fabric,
       finish: curatedFootwear?.source.finish,
+      assetKey: curatedFootwear?.source.assetKey,
     },
   ];
   for (const choice of choices) {
@@ -133,7 +137,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
         if (!original?.isSkinnedMesh) throw new Error('Incompatible character geometry');
         clonedNode.geometry = original.geometry.clone();
-        if (choice.fabric !== 'plain') fabricUVs(clonedNode.geometry, choice.part === 'feet');
+        if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
         const dyeMaterial = (originalMaterial: T.Material) => {
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
@@ -162,6 +166,13 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
             if (choice.fabric !== 'plain') {
               material.map = fabricTexture(choice.fabric);
               material.roughness = choice.fabric === 'patent' ? .2 : choice.fabric === 'canvas' || choice.fabric === 'denim' ? .95 : .84;
+            }
+            if (choice.assetKey && choice.finish) {
+              const finish = choice.finish as CuratedFinish;
+              material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
+              material.bumpScale = curatedBumpScale(finish);
+              material.roughnessMap = curatedRoughnessTexture(choice.assetKey, finish);
+              material.needsUpdate = true;
             }
           }
           return material;
