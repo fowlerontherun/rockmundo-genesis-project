@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Type, Image as ImageIcon, Trash2, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Type, Image as ImageIcon, Trash2, Copy, ArrowUp, ArrowDown, Upload, Undo2, Redo2, Loader2 } from "lucide-react";
 import { garmentTemplate, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type GarmentSurface = "front" | "back" | "left-sleeve" | "right-sleeve";
 
@@ -66,7 +68,11 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const [surface, setSurface] = useState<GarmentSurface>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
+  const [past, setPast] = useState<GarmentSurfaceLayer[][]>([]);
+  const [future, setFuture] = useState<GarmentSurfaceLayer[][]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const visibleLayers = useMemo(
     () => layers.filter(layer => (layer.surface || "front") === surface),
@@ -74,8 +80,39 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   );
   const selected = layers.find(layer => layer.id === selectedId) || null;
 
-  const updateLayer = (id: string, patch: Partial<GarmentSurfaceLayer>) =>
-    onChange(layers.map(layer => layer.id === id ? { ...layer, ...patch } : layer));
+  const remember = () => {
+    setPast(history => [...history.slice(-29), layers]);
+    setFuture([]);
+  };
+
+  const commit = (next: GarmentSurfaceLayer[]) => {
+    remember();
+    commit(next);
+  };
+
+  const updateLayer = (id: string, patch: Partial<GarmentSurfaceLayer>, record = true) => {
+    const next = layers.map(layer => layer.id === id ? { ...layer, ...patch } : layer);
+    if (record) commit(next);
+    else commit(next);
+  };
+
+  const undo = () => {
+    const previous = past[past.length - 1];
+    if (!previous) return;
+    setPast(history => history.slice(0, -1));
+    setFuture(history => [layers, ...history].slice(0, 30));
+    onChange(previous);
+    setSelectedId(null);
+  };
+
+  const redo = () => {
+    const next = future[0];
+    if (!next) return;
+    setFuture(history => history.slice(1));
+    setPast(history => [...history.slice(-29), layers]);
+    onChange(next);
+    setSelectedId(null);
+  };
 
   const addLayer = (type: "text" | "graphic", asset?: string) => {
     const layer: GarmentSurfaceLayer = {
@@ -99,7 +136,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
       outlineColor: type === "text" ? "#000000" : undefined,
       letterSpacing: type === "text" ? 0 : undefined,
     };
-    onChange([...layers, layer]);
+    commit([...layers, layer]);
     setSelectedId(layer.id);
   };
 
@@ -112,13 +149,45 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     updateLayer(id, {
       offsetX: clamp(snap(x), -90, 90),
       offsetY: clamp(snap(y), -90, 90),
-    });
+    }, false);
   };
 
   const onPointerDown = (event: React.PointerEvent, id: string) => {
     event.currentTarget.setPointerCapture(event.pointerId);
+    remember();
     setSelectedId(id);
     moveFromPointer(event, id);
+  };
+
+  const uploadArtwork = async (file: File) => {
+    if (!file.type.match(/^image\/(png|jpeg|webp|svg\+xml)$/)) throw new Error("Use PNG, JPG, WEBP or SVG artwork.");
+    if (file.size > 10 * 1024 * 1024) throw new Error("Artwork must be 10 MB or smaller.");
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError || !data.user) throw new Error("You need to be signed in to upload artwork.");
+    const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+    const uploadPath = `${data.user.id}/clothing-skins/${crypto.randomUUID()}-${safeName}`;
+    const { error } = await supabase.storage.from("merch-artwork").upload(uploadPath, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type,
+    });
+    if (error) throw error;
+    return supabase.storage.from("merch-artwork").getPublicUrl(uploadPath).data.publicUrl;
+  };
+
+  const handleArtworkFile = async (file?: File) => {
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const asset = await uploadArtwork(file);
+      addLayer("graphic", asset);
+      toast.success("Artwork added to garment");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Artwork upload failed");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return <div className="space-y-4">
@@ -131,9 +200,15 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" disabled={!past.length} onClick={undo} title="Undo"><Undo2 className="h-4 w-4"/></Button>
+        <Button type="button" size="sm" variant="outline" disabled={!future.length} onClick={redo} title="Redo"><Redo2 className="h-4 w-4"/></Button>
         <Button type="button" size="sm" variant={snapToGrid ? "default" : "outline"} onClick={() => setSnapToGrid(value => !value)}>Snap 10</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("text")}><Type className="h-4 w-4 mr-1"/>Text</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("graphic")}><ImageIcon className="h-4 w-4 mr-1"/>Graphic</Button>
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={event => void handleArtworkFile(event.target.files?.[0])}/>
+        <Button type="button" size="sm" variant="outline" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+          {isUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin"/> : <Upload className="h-4 w-4 mr-1"/>}Upload artwork
+        </Button>
         {MOTIFS.map(motif => <Button key={motif} type="button" size="sm" variant="ghost" onClick={() => addLayer("graphic", motif)} className="text-xs capitalize">{motif.replaceAll("-", " ")}</Button>)}
       </div>
     </div>
@@ -178,7 +253,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
             }}
             onPointerDown={event => onPointerDown(event, layer.id)}
           >
-            {layer.type === "text" ? (layer.text || "Text") : (layer.asset || layer.name || "Graphic")}
+            {layer.type === "text" ? (layer.text || "Text") : /^https?:\/\//.test(String(layer.asset || "")) ? <img src={layer.asset} alt={layer.name || "Uploaded artwork"} className="h-full w-full object-contain pointer-events-none" draggable={false}/> : (layer.asset || layer.name || "Graphic")}
           </button>;
         })}
       </div>
@@ -213,21 +288,21 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
               if (index < 0 || index === layers.length - 1) return;
               const next = [...layers];
               [next[index], next[index + 1]] = [next[index + 1], next[index]];
-              onChange(next);
+              commit(next);
             }} title="Bring forward"><ArrowUp className="h-4 w-4"/></Button>
             <Button type="button" size="sm" variant="outline" disabled={layers.indexOf(selected) <= 0} onClick={() => {
               const index = layers.indexOf(selected);
               if (index <= 0) return;
               const next = [...layers];
               [next[index], next[index - 1]] = [next[index - 1], next[index]];
-              onChange(next);
+              commit(next);
             }} title="Send backward"><ArrowDown className="h-4 w-4"/></Button>
             <Button type="button" size="sm" variant="outline" onClick={() => {
               const copy = { ...selected, id: crypto.randomUUID(), name: `${selected.name} copy`, offsetX: clamp(Number(selected.offsetX || 0) + 8, -90, 90), offsetY: clamp(Number(selected.offsetY || 0) - 8, -90, 90) };
-              onChange([...layers, copy]);
+              commit([...layers, copy]);
               setSelectedId(copy.id);
             }}><Copy className="h-4 w-4"/></Button>
-            <Button type="button" size="sm" variant="destructive" onClick={() => { onChange(layers.filter(layer => layer.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4"/></Button>
+            <Button type="button" size="sm" variant="destructive" onClick={() => { commit(layers.filter(layer => layer.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4"/></Button>
           </div>
         </>}
       </div>
