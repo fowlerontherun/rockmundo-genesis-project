@@ -37,6 +37,13 @@ describe('curated donor garments', () => {
     });
   });
 
+  it('supports safe textile variants on validated donor geometry', () => {
+    const tartan = item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'punk', part: 'legs', color: '#9f2634', fabric: 'plaid' } } });
+    const trainers = item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'casual', part: 'feet', color: '#ece9df', fabric: 'canvas' } } });
+    expect(curatedDonorSource(tartan)?.fabric).toBe('plaid');
+    expect(curatedDonorSource(trainers)?.fabric).toBe('canvas');
+  });
+
   it('rejects unsupported donor definitions', () => {
     expect(curatedDonorSource(item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'unknown', part: 'body' } } }))).toBeNull();
     expect(curatedDonorSource(item({ render_config: { curatedSource: { kind: 'procedural', style: 'casual', part: 'body' } } }))).toBeNull();
