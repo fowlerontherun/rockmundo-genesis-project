@@ -11,6 +11,7 @@ import { resolveSongAudioDescriptor } from '@/features/gig-experience/viewer/aud
 import {
   GIG_CROWD_SOUND_TYPES,
   loadGigCrowdSounds,
+  pickGigCrowdSound,
   type GigCrowdSound,
 } from '@/features/gig-experience/viewer/audio/crowdSoundLibrary';
 import './concert-demo.css';
@@ -145,6 +146,39 @@ export default function Concert3DDemo() {
     if (audioEnabled && settings.playing) void audio.play().catch(() => undefined);
     else audio.pause();
   }, [audioEnabled, settings.playing]);
+
+  const crowdPulseBucket = Math.floor(stats.seconds / 12);
+  useEffect(() => {
+    if (!audioEnabled || !settings.playing || selectedCrowdSoundId !== 'auto' || !crowdSounds.length || typeof Audio === 'undefined') return;
+    const intensity = Math.max(1, Math.min(10, Math.round(2 + settings.crowd * 8)));
+    const reactionTypes = reaction === 'mosh_pit' || reaction === 'jump'
+      ? ['mosh_pit', 'crowd_cheer_large', 'crowd_cheer_medium'] as const
+      : reaction === 'applause'
+        ? ['applause', 'crowd_cheer_medium'] as const
+        : reaction === 'phone_lights' || reaction === 'sway' || reaction === 'still'
+          ? ['lighter_moment', 'crowd_singing', 'ambient_chatter'] as const
+          : reaction === 'cheer' || reaction === 'crowd_surf'
+            ? ['crowd_cheer_large', 'crowd_cheer_medium', 'applause'] as const
+            : settings.crowd > 0.72
+              ? ['crowd_cheer_large', 'crowd_singing', 'mosh_pit'] as const
+              : settings.crowd > 0.4
+                ? ['crowd_cheer_medium', 'applause', 'song_recognition'] as const
+                : ['ambient_chatter', 'crowd_cheer_small', 'lighter_moment'] as const;
+    const clip = pickGigCrowdSound(crowdSounds, [...reactionTypes], intensity, `3d-demo:${reaction}:${crowdPulseBucket}:${venueType}`);
+    if (!clip) return;
+
+    crowdAudio.current?.pause();
+    const audio = new Audio(clip.audio_url);
+    audio.preload = 'auto';
+    audio.loop = clip.sound_type === 'ambient_chatter' || clip.sound_type === 'crowd_singing';
+    audio.volume = Math.max(0.08, Math.min(0.5, 0.16 + settings.crowd * 0.28));
+    crowdAudio.current = audio;
+    void audio.play().catch(() => undefined);
+    return () => {
+      audio.pause();
+      if (crowdAudio.current === audio) crowdAudio.current = null;
+    };
+  }, [audioEnabled, settings.playing, selectedCrowdSoundId, crowdSounds, crowdPulseBucket, reaction, settings.crowd, venueType]);
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const change = () => setSettings(previous => ({ ...previous, reducedMotion: media.matches }));
