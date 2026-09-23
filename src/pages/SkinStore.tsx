@@ -24,6 +24,7 @@ import type { InstrumentSkinItem } from "@/features/instrument-skins/instrumentS
 import {
   useSkinCollections,
   useClothingItems,
+  useStoreClothingItems,
   useFeaturedItems,
   useNewArrivals,
   useOwnedSkins,
@@ -45,8 +46,9 @@ const SkinStore = () => {
   const { data: collections = [], isLoading: collectionsLoading } = useSkinCollections();
   const { data: featuredItems = [] } = useFeaturedItems();
   const { data: newArrivals = [] } = useNewArrivals();
-  const { data: collectionItems = [] } = useClothingItems(selectedCollection || undefined);
-  const { data: allItems = [] } = useClothingItems();
+  const { data: collectionItems = [] } = useStoreClothingItems(selectedCollection || undefined);
+  const { data: allItems = [] } = useStoreClothingItems();
+  const { data: ownedCatalogItems = [] } = useClothingItems();
   const { data: ownedSkins = [] } = useOwnedSkins();
   const { data: instrumentItems = [] } = useInstrumentSkinItems();
   const { data: vipStatus } = useVipStatus();
@@ -55,7 +57,7 @@ const SkinStore = () => {
 
   const ownedItemIds = ownedSkins.filter((skin) => skin.item_type === 'clothing').map((skin) => skin.item_id);
   const ownedInstrumentIds = ownedSkins.filter((skin) => skin.item_type === 'instrument').map((skin) => skin.item_id);
-  const ownedClothingItems = allItems.filter((item) => ownedItemIds.includes(item.id));
+  const ownedClothingItems = ownedCatalogItems.filter((item) => ownedItemIds.includes(item.id));
   const ownedInstrumentItems = instrumentItems.filter((item) => ownedInstrumentIds.includes(item.id));
   const previewOwnedSkin = previewItem
     ? ownedSkins.find((skin) => skin.item_type === 'clothing' && skin.item_id === previewItem.id) || null
@@ -105,8 +107,14 @@ const SkinStore = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const getItemsByCategory = (category: string) =>
-    allItems.filter((item) => item.category === category);
+  const browseGroups = [
+    { key: "tops", label: "Tops & Jackets", slots: ["top", "outerwear"] },
+    { key: "bottoms", label: "Bottoms", slots: ["bottom"] },
+    { key: "footwear", label: "Footwear", slots: ["footwear"] },
+    { key: "accessories", label: "Accessories", slots: ["accessory", "headwear", "eyewear"] },
+  ] as const;
+  const getItemsBySlots = (slots: readonly string[]) =>
+    allItems.filter((item) => slots.includes(String(item.wearable_slot || "")));
 
   const selectedCollectionData = collections.find((c) => c.id === selectedCollection);
 
@@ -137,7 +145,7 @@ const SkinStore = () => {
           </TabsTrigger>
           <TabsTrigger value="collections" className="gap-1.5">
             <ShoppingBag className="h-4 w-4 hidden sm:inline" />
-            <span>Collections</span>
+            <span>Skin Packs</span>
           </TabsTrigger>
           <TabsTrigger value="browse" className="gap-1.5">
             <Shirt className="h-4 w-4 hidden sm:inline" />
@@ -280,13 +288,13 @@ const SkinStore = () => {
 
         <TabsContent value="browse" className="space-y-6">
           <ScrollArea className="h-[calc(100vh-280px)]">
-            {["shirt", "pants", "jacket", "shoes", "accessory", "hat"].map((category) => {
-              const categoryItems = getItemsByCategory(category);
+            {browseGroups.map((group) => {
+              const categoryItems = getItemsBySlots(group.slots);
               if (categoryItems.length === 0) return null;
 
               return (
-                <div key={category} className="mb-8">
-                  <h3 className="text-lg font-semibold capitalize mb-4">{category}s</h3>
+                <div key={group.key} className="mb-8">
+                  <h3 className="text-lg font-semibold mb-4">{group.label}</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                     {categoryItems.map((item) => (
                       <StoreItemCard
