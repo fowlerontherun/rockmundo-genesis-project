@@ -122,7 +122,10 @@ export const useClothingItems = (collectionId?: string) => useQuery({
 export const useStoreClothingItems = (collectionId?: string) => useQuery({
   queryKey: ["store-clothing-items", collectionId],
   queryFn: async () => {
-    let query = supabase.from("avatar_clothing_items").select("*")
+    // Keep the PostgREST builder deliberately shallow here. The generated
+    // Database type is large enough that chaining this filtered "*" query can
+    // exceed TypeScript's instantiation depth during CI.
+    let query: any = (supabase.from("avatar_clothing_items") as any).select("*")
       .eq("curated_asset_status", "published")
       .not("curated_asset_key", "is", null);
     if (collectionId) query = query.eq("collection_id", collectionId);
