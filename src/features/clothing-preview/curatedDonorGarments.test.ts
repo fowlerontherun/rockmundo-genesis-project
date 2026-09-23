@@ -37,6 +37,14 @@ describe('curated donor garments', () => {
     });
   });
 
+  it('reads curated premium material finishes', () => {
+    const jacket = item({
+      material_config: { fabric: 'plain', finish: 'leather' },
+      render_config: { curatedSource: { kind: 'avatar-part', style: 'punk', part: 'body', color: '#111111', fabric: 'plain' }, curatedFinish: 'leather' },
+    });
+    expect(curatedDonorSource(jacket)?.finish).toBe('leather');
+  });
+
   it('supports safe textile variants on validated donor geometry', () => {
     const tartan = item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'punk', part: 'legs', color: '#9f2634', fabric: 'plaid' } } });
     const trainers = item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'casual', part: 'feet', color: '#ece9df', fabric: 'canvas' } } });
