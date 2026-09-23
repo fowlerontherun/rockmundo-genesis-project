@@ -115,6 +115,54 @@ export function applyAvatarSkinQuality(
   material.needsUpdate = true;
 }
 
+
+
+function hairTextureSize(quality: AvatarVisualQuality) {
+  if (quality === 'ultra') return 512;
+  if (quality === 'high') return 256;
+  if (quality === 'balanced') return 128;
+  return 0;
+}
+
+export function avatarHairNormalTexture(quality: AvatarVisualQuality) {
+  const size = hairTextureSize(quality);
+  if (!size) return null;
+  const profile = avatarQualityProfile(quality);
+  const pixels = new Uint8Array(size * size * 4);
+  const normal = new T.Vector3();
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const strand = Math.sin((x / size) * Math.PI * 54) * .035;
+      const broken = (noise(x, Math.floor(y / 3), 991) - .5) * .018;
+      normal.set(-(strand + broken), 0, 1).normalize();
+      const offset = (y * size + x) * 4;
+      pixels[offset] = Math.round((normal.x * .5 + .5) * 255);
+      pixels[offset + 1] = Math.round((normal.y * .5 + .5) * 255);
+      pixels[offset + 2] = Math.round((normal.z * .5 + .5) * 255);
+      pixels[offset + 3] = 255;
+    }
+  }
+  return texture(`avatar-hair-normal-${quality}`, pixels, size, profile.anisotropy);
+}
+
+export function avatarHairRoughnessTexture(quality: AvatarVisualQuality) {
+  const size = hairTextureSize(quality);
+  if (!size) return null;
+  const profile = avatarQualityProfile(quality);
+  const pixels = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const strand = (Math.sin((x / size) * Math.PI * 42) * .5 + .5) * 22;
+      const flyaway = noise(x, y, 1771) * 18;
+      const value = T.MathUtils.clamp(150 + strand + flyaway, 120, 205);
+      const offset = (y * size + x) * 4;
+      pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = Math.round(value);
+      pixels[offset + 3] = 255;
+    }
+  }
+  return texture(`avatar-hair-roughness-${quality}`, pixels, size, profile.anisotropy);
+}
+
 export function applyAvatarEyeQuality(material: T.MeshStandardMaterial, quality: AvatarVisualQuality) {
   if (quality === 'crowd') return;
   material.roughness = quality === 'ultra' ? .18 : .24;
@@ -125,8 +173,16 @@ export function applyAvatarEyeQuality(material: T.MeshStandardMaterial, quality:
 
 export function applyAvatarHairQuality(material: T.MeshStandardMaterial, quality: AvatarVisualQuality) {
   if (quality === 'crowd') return;
-  material.roughness = quality === 'ultra' ? .5 : quality === 'high' ? .56 : .64;
+  material.roughness = quality === 'ultra' ? .46 : quality === 'high' ? .53 : .62;
   material.metalness = 0;
-  material.envMapIntensity = quality === 'ultra' ? 1.15 : 1.02;
+  material.envMapIntensity = quality === 'ultra' ? 1.22 : quality === 'high' ? 1.08 : 1.0;
+  const normal = avatarHairNormalTexture(quality);
+  const roughness = avatarHairRoughnessTexture(quality);
+  if (normal) {
+    material.normalMap = normal;
+    const strength = quality === 'ultra' ? .42 : quality === 'high' ? .34 : .24;
+    material.normalScale.set(strength, strength);
+  }
+  if (roughness) material.roughnessMap = roughness;
   material.needsUpdate = true;
 }
