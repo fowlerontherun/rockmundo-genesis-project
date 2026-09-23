@@ -3,7 +3,7 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import { useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
 import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
-import { defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
+import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
 import { HeadStyling } from './HeadStyling';
 import { AccessoryStyling } from './AccessoryStyling';
 import { OwnedAccessories } from './OwnedAccessories';
@@ -55,6 +55,8 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <div className="player-model-editor__choices" role="group" aria-label="Body frame">{(['masculine', 'feminine'] as const).map(frame => <button key={frame} type="button" aria-pressed={draft.body.frame === frame} onClick={() => setBody({ frame })}>{frame === 'masculine' ? 'Masculine' : 'Feminine'}</button>)}</div>
           <label className="player-model-editor__range">Height <output>{Math.round(draft.body.height * 178)} cm</output><input type="range" min="0.9" max="1.1" step="0.01" value={draft.body.height} onChange={event => setBody({ height: Number(event.target.value) })} /></label>
           <label className="player-model-editor__range">Build <output>{Math.round(draft.body.build * 100)}%</output><input type="range" min="0.85" max="1.15" step="0.01" value={draft.body.build} onChange={event => setBody({ build: Number(event.target.value) })} /></label>
+          <div className="player-model-editor__body-option"><span>Muscle definition</span><div className="player-model-editor__choices" role="group" aria-label="Muscle definition">{BODY_MUSCLE_TYPES.map(muscle => <button key={muscle} type="button" aria-pressed={(draft.body.muscle ?? 'natural') === muscle} onClick={() => setBody({ muscle })}>{BODY_MUSCLE_LABELS[muscle]}</button>)}</div></div>
+          <p className="player-model-editor__hint">Build controls body width; muscle definition is a separate Avatar V2 body shape.</p>
           <div className="player-model-editor__skin"><span>Skin tone</span><div role="group" aria-label="Skin tones">{SKIN_COLORS.map((color, index) => <button key={color} type="button" aria-label={`Skin tone ${index + 1}`} aria-pressed={draft.body.skin === color} style={{ backgroundColor: color }} onClick={() => setBody({ skin: color })} />)}<input type="color" aria-label="Custom skin tone" value={draft.body.skin} onChange={event => setBody({ skin: event.target.value })} /></div></div>
           <HeadStyling appearance={draft} onChange={change} />
           <AccessoryStyling appearance={draft} onChange={change} richClothing={richClothing} />
