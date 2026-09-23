@@ -9,7 +9,8 @@
       "Avoid photoreal materials and micro-detail",
       "Validate on masculine and feminine frames",
       "Validate singing, guitar/bass and drummer poses where relevant",
-      "No detached geometry or major clipping"
+      "No detached geometry or major clipping",
+      "Prefer validated avatar donor geometry for safe variants; use bespoke skinned GLBs only where silhouette/detail requires it"
     ]
   },
   "packs": [
@@ -31,7 +32,8 @@
           ],
           "material": "cotton",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.plain-black-tee",
@@ -45,7 +47,8 @@
           ],
           "material": "cotton",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.plain-white-tee",
@@ -59,7 +62,8 @@
           ],
           "material": "cotton",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.vintage-charcoal-tee",
@@ -73,7 +77,8 @@
           ],
           "material": "cotton",
           "fit": "relaxed",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.dark-slim-jeans",
@@ -88,7 +93,8 @@
           ],
           "material": "denim",
           "fit": "slim",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.blue-straight-jeans",
@@ -103,7 +109,8 @@
           ],
           "material": "denim",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.black-straight-jeans",
@@ -117,7 +124,8 @@
           ],
           "material": "denim",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.canvas-trainers",
@@ -133,7 +141,8 @@
           ],
           "material": "canvas",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.black-boots",
@@ -147,7 +156,8 @@
           ],
           "material": "leather",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.starter.brown-boots",
@@ -162,7 +172,8 @@
           ],
           "material": "leather",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         }
       ]
     },
@@ -183,7 +194,8 @@
           ],
           "material": "cotton",
           "fit": "slim",
-          "status": "planned"
+          "status": "planned",
+          "production": "bespoke-mesh-required"
         },
         {
           "assetKey": "clothing.punk.safety-pin-tee",
@@ -199,7 +211,8 @@
           ],
           "material": "cotton",
           "fit": "regular",
-          "status": "planned"
+          "status": "planned",
+          "production": "bespoke-mesh-required"
         },
         {
           "assetKey": "clothing.punk.red-tartan-trousers",
@@ -215,7 +228,8 @@
           ],
           "material": "wool",
           "fit": "slim",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.punk.black-tartan-trousers",
@@ -231,7 +245,8 @@
           ],
           "material": "wool",
           "fit": "slim",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.punk.studded-denim-vest",
@@ -246,7 +261,8 @@
           ],
           "material": "denim",
           "fit": "regular",
-          "status": "planned"
+          "status": "planned",
+          "production": "bespoke-mesh-required"
         },
         {
           "assetKey": "clothing.punk.biker-jacket",
@@ -261,7 +277,8 @@
           ],
           "material": "leather",
           "fit": "slim",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.punk.patch-jacket",
@@ -277,7 +294,8 @@
           ],
           "material": "denim",
           "fit": "regular",
-          "status": "planned"
+          "status": "planned",
+          "production": "bespoke-mesh-required"
         },
         {
           "assetKey": "clothing.punk.combat-boots",
@@ -292,7 +310,8 @@
           ],
           "material": "leather",
           "fit": "regular",
-          "status": "planned"
+          "status": "published",
+          "production": "validated-avatar-donor"
         },
         {
           "assetKey": "clothing.punk.double-eyelet-belt",
@@ -307,7 +326,8 @@
           ],
           "material": "leather",
           "fit": "regular",
-          "status": "planned"
+          "status": "planned",
+          "production": "bespoke-mesh-required"
         },
         {
           "assetKey": "clothing.punk.wrist-cuffs",
@@ -322,7 +342,8 @@
           ],
           "material": "leather",
           "fit": "regular",
-          "status": "planned"
+          "status": "planned",
+          "production": "bespoke-mesh-required"
         }
       ]
     }
