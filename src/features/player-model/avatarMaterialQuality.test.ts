@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultAppearance } from './appearance';
-import { avatarHairNormalTexture, avatarHairRoughnessTexture, avatarSkinNormalTexture, avatarSkinRoughnessTexture } from './avatarMaterialQuality';
+import { applyAvatarHairQuality, avatarHairNormalTexture, avatarHairRoughnessTexture, avatarSkinNormalTexture, avatarSkinRoughnessTexture, createAvatarHairTextureCache } from './avatarMaterialQuality';
 
 describe('avatar material quality', () => {
   it('uses high-resolution skin maps for close-up quality tiers', () => {
@@ -32,6 +32,18 @@ describe('avatar material quality', () => {
     high?.dispose();
     ultra?.dispose();
     cinematic?.dispose();
+  });
+
+  it('reuses one high-resolution hair surface across avatar material groups', () => {
+    const cache = createAvatarHairTextureCache('ultra');
+    const first = new (require('three').MeshStandardMaterial)();
+    const second = new (require('three').MeshStandardMaterial)();
+    applyAvatarHairQuality(first, 'ultra', cache);
+    applyAvatarHairQuality(second, 'ultra', cache);
+    expect(first.normalMap).toBe(second.normalMap);
+    expect(first.roughnessMap).toBe(second.roughnessMap);
+    cache.normal?.dispose();
+    cache.roughness?.dispose();
   });
 
   it('adds a separate roughness surface at half skin-normal resolution', () => {
