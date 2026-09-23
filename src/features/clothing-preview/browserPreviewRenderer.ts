@@ -1,8 +1,12 @@
 import * as T from 'three';
 import type { ClothingItem } from '@/hooks/useSkinStore';
-import type { ClothingPreviewVariant } from './clothingPreview';
+import { clothingPreviewVariants, type ClothingPreviewVariant } from './clothingPreview';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
 import { CLOTHING_PREVIEW_RENDERER_VERSION, CLOTHING_TURNTABLE_VIEWS, type ClothingPreviewViewKey } from './previewManifest';
+import { STYLES, defaultAppearance, modelFile } from '@/features/player-model/appearance';
+import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary } from '@/features/player-model/model';
+import { curatedDonorSource } from './curatedDonorGarments';
+import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable } from './curatedGarmentAssets';
 
 export interface RenderedPreviewFrame {
   key: ClothingPreviewViewKey;
@@ -123,9 +127,39 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
   floor.receiveShadow = true;
   scene.add(floor);
 
-  addMannequin(scene);
-  const garment = buildProceduralGarment(item, options.variant);
-  scene.add(garment);
+  let garment: T.Group | null = null;
+  let curatedAvatar: T.Object3D | null = null;
+  let library: ModelLibrary | null = null;
+
+  if (isCuratedClothing(item)) {
+    if (!isCuratedClothingRenderable(item)) throw new Error('Curated clothing must be validated before preview generation.');
+    const frame = item.supported_frames?.includes('masculine') ? 'masculine' : 'feminine';
+    const appearance = defaultAppearance(item.id);
+    appearance.body.frame = frame;
+    appearance.body.height = 1;
+    appearance.body.build = 1;
+    const variant = options.variant || clothingPreviewVariants(item)[0];
+    const garmentFile = curatedGarmentFile(item, frame);
+    const files = STYLES.map(style => modelFile(frame, style));
+    if (garmentFile) files.push(garmentFile);
+    library = await loadModelLibrary(files);
+    const donor = curatedDonorSource(item);
+    curatedAvatar = assemblePlayerModel(library, appearance, [], donor ? [{ item, variant }] : []);
+    curatedAvatar.traverse(object => {
+      if (!(object instanceof T.Mesh)) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+    });
+    scene.add(curatedAvatar);
+    if (!donor) {
+      garment = buildCuratedGarment(library, curatedAvatar, item, frame);
+      scene.add(garment);
+    }
+  } else {
+    addMannequin(scene);
+    garment = buildProceduralGarment(item, options.variant);
+    scene.add(garment);
+  }
 
   const result: RenderedPreviewFrame[] = [];
   try {
@@ -142,8 +176,16 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
     }
     return result;
   } finally {
-    scene.remove(garment);
-    disposeProceduralGarment(garment);
+    if (garment) {
+      scene.remove(garment);
+      if (isCuratedClothing(item)) disposeCuratedGarment(garment);
+      else disposeProceduralGarment(garment);
+    }
+    if (curatedAvatar) {
+      scene.remove(curatedAvatar);
+      disposeModel(curatedAvatar);
+    }
+    library?.forEach(disposeModel);
     scene.traverse(object => {
       if (!(object instanceof T.Mesh)) return;
       object.geometry.dispose();
