@@ -1,0 +1,330 @@
+{
+  "schema": "rockmundo.curated-skin-manifest",
+  "schemaVersion": 1,
+  "style": {
+    "artDirection": "Rockmundo stylised low-poly stage avatar",
+    "rules": [
+      "Readable silhouette at full-body camera distance",
+      "Match existing avatar proportions and rig",
+      "Avoid photoreal materials and micro-detail",
+      "Validate on masculine and feminine frames",
+      "Validate singing, guitar/bass and drummer poses where relevant",
+      "No detached geometry or major clipping"
+    ]
+  },
+  "packs": [
+    {
+      "key": "starter-wardrobe",
+      "name": "Starter Wardrobe",
+      "items": [
+        {
+          "assetKey": "clothing.starter.logo-tee",
+          "name": "Rockmundo Logo Tee",
+          "category": "t-shirt",
+          "slot": "top",
+          "rarity": "common",
+          "price": 0,
+          "palette": [
+            "#111111",
+            "#f2f0e8",
+            "#b52f3f"
+          ],
+          "material": "cotton",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.plain-black-tee",
+          "name": "Plain Black Tee",
+          "category": "t-shirt",
+          "slot": "top",
+          "rarity": "common",
+          "price": 75,
+          "palette": [
+            "#151515"
+          ],
+          "material": "cotton",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.plain-white-tee",
+          "name": "Plain White Tee",
+          "category": "t-shirt",
+          "slot": "top",
+          "rarity": "common",
+          "price": 75,
+          "palette": [
+            "#ece9df"
+          ],
+          "material": "cotton",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.vintage-charcoal-tee",
+          "name": "Vintage Charcoal Tee",
+          "category": "t-shirt",
+          "slot": "top",
+          "rarity": "common",
+          "price": 100,
+          "palette": [
+            "#3b3d42"
+          ],
+          "material": "cotton",
+          "fit": "relaxed",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.dark-slim-jeans",
+          "name": "Dark Slim Jeans",
+          "category": "jeans",
+          "slot": "bottom",
+          "rarity": "common",
+          "price": 150,
+          "palette": [
+            "#20252d",
+            "#111318"
+          ],
+          "material": "denim",
+          "fit": "slim",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.blue-straight-jeans",
+          "name": "Blue Straight Jeans",
+          "category": "jeans",
+          "slot": "bottom",
+          "rarity": "common",
+          "price": 150,
+          "palette": [
+            "#40566d",
+            "#27384b"
+          ],
+          "material": "denim",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.black-straight-jeans",
+          "name": "Black Straight Jeans",
+          "category": "jeans",
+          "slot": "bottom",
+          "rarity": "common",
+          "price": 150,
+          "palette": [
+            "#17191d"
+          ],
+          "material": "denim",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.canvas-trainers",
+          "name": "Canvas Trainers",
+          "category": "trainers",
+          "slot": "footwear",
+          "rarity": "common",
+          "price": 120,
+          "palette": [
+            "#ece9df",
+            "#171717",
+            "#a92736"
+          ],
+          "material": "canvas",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.black-boots",
+          "name": "Black Boots",
+          "category": "boots",
+          "slot": "footwear",
+          "rarity": "common",
+          "price": 180,
+          "palette": [
+            "#151515"
+          ],
+          "material": "leather",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.starter.brown-boots",
+          "name": "Brown Boots",
+          "category": "boots",
+          "slot": "footwear",
+          "rarity": "common",
+          "price": 180,
+          "palette": [
+            "#513a29",
+            "#2e231c"
+          ],
+          "material": "leather",
+          "fit": "regular",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "key": "punk-essentials",
+      "name": "Punk Essentials",
+      "items": [
+        {
+          "assetKey": "clothing.punk.ripped-black-tee",
+          "name": "Ripped Black Tee",
+          "category": "t-shirt",
+          "slot": "top",
+          "rarity": "uncommon",
+          "price": 250,
+          "palette": [
+            "#111111",
+            "#2b2b2b"
+          ],
+          "material": "cotton",
+          "fit": "slim",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.safety-pin-tee",
+          "name": "Safety Pin Tee",
+          "category": "t-shirt",
+          "slot": "top",
+          "rarity": "uncommon",
+          "price": 300,
+          "palette": [
+            "#111111",
+            "#ede9df",
+            "#a82b39"
+          ],
+          "material": "cotton",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.red-tartan-trousers",
+          "name": "Red Tartan Trousers",
+          "category": "pants",
+          "slot": "bottom",
+          "rarity": "rare",
+          "price": 450,
+          "palette": [
+            "#9f2634",
+            "#191919",
+            "#d2b79d"
+          ],
+          "material": "wool",
+          "fit": "slim",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.black-tartan-trousers",
+          "name": "Black Tartan Trousers",
+          "category": "pants",
+          "slot": "bottom",
+          "rarity": "rare",
+          "price": 450,
+          "palette": [
+            "#181818",
+            "#515151",
+            "#8c2431"
+          ],
+          "material": "wool",
+          "fit": "slim",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.studded-denim-vest",
+          "name": "Studded Denim Vest",
+          "category": "vest",
+          "slot": "outerwear",
+          "rarity": "rare",
+          "price": 550,
+          "palette": [
+            "#263747",
+            "#111111"
+          ],
+          "material": "denim",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.biker-jacket",
+          "name": "Biker Jacket",
+          "category": "jacket",
+          "slot": "outerwear",
+          "rarity": "rare",
+          "price": 700,
+          "palette": [
+            "#111111",
+            "#68262d"
+          ],
+          "material": "leather",
+          "fit": "slim",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.patch-jacket",
+          "name": "Patch Jacket",
+          "category": "jacket",
+          "slot": "outerwear",
+          "rarity": "epic",
+          "price": 900,
+          "palette": [
+            "#171717",
+            "#384653",
+            "#8c2632"
+          ],
+          "material": "denim",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.combat-boots",
+          "name": "Combat Boots",
+          "category": "boots",
+          "slot": "footwear",
+          "rarity": "uncommon",
+          "price": 350,
+          "palette": [
+            "#111111",
+            "#332a24"
+          ],
+          "material": "leather",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.double-eyelet-belt",
+          "name": "Double Eyelet Belt",
+          "category": "accessory",
+          "slot": "accessory",
+          "rarity": "uncommon",
+          "price": 225,
+          "palette": [
+            "#111111",
+            "#8b8b8b"
+          ],
+          "material": "leather",
+          "fit": "regular",
+          "status": "planned"
+        },
+        {
+          "assetKey": "clothing.punk.wrist-cuffs",
+          "name": "Studded Wrist Cuffs",
+          "category": "accessory",
+          "slot": "accessory",
+          "rarity": "uncommon",
+          "price": 200,
+          "palette": [
+            "#111111",
+            "#8a8a8a"
+          ],
+          "material": "leather",
+          "fit": "regular",
+          "status": "planned"
+        }
+      ]
+    }
+  ]
+}
