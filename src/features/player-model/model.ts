@@ -331,7 +331,7 @@ export function assemblePlayerModel(
     addAccessories(result, appearance, headBone, richClothing, quality);
   }
   addStarterLogoTee(result, appearance, bones, richClothing);
-  addCuratedSkinDetails(result, bones, richClothing);
+  addCuratedSkinDetails(result, bones, richClothing, quality);
   addTattoos(result, tattoos, bones);
   result.updateMatrixWorld(true);
   return result;
