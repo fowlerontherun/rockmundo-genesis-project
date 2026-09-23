@@ -5,6 +5,7 @@ import { demoAssetUrl } from '@/features/gig-demo-3d/assets';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
+import { curatedDonorSource } from './curatedDonorGarments';
 
 export type CuratedAssetStatus = NonNullable<ClothingItem['curated_asset_status']>;
 
@@ -19,6 +20,7 @@ export function isCuratedClothingRenderable(item: ClothingItem) {
 }
 
 export function curatedGarmentFile(item: ClothingItem, frame: PlayerAppearance['body']['frame']) {
+  if (curatedDonorSource(item)) return null;
   if (!item.curated_asset_key) return null;
   const safe = item.curated_asset_key.replace(/[^a-z0-9._-]/gi, '-');
   return `clothing/${frame}/${safe}.glb`;

@@ -17,6 +17,7 @@ import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
 import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from '@/features/clothing-preview/curatedGarmentAssets';
+import { curatedDonorSource } from '@/features/clothing-preview/curatedDonorGarments';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
@@ -143,6 +144,8 @@ export class Musician {
             this.root.updateMatrixWorld(true);
             for (const resolved of richClothing) {
                 if (isCuratedClothing(resolved.item)) {
+                    if (curatedDonorSource(resolved.item))
+                        continue;
                     if (!appearance || !curatedLibrary || !isCuratedClothingRenderable(resolved.item))
                         continue;
                     try {
