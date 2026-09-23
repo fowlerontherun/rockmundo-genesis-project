@@ -138,3 +138,66 @@ export function curatedBumpScale(finish: CuratedFinish) {
   if (finish === 'vintage-cotton') return .012;
   return .009;
 }
+
+
+/**
+ * Greyscale colour modulation used by curated skins. Material colour still
+ * defines the selected variant; this map adds visible stitching, panel breaks,
+ * faded wear and weave contrast so the item reads at normal gameplay distance.
+ */
+export function curatedAlbedoTexture(assetKey: string, finish: CuratedFinish) {
+  const size = 256;
+  const seed = hash(assetKey) + 211;
+  const pixels = rgba(size, (x, y) => {
+    const n = noise(x, y, seed);
+    let value = 238 + (n - .5) * 8;
+
+    if (finish === 'cotton' || finish === 'vintage-cotton') {
+      const knit = ((x % 8) < 2 ? -5 : 2) + ((y % 8) < 2 ? -4 : 1);
+      const collarBand = y % 126 < 4 ? -14 : 0;
+      value += knit + collarBand;
+      if (finish === 'vintage-cotton') {
+        value -= noise(Math.floor(x / 20), Math.floor(y / 20), seed + 9) * 22;
+      }
+    }
+
+    if (finish === 'denim') {
+      value = 214 + (((x + y) % 12) < 4 ? 18 : -4) + (n - .5) * 10;
+      if (x % 96 < 3 || y % 118 < 3) value -= 25;
+      if (assetKey.includes('jeans') && Math.abs(((y + Math.floor(x * .25)) % 90) - 45) < 3) value += 18;
+    }
+
+    if (finish === 'tartan') {
+      value = 225;
+      if (x % 72 < 20) value -= 44;
+      if (y % 72 < 20) value -= 34;
+      if (x % 18 < 3 || y % 18 < 3) value -= 24;
+      if (x % 36 >= 18 && y % 36 >= 18) value += 10;
+    }
+
+    if (finish === 'canvas') {
+      value = 228 + ((x % 6) < 2 ? 10 : -2) + ((y % 6) < 2 ? 8 : -2);
+      if (y % 92 < 3) value -= 18;
+    }
+
+    if (finish === 'leather' || finish === 'polished-leather') {
+      value = finish === 'polished-leather' ? 246 : 232;
+      value += (n - .5) * (finish === 'polished-leather' ? 6 : 12);
+      if (assetKey.includes('biker-jacket')) {
+        if (Math.abs(((x + y) % 128) - 64) < 3) value -= 34;
+        if (x % 112 < 3) value -= 22;
+        if (Math.abs(x - size / 2) < 3) value += 20;
+      }
+      if (assetKey.includes('boots')) {
+        if (y % 92 < 3) value -= 24;
+        if (Math.abs(((x + y) % 144) - 72) < 3) value -= 16;
+        if (x > 96 && x < 160 && y > 80 && y < 176 && x % 14 < 3) value += 14;
+      }
+    }
+
+    return value;
+  });
+  const texture = dataTexture(`curated-albedo-${assetKey}`, pixels, size);
+  texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
