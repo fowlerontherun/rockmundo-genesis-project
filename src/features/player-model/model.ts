@@ -35,11 +35,16 @@ function findPlayerBone(bones: Map<string, T.Bone>, names: string[]) {
 
 function rockmundoWordmarkTexture() {
   const glyphs: Record<string, string[]> = {
-    R:['110','101','110','101','101'], O:['111','101','101','101','111'], C:['111','100','100','100','111'],
-    K:['101','101','110','101','101'], M:['101','111','111','101','101'], U:['101','101','101','101','111'],
-    N:['101','111','111','111','101'], D:['110','101','101','101','110'],
+    R:['11110','10001','10001','11110','10100','10010','10001'],
+    O:['01110','10001','10001','10001','10001','10001','01110'],
+    C:['01111','10000','10000','10000','10000','10000','01111'],
+    K:['10001','10010','10100','11000','10100','10010','10001'],
+    M:['10001','11011','10101','10101','10001','10001','10001'],
+    U:['10001','10001','10001','10001','10001','10001','01110'],
+    N:['10001','11001','11001','10101','10011','10011','10001'],
+    D:['11110','10001','10001','10001','10001','10001','11110'],
   };
-  const word='ROCKMUNDO', scale=2, gap=1, glyphW=3, glyphH=5;
+  const word='ROCKMUNDO', scale=4, gap=1, glyphW=5, glyphH=7;
   const width=(word.length*(glyphW+gap)-gap)*scale, height=glyphH*scale;
   const data=new Uint8Array(width*height*4);
   for(let i=0;i<word.length;i++) {
@@ -47,12 +52,17 @@ function rockmundoWordmarkTexture() {
     for(let y=0;y<glyphH;y++) for(let x=0;x<glyphW;x++) if(glyph[y][x]==='1') {
       for(let sy=0;sy<scale;sy++) for(let sx=0;sx<scale;sx++) {
         const px=(i*(glyphW+gap)+x)*scale+sx, py=(glyphH-1-y)*scale+sy, index=(py*width+px)*4;
-        data[index]=238; data[index+1]=232; data[index+2]=219; data[index+3]=255;
+        data[index]=244; data[index+1]=239; data[index+2]=226; data[index+3]=255;
       }
     }
   }
   const texture=new T.DataTexture(data,width,height,T.RGBAFormat);
-  texture.name='RockmundoWordmark'; texture.colorSpace=T.SRGBColorSpace; texture.magFilter=T.NearestFilter; texture.minFilter=T.LinearFilter; texture.needsUpdate=true;
+  texture.name='RockmundoWordmarkHD';
+  texture.colorSpace=T.SRGBColorSpace;
+  texture.magFilter=T.LinearFilter;
+  texture.minFilter=T.LinearMipmapLinearFilter;
+  texture.generateMipmaps=true;
+  texture.needsUpdate=true;
   return texture;
 }
 
