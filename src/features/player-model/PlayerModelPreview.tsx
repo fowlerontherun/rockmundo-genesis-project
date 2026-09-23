@@ -82,8 +82,24 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
           },
           rotate: angle => { camera.position.sub(controls!.target).applyAxisAngle(new T.Vector3(0, 1, 0), angle).add(controls!.target); controls!.update(); },
           zoom: factor => { const offset = camera.position.clone().sub(controls!.target); offset.setLength(T.MathUtils.clamp(offset.length() * factor, controls!.minDistance, 7)); camera.position.copy(controls!.target).add(offset); controls!.update(); },
-          reset: () => { controls!.minDistance = 2.4; controls!.reset(); },
-          focusHead: () => { controls!.minDistance = .65; controls!.target.set(0, 1.56 * latest.current.appearance.body.height, 0); camera.position.copy(controls!.target).add(new T.Vector3(.1, .06, 1.05)); controls!.update(); },
+          reset: () => {
+            controls!.minDistance = 2.4;
+            camera.fov = 35;
+            camera.updateProjectionMatrix();
+            if (renderer) renderer.toneMappingExposure = 1.3;
+            faceFill.intensity = visualQuality === 'ultra' ? 1.1 : .8;
+            controls!.reset();
+          },
+          focusHead: () => {
+            controls!.minDistance = .62;
+            controls!.target.set(0, 1.56 * latest.current.appearance.body.height, 0);
+            camera.fov = visualQuality === 'ultra' ? 27 : 29;
+            camera.updateProjectionMatrix();
+            camera.position.copy(controls!.target).add(new T.Vector3(.08, .035, .92));
+            if (renderer) renderer.toneMappingExposure = 1.18;
+            faceFill.intensity = visualQuality === 'ultra' ? 1.42 : 1.12;
+            controls!.update();
+          },
         };
         api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos); setStatus('ready');
       }).catch(() => { if (alive) setStatus('error'); });
