@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { PlayerAppearance } from './appearance';
 import { isScalpHair } from './hair';
+import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 
 export interface HeadAccessorySpec {
   slot: 'headwear' | 'eyewear';
@@ -29,12 +30,22 @@ function lensShape(style: string, w: number, h: number): T.Shape {
 
 /** Starter geometry is authored around the face in rest world space, then
  * attached to Head by the shared fitting-room and stage assembly. */
-export function buildHeadAccessory(spec: HeadAccessorySpec, bounds: T.Box3): T.Group {
+export function buildHeadAccessory(
+  spec: HeadAccessorySpec,
+  bounds: T.Box3,
+  quality: AvatarVisualQuality = 'balanced',
+): T.Group {
+  const profile = avatarQualityProfile(quality);
   const group = new T.Group(); group.name = `avatar-${spec.slot}`;
   group.userData.style = spec.style;
   const size = bounds.getSize(new T.Vector3()), c = bounds.getCenter(new T.Vector3());
   const w = size.x, h = size.y, d = size.z, top = bounds.max.y;
-  const material = new T.MeshStandardMaterial({ color: spec.color, roughness: spec.slot === 'headwear' ? .88 : .3, metalness: spec.slot === 'eyewear' ? .45 : 0 });
+  const material = new T.MeshStandardMaterial({
+    color: spec.color,
+    roughness: spec.slot === 'headwear' ? .86 : (quality === 'ultra' ? .2 : .28),
+    metalness: spec.slot === 'eyewear' ? .5 : 0,
+    envMapIntensity: spec.slot === 'eyewear' ? (quality === 'ultra' ? 1.5 : 1.2) : .9,
+  });
   material.name = 'AvatarAccessory';
   const add = (geometry: T.BufferGeometry, name: string, x: number, y: number, z: number, mat: T.Material = material) => {
     const mesh = new T.Mesh(geometry, mat); mesh.name = name; mesh.position.set(x, y, z);
@@ -43,14 +54,27 @@ export function buildHeadAccessory(spec: HeadAccessorySpec, bounds: T.Box3): T.G
   if (spec.slot === 'eyewear') {
     const eyeY = top - h * .405, front = bounds.max.z + d * .012;
     const lensW = w * .19, lensH = h * (spec.style === 'rectangle' ? .072 : .098);
-    const lensMaterial = new T.MeshPhysicalMaterial({ color: spec.lensColor ?? '#40566d', transparent: true, opacity: spec.lenses === 'tinted' ? .72 : .13, roughness: .08, metalness: 0, depthWrite: false, side: T.DoubleSide });
+    const lensMaterial = new T.MeshPhysicalMaterial({
+      color: spec.lensColor ?? '#40566d',
+      transparent: true,
+      opacity: spec.lenses === 'tinted' ? .72 : .13,
+      roughness: quality === 'ultra' ? .035 : .07,
+      metalness: 0,
+      clearcoat: quality === 'crowd' ? 0 : 1,
+      clearcoatRoughness: quality === 'ultra' ? .025 : .06,
+      ior: 1.45,
+      envMapIntensity: quality === 'ultra' ? 1.6 : 1.25,
+      depthWrite: false,
+      side: T.DoubleSide,
+    });
     lensMaterial.name = 'AvatarLens';
     for (const side of [-1, 1]) {
       const shape = lensShape(spec.style, lensW, lensH);
-      const points = shape.getPoints(32).map(p => new T.Vector3(p.x, p.y, 0));
+      const curvePoints = quality === 'ultra' ? 64 : quality === 'high' ? 48 : 32;
+      const points = shape.getPoints(curvePoints).map(p => new T.Vector3(p.x, p.y, 0));
       const curve = new T.CatmullRomCurve3(points, true);
-      add(new T.TubeGeometry(curve, 64, w * (spec.style === 'wayfarer' ? .015 : .010), 6, true), `glasses-frame-${side}`, c.x + side * w * .235, eyeY, front);
-      add(new T.ShapeGeometry(shape, 32), `glasses-lens-${side}`, c.x + side * w * .235, eyeY, front, lensMaterial).castShadow = false;
+      add(new T.TubeGeometry(curve, Math.max(48, profile.accessorySegments * 3), w * (spec.style === 'wayfarer' ? .015 : .010), Math.max(6, Math.floor(profile.accessorySegments / 2)), true), `glasses-frame-${side}`, c.x + side * w * .235, eyeY, front);
+      add(new T.ShapeGeometry(shape, curvePoints), `glasses-lens-${side}`, c.x + side * w * .235, eyeY, front, lensMaterial).castShadow = false;
       const length = Math.max(d * .60, front - c.z);
       const templeX = c.x + side * w * .43;
       add(new T.BoxGeometry(w * .016, h * .020, length), `glasses-arm-${side}`, templeX, eyeY + h * .005, front - length * .5);
@@ -62,20 +86,20 @@ export function buildHeadAccessory(spec: HeadAccessorySpec, bounds: T.Box3): T.G
   } else {
     const bottom = top - h * .20, rx = w * .56, rz = d * .57;
     const ring = (name: string, radius: number, y: number, tube: number, mat = material) => {
-      const mesh = add(new T.TorusGeometry(radius, tube, 8, 48), name, c.x, y, c.z, mat);
+      const mesh = add(new T.TorusGeometry(radius, tube, Math.max(8, Math.floor(profile.accessorySegments / 2)), Math.max(48, profile.accessorySegments * 3)), name, c.x, y, c.z, mat);
       mesh.rotation.x = Math.PI / 2; mesh.scale.y = rz / rx; return mesh;
     };
     const dome = (height: number) => {
-      const mesh = add(new T.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), 'hat-crown', c.x, bottom, c.z);
+      const mesh = add(new T.SphereGeometry(1, Math.max(24, profile.accessorySegments * 2), Math.max(12, profile.accessorySegments), 0, Math.PI * 2, 0, Math.PI / 2), 'hat-crown', c.x, bottom, c.z);
       mesh.scale.set(rx, height, rz); return mesh;
     };
     if (spec.style === 'cap' || spec.style === 'beanie') {
       dome(h * (spec.style === 'cap' ? .29 : .36));
       ring('hat-band', rx * .96, bottom + h * .025, h * (spec.style === 'beanie' ? .045 : .018));
       if (spec.style === 'cap') {
-        const visor = add(new T.SphereGeometry(1, 32, 12), 'cap-visor', c.x, bottom, c.z + rz * .82);
+        const visor = add(new T.SphereGeometry(1, Math.max(24, profile.accessorySegments * 2), Math.max(12, profile.accessorySegments)), 'cap-visor', c.x, bottom, c.z + rz * .82);
         visor.scale.set(rx * .93, h * .023, rz * .78);
-        add(new T.SphereGeometry(w * .025, 12, 8), 'cap-button', c.x, bottom + h * .29, c.z);
+        add(new T.SphereGeometry(w * .025, Math.max(12, profile.accessorySegments), Math.max(8, Math.floor(profile.accessorySegments * .7))), 'cap-button', c.x, bottom + h * .29, c.z);
         const seamMaterial = material.clone(); seamMaterial.color.multiplyScalar(.7);
         for (const angle of [-.8, 0, .8]) {
           const points = Array.from({ length: 25 }, (_, i) => {
@@ -87,7 +111,7 @@ export function buildHeadAccessory(spec: HeadAccessorySpec, bounds: T.Box3): T.G
       }
     } else {
       const bucket = spec.style === 'bucket';
-      const crown = add(new T.CylinderGeometry(rx * (bucket ? .85 : .80), rx, h * .30, 32), 'hat-crown', c.x, bottom + h * .15, c.z);
+      const crown = add(new T.CylinderGeometry(rx * (bucket ? .85 : .80), rx, h * .30, Math.max(32, profile.accessorySegments * 2)), 'hat-crown', c.x, bottom + h * .15, c.z);
       crown.scale.z = rz / rx;
       if (!bucket) {
         const points = crown.geometry.attributes.position;
@@ -101,7 +125,7 @@ export function buildHeadAccessory(spec: HeadAccessorySpec, bounds: T.Box3): T.G
         }
         crown.geometry.computeVertexNormals();
       }
-      const brim = new T.RingGeometry(rx * .94, rx * (bucket ? 1.32 : spec.style === 'cowboy' ? 1.65 : 1.48), 48, 3);
+      const brim = new T.RingGeometry(rx * .94, rx * (bucket ? 1.32 : spec.style === 'cowboy' ? 1.65 : 1.48), Math.max(48, profile.accessorySegments * 3), quality === 'ultra' ? 6 : quality === 'high' ? 4 : 3);
       brim.rotateX(-Math.PI / 2); brim.scale(1, 1, rz / rx);
       const vertices = brim.attributes.position;
       for (let i = 0; i < vertices.count; i++) {
