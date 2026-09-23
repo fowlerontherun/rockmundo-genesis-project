@@ -49,7 +49,7 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
     for(const face of skinFaces) {
       const polygon: T.Vector3[]=[];
       for(let i=0;i<3;i++) { const a=face[i],b=face[(i+1)%3]; if(a.y>=hairline) polygon.push(a.clone()); if((a.y>=hairline)!==(b.y>=hairline)) polygon.push(a.clone().lerp(b,(hairline-a.y)/(b.y-a.y))); }
-      for(let i=1;i<polygon.length-1;i++) for(const v of [polygon[0],polygon[i],polygon[i+1]]) points.push(center.x+(v.x-center.x)*1.025,v.y+.003,center.z+(v.z-center.z)*1.025);
+      for(let i=1;i<polygon.length-1;i++) for(const v of [polygon[0],polygon[i],polygon[i+1]]) points.push(center.x+(v.x-center.x)*1.055,v.y+.006,center.z+(v.z-center.z)*1.055);
     }
     if(points.length) {
       const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(points,3));g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(points.length/3*2),2));g.computeVertexNormals();strands.push(g);
@@ -58,7 +58,7 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
     // the clipped cap above. This shallow shell guarantees a closed crown while
     // retaining the face-conforming hairline and stays outside the skin surface.
     const crown=new T.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI*.64).toNonIndexed();
-    crown.scale(rx*1.045,h*.19,rz*1.045); crown.translate(center.x,top-h*.185,center.z-rz*.015); strands.push(crown);
+    crown.scale(rx*1.065,h*.195,rz*1.06); crown.translate(center.x,top-h*.18,center.z-rz*.025); strands.push(crown);
   };
   if(cut !== 'original' && cut !== 'bald') cap();
   if(cut === 'quiff') for(let i=0;i<5;i++) ellipsoid(strands,center.x+(i-2)*rx*.26,top+h*(.045+i*.008),center.z+rz*.34,rx*.27,h*.09,rz*.43,-.16);
@@ -71,7 +71,7 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
       ellipsoid(strands,center.x+Math.cos(angle)*rx*.86,top-length*.56*layer,center.z-Math.sin(angle)*rz*.84,rx*.16,length*.5*layer,rz*.17,cut==='layered_long'?Math.sin(i*.7)*.07:0);
     }
     // Side panels frame the face; the front is deliberately open.
-    for(const side of [-1,1]) ellipsoid(strands,center.x+side*rx*.88,top-length*.58,center.z+rz*.2,rx*.16,length*.48,rz*.2,side*(cut==='layered_long'?.06:0));
+    for(const side of [-1,1]) ellipsoid(strands,center.x+side*rx*.95,top-length*.58,center.z-rz*.03,rx*.15,length*.48,rz*.18,side*(cut==='layered_long'?.06:0));
   }
   if(cut === 'long_waves') {
     for(let i=0;i<13;i++) {
@@ -83,7 +83,7 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
     }
     for(const side of [-1,1]) for(let segment=0;segment<3;segment++) {
       const phase=segment*1.8+side;
-      ellipsoid(strands,center.x+side*rx*(.88+.04*Math.sin(phase)),top-h*(.28+segment*.18),center.z+rz*.18-segment*rz*.03,rx*.15,h*.2,rz*.18,side*Math.sin(phase)*.12);
+      ellipsoid(strands,center.x+side*rx*(.95+.03*Math.sin(phase)),top-h*(.28+segment*.18),center.z-rz*.02-segment*rz*.03,rx*.14,h*.2,rz*.17,side*Math.sin(phase)*.12);
     }
   }
   if(cut === 'ponytail') { ellipsoid(strands,center.x,top-h*.1,center.z-rz*.96,rx*.31,h*.105,rz*.27); for(let i=0;i<4;i++) ellipsoid(strands,center.x+Math.sin(i*.8)*rx*.08,top-h*.15-i*h*.12,center.z-rz*(1.12+i*.045),rx*(.26-i*.02),h*.115,rz*.22); }
