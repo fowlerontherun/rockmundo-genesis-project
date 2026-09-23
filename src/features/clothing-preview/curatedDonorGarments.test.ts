@@ -34,6 +34,7 @@ describe('curated donor garments', () => {
       style: 'casual',
       part: 'body',
       color: '#151515',
+      secondaryColor: undefined,
       fabric: 'plain',
     });
   });
@@ -62,11 +63,12 @@ describe('curated donor garments', () => {
     const top = item();
     const rows = [{
       item: top,
-      variant: { id: 'color-1', label: 'Colour 2', color: '#eeeeee', material: 'stripe', pattern: 'solid' },
+      variant: { id: 'color-1', label: 'Colour 2', color: '#eeeeee', secondaryColor: '#991122', material: 'stripe', pattern: 'solid' },
     }] as any;
     const resolved = curatedDonorForSlot(rows, 'top');
     expect(resolved?.source.color).toBe('#eeeeee');
     expect(resolved?.source.fabric).toBe('stripe');
+    expect(resolved?.source.secondaryColor).toBe('#991122');
   });
 
   it('loads the correct frame-specific donor model for live performance', () => {
