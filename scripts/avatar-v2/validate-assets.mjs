@@ -51,6 +51,7 @@ const closeupBoneAliases = {
 
 const recommendedExpressions = ['visemeAA','visemeEE','visemeIH','visemeOH','visemeOU','mouthFunnel','mouthPucker'];
 const customizationMorphs = ['bodySlim','bodyBroad','faceOval','faceAngular','faceSoft','faceWide'];
+const requiredBodyRegions = ['torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet'];
 
 const expressionAliases = {
   blinkLeft: ['blinkleft','blink_l','eyeBlinkLeft','eye_blink_l'],
@@ -127,6 +128,18 @@ function inspect(gltf) {
   for (const skin of gltf.skins ?? []) for (const joint of skin.joints ?? []) jointIndexes.add(joint);
   const jointNames = [...jointIndexes].map(index => gltf.nodes?.[index]?.name).filter(Boolean);
 
+  const bodyRegions = new Set();
+  for (const node of gltf.nodes ?? []) {
+    if (node.mesh == null) continue;
+    const explicit = String(node.extras?.rockmundoBodyRegion ?? '').toLowerCase();
+    if (requiredBodyRegions.includes(explicit)) bodyRegions.add(explicit);
+    const cleanedName = clean(node.name ?? '');
+    for (const region of requiredBodyRegions) {
+      const cleanedRegion = clean(region);
+      if (cleanedName.includes(`rmv2body${cleanedRegion}`) || cleanedName.includes(`body${cleanedRegion}`)) bodyRegions.add(region);
+    }
+  }
+
   return {
     triangles,
     vertices,
@@ -135,6 +148,7 @@ function inspect(gltf) {
     jointNames,
     morphTargets: [...morphTargets],
     materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
+    bodyRegions: [...bodyRegions],
   };
 }
 
@@ -162,6 +176,9 @@ function validateAsset(gltf, entry) {
   if (entry.lod <= 1) {
     for (const [semantic, aliases] of Object.entries(closeupBoneAliases)) {
       if (!containsAlias(report.jointNames, aliases)) errors.push(`Missing close-up articulation bone: ${semantic}`);
+    }
+    for (const region of requiredBodyRegions) {
+      if (!report.bodyRegions.includes(region)) errors.push(`Missing garment-occlusion body region: ${region}`);
     }
   }
 
