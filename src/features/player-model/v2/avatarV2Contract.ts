@@ -67,6 +67,28 @@ export const AVATAR_V2_RECOMMENDED_BONES = [
   'leftIndexProximal', 'rightIndexProximal',
 ] as const;
 
+export const AVATAR_V2_CLOSEUP_BONE_ALIASES = {
+  leftShoulder: ['leftShoulder', 'shoulder_l', 'clavicle_l', 'mixamorigLeftShoulder'],
+  rightShoulder: ['rightShoulder', 'shoulder_r', 'clavicle_r', 'mixamorigRightShoulder'],
+  leftToes: ['leftToes', 'toe_l', 'toebase_l', 'mixamorigLeftToeBase'],
+  rightToes: ['rightToes', 'toe_r', 'toebase_r', 'mixamorigRightToeBase'],
+  leftThumb: ['leftThumbProximal', 'leftHandThumb1', 'thumb_01_l', 'mixamorigLeftHandThumb1'],
+  leftIndex: ['leftIndexProximal', 'leftHandIndex1', 'index_01_l', 'mixamorigLeftHandIndex1'],
+  leftMiddle: ['leftMiddleProximal', 'leftHandMiddle1', 'middle_01_l', 'mixamorigLeftHandMiddle1'],
+  leftRing: ['leftRingProximal', 'leftHandRing1', 'ring_01_l', 'mixamorigLeftHandRing1'],
+  leftLittle: ['leftLittleProximal', 'leftHandPinky1', 'pinky_01_l', 'mixamorigLeftHandPinky1'],
+  rightThumb: ['rightThumbProximal', 'rightHandThumb1', 'thumb_01_r', 'mixamorigRightHandThumb1'],
+  rightIndex: ['rightIndexProximal', 'rightHandIndex1', 'index_01_r', 'mixamorigRightHandIndex1'],
+  rightMiddle: ['rightMiddleProximal', 'rightHandMiddle1', 'middle_01_r', 'mixamorigRightHandMiddle1'],
+  rightRing: ['rightRingProximal', 'rightHandRing1', 'ring_01_r', 'mixamorigRightHandRing1'],
+  rightLittle: ['rightLittleProximal', 'rightHandPinky1', 'pinky_01_r', 'mixamorigRightHandPinky1'],
+} as const;
+
+export const AVATAR_V2_RECOMMENDED_EXPRESSIONS = [
+  'visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU',
+  'mouthFunnel', 'mouthPucker',
+] as const;
+
 export const AVATAR_V2_REQUIRED_EXPRESSIONS = [
   'blinkLeft',
   'blinkRight',
@@ -126,6 +148,41 @@ function collectMorphTargets(scene: T.Object3D) {
   return [...result].sort();
 }
 
+function collectBoneNames(scene: T.Object3D) {
+  const names: string[] = [];
+  scene.traverse(node => {
+    if (node instanceof T.Bone) names.push(node.name);
+  });
+  return names;
+}
+
+function hasAnyAlias(names: string[], aliases: readonly string[]) {
+  const available = new Set(names.map(clean));
+  return aliases.map(clean).some(alias => available.has(alias));
+}
+
+function collectMaterialNames(scene: T.Object3D) {
+  const names = new Set<string>();
+  scene.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    materials.forEach(material => {
+      if (material.name) names.add(material.name);
+    });
+  });
+  return [...names];
+}
+
+function hasMaterialRole(names: string[], role: 'skin' | 'eyes' | 'teeth' | 'tongue') {
+  const patterns = {
+    skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
+    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|cornea)($|[_-])/i,
+    teeth: /rmv2[_-]?teeth|teeth/i,
+    tongue: /rmv2[_-]?tongue|tongue/i,
+  } as const;
+  return names.some(name => patterns[role].test(name));
+}
+
 function hasExpression(names: string[], expression: keyof typeof EXPRESSION_ALIASES) {
   const available = new Set(names.map(clean));
   return [expression, ...EXPRESSION_ALIASES[expression]].map(clean).some(name => available.has(name));
@@ -164,6 +221,19 @@ export function validateAvatarV2Scene(
     }
   }
 
+  const boneNames = collectBoneNames(scene);
+  if (lod <= 1) {
+    for (const [semantic, aliases] of Object.entries(AVATAR_V2_CLOSEUP_BONE_ALIASES)) {
+      if (!hasAnyAlias(boneNames, aliases)) {
+        issues.push({
+          level: 'error',
+          code: `missing-closeup-bone:${semantic}`,
+          message: `LOD${lod} is missing close-up articulation bone: ${semantic}.`,
+        });
+      }
+    }
+  }
+
   const morphTargets = collectMorphTargets(scene);
   for (const expression of AVATAR_V2_REQUIRED_EXPRESSIONS) {
     if (!hasExpression(morphTargets, expression)) {
@@ -172,6 +242,53 @@ export function validateAvatarV2Scene(
         code: `missing-expression:${expression}`,
         message: `Facial expression target is missing: ${expression}.`,
       });
+    }
+  }
+
+  if (lod <= 1) {
+    for (const expression of AVATAR_V2_RECOMMENDED_EXPRESSIONS) {
+      const available = new Set(morphTargets.map(clean));
+      if (![expression].map(clean).some(name => available.has(name))) {
+        issues.push({
+          level: 'warning',
+          code: `missing-performance-expression:${expression}`,
+          message: `Recommended singing expression target is missing: ${expression}.`,
+        });
+      }
+    }
+  }
+
+  const materials = collectMaterialNames(scene);
+  if (lod <= 1) {
+    for (const role of ['skin', 'eyes'] as const) {
+      if (!hasMaterialRole(materials, role)) {
+        issues.push({
+          level: 'error',
+          code: `missing-material-role:${role}`,
+          message: `LOD${lod} needs a named ${role} material for close-up physical shading.`,
+        });
+      }
+    }
+  }
+  if (lod === 0) {
+    for (const role of ['teeth', 'tongue'] as const) {
+      if (!hasMaterialRole(materials, role)) {
+        issues.push({
+          level: 'error',
+          code: `missing-material-role:${role}`,
+          message: `LOD0 needs a separate ${role} material/mesh for singing close-ups.`,
+        });
+      }
+    }
+  } else if (lod === 1) {
+    for (const role of ['teeth', 'tongue'] as const) {
+      if (!hasMaterialRole(materials, role)) {
+        issues.push({
+          level: 'warning',
+          code: `missing-material-role:${role}`,
+          message: `LOD1 should retain separate ${role} geometry for close stage shots.`,
+        });
+      }
     }
   }
 
