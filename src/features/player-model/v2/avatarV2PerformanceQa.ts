@@ -61,7 +61,7 @@ export function inspectAvatarV2Performance(
   let maxRight = 0;
   let maxStick = 0;
   const sticks = preset === 'rock_drums'
-    ? rig.tools.filter(tool => tool.name === 'playing-stick')
+    ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
     : [];
 
   for (const seconds of SAMPLE_TIMES) {
