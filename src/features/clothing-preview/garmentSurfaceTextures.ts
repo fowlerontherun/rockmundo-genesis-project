@@ -84,6 +84,17 @@ function drawGraphic(ctx: CanvasRenderingContext2D, detail: ClothingDetailLayer,
   ctx.restore();
 }
 
+function fontStack(style: ClothingDetailLayer["fontStyle"]) {
+  switch (style) {
+    case "script": return "italic 800 Arial, sans-serif";
+    case "varsity": return "900 Georgia, serif";
+    case "clean": return "700 Arial, sans-serif";
+    case "punk": return "900 Impact, Arial Black, sans-serif";
+    case "metal": return "900 Impact, Arial Black, sans-serif";
+    default: return "900 Arial Black, Arial, sans-serif";
+  }
+}
+
 function drawLayer(ctx: CanvasRenderingContext2D, detail: ClothingDetailLayer, size: number) {
   const rawScale = Number(detail.scale ?? 100);
   const scale = clamp(Math.abs(rawScale) > 10 ? rawScale / 100 : rawScale, .15, 3);
@@ -108,9 +119,18 @@ function drawLayer(ctx: CanvasRenderingContext2D, detail: ClothingDetailLayer, s
   const type = String(detail.type || "graphic").toLowerCase();
   if (type === "text") {
     const text = String(detail.text || detail.name || "ROCKMUNDO").slice(0, 40);
-    ctx.font = `900 ${Math.max(18, Math.round(height * .62))}px Arial Black, Arial, sans-serif`;
+    const fontSize = Math.max(18, Math.round(height * .62));
+    ctx.font = `${fontStack(detail.fontStyle)}`.replace(/^[^ ]+/, match => match) .replace(/Arial/, `${fontSize}px Arial`);
+    if (!ctx.font.includes(`${fontSize}px`)) ctx.font = `900 ${fontSize}px Arial Black, Arial, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    const outline = /^#[0-9a-fA-F]{6}$/.test(String(detail.outlineColor || "")) ? String(detail.outlineColor) : "";
+    if (outline) {
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = Math.max(2, fontSize * .055);
+      ctx.lineJoin = "round";
+      ctx.strokeText(text, 0, 0, width);
+    }
     ctx.fillText(text, 0, 0, width);
   } else {
     drawGraphic(ctx, detail, width, height);
