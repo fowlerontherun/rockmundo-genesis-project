@@ -192,6 +192,28 @@ export function addHair(
       ellipsoid(strands,center.x+side*rx*(.76+Math.cos(a)*.18),top-h*.03+Math.sin(a)*h*.11,center.z-rz*.2+Math.cos(a)*rz*.12,rx*.19,h*.09,rz*.18);
     }
   }
+  if ((quality === 'high' || quality === 'ultra') && ['long','layered_long','long_waves','shoulder','ponytail','high_ponytail','side_braid','twin_ponytails','mullet'].includes(cut)) {
+    const flyawayCount = quality === 'ultra' ? 8 : 4;
+    for (let i = 0; i < flyawayCount; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const phase = i * 1.37;
+      const start = new T.Vector3(
+        center.x + side * rx * (.72 + (i % 3) * .08),
+        top - h * (.18 + (i % 4) * .07),
+        center.z - rz * (.30 + (i % 3) * .15),
+      );
+      const end = start.clone().add(new T.Vector3(
+        side * rx * (.10 + .025 * Math.sin(phase)),
+        -h * (.16 + .025 * Math.cos(phase)),
+        -rz * (.04 + .02 * Math.sin(phase * .7)),
+      ));
+      const middle = start.clone().lerp(end, .5).add(new T.Vector3(side * rx * .045, h * .018, rz * .015));
+      const curve = new T.CatmullRomCurve3([start, middle, end]);
+      const strand = new T.TubeGeometry(curve, quality === 'ultra' ? 14 : 10, rx * (quality === 'ultra' ? .012 : .014), 5, false).toNonIndexed();
+      strands.push(strand);
+    }
+  }
+
   const chin=appearance.body.frame==='masculine'?.27:.14, lipY=base+h*.34, lipZ=(surfaceZ(center.x,lipY)??front)+.002;
   const moustache = () => { for(const side of [-1,1]) ellipsoid(beard,center.x+side*rx*.25,lipY,lipZ,rx*.36,h*.047,rz*.12,side*.16); };
   if(['moustache','goatee','short_beard','full_beard','long_beard'].includes(facial)) moustache();
