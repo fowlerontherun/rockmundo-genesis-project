@@ -13,7 +13,7 @@ import { addCuratedSkinDetails } from '@/features/clothing-preview/curatedSkinDe
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
-import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, type CuratedFinish } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, curatedTextureForQuality, type CuratedFinish } from './curatedSurfaceMaps';
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 import { applyCuratedMacroShading } from './curatedMacroShading';
 import { curatedMaterialProfile } from './curatedMaterialProfile';
@@ -243,17 +243,21 @@ export function assemblePlayerModel(
             if (choice.assetKey && choice.finish) {
               const finish = choice.finish as CuratedFinish;
               if (finish === 'tartan') {
-                material.map = curatedTartanTexture(choice.assetKey, choice.dye, choice.secondaryColor || '#171717');
+                material.map = curatedTextureForQuality(
+                  curatedTartanTexture(choice.assetKey, choice.dye, choice.secondaryColor || '#171717'),
+                  quality,
+                  'color',
+                );
                 material.color.set('#ffffff');
               } else {
-                material.map = curatedAlbedoTexture(choice.assetKey, finish);
+                material.map = curatedTextureForQuality(curatedAlbedoTexture(choice.assetKey, finish), quality, 'color');
               }
               const profile = curatedMaterialProfile(choice.assetKey, finish);
-              material.normalMap = curatedNormalTexture(choice.assetKey, finish);
+              material.normalMap = curatedTextureForQuality(curatedNormalTexture(choice.assetKey, finish), quality, 'normal');
               material.normalScale.set(profile.normalStrength, profile.normalStrength);
               material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
               material.bumpScale = curatedBumpScale(finish) * profile.bumpMultiplier;
-              material.roughnessMap = curatedRoughnessTexture(choice.assetKey, finish);
+              material.roughnessMap = curatedTextureForQuality(curatedRoughnessTexture(choice.assetKey, finish), quality, 'roughness');
               material.roughness = profile.roughness;
               material.metalness = profile.metalness;
               material.envMapIntensity = profile.envMapIntensity;
