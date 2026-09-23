@@ -7,11 +7,14 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Layers3, Palette, Scissors, Sparkles, Shirt, Wand2 } from "lucide-react";
+import { GarmentSurfaceEditor } from "@/components/admin/clothing/GarmentSurfaceEditor";
+import { GARMENT_TEMPLATES, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
 
 export type DetailLayerType = "decal" | "graphic" | "text" | "patch" | "embroidery" | "trim" | "studs" | "zip" | "buttons" | "distress" | "stitching" | "badge";
 
 export interface ClothingDesignConfig {
   garment: {
+    templateKey: string;
     silhouette: string;
     cut: string;
     length: string;
@@ -92,7 +95,7 @@ export interface ClothingDesignConfig {
 }
 
 export const DEFAULT_CLOTHING_DESIGN: ClothingDesignConfig = {
-  garment: { silhouette: "classic", cut: "regular", length: "standard", sleeve: "standard", collar: "crew", closure: "none", hem: "straight", asymmetry: false, widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 100, sleeveWidthScale: 100, waistScale: 100, flare: 0 },
+  garment: { templateKey: "tshirt", silhouette: "classic", cut: "regular", length: "standard", sleeve: "standard", collar: "crew", closure: "none", hem: "straight", asymmetry: false, widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 100, sleeveWidthScale: 100, waistScale: 100, flare: 0 },
   material: { fabric: "cotton", primaryColor: "#111111", secondaryColor: "#ffffff", roughness: 65, sheen: 10, metallic: 0, textureScale: 100, thickness: 50 },
   pattern: { type: "solid", color: "#111111", secondaryColor: "#ffffff", scale: 100, rotation: 0, opacity: 100, repeat: "tile" },
   fit: { fit: "regular", waist: "natural", rise: "mid", drape: 50, oversized: 0, taper: 25 },
@@ -148,7 +151,7 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
   const preset = CATEGORY_PRESETS[String(category || "").toLowerCase()];
   const applyCategoryPreset = () => {
     if (!preset) return;
-    onChange({ ...value, garment: { ...value.garment, ...preset } });
+    onChange({ ...value, garment: { ...value.garment, ...preset, templateKey: inferGarmentTemplateKey(category) } });
   };
 
   return <div className="space-y-5">
@@ -157,6 +160,7 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
       <Button type="button" size="sm" variant="outline" onClick={applyCategoryPreset}><Wand2 className="h-4 w-4 mr-1"/>Apply garment preset</Button>
     </CardContent></Card>
     <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Scissors className="h-4 w-4"/>Garment construction</CardTitle></CardHeader><CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="space-y-2"><Label>Garment template</Label><Select value={value.garment.templateKey || inferGarmentTemplateKey(category)} onValueChange={v=>set("garment",{templateKey:v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{GARMENT_TEMPLATES.map(template=><SelectItem key={template.key} value={template.key}>{template.label}</SelectItem>)}</SelectContent></Select><p className="text-[11px] text-muted-foreground">Controls the base garment family used by the renderer.</p></div>
       <FieldSelect label="Silhouette" value={value.garment.silhouette} values={SILHOUETTES} onChange={v=>set("garment",{silhouette:v})}/>
       <FieldSelect label="Cut" value={value.garment.cut} values={CUTS} onChange={v=>set("garment",{cut:v})}/>
       <FieldSelect label="Sleeve" value={value.garment.sleeve} values={SLEEVES} onChange={v=>set("garment",{sleeve:v})}/>
@@ -209,7 +213,22 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
       {value.zones.map((zone,i)=><div key={zone.id} className="grid grid-cols-[1fr_130px_auto_auto] gap-2 items-center"><Input value={zone.name} onChange={e=>{const zones=[...value.zones]; zones[i]={...zone,name:e.target.value}; onChange({...value,zones});}}/><Input type="color" value={zone.color} onChange={e=>{const zones=[...value.zones]; zones[i]={...zone,color:e.target.value}; onChange({...value,zones});}}/><div className="flex items-center gap-2"><Switch checked={zone.playerEditable} onCheckedChange={checked=>{const zones=[...value.zones]; zones[i]={...zone,playerEditable:checked}; onChange({...value,zones});}}/><span className="text-xs">Player editable</span></div><Button type="button" size="icon" variant="ghost" onClick={()=>onChange({...value,zones:value.zones.filter((_,idx)=>idx!==i)})}><Trash2 className="h-4 w-4"/></Button></div>)}
     </CardContent></Card>
 
-    <Card><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4"/>Detail layers <Badge variant="secondary">{value.details.length}/24</Badge></CardTitle><Button type="button" size="sm" variant="outline" onClick={addDetail} disabled={value.details.length>=24}><Plus className="h-4 w-4 mr-1"/>Detail</Button></CardHeader><CardContent className="space-y-4">
+    <Card className="border-primary/20">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4"/>Visual garment surface designer</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">Design directly on the front, back and sleeves. Drag elements on the garment and the live 3D preview updates from the same saved detail data.</p>
+        <GarmentSurfaceEditor
+          category={category}
+          templateKey={value.garment.templateKey}
+          layers={value.details}
+          onChange={details => onChange({ ...value, details: details as ClothingDesignConfig["details"] })}
+        />
+      </CardContent>
+    </Card>
+
+    <Card><CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4"/>Advanced detail layers <Badge variant="secondary">{value.details.length}/24</Badge></CardTitle><Button type="button" size="sm" variant="outline" onClick={addDetail} disabled={value.details.length>=24}><Plus className="h-4 w-4 mr-1"/>Detail</Button></CardHeader><CardContent className="space-y-4">
       {value.details.length===0 && <p className="text-sm text-muted-foreground">Layer graphics, text, patches, embroidery, zips, studs, trims, stitching and distressing over the base garment.</p>}
       {value.details.map((detail,i)=><div key={detail.id} className="rounded-lg border p-3 space-y-3"><div className="flex items-center justify-between"><div className="flex gap-2"><Badge>{i+1}</Badge><Input className="h-8" value={detail.name} onChange={e=>{const details=[...value.details]; details[i]={...detail,name:e.target.value}; onChange({...value,details});}}/></div><Button type="button" size="icon" variant="ghost" onClick={()=>onChange({...value,details:value.details.filter((_,idx)=>idx!==i)})}><Trash2 className="h-4 w-4"/></Button></div><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <FieldSelect label="Type" value={detail.type} values={DETAIL_TYPES} onChange={v=>{const details=[...value.details]; details[i]={...detail,type:v as DetailLayerType}; onChange({...value,details});}}/>
