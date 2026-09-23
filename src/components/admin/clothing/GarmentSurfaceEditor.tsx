@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -72,6 +72,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const [future, setFuture] = useState<GarmentSurfaceLayer[][]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [showSafeArea, setShowSafeArea] = useState(true);
+  const [constrainToSafeArea, setConstrainToSafeArea] = useState(true);
   const [copiedLayer, setCopiedLayer] = useState<GarmentSurfaceLayer | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<{
@@ -160,9 +161,11 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     const x = ((event.clientX - rect.left) / rect.width) * 200 - 100;
     const y = 100 - ((event.clientY - rect.top) / rect.height) * 200;
     const snap = (value: number) => snapToGrid ? Math.round(value / 10) * 10 : Math.round(value);
+    const xLimit = constrainToSafeArea ? (surface.includes("sleeve") ? 48 : 58) : 90;
+    const yLimit = constrainToSafeArea ? 62 : 90;
     updateLayer(id, {
-      offsetX: clamp(snap(x), -90, 90),
-      offsetY: clamp(snap(y), -90, 90),
+      offsetX: clamp(snap(x), -xLimit, xLimit),
+      offsetY: clamp(snap(y), -yLimit, yLimit),
     }, false);
   };
 
@@ -255,6 +258,37 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     setSelectedId(copy.id);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input,textarea,select,[contenteditable=true]")) return;
+      const modifier = event.ctrlKey || event.metaKey;
+      if (modifier && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        if (event.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (modifier && event.key.toLowerCase() === "c" && selected) {
+        event.preventDefault();
+        setCopiedLayer({ ...selected });
+        return;
+      }
+      if (modifier && event.key.toLowerCase() === "v" && copiedLayer) {
+        event.preventDefault();
+        pasteCopiedLayer();
+        return;
+      }
+      if ((event.key === "Delete" || event.key === "Backspace") && selected) {
+        event.preventDefault();
+        commit(layers.filter(layer => layer.id !== selected.id));
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [copiedLayer, future, layers, past, selected, surface]);
+
   const uploadArtwork = async (file: File) => {
     if (!file.type.match(/^image\/(png|jpeg|webp|svg\+xml)$/)) throw new Error("Use PNG, JPG, WEBP or SVG artwork.");
     if (file.size > 10 * 1024 * 1024) throw new Error("Artwork must be 10 MB or smaller.");
@@ -300,6 +334,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         <Button type="button" size="sm" variant="outline" disabled={!future.length} onClick={redo} title="Redo"><Redo2 className="h-4 w-4"/></Button>
         <Button type="button" size="sm" variant={snapToGrid ? "default" : "outline"} onClick={() => setSnapToGrid(value => !value)}>Snap 10</Button>
         <Button type="button" size="sm" variant={showSafeArea ? "default" : "outline"} onClick={() => setShowSafeArea(value => !value)}>Safe area</Button>
+        <Button type="button" size="sm" variant={constrainToSafeArea ? "default" : "outline"} onClick={() => setConstrainToSafeArea(value => !value)}>Keep inside</Button>
         <Button type="button" size="sm" variant="outline" disabled={!copiedLayer} onClick={pasteCopiedLayer}><ClipboardPaste className="h-4 w-4 mr-1"/>Paste</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("text")}><Type className="h-4 w-4 mr-1"/>Text</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("graphic")}><ImageIcon className="h-4 w-4 mr-1"/>Graphic</Button>
@@ -330,7 +365,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         </svg>
         <div className="absolute left-3 top-3 flex items-center gap-2">
           <Badge variant="secondary" className="capitalize">{surface.replace("-", " ")}</Badge>
-          <span className="text-[11px] text-slate-400">Drag items directly on the garment</span>
+          <span className="text-[11px] text-slate-400">Drag items directly on the garment · handles resize/rotate · Ctrl/Cmd C/V/Z</span>
         </div>
 
         {visibleLayers.map(layer => {
