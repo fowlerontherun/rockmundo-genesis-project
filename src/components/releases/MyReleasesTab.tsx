@@ -149,9 +149,11 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
         `)
         .order("created_at", { ascending: false });
       
-      // Filter by user_id OR band membership
+      // Character isolation: once this character has an active band, that band
+      // is the authoritative release scope. Do not union in account-level
+      // releases because multiple characters share the same auth user.
       if (bandIds.length > 0) {
-        query = query.or(`user_id.eq.${authUserId ?? userId},band_id.in.(${bandIds.join(",")})`);
+        query = query.in("band_id", bandIds);
       } else {
         query = query.eq("user_id", authUserId ?? userId);
       }
