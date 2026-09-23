@@ -44,7 +44,13 @@ SET
     WHEN 'clothing.starter.dark-slim-jeans' THEN '{"silhouette":"slim jean","construction":"denim twill","visualRead":"twill, seams and thigh whiskers"}'::jsonb
     WHEN 'clothing.starter.blue-straight-jeans' THEN '{"silhouette":"straight jean","construction":"denim twill","visualRead":"classic wash, seams and whiskers"}'::jsonb
     WHEN 'clothing.starter.black-straight-jeans' THEN '{"silhouette":"straight jean","construction":"black denim","visualRead":"dark twill, seams and restrained whiskers"}'::jsonb
-    ELSE '{"silhouette":"fitted stage basic","construction":"curated textile","visualRead":"high-detail woven surface"}'::jsonb
+    WHEN 'clothing.starter.black-boots' THEN '{"silhouette":"clean stage boot","construction":"polished leather","visualRead":"polished grain, toe seam and defined sole"}'::jsonb
+    WHEN 'clothing.starter.brown-boots' THEN '{"silhouette":"clean stage boot","construction":"grained leather","visualRead":"warm leather grain, toe seam and worn depth"}'::jsonb
+    WHEN 'clothing.starter.logo-tee' THEN '{"silhouette":"classic fitted tee","construction":"cotton jersey","visualRead":"fine cotton knit, neckline stitching and HD Rockmundo chest print"}'::jsonb
+    WHEN 'clothing.starter.plain-black-tee' THEN '{"silhouette":"classic fitted tee","construction":"cotton jersey","visualRead":"fine black cotton knit with neckline and hem definition"}'::jsonb
+    WHEN 'clothing.starter.plain-white-tee' THEN '{"silhouette":"classic fitted tee","construction":"cotton jersey","visualRead":"clean white cotton knit with neckline and hem definition"}'::jsonb
+    WHEN 'clothing.starter.vintage-charcoal-tee' THEN '{"silhouette":"classic fitted tee","construction":"washed cotton jersey","visualRead":"soft faded cotton with irregular vintage wear"}'::jsonb
+    ELSE '{"silhouette":"fitted stage basic","construction":"curated textile","visualRead":"high-detail textile surface"}'::jsonb
   END,
   detail_layers = CASE curated_asset_key
     WHEN 'clothing.punk.biker-jacket' THEN '[{"type":"stitching","name":"Panel seams"},{"type":"zip","name":"Centre zip"},{"type":"distress","name":"Leather grain"}]'::jsonb
@@ -57,7 +63,10 @@ SET
     WHEN 'clothing.starter.dark-slim-jeans' THEN '[{"type":"embroidery","name":"Denim twill"},{"type":"stitching","name":"Leg seams"},{"type":"distress","name":"Whisker wear"}]'::jsonb
     WHEN 'clothing.starter.blue-straight-jeans' THEN '[{"type":"embroidery","name":"Denim twill"},{"type":"stitching","name":"Leg seams"},{"type":"distress","name":"Whisker wear"}]'::jsonb
     WHEN 'clothing.starter.black-straight-jeans' THEN '[{"type":"embroidery","name":"Denim twill"},{"type":"stitching","name":"Leg seams"},{"type":"distress","name":"Whisker wear"}]'::jsonb
-    WHEN 'clothing.starter.vintage-charcoal-tee' THEN '[{"type":"embroidery","name":"Cotton weave"},{"type":"distress","name":"Faded wear"}]'::jsonb
+    WHEN 'clothing.starter.logo-tee' THEN '[{"type":"graphic","name":"HD Rockmundo chest print"},{"type":"stitching","name":"Neckline and hem stitching"}]'::jsonb
+    WHEN 'clothing.starter.plain-black-tee' THEN '[{"type":"stitching","name":"Neckline and hem stitching"}]'::jsonb
+    WHEN 'clothing.starter.plain-white-tee' THEN '[{"type":"stitching","name":"Neckline and hem stitching"}]'::jsonb
+    WHEN 'clothing.starter.vintage-charcoal-tee' THEN '[{"type":"embroidery","name":"Cotton weave"},{"type":"distress","name":"Faded wear"},{"type":"stitching","name":"Neckline and hem stitching"}]'::jsonb
     ELSE '[{"type":"stitching","name":"Textile surface detail"}]'::jsonb
   END
 WHERE curated_asset_status='published'
