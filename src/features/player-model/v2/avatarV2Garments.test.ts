@@ -184,6 +184,30 @@ describe('Avatar V2 garments', () => {
       .toThrow(/body region/);
   });
 
+  it('allows authored headwear and eyewear without fake body occlusion regions', () => {
+    for (const wearable_slot of ['headwear', 'eyewear'] as const) {
+      const accessory = item({
+        id: `v2-${wearable_slot}`,
+        name: `V2 Test ${wearable_slot}`,
+        category: wearable_slot === 'headwear' ? 'hat' : 'glasses',
+        wearable_slot,
+        garment_config: {
+          avatarV2: {
+            version: 1,
+            status: 'validated',
+            frames: {
+              masculine: { lod1: `avatar-v2/clothing/masculine/test-${wearable_slot}-lod1.glb` },
+            },
+            occludeBodyRegions: [],
+            colourMode: 'authored',
+            materialZones: { main: [], trim: [] },
+          },
+        },
+      });
+      expect(avatarV2ClothingCompatibilityReason([row(accessory)], 'masculine', 1)).toBeNull();
+    }
+  });
+
   it('rejects arbitrary URLs in V2 garment metadata', () => {
     const unsafe = item({
       garment_config: {
