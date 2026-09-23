@@ -307,7 +307,7 @@ function targetCuratedSize(quality: AvatarVisualQuality, baseSize: number) {
 export function curatedTextureForQuality(
   source: T.DataTexture,
   quality: AvatarVisualQuality,
-  kind: 'color' | 'normal' | 'roughness',
+  kind: 'color' | 'normal' | 'roughness' | 'height',
 ) {
   const src = source.image?.data as Uint8Array | undefined;
   const sw = Number(source.image?.width || 0);
@@ -349,7 +349,7 @@ export function curatedTextureForQuality(
         pixels[offset + 1] = Math.round((normal.y * .5 + .5) * 255);
         pixels[offset + 2] = Math.round((normal.z * .5 + .5) * 255);
       } else {
-        const amplitude = kind === 'color' ? 5 : 8;
+        const amplitude = kind === 'color' ? 5 : kind === 'height' ? 6 : 8;
         pixels[offset] = T.MathUtils.clamp(sample(0, x, y) + micro * amplitude, 0, 255);
         pixels[offset + 1] = T.MathUtils.clamp(sample(1, x, y) + micro * amplitude, 0, 255);
         pixels[offset + 2] = T.MathUtils.clamp(sample(2, x, y) + micro * amplitude, 0, 255);
