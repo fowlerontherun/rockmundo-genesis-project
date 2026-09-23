@@ -61,6 +61,15 @@ export function curatedReliefTexture(assetKey: string, finish: CuratedFinish) {
   const seed = hash(assetKey);
   const pixels = rgba(size, (x, y) => {
     const n = noise(x, y, seed);
+    const bikerPanels = assetKey.includes('biker-jacket')
+      ? ((Math.abs(((x + y) % 128) - 64) < 2 ? 20 : 0) + (x % 112 < 2 ? 12 : 0))
+      : 0;
+    const jeanWhiskers = assetKey.includes('jeans')
+      ? (Math.abs(((y + Math.floor(x * .28)) % 96) - 48) < 2 ? 7 : 0)
+      : 0;
+    const bootSeams = assetKey.includes('boots')
+      ? ((y % 92 < 2 ? 13 : 0) + (Math.abs(((x + y) % 144) - 72) < 2 ? 7 : 0))
+      : 0;
     if (finish === 'cotton') {
       const weave = ((x % 6) < 2 ? 8 : 0) + ((y % 6) < 2 ? 8 : 0);
       return 126 + weave + (n - .5) * 8;
@@ -74,7 +83,7 @@ export function curatedReliefTexture(assetKey: string, finish: CuratedFinish) {
       const twill = ((x + y + (seed % 7)) % 10) < 3 ? 18 : 0;
       const cross = ((x - y + size) % 29) < 2 ? 6 : 0;
       const seam = (x % 96 < 2 || y % 112 < 2) ? 20 : 0;
-      return 118 + twill + cross + seam + (n - .5) * 8;
+      return 118 + twill + cross + seam + jeanWhiskers + (n - .5) * 8;
     }
     if (finish === 'tartan') {
       const broad = (x % 72 < 18 || y % 72 < 18) ? 12 : 0;
@@ -92,7 +101,7 @@ export function curatedReliefTexture(assetKey: string, finish: CuratedFinish) {
       const creaseA = Math.abs(((x + y + (seed % 37)) % 83) - 41) < 2 ? 15 : 0;
       const creaseB = Math.abs(((x - y + size + (seed % 53)) % 117) - 58) < 2 ? 10 : 0;
       const strength = finish === 'polished-leather' ? .62 : 1;
-      return 124 + (pore - .5) * 18 * strength + (creaseA + creaseB) * strength;
+      return 124 + (pore - .5) * 18 * strength + (creaseA + creaseB + bikerPanels + bootSeams) * strength;
     }
     return 128;
   });
