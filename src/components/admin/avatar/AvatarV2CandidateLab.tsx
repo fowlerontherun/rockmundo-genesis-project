@@ -7,9 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
+import { Musician } from '@/features/gig-demo-3d/performers';
+import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
 import { defaultAppearance } from '@/features/player-model/appearance';
 import { disposeModel } from '@/features/player-model/model';
 import { AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
+import { prepareAvatarV2CandidateModel } from '@/features/player-model/v2/avatarV2Model';
 import {
   validateAvatarV2Scene,
   type AvatarV2Frame,
@@ -25,6 +28,8 @@ function CandidateCanvas({
   onReport,
   onError,
   animateFace,
+  appearance,
+  performance,
 }: {
   file: File | null;
   frame: AvatarV2Frame;
@@ -32,6 +37,8 @@ function CandidateCanvas({
   onReport: (report: AvatarV2ValidationReport | null) => void;
   onError: (message: string) => void;
   animateFace: boolean;
+  appearance: ReturnType<typeof defaultAppearance>;
+  performance: 'backstage' | 'vocals' | 'electric_guitar' | 'bass_guitar' | 'rock_drums';
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -42,6 +49,8 @@ function CandidateCanvas({
     let alive = true;
     let raf = 0;
     let model: T.Object3D | null = null;
+    let actor: Musician | null = null;
+    let equipment: T.Group | null = null;
     let objectUrl: string | null = null;
     let renderer: T.WebGLRenderer | null = null;
     let environment: T.WebGLRenderTarget | null = null;
@@ -62,8 +71,10 @@ function CandidateCanvas({
 
     const render = (now = performance.now()) => {
       if (!alive) return;
-      if (faceController && animateFace) {
-        const seconds = (now - startedAt) / 1000;
+      const seconds = (now - startedAt) / 1000;
+      if (actor) {
+        actor.update(animateFace ? seconds : 0, .78, !animateFace);
+      } else if (faceController && animateFace) {
         const opening = .18 + Math.pow(Math.max(0, Math.sin(seconds * 4.2)), 1.35) * .72;
         faceController.update({
           seconds,
@@ -138,12 +149,40 @@ function CandidateCanvas({
             return;
           }
 
-          model = gltf.scene;
-          model.updateMatrixWorld(true);
-          const report = validateAvatarV2Scene(model, frame, lod);
+          const source = gltf.scene;
+          source.updateMatrixWorld(true);
+          const report = validateAvatarV2Scene(source, frame, lod);
           onReport(report);
-          faceController = new AvatarV2ExpressionController(model);
 
+          if (report.valid) {
+            const prepared = prepareAvatarV2CandidateModel(source, appearance, lod);
+            if (prepared.model) {
+              const assignment = performance === 'backstage'
+                ? stageAssignment(null, 'other')
+                : stageAssignment(performance);
+              actor = new Musician(
+                prepared.model,
+                assignment.role,
+                [0, 0, 0],
+                .25,
+                undefined,
+                appearance,
+                assignment.instrument,
+                assignment.vocal,
+              );
+              disposeModel(prepared.model);
+              model = actor.root;
+              scene.add(actor.root);
+              equipment = actor.equipment;
+              if (equipment) scene.add(equipment);
+              return;
+            }
+          }
+
+          // Failed contract candidates still render in A-pose so artists can see
+          // what needs fixing; they are never routed through live performance.
+          model = source;
+          faceController = new AvatarV2ExpressionController(model);
           model.traverse(node => {
             if (!(node instanceof T.Mesh)) return;
             node.castShadow = true;
@@ -160,7 +199,6 @@ function CandidateCanvas({
           const scaled = new T.Box3().setFromObject(model);
           model.position.y -= scaled.min.y;
           model.updateMatrixWorld(true);
-
           scene.add(model);
         }).catch(error => {
           if (!alive) return;
@@ -178,6 +216,10 @@ function CandidateCanvas({
           model.removeFromParent();
           disposeModel(model);
         }
+        if (equipment) {
+          equipment.removeFromParent();
+          disposeModel(equipment);
+        }
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         disposeModel(floor);
         environment?.dispose();
@@ -192,7 +234,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, frame, lod, onError, onReport, animateFace]);
+  }, [file, frame, lod, onError, onReport, animateFace, appearance, performance]);
 
   return (
     <canvas
@@ -210,6 +252,7 @@ export function AvatarV2CandidateLab() {
   const [report, setReport] = useState<AvatarV2ValidationReport | null>(null);
   const [error, setError] = useState('');
   const [animateFace, setAnimateFace] = useState(true);
+  const [performance, setPerformance] = useState<'backstage' | 'vocals' | 'electric_guitar' | 'bass_guitar' | 'rock_drums'>('vocals');
 
   const appearance = useMemo(() => {
     const next = defaultAppearance('avatar-v2-side-by-side');
@@ -262,12 +305,26 @@ export function AvatarV2CandidateLab() {
               onChange={event => setFile(event.target.files?.[0] ?? null)}
             />
           </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Performance test</span>
+            <select
+              className="block rounded-md border bg-background px-3 py-2"
+              value={performance}
+              onChange={event => setPerformance(event.target.value as typeof performance)}
+            >
+              <option value="backstage">Backstage / A-pose</option>
+              <option value="vocals">Vocals</option>
+              <option value="electric_guitar">Electric guitar</option>
+              <option value="bass_guitar">Bass guitar</option>
+              <option value="rock_drums">Rock drums</option>
+            </select>
+          </label>
           <Button
             type="button"
             variant={animateFace ? 'default' : 'outline'}
             onClick={() => setAnimateFace(value => !value)}
           >
-            {animateFace ? 'Face animation on' : 'Face animation off'}
+            {animateFace ? 'Animation on' : 'Animation off'}
           </Button>
           {file && (
             <Button
@@ -299,7 +356,16 @@ export function AvatarV2CandidateLab() {
                 {file ? report?.valid ? 'contract pass' : report ? 'needs fixes' : 'checking' : 'load a GLB'}
               </Badge>
             </div>
-            <CandidateCanvas file={file} frame={frame} lod={lod} onReport={setReport} onError={setError} animateFace={animateFace} />
+            <CandidateCanvas
+              file={file}
+              frame={frame}
+              lod={lod}
+              onReport={setReport}
+              onError={setError}
+              animateFace={animateFace}
+              appearance={appearance}
+              performance={performance}
+            />
           </div>
         </div>
 
