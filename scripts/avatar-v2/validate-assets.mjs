@@ -1,0 +1,196 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const ROOT = process.cwd();
+const ASSET_ROOT = path.join(ROOT, 'public', 'avatar-v2');
+const MANIFEST_PATH = path.join(ASSET_ROOT, 'manifest.json');
+
+const budgets = {
+  0: { triangles: 55000, vertices: 65000, bones: 96 },
+  1: { triangles: 30000, vertices: 38000, bones: 96 },
+  2: { triangles: 12000, vertices: 18000, bones: 80 },
+  3: { triangles: 5000, vertices: 8000, bones: 64 },
+};
+
+const requiredBoneAliases = {
+  hips: ['hips','pelvis','root_hips','j_bip_c_hips'],
+  spine: ['spine','spine1','spine_01','j_bip_c_spine'],
+  chest: ['chest','spine2','spine_02','upperchest','j_bip_c_chest'],
+  neck: ['neck','neck1','j_bip_c_neck'],
+  head: ['head','j_bip_c_head'],
+  leftUpperArm: ['leftupperarm','upperarm_l','left_arm','j_bip_l_upperarm'],
+  leftLowerArm: ['leftlowerarm','lowerarm_l','left_forearm','j_bip_l_lowerarm'],
+  leftHand: ['lefthand','hand_l','left_hand','j_bip_l_hand'],
+  rightUpperArm: ['rightupperarm','upperarm_r','right_arm','j_bip_r_upperarm'],
+  rightLowerArm: ['rightlowerarm','lowerarm_r','right_forearm','j_bip_r_lowerarm'],
+  rightHand: ['righthand','hand_r','right_hand','j_bip_r_hand'],
+  leftUpperLeg: ['leftupperleg','thigh_l','left_thigh','j_bip_l_upperleg'],
+  leftLowerLeg: ['leftlowerleg','calf_l','left_calf','j_bip_l_lowerleg'],
+  leftFoot: ['leftfoot','foot_l','left_foot','j_bip_l_foot'],
+  rightUpperLeg: ['rightupperleg','thigh_r','right_thigh','j_bip_r_upperleg'],
+  rightLowerLeg: ['rightlowerleg','calf_r','right_calf','j_bip_r_lowerleg'],
+  rightFoot: ['rightfoot','foot_r','right_foot','j_bip_r_foot'],
+};
+
+const expressionAliases = {
+  blinkLeft: ['blinkleft','blink_l','eyeBlinkLeft','eye_blink_l'],
+  blinkRight: ['blinkright','blink_r','eyeBlinkRight','eye_blink_r'],
+  jawOpen: ['jawopen','jaw_open','mouthOpen','mouth_open'],
+  mouthSmile: ['mouthsmile','mouth_smile','smile','mouthSmileLeft'],
+};
+
+const clean = value => String(value ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+
+function fail(message) {
+  console.error(`[avatar-v2] ERROR: ${message}`);
+  process.exitCode = 1;
+}
+
+function readGlbJson(file) {
+  const bytes = fs.readFileSync(file);
+  if (bytes.length < 20) throw new Error('File is too small to be a GLB.');
+  if (bytes.readUInt32LE(0) !== 0x46546c67) throw new Error('Invalid GLB magic.');
+  if (bytes.readUInt32LE(4) !== 2) throw new Error('Only GLB 2.0 is supported.');
+  const declared = bytes.readUInt32LE(8);
+  if (declared !== bytes.length) throw new Error(`GLB length header ${declared} does not match file size ${bytes.length}.`);
+
+  let offset = 12;
+  while (offset + 8 <= bytes.length) {
+    const length = bytes.readUInt32LE(offset);
+    const type = bytes.readUInt32LE(offset + 4);
+    offset += 8;
+    if (offset + length > bytes.length) throw new Error('GLB chunk exceeds file size.');
+    if (type === 0x4e4f534a) {
+      const text = bytes.subarray(offset, offset + length).toString('utf8').replace(/\0+$/g, '').trim();
+      return JSON.parse(text);
+    }
+    offset += length;
+  }
+  throw new Error('GLB JSON chunk is missing.');
+}
+
+function accessorCount(gltf, accessorIndex) {
+  if (accessorIndex === undefined || accessorIndex === null) return 0;
+  return Number(gltf.accessors?.[accessorIndex]?.count ?? 0);
+}
+
+function primitiveTriangles(gltf, primitive) {
+  const count = primitive.indices !== undefined
+    ? accessorCount(gltf, primitive.indices)
+    : accessorCount(gltf, primitive.attributes?.POSITION);
+  const mode = primitive.mode ?? 4;
+  if (mode === 4) return Math.floor(count / 3);
+  if (mode === 5 || mode === 6) return Math.max(0, count - 2);
+  return 0;
+}
+
+function inspect(gltf) {
+  let triangles = 0;
+  let vertices = 0;
+  let skinnedMeshes = 0;
+  const morphTargets = new Set();
+
+  for (const mesh of gltf.meshes ?? []) {
+    for (const primitive of mesh.primitives ?? []) {
+      triangles += primitiveTriangles(gltf, primitive);
+      vertices += accessorCount(gltf, primitive.attributes?.POSITION);
+    }
+    for (const name of mesh.extras?.targetNames ?? []) morphTargets.add(name);
+  }
+
+  const skinnedMeshIndexes = new Set(
+    (gltf.nodes ?? []).filter(node => node.skin !== undefined && node.mesh !== undefined).map(node => node.mesh),
+  );
+  skinnedMeshes = skinnedMeshIndexes.size;
+
+  const jointIndexes = new Set();
+  for (const skin of gltf.skins ?? []) for (const joint of skin.joints ?? []) jointIndexes.add(joint);
+  const jointNames = [...jointIndexes].map(index => gltf.nodes?.[index]?.name).filter(Boolean);
+
+  return {
+    triangles,
+    vertices,
+    bones: jointIndexes.size,
+    skinnedMeshes,
+    jointNames,
+    morphTargets: [...morphTargets],
+  };
+}
+
+function containsAlias(names, aliases) {
+  const available = new Set(names.map(clean));
+  return aliases.map(clean).some(alias => available.has(alias));
+}
+
+function validateAsset(gltf, entry) {
+  const report = inspect(gltf);
+  const errors = [];
+  const warnings = [];
+  const budget = budgets[entry.lod];
+
+  if (!budget) errors.push(`Unsupported LOD: ${entry.lod}`);
+  if (!report.skinnedMeshes) errors.push('No skinned meshes found.');
+  if (budget && report.triangles > budget.triangles) errors.push(`Triangle budget exceeded: ${report.triangles} > ${budget.triangles}`);
+  if (budget && report.vertices > budget.vertices) errors.push(`Vertex budget exceeded: ${report.vertices} > ${budget.vertices}`);
+  if (budget && report.bones > budget.bones) errors.push(`Bone budget exceeded: ${report.bones} > ${budget.bones}`);
+
+  for (const [semantic, aliases] of Object.entries(requiredBoneAliases)) {
+    if (!containsAlias(report.jointNames, [semantic, ...aliases])) errors.push(`Missing required bone: ${semantic}`);
+  }
+
+  for (const [expression, aliases] of Object.entries(expressionAliases)) {
+    if (!containsAlias(report.morphTargets, [expression, ...aliases])) {
+      const message = `Missing expression target: ${expression}`;
+      if (entry.lod <= 1) errors.push(message);
+      else warnings.push(message);
+    }
+  }
+
+  const negativeScaleNodes = (gltf.nodes ?? []).filter(node => Array.isArray(node.scale) && node.scale.some(value => Number(value) < 0));
+  if (negativeScaleNodes.length) errors.push(`${negativeScaleNodes.length} node(s) use negative scale.`);
+
+  return { ...report, errors, warnings };
+}
+
+if (!fs.existsSync(MANIFEST_PATH)) {
+  fail(`Manifest is missing: ${MANIFEST_PATH}`);
+} else {
+  const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+  if (manifest.schema !== 'rockmundo.avatar-v2-assets') fail('Unexpected manifest schema.');
+  if (manifest.contractVersion !== '2.0') fail('Avatar V2 contractVersion must be 2.0.');
+
+  let checked = 0;
+  for (const entry of manifest.assets ?? []) {
+    const file = path.join(ASSET_ROOT, entry.file);
+    const mustExist = entry.status === 'asset_ready' || entry.status === 'validated';
+    if (!fs.existsSync(file)) {
+      if (mustExist) fail(`${entry.frame} LOD${entry.lod} is ${entry.status} but file is missing: ${entry.file}`);
+      else console.log(`[avatar-v2] ${entry.frame} LOD${entry.lod}: ${entry.status} (asset not present yet)`);
+      continue;
+    }
+
+    checked += 1;
+    try {
+      const gltf = readGlbJson(file);
+      const report = validateAsset(gltf, entry);
+      console.log(
+        `[avatar-v2] ${entry.frame} LOD${entry.lod}: ${report.triangles.toLocaleString()} tris, ` +
+        `${report.vertices.toLocaleString()} vertices, ${report.bones} bones, ${report.skinnedMeshes} skinned mesh(es)`,
+      );
+      report.warnings.forEach(message => console.warn(`[avatar-v2] WARN: ${entry.frame} LOD${entry.lod}: ${message}`));
+      if (report.errors.length) {
+        report.errors.forEach(message => fail(`${entry.frame} LOD${entry.lod}: ${message}`));
+      } else if (entry.status === 'validated') {
+        console.log(`[avatar-v2] PASS: ${entry.frame} LOD${entry.lod} validated asset meets the automated contract.`);
+      } else {
+        console.log(`[avatar-v2] PASS: ${entry.frame} LOD${entry.lod} candidate meets the automated contract; visual QA still required.`);
+      }
+    } catch (error) {
+      fail(`${entry.frame} LOD${entry.lod}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  if (!checked) {
+    console.log('[avatar-v2] Foundation ready. No candidate GLBs are present yet; planned assets are allowed to be absent.');
+  }
+}

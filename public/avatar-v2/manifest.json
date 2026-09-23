@@ -1,0 +1,29 @@
+{
+  "schema": "rockmundo.avatar-v2-assets",
+  "version": 1,
+  "contractVersion": "2.0",
+  "assetVersion": "v2-alpha-1",
+  "coordinateSystem": {
+    "up": "+Y",
+    "forward": "+Z",
+    "units": "metres",
+    "restPose": "A-pose"
+  },
+  "materials": {
+    "skin": "RMV2_Skin",
+    "eyes": "RMV2_Eyes",
+    "hair": "RMV2_Hair",
+    "teeth": "RMV2_Teeth",
+    "tongue": "RMV2_Tongue"
+  },
+  "assets": [
+    { "frame": "masculine", "lod": 0, "file": "masculine/base-lod0.glb", "status": "planned" },
+    { "frame": "masculine", "lod": 1, "file": "masculine/base-lod1.glb", "status": "planned" },
+    { "frame": "masculine", "lod": 2, "file": "masculine/base-lod2.glb", "status": "planned" },
+    { "frame": "masculine", "lod": 3, "file": "masculine/base-lod3.glb", "status": "planned" },
+    { "frame": "feminine", "lod": 0, "file": "feminine/base-lod0.glb", "status": "planned" },
+    { "frame": "feminine", "lod": 1, "file": "feminine/base-lod1.glb", "status": "planned" },
+    { "frame": "feminine", "lod": 2, "file": "feminine/base-lod2.glb", "status": "planned" },
+    { "frame": "feminine", "lod": 3, "file": "feminine/base-lod3.glb", "status": "planned" }
+  ]
+}

@@ -121,6 +121,7 @@ const AdminDashboard = () => {
     { label: "Random Events", path: "/admin/random-events", icon: Zap },
     { label: "Tutorials", path: "/admin/tutorials", icon: Wrench },
     { label: "Curated Skin Packs", path: "/admin/skin-collections", icon: Sparkles },
+    { label: "Avatar V2 Mesh System", path: "/admin/avatar-v2", icon: Sparkles },
     // Advanced
     { label: "Brands Admin", path: "/admin/brands", icon: Briefcase },
     { label: "Crew Catalog", path: "/admin/crew", icon: Users },

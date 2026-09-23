@@ -981,13 +981,21 @@ export class DemoCrowd {
 export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup?: ConcertPerformer[], seed?: number, venue?: VenueProfile) {
     const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const donorFiles = lineup?.flatMap(p => requiredCuratedDonorModelFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
-    const library = await loadModelLibrary(['casual.glb', 'punk.glb', 'suit.glb', ...requiredModelFiles([...(lineup?.map(p => p.appearance) ?? []), ...crowdAppearances(seed ?? 85043)]), ...donorFiles], manager);
+    const lineupAppearances = lineup?.map(p => p.appearance) ?? [];
+    const library = await loadModelLibrary([
+        'casual.glb',
+        'punk.glb',
+        'suit.glb',
+        ...requiredModelFiles([...lineupAppearances, ...crowdAppearances(seed ?? 85043)]),
+        ...requiredAvatarV2ModelFiles(lineupAppearances, 'high'),
+        ...donorFiles,
+    ], manager);
     await loadOptionalCuratedGarments(library, curatedFiles, manager);
     const casual = library.get('casual.glb')!, punk = library.get('punk.glb')!, suit = library.get('suit.glb')!;
     const cymbals: T.Object3D[] = [];
     try {
         const actors = lineup ? lineup.map(p => {
-            const assembled = assemblePlayerModel(
+            const assembled = assembleAvatarMesh(
                 library,
                 p.appearance,
                 visibleTattoosForClothing(p.tattoos ?? [], p.richClothing ?? []),

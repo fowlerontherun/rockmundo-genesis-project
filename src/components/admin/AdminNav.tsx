@@ -164,6 +164,7 @@ export const adminCategories: AdminCategory[] = [
     icon: Sparkles,
     items: [
       { path: "/admin/skin-collections", label: "Curated Skin Packs", description: "Manage clothing packs, asset readiness, validation and publishing" },
+      { path: "/admin/avatar-v2", label: "Avatar V2 Mesh System", description: "Track replacement base meshes, LOD budgets and rollout readiness" },
     ],
   },
   {
