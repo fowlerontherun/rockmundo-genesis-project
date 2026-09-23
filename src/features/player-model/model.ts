@@ -20,7 +20,7 @@ import { curatedMaterialProfile } from './curatedMaterialProfile';
 import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, createAvatarHairTextureCache, createAvatarSkinTextureCache } from './avatarMaterialQuality';
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
-import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial } from './avatarPhysicalMaterials';
+import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -307,6 +307,10 @@ export function assemblePlayerModel(
           }
           if (/skin/.test(name)) {
             return upgradeSkinMaterial(material, appearance, quality);
+          }
+          if (!choice.assetKey && choice.fabric !== 'plain' && !/earring|metal/.test(name)) {
+            const upgraded = upgradeStarterFabricMaterial(material, choice.fabric, quality);
+            if (upgraded !== material) return upgraded;
           }
           if (
             choice.assetKey &&
