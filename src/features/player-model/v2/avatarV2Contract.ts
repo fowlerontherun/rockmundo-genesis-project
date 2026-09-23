@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { PlayerAppearance } from '../appearance';
+import { AVATAR_V2_CUSTOMIZATION_MORPHS } from './avatarV2Customization';
 
 export type AvatarV2Frame = PlayerAppearance['body']['frame'];
 export type AvatarV2Lod = 0 | 1 | 2 | 3;
@@ -246,13 +247,22 @@ export function validateAvatarV2Scene(
   }
 
   if (lod <= 1) {
+    const available = new Set(morphTargets.map(clean));
     for (const expression of AVATAR_V2_RECOMMENDED_EXPRESSIONS) {
-      const available = new Set(morphTargets.map(clean));
       if (![expression].map(clean).some(name => available.has(name))) {
         issues.push({
           level: 'warning',
           code: `missing-performance-expression:${expression}`,
           message: `Recommended singing expression target is missing: ${expression}.`,
+        });
+      }
+    }
+    for (const morph of AVATAR_V2_CUSTOMIZATION_MORPHS) {
+      if (!available.has(clean(morph))) {
+        issues.push({
+          level: 'warning',
+          code: `missing-customization-morph:${morph}`,
+          message: `Recommended Avatar Designer shape target is missing: ${morph}.`,
         });
       }
     }
