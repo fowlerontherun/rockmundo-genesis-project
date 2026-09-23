@@ -24,6 +24,7 @@ import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial
 import { avatarV2AssetUrl, isAvatarV2AssetFile } from './v2/avatarV2Assets';
 
 export type ModelLibrary = Map<string, T.Object3D>;
+export type PlayerModelPresentation = 'stage' | 'tattoo';
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
   return [...new Set(appearances.flatMap(a => [headModelStyle(a), ...(['top', 'bottom', 'footwear'] as const).map(slot => equipmentStyle(a, slot))].map(style => modelFile(a.body.frame, style))))];
 }
@@ -133,6 +134,7 @@ export function assemblePlayerModel(
   tattoos: ResolvedTattooVisual[] = [],
   richClothing: ResolvedEquippedClothing[] = [],
   quality: AvatarVisualQuality = 'balanced',
+  presentation: PlayerModelPresentation = 'stage',
 ): T.Object3D {
   const source = (style: Parameters<typeof modelFile>[1]) => {
     const model = library.get(modelFile(appearance.body.frame, style));
@@ -196,9 +198,10 @@ export function assemblePlayerModel(
     return created;
   };
 
-  const curatedTop = curatedDonorForSlot(richClothing, 'top');
-  const curatedBottom = curatedDonorForSlot(richClothing, 'bottom');
-  const curatedFootwear = curatedDonorForSlot(richClothing, 'footwear');
+  const curatedTop = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'top');
+  const curatedBottom = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'bottom');
+  const curatedFootwear = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'footwear');
+  const topless = presentation === 'stage' && appearance.equipment.top.itemId === 'starter.top.topless' && !curatedTop;
   const choices = [
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
@@ -251,7 +254,17 @@ export function assemblePlayerModel(
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
           const name = material.name.toLowerCase();
-          material.roughness = /skin/.test(name) ? skinRoughness(appearance) : .84;
+          const skinMaterial = /skin/.test(name);
+          const hideForTattooView = presentation === 'tattoo' && choice.part !== 'head' && !skinMaterial;
+          const hideForTopless = topless && choice.part === 'body' && !skinMaterial;
+          if (hideForTattooView || hideForTopless) {
+            material.visible = false;
+            material.transparent = true;
+            material.opacity = 0;
+            material.depthWrite = false;
+            return material;
+          }
+          material.roughness = skinMaterial ? skinRoughness(appearance) : .84;
           material.metalness = /earring|metal/.test(name) ? .65 : 0;
           if (!/skin|earring|metal/.test(name) && choice.finish) {
             if (choice.finish === 'cotton') material.roughness = .9;
@@ -374,9 +387,12 @@ export function assemblePlayerModel(
     addHair(result, appearance, headBone, quality, hairTextureCache);
     addAccessories(result, appearance, headBone, richClothing, quality);
   }
-  addStarterLogoTee(result, appearance, bones, richClothing);
-  addCuratedSkinDetails(result, bones, richClothing, quality);
+  if (presentation === 'stage') {
+    addStarterLogoTee(result, appearance, bones, richClothing);
+    addCuratedSkinDetails(result, bones, richClothing, quality);
+  }
   addTattoos(result, tattoos, bones);
+  result.userData.rockmundoAvatarPresentation = presentation;
   result.updateMatrixWorld(true);
   return result;
 }
