@@ -9,7 +9,7 @@ import {
   avatarV2Readiness,
 } from '@/features/player-model/v2/avatarV2Registry';
 
-const statusVariant = (status: string) =>
+const statusVariant = (status: string): 'default' | 'destructive' | 'secondary' =>
   status === 'validated' ? 'default' : status === 'blocked' ? 'destructive' : 'secondary';
 
 export default function AvatarV2Admin() {
