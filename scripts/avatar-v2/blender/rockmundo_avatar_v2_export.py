@@ -43,7 +43,7 @@ REQUIRED_BONES = {
     "leftLowerLeg": ["leftlowerleg", "calf_l", "left_calf", "j_bip_l_lowerleg"],
     "leftFoot": ["leftfoot", "foot_l", "left_foot", "j_bip_l_foot"],
     "rightUpperLeg": ["rightupperleg", "thigh_r", "right_thigh", "j_bip_r_upperleg"],
-    "rightLowerLeg": ["rightlowerleg", "calf_l", "right_calf", "j_bip_r_lowerleg"],
+    "rightLowerLeg": ["rightlowerleg", "calf_r", "right_calf", "j_bip_r_lowerleg"],
     "rightFoot": ["rightfoot", "foot_r", "right_foot", "j_bip_r_foot"],
 }
 
