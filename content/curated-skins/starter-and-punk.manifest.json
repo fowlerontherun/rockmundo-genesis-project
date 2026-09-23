@@ -211,8 +211,8 @@
           ],
           "material": "cotton",
           "fit": "regular",
-          "status": "planned",
-          "production": "bespoke-mesh-required"
+          "status": "published",
+          "production": "validated-avatar-detail"
         },
         {
           "assetKey": "clothing.punk.red-tartan-trousers",
@@ -294,8 +294,8 @@
           ],
           "material": "denim",
           "fit": "regular",
-          "status": "planned",
-          "production": "bespoke-mesh-required"
+          "status": "published",
+          "production": "validated-avatar-detail"
         },
         {
           "assetKey": "clothing.punk.combat-boots",
@@ -326,8 +326,8 @@
           ],
           "material": "leather",
           "fit": "regular",
-          "status": "planned",
-          "production": "bespoke-mesh-required"
+          "status": "published",
+          "production": "validated-avatar-detail"
         },
         {
           "assetKey": "clothing.punk.wrist-cuffs",
@@ -342,8 +342,8 @@
           ],
           "material": "leather",
           "fit": "regular",
-          "status": "planned",
-          "production": "bespoke-mesh-required"
+          "status": "published",
+          "production": "validated-avatar-detail"
         }
       ]
     }
