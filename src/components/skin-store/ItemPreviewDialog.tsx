@@ -249,6 +249,7 @@ export const ItemPreviewDialog = ({ item, isOwned, ownedSkin, onClose, onPurchas
               <div className="font-medium text-sm flex items-center gap-2"><Shirt className="h-4 w-4" />Garment details</div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                 <span className="text-muted-foreground">Fabric</span><span className="capitalize">{selectedVariant?.material || material.fabric || 'standard'}</span>
+                <span className="text-muted-foreground">Finish</span><span className="capitalize">{String(item.render_config?.curatedFinish || material.finish || 'standard').replace(/-/g, ' ')}</span>
                 <span className="text-muted-foreground">Silhouette</span><span className="capitalize">{garment.silhouette || 'classic'}</span>
                 <span className="text-muted-foreground">Fit</span><span className="capitalize">{fit.fit || 'regular'}</span>
                 <span className="text-muted-foreground">Pattern</span><span className="capitalize">{selectedVariant?.pattern || pattern.type || 'solid'}</span>
