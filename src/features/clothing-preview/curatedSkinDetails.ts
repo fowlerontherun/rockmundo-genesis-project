@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { ResolvedEquippedClothing } from './equippedClothing';
+import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from '@/features/player-model/curatedSurfaceAttachment';
 
 const clean = (value: string) => value.replace(/[_.]/g, '').toLowerCase();
 
@@ -10,7 +11,14 @@ function findBone(bones: Map<string, T.Bone>, names: string[]) {
 }
 
 function metalMaterial(color = '#a7adb5') {
-  return new T.MeshStandardMaterial({ color, roughness: .34, metalness: .82 });
+  return new T.MeshPhysicalMaterial({
+    color,
+    roughness: .2,
+    metalness: .88,
+    clearcoat: .6,
+    clearcoatRoughness: .08,
+    envMapIntensity: 1.65,
+  });
 }
 
 function clothMaterial(color: string) {
@@ -22,6 +30,27 @@ function attachAtWorld(root: T.Object3D, bone: T.Bone, object: T.Object3D, posit
   object.position.copy(position);
   root.updateMatrixWorld(true);
   bone.attach(object);
+}
+
+function attachToBodySurface(
+  root: T.Object3D,
+  bone: T.Bone,
+  object: T.Object3D,
+  around: T.Vector3,
+  offset = .0022,
+) {
+  const attachment = findFrontSurfaceAttachment(root, 'body', around);
+  if (!attachment) {
+    object.traverse(node => {
+      if (!(node instanceof T.Mesh)) return;
+      node.geometry.dispose();
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach(material => material.dispose());
+    });
+    return false;
+  }
+  attachSurfaceGraphic(root, bone, object, attachment, offset);
+  return true;
 }
 
 function addSafetyPins(root: T.Object3D, bones: Map<string, T.Bone>) {
@@ -38,7 +67,7 @@ function addSafetyPins(root: T.Object3D, bones: Map<string, T.Bone>) {
     shaft.rotation.z = Math.PI/2 + angle;
     shaft.position.x = .017;
     group.add(shaft);
-    attachAtWorld(root, chest, group, base.clone().add(new T.Vector3(x,y,.166)));
+    attachToBodySurface(root, chest, group, base.clone().add(new T.Vector3(x, y, 0)), .0025);
   }
 }
 
@@ -52,16 +81,16 @@ function addPatchJacketDetails(root: T.Object3D, bones: Map<string, T.Bone>) {
     { x:-.035, y:-.09, w:.12, h:.055, color:'#426baa', rot:.04 },
   ];
   for (const patch of patches) {
-    const mesh = new T.Mesh(new T.BoxGeometry(patch.w,patch.h,.006), clothMaterial(patch.color));
+    const mesh = new T.Mesh(curvedGraphicGeometry(patch.w, patch.h, .0035), clothMaterial(patch.color));
     mesh.name = 'curated-jacket-patch';
     mesh.rotation.z = patch.rot;
-    attachAtWorld(root, chest, mesh, base.clone().add(new T.Vector3(patch.x,patch.y,.172)));
+    attachToBodySurface(root, chest, mesh, base.clone().add(new T.Vector3(patch.x, patch.y, 0)), .0028);
   }
   for (const x of [-.15,-.10,-.05,.05,.10,.15]) {
     const stud = new T.Mesh(new T.ConeGeometry(.009,.018,6), metalMaterial('#c1c5ca'));
     stud.name='curated-jacket-stud';
     stud.rotation.x=Math.PI/2;
-    attachAtWorld(root,chest,stud,base.clone().add(new T.Vector3(x,.15,.18)));
+    attachToBodySurface(root, chest, stud, base.clone().add(new T.Vector3(x, .15, 0)), .003);
   }
 }
 
