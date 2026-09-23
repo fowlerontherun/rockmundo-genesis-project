@@ -130,6 +130,7 @@ describe('shipped modular stage models', () => {
     });
     expect(visibleSkin).toBeGreaterThan(0);
     expect(hiddenGarment).toBeGreaterThan(0);
+    expect(model.getObjectByName('avatar-v1-skin-underlay-torso')).toBeTruthy();
     expect(model.userData.rockmundoAvatarPresentation).toBe('stage');
     disposeModel(model);
   });
@@ -155,6 +156,8 @@ describe('shipped modular stage models', () => {
     });
     expect(hiddenClothingMaterials).toBeGreaterThan(0);
     expect(visibleSkinMaterials).toBeGreaterThan(0);
+    expect(model.getObjectByName('avatar-v1-skin-underlay-torso')).toBeTruthy();
+    expect(model.getObjectByName('avatar-v1-skin-underlay-upper-leg-l')).toBeTruthy();
     expect(model.getObjectByName('avatar-tattoo-tattoo-visible')).toBeTruthy();
     expect(model.userData.rockmundoAvatarPresentation).toBe('tattoo');
     expect(appearance.equipment.top.itemId).toBe('starter.top.suit');
