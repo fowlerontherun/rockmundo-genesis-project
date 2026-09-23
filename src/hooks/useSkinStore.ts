@@ -42,6 +42,9 @@ export interface ClothingDetailLayer {
   surface?: "front" | "back" | "left-sleeve" | "right-sleeve";
   widthScale?: number;
   heightScale?: number;
+  fontStyle?: "block" | "punk" | "script" | "metal" | "varsity" | "clean";
+  outlineColor?: string;
+  letterSpacing?: number;
 }
 
 export interface ClothingItem {

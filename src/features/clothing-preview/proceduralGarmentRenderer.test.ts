@@ -2,6 +2,7 @@ import * as T from 'three';
 import { describe, expect, it } from 'vitest';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
+import { isCompositeSurfaceLayer } from './garmentSurfaceTextures';
 
 function item(category: string, wearableSlot: string, garment: Record<string, unknown> = {}): ClothingItem {
   return {
@@ -68,6 +69,25 @@ describe('procedural garment stage rig anchors', () => {
     if (!box) throw new Error('Expected detail bounds');
     expect(box.max.x - box.min.x).toBeLessThan(.2);
     expect(box.max.y - box.min.y).toBeLessThan(.15);
+    disposeProceduralGarment(garment);
+  });
+
+  it('classifies printable artwork separately from structural garment details', () => {
+    expect(isCompositeSurfaceLayer({ type: 'text' } as any)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'graphic' } as any)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'badge' } as any)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'zip' } as any)).toBe(false);
+    expect(isCompositeSurfaceLayer({ type: 'studs' } as any)).toBe(false);
+  });
+
+  it('keeps structural details as geometry while compositing flat artwork', () => {
+    const clothing = item('jacket', 'top', { sleeve: 'long', closure: 'zip' });
+    clothing.detail_layers = [
+      { id: 'zip-1', type: 'zip', name: 'Side zip', zone: 'trim', color: '#cccccc', scale: 100, rotation: 0, opacity: 100, offsetX: 20, offsetY: 0, surface: 'front' },
+    ] as any;
+    const garment = buildProceduralGarment(clothing);
+    const structural = garment.children.filter(child => child instanceof T.Mesh && child.userData.rigAnchor === 'Torso');
+    expect(structural.length).toBeGreaterThan(1);
     disposeProceduralGarment(garment);
   });
 

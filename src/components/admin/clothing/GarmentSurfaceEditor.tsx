@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Type, Image as ImageIcon, Trash2, Copy } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Type, Image as ImageIcon, Trash2, Copy, ArrowUp, ArrowDown } from "lucide-react";
 import { garmentTemplate, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
 
 export type GarmentSurface = "front" | "back" | "left-sleeve" | "right-sleeve";
@@ -25,6 +26,9 @@ export interface GarmentSurfaceLayer {
   surface?: GarmentSurface;
   widthScale?: number;
   heightScale?: number;
+  fontStyle?: "block" | "punk" | "script" | "metal" | "varsity" | "clean";
+  outlineColor?: string;
+  letterSpacing?: number;
 }
 
 interface Props {
@@ -42,6 +46,8 @@ const SURFACES: Array<{ key: GarmentSurface; label: string }> = [
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const MOTIFS = ["rockmundo-mark", "star", "lightning", "vinyl-record", "stripe"];
+const TEXT_STYLES = ["block", "punk", "script", "metal", "varsity", "clean"] as const;
 
 function garmentOutline(category: string | undefined, surface: GarmentSurface) {
   const cat = String(category || "t-shirt").toLowerCase();
@@ -59,6 +65,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const availableSurfaces = SURFACES.filter(entry => template?.surfaces.includes(entry.key) ?? true);
   const [surface, setSurface] = useState<GarmentSurface>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [snapToGrid, setSnapToGrid] = useState(true);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const visibleLayers = useMemo(
@@ -70,7 +77,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const updateLayer = (id: string, patch: Partial<GarmentSurfaceLayer>) =>
     onChange(layers.map(layer => layer.id === id ? { ...layer, ...patch } : layer));
 
-  const addLayer = (type: "text" | "graphic") => {
+  const addLayer = (type: "text" | "graphic", asset?: string) => {
     const layer: GarmentSurfaceLayer = {
       id: crypto.randomUUID(),
       type,
@@ -79,7 +86,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
       color: "#ffffff",
       secondaryColor: "#000000",
       text: type === "text" ? "ROCKMUNDO" : undefined,
-      asset: type === "graphic" ? "rockmundo-mark" : undefined,
+      asset: type === "graphic" ? (asset || "rockmundo-mark") : undefined,
       scale: 100,
       rotation: 0,
       opacity: 100,
@@ -88,6 +95,9 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
       surface,
       widthScale: 100,
       heightScale: 100,
+      fontStyle: type === "text" ? "block" : undefined,
+      outlineColor: type === "text" ? "#000000" : undefined,
+      letterSpacing: type === "text" ? 0 : undefined,
     };
     onChange([...layers, layer]);
     setSelectedId(layer.id);
@@ -98,9 +108,10 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     if (!rect) return;
     const x = ((event.clientX - rect.left) / rect.width) * 200 - 100;
     const y = 100 - ((event.clientY - rect.top) / rect.height) * 200;
+    const snap = (value: number) => snapToGrid ? Math.round(value / 10) * 10 : Math.round(value);
     updateLayer(id, {
-      offsetX: Math.round(clamp(x, -90, 90)),
-      offsetY: Math.round(clamp(y, -90, 90)),
+      offsetX: clamp(snap(x), -90, 90),
+      offsetY: clamp(snap(y), -90, 90),
     });
   };
 
@@ -119,9 +130,11 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
           </Button>
         ))}
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant={snapToGrid ? "default" : "outline"} onClick={() => setSnapToGrid(value => !value)}>Snap 10</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("text")}><Type className="h-4 w-4 mr-1"/>Text</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("graphic")}><ImageIcon className="h-4 w-4 mr-1"/>Graphic</Button>
+        {MOTIFS.map(motif => <Button key={motif} type="button" size="sm" variant="ghost" onClick={() => addLayer("graphic", motif)} className="text-xs capitalize">{motif.replaceAll("-", " ")}</Button>)}
       </div>
     </div>
 
@@ -174,7 +187,13 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         <div className="flex items-center justify-between"><div className="font-medium text-sm">Selected layer</div><Badge variant="outline">{visibleLayers.length} on surface</Badge></div>
         {!selected ? <p className="text-xs text-muted-foreground">Select an item on the garment, or add text/graphics above.</p> : <>
           <div className="space-y-2"><Label>Name</Label><Input value={selected.name} onChange={event => updateLayer(selected.id, { name: event.target.value })}/></div>
-          {selected.type === "text" && <div className="space-y-2"><Label>Text</Label><Input value={selected.text || ""} onChange={event => updateLayer(selected.id, { text: event.target.value })}/></div>}
+          {selected.type === "text" && <>
+            <div className="space-y-2"><Label>Text</Label><Input value={selected.text || ""} onChange={event => updateLayer(selected.id, { text: event.target.value })}/></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1"><Label className="text-xs">Text style</Label><Select value={selected.fontStyle || "block"} onValueChange={value => updateLayer(selected.id, { fontStyle: value as GarmentSurfaceLayer["fontStyle"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TEXT_STYLES.map(style => <SelectItem key={style} value={style} className="capitalize">{style}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-1"><Label className="text-xs">Outline</Label><Input type="color" value={selected.outlineColor || "#000000"} onChange={event => updateLayer(selected.id, { outlineColor: event.target.value })}/></div>
+            </div>
+          </>}
           {selected.type !== "text" && <div className="space-y-2"><Label>Asset / motif</Label><Input value={selected.asset || ""} onChange={event => updateLayer(selected.id, { asset: event.target.value })}/></div>}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1"><Label className="text-xs">X</Label><Input type="number" min={-90} max={90} value={selected.offsetX || 0} onChange={event => updateLayer(selected.id, { offsetX: Number(event.target.value) })}/></div>
@@ -184,12 +203,30 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
             <div className="space-y-1"><Label className="text-xs">Rotation</Label><Input type="number" min={-180} max={180} value={selected.rotation || 0} onChange={event => updateLayer(selected.id, { rotation: Number(event.target.value) })}/></div>
             <div className="space-y-1"><Label className="text-xs">Opacity</Label><Input type="number" min={5} max={100} value={selected.opacity ?? 100} onChange={event => updateLayer(selected.id, { opacity: Number(event.target.value) })}/></div>
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button type="button" size="sm" variant="outline" className="flex-1" onClick={() => {
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => updateLayer(selected.id, { offsetX: 0 })}>Centre X</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => updateLayer(selected.id, { offsetY: 0 })}>Centre Y</Button>
+          </div>
+          <div className="grid grid-cols-4 gap-2 pt-2">
+            <Button type="button" size="sm" variant="outline" disabled={layers.indexOf(selected) === layers.length - 1} onClick={() => {
+              const index = layers.indexOf(selected);
+              if (index < 0 || index === layers.length - 1) return;
+              const next = [...layers];
+              [next[index], next[index + 1]] = [next[index + 1], next[index]];
+              onChange(next);
+            }} title="Bring forward"><ArrowUp className="h-4 w-4"/></Button>
+            <Button type="button" size="sm" variant="outline" disabled={layers.indexOf(selected) <= 0} onClick={() => {
+              const index = layers.indexOf(selected);
+              if (index <= 0) return;
+              const next = [...layers];
+              [next[index], next[index - 1]] = [next[index - 1], next[index]];
+              onChange(next);
+            }} title="Send backward"><ArrowDown className="h-4 w-4"/></Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => {
               const copy = { ...selected, id: crypto.randomUUID(), name: `${selected.name} copy`, offsetX: clamp(Number(selected.offsetX || 0) + 8, -90, 90), offsetY: clamp(Number(selected.offsetY || 0) - 8, -90, 90) };
               onChange([...layers, copy]);
               setSelectedId(copy.id);
-            }}><Copy className="h-4 w-4 mr-1"/>Duplicate</Button>
+            }}><Copy className="h-4 w-4"/></Button>
             <Button type="button" size="sm" variant="destructive" onClick={() => { onChange(layers.filter(layer => layer.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4"/></Button>
           </div>
         </>}

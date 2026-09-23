@@ -90,6 +90,9 @@ export interface ClothingDesignConfig {
     surface?: "front" | "back" | "left-sleeve" | "right-sleeve";
     widthScale?: number;
     heightScale?: number;
+    fontStyle?: "block" | "punk" | "script" | "metal" | "varsity" | "clean";
+    outlineColor?: string;
+    letterSpacing?: number;
   }>;
   variants: Array<{ name: string; primaryColor: string; secondaryColor: string; pattern: string; material: string }>;
 }
@@ -158,7 +161,7 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
     {preset && <Card className="border-primary/20 bg-primary/5"><CardContent className="pt-4 flex flex-wrap items-center justify-between gap-3">
       <div><div className="text-sm font-medium">Recommended {String(category).replaceAll("-", " ")} proportions</div><p className="text-xs text-muted-foreground">Start from body-safe proportions for this garment type, then fine tune every measurement below.</p></div>
       <Button type="button" size="sm" variant="outline" onClick={applyCategoryPreset}><Wand2 className="h-4 w-4 mr-1"/>Apply garment preset</Button>
-    </CardContent></Card>
+    </CardContent></Card>}
     <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Scissors className="h-4 w-4"/>Garment construction</CardTitle></CardHeader><CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div className="space-y-2"><Label>Garment template</Label><Select value={value.garment.templateKey || inferGarmentTemplateKey(category)} onValueChange={v=>set("garment",{templateKey:v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{GARMENT_TEMPLATES.map(template=><SelectItem key={template.key} value={template.key}>{template.label}</SelectItem>)}</SelectContent></Select><p className="text-[11px] text-muted-foreground">Controls the base garment family used by the renderer.</p></div>
       <FieldSelect label="Silhouette" value={value.garment.silhouette} values={SILHOUETTES} onChange={v=>set("garment",{silhouette:v})}/>

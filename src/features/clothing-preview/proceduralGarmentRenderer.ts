@@ -2,6 +2,7 @@ import * as T from 'three';
 import type { ClothingDetailLayer, ClothingItem } from '@/hooks/useSkinStore';
 import type { ClothingPreviewVariant } from './clothingPreview';
 import { buildRichGarmentVisualSpec } from './richGarmentVisuals';
+import { buildCompositeGarmentSurfaceTexture, isCompositeSurfaceLayer } from './garmentSurfaceTextures';
 
 export type RichGarmentVisualSpec = ReturnType<typeof buildRichGarmentVisualSpec>;
 export type GarmentRigAnchor = 'Torso' | 'Hips' | 'UpperArm.L' | 'UpperArm.R' | 'UpperLeg.L' | 'UpperLeg.R' | 'Foot.L' | 'Foot.R' | 'Head';
@@ -292,12 +293,22 @@ function buildTopBodyGeometry(
   return geometry;
 }
 
+interface TopGarmentMetrics {
+  bodyHeight: number;
+  halfShoulder: number;
+  halfHem: number;
+  torsoDepth: number;
+  shoulderY: number;
+  sleeveLength: number;
+  sleeveRadius: number;
+}
+
 function addTopGarment(
   item: ClothingItem,
   spec: RichGarmentVisualSpec,
   material: T.Material,
   add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
-) {
+): TopGarmentMetrics {
   const category = String(item.category || '').toLowerCase();
   const garmentConfig = (item.garment_config || {}) as Record<string, unknown>;
   const templateKey = String(garmentConfig.templateKey || garmentConfig.template_key || '').toLowerCase();
@@ -333,15 +344,15 @@ function addTopGarment(
   }
 
   const sleeves = spec.sleeve;
+  const sleeveLength = (
+    /long|full/.test(sleeves) ? .64 :
+    /three-quarter/.test(sleeves) ? .5 :
+    /elbow/.test(sleeves) ? .39 :
+    /cap/.test(sleeves) ? .18 : .29
+  ) * spec.sleeveLengthScale;
+  const sleeveRadius = spec.scaleX * (isOuterwear ? .082 : .068) * T.MathUtils.lerp(.92, 1.08, spec.drape) * spec.sleeveWidthScale;
+  const shoulderY = spec.y + bodyHeight * .35;
   if (sleeves !== 'sleeveless' && sleeves !== 'none') {
-    const sleeveLength = (
-      /long|full/.test(sleeves) ? .64 :
-      /three-quarter/.test(sleeves) ? .5 :
-      /elbow/.test(sleeves) ? .39 :
-      /cap/.test(sleeves) ? .18 : .29
-    ) * spec.sleeveLengthScale;
-    const sleeveRadius = spec.scaleX * (isOuterwear ? .082 : .068) * T.MathUtils.lerp(.92, 1.08, spec.drape) * spec.sleeveWidthScale;
-    const shoulderY = spec.y + bodyHeight * .35;
     const sleeveDepthScale = Math.max(.72, torsoDepth / Math.max(.01, sleeveRadius * 2.25));
     for (const side of [-1, 1]) {
       const sleeve = new T.Mesh(
@@ -400,8 +411,126 @@ function addTopGarment(
       add(button, 'Torso');
     }
   }
+
+  return { bodyHeight, halfShoulder, halfHem, torsoDepth, shoulderY, sleeveLength, sleeveRadius };
 }
 
+function surfaceCompositeMaterial(texture: T.Texture, spec: RichGarmentVisualSpec) {
+  return new T.MeshPhysicalMaterial({
+    color: '#ffffff',
+    map: texture,
+    transparent: true,
+    alphaTest: .02,
+    depthWrite: false,
+    roughness: Math.min(1, spec.roughness + .04),
+    metalness: Math.max(0, spec.metalness * .15),
+    side: T.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+  });
+}
+
+function addTopSurfaceComposites(
+  details: ClothingDetailLayer[],
+  spec: RichGarmentVisualSpec,
+  metrics: TopGarmentMetrics,
+  add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
+) {
+  const width = Math.max(metrics.halfShoulder * 1.72, metrics.halfHem * 1.72);
+  const height = metrics.bodyHeight * .78;
+  const frontTexture = buildCompositeGarmentSurfaceTexture(details, 'front');
+  if (frontTexture) {
+    const mesh = new T.Mesh(new T.PlaneGeometry(width, height), surfaceCompositeMaterial(frontTexture, spec));
+    mesh.name = 'garment-composite-front';
+    mesh.position.set(0, spec.y - metrics.bodyHeight * .035, spec.z + metrics.torsoDepth * .515 + .008);
+    mesh.userData.surfaceTexture = frontTexture;
+    add(mesh, 'Torso');
+  }
+
+  const backTexture = buildCompositeGarmentSurfaceTexture(details, 'back');
+  if (backTexture) {
+    const mesh = new T.Mesh(new T.PlaneGeometry(width, height), surfaceCompositeMaterial(backTexture, spec));
+    mesh.name = 'garment-composite-back';
+    mesh.position.set(0, spec.y - metrics.bodyHeight * .035, spec.z - metrics.torsoDepth * .515 - .008);
+    mesh.rotation.y = Math.PI;
+    mesh.userData.surfaceTexture = backTexture;
+    add(mesh, 'Torso');
+  }
+
+  if (spec.sleeve !== 'none' && spec.sleeve !== 'sleeveless') {
+    for (const [surface, side, anchor] of [
+      ['left-sleeve', 1, 'UpperArm.L'],
+      ['right-sleeve', -1, 'UpperArm.R'],
+    ] as const) {
+      const sleeveTexture = buildCompositeGarmentSurfaceTexture(details, surface);
+      if (!sleeveTexture) continue;
+      const mesh = new T.Mesh(
+        new T.PlaneGeometry(metrics.sleeveLength * .74, metrics.sleeveRadius * 2.15),
+        surfaceCompositeMaterial(sleeveTexture, spec),
+      );
+      mesh.name = `garment-composite-${surface}`;
+      mesh.position.set(side * (metrics.halfShoulder + metrics.sleeveLength * .46), metrics.shoulderY, spec.z + metrics.sleeveRadius * .72);
+      mesh.userData.surfaceTexture = sleeveTexture;
+      add(mesh, anchor);
+    }
+  }
+}
+
+
+
+function addBottomSurfaceComposites(
+  details: ClothingDetailLayer[],
+  spec: RichGarmentVisualSpec,
+  skirtLike: boolean,
+  shortFactor: number,
+  add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
+) {
+  const frontTexture = buildCompositeGarmentSurfaceTexture(details, 'front');
+  const backTexture = buildCompositeGarmentSurfaceTexture(details, 'back');
+  if (!frontTexture && !backTexture) return;
+
+  const zOffset = Math.max(.055, spec.scaleZ * .34);
+  if (skirtLike) {
+    const width = spec.scaleX * (1.02 + spec.customFlare * .2);
+    const height = spec.scaleY * .78;
+    for (const [name, texture, z, rotation] of [
+      ['front', frontTexture, spec.z + zOffset, 0],
+      ['back', backTexture, spec.z - zOffset, Math.PI],
+    ] as const) {
+      if (!texture) continue;
+      const mesh = new T.Mesh(new T.PlaneGeometry(width, height), surfaceCompositeMaterial(texture, spec));
+      mesh.name = `garment-composite-bottom-${name}`;
+      mesh.position.set(0, spec.y, z);
+      mesh.rotation.y = rotation;
+      mesh.userData.surfaceTexture = texture;
+      add(mesh, 'Hips');
+    }
+    return;
+  }
+
+  const legHeight = spec.scaleY * shortFactor * .82;
+  const legWidth = spec.scaleX * .32;
+  const legY = spec.y + (spec.scaleY - spec.scaleY * shortFactor) * .24;
+  for (const [surface, baseTexture, z, rotation] of [
+    ['front', frontTexture, spec.z + zOffset, 0],
+    ['back', backTexture, spec.z - zOffset, Math.PI],
+  ] as const) {
+    if (!baseTexture) continue;
+    for (const [index, side] of [-1, 1].entries()) {
+      const texture = baseTexture.clone();
+      texture.needsUpdate = true;
+      texture.repeat.set(.5, 1);
+      texture.offset.set(index === 0 ? 0 : .5, 0);
+      const mesh = new T.Mesh(new T.PlaneGeometry(legWidth, legHeight), surfaceCompositeMaterial(texture, spec));
+      mesh.name = `garment-composite-${surface}-leg-${side < 0 ? 'right' : 'left'}`;
+      mesh.position.set(side * spec.scaleX * .22, legY, z);
+      mesh.rotation.y = rotation;
+      mesh.userData.surfaceTexture = texture;
+      add(mesh, side > 0 ? 'UpperLeg.L' : 'UpperLeg.R');
+    }
+    baseTexture.dispose();
+  }
+}
 
 export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPreviewVariant) {
   const spec = buildRichGarmentVisualSpec(item, variant);
@@ -417,12 +546,15 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   };
 
   if (spec.slot === 'top') {
-    addTopGarment(item, spec, material, add);
+    const metrics = addTopGarment(item, spec, material, add);
+    const flatDetails = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
+    addTopSurfaceComposites(flatDetails, spec, metrics, add);
   } else if (spec.slot === 'bottom') {
     const garment = (item.garment_config || {}) as Record<string, unknown>;
     const category = String(item.category || '').toLowerCase();
     const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
     const skirtLike = templateKey === 'skirt' || /skirt|dress|a-line|wide/.test(`${category} ${garment.silhouette || ''}`.toLowerCase());
+    const shortFactor = templateKey === 'shorts' || /short/.test(category) ? .52 : 1;
     if (skirtLike) {
       const waist = spec.scaleX * .39 * spec.waistScale;
       const hem = spec.scaleX * (.48 + spec.flare + spec.customFlare * .24);
@@ -431,7 +563,6 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       skirt.position.set(0, spec.y, spec.z);
       add(skirt, 'Hips');
     } else {
-      const shortFactor = templateKey === 'shorts' || /short/.test(category) ? .52 : 1;
       const legHeight = spec.scaleY * shortFactor;
       const topRadius = spec.scaleX * .18 * spec.waistScale;
       const bottomRadius = topRadius * T.MathUtils.lerp(1.02, .74, spec.taper);
@@ -447,6 +578,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
         add(crease, anchor);
       }
     }
+    const flatDetails = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
+    addBottomSurfaceComposites(flatDetails, spec, skirtLike, shortFactor, add);
   } else if (spec.slot === 'footwear') {
     const category = String(item.category || '').toLowerCase();
     const garment = (item.garment_config || {}) as Record<string, unknown>;
@@ -569,8 +702,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     T.MathUtils.clamp(group.scale.z, .75, 1.25),
   );
 
-  const details = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 18) : [];
-  details.forEach((detail, index) => addDetail(group, detail, index, spec));
+  const details = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
+  details.filter(detail => !(['top', 'bottom'].includes(spec.slot) && isCompositeSurfaceLayer(detail))).forEach((detail, index) => addDetail(group, detail, index, spec));
   if (spec.distress > .05) {
     const distressMaterial = new T.MeshBasicMaterial({ color: '#151515', transparent: true, opacity: Math.min(.5, .12 + spec.distress * .35), wireframe: true });
     const distress = new T.Mesh(new T.SphereGeometry(Math.max(.3, spec.scaleX * .58), 12, 8), distressMaterial);
@@ -588,6 +721,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       materials.forEach(entry => entry.dispose());
       const detailTexture = object.userData.detailTexture as T.Texture | undefined;
       detailTexture?.dispose();
+      const surfaceTexture = object.userData.surfaceTexture as T.Texture | undefined;
+      surfaceTexture?.dispose();
     });
   };
   return group;
