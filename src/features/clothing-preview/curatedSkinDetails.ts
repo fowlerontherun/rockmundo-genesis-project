@@ -144,6 +144,50 @@ function addPatchJacketDetails(root: T.Object3D, bones: Map<string, T.Bone>, qua
   }
 }
 
+function addBikerJacketHardware(root: T.Object3D, bones: Map<string, T.Bone>, quality: AvatarVisualQuality) {
+  const profile = avatarQualityProfile(quality);
+  const chest = findBone(bones, ['Spine2','Spine.002','Chest','UpperChest']) ?? findBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+  const base = chest.getWorldPosition(new T.Vector3());
+
+  const zipper = new T.Group();
+  zipper.name = 'curated-biker-zipper-pull';
+  const slider = new T.Mesh(
+    new T.BoxGeometry(.014, .026, .006),
+    metalMaterial('#b9bec6'),
+  );
+  slider.name = 'curated-biker-zipper-slider';
+  zipper.add(slider);
+  const pull = new T.Mesh(
+    new T.TorusGeometry(
+      .012,
+      .0024,
+      Math.max(6, Math.floor(profile.accessorySegments / 3)),
+      Math.max(16, profile.accessorySegments),
+    ),
+    metalMaterial('#c8ccd2'),
+  );
+  pull.name = 'curated-biker-zipper-ring';
+  pull.position.y = -.024;
+  zipper.add(pull);
+  attachToBodySurface(root, chest, zipper, base.clone().add(new T.Vector3(0, -.025, 0)), .0032);
+
+  for (const [x, y] of [[-.115,.105],[.115,.105],[-.145,.02],[.145,.02]] as const) {
+    const snap = new T.Mesh(
+      new T.CylinderGeometry(
+        .008,
+        .008,
+        .004,
+        Math.max(10, profile.accessorySegments),
+      ),
+      metalMaterial('#c3c7cd'),
+    );
+    snap.name = 'curated-biker-lapel-snap';
+    snap.rotation.x = Math.PI / 2;
+    attachToBodySurface(root, chest, snap, base.clone().add(new T.Vector3(x, y, 0)), .003);
+  }
+}
+
 function addEyeletBelt(root: T.Object3D, bones: Map<string, T.Bone>, quality: AvatarVisualQuality) {
   const profile = avatarQualityProfile(quality);
   const hips = findBone(bones,['Hips','Pelvis']);
@@ -197,6 +241,7 @@ export function addCuratedSkinDetails(
     .filter(Boolean));
   if (keys.has('clothing.punk.safety-pin-tee')) addSafetyPins(root, bones, quality);
   if (keys.has('clothing.punk.patch-jacket')) addPatchJacketDetails(root, bones, quality);
+  if (keys.has('clothing.punk.biker-jacket')) addBikerJacketHardware(root, bones, quality);
   if (keys.has('clothing.punk.double-eyelet-belt')) addEyeletBelt(root, bones, quality);
   if (keys.has('clothing.punk.wrist-cuffs')) addWristCuffs(root, bones, quality);
 }
