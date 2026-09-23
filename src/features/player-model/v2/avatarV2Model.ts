@@ -58,6 +58,12 @@ function materialName(material: T.Material) {
 function tuneV2Materials(root: T.Object3D, appearance: PlayerAppearance) {
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
+    // SkeletonUtils intentionally shares geometry/material references. V2
+    // instances may have different skin/hair/eye colours, so clone materials
+    // before applying character-specific tuning.
+    node.material = Array.isArray(node.material)
+      ? node.material.map(material => material.clone())
+      : node.material.clone();
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     for (const material of materials) {
       if (!(material instanceof T.MeshStandardMaterial)) continue;
@@ -140,12 +146,9 @@ export function tryAssembleAvatarV2Model(
   const model = clone(source);
   const report = validateAvatarV2Scene(model, appearance.body.frame, lod);
   if (!report.valid) {
-    model.traverse(node => {
-      if (!(node instanceof T.Mesh)) return;
-      node.geometry.dispose();
-      const materials = Array.isArray(node.material) ? node.material : [node.material];
-      materials.forEach(material => material.dispose());
-    });
+    // The clone still shares source geometry/materials at this point. Do not
+    // dispose them here: the ModelLibrary owns those resources and V1 fallback
+    // or another V2 attempt may still need them.
     return { model: null, report, reason: 'Avatar V2 asset failed the runtime mesh contract.' };
   }
 
