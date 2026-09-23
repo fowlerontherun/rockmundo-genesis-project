@@ -129,14 +129,20 @@ function inspect(gltf) {
   const jointNames = [...jointIndexes].map(index => gltf.nodes?.[index]?.name).filter(Boolean);
 
   const bodyRegions = new Set();
+  const unskinnedBodyRegions = new Set();
   for (const node of gltf.nodes ?? []) {
     if (node.mesh == null) continue;
+    const matched = new Set();
     const explicit = String(node.extras?.rockmundoBodyRegion ?? '').toLowerCase();
-    if (requiredBodyRegions.includes(explicit)) bodyRegions.add(explicit);
+    if (requiredBodyRegions.includes(explicit)) matched.add(explicit);
     const cleanedName = clean(node.name ?? '');
     for (const region of requiredBodyRegions) {
       const cleanedRegion = clean(region);
-      if (cleanedName.includes(`rmv2body${cleanedRegion}`) || cleanedName.includes(`body${cleanedRegion}`)) bodyRegions.add(region);
+      if (cleanedName.includes(`rmv2body${cleanedRegion}`) || cleanedName.includes(`body${cleanedRegion}`)) matched.add(region);
+    }
+    for (const region of matched) {
+      bodyRegions.add(region);
+      if (node.skin == null) unskinnedBodyRegions.add(region);
     }
   }
 
@@ -149,6 +155,7 @@ function inspect(gltf) {
     morphTargets: [...morphTargets],
     materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
     bodyRegions: [...bodyRegions],
+    unskinnedBodyRegions: [...unskinnedBodyRegions],
   };
 }
 
@@ -179,6 +186,7 @@ function validateAsset(gltf, entry) {
     }
     for (const region of requiredBodyRegions) {
       if (!report.bodyRegions.includes(region)) errors.push(`Missing garment-occlusion body region: ${region}`);
+      else if (report.unskinnedBodyRegions.includes(region)) errors.push(`Garment-occlusion body region is not skinned: ${region}`);
     }
   }
 
