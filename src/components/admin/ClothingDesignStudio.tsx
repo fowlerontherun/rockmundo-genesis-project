@@ -20,6 +20,12 @@ export interface ClothingDesignConfig {
     closure: string;
     hem: string;
     asymmetry: boolean;
+    widthScale: number;
+    bodyLengthScale: number;
+    sleeveLengthScale: number;
+    sleeveWidthScale: number;
+    waistScale: number;
+    flare: number;
   };
   material: {
     fabric: string;
@@ -83,7 +89,7 @@ export interface ClothingDesignConfig {
 }
 
 export const DEFAULT_CLOTHING_DESIGN: ClothingDesignConfig = {
-  garment: { silhouette: "classic", cut: "regular", length: "standard", sleeve: "standard", collar: "crew", closure: "none", hem: "straight", asymmetry: false },
+  garment: { silhouette: "classic", cut: "regular", length: "standard", sleeve: "standard", collar: "crew", closure: "none", hem: "straight", asymmetry: false, widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 100, sleeveWidthScale: 100, waistScale: 100, flare: 0 },
   material: { fabric: "cotton", primaryColor: "#111111", secondaryColor: "#ffffff", roughness: 65, sheen: 10, metallic: 0, textureScale: 100, thickness: 50 },
   pattern: { type: "solid", color: "#111111", secondaryColor: "#ffffff", scale: 100, rotation: 0, opacity: 100, repeat: "tile" },
   fit: { fit: "regular", waist: "natural", rise: "mid", drape: 50, oversized: 0, taper: 25 },
@@ -131,6 +137,12 @@ export function ClothingDesignStudio({ value, onChange }: { value: ClothingDesig
       <div className="space-y-2"><Label>Length</Label><Input value={value.garment.length} onChange={e=>set("garment",{length:e.target.value})}/></div>
       <div className="space-y-2"><Label>Hem</Label><Input value={value.garment.hem} onChange={e=>set("garment",{hem:e.target.value})}/></div>
       <div className="flex items-end gap-2 pb-2"><Switch checked={value.garment.asymmetry} onCheckedChange={v=>set("garment",{asymmetry:v})}/><Label>Asymmetric</Label></div>
+      <NumberSlider label="Body width %" value={value.garment.widthScale ?? 100} min={70} max={140} onChange={v=>set("garment",{widthScale:v})}/>
+      <NumberSlider label="Body length %" value={value.garment.bodyLengthScale ?? 100} min={65} max={150} onChange={v=>set("garment",{bodyLengthScale:v})}/>
+      <NumberSlider label="Sleeve length %" value={value.garment.sleeveLengthScale ?? 100} min={40} max={160} onChange={v=>set("garment",{sleeveLengthScale:v})}/>
+      <NumberSlider label="Sleeve width %" value={value.garment.sleeveWidthScale ?? 100} min={60} max={150} onChange={v=>set("garment",{sleeveWidthScale:v})}/>
+      <NumberSlider label="Waist / hem width %" value={value.garment.waistScale ?? 100} min={60} max={150} onChange={v=>set("garment",{waistScale:v})}/>
+      <NumberSlider label="Flare %" value={value.garment.flare ?? 0} min={0} max={100} onChange={v=>set("garment",{flare:v})}/>
     </CardContent></Card>
 
     <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Palette className="h-4 w-4"/>Material & surface</CardTitle></CardHeader><CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -179,6 +191,8 @@ export function ClothingDesignStudio({ value, onChange }: { value: ClothingDesig
         <NumberSlider label="Scale" value={detail.scale} min={10} max={300} onChange={v=>{const details=[...value.details]; details[i]={...detail,scale:v}; onChange({...value,details});}}/>
         <NumberSlider label="Rotation" value={detail.rotation} min={-180} max={180} onChange={v=>{const details=[...value.details]; details[i]={...detail,rotation:v}; onChange({...value,details});}}/>
         <NumberSlider label="Opacity" value={detail.opacity} onChange={v=>{const details=[...value.details]; details[i]={...detail,opacity:v}; onChange({...value,details});}}/>
+        <NumberSlider label="Horizontal position" value={detail.offsetX} min={-100} max={100} onChange={v=>{const details=[...value.details]; details[i]={...detail,offsetX:v}; onChange({...value,details});}}/>
+        <NumberSlider label="Vertical position" value={detail.offsetY} min={-100} max={100} onChange={v=>{const details=[...value.details]; details[i]={...detail,offsetY:v}; onChange({...value,details});}}/>
       </div></div>)}
     </CardContent></Card>
 
