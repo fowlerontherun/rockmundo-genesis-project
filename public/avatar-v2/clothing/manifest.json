@@ -1,0 +1,79 @@
+{
+  "schema": "rockmundo.avatar-v2-garments",
+  "version": 1,
+  "assetVersion": "v2-alpha-1",
+  "budgets": {
+    "lod0": { "maxTriangles": 25000, "maxVertices": 32000 },
+    "lod1": { "maxTriangles": 14000, "maxVertices": 20000 },
+    "lod2": { "maxTriangles": 6500, "maxVertices": 9000 },
+    "lod3": { "maxTriangles": 3000, "maxVertices": 4500 }
+  },
+  "items": [
+    {
+      "itemKey": "clothing.starter.logo-tee",
+      "name": "Rockmundo Logo Tee",
+      "slot": "top",
+      "status": "planned",
+      "occludeBodyRegions": ["torso"],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": ["RMV2_Garment_Main"],
+        "trim": ["RMV2_Garment_Trim"]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.logo-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.logo-tee-lod1.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.logo-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.logo-tee-lod1.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.dark-slim-jeans",
+      "name": "Dark Slim Jeans",
+      "slot": "bottom",
+      "status": "planned",
+      "occludeBodyRegions": ["hips", "upper-legs", "lower-legs"],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": ["RMV2_Garment_Main"],
+        "trim": ["RMV2_Garment_Trim"]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.dark-slim-jeans-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.dark-slim-jeans-lod1.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.dark-slim-jeans-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.dark-slim-jeans-lod1.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.black-boots",
+      "name": "Black Boots",
+      "slot": "footwear",
+      "status": "planned",
+      "occludeBodyRegions": ["feet"],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": ["RMV2_Garment_Main"],
+        "trim": ["RMV2_Garment_Trim"]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.black-boots-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.black-boots-lod1.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.black-boots-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.black-boots-lod1.glb"
+        }
+      }
+    }
+  ]
+}
