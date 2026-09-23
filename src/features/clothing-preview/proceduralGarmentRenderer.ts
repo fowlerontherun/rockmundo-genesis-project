@@ -477,6 +477,61 @@ function addTopSurfaceComposites(
 }
 
 
+
+function addBottomSurfaceComposites(
+  details: ClothingDetailLayer[],
+  spec: RichGarmentVisualSpec,
+  skirtLike: boolean,
+  shortFactor: number,
+  add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
+) {
+  const frontTexture = buildCompositeGarmentSurfaceTexture(details, 'front');
+  const backTexture = buildCompositeGarmentSurfaceTexture(details, 'back');
+  if (!frontTexture && !backTexture) return;
+
+  const zOffset = Math.max(.055, spec.scaleZ * .34);
+  if (skirtLike) {
+    const width = spec.scaleX * (1.02 + spec.customFlare * .2);
+    const height = spec.scaleY * .78;
+    for (const [name, texture, z, rotation] of [
+      ['front', frontTexture, spec.z + zOffset, 0],
+      ['back', backTexture, spec.z - zOffset, Math.PI],
+    ] as const) {
+      if (!texture) continue;
+      const mesh = new T.Mesh(new T.PlaneGeometry(width, height), surfaceCompositeMaterial(texture, spec));
+      mesh.name = `garment-composite-bottom-${name}`;
+      mesh.position.set(0, spec.y, z);
+      mesh.rotation.y = rotation;
+      mesh.userData.surfaceTexture = texture;
+      add(mesh, 'Hips');
+    }
+    return;
+  }
+
+  const legHeight = spec.scaleY * shortFactor * .82;
+  const legWidth = spec.scaleX * .32;
+  const legY = spec.y + (spec.scaleY - spec.scaleY * shortFactor) * .24;
+  for (const [surface, baseTexture, z, rotation] of [
+    ['front', frontTexture, spec.z + zOffset, 0],
+    ['back', backTexture, spec.z - zOffset, Math.PI],
+  ] as const) {
+    if (!baseTexture) continue;
+    for (const [index, side] of [-1, 1].entries()) {
+      const texture = baseTexture.clone();
+      texture.needsUpdate = true;
+      texture.repeat.set(.5, 1);
+      texture.offset.set(index === 0 ? 0 : .5, 0);
+      const mesh = new T.Mesh(new T.PlaneGeometry(legWidth, legHeight), surfaceCompositeMaterial(texture, spec));
+      mesh.name = `garment-composite-${surface}-leg-${side < 0 ? 'right' : 'left'}`;
+      mesh.position.set(side * spec.scaleX * .22, legY, z);
+      mesh.rotation.y = rotation;
+      mesh.userData.surfaceTexture = texture;
+      add(mesh, side > 0 ? 'UpperLeg.L' : 'UpperLeg.R');
+    }
+    baseTexture.dispose();
+  }
+}
+
 export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPreviewVariant) {
   const spec = buildRichGarmentVisualSpec(item, variant);
   const group = new T.Group();
