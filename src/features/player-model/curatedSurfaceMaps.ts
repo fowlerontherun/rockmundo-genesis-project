@@ -323,9 +323,17 @@ export function curatedTextureForQuality(
   const pixels = new Uint8Array(target * target * 4);
   const seed = textureHash(source.name || 'curated');
   const sample = (channel: number, x: number, y: number) => {
-    const sx = Math.min(sw - 1, Math.max(0, Math.floor((x / target) * sw)));
-    const sy = Math.min(sh - 1, Math.max(0, Math.floor((y / target) * sh)));
-    return src[(sy * sw + sx) * 4 + channel];
+    // Bilinear filtering during generation avoids magnifying the original
+    // 128/256px texels into visible square blocks in 1K/2K store artwork.
+    const fx = T.MathUtils.clamp(((x + .5) / target) * sw - .5, 0, sw - 1);
+    const fy = T.MathUtils.clamp(((y + .5) / target) * sh - .5, 0, sh - 1);
+    const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const x1 = Math.min(sw - 1, x0 + 1), y1 = Math.min(sh - 1, y0 + 1);
+    const tx = fx - x0, ty = fy - y0;
+    const at = (px: number, py: number) => src[(py * sw + px) * 4 + channel];
+    const a = T.MathUtils.lerp(at(x0, y0), at(x1, y0), tx);
+    const b = T.MathUtils.lerp(at(x0, y1), at(x1, y1), tx);
+    return T.MathUtils.lerp(a, b, ty);
   };
 
   for (let y = 0; y < target; y++) {
