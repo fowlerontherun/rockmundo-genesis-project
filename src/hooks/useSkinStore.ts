@@ -119,10 +119,24 @@ export const useClothingItems = (collectionId?: string) => useQuery({
   staleTime: 5 * 60 * 1000,
 });
 
+export const useStoreClothingItems = (collectionId?: string) => useQuery({
+  queryKey: ["store-clothing-items", collectionId],
+  queryFn: async () => {
+    let query = supabase.from("avatar_clothing_items").select("*")
+      .eq("curated_asset_status", "published")
+      .not("curated_asset_key", "is", null);
+    if (collectionId) query = query.eq("collection_id", collectionId);
+    const { data, error } = await query.order("category").order("name");
+    if (error) throw error;
+    return data as ClothingItem[];
+  },
+  staleTime: 2 * 60 * 1000,
+});
+
 export const useFeaturedItems = () => useQuery({
   queryKey: ["featured-items"],
   queryFn: async () => {
-    const { data, error } = await supabase.from("avatar_clothing_items").select("*").eq("featured", true).order("created_at", { ascending: false }).limit(10);
+    const { data, error } = await supabase.from("avatar_clothing_items").select("*").eq("featured", true).eq("curated_asset_status", "published").not("curated_asset_key", "is", null).order("created_at", { ascending: false }).limit(10);
     if (error) throw error;
     return data as ClothingItem[];
   },
@@ -135,7 +149,7 @@ export const useNewArrivals = () => {
   return useQuery({
     queryKey: ["new-arrivals"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("avatar_clothing_items").select("*").gte("release_date", thirtyDaysAgo.toISOString().split("T")[0]).order("release_date", { ascending: false }).limit(12);
+      const { data, error } = await supabase.from("avatar_clothing_items").select("*").eq("curated_asset_status", "published").not("curated_asset_key", "is", null).gte("release_date", thirtyDaysAgo.toISOString().split("T")[0]).order("release_date", { ascending: false }).limit(12);
       if (error) throw error;
       return data as ClothingItem[];
     },

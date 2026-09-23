@@ -40,7 +40,8 @@ export function ClothingPreviewManager({ collectionId, items, onChanged }: Props
       if (error) throw error;
       return (data || []) as any[];
     },
-    refetchInterval: workerActive ? 3000 : 15000,
+    enabled: legacyItems.length > 0,
+    refetchInterval: workerActive && legacyItems.length > 0 ? 3000 : false,
   });
 
   const invalidate = () => {
@@ -99,7 +100,7 @@ export function ClothingPreviewManager({ collectionId, items, onChanged }: Props
   return <Card>
     <ClothingPreviewRenderWorker
       collectionId={collectionId}
-      active={workerActive}
+      active={workerActive && legacyItems.length > 0}
       onStatusChange={setWorkerStatus}
       onJobCompleted={invalidate}
     />
