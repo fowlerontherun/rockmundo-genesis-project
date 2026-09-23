@@ -11,6 +11,13 @@ export interface HeadAccessorySpec {
   lenses?: 'clear' | 'tinted';
 }
 
+export interface HeadAccessoryFit {
+  leftEye?: T.Vector3 | null;
+  rightEye?: T.Vector3 | null;
+  leftEar?: T.Vector3 | null;
+  rightEar?: T.Vector3 | null;
+}
+
 function lensShape(style: string, w: number, h: number): T.Shape {
   const s = new T.Shape();
   if (style === 'round') s.absellipse(0, 0, w, h, 0, Math.PI * 2, false, 0);
@@ -34,6 +41,7 @@ export function buildHeadAccessory(
   spec: HeadAccessorySpec,
   bounds: T.Box3,
   quality: AvatarVisualQuality = 'balanced',
+  fit: HeadAccessoryFit = {},
 ): T.Group {
   const profile = avatarQualityProfile(quality);
   const group = new T.Group(); group.name = `avatar-${spec.slot}`;
@@ -52,8 +60,12 @@ export function buildHeadAccessory(
     mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); return mesh;
   };
   if (spec.slot === 'eyewear') {
-    const eyeY = top - h * .405, front = bounds.max.z + d * .012;
-    const lensW = w * .19, lensH = h * (spec.style === 'rectangle' ? .072 : .098);
+    const fittedEyes = fit.leftEye && fit.rightEye ? [fit.leftEye, fit.rightEye] as const : null;
+    const eyeY = fittedEyes ? (fittedEyes[0].y + fittedEyes[1].y) * .5 : top - h * .405;
+    const front = fittedEyes ? Math.max(fittedEyes[0].z, fittedEyes[1].z) + d * .012 : bounds.max.z + d * .012;
+    const fittedSeparation = fittedEyes ? Math.abs(fittedEyes[1].x - fittedEyes[0].x) : w * .47;
+    const lensW = T.MathUtils.clamp(fittedSeparation * .40, w * .16, w * .21);
+    const lensH = h * (spec.style === 'rectangle' ? .072 : .098);
     const lensMaterial = new T.MeshPhysicalMaterial({
       color: spec.lensColor ?? '#40566d',
       transparent: true,
@@ -73,12 +85,22 @@ export function buildHeadAccessory(
       const curvePoints = quality === 'cinematic' ? 80 : quality === 'ultra' ? 64 : quality === 'high' ? 48 : 32;
       const points = shape.getPoints(curvePoints).map(p => new T.Vector3(p.x, p.y, 0));
       const curve = new T.CatmullRomCurve3(points, true);
-      add(new T.TubeGeometry(curve, Math.max(48, profile.accessorySegments * 3), w * (spec.style === 'wayfarer' ? .015 : .010), Math.max(6, Math.floor(profile.accessorySegments / 2)), true), `glasses-frame-${side}`, c.x + side * w * .235, eyeY, front);
-      add(new T.ShapeGeometry(shape, curvePoints), `glasses-lens-${side}`, c.x + side * w * .235, eyeY, front, lensMaterial).castShadow = false;
-      const length = Math.max(d * .60, front - c.z);
-      const templeX = c.x + side * w * .43;
-      add(new T.BoxGeometry(w * .016, h * .020, length), `glasses-arm-${side}`, templeX, eyeY + h * .005, front - length * .5);
-      const hook = add(new T.BoxGeometry(w * .016, h * .075, d * .028), `glasses-ear-hook-${side}`, templeX, eyeY - h * .025, front - length);
+      const eye = side < 0 ? fit.leftEye : fit.rightEye;
+      const ear = side < 0 ? fit.leftEar : fit.rightEar;
+      const lensX = eye?.x ?? c.x + side * w * .235;
+      const lensY = eye?.y ?? eyeY;
+      add(new T.TubeGeometry(curve, Math.max(48, profile.accessorySegments * 3), w * (spec.style === 'wayfarer' ? .015 : .010), Math.max(6, Math.floor(profile.accessorySegments / 2)), true), `glasses-frame-${side}`, lensX, lensY, front);
+      add(new T.ShapeGeometry(shape, curvePoints), `glasses-lens-${side}`, lensX, lensY, front, lensMaterial).castShadow = false;
+
+      const templeX = ear?.x !== undefined ? ear.x - side * w * .035 : c.x + side * w * .43;
+      const earZ = ear?.z ?? c.z;
+      const earY = ear?.y !== undefined ? ear.y + h * .035 : eyeY - h * .025;
+      const length = Math.max(d * .34, Math.abs(front - earZ));
+      const armY = (lensY + earY) * .5;
+      const armZ = (front + earZ) * .5;
+      const arm = add(new T.BoxGeometry(w * .016, h * .020, length), `glasses-arm-${side}`, templeX, armY, armZ);
+      arm.rotation.x = Math.atan2(earY - lensY, Math.max(.001, front - earZ));
+      const hook = add(new T.BoxGeometry(w * .016, h * .075, d * .028), `glasses-ear-hook-${side}`, templeX, earY - h * .025, earZ);
       hook.rotation.x = side * .04;
     }
     add(new T.BoxGeometry(w * .095, h * .019, d * .022), 'glasses-bridge', c.x, eyeY + h * .018, front);

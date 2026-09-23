@@ -5,8 +5,9 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 
-function headSkinBounds(root: T.Object3D) {
+function headSkinSurface(root: T.Object3D) {
   const bounds = new T.Box3();
+  const points: T.Vector3[] = [];
   root.updateMatrixWorld(true);
   root.traverse(node => {
     if (!(node instanceof T.SkinnedMesh)) return;
@@ -17,10 +18,96 @@ function headSkinBounds(root: T.Object3D) {
     if (!materials.some(material => /skin/i.test(material.name))) return;
     node.skeleton.update();
     for (let i = 0; i < node.geometry.attributes.position.count; i += 1) {
-      bounds.expandByPoint(node.getVertexPosition(i, new T.Vector3()).applyMatrix4(node.matrixWorld));
+      const point = node.getVertexPosition(i, new T.Vector3()).applyMatrix4(node.matrixWorld);
+      bounds.expandByPoint(point);
+      points.push(point);
     }
   });
-  return bounds;
+  return { bounds, points };
+}
+
+function fittedEarPoint(
+  points: T.Vector3[],
+  bounds: T.Box3,
+  side: -1 | 1,
+) {
+  if (!points.length || bounds.isEmpty()) return null;
+  const center = bounds.getCenter(new T.Vector3());
+  const size = bounds.getSize(new T.Vector3());
+  const targetY = center.y - size.y * .055;
+  const targetZ = center.z + size.z * .05;
+  let best: T.Vector3 | null = null;
+  let bestScore = Infinity;
+
+  for (const point of points) {
+    const sideDepth = side < 0 ? Math.abs(point.x - bounds.min.x) : Math.abs(bounds.max.x - point.x);
+    const score =
+      sideDepth * 4.5 +
+      Math.abs(point.y - targetY) * 2.1 +
+      Math.abs(point.z - targetZ) * .7;
+    if (score < bestScore) {
+      bestScore = score;
+      best = point;
+    }
+  }
+
+  if (!best) return null;
+  return best.clone().add(new T.Vector3(side * size.x * .012, -size.y * .01, size.z * .006));
+}
+
+
+
+function fittedEyeCenters(
+  root: T.Object3D,
+  bounds: T.Box3,
+  frame: PlayerAppearance['body']['frame'],
+) {
+  if (bounds.isEmpty()) return { leftEye: null, rightEye: null };
+  const strong: T.Vector3[] = [];
+  const fallback: T.Vector3[] = [];
+  const center = bounds.getCenter(new T.Vector3());
+  const size = bounds.getSize(new T.Vector3());
+
+  root.updateMatrixWorld(true);
+  root.traverse(node => {
+    if (!(node instanceof T.SkinnedMesh)) return;
+    let parent: T.Object3D | null = node;
+    while (parent && !/_Head(?:_|$)/i.test(parent.name)) parent = parent.parent;
+    if (!parent) return;
+
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    const groups = node.geometry.groups.length
+      ? node.geometry.groups
+      : [{ start: 0, count: node.geometry.index?.count ?? node.geometry.attributes.position.count, materialIndex: 0 }];
+    node.skeleton.update();
+
+    for (const group of groups) {
+      const material = materials[group.materialIndex ?? 0];
+      if (!material) continue;
+      const name = material.name.toLowerCase();
+      const isStrong = /iris|pupil|eye/.test(name) || (frame === 'feminine' && name === 'brown');
+      const isFallback = name === 'white';
+      if (!isStrong && !isFallback) continue;
+
+      const target = isStrong ? strong : fallback;
+      const end = Math.min(group.start + group.count, node.geometry.index?.count ?? node.geometry.attributes.position.count);
+      for (let cursor = group.start; cursor < end; cursor++) {
+        const vertexIndex = node.geometry.index ? node.geometry.index.getX(cursor) : cursor;
+        const point = node.getVertexPosition(vertexIndex, new T.Vector3()).applyMatrix4(node.matrixWorld);
+        if (isFallback && point.y < center.y + size.y * .02) continue;
+        target.push(point);
+      }
+    }
+  });
+
+  const points = strong.length ? strong : fallback;
+  const average = (side: -1 | 1) => {
+    const selected = points.filter(point => side < 0 ? point.x < center.x : point.x > center.x);
+    if (!selected.length) return null;
+    return selected.reduce((sum, point) => sum.add(point), new T.Vector3()).multiplyScalar(1 / selected.length);
+  };
+
+  return { leftEye: average(-1), rightEye: average(1) };
 }
 
 function material(color: string, name: string, metalness = 0, roughness = .78) {
@@ -51,10 +138,14 @@ export function addAccessories(
   if (storeSlots.has('eyewear')) accessories.glasses = 'none';
   if (accessories.hat === 'none' && accessories.glasses === 'none' && (accessories.leftEarring ?? accessories.earrings) === 'none' && (accessories.rightEarring ?? accessories.earrings) === 'none' && !storeSlots.has('headwear')) return;
 
-  const bounds = headSkinBounds(root);
+  const headSurface = headSkinSurface(root);
+  const bounds = headSurface.bounds;
   if (bounds.isEmpty()) return;
   const center = bounds.getCenter(new T.Vector3()), size = bounds.getSize(new T.Vector3());
   const rx = size.x * .5, rz = size.z * .5;
+  const leftEarFit = fittedEarPoint(headSurface.points, bounds, -1);
+  const rightEarFit = fittedEarPoint(headSurface.points, bounds, 1);
+  const eyeFit = fittedEyeCenters(root, bounds, appearance.body.frame);
   const anchor = new T.Group();
   anchor.name = 'avatar-accessories';
 
@@ -71,7 +162,11 @@ export function addAccessories(
       slot: 'eyewear', style, color: accessories.glassesColor,
       lenses: appearance.accessories?.lensTint ?? (accessories.glasses === 'sunglasses' ? 'tinted' : 'clear'),
       lensColor: appearance.accessories?.lensColor ?? '#40566d',
-    }, bounds, quality);
+    }, bounds, quality, {
+      ...eyeFit,
+      leftEar: leftEarFit,
+      rightEar: rightEarFit,
+    });
     glasses.name = `avatar-glasses-${accessories.glasses}`;
     anchor.add(glasses);
   }
@@ -81,14 +176,24 @@ export function addAccessories(
   if (leftStyle !== 'none' || rightStyle !== 'none') {
     const earrings = new T.Group();
     earrings.name = 'avatar-earrings';
-    const metal = material(accessories.earringColor, 'AccessoryEarring', .92, quality === 'cinematic' ? .1 : quality === 'ultra' ? .14 : .2);
-    if (metal instanceof T.MeshStandardMaterial) metal.envMapIntensity = quality === 'cinematic' ? 1.8 : quality === 'ultra' ? 1.6 : 1.3;
-    const earY = center.y - size.y * .055;
-    const earZ = center.z + rz * .10;
+    const metal = quality === 'crowd' || quality === 'balanced'
+      ? material(accessories.earringColor, 'AccessoryEarring', .92, .2)
+      : new T.MeshPhysicalMaterial({
+          color: accessories.earringColor,
+          metalness: .94,
+          roughness: quality === 'cinematic' ? .08 : quality === 'ultra' ? .11 : .15,
+          clearcoat: .7,
+          clearcoatRoughness: .06,
+          envMapIntensity: quality === 'cinematic' ? 1.9 : quality === 'ultra' ? 1.7 : 1.45,
+        });
+    metal.name = 'AccessoryEarring';
     for (const side of [-1, 1] as const) {
       const style = side < 0 ? leftStyle : rightStyle;
       if (style === 'none') continue;
-      const earX = center.x + side * rx * .965;
+      const fitted = side < 0 ? leftEarFit : rightEarFit;
+      const earX = fitted?.x ?? center.x + side * rx * .965;
+      const earY = fitted?.y ?? center.y - size.y * .055;
+      const earZ = fitted?.z ?? center.z + rz * .10;
       const sideGroup = new T.Group();
       sideGroup.name = `avatar-earring-${side < 0 ? 'left' : 'right'}-${style}`;
       if (style === 'studs') {
