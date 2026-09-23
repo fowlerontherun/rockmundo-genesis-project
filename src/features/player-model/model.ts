@@ -14,6 +14,7 @@ import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
 import { curatedAlbedoTexture, curatedBumpScale, curatedReliefTexture, curatedRoughnessTexture, type CuratedFinish } from './curatedSurfaceMaps';
+import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -70,16 +71,47 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
   const curatedLogo = richClothing.some(row => row.item.curated_asset_key === 'clothing.starter.logo-tee');
   const hasOtherTop = richClothing.some(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key !== 'clothing.starter.logo-tee');
   if (!curatedLogo && (appearance.equipment.top.itemId !== 'starter.top.casual' || hasOtherTop)) return;
-  const chest=findPlayerBone(bones,['Spine2','Spine.002','Chest','UpperChest']) ?? findPlayerBone(bones,['Spine1','Spine.001']);
-  if(!chest) return;
-  root.updateMatrixWorld(true);
-  const texture=rockmundoWordmarkTexture();
-  const material=new T.MeshStandardMaterial({map:texture,transparent:true,alphaTest:.08,roughness:.78,metalness:0,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
-  material.name='RockmundoLogoPrint';
-  const mark=new T.Mesh(new T.PlaneGeometry(.34,.072),material);
-  mark.name='avatar-rockmundo-logo';
-  mark.position.copy(chest.getWorldPosition(new T.Vector3())).add(new T.Vector3(0,.02,.155));
-  root.add(mark); root.updateMatrixWorld(true); chest.attach(mark);
+
+  const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
+    ?? findPlayerBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+
+  const attachment = findFrontSurfaceAttachment(
+    root,
+    'body',
+    chest.getWorldPosition(new T.Vector3()),
+    appearance.body.frame === 'feminine' ? .018 : .025,
+  );
+  // Never fall back to an arbitrary forward offset: if the fitted shirt surface
+  // cannot be resolved, omitting the print is safer than showing a floating logo.
+  if (!attachment) {
+    console.warn('[curated-clothing] Rockmundo logo surface could not be resolved');
+    return;
+  }
+
+  const texture = rockmundoWordmarkTexture();
+  const material = new T.MeshStandardMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: .12,
+    roughness: .86,
+    metalness: 0,
+    side: T.DoubleSide,
+    depthWrite: false,
+    depthTest: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  material.name = 'RockmundoLogoPrint';
+
+  const mark = new T.Mesh(
+    curvedGraphicGeometry(appearance.body.frame === 'feminine' ? .305 : .33, .07, .009),
+    material,
+  );
+  mark.name = 'avatar-rockmundo-logo';
+  mark.renderOrder = 3;
+  attachSurfaceGraphic(root, chest, mark, attachment, .0018);
 }
 
 /** Each part keeps its donor inverse binds and local transform. This matters for
