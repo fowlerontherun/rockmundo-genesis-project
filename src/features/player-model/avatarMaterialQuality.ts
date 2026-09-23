@@ -123,17 +123,18 @@ export function applyAvatarSkinQuality(
   const roughness = cache?.roughness ?? avatarSkinRoughnessTexture(appearance, quality);
   if (normal) {
     material.normalMap = normal;
-    const strength = quality === 'ultra' ? .34 : quality === 'high' ? .28 : .2;
+    const strength = quality === 'cinematic' ? .38 : quality === 'ultra' ? .34 : quality === 'high' ? .28 : .2;
     material.normalScale.set(strength, strength);
   }
   if (roughness) material.roughnessMap = roughness;
-  material.envMapIntensity = quality === 'ultra' ? .9 : .82;
+  material.envMapIntensity = quality === 'cinematic' ? .96 : quality === 'ultra' ? .9 : .82;
   material.needsUpdate = true;
 }
 
 
 
 function hairTextureSize(quality: AvatarVisualQuality) {
+  if (quality === 'cinematic') return 1024;
   if (quality === 'ultra') return 512;
   if (quality === 'high') return 256;
   if (quality === 'balanced') return 128;
@@ -181,22 +182,22 @@ export function avatarHairRoughnessTexture(quality: AvatarVisualQuality) {
 
 export function applyAvatarEyeQuality(material: T.MeshStandardMaterial, quality: AvatarVisualQuality) {
   if (quality === 'crowd') return;
-  material.roughness = quality === 'ultra' ? .18 : .24;
+  material.roughness = quality === 'cinematic' ? .14 : quality === 'ultra' ? .18 : .24;
   material.metalness = 0;
-  material.envMapIntensity = quality === 'ultra' ? 1.45 : 1.2;
+  material.envMapIntensity = quality === 'cinematic' ? 1.62 : quality === 'ultra' ? 1.45 : 1.2;
   material.needsUpdate = true;
 }
 
 export function applyAvatarHairQuality(material: T.MeshStandardMaterial, quality: AvatarVisualQuality) {
   if (quality === 'crowd') return;
-  material.roughness = quality === 'ultra' ? .46 : quality === 'high' ? .53 : .62;
+  material.roughness = quality === 'cinematic' ? .42 : quality === 'ultra' ? .46 : quality === 'high' ? .53 : .62;
   material.metalness = 0;
-  material.envMapIntensity = quality === 'ultra' ? 1.22 : quality === 'high' ? 1.08 : 1.0;
+  material.envMapIntensity = quality === 'cinematic' ? 1.3 : quality === 'ultra' ? 1.22 : quality === 'high' ? 1.08 : 1.0;
   const normal = avatarHairNormalTexture(quality);
   const roughness = avatarHairRoughnessTexture(quality);
   if (normal) {
     material.normalMap = normal;
-    const strength = quality === 'ultra' ? .42 : quality === 'high' ? .34 : .24;
+    const strength = quality === 'cinematic' ? .48 : quality === 'ultra' ? .42 : quality === 'high' ? .34 : .24;
     material.normalScale.set(strength, strength);
   }
   if (roughness) material.roughnessMap = roughness;
