@@ -3,6 +3,7 @@ import type { PlayerAppearance } from './appearance';
 import { buildHeadAccessory, tuckHair } from './accessoryGeometry';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
+import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 
 function headSkinBounds(root: T.Object3D) {
   const bounds = new T.Box3();
@@ -36,7 +37,14 @@ function mesh(geometry: T.BufferGeometry, mat: T.Material, name: string) {
   return result;
 }
 
-export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, head: T.Bone, richClothing: ResolvedEquippedClothing[] = []) {
+export function addAccessories(
+  root: T.Object3D,
+  appearance: PlayerAppearance,
+  head: T.Bone,
+  richClothing: ResolvedEquippedClothing[] = [],
+  quality: AvatarVisualQuality = 'balanced',
+) {
+  const profile = avatarQualityProfile(quality);
   const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', leftEarring: appearance.accessories?.earrings ?? 'none', rightEarring: appearance.accessories?.earrings ?? 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) };
   const storeSlots = new Set(richClothing.map(row => richGarmentSlot(row.item)));
   if (storeSlots.has('headwear')) accessories.hat = 'none';
@@ -73,7 +81,8 @@ export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, h
   if (leftStyle !== 'none' || rightStyle !== 'none') {
     const earrings = new T.Group();
     earrings.name = 'avatar-earrings';
-    const metal = material(accessories.earringColor, 'AccessoryEarring', .9, .22);
+    const metal = material(accessories.earringColor, 'AccessoryEarring', .92, quality === 'ultra' ? .14 : .2);
+    if (metal instanceof T.MeshStandardMaterial) metal.envMapIntensity = quality === 'ultra' ? 1.6 : 1.3;
     const earY = center.y - size.y * .055;
     const earZ = center.z + rz * .10;
     for (const side of [-1, 1] as const) {
@@ -83,23 +92,23 @@ export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, h
       const sideGroup = new T.Group();
       sideGroup.name = `avatar-earring-${side < 0 ? 'left' : 'right'}-${style}`;
       if (style === 'studs') {
-        const stud = mesh(new T.SphereGeometry(size.x * .024, 12, 8), metal.clone(), 'earring-stud');
+        const stud = mesh(new T.SphereGeometry(size.x * .024, profile.accessorySegments, Math.max(8, Math.floor(profile.accessorySegments * .7))), metal.clone(), 'earring-stud');
         stud.position.set(earX, earY, earZ);
         sideGroup.add(stud);
       } else if (style === 'hoops') {
-        const hoop = mesh(new T.TorusGeometry(size.y * .048, size.x * .010, 8, 22, Math.PI * 1.9), metal.clone(), 'earring-hoop');
+        const hoop = mesh(new T.TorusGeometry(size.y * .048, size.x * .010, Math.max(8, Math.floor(profile.accessorySegments / 2)), Math.max(22, profile.accessorySegments * 2), Math.PI * 1.9), metal.clone(), 'earring-hoop');
         hoop.position.set(earX, earY - size.y * .040, earZ + rz * .015);
         hoop.rotation.y = Math.PI / 2;
         hoop.rotation.x = side * .06;
         sideGroup.add(hoop);
       } else {
-        const stud = mesh(new T.SphereGeometry(size.x * .020, 10, 8), metal.clone(), 'earring-drop-stud');
+        const stud = mesh(new T.SphereGeometry(size.x * .020, profile.accessorySegments, Math.max(8, Math.floor(profile.accessorySegments * .7))), metal.clone(), 'earring-drop-stud');
         stud.position.set(earX, earY, earZ);
         sideGroup.add(stud);
-        const link = mesh(new T.CylinderGeometry(size.x * .007, size.x * .007, size.y * .078, 8), metal.clone(), 'earring-drop-link');
+        const link = mesh(new T.CylinderGeometry(size.x * .007, size.x * .007, size.y * .078, Math.max(8, profile.accessorySegments)), metal.clone(), 'earring-drop-link');
         link.position.set(earX, earY - size.y * .050, earZ);
         sideGroup.add(link);
-        const drop = mesh(new T.SphereGeometry(size.x * .030, 12, 8), metal.clone(), 'earring-drop');
+        const drop = mesh(new T.SphereGeometry(size.x * .030, profile.accessorySegments, Math.max(8, Math.floor(profile.accessorySegments * .7))), metal.clone(), 'earring-drop');
         drop.scale.y = 1.25;
         drop.position.set(earX, earY - size.y * .100, earZ);
         sideGroup.add(drop);
