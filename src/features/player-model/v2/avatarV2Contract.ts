@@ -282,10 +282,13 @@ export function validateAvatarV2Scene(
 
   if (lod <= 1) {
     const regions = new Set<AvatarV2BodyRegion>();
+    const unskinnedRegions = new Set<AvatarV2BodyRegion>();
     scene.traverse(node => {
       if (!(node instanceof T.Mesh)) return;
       const region = avatarV2BodyRegion(node);
-      if (region) regions.add(region);
+      if (!region) return;
+      regions.add(region);
+      if (!(node instanceof T.SkinnedMesh)) unskinnedRegions.add(region);
     });
     for (const region of AVATAR_V2_BODY_REGIONS) {
       if (!regions.has(region)) {
@@ -293,6 +296,12 @@ export function validateAvatarV2Scene(
           level: 'error',
           code: `missing-body-region:${region}`,
           message: `LOD${lod} needs an authored body region for garment occlusion: ${region}.`,
+        });
+      } else if (unskinnedRegions.has(region)) {
+        issues.push({
+          level: 'error',
+          code: `unskinned-body-region:${region}`,
+          message: `Avatar V2 body region must be skinned to the humanoid rig: ${region}.`,
         });
       }
     }
