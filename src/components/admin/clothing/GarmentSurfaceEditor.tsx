@@ -51,6 +51,24 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 const MOTIFS = ["rockmundo-mark", "star", "lightning", "vinyl-record", "stripe"];
 const TEXT_STYLES = ["block", "punk", "script", "metal", "varsity", "clean"] as const;
 
+type SafeGuide = { x: number; y: number; width: number; height: number; label: string };
+function garmentSafeGuides(templateKey: string | undefined, category: string | undefined, surface: GarmentSurface): SafeGuide[] {
+  const key = String(templateKey || inferGarmentTemplateKey(category));
+  if (surface.includes("sleeve")) return [{ x: 30, y: 18, width: 40, height: 64, label: "Sleeve print area" }];
+  if (key === "hoodie" && surface === "front") return [{ x: 28, y: 18, width: 44, height: 40, label: "Chest print area" }];
+  if (["jacket", "shirt", "coat"].includes(key) && surface === "front") return [
+    { x: 22, y: 22, width: 25, height: 54, label: "Left panel" },
+    { x: 53, y: 22, width: 25, height: 54, label: "Right panel" },
+  ];
+  if (["trousers", "jeans", "shorts"].includes(key)) return [
+    { x: 24, y: 18, width: 23, height: 68, label: "Left leg" },
+    { x: 53, y: 18, width: 23, height: 68, label: "Right leg" },
+  ];
+  if (["cap", "beanie", "wide-brim-hat"].includes(key)) return [{ x: 32, y: 34, width: 36, height: 30, label: "Front badge area" }];
+  if (["trainers", "boots", "dress-shoes"].includes(key)) return [{ x: 24, y: 34, width: 52, height: 32, label: "Outer shoe panel" }];
+  return [{ x: 24, y: 22, width: 52, height: 60, label: "Safe print area" }];
+}
+
 function garmentOutline(category: string | undefined, surface: GarmentSurface) {
   const cat = String(category || "t-shirt").toLowerCase();
   if (surface.includes("sleeve")) {
@@ -67,6 +85,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const availableSurfaces = SURFACES.filter(entry => template?.surfaces.includes(entry.key) ?? true);
   const [surface, setSurface] = useState<GarmentSurface>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [past, setPast] = useState<GarmentSurfaceLayer[][]>([]);
   const [future, setFuture] = useState<GarmentSurfaceLayer[][]>([]);
@@ -94,6 +113,8 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     [layers, surface],
   );
   const selected = layers.find(layer => layer.id === selectedId) || null;
+  const selectedLayers = layers.filter(layer => selectedIds.includes(layer.id));
+  const safeGuides = garmentSafeGuides(templateKey, category, surface);
 
   const remember = () => {
     setPast(history => [...history.slice(-29), layers]);
@@ -118,6 +139,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     setFuture(history => [layers, ...history].slice(0, 30));
     onChange(previous);
     setSelectedId(null);
+    setSelectedIds([]);
   };
 
   const redo = () => {
@@ -127,6 +149,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     setPast(history => [...history.slice(-29), layers]);
     onChange(next);
     setSelectedId(null);
+    setSelectedIds([]);
   };
 
   const addLayer = (type: "text" | "graphic", asset?: string) => {
@@ -153,6 +176,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     };
     commit([...layers, layer]);
     setSelectedId(layer.id);
+    setSelectedIds([layer.id]);
   };
 
   const moveFromPointer = (event: React.PointerEvent, id: string) => {
@@ -163,17 +187,57 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     const snap = (value: number) => snapToGrid ? Math.round(value / 10) * 10 : Math.round(value);
     const xLimit = constrainToSafeArea ? (surface.includes("sleeve") ? 48 : 58) : 90;
     const yLimit = constrainToSafeArea ? 62 : 90;
-    updateLayer(id, {
-      offsetX: clamp(snap(x), -xLimit, xLimit),
-      offsetY: clamp(snap(y), -yLimit, yLimit),
-    }, false);
+    let nextX = clamp(snap(x), -xLimit, xLimit);
+    let nextY = clamp(snap(y), -yLimit, yLimit);
+    const key = String(templateKey || inferGarmentTemplateKey(category));
+    if (constrainToSafeArea && surface === "front") {
+      if (key === "hoodie") nextY = clamp(nextY, 0, 55);
+      if (["jacket", "shirt", "coat"].includes(key)) {
+        nextY = clamp(nextY, -48, 48);
+        if (Math.abs(nextX) < 12) nextX = nextX < 0 ? -12 : 12;
+      }
+      if (["cap", "beanie", "wide-brim-hat"].includes(key)) {
+        nextX = clamp(nextX, -36, 36);
+        nextY = clamp(nextY, -24, 24);
+      }
+      if (["trainers", "boots", "dress-shoes"].includes(key)) {
+        nextX = clamp(nextX, -48, 48);
+        nextY = clamp(nextY, -30, 30);
+      }
+    }
+    updateLayer(id, { offsetX: nextX, offsetY: nextY }, false);
   };
 
   const onPointerDown = (event: React.PointerEvent, id: string) => {
     event.currentTarget.setPointerCapture(event.pointerId);
+    if (event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedIds(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
+      setSelectedId(id);
+      return;
+    }
     remember();
     setSelectedId(id);
+    setSelectedIds([id]);
     moveFromPointer(event, id);
+  };
+
+  const alignSelection = (mode: "left" | "center-x" | "right" | "top" | "center-y" | "bottom") => {
+    if (selectedLayers.length < 2) return;
+    const xs = selectedLayers.map(layer => Number(layer.offsetX || 0));
+    const ys = selectedLayers.map(layer => Number(layer.offsetY || 0));
+    const target = mode === "left" ? Math.min(...xs)
+      : mode === "right" ? Math.max(...xs)
+      : mode === "center-x" ? xs.reduce((sum, value) => sum + value, 0) / xs.length
+      : mode === "bottom" ? Math.min(...ys)
+      : mode === "top" ? Math.max(...ys)
+      : ys.reduce((sum, value) => sum + value, 0) / ys.length;
+    commit(layers.map(layer => {
+      if (!selectedIds.includes(layer.id)) return layer;
+      if (mode === "left" || mode === "right" || mode === "center-x") return { ...layer, offsetX: Math.round(target) };
+      return { ...layer, offsetY: Math.round(target) };
+    }));
   };
 
   const startResize = (event: React.PointerEvent, layer: GarmentSurfaceLayer) => {
@@ -256,6 +320,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     };
     commit([...layers, copy]);
     setSelectedId(copy.id);
+    setSelectedIds([copy.id]);
   };
 
   useEffect(() => {
@@ -283,6 +348,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         event.preventDefault();
         commit(layers.filter(layer => layer.id !== selected.id));
         setSelectedId(null);
+        setSelectedIds([]);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -324,7 +390,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap gap-2">
         {availableSurfaces.map(entry => (
-          <Button key={entry.key} type="button" size="sm" variant={surface === entry.key ? "default" : "outline"} onClick={() => { setSurface(entry.key); setSelectedId(null); }}>
+          <Button key={entry.key} type="button" size="sm" variant={surface === entry.key ? "default" : "outline"} onClick={() => { setSurface(entry.key); setSelectedId(null); setSelectedIds([]); }}>
             {entry.label}
           </Button>
         ))}
@@ -361,7 +427,10 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full p-12" preserveAspectRatio="xMidYMid meet">
           <path d={garmentOutline(category, surface)} fill="#242f3d" stroke="#718096" strokeWidth="1.2" />
           <path d={garmentOutline(category, surface)} fill="none" stroke="#94a3b8" strokeDasharray="2 2" strokeWidth=".45" opacity=".6" />
-          {showSafeArea && <rect x="24" y="22" width="52" height="60" rx="2" fill="none" stroke="#22c55e" strokeWidth=".55" strokeDasharray="2 1.5" opacity=".75"/>}
+          {showSafeArea && safeGuides.map((guide, index) => <g key={`${guide.label}-${index}`}>
+            <rect x={guide.x} y={guide.y} width={guide.width} height={guide.height} rx="2" fill="none" stroke="#22c55e" strokeWidth=".55" strokeDasharray="2 1.5" opacity=".8"/>
+            <text x={guide.x + 1.5} y={guide.y + 4} fill="#86efac" fontSize="2.4" opacity=".9">{guide.label}</text>
+          </g>)}
         </svg>
         <div className="absolute left-3 top-3 flex items-center gap-2">
           <Badge variant="secondary" className="capitalize">{surface.replace("-", " ")}</Badge>
@@ -373,7 +442,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
           const y = 50 - clamp(Number(layer.offsetY || 0), -90, 90) / 2;
           const width = 90 * clamp(Number(layer.scale || 100) / 100, .15, 3) * clamp(Number(layer.widthScale || 100) / 100, .2, 2.5);
           const height = 52 * clamp(Number(layer.scale || 100) / 100, .15, 3) * clamp(Number(layer.heightScale || 100) / 100, .2, 2.5);
-          const isSelected = selectedId === layer.id;
+          const isSelected = selectedIds.includes(layer.id);
           return <div
             key={layer.id}
             role="button"
@@ -394,7 +463,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
             <div className="absolute inset-0 overflow-hidden flex items-center justify-center pointer-events-none">
               {layer.type === "text" ? (layer.text || "Text") : /^https?:\/\//.test(String(layer.asset || "")) ? <img src={layer.asset} alt={layer.name || "Uploaded artwork"} className="h-full w-full object-contain pointer-events-none" draggable={false}/> : (layer.asset || layer.name || "Graphic")}
             </div>
-            {isSelected && <>
+            {selectedId === layer.id && <>
               <span className="absolute -right-2 -bottom-2 h-4 w-4 rounded-sm border-2 border-background bg-primary shadow cursor-nwse-resize" title="Resize" onPointerDown={event => startResize(event, layer)}><Maximize2 className="h-3 w-3 text-primary-foreground"/></span>
               <span className="absolute left-1/2 -top-7 -translate-x-1/2 h-5 w-5 rounded-full border-2 border-background bg-primary shadow cursor-grab flex items-center justify-center" title="Rotate" onPointerDown={event => startRotate(event, layer)}><RotateCw className="h-3 w-3 text-primary-foreground"/></span>
             </>}
@@ -403,7 +472,19 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
       </div>
 
       <div className="space-y-3 rounded-xl border p-3">
-        <div className="flex items-center justify-between"><div className="font-medium text-sm">Selected layer</div><Badge variant="outline">{visibleLayers.length} on surface</Badge></div>
+        <div className="flex items-center justify-between"><div className="font-medium text-sm">{selectedIds.length > 1 ? "Selected layers" : "Selected layer"}</div><Badge variant="outline">{selectedIds.length ? `${selectedIds.length} selected` : `${visibleLayers.length} on surface`}</Badge></div>
+        {selectedIds.length > 1 && <div className="space-y-2 rounded-md border p-2">
+          <Label className="text-xs">Group alignment</Label>
+          <div className="grid grid-cols-3 gap-1">
+            <Button type="button" size="sm" variant="outline" onClick={() => alignSelection("left")}>Left</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => alignSelection("center-x")}>Centre X</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => alignSelection("right")}>Right</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => alignSelection("top")}>Top</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => alignSelection("center-y")}>Centre Y</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => alignSelection("bottom")}>Bottom</Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">Shift-click artwork on the canvas to add or remove it from the selection.</p>
+        </div>}
         {!selected ? <p className="text-xs text-muted-foreground">Select an item on the garment, or add text/graphics above.</p> : <>
           <div className="space-y-2"><Label>Name</Label><Input value={selected.name} onChange={event => updateLayer(selected.id, { name: event.target.value })}/></div>
           {selected.type === "text" && <>
@@ -445,7 +526,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
               setCopiedLayer({ ...selected });
               toast.success("Layer copied");
             }} title="Copy"><Copy className="h-4 w-4"/></Button>
-            <Button type="button" size="sm" variant="destructive" onClick={() => { commit(layers.filter(layer => layer.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4"/></Button>
+            <Button type="button" size="sm" variant="destructive" onClick={() => { const ids = selectedIds.length ? selectedIds : [selected.id]; commit(layers.filter(layer => !ids.includes(layer.id))); setSelectedId(null); setSelectedIds([]); }}><Trash2 className="h-4 w-4"/></Button>
           </div>
         </>}
       </div>
