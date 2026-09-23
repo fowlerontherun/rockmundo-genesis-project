@@ -249,6 +249,8 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not has_alias(morphs, [expression]):
                 warnings.append(f"Missing recommended singing target: {expression}.")
         for morph in CUSTOMIZATION_MORPHS:
+            if morph in REQUIRED_MUSCLE_MORPHS:
+                continue
             if not has_alias(morphs, [morph]):
                 warnings.append(f"Missing Avatar Designer shape target: {morph}.")
 
