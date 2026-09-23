@@ -184,6 +184,32 @@ unknown garment bone, absent exact LOD asset or failed contract still causes a
 clean V1 fallback. The registry remains locked until real masculine/feminine
 base assets and the proof garments are validated.
 
+#### Phase C2 — complete body, muscle types and tattoo fitting view
+
+Avatar V2 now treats the base character as a complete unclothed body rather than
+a clothing-dependent donor:
+
+- body width/build remains its own control;
+- muscle definition is a separate saved choice with Natural, Toned, Athletic,
+  Muscular and Bodybuilder states;
+- V2 authoring requires dedicated `muscleToned`, `muscleAthletic`,
+  `muscleMuscular` and `muscleBodybuilder` morph targets so changing muscle
+  definition never relies on scaling the skeleton;
+- each of the eight V2 body-region meshes must be skinned and use a skin material.
+  A candidate that would leave a hole when clothes are removed now fails both the
+  browser contract and Blender export gate;
+- Topless is a real free top state. It reveals the skinned base torso rather than
+  drawing a transparent fake T-shirt;
+- Tattoo Parlour uses a dedicated `tattoo` presentation. Garments are temporarily
+  suppressed only for that preview and every owned tattoo is rendered, while the
+  character's saved outfit remains untouched;
+- the admin V1/V2 candidate lab can switch muscle types so each authored morph can
+  be reviewed with the same performance rig before rollout.
+
+The server-side appearance validator accepts the optional muscle field and the
+topless starter item while continuing to accept every legacy version-1 appearance
+that has no muscle field.
+
 ### Phase D — production rollout
 
 - LOD2/3;
