@@ -14,6 +14,7 @@ import {
   AVATAR_V2_ROLLOUT,
   validatedAvatarV2Asset,
 } from './avatarV2Registry';
+import { applyAvatarV2Customization } from './avatarV2Customization';
 
 const LEGACY_BONE_NAMES: Record<AvatarV2Bone, string> = {
   hips: 'Hips',
@@ -136,6 +137,7 @@ export function prepareAvatarV2CandidateModel(
 
   normalizeRigNames(model, report);
   tuneV2Materials(model, appearance);
+  applyAvatarV2Customization(model, appearance);
   normalizeScale(model, appearance);
   model.name = `rockmundo-avatar-v2-${appearance.body.frame}-lod${lod}`;
   model.userData.rockmundoAvatarEngine = 'rockmundo-v2';
