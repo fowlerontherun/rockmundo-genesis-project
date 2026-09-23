@@ -170,7 +170,12 @@ the legacy V1 body mesh back into the scene:
   remain rejected;
 - body occlusion metadata is mandatory for tops, bottoms and footwear, but is
   deliberately optional for hats/glasses/accessories that do not cover a body
-  region.
+  region;
+- the admin candidate lab runs valid V2 meshes through the production vocal,
+  electric-guitar, bass and rock-drum performance rigs. It samples multiple
+  motion frames, rejects non-finite hand bones, reports left/right grip drift,
+  verifies two drumsticks and reports stick-to-hand drift. The current automated
+  hand/stick clearance target is 14 cm; visual clipping review is still required.
 
 This is a compatibility bridge, not a rollout switch. Any missing head surface,
 unknown garment bone, absent exact LOD asset or failed contract still causes a
