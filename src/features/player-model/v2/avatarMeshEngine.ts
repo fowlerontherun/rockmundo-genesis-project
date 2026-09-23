@@ -15,6 +15,7 @@ import {
   tryAssembleAvatarV2Model,
 } from './avatarV2Model';
 import { avatarV2ClothingCompatibilityReason, buildAvatarV2Garments } from './avatarV2Garments';
+import { applyAvatarV2Compatibility } from './avatarV2Compatibility';
 
 export type AvatarMeshEngine = 'legacy-v1' | 'rockmundo-v2';
 
@@ -38,9 +39,7 @@ function v2CompatibilityReason(
   appearance: PlayerAppearance,
   quality: AvatarVisualQuality,
   clothing: ResolvedEquippedClothing[],
-  tattoos: ResolvedTattooVisual[],
 ) {
-  if (tattoos.length) return 'Avatar V2 tattoo projection has not been enabled yet.';
   return avatarV2ClothingCompatibilityReason(
     clothing,
     appearance.body.frame,
@@ -62,7 +61,7 @@ export function assembleAvatarMesh(
   options: AvatarMeshAssemblyOptions = {},
 ): T.Object3D {
   const wantsV2 = options.forceEngine === 'rockmundo-v2' || options.forceEngine == null;
-  let incompatible = v2CompatibilityReason(appearance, quality, clothing, tattoos);
+  let incompatible = v2CompatibilityReason(appearance, quality, clothing);
 
   if (wantsV2 && !incompatible) {
     const result = tryAssembleAvatarV2Model(
@@ -84,6 +83,7 @@ export function assembleAvatarMesh(
           result.model.add(garments.group);
           result.model.userData.rockmundoAvatarV2OccludedBodyRegions = garments.hiddenBodyRegions;
         }
+        applyAvatarV2Compatibility(result.model, appearance, tattoos, clothing, quality);
         result.model.userData.rockmundoAvatarEngine = 'rockmundo-v2';
         result.model.userData.rockmundoAvatarV2Report = result.report;
         return result.model;
