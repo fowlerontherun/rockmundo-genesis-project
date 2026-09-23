@@ -13,6 +13,12 @@ import { defaultAppearance } from '@/features/player-model/appearance';
 import { disposeModel } from '@/features/player-model/model';
 import { AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { prepareAvatarV2CandidateModel } from '@/features/player-model/v2/avatarV2Model';
+import { applyAvatarV2Compatibility } from '@/features/player-model/v2/avatarV2Compatibility';
+import {
+  inspectAvatarV2Performance,
+  type AvatarV2PerformancePreset,
+  type AvatarV2PerformanceQaReport,
+} from '@/features/player-model/v2/avatarV2PerformanceQa';
 import {
   validateAvatarV2Scene,
   type AvatarV2Frame,
@@ -27,6 +33,7 @@ function CandidateCanvas({
   lod,
   onReport,
   onError,
+  onPerformanceReport,
   animateFace,
   appearance,
   performancePreset,
@@ -36,9 +43,10 @@ function CandidateCanvas({
   lod: AvatarV2Lod;
   onReport: (report: AvatarV2ValidationReport | null) => void;
   onError: (message: string) => void;
+  onPerformanceReport: (report: AvatarV2PerformanceQaReport | null) => void;
   animateFace: boolean;
   appearance: ReturnType<typeof defaultAppearance>;
-  performancePreset: 'backstage' | 'vocals' | 'electric_guitar' | 'bass_guitar' | 'rock_drums';
+  performancePreset: AvatarV2PerformancePreset;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -140,6 +148,7 @@ function CandidateCanvas({
       raf = requestAnimationFrame(render);
       onReport(null);
       onError('');
+      onPerformanceReport(null);
 
       if (file) {
         objectUrl = URL.createObjectURL(file);
@@ -157,6 +166,8 @@ function CandidateCanvas({
           if (report.valid) {
             const prepared = prepareAvatarV2CandidateModel(source, appearance, lod);
             if (prepared.model) {
+              const compatibilityQuality = lod === 0 ? 'cinematic' : lod === 1 ? 'high' : lod === 2 ? 'balanced' : 'crowd';
+              applyAvatarV2Compatibility(prepared.model, appearance, [], [], compatibilityQuality);
               const assignment = performancePreset === 'backstage'
                 ? stageAssignment(null, 'other')
                 : stageAssignment(performancePreset);
@@ -175,6 +186,7 @@ function CandidateCanvas({
               scene.add(actor.root);
               equipment = actor.equipment;
               if (equipment) scene.add(equipment);
+              onPerformanceReport(inspectAvatarV2Performance(actor, performancePreset));
               return;
             }
           }
@@ -203,6 +215,7 @@ function CandidateCanvas({
         }).catch(error => {
           if (!alive) return;
           onReport(null);
+          onPerformanceReport(null);
           onError(error instanceof Error ? error.message : 'Candidate GLB could not be loaded.');
         });
       }
@@ -234,7 +247,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, frame, lod, onError, onReport, animateFace, appearance, performancePreset]);
+  }, [file, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset]);
 
   return (
     <canvas
@@ -252,12 +265,18 @@ export function AvatarV2CandidateLab() {
   const [report, setReport] = useState<AvatarV2ValidationReport | null>(null);
   const [error, setError] = useState('');
   const [animateFace, setAnimateFace] = useState(true);
-  const [performance, setPerformance] = useState<'backstage' | 'vocals' | 'electric_guitar' | 'bass_guitar' | 'rock_drums'>('vocals');
+  const [performance, setPerformance] = useState<AvatarV2PerformancePreset>('vocals');
+  const [performanceReport, setPerformanceReport] = useState<AvatarV2PerformanceQaReport | null>(null);
 
   const appearance = useMemo(() => {
     const next = defaultAppearance('avatar-v2-side-by-side');
     next.body.frame = frame;
     next.head.hairStyle = 'quiff';
+    if (next.accessories) {
+      next.accessories.glasses = 'square';
+      next.accessories.leftEarring = 'hoops';
+      next.accessories.rightEarring = 'studs';
+    }
     return next;
   }, [frame]);
 
@@ -271,8 +290,10 @@ export function AvatarV2CandidateLab() {
       <CardHeader>
         <CardTitle>V1 ↔ V2 candidate lab</CardTitle>
         <CardDescription>
-          Load a GLB locally for side-by-side visual inspection. The file stays in this browser session
-          and is not published, uploaded or made available to players.
+          Load a GLB locally for side-by-side visual inspection. The lab applies the same saved-hair and
+          accessory bridge as the live V2 path, using a quiff, square glasses and independent earrings as
+          visible fit checks. The file stays in this browser session and is not published, uploaded or made
+          available to players.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -371,6 +392,7 @@ export function AvatarV2CandidateLab() {
               lod={lod}
               onReport={setReport}
               onError={setError}
+              onPerformanceReport={setPerformanceReport}
               animateFace={animateFace}
               appearance={appearance}
               performancePreset={performance}
@@ -379,6 +401,42 @@ export function AvatarV2CandidateLab() {
         </div>
 
         {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+
+        {performanceReport && (
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={performanceReport.valid ? 'default' : 'destructive'}>
+                {performanceReport.valid ? 'Performance grip pass' : 'Performance grip needs fixes'}
+              </Badge>
+              {performanceReport.maxLeftGripError != null && (
+                <Badge variant="outline">left hand {(performanceReport.maxLeftGripError * 100).toFixed(1)}cm max drift</Badge>
+              )}
+              {performanceReport.maxRightGripError != null && (
+                <Badge variant="outline">right hand {(performanceReport.maxRightGripError * 100).toFixed(1)}cm max drift</Badge>
+              )}
+              {performanceReport.preset === 'rock_drums' && (
+                <Badge variant="outline">{performanceReport.drumsticks}/2 drumsticks</Badge>
+              )}
+              {performanceReport.maxDrumstickError != null && (
+                <Badge variant="outline">stick/hand {(performanceReport.maxDrumstickError * 100).toFixed(1)}cm max drift</Badge>
+              )}
+            </div>
+            {performanceReport.issues.length === 0 ? (
+              <p className="text-sm text-emerald-600">
+                The candidate stayed within the automated hand/grip clearance limits across the sampled performance motion.
+              </p>
+            ) : (
+              <div className="grid gap-2 md:grid-cols-2">
+                {performanceReport.issues.map(issue => (
+                  <div key={issue.code} className="rounded-md border p-3 text-sm">
+                    <code className="text-xs">{issue.code}</code>
+                    <p className="mt-1 text-muted-foreground">{issue.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {report && (
           <div className="space-y-3 rounded-lg border p-4">

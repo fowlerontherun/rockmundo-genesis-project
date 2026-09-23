@@ -4,6 +4,16 @@ import { buildHeadAccessory, tuckHair } from './accessoryGeometry';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
+import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
+
+function isHeadSurfaceMesh(root: T.Object3D, node: T.SkinnedMesh) {
+  let parent: T.Object3D | null = node;
+  while (parent) {
+    if (/_Head(?:_|$)/i.test(parent.name)) return true;
+    parent = parent.parent;
+  }
+  return root.userData.rockmundoAvatarEngine === 'rockmundo-v2' && isAvatarV2HeadSurfaceNode(node);
+}
 
 function headSkinSurface(root: T.Object3D) {
   const bounds = new T.Box3();
@@ -11,9 +21,7 @@ function headSkinSurface(root: T.Object3D) {
   root.updateMatrixWorld(true);
   root.traverse(node => {
     if (!(node instanceof T.SkinnedMesh)) return;
-    let parent: T.Object3D | null = node;
-    while (parent && !/_Head(?:_|$)/i.test(parent.name)) parent = parent.parent;
-    if (!parent) return;
+    if (!isHeadSurfaceMesh(root, node)) return;
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     if (!materials.some(material => /skin/i.test(material.name))) return;
     node.skeleton.update();
@@ -71,9 +79,7 @@ function fittedEyeCenters(
   root.updateMatrixWorld(true);
   root.traverse(node => {
     if (!(node instanceof T.SkinnedMesh)) return;
-    let parent: T.Object3D | null = node;
-    while (parent && !/_Head(?:_|$)/i.test(parent.name)) parent = parent.parent;
-    if (!parent) return;
+    if (!isHeadSurfaceMesh(root, node)) return;
 
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     const groups = node.geometry.groups.length

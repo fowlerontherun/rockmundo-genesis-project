@@ -54,6 +54,20 @@ function validScene() {
   mesh.bind(new T.Skeleton(bones));
   root.add(mesh);
 
+  const headGeometry = new T.BoxGeometry(.38, .5, .34, 2, 3, 2);
+  const headCount = headGeometry.attributes.position.count;
+  headGeometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(headCount * 4), 4));
+  const headWeights = new Float32Array(headCount * 4);
+  for (let index = 0; index < headCount; index++) headWeights[index * 4] = 1;
+  headGeometry.setAttribute('skinWeight', new T.Float32BufferAttribute(headWeights, 4));
+  const headMaterial = new T.MeshStandardMaterial({ color: '#cccccc' });
+  headMaterial.name = 'RMV2_Skin';
+  const headSurface = new T.SkinnedMesh(headGeometry, headMaterial);
+  headSurface.name = 'RMV2_HeadSurface';
+  headSurface.position.y = 1.45;
+  headSurface.bind(new T.Skeleton(bones));
+  root.add(headSurface);
+
   for (const region of AVATAR_V2_BODY_REGIONS) {
     const partGeometry = new T.BoxGeometry(.02, .02, .02);
     const partCount = partGeometry.attributes.position.count;
@@ -79,9 +93,17 @@ describe('Avatar V2 mesh contract', () => {
   it('accepts a compact skinned humanoid with the required rig and facial targets', () => {
     const report = validateAvatarV2Scene(validScene(), 'masculine', 0);
     expect(report.valid).toBe(true);
-    expect(report.skinnedMeshes).toBe(1);
+    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length);
     expect(report.issues.filter(issue => issue.level === 'error')).toEqual([]);
     expect(Object.keys(report.boneMap)).toHaveLength(AVATAR_V2_REQUIRED_BONES.length);
+  });
+
+  it('fails close-up assets without an authored skinned head surface', () => {
+    const scene = validScene();
+    scene.remove(scene.getObjectByName('RMV2_HeadSurface')!);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-head-surface' && issue.level === 'error')).toBe(true);
   });
 
   it('fails close-up assets that omit a required facial expression', () => {
