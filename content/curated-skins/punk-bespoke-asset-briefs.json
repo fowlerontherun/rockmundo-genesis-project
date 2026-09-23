@@ -1,0 +1,101 @@
+{
+  "schema": "rockmundo.bespoke-garment-brief",
+  "schemaVersion": 1,
+  "rigRules": {
+    "frames": [
+      "masculine",
+      "feminine"
+    ],
+    "sourceSkeleton": "Rockmundo player avatar skeleton",
+    "requiredPoses": [
+      "rest",
+      "tpose",
+      "singing",
+      "guitar",
+      "bass",
+      "drums"
+    ],
+    "requirements": [
+      "Use the exact frame-specific Rockmundo skeleton and bone names",
+      "Garment must contain skinned meshes; no independent donor armature at runtime",
+      "Keep bind pose and inverse binds compatible with the existing avatar",
+      "No body mesh embedded in the garment asset",
+      "No detached decorative pieces unless they are weighted or intentionally rig-attached",
+      "No major clipping through torso, arms, instrument straps or seated legs",
+      "Keep material count low and silhouette readable under dark stage lighting"
+    ]
+  },
+  "assets": [
+    {
+      "assetKey": "clothing.punk.ripped-black-tee",
+      "name": "Ripped Black Tee",
+      "slot": "top",
+      "files": {
+        "masculine": "public/gig-demo-3d/clothing/masculine/clothing.punk.ripped-black-tee.glb",
+        "feminine": "public/gig-demo-3d/clothing/feminine/clothing.punk.ripped-black-tee.glb"
+      },
+      "visualBrief": {
+        "base": "Slim black punk T-shirt",
+        "silhouette": "Close to the existing casual tee so shoulders/arms stay reliable",
+        "details": [
+          "Irregular torn sleeve edges",
+          "Small distressed holes around lower front and hem",
+          "Slightly uneven hem",
+          "No giant holes exposing most of the torso",
+          "Stage-worn rather than post-apocalyptic"
+        ],
+        "materials": [
+          "mat_cloth_black",
+          "mat_edge_fade"
+        ],
+        "targetTriangleBudget": 12000
+      },
+      "validation": {
+        "tattooCoverage": [
+          "torso"
+        ],
+        "criticalChecks": [
+          "Sleeve tears do not intersect upper arm during guitar pose",
+          "Front holes do not z-fight with torso",
+          "Hem remains above belt line in seated/drum pose"
+        ]
+      }
+    },
+    {
+      "assetKey": "clothing.punk.studded-denim-vest",
+      "name": "Studded Denim Vest",
+      "slot": "outerwear",
+      "files": {
+        "masculine": "public/gig-demo-3d/clothing/masculine/clothing.punk.studded-denim-vest.glb",
+        "feminine": "public/gig-demo-3d/clothing/feminine/clothing.punk.studded-denim-vest.glb"
+      },
+      "visualBrief": {
+        "base": "Sleeveless dark denim punk vest",
+        "silhouette": "Open-neck sleeveless vest with cropped jacket proportions",
+        "details": [
+          "Visible arm openings with enough clearance for guitar/bass animation",
+          "Small metal studs across shoulders",
+          "Two small front pockets",
+          "Subtle seam/panel detail",
+          "No sleeves and no floating collar pieces"
+        ],
+        "materials": [
+          "mat_denim_dark",
+          "mat_metal_studs"
+        ],
+        "targetTriangleBudget": 16000
+      },
+      "validation": {
+        "tattooCoverage": [
+          "torso"
+        ],
+        "criticalChecks": [
+          "Arm holes clear shoulders through full performance range",
+          "Studs remain attached through singing and guitar motion",
+          "Vest does not intersect guitar body or strap area excessively",
+          "Lower hem remains stable in seated/drum pose"
+        ]
+      }
+    }
+  ]
+}
