@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Type, Image as ImageIcon, Trash2, Copy } from "lucide-react";
+import { garmentTemplate, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
 
 export type GarmentSurface = "front" | "back" | "left-sleeve" | "right-sleeve";
 
@@ -28,6 +29,7 @@ export interface GarmentSurfaceLayer {
 
 interface Props {
   category?: string;
+  templateKey?: string;
   layers: GarmentSurfaceLayer[];
   onChange: (layers: GarmentSurfaceLayer[]) => void;
 }
@@ -52,7 +54,9 @@ function garmentOutline(category: string | undefined, surface: GarmentSurface) {
   return "M30 12 L40 5 L60 5 L70 12 L90 31 L76 40 L69 92 L31 92 L24 40 L10 31 Z";
 }
 
-export function GarmentSurfaceEditor({ category, layers, onChange }: Props) {
+export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }: Props) {
+  const template = garmentTemplate(templateKey || inferGarmentTemplateKey(category));
+  const availableSurfaces = SURFACES.filter(entry => template?.surfaces.includes(entry.key) ?? true);
   const [surface, setSurface] = useState<GarmentSurface>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -109,7 +113,7 @@ export function GarmentSurfaceEditor({ category, layers, onChange }: Props) {
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap gap-2">
-        {SURFACES.map(entry => (
+        {availableSurfaces.map(entry => (
           <Button key={entry.key} type="button" size="sm" variant={surface === entry.key ? "default" : "outline"} onClick={() => { setSurface(entry.key); setSelectedId(null); }}>
             {entry.label}
           </Button>
