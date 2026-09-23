@@ -5,6 +5,7 @@ import type { PlayerAppearance } from '../appearance';
 import type { AvatarVisualQuality } from '../avatarVisualQuality';
 import {
   assemblePlayerModel,
+  disposeModel,
   requiredModelFiles,
   type ModelLibrary,
 } from '../model';
@@ -87,6 +88,7 @@ export function assembleAvatarMesh(
         result.model.userData.rockmundoAvatarV2Report = result.report;
         return result.model;
       } catch (error) {
+        disposeModel(result.model);
         incompatible = error instanceof Error ? error.message : 'Avatar V2 garment assembly failed.';
       }
     }
