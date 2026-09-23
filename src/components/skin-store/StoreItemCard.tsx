@@ -65,6 +65,10 @@ export const StoreItemCard = ({ item, isOwned, onPurchase, onPreview }: StoreIte
   const bonuses = bonusPills(item);
   const generatedFrames = usablePreviewFrames(item.preview_manifest);
   const thumbnail = generatedFrames.find(frame => frame.key === 'front')?.url || generatedFrames[0]?.url;
+  const finish = String(item.render_config?.curatedFinish || item.material_config?.finish || '').replace(/-/g, ' ');
+  const variantCount = Array.isArray(item.variant_matrix) && item.variant_matrix.length
+    ? item.variant_matrix.length
+    : Array.isArray(item.color_variants) ? item.color_variants.length : 0;
 
   return (
     <Card className={`relative overflow-hidden hover:shadow-electric transition-all duration-300 group ${item.featured ? "ring-2 ring-warning/50" : ""}`}>
@@ -108,6 +112,10 @@ export const StoreItemCard = ({ item, isOwned, onPurchase, onPreview }: StoreIte
         </div>
 
         <h4 className="font-medium text-foreground truncate mb-2">{item.name}</h4>
+        {(finish || variantCount > 1) && <div className="mb-2 flex flex-wrap gap-1">
+          {finish && <Badge variant="outline" className="text-[10px] capitalize">{finish}</Badge>}
+          {variantCount > 1 && <Badge variant="outline" className="text-[10px]">{variantCount} colourways</Badge>}
+        </div>}
 
         {bonuses.length > 0 && (
           <div className="mb-3 rounded-md border border-primary/20 bg-primary/5 p-2">
