@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { PlayerAppearance } from './appearance';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarHairQuality, type AvatarHairTextureCache } from './avatarMaterialQuality';
+import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
 
 /** Authored meshes split scalp hair from brows and eyes. New cuts use the
  * complete casual scalp, leaving all skin, eyebrows and facial details intact. */
@@ -10,17 +11,9 @@ function isHeadSurfaceMesh(root: T.Object3D, node: T.SkinnedMesh) {
   let parent: T.Object3D | null = node;
   while (parent) {
     if (/_Head(?:_|$)/i.test(parent.name)) return true;
-    if (
-      root.userData.rockmundoAvatarEngine === 'rockmundo-v2' &&
-      (
-        parent.userData?.rockmundoHeadSurface === true ||
-        /(?:rmv2|rockmundo)[_-]?(?:head|face)(?:surface)?/i.test(parent.name) ||
-        /(?:head|face)[_-]?surface/i.test(parent.name)
-      )
-    ) return true;
     parent = parent.parent;
   }
-  return false;
+  return root.userData.rockmundoAvatarEngine === 'rockmundo-v2' && isAvatarV2HeadSurfaceNode(node);
 }
 export function isScalpHair(material: T.Material, frame: PlayerAppearance['body']['frame']) {
   return frame === 'feminine' ? material.name === 'Hair_Blond' : material.name === 'Hair';
