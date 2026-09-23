@@ -295,13 +295,14 @@ function targetCuratedSize(quality: AvatarVisualQuality, baseSize: number) {
   if (quality === 'crowd') return Math.min(baseSize, 128);
   if (quality === 'balanced') return baseSize;
   if (quality === 'high') return Math.max(baseSize, 512);
-  return Math.max(baseSize, 1024);
+  if (quality === 'ultra') return Math.max(baseSize, 1024);
+  return Math.max(baseSize, 2048);
 }
 
 /**
  * Upscales procedural curated surface maps only for close-up tiers and injects
- * restrained micro-variation so 512/1024 textures carry real extra detail
- * rather than simply stretching the existing 256px map.
+ * restrained micro-variation so 512/1024/2048 textures carry real extra
+ * detail rather than simply stretching the existing 256px map.
  */
 export function curatedTextureForQuality(
   source: T.DataTexture,
