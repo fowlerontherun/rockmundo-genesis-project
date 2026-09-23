@@ -80,6 +80,11 @@ CUSTOMIZATION_MORPHS = [
     "bodySlim", "bodyBroad", "faceOval", "faceAngular", "faceSoft", "faceWide",
 ]
 
+BODY_REGIONS = [
+    "torso", "upper-arms", "lower-arms", "hands",
+    "hips", "upper-legs", "lower-legs", "feet",
+]
+
 MATERIAL_ROLES = {
     "skin": re.compile(r"rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])", re.I),
     "eyes": re.compile(r"rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|cornea)($|[_-])", re.I),
@@ -193,6 +198,20 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
         for semantic, aliases in CLOSEUP_BONES.items():
             if not has_alias(bone_names, aliases):
                 errors.append(f"Missing close-up articulation bone: {semantic}.")
+
+        authored_regions = set()
+        for obj in meshes:
+            explicit = str(obj.get("rockmundoBodyRegion", "")).lower()
+            if explicit in BODY_REGIONS:
+                authored_regions.add(explicit)
+            cleaned_name = clean(obj.name)
+            for region in BODY_REGIONS:
+                cleaned_region = clean(region)
+                if f"rmv2body{cleaned_region}" in cleaned_name or f"body{cleaned_region}" in cleaned_name:
+                    authored_regions.add(region)
+        for region in BODY_REGIONS:
+            if region not in authored_regions:
+                errors.append(f"Missing garment-occlusion body region mesh: {region}.")
 
     for expression, aliases in REQUIRED_EXPRESSIONS.items():
         if not has_alias(morphs, [expression, *aliases]):
