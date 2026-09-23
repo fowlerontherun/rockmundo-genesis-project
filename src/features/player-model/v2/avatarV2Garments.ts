@@ -3,7 +3,7 @@ import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
-import type { ModelLibrary } from '../model';
+import { disposeModel, type ModelLibrary } from '../model';
 import type { AvatarV2Frame, AvatarV2Lod } from './avatarV2Contract';
 import { avatarV2RuntimeBoneName, cleanAvatarV2Name } from './avatarV2Contract';
 import { AVATAR_V2_ROLLOUT } from './avatarV2Registry';
@@ -171,18 +171,25 @@ function bodyRegion(node: T.Object3D): AvatarV2BodyRegion | null {
   return match ?? null;
 }
 
+function availableBodyRegions(root: T.Object3D) {
+  const found = new Set<AvatarV2BodyRegion>();
+  root.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    const region = bodyRegion(node);
+    if (region) found.add(region);
+  });
+  return found;
+}
+
 function applyBodyOcclusion(root: T.Object3D, regions: AvatarV2BodyRegion[]) {
   const wanted = new Set(regions);
-  const found = new Set<AvatarV2BodyRegion>();
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
     const region = bodyRegion(node);
     if (!region || !wanted.has(region)) return;
     node.visible = false;
     node.userData.rockmundoV2OccludedByGarment = true;
-    found.add(region);
   });
-  return regions.filter(region => !found.has(region));
 }
 
 function ownMaterial(source: T.Material) {
@@ -247,61 +254,72 @@ export function buildAvatarV2Garments(
   const group = new T.Group();
   group.name = 'rockmundo-avatar-v2-garments';
   const hidden = new Set<AvatarV2BodyRegion>();
+  const available = availableBodyRegions(avatarRoot);
 
   for (const row of clothing) {
     const config = avatarV2GarmentConfig(row.item)!;
-    const file = avatarV2GarmentFile(row.item, frame, lod)!;
-    const source = library.get(file);
-    if (!source) throw new Error(`Avatar V2 garment was not preloaded: ${file}`);
-
-    const counts = garmentMeshCount(source);
-    if (!counts.skinned) throw new Error(`${row.item.name} V2 garment has no skinned mesh.`);
-    if (counts.unskinned) {
-      throw new Error(`${row.item.name} V2 garment contains ${counts.unskinned} unskinned mesh(es); rigid details must be bone weighted.`);
-    }
-
-    source.updateMatrixWorld(true);
-    const itemGroup = new T.Group();
-    itemGroup.name = `avatar-v2-garment-${row.item.curated_asset_key || row.item.id}`;
-
-    source.traverse(node => {
-      if (!(node instanceof T.SkinnedMesh)) return;
-      const mesh = clone(node) as T.SkinnedMesh;
-      mesh.geometry = node.geometry.clone();
-      mesh.material = Array.isArray(node.material)
-        ? node.material.map(ownMaterial)
-        : ownMaterial(node.material);
-
-      const bound = node.skeleton.bones.map(donor => {
-        const exact = target.exact.get(donor.name) ?? target.cleaned.get(clean(donor.name));
-        if (exact) return exact;
-        const runtimeName = avatarV2RuntimeBoneName(donor.name);
-        const normalized = target.exact.get(runtimeName) ?? target.cleaned.get(clean(runtimeName));
-        if (!normalized) throw new Error(`${row.item.name} V2 garment uses unknown avatar bone: ${donor.name}`);
-        return normalized;
-      });
-
-      const relative = node.matrixWorld.clone();
-      relative.decompose(mesh.position, mesh.quaternion, mesh.scale);
-      mesh.bind(
-        new T.Skeleton(bound, node.skeleton.boneInverses.map(matrix => matrix.clone())),
-        node.bindMatrix.clone(),
-      );
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.frustumCulled = false;
-      mesh.userData.rockmundoAvatarV2Garment = true;
-      applyVariant(mesh, row, config);
-      itemGroup.add(mesh);
-    });
-
-    group.add(itemGroup);
-    const missingRegions = applyBodyOcclusion(avatarRoot, config.occludeBodyRegions);
+    const missingRegions = config.occludeBodyRegions.filter(region => !available.has(region));
     if (missingRegions.length) {
       throw new Error(`${row.item.name} could not find Avatar V2 body region(s) to occlude: ${missingRegions.join(', ')}`);
     }
     config.occludeBodyRegions.forEach(region => hidden.add(region));
   }
 
+  try {
+    for (const row of clothing) {
+      const config = avatarV2GarmentConfig(row.item)!;
+      const file = avatarV2GarmentFile(row.item, frame, lod)!;
+      const source = library.get(file);
+      if (!source) throw new Error(`Avatar V2 garment was not preloaded: ${file}`);
+
+      const counts = garmentMeshCount(source);
+      if (!counts.skinned) throw new Error(`${row.item.name} V2 garment has no skinned mesh.`);
+      if (counts.unskinned) {
+        throw new Error(`${row.item.name} V2 garment contains ${counts.unskinned} unskinned mesh(es); rigid details must be bone weighted.`);
+      }
+
+      source.updateMatrixWorld(true);
+      const itemGroup = new T.Group();
+      itemGroup.name = `avatar-v2-garment-${row.item.curated_asset_key || row.item.id}`;
+
+      source.traverse(node => {
+        if (!(node instanceof T.SkinnedMesh)) return;
+        const mesh = clone(node) as T.SkinnedMesh;
+        mesh.geometry = node.geometry.clone();
+        mesh.material = Array.isArray(node.material)
+          ? node.material.map(ownMaterial)
+          : ownMaterial(node.material);
+
+        const bound = node.skeleton.bones.map(donor => {
+          const exact = target.exact.get(donor.name) ?? target.cleaned.get(clean(donor.name));
+          if (exact) return exact;
+          const runtimeName = avatarV2RuntimeBoneName(donor.name);
+          const normalized = target.exact.get(runtimeName) ?? target.cleaned.get(clean(runtimeName));
+          if (!normalized) throw new Error(`${row.item.name} V2 garment uses unknown avatar bone: ${donor.name}`);
+          return normalized;
+        });
+
+        const relative = node.matrixWorld.clone();
+        relative.decompose(mesh.position, mesh.quaternion, mesh.scale);
+        mesh.bind(
+          new T.Skeleton(bound, node.skeleton.boneInverses.map(matrix => matrix.clone())),
+          node.bindMatrix.clone(),
+        );
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.frustumCulled = false;
+        mesh.userData.rockmundoAvatarV2Garment = true;
+        applyVariant(mesh, row, config);
+        itemGroup.add(mesh);
+      });
+
+      group.add(itemGroup);
+    }
+  } catch (error) {
+    disposeModel(group);
+    throw error;
+  }
+
+  applyBodyOcclusion(avatarRoot, [...hidden]);
   return { group, hiddenBodyRegions: [...hidden] };
 }
