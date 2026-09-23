@@ -39,5 +39,17 @@ export function curatedDonorForSlot(
   });
   if (!row) return null;
   const source = curatedDonorSource(row.item);
-  return source ? { row, source } : null;
+  if (!source) return null;
+  const allowedFabrics = new Set(['plain','stripe','plaid','pinstripe','denim','canvas','two-tone','patent']);
+  const variantFabric = row.variant?.material && allowedFabrics.has(row.variant.material)
+    ? row.variant.material as CuratedDonorSource['fabric']
+    : undefined;
+  return {
+    row,
+    source: {
+      ...source,
+      color: row.variant?.color || source.color,
+      fabric: variantFabric || source.fabric,
+    },
+  };
 }
