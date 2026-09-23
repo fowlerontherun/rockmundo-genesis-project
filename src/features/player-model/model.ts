@@ -19,6 +19,7 @@ import { applyCuratedMacroShading } from './curatedMacroShading';
 import { curatedMaterialProfile } from './curatedMaterialProfile';
 import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality } from './avatarMaterialQuality';
 import type { AvatarVisualQuality } from './avatarVisualQuality';
+import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -194,6 +195,9 @@ export function assemblePlayerModel(
         clonedNode.geometry = original.geometry.clone();
         if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
+        if (choice.part === 'head' || choice.part === 'body') {
+          applyAvatarSkinMacroShading(clonedNode.geometry, choice.part, appearance, quality);
+        }
         const dyeMaterial = (originalMaterial: T.Material) => {
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
@@ -211,6 +215,7 @@ export function assemblePlayerModel(
           }
           if (/skin/.test(name)) {
             material.color.set(appearance.body.skin);
+            if (clonedNode.geometry.getAttribute('color')) material.vertexColors = true;
             applyAvatarSkinQuality(material, appearance, quality);
           } else if (choice.part === 'head') {
             // The source rigs use slightly different material names. Keep iris,
