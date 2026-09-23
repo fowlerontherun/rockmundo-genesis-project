@@ -37,11 +37,11 @@ function mesh(geometry: T.BufferGeometry, mat: T.Material, name: string) {
 }
 
 export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, head: T.Bone, richClothing: ResolvedEquippedClothing[] = []) {
-  const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) };
+  const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', leftEarring: appearance.accessories?.earrings ?? 'none', rightEarring: appearance.accessories?.earrings ?? 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) };
   const storeSlots = new Set(richClothing.map(row => richGarmentSlot(row.item)));
   if (storeSlots.has('headwear')) accessories.hat = 'none';
   if (storeSlots.has('eyewear')) accessories.glasses = 'none';
-  if (accessories.hat === 'none' && accessories.glasses === 'none' && accessories.earrings === 'none' && !storeSlots.has('headwear')) return;
+  if (accessories.hat === 'none' && accessories.glasses === 'none' && (accessories.leftEarring ?? accessories.earrings) === 'none' && (accessories.rightEarring ?? accessories.earrings) === 'none' && !storeSlots.has('headwear')) return;
 
   const bounds = headSkinBounds(root);
   if (bounds.isEmpty()) return;
@@ -68,35 +68,43 @@ export function addAccessories(root: T.Object3D, appearance: PlayerAppearance, h
     anchor.add(glasses);
   }
 
-  if (accessories.earrings !== 'none') {
+  const leftStyle = accessories.leftEarring ?? accessories.earrings;
+  const rightStyle = accessories.rightEarring ?? accessories.earrings;
+  if (leftStyle !== 'none' || rightStyle !== 'none') {
     const earrings = new T.Group();
-    earrings.name = `avatar-earrings-${accessories.earrings}`;
+    earrings.name = 'avatar-earrings';
     const metal = material(accessories.earringColor, 'AccessoryEarring', .9, .22);
-    const earY = center.y - size.y * .015;
-    const earZ = center.z + rz * .03;
-    for (const side of [-1, 1]) {
-      const earX = center.x + side * rx * .985;
-      if (accessories.earrings === 'studs') {
-        const stud = mesh(new T.SphereGeometry(size.x * .028, 12, 8), metal.clone(), 'earring-stud');
+    const earY = center.y - size.y * .055;
+    const earZ = center.z + rz * .10;
+    for (const side of [-1, 1] as const) {
+      const style = side < 0 ? leftStyle : rightStyle;
+      if (style === 'none') continue;
+      const earX = center.x + side * rx * .965;
+      const sideGroup = new T.Group();
+      sideGroup.name = `avatar-earring-${side < 0 ? 'left' : 'right'}-${style}`;
+      if (style === 'studs') {
+        const stud = mesh(new T.SphereGeometry(size.x * .024, 12, 8), metal.clone(), 'earring-stud');
         stud.position.set(earX, earY, earZ);
-        earrings.add(stud);
-      } else if (accessories.earrings === 'hoops') {
-        const hoop = mesh(new T.TorusGeometry(size.y * .055, size.x * .012, 8, 22, Math.PI * 1.86), metal.clone(), 'earring-hoop');
-        hoop.position.set(earX, earY - size.y * .035, earZ);
-        hoop.rotation.z = side * .05;
-        earrings.add(hoop);
+        sideGroup.add(stud);
+      } else if (style === 'hoops') {
+        const hoop = mesh(new T.TorusGeometry(size.y * .048, size.x * .010, 8, 22, Math.PI * 1.9), metal.clone(), 'earring-hoop');
+        hoop.position.set(earX, earY - size.y * .040, earZ + rz * .015);
+        hoop.rotation.y = Math.PI / 2;
+        hoop.rotation.x = side * .06;
+        sideGroup.add(hoop);
       } else {
-        const stud = mesh(new T.SphereGeometry(size.x * .022, 10, 8), metal.clone(), 'earring-drop-stud');
+        const stud = mesh(new T.SphereGeometry(size.x * .020, 10, 8), metal.clone(), 'earring-drop-stud');
         stud.position.set(earX, earY, earZ);
-        earrings.add(stud);
-        const link = mesh(new T.CylinderGeometry(size.x * .008, size.x * .008, size.y * .09, 8), metal.clone(), 'earring-drop-link');
-        link.position.set(earX, earY - size.y * .055, earZ);
-        earrings.add(link);
-        const drop = mesh(new T.SphereGeometry(size.x * .034, 12, 8), metal.clone(), 'earring-drop');
-        drop.scale.y = 1.3;
-        drop.position.set(earX, earY - size.y * .115, earZ);
-        earrings.add(drop);
+        sideGroup.add(stud);
+        const link = mesh(new T.CylinderGeometry(size.x * .007, size.x * .007, size.y * .078, 8), metal.clone(), 'earring-drop-link');
+        link.position.set(earX, earY - size.y * .050, earZ);
+        sideGroup.add(link);
+        const drop = mesh(new T.SphereGeometry(size.x * .030, 12, 8), metal.clone(), 'earring-drop');
+        drop.scale.y = 1.25;
+        drop.position.set(earX, earY - size.y * .100, earZ);
+        sideGroup.add(drop);
       }
+      earrings.add(sideGroup);
     }
     anchor.add(earrings);
   }
