@@ -32,6 +32,7 @@ function dataTexture(name: string, pixels: Uint8Array, size: number) {
   texture.magFilter = T.LinearFilter;
   texture.minFilter = T.LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
+  texture.anisotropy = 8;
   texture.needsUpdate = true;
   return texture;
 }
@@ -199,5 +200,45 @@ export function curatedAlbedoTexture(assetKey: string, finish: CuratedFinish) {
   });
   const texture = dataTexture(`curated-albedo-${assetKey}`, pixels, size);
   texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
+
+
+export function curatedNormalTexture(assetKey: string, finish: CuratedFinish) {
+  const relief = curatedReliefTexture(assetKey, finish);
+  const source = relief.image.data as Uint8Array;
+  const size = relief.image.width as number;
+  const pixels = new Uint8Array(size * size * 4);
+  const strength = finish === 'canvas' || finish === 'denim'
+    ? 2.2
+    : finish === 'leather'
+      ? 1.55
+      : finish === 'polished-leather'
+        ? .9
+        : 1.3;
+
+  const height = (x: number, y: number) => {
+    const wrappedX = (x + size) % size;
+    const wrappedY = (y + size) % size;
+    return source[(wrappedY * size + wrappedX) * 4] / 255;
+  };
+
+  const normal = new T.Vector3();
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = (height(x + 1, y) - height(x - 1, y)) * strength;
+      const dy = (height(x, y + 1) - height(x, y - 1)) * strength;
+      normal.set(-dx, -dy, 1).normalize();
+      const offset = (y * size + x) * 4;
+      pixels[offset] = Math.round((normal.x * .5 + .5) * 255);
+      pixels[offset + 1] = Math.round((normal.y * .5 + .5) * 255);
+      pixels[offset + 2] = Math.round((normal.z * .5 + .5) * 255);
+      pixels[offset + 3] = 255;
+    }
+  }
+
+  relief.dispose();
+  const texture = dataTexture(`curated-normal-${assetKey}`, pixels, size);
+  texture.colorSpace = T.NoColorSpace;
   return texture;
 }
