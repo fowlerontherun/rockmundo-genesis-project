@@ -37,15 +37,30 @@ function materialName(material: T.Material) {
   return material.name.toLowerCase();
 }
 
+function ownV2MeshResources(root: T.Object3D) {
+  root.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    // SkeletonUtils shares geometry, materials and textures. The assembled model
+    // is disposed after the stage performer clones it, so it must own every
+    // disposable GPU resource rather than invalidating the cached source GLB.
+    node.geometry = node.geometry.clone();
+    const ownMaterial = (source: T.Material) => {
+      const material = source.clone();
+      for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const) {
+        const value = (material as T.MeshStandardMaterial)[key];
+        if (value instanceof T.Texture) (material as T.MeshStandardMaterial)[key] = value.clone();
+      }
+      return material;
+    };
+    node.material = Array.isArray(node.material)
+      ? node.material.map(ownMaterial)
+      : ownMaterial(node.material);
+  });
+}
+
 function tuneV2Materials(root: T.Object3D, appearance: PlayerAppearance) {
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    // SkeletonUtils intentionally shares geometry/material references. V2
-    // instances may have different skin/hair/eye colours, so clone materials
-    // before applying character-specific tuning.
-    node.material = Array.isArray(node.material)
-      ? node.material.map(material => material.clone())
-      : node.material.clone();
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     for (const material of materials) {
       if (!(material instanceof T.MeshStandardMaterial)) continue;
@@ -116,6 +131,7 @@ export function prepareAvatarV2CandidateModel(
     return { model: null, report, reason: 'Avatar V2 asset failed the runtime mesh contract.' };
   }
 
+  ownV2MeshResources(model);
   normalizeRigNames(model, report);
   tuneV2Materials(model, appearance);
   applyAvatarV2Customization(model, appearance);
