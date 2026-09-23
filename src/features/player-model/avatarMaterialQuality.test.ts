@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultAppearance } from './appearance';
-import { avatarSkinNormalTexture, avatarSkinRoughnessTexture } from './avatarMaterialQuality';
+import { avatarHairNormalTexture, avatarHairRoughnessTexture, avatarSkinNormalTexture, avatarSkinRoughnessTexture } from './avatarMaterialQuality';
 
 describe('avatar material quality', () => {
   it('uses high-resolution skin maps for close-up quality tiers', () => {
@@ -17,6 +17,15 @@ describe('avatar material quality', () => {
     const appearance = defaultAppearance('crowd-quality');
     expect(avatarSkinNormalTexture(appearance, 'crowd')).toBeNull();
     expect(avatarSkinRoughnessTexture(appearance, 'crowd')).toBeNull();
+  });
+
+  it('adds high-resolution strand maps for close-up hair', () => {
+    const high = avatarHairNormalTexture('high');
+    const ultra = avatarHairRoughnessTexture('ultra');
+    expect(high?.image.width).toBe(256);
+    expect(ultra?.image.width).toBe(512);
+    high?.dispose();
+    ultra?.dispose();
   });
 
   it('adds a separate roughness surface at half skin-normal resolution', () => {
