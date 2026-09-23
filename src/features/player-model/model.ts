@@ -21,6 +21,7 @@ import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, 
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
+import { avatarV2AssetUrl, isAvatarV2AssetFile } from './v2/avatarV2Assets';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -29,7 +30,11 @@ export function requiredModelFiles(appearances: PlayerAppearance[]) {
 export async function loadModelLibrary(files: string[], manager?: T.LoadingManager): Promise<ModelLibrary> {
   const loader = new GLTFLoader(manager), library: ModelLibrary = new Map();
   // Wait for every in-flight asset before releasing on failure.
-  const results = await Promise.allSettled([...new Set(files)].map(async file => { const gltf = await loader.loadAsync(demoAssetUrl(file)); library.set(file, gltf.scene); }));
+  const results = await Promise.allSettled([...new Set(files)].map(async file => {
+    const url = isAvatarV2AssetFile(file) ? avatarV2AssetUrl(file) : demoAssetUrl(file);
+    const gltf = await loader.loadAsync(url);
+    library.set(file, gltf.scene);
+  }));
   const failed = results.find(result => result.status === 'rejected');
   if (failed?.status === 'rejected') { library.forEach(disposeModel); throw failed.reason; }
   return library;
