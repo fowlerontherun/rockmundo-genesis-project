@@ -171,6 +171,9 @@ function addDetail(group: T.Group, detail: ClothingDetailLayer, index: number, s
   const x = T.MathUtils.clamp(xUnit, -.9, .9) * spec.scaleX * .42;
   const yOffset = T.MathUtils.clamp(yUnit, -.9, .9) * spec.scaleY * .42;
   const z = spec.scaleZ * .38 + .014 + index * .00035;
+  const surface = String(detail.surface || 'front').toLowerCase();
+  const widthScale = T.MathUtils.clamp(Number(detail.widthScale ?? 100) / 100, .2, 2.5);
+  const heightScale = T.MathUtils.clamp(Number(detail.heightScale ?? 100) / 100, .2, 2.5);
   const type = String(detail.type || 'badge').toLowerCase();
   const rawOpacity = Number(detail.opacity ?? 1);
   const opacity = T.MathUtils.clamp(rawOpacity > 1 ? rawOpacity / 100 : rawOpacity, .05, 1);
@@ -192,7 +195,7 @@ function addDetail(group: T.Group, detail: ClothingDetailLayer, index: number, s
     // implementation used chunky boxes at editor scale=100, which produced
     // giant floating diamonds/rectangles in the fitting room.
     mesh = new T.Mesh(
-      new T.PlaneGeometry(.12 * scale, .075 * scale),
+      new T.PlaneGeometry(.12 * scale * widthScale, .075 * scale * heightScale),
       new T.MeshStandardMaterial({
         color: detailTexture ? '#ffffff' : color,
         map: detailTexture,
@@ -208,10 +211,25 @@ function addDetail(group: T.Group, detail: ClothingDetailLayer, index: number, s
     if (detailTexture) mesh.userData.detailTexture = detailTexture;
   }
 
-  mesh.position.set(x, spec.y + yOffset, z + spec.z);
-  mesh.rotation.z = T.MathUtils.degToRad(Number(detail?.rotation || 0));
+  const rotation = T.MathUtils.degToRad(Number(detail?.rotation || 0));
+  let anchor = defaultAnchor(spec);
+  if (surface === 'back') {
+    mesh.position.set(-x, spec.y + yOffset, spec.z - z);
+    mesh.rotation.set(0, Math.PI, -rotation);
+  } else if (surface === 'left-sleeve' && spec.slot === 'top') {
+    mesh.position.set(spec.scaleX * .54, spec.y + spec.scaleY * .27 + yOffset * .45, spec.z + x * .35);
+    mesh.rotation.set(0, Math.PI / 2, rotation);
+    anchor = 'UpperArm.L';
+  } else if (surface === 'right-sleeve' && spec.slot === 'top') {
+    mesh.position.set(-spec.scaleX * .54, spec.y + spec.scaleY * .27 + yOffset * .45, spec.z - x * .35);
+    mesh.rotation.set(0, -Math.PI / 2, -rotation);
+    anchor = 'UpperArm.R';
+  } else {
+    mesh.position.set(x, spec.y + yOffset, z + spec.z);
+    mesh.rotation.z = rotation;
+  }
   mesh.castShadow = true;
-  markRigAnchor(mesh, defaultAnchor(spec));
+  markRigAnchor(mesh, anchor);
   group.add(mesh);
 }
 
