@@ -41,21 +41,23 @@ export function buildHeadAccessory(spec: HeadAccessorySpec, bounds: T.Box3): T.G
     mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); return mesh;
   };
   if (spec.slot === 'eyewear') {
-    const eyeY = top - h * .39, front = bounds.max.z + d * .045;
-    const lensW = w * .205, lensH = h * (spec.style === 'rectangle' ? .075 : .105);
+    const eyeY = top - h * .405, front = bounds.max.z + d * .012;
+    const lensW = w * .19, lensH = h * (spec.style === 'rectangle' ? .072 : .098);
     const lensMaterial = new T.MeshPhysicalMaterial({ color: spec.lensColor ?? '#40566d', transparent: true, opacity: spec.lenses === 'tinted' ? .72 : .13, roughness: .08, metalness: 0, depthWrite: false, side: T.DoubleSide });
     lensMaterial.name = 'AvatarLens';
     for (const side of [-1, 1]) {
       const shape = lensShape(spec.style, lensW, lensH);
       const points = shape.getPoints(32).map(p => new T.Vector3(p.x, p.y, 0));
       const curve = new T.CatmullRomCurve3(points, true);
-      add(new T.TubeGeometry(curve, 64, w * (spec.style === 'wayfarer' ? .017 : .011), 6, true), `glasses-frame-${side}`, c.x + side * w * .25, eyeY, front);
-      add(new T.ShapeGeometry(shape, 32), `glasses-lens-${side}`, c.x + side * w * .25, eyeY, front, lensMaterial).castShadow = false;
-      const length = Math.max(d * .75, front - c.z);
-      add(new T.BoxGeometry(w * .02, h * .025, length), `glasses-arm-${side}`, c.x + side * w * .465, eyeY, front - length * .5);
-      add(new T.BoxGeometry(w * .02, h * .10, d * .035), `glasses-ear-hook-${side}`, c.x + side * w * .465, eyeY - h * .03, front - length);
+      add(new T.TubeGeometry(curve, 64, w * (spec.style === 'wayfarer' ? .015 : .010), 6, true), `glasses-frame-${side}`, c.x + side * w * .235, eyeY, front);
+      add(new T.ShapeGeometry(shape, 32), `glasses-lens-${side}`, c.x + side * w * .235, eyeY, front, lensMaterial).castShadow = false;
+      const length = Math.max(d * .60, front - c.z);
+      const templeX = c.x + side * w * .43;
+      add(new T.BoxGeometry(w * .016, h * .020, length), `glasses-arm-${side}`, templeX, eyeY + h * .005, front - length * .5);
+      const hook = add(new T.BoxGeometry(w * .016, h * .075, d * .028), `glasses-ear-hook-${side}`, templeX, eyeY - h * .025, front - length);
+      hook.rotation.x = side * .04;
     }
-    add(new T.BoxGeometry(w * .11, h * .023, d * .028), 'glasses-bridge', c.x, eyeY + h * .02, front);
+    add(new T.BoxGeometry(w * .095, h * .019, d * .022), 'glasses-bridge', c.x, eyeY + h * .018, front);
     if (spec.style === 'aviator') add(new T.BoxGeometry(w * .14, h * .015, d * .02), 'glasses-brow-bar', c.x, eyeY + lensH * .75, front);
   } else {
     const bottom = top - h * .20, rx = w * .56, rz = d * .57;
