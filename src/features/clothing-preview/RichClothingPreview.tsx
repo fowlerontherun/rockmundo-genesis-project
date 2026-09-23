@@ -141,7 +141,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
           garment = buildProceduralGarment(currentPreview.item, currentPreview.variant);
           garment.scale.y *= appearance.body.height;
         }
-        scene.add(garment);
+        if (garment) scene.add(garment);
         if (liveScene.current) {
           liveScene.current.garment = garment;
           liveScene.current.avatar = base;
