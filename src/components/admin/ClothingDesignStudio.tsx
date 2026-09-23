@@ -113,6 +113,22 @@ const CLOSURES = ["none", "buttons", "zip", "double-zip", "snaps", "lace", "buck
 const CONDITIONS = ["new", "washed", "faded", "vintage", "distressed", "heavily-distressed", "stage-worn"];
 const DETAIL_TYPES: DetailLayerType[] = ["decal", "graphic", "text", "patch", "embroidery", "trim", "studs", "zip", "buttons", "distress", "stitching", "badge"];
 
+const CATEGORY_PRESETS: Record<string, Partial<ClothingDesignConfig["garment"]>> = {
+  "t-shirt": { silhouette: "classic", cut: "regular", length: "standard", sleeve: "short", collar: "crew", closure: "none", hem: "straight", widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 100, sleeveWidthScale: 100, waistScale: 96, flare: 0 },
+  shirt: { silhouette: "fitted", cut: "tailored", length: "standard", sleeve: "long", collar: "shirt", closure: "buttons", hem: "curved", widthScale: 98, bodyLengthScale: 104, sleeveLengthScale: 100, sleeveWidthScale: 92, waistScale: 90, flare: 0 },
+  "tank-top": { silhouette: "fitted", cut: "slim", length: "standard", sleeve: "none", collar: "scoop", closure: "none", hem: "straight", widthScale: 94, bodyLengthScale: 96, sleeveLengthScale: 40, sleeveWidthScale: 70, waistScale: 90, flare: 0 },
+  hoodie: { silhouette: "relaxed", cut: "relaxed", length: "standard", sleeve: "long", collar: "hood", closure: "none", hem: "ribbed", widthScale: 108, bodyLengthScale: 106, sleeveLengthScale: 108, sleeveWidthScale: 112, waistScale: 98, flare: 0 },
+  sweater: { silhouette: "relaxed", cut: "regular", length: "standard", sleeve: "long", collar: "crew", closure: "none", hem: "ribbed", widthScale: 104, bodyLengthScale: 102, sleeveLengthScale: 104, sleeveWidthScale: 106, waistScale: 96, flare: 0 },
+  jacket: { silhouette: "structured", cut: "tailored", length: "standard", sleeve: "long", collar: "lapel", closure: "zip", hem: "straight", widthScale: 106, bodyLengthScale: 102, sleeveLengthScale: 104, sleeveWidthScale: 108, waistScale: 94, flare: 0 },
+  coat: { silhouette: "structured", cut: "tailored", length: "long", sleeve: "long", collar: "lapel", closure: "buttons", hem: "straight", widthScale: 110, bodyLengthScale: 138, sleeveLengthScale: 108, sleeveWidthScale: 112, waistScale: 100, flare: 6 },
+  vest: { silhouette: "fitted", cut: "tailored", length: "standard", sleeve: "none", collar: "v-neck", closure: "buttons", hem: "pointed", widthScale: 96, bodyLengthScale: 96, sleeveLengthScale: 40, sleeveWidthScale: 70, waistScale: 86, flare: 0 },
+  dress: { silhouette: "fitted", cut: "tailored", length: "standard", sleeve: "short", collar: "scoop", closure: "none", hem: "straight", widthScale: 98, bodyLengthScale: 108, sleeveLengthScale: 95, sleeveWidthScale: 94, waistScale: 82, flare: 42 },
+  skirt: { silhouette: "a-line", cut: "regular", length: "standard", sleeve: "none", collar: "none", closure: "zip", hem: "straight", widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 40, sleeveWidthScale: 70, waistScale: 82, flare: 48 },
+  pants: { silhouette: "classic", cut: "regular", length: "standard", sleeve: "none", collar: "none", closure: "zip", hem: "straight", widthScale: 100, bodyLengthScale: 100, sleeveLengthScale: 40, sleeveWidthScale: 70, waistScale: 92, flare: 0 },
+  jeans: { silhouette: "classic", cut: "slim", length: "standard", sleeve: "none", collar: "none", closure: "zip", hem: "straight", widthScale: 98, bodyLengthScale: 100, sleeveLengthScale: 40, sleeveWidthScale: 70, waistScale: 90, flare: 0 },
+  shorts: { silhouette: "classic", cut: "regular", length: "short", sleeve: "none", collar: "none", closure: "zip", hem: "straight", widthScale: 100, bodyLengthScale: 72, sleeveLengthScale: 40, sleeveWidthScale: 70, waistScale: 92, flare: 0 },
+};
+
 function NumberSlider({ label, value, min = 0, max = 100, step = 1, onChange }: { label: string; value: number; min?: number; max?: number; step?: number; onChange: (v: number) => void }) {
   return <div className="space-y-2"><div className="flex justify-between"><Label>{label}</Label><span className="text-xs text-muted-foreground">{value}</span></div><Slider value={[value]} min={min} max={max} step={step} onValueChange={([v]) => onChange(v)} /></div>;
 }
@@ -121,13 +137,22 @@ function FieldSelect({ label, value, values, onChange }: { label: string; value:
   return <div className="space-y-2"><Label>{label}</Label><Select value={value} onValueChange={onChange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{values.map(v => <SelectItem key={v} value={v} className="capitalize">{v.replaceAll("-", " ")}</SelectItem>)}</SelectContent></Select></div>;
 }
 
-export function ClothingDesignStudio({ value, onChange }: { value: ClothingDesignConfig; onChange: (value: ClothingDesignConfig) => void }) {
+export function ClothingDesignStudio({ value, onChange, category }: { value: ClothingDesignConfig; onChange: (value: ClothingDesignConfig) => void; category?: string }) {
   const set = <K extends keyof ClothingDesignConfig>(key: K, patch: Partial<ClothingDesignConfig[K]>) => onChange({ ...value, [key]: { ...(value[key] as any), ...patch } });
   const addZone = () => onChange({ ...value, zones: [...value.zones, { id: `zone_${Date.now()}`, name: "New zone", color: "#ffffff", playerEditable: true }] });
   const addDetail = () => onChange({ ...value, details: [...value.details, { id: crypto.randomUUID(), type: "graphic", name: "New detail", zone: value.zones[0]?.id || "main", color: "#ffffff", secondaryColor: "#000000", scale: 100, rotation: 0, opacity: 100, offsetX: 0, offsetY: 0 }] });
   const addVariant = () => onChange({ ...value, variants: [...value.variants, { name: `Variant ${value.variants.length + 1}`, primaryColor: value.material.primaryColor, secondaryColor: value.material.secondaryColor, pattern: value.pattern.type, material: value.material.fabric }] });
+  const preset = CATEGORY_PRESETS[String(category || "").toLowerCase()];
+  const applyCategoryPreset = () => {
+    if (!preset) return;
+    onChange({ ...value, garment: { ...value.garment, ...preset } });
+  };
 
   return <div className="space-y-5">
+    {preset && <Card className="border-primary/20 bg-primary/5"><CardContent className="pt-4 flex flex-wrap items-center justify-between gap-3">
+      <div><div className="text-sm font-medium">Recommended {String(category).replaceAll("-", " ")} proportions</div><p className="text-xs text-muted-foreground">Start from body-safe proportions for this garment type, then fine tune every measurement below.</p></div>
+      <Button type="button" size="sm" variant="outline" onClick={applyCategoryPreset}><Wand2 className="h-4 w-4 mr-1"/>Apply garment preset</Button>
+    </CardContent></Card>
     <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Scissors className="h-4 w-4"/>Garment construction</CardTitle></CardHeader><CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <FieldSelect label="Silhouette" value={value.garment.silhouette} values={SILHOUETTES} onChange={v=>set("garment",{silhouette:v})}/>
       <FieldSelect label="Cut" value={value.garment.cut} values={CUTS} onChange={v=>set("garment",{cut:v})}/>
