@@ -192,8 +192,8 @@ export function addHair(
       ellipsoid(strands,center.x+side*rx*(.76+Math.cos(a)*.18),top-h*.03+Math.sin(a)*h*.11,center.z-rz*.2+Math.cos(a)*rz*.12,rx*.19,h*.09,rz*.18);
     }
   }
-  if ((quality === 'high' || quality === 'ultra') && ['long','layered_long','long_waves','shoulder','ponytail','high_ponytail','side_braid','twin_ponytails','mullet'].includes(cut)) {
-    const flyawayCount = quality === 'ultra' ? 8 : 4;
+  if ((quality === 'high' || quality === 'ultra' || quality === 'cinematic') && ['long','layered_long','long_waves','shoulder','ponytail','high_ponytail','side_braid','twin_ponytails','mullet'].includes(cut)) {
+    const flyawayCount = quality === 'cinematic' ? 12 : quality === 'ultra' ? 8 : 4;
     for (let i = 0; i < flyawayCount; i++) {
       const side = i % 2 === 0 ? -1 : 1;
       const phase = i * 1.37;
@@ -209,7 +209,7 @@ export function addHair(
       ));
       const middle = start.clone().lerp(end, .5).add(new T.Vector3(side * rx * .045, h * .018, rz * .015));
       const curve = new T.CatmullRomCurve3([start, middle, end]);
-      const strand = new T.TubeGeometry(curve, quality === 'ultra' ? 14 : 10, rx * (quality === 'ultra' ? .012 : .014), 5, false).toNonIndexed();
+      const strand = new T.TubeGeometry(curve, quality === 'cinematic' ? 18 : quality === 'ultra' ? 14 : 10, rx * (quality === 'cinematic' ? .0105 : quality === 'ultra' ? .012 : .014), 5, false).toNonIndexed();
       strands.push(strand);
     }
   }
@@ -238,9 +238,9 @@ export function addHair(
       ? new T.MeshStandardMaterial({ color, roughness: .9, side: T.DoubleSide })
       : new T.MeshPhysicalMaterial({
           color,
-          roughness: quality === 'ultra' ? .48 : quality === 'high' ? .54 : .62,
+          roughness: quality === 'cinematic' ? .44 : quality === 'ultra' ? .48 : quality === 'high' ? .54 : .62,
           metalness: 0,
-          sheen: quality === 'ultra' ? .5 : .35,
+          sheen: quality === 'cinematic' ? .58 : quality === 'ultra' ? .5 : .35,
           sheenRoughness: .72,
           sheenColor: new T.Color(color).lerp(new T.Color('#ffffff'), .08),
           side: T.DoubleSide,
@@ -248,7 +248,7 @@ export function addHair(
     material.name=name;
     applyAvatarHairQuality(material, quality);
     if(facial==='stubble'&&name==='FacialHair') {
-      const stubbleSize = quality === 'ultra' ? 256 : quality === 'high' ? 128 : 64;
+      const stubbleSize = quality === 'cinematic' ? 512 : quality === 'ultra' ? 256 : quality === 'high' ? 128 : 64;
       const data=new Uint8Array(stubbleSize*stubbleSize*4);
       for(let i=0;i<stubbleSize*stubbleSize;i++){
         data[i*4]=data[i*4+1]=data[i*4+2]=255;
