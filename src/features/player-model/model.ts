@@ -8,6 +8,7 @@ import { addHair, isScalpHair } from './hair';
 import { addAccessories } from './accessories';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
+import { curatedDonorForSlot } from '@/features/clothing-preview/curatedDonorGarments';
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
@@ -54,7 +55,9 @@ function rockmundoWordmarkTexture() {
 }
 
 function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>, richClothing: ResolvedEquippedClothing[]) {
-  if (appearance.equipment.top.itemId !== 'starter.top.casual' || richClothing.some(row => richGarmentSlot(row.item) === 'top')) return;
+  const curatedLogo = richClothing.some(row => row.item.curated_asset_key === 'clothing.starter.logo-tee');
+  const hasOtherTop = richClothing.some(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key !== 'clothing.starter.logo-tee');
+  if (!curatedLogo && (appearance.equipment.top.itemId !== 'starter.top.casual' || hasOtherTop)) return;
   const chest=findPlayerBone(bones,['Spine2','Spine.002','Chest','UpperChest']) ?? findPlayerBone(bones,['Spine1','Spine.001']);
   if(!chest) return;
   root.updateMatrixWorld(true);
@@ -90,11 +93,29 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
       if (lower && foot && foot.parent !== lower) lower.attach(foot);
     }
   }
+  const curatedTop = curatedDonorForSlot(richClothing, 'top');
+  const curatedBottom = curatedDonorForSlot(richClothing, 'bottom');
+  const curatedFootwear = curatedDonorForSlot(richClothing, 'footwear');
   const choices = [
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
-    { part: 'body', style: equipmentStyle(appearance, 'top'), dye: appearance.equipment.top.color, fabric: equipmentItem(appearance, 'top').fabric },
-    { part: 'legs', style: equipmentStyle(appearance, 'bottom'), dye: appearance.equipment.bottom.color, fabric: equipmentItem(appearance, 'bottom').fabric },
-    { part: 'feet', style: equipmentStyle(appearance, 'footwear'), dye: appearance.equipment.footwear.color, fabric: equipmentItem(appearance, 'footwear').fabric },
+    {
+      part: 'body',
+      style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
+      dye: curatedTop?.source.color ?? appearance.equipment.top.color,
+      fabric: curatedTop?.source.fabric ?? equipmentItem(appearance, 'top').fabric,
+    },
+    {
+      part: 'legs',
+      style: curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
+      dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
+      fabric: curatedBottom?.source.fabric ?? equipmentItem(appearance, 'bottom').fabric,
+    },
+    {
+      part: 'feet',
+      style: curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear'),
+      dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
+      fabric: curatedFootwear?.source.fabric ?? equipmentItem(appearance, 'footwear').fabric,
+    },
   ];
   for (const choice of choices) {
     const matches = (node: T.Object3D) => !(node instanceof T.Bone) && new RegExp(`_${choice.part}(?:_|$)`, 'i').test(node.name);
