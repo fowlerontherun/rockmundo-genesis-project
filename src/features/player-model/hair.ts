@@ -102,6 +102,78 @@ export function addHair(root: T.Object3D, appearance: PlayerAppearance, head: T.
   }
   if(cut === 'bun') ellipsoid(strands,center.x,top+h*.015,center.z-rz*.3,rx*.39,h*.12,rz*.39);
   if(cut === 'curls') for(let row=0;row<3;row++) for(let i=0;i<10;i++) { const a=i*Math.PI/5+row*.17,r=Math.sin((row+1)*Math.PI/7);ellipsoid(strands,center.x+Math.cos(a)*rx*r*.9,top+h*.005+Math.cos((row+1)*Math.PI/7)*h*.08,center.z+Math.sin(a)*rz*r*.9,rx*.21,h*.085,rz*.2); }
+  if (cut === 'faux_hawk') for(let i=0;i<7;i++) ellipsoid(strands,center.x,top+h*(.035+Math.sin(i/6*Math.PI)*.025),center.z-rz*.64+i*rz*1.28/6,rx*.15,h*.09,rz*.16);
+  if (cut === 'undercut') {
+    for(let i=0;i<5;i++) ellipsoid(strands,center.x+(i-2)*rx*.22,top-h*.015,center.z+rz*(.18-i*.08),rx*.25,h*.07,rz*.27,-.13);
+  }
+  if (cut === 'slick_back') {
+    for(let i=0;i<7;i++) ellipsoid(strands,center.x+(i-3)*rx*.22,top-h*.03,center.z+rz*(.22-i*.12),rx*.22,h*.065,rz*.31,-.22);
+  }
+  if (cut === 'side_part') {
+    for(let i=0;i<7;i++) {
+      const side=i<2?-1:1, offset=(i-3)*rx*.2;
+      ellipsoid(strands,center.x+offset,top-h*(.018+Math.abs(i-3)*.008),center.z+rz*(.24-Math.abs(i-3)*.055),rx*.24,h*.07,rz*.27,side*.18);
+    }
+  }
+  if (cut === 'curtain') for(const side of [-1,1]) for(let i=0;i<4;i++) {
+    ellipsoid(strands,center.x+side*rx*(.2+i*.18),top-h*(.04+i*.035),center.z+rz*(.42-i*.06),rx*.2,h*.115,rz*.18,side*.17);
+  }
+  if (cut === 'pixie') {
+    for(let i=0;i<9;i++) {
+      const a=i/8*Math.PI*2;
+      ellipsoid(strands,center.x+Math.cos(a)*rx*.48,top-h*.055,center.z+Math.sin(a)*rz*.48,rx*.2,h*.075,rz*.2,Math.sin(a)*.16);
+    }
+  }
+  if (cut === 'shag') {
+    for(let i=0;i<13;i++) {
+      const a=i*Math.PI/12, layer=.7+.25*((i%3)/2);
+      ellipsoid(strands,center.x+Math.cos(a)*rx*.88,top-h*.26*layer,center.z-Math.sin(a)*rz*.82,rx*.17,h*.22*layer,rz*.18,Math.sin(i*1.3)*.18);
+    }
+  }
+  if (cut === 'mullet') {
+    for(let i=0;i<8;i++) ellipsoid(strands,center.x+(i-3.5)*rx*.2,top-h*.08,center.z-rz*(.2+i*.09),rx*.19,h*.1,rz*.23,Math.sin(i)*.08);
+    for(let i=0;i<5;i++) ellipsoid(strands,center.x+Math.sin(i*.9)*rx*.09,top-h*(.18+i*.12),center.z-rz*.92,rx*.28,h*.12,rz*.2,Math.sin(i)*.08);
+  }
+  if (cut === 'box_braids') {
+    for(const side of [-1,1]) for(let row=0;row<4;row++) for(let i=0;i<4;i++) {
+      const x=center.x+side*rx*(.34+i*.16), y=top-h*(.18+row*.17), z=center.z-rz*(.25+i*.14);
+      ellipsoid(strands,x,y,z,rx*.085,h*.13,rz*.085,side*(i%2?.08:-.08));
+    }
+  }
+  if (cut === 'cornrows') {
+    for(let lane=-3;lane<=3;lane++) for(let i=0;i<6;i++) {
+      ellipsoid(strands,center.x+lane*rx*.19,top-h*(.035+i*.028),center.z+rz*(.42-i*.25),rx*.075,h*.035,rz*.13,lane*.025);
+    }
+  }
+  if (cut === 'locs_short' || cut === 'locs_long') {
+    const rows=cut==='locs_long'?6:3;
+    for(let i=0;i<12;i++) {
+      const a=i*Math.PI/11, x=center.x+Math.cos(a)*rx*.86, z=center.z-Math.sin(a)*rz*.82;
+      for(let row=0;row<rows;row++) ellipsoid(strands,x+Math.sin(i+row)*rx*.025,top-h*(.18+row*.11),z,rx*.07,h*.09,rz*.07,Math.sin(i*.7)*.08);
+    }
+  }
+  if (cut === 'messy_bun') {
+    ellipsoid(strands,center.x,top+h*.03,center.z-rz*.28,rx*.36,h*.13,rz*.35);
+    for(let i=0;i<7;i++) {
+      const a=i*Math.PI*2/7;
+      ellipsoid(strands,center.x+Math.cos(a)*rx*.28,top+h*(.04+Math.sin(i)*.02),center.z-rz*.28+Math.sin(a)*rz*.22,rx*.15,h*.075,rz*.15,Math.sin(i)*.2);
+    }
+  }
+  if (cut === 'space_buns') for(const side of [-1,1]) {
+    ellipsoid(strands,center.x+side*rx*.58,top+h*.005,center.z-rz*.16,rx*.28,h*.13,rz*.27,side*.08);
+  }
+  if (cut === 'afro') {
+    for(let row=0;row<4;row++) for(let i=0;i<12;i++) {
+      const phi=(row+1)*Math.PI/7, a=i*Math.PI/6+row*.13;
+      ellipsoid(strands,center.x+Math.cos(a)*Math.sin(phi)*rx*1.02,top-h*.03+Math.cos(phi)*h*.18,center.z+Math.sin(a)*Math.sin(phi)*rz*.98,rx*.22,h*.1,rz*.21);
+    }
+  }
+  if (cut === 'afro_puffs') for(const side of [-1,1]) {
+    for(let i=0;i<8;i++) {
+      const a=i*Math.PI/4;
+      ellipsoid(strands,center.x+side*rx*(.76+Math.cos(a)*.18),top-h*.03+Math.sin(a)*h*.11,center.z-rz*.2+Math.cos(a)*rz*.12,rx*.19,h*.09,rz*.18);
+    }
+  }
   const chin=appearance.body.frame==='masculine'?.27:.14, lipY=base+h*.34, lipZ=(surfaceZ(center.x,lipY)??front)+.002;
   const moustache = () => { for(const side of [-1,1]) ellipsoid(beard,center.x+side*rx*.25,lipY,lipZ,rx*.36,h*.047,rz*.12,side*.16); };
   if(['moustache','goatee','short_beard','full_beard','long_beard'].includes(facial)) moustache();
