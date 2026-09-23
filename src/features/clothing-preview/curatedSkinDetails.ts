@@ -26,6 +26,31 @@ function clothMaterial(color: string) {
   return new T.MeshStandardMaterial({ color, roughness: .9, metalness: 0, side: T.DoubleSide });
 }
 
+function patchStitchGeometry(width: number, height: number, curve = .0035) {
+  const points: T.Vector3[] = [];
+  const steps = 6;
+  const zAt = (x: number) => -curve * Math.pow(Math.min(1, Math.abs(x / (width / 2 || 1))), 2) + .0012;
+  const insetX = width * .42;
+  const insetY = height * .39;
+  for (let index = 0; index <= steps; index++) {
+    const x = T.MathUtils.lerp(-insetX, insetX, index / steps);
+    points.push(new T.Vector3(x, insetY, zAt(x)));
+  }
+  for (let index = 1; index <= steps; index++) {
+    const y = T.MathUtils.lerp(insetY, -insetY, index / steps);
+    points.push(new T.Vector3(insetX, y, zAt(insetX)));
+  }
+  for (let index = 1; index <= steps; index++) {
+    const x = T.MathUtils.lerp(insetX, -insetX, index / steps);
+    points.push(new T.Vector3(x, -insetY, zAt(x)));
+  }
+  for (let index = 1; index < steps; index++) {
+    const y = T.MathUtils.lerp(-insetY, insetY, index / steps);
+    points.push(new T.Vector3(-insetX, y, zAt(-insetX)));
+  }
+  return new T.BufferGeometry().setFromPoints(points);
+}
+
 function attachAtWorld(root: T.Object3D, bone: T.Bone, object: T.Object3D, position: T.Vector3) {
   root.add(object);
   object.position.copy(position);
@@ -69,6 +94,21 @@ function addSafetyPins(root: T.Object3D, bones: Map<string, T.Bone>, quality: Av
     shaft.rotation.z = Math.PI/2 + angle;
     shaft.position.x = .017;
     group.add(shaft);
+    const clasp = new T.Mesh(
+      new T.SphereGeometry(.007, Math.max(8, profile.accessorySegments), Math.max(5, Math.floor(profile.accessorySegments / 2))),
+      metalMaterial(),
+    );
+    clasp.name = 'curated-safety-pin-clasp';
+    clasp.position.set(-.019, .003, .001);
+    group.add(clasp);
+    const point = new T.Mesh(
+      new T.ConeGeometry(.0038, .014, Math.max(6, Math.floor(profile.accessorySegments / 2))),
+      metalMaterial('#d4d7dc'),
+    );
+    point.name = 'curated-safety-pin-point';
+    point.rotation.z = Math.PI / 2 + angle;
+    point.position.set(.043, -.003, .001);
+    group.add(point);
     attachToBodySurface(root, chest, group, base.clone().add(new T.Vector3(x, y, 0)), .0025);
   }
 }
@@ -84,10 +124,17 @@ function addPatchJacketDetails(root: T.Object3D, bones: Map<string, T.Bone>, qua
     { x:-.035, y:-.09, w:.12, h:.055, color:'#426baa', rot:.04 },
   ];
   for (const patch of patches) {
+    const group = new T.Group();
+    group.name = 'curated-jacket-patch';
+    group.rotation.z = patch.rot;
     const mesh = new T.Mesh(curvedGraphicGeometry(patch.w, patch.h, .0035), clothMaterial(patch.color));
-    mesh.name = 'curated-jacket-patch';
-    mesh.rotation.z = patch.rot;
-    attachToBodySurface(root, chest, mesh, base.clone().add(new T.Vector3(patch.x, patch.y, 0)), .0028);
+    mesh.name = 'curated-jacket-patch-cloth';
+    group.add(mesh);
+    const stitchMaterial = new T.LineBasicMaterial({ color: '#e7dfd2', transparent: true, opacity: .78 });
+    const stitches = new T.LineLoop(patchStitchGeometry(patch.w, patch.h), stitchMaterial);
+    stitches.name = 'curated-jacket-patch-stitching';
+    group.add(stitches);
+    attachToBodySurface(root, chest, group, base.clone().add(new T.Vector3(patch.x, patch.y, 0)), .0028);
   }
   for (const x of [-.15,-.10,-.05,.05,.10,.15]) {
     const stud = new T.Mesh(new T.ConeGeometry(.009, .018, Math.max(6, profile.accessorySegments)), metalMaterial('#c1c5ca'));
