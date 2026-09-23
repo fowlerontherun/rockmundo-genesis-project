@@ -55,12 +55,19 @@ function validScene() {
   root.add(mesh);
 
   for (const region of AVATAR_V2_BODY_REGIONS) {
-    const part = new T.Mesh(
-      new T.BoxGeometry(.02, .02, .02),
+    const partGeometry = new T.BoxGeometry(.02, .02, .02);
+    const partCount = partGeometry.attributes.position.count;
+    partGeometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(partCount * 4), 4));
+    const partWeights = new Float32Array(partCount * 4);
+    for (let index = 0; index < partCount; index++) partWeights[index * 4] = 1;
+    partGeometry.setAttribute('skinWeight', new T.Float32BufferAttribute(partWeights, 4));
+    const part = new T.SkinnedMesh(
+      partGeometry,
       new T.MeshStandardMaterial({ color: '#cccccc' }),
     );
     part.name = `RMV2_Body_${region}`;
     part.userData.rockmundoBodyRegion = region;
+    part.bind(new T.Skeleton(bones));
     root.add(part);
   }
 
