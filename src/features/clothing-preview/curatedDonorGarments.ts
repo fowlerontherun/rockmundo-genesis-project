@@ -11,6 +11,7 @@ export interface CuratedDonorSource {
   style: Style;
   part: CuratedDonorPart;
   color?: string;
+  secondaryColor?: string;
   fabric?: 'plain' | 'stripe' | 'plaid' | 'pinstripe' | 'denim' | 'canvas' | 'two-tone' | 'patent';
   finish?: 'cotton' | 'vintage-cotton' | 'denim' | 'tartan' | 'leather' | 'canvas' | 'polished-leather';
 }
@@ -29,6 +30,7 @@ export function curatedDonorSource(item: ClothingItem): CuratedDonorSource | nul
     style: raw.style as Style,
     part: raw.part as CuratedDonorPart,
     color: typeof raw.color === 'string' ? raw.color : undefined,
+    secondaryColor: typeof raw.secondaryColor === 'string' ? raw.secondaryColor : undefined,
     fabric: typeof raw.fabric === 'string' ? raw.fabric as CuratedDonorSource['fabric'] : undefined,
     finish: allowedFinishes.has(finish) ? finish as CuratedDonorSource['finish'] : undefined,
   };
@@ -56,6 +58,7 @@ export function curatedDonorForSlot(
     source: {
       ...source,
       color: row.variant?.color || source.color,
+      secondaryColor: row.variant?.secondaryColor || source.secondaryColor,
       fabric: variantFabric || source.fabric,
     },
   };
