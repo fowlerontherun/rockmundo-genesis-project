@@ -246,6 +246,10 @@ export function addHair(
           side: T.DoubleSide,
         });
     material.name=name;
+    if (material instanceof T.MeshPhysicalMaterial && quality !== 'crowd') {
+      material.anisotropy = quality === 'cinematic' ? .82 : quality === 'ultra' ? .7 : quality === 'high' ? .5 : .28;
+      material.anisotropyRotation = 0;
+    }
     applyAvatarHairQuality(material, quality);
     if(facial==='stubble'&&name==='FacialHair') {
       const stubbleSize = quality === 'cinematic' ? 512 : quality === 'ultra' ? 256 : quality === 'high' ? 128 : 64;
