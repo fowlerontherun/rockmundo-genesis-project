@@ -7,6 +7,7 @@ import { headModelStyle, equipmentItem, equipmentStyle, modelFile, type PlayerAp
 import { addHair, isScalpHair } from './hair';
 import { addAccessories } from './accessories';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { addFaceDetails, skinRoughness } from './faceDetails';
 import { addTattoos, type ResolvedTattooVisual } from './tattoos';
 import { fabricTexture, fabricUVs } from './fabrics';
@@ -22,6 +23,48 @@ export async function loadModelLibrary(files: string[], manager?: T.LoadingManag
   const failed = results.find(result => result.status === 'rejected');
   if (failed?.status === 'rejected') { library.forEach(disposeModel); throw failed.reason; }
   return library;
+}
+
+const cleanBoneName = (value: string) => value.replace(/[_.]/g, '').toLowerCase();
+function findPlayerBone(bones: Map<string, T.Bone>, names: string[]) {
+  for (const bone of bones.values()) if (names.some(name => cleanBoneName(bone.name) === cleanBoneName(name))) return bone;
+}
+
+function rockmundoWordmarkTexture() {
+  const glyphs: Record<string, string[]> = {
+    R:['110','101','110','101','101'], O:['111','101','101','101','111'], C:['111','100','100','100','111'],
+    K:['101','101','110','101','101'], M:['101','111','111','101','101'], U:['101','101','101','101','111'],
+    N:['101','111','111','111','101'], D:['110','101','101','101','110'],
+  };
+  const word='ROCKMUNDO', scale=2, gap=1, glyphW=3, glyphH=5;
+  const width=(word.length*(glyphW+gap)-gap)*scale, height=glyphH*scale;
+  const data=new Uint8Array(width*height*4);
+  for(let i=0;i<word.length;i++) {
+    const glyph=glyphs[word[i]];
+    for(let y=0;y<glyphH;y++) for(let x=0;x<glyphW;x++) if(glyph[y][x]==='1') {
+      for(let sy=0;sy<scale;sy++) for(let sx=0;sx<scale;sx++) {
+        const px=(i*(glyphW+gap)+x)*scale+sx, py=(glyphH-1-y)*scale+sy, index=(py*width+px)*4;
+        data[index]=238; data[index+1]=232; data[index+2]=219; data[index+3]=255;
+      }
+    }
+  }
+  const texture=new T.DataTexture(data,width,height,T.RGBAFormat);
+  texture.name='RockmundoWordmark'; texture.colorSpace=T.SRGBColorSpace; texture.magFilter=T.NearestFilter; texture.minFilter=T.LinearFilter; texture.needsUpdate=true;
+  return texture;
+}
+
+function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>, richClothing: ResolvedEquippedClothing[]) {
+  if (appearance.equipment.top.itemId !== 'starter.top.casual' || richClothing.some(row => richGarmentSlot(row.item) === 'top')) return;
+  const chest=findPlayerBone(bones,['Spine2','Spine.002','Chest','UpperChest']) ?? findPlayerBone(bones,['Spine1','Spine.001']);
+  if(!chest) return;
+  root.updateMatrixWorld(true);
+  const texture=rockmundoWordmarkTexture();
+  const material=new T.MeshStandardMaterial({map:texture,transparent:true,alphaTest:.08,roughness:.78,metalness:0,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  material.name='RockmundoLogoPrint';
+  const mark=new T.Mesh(new T.PlaneGeometry(.34,.072),material);
+  mark.name='avatar-rockmundo-logo';
+  mark.position.copy(chest.getWorldPosition(new T.Vector3())).add(new T.Vector3(0,.02,.155));
+  root.add(mark); root.updateMatrixWorld(true); chest.attach(mark);
 }
 
 /** Each part keeps its donor inverse binds and local transform. This matters for
@@ -126,6 +169,7 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
     addHair(result, appearance, headBone);
     addAccessories(result, appearance, headBone, richClothing);
   }
+  addStarterLogoTee(result, appearance, bones, richClothing);
   addTattoos(result, tattoos, bones);
   result.updateMatrixWorld(true);
   return result;
