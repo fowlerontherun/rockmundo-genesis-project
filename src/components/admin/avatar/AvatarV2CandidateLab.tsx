@@ -261,6 +261,11 @@ export function AvatarV2CandidateLab() {
     return next;
   }, [frame]);
 
+  const comparisonAssignment = useMemo(
+    () => performance === 'backstage' ? stageAssignment(null, 'other') : stageAssignment(performance),
+    [performance],
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -347,7 +352,11 @@ export function AvatarV2CandidateLab() {
               <h3 className="font-semibold">Current Avatar V1</h3>
               <Badge variant="outline">live fallback</Badge>
             </div>
-            <PlayerModelPreview appearance={appearance} />
+            <PlayerModelPreview
+              appearance={appearance}
+              role={comparisonAssignment.role}
+              instrument={comparisonAssignment.instrument ?? undefined}
+            />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
