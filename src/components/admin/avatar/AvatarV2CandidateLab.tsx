@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
 import { defaultAppearance } from '@/features/player-model/appearance';
 import { disposeModel } from '@/features/player-model/model';
+import { AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import {
   validateAvatarV2Scene,
   type AvatarV2Frame,
@@ -23,12 +24,14 @@ function CandidateCanvas({
   lod,
   onReport,
   onError,
+  animateFace,
 }: {
   file: File | null;
   frame: AvatarV2Frame;
   lod: AvatarV2Lod;
   onReport: (report: AvatarV2ValidationReport | null) => void;
   onError: (message: string) => void;
+  animateFace: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -42,6 +45,8 @@ function CandidateCanvas({
     let objectUrl: string | null = null;
     let renderer: T.WebGLRenderer | null = null;
     let environment: T.WebGLRenderTarget | null = null;
+    let faceController: AvatarV2ExpressionController | null = null;
+    const startedAt = performance.now();
 
     const scene = new T.Scene();
     scene.background = new T.Color('#101823');
@@ -55,8 +60,22 @@ function CandidateCanvas({
     controls.minDistance = 1.2;
     controls.maxDistance = 7;
 
-    const render = () => {
+    const render = (now = performance.now()) => {
       if (!alive) return;
+      if (faceController && animateFace) {
+        const seconds = (now - startedAt) / 1000;
+        const opening = .18 + Math.pow(Math.max(0, Math.sin(seconds * 4.2)), 1.35) * .72;
+        faceController.update({
+          seconds,
+          phase: .25,
+          vocalActive: true,
+          opening,
+          energy: .85,
+          reducedMotion: false,
+        });
+      } else {
+        faceController?.reset();
+      }
       controls.update();
       renderer?.render(scene, camera);
       raf = requestAnimationFrame(render);
@@ -123,6 +142,7 @@ function CandidateCanvas({
           model.updateMatrixWorld(true);
           const report = validateAvatarV2Scene(model, frame, lod);
           onReport(report);
+          faceController = new AvatarV2ExpressionController(model);
 
           model.traverse(node => {
             if (!(node instanceof T.Mesh)) return;
@@ -172,7 +192,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, frame, lod, onError, onReport]);
+  }, [file, frame, lod, onError, onReport, animateFace]);
 
   return (
     <canvas
@@ -189,6 +209,7 @@ export function AvatarV2CandidateLab() {
   const [file, setFile] = useState<File | null>(null);
   const [report, setReport] = useState<AvatarV2ValidationReport | null>(null);
   const [error, setError] = useState('');
+  const [animateFace, setAnimateFace] = useState(true);
 
   const appearance = useMemo(() => {
     const next = defaultAppearance('avatar-v2-side-by-side');
@@ -241,6 +262,13 @@ export function AvatarV2CandidateLab() {
               onChange={event => setFile(event.target.files?.[0] ?? null)}
             />
           </label>
+          <Button
+            type="button"
+            variant={animateFace ? 'default' : 'outline'}
+            onClick={() => setAnimateFace(value => !value)}
+          >
+            {animateFace ? 'Face animation on' : 'Face animation off'}
+          </Button>
           {file && (
             <Button
               type="button"
@@ -271,7 +299,7 @@ export function AvatarV2CandidateLab() {
                 {file ? report?.valid ? 'contract pass' : report ? 'needs fixes' : 'checking' : 'load a GLB'}
               </Badge>
             </div>
-            <CandidateCanvas file={file} frame={frame} lod={lod} onReport={setReport} onError={setError} />
+            <CandidateCanvas file={file} frame={frame} lod={lod} onReport={setReport} onError={setError} animateFace={animateFace} />
           </div>
         </div>
 
