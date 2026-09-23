@@ -114,6 +114,54 @@ describe('shipped modular stage models', () => {
     disposeModel(model); disposeModel(actor.root);
   });
 
+  it.each(['masculine', 'feminine'] as const)('renders the %s topless option from the real skinned body instead of a transparent fake shirt', frame => {
+    const appearance = defaultAppearance('topless');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.topless';
+    const model = assemblePlayerModel(library, appearance);
+    let visibleSkin = 0;
+    let hiddenGarment = 0;
+    model.traverse(node => {
+      if (!(node instanceof T.Mesh) || !/Body/i.test(node.name + node.parent?.name)) return;
+      for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+        if (/skin/i.test(material.name) && material.visible !== false) visibleSkin += 1;
+        if (!/skin/i.test(material.name) && material.visible === false) hiddenGarment += 1;
+      }
+    });
+    expect(visibleSkin).toBeGreaterThan(0);
+    expect(hiddenGarment).toBeGreaterThan(0);
+    expect(model.userData.rockmundoAvatarPresentation).toBe('stage');
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('renders the %s Tattoo Parlour model unclothed without changing the saved outfit', frame => {
+    const appearance = defaultAppearance('tattoo-unclothed');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.suit';
+    appearance.equipment.bottom.itemId = 'starter.bottom.punk';
+    const tattoos = [{
+      id: 'tattoo-visible', profile_id: 'profile-1', body_slot: 'chest' as const,
+      ink_color: '#111111', quality_score: 90, is_infected: false, category: 'blackwork' as const,
+    }];
+    const model = assemblePlayerModel(library, appearance, tattoos, [], 'balanced', 'tattoo');
+    let hiddenClothingMaterials = 0;
+    let visibleSkinMaterials = 0;
+    model.traverse(node => {
+      if (!(node instanceof T.Mesh) || /Head/i.test(node.name + node.parent?.name)) return;
+      for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+        if (/skin/i.test(material.name) && material.visible !== false) visibleSkinMaterials += 1;
+        if (!/skin/i.test(material.name) && material.visible === false) hiddenClothingMaterials += 1;
+      }
+    });
+    expect(hiddenClothingMaterials).toBeGreaterThan(0);
+    expect(visibleSkinMaterials).toBeGreaterThan(0);
+    expect(model.getObjectByName('avatar-tattoo-tattoo-visible')).toBeTruthy();
+    expect(model.userData.rockmundoAvatarPresentation).toBe('tattoo');
+    expect(appearance.equipment.top.itemId).toBe('starter.top.suit');
+    expect(appearance.equipment.bottom.itemId).toBe('starter.bottom.punk');
+    disposeModel(model);
+  });
+
   it('dyes the feminine casual shirt and keeps skin and eyes independent', () => {
     const appearance = defaultAppearance(); appearance.body.frame = 'feminine'; appearance.equipment.top = { itemId: 'starter.top.casual', color: '#00ff00' }; appearance.body.skin = '#8d5524';
     const model = assemblePlayerModel(library, appearance); const found = new Map<string, string>();
@@ -136,6 +184,13 @@ describe('shipped modular stage models', () => {
   });
 });
 describe('appearance boundaries', () => {
+  it('upgrades saved appearances without a muscle field to the natural body type', () => {
+    const old = defaultAppearance('legacy-muscle');
+    delete old.body.muscle;
+    const resolved = resolveAppearance(JSON.parse(JSON.stringify(old)), 'legacy-muscle');
+    expect(resolved.body.muscle).toBe('natural');
+    expect(appearanceSchema.safeParse(old).success).toBe(true);
+  });
   it('rejects unknown items, URLs, non-finite dimensions, invalid colours and extra keys', () => {
     for (const edit of [
       (a: ReturnType<typeof defaultAppearance>) => { a.equipment.top.itemId = 'paid.exclusive'; },
@@ -149,16 +204,18 @@ describe('appearance boundaries', () => {
       (a: ReturnType<typeof defaultAppearance>) => { a.head.eyebrowStyle = 'zigzag' as never; },
       (a: ReturnType<typeof defaultAppearance>) => { a.head.skinDetail = 'glitter' as never; },
       (a: ReturnType<typeof defaultAppearance>) => { a.head.eyeColor = 'green'; },
+      (a: ReturnType<typeof defaultAppearance>) => { a.body.muscle = 'impossible' as never; },
     ]) { const value = defaultAppearance(); edit(value); expect(appearanceSchema.safeParse(value).success).toBe(false); expect(resolveAppearance(value, 'safe')).toEqual(defaultAppearance('safe')); }
     expect(appearanceSchema.safeParse({ ...defaultAppearance(), bonus: 100 }).success).toBe(false);
   });
 });
 
 describe('expanded starter wardrobe', () => {
-  it.each(['masculine', 'feminine'] as const)('renders and preserves all 18 starter pieces on the %s gig rig', frame => {
+  it.each(['masculine', 'feminine'] as const)('renders and preserves the full starter wardrobe on the %s gig rig', frame => {
+    const expectedCounts = { top: 7, bottom: 6, footwear: 6 } as const;
     for (const slot of SLOTS) {
-      expect(STARTER_ITEMS[slot]).toHaveLength(6);
-      expect(new Set(STARTER_ITEMS[slot].map(item => item.id)).size).toBe(6);
+      expect(STARTER_ITEMS[slot]).toHaveLength(expectedCounts[slot]);
+      expect(new Set(STARTER_ITEMS[slot].map(item => item.id)).size).toBe(STARTER_ITEMS[slot].length);
       for (const item of STARTER_ITEMS[slot]) {
         const appearance = defaultAppearance(); appearance.body.frame = frame;
         appearance.equipment[slot] = { itemId: item.id, color: '#338b8d' };
