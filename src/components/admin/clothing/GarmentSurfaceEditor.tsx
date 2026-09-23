@@ -213,8 +213,15 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     if (event.shiftKey) {
       event.preventDefault();
       event.stopPropagation();
-      setSelectedIds(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
-      setSelectedId(id);
+      setSelectedIds(current => {
+        if (current.includes(id)) {
+          const next = current.filter(item => item !== id);
+          setSelectedId(next[next.length - 1] || null);
+          return next;
+        }
+        setSelectedId(id);
+        return [...current, id];
+      });
       return;
     }
     remember();
@@ -346,14 +353,15 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
       }
       if ((event.key === "Delete" || event.key === "Backspace") && selected) {
         event.preventDefault();
-        commit(layers.filter(layer => layer.id !== selected.id));
+        const ids = selectedIds.length ? selectedIds : [selected.id];
+        commit(layers.filter(layer => !ids.includes(layer.id)));
         setSelectedId(null);
         setSelectedIds([]);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [copiedLayer, future, layers, past, selected, surface]);
+  }, [copiedLayer, future, layers, past, selected, selectedIds, surface]);
 
   const uploadArtwork = async (file: File) => {
     if (!file.type.match(/^image\/(png|jpeg|webp|svg\+xml)$/)) throw new Error("Use PNG, JPG, WEBP or SVG artwork.");
