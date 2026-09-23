@@ -30,6 +30,15 @@ export interface RichGarmentVisualSpec {
   closure: string;
   length: string;
   bodyOffsetX: number;
+  drape: number;
+  taper: number;
+  thickness: number;
+  asymmetry: boolean;
+  hem: string;
+  sleeveLengthScale: number;
+  sleeveWidthScale: number;
+  waistScale: number;
+  customFlare: number;
 }
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => {
@@ -49,6 +58,13 @@ const percentScale = (value: unknown, fallback = 1) => {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.max(.1, Math.min(4, number > 10 ? number / 100 : number));
+};
+
+const signedPercent = (value: unknown, maxWorld: number, fallback = 0) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  const normalized = Math.abs(number) > 1 ? number / 100 : number;
+  return Math.max(-1, Math.min(1, normalized)) * maxWorld;
 };
 
 export function richGarmentSlot(item: ClothingItem): RichGarmentSlot {
@@ -105,8 +121,11 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
     /crop/.test(length) ? .76 :
     /long|maxi|longline/.test(length) ? 1.24 :
     /mini|short/.test(length) ? .86 : 1;
-  const baseScale = slot === 'top' ? [0.78, 0.72 * lengthScale, 0.42] : slot === 'bottom' ? [0.56, 0.78 * lengthScale, 0.34] : slot === 'footwear' ? [0.32, 0.2, 0.58] : [0.42, 0.26, 0.32];
-  const baseY = slot === 'top' ? 1.15 : slot === 'bottom' ? 0.58 : slot === 'footwear' ? 0.1 : slot === 'headwear' ? 1.83 : slot === 'eyewear' ? 1.61 : 1.08;
+  // These are body-space dimensions, not arbitrary display dimensions. Keeping
+  // them close to the underlying RockMundo avatar prevents the old "cardboard
+  // poncho" effect where a procedural top could span from wrist to wrist.
+  const baseScale = slot === 'top' ? [0.54, 0.68 * lengthScale, 0.30] : slot === 'bottom' ? [0.44, 0.74 * lengthScale, 0.28] : slot === 'footwear' ? [0.25, 0.16, 0.42] : slot === 'headwear' ? [0.36, 0.22, 0.30] : slot === 'eyewear' ? [0.30, 0.11, 0.12] : [0.34, 0.22, 0.24];
+  const baseY = slot === 'top' ? 1.17 : slot === 'bottom' ? 0.57 : slot === 'footwear' ? 0.105 : slot === 'headwear' ? 1.82 : slot === 'eyewear' ? 1.61 : 1.08;
 
   return {
     slot,
@@ -118,13 +137,13 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
     metalness: percent01(materialConfig.metallic ?? materialConfig.metalness, defaults.metalness),
     sheen: percent01(materialConfig.sheen, defaults.sheen),
     opacity: Math.max(.08, percent01(patternConfig.opacity, 1)),
-    scaleX: baseScale[0] * oversize * clamp(render.scale ? Number(render.scale) / 100 : 1, 0.7, 1.4, 1),
-    scaleY: baseScale[1] * clamp(garment.lengthScale ?? garment.length_scale, 0.7, 1.35, 1),
+    scaleX: baseScale[0] * oversize * clamp(render.scale ? Number(render.scale) / 100 : 1, 0.7, 1.4, 1) * clamp(Number(garment.widthScale ?? garment.width_scale ?? 100) / 100, .7, 1.4, 1),
+    scaleY: baseScale[1] * clamp(garment.lengthScale ?? garment.length_scale, 0.7, 1.35, 1) * clamp(Number(garment.bodyLengthScale ?? garment.body_length_scale ?? 100) / 100, .65, 1.5, 1),
     scaleZ: baseScale[2] * (fitName === 'oversized' ? 1.12 : fitName === 'skinny' ? 0.92 : 1),
-    y: baseY + clamp(render.bodyOffsetY ?? render.body_offset_y ?? render.offsetY ?? render.offset_y, -0.35, 0.35, 0),
-    z: clamp(render.depthOffset ?? render.depth_offset, -0.2, 0.2, 0),
+    y: baseY + signedPercent(render.bodyOffsetY ?? render.body_offset_y ?? render.offsetY ?? render.offset_y, .35),
+    z: signedPercent(render.depthOffset ?? render.depth_offset, .2),
     flare,
-    distress: clamp(wear.distress ?? wear.distressIntensity ?? wear.distress_intensity, 0, 1, /distress|stage-worn/.test(String(wear.condition || '')) ? 0.45 : 0),
+    distress: percent01(wear.distress ?? wear.distressIntensity ?? wear.distress_intensity, /distress|stage-worn/.test(String(wear.condition || '')) ? 0.45 : 0),
     patternScale: percentScale(patternConfig.scale, 1),
     patternRotation: clamp(patternConfig.rotation, -360, 360, 0),
     detailCount: Array.isArray(item.detail_layers) ? Math.min(24, item.detail_layers.length) : 0,
@@ -134,6 +153,15 @@ export function buildRichGarmentVisualSpec(item: ClothingItem, variant?: Clothin
     collar,
     closure,
     length,
-    bodyOffsetX: clamp(render.bodyOffsetX ?? render.body_offset_x ?? render.offsetX ?? render.offset_x, -0.35, 0.35, 0),
+    bodyOffsetX: signedPercent(render.bodyOffsetX ?? render.body_offset_x ?? render.offsetX ?? render.offset_x, .35),
+    drape: percent01(fit.drape, .5),
+    taper: percent01(fit.taper, .25),
+    thickness: percent01(materialConfig.thickness, .5),
+    asymmetry: Boolean(garment.asymmetry),
+    hem: String(garment.hem || 'straight').toLowerCase(),
+    sleeveLengthScale: clamp(Number(garment.sleeveLengthScale ?? garment.sleeve_length_scale ?? 100) / 100, .4, 1.6, 1),
+    sleeveWidthScale: clamp(Number(garment.sleeveWidthScale ?? garment.sleeve_width_scale ?? 100) / 100, .6, 1.5, 1),
+    waistScale: clamp(Number(garment.waistScale ?? garment.waist_scale ?? 100) / 100, .6, 1.5, 1),
+    customFlare: percent01(garment.flare, 0),
   };
 }

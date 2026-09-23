@@ -137,21 +137,75 @@ function addTopConstructionDetails(
   }
 }
 
+function makeDetailTexture(detail: ClothingDetailLayer, color: string) {
+  if (typeof document === 'undefined') return null;
+  const type = String(detail.type || '').toLowerCase();
+  const label = type === 'text' ? String(detail.text || '').trim() : '';
+  if (!label) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 92px Arial, sans-serif';
+  const words = label.slice(0, 32);
+  ctx.fillText(words, canvas.width / 2, canvas.height / 2, canvas.width * .92);
+  const texture = new T.CanvasTexture(canvas);
+  texture.colorSpace = T.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function addDetail(group: T.Group, detail: ClothingDetailLayer, index: number, spec: RichGarmentVisualSpec) {
   const color = /^#[0-9a-fA-F]{6}$/.test(String(detail.color || '')) ? detail.color : spec.secondaryColor;
-  const scale = Math.max(.45, Math.min(1.8, Number(detail.scale || 1)));
-  const x = Math.max(-.33, Math.min(.33, Number(detail.offsetX ?? ((index % 3) - 1) * .16)));
-  const yOffset = Math.max(-.34, Math.min(.34, Number(detail.offsetY ?? .14 - Math.floor(index / 3) * .12)));
-  const z = spec.scaleZ / 2 + .025 + index * .0005;
+  const rawScale = Number(detail.scale ?? 100);
+  const scale = Math.max(.15, Math.min(3, Number.isFinite(rawScale) ? (Math.abs(rawScale) > 10 ? rawScale / 100 : rawScale) : 1));
+  const rawX = Number(detail.offsetX ?? ((index % 3) - 1) * 18);
+  const rawY = Number(detail.offsetY ?? (18 - Math.floor(index / 3) * 16));
+  const xUnit = Math.abs(rawX) > 1 ? rawX / 100 : rawX;
+  const yUnit = Math.abs(rawY) > 1 ? rawY / 100 : rawY;
+  const x = T.MathUtils.clamp(xUnit, -.9, .9) * spec.scaleX * .42;
+  const yOffset = T.MathUtils.clamp(yUnit, -.9, .9) * spec.scaleY * .42;
+  const z = spec.scaleZ * .38 + .014 + index * .00035;
   const type = String(detail.type || 'badge').toLowerCase();
+  const rawOpacity = Number(detail.opacity ?? 1);
+  const opacity = T.MathUtils.clamp(rawOpacity > 1 ? rawOpacity / 100 : rawOpacity, .05, 1);
   let mesh: T.Mesh;
+  const detailTexture = makeDetailTexture(detail, color);
 
   if (/stud|button/.test(type)) {
-    mesh = new T.Mesh(new T.SphereGeometry(.025 * scale, 10, 8), new T.MeshStandardMaterial({ color, roughness: .28, metalness: .7 }));
+    mesh = new T.Mesh(
+      new T.SphereGeometry(.018 * scale, 12, 8),
+      new T.MeshStandardMaterial({ color, roughness: .28, metalness: .7, transparent: opacity < 1, opacity }),
+    );
   } else if (/zip|trim|stitch/.test(type)) {
-    mesh = new T.Mesh(new T.BoxGeometry(.025 * scale, .22 * scale, .012), new T.MeshStandardMaterial({ color, roughness: .4, metalness: /zip/.test(type) ? .65 : .08 }));
+    mesh = new T.Mesh(
+      new T.BoxGeometry(.014 * scale, .14 * scale, .007),
+      new T.MeshStandardMaterial({ color, roughness: .4, metalness: /zip/.test(type) ? .65 : .08, transparent: opacity < 1, opacity }),
+    );
   } else {
-    mesh = new T.Mesh(new T.BoxGeometry(.16 * scale, .1 * scale, .012), new T.MeshStandardMaterial({ color, roughness: /embroidery|patch/.test(type) ? .88 : .5, metalness: 0 }));
+    // Graphics/patches are intentionally thin surface layers. The previous
+    // implementation used chunky boxes at editor scale=100, which produced
+    // giant floating diamonds/rectangles in the fitting room.
+    mesh = new T.Mesh(
+      new T.PlaneGeometry(.12 * scale, .075 * scale),
+      new T.MeshStandardMaterial({
+        color: detailTexture ? '#ffffff' : color,
+        map: detailTexture,
+        roughness: /embroidery|patch/.test(type) ? .88 : .58,
+        metalness: 0,
+        side: T.DoubleSide,
+        transparent: true,
+        opacity,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      }),
+    );
+    if (detailTexture) mesh.userData.detailTexture = detailTexture;
   }
 
   mesh.position.set(x, spec.y + yOffset, z + spec.z);
@@ -232,10 +286,12 @@ function addTopGarment(
   const isBoxy = /boxy|oversized|structured/.test(`${spec.silhouette} ${spec.cut}`);
   const isFitted = /slim|skinny|fitted|tailored/.test(`${spec.silhouette} ${spec.cut}`);
   const isCropped = /crop/.test(spec.length);
-  const bodyHeight = spec.scaleY * (isDress ? .9 : 1.02);
-  const halfShoulder = spec.scaleX * (isBoxy ? .54 : isFitted ? .47 : .5);
-  const halfHem = halfShoulder * (isDress ? 1.02 : isBoxy ? .96 : isFitted ? .76 : .86);
-  const torsoDepth = Math.max(.16, spec.scaleZ * (isOuterwear ? .82 : .72));
+  const bodyHeight = spec.scaleY * (isDress ? .92 : 1.02);
+  const drapeSpread = T.MathUtils.lerp(.96, 1.06, spec.drape);
+  const taper = T.MathUtils.lerp(1.02, .76, spec.taper);
+  const halfShoulder = spec.scaleX * (isBoxy ? .52 : isFitted ? .46 : .49) * drapeSpread;
+  const halfHem = halfShoulder * (isDress ? 1.04 + spec.customFlare * .24 : isBoxy ? .94 : isFitted ? .84 : taper) * spec.waistScale;
+  const torsoDepth = Math.max(.105, spec.scaleZ * (isOuterwear ? .76 : .64) * T.MathUtils.lerp(.9, 1.12, spec.thickness));
 
   const torso = new T.Mesh(
     buildTopBodyGeometry(halfShoulder, halfHem, bodyHeight, torsoDepth, spec.collar, isCropped),
@@ -258,22 +314,23 @@ function addTopGarment(
 
   const sleeves = spec.sleeve;
   if (sleeves !== 'sleeveless' && sleeves !== 'none') {
-    const sleeveLength =
+    const sleeveLength = (
       /long|full/.test(sleeves) ? .64 :
       /three-quarter/.test(sleeves) ? .5 :
       /elbow/.test(sleeves) ? .39 :
-      /cap/.test(sleeves) ? .18 : .29;
-    const sleeveRadius = spec.scaleX * (isOuterwear ? .102 : .084);
-    const shoulderY = spec.y + bodyHeight * .34;
-    const sleeveDepthScale = Math.max(.7, torsoDepth / Math.max(.01, sleeveRadius * 2));
+      /cap/.test(sleeves) ? .18 : .29
+    ) * spec.sleeveLengthScale;
+    const sleeveRadius = spec.scaleX * (isOuterwear ? .082 : .068) * T.MathUtils.lerp(.92, 1.08, spec.drape) * spec.sleeveWidthScale;
+    const shoulderY = spec.y + bodyHeight * .35;
+    const sleeveDepthScale = Math.max(.72, torsoDepth / Math.max(.01, sleeveRadius * 2.25));
     for (const side of [-1, 1]) {
       const sleeve = new T.Mesh(
-        new T.CylinderGeometry(sleeveRadius * .82, sleeveRadius, sleeveLength, 14, 2, false),
+        new T.CylinderGeometry(sleeveRadius * .84, sleeveRadius, sleeveLength, 16, 3, false),
         material,
       );
       sleeve.rotation.z = Math.PI / 2;
       sleeve.scale.z = sleeveDepthScale;
-      sleeve.position.set(side * (halfShoulder + sleeveLength * .43), shoulderY, spec.z);
+      sleeve.position.set(side * (halfShoulder + sleeveLength * .46), shoulderY - (spec.asymmetry && side > 0 ? .025 : 0), spec.z);
       add(sleeve, side > 0 ? 'UpperArm.L' : 'UpperArm.R');
     }
   }
@@ -343,34 +400,55 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     addTopGarment(item, spec, material, add);
   } else if (spec.slot === 'bottom') {
     const garment = (item.garment_config || {}) as Record<string, unknown>;
-    const skirtLike = /skirt|dress|a-line|wide/.test(`${item.category} ${garment.silhouette || ''}`.toLowerCase());
+    const category = String(item.category || '').toLowerCase();
+    const skirtLike = /skirt|dress|a-line|wide/.test(`${category} ${garment.silhouette || ''}`.toLowerCase());
     if (skirtLike) {
-      const skirt = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .42, spec.scaleX * (.5 + spec.flare), spec.scaleY, 28, 1, false), material);
+      const waist = spec.scaleX * .39 * spec.waistScale;
+      const hem = spec.scaleX * (.48 + spec.flare + spec.customFlare * .24);
+      const skirt = new T.Mesh(new T.CylinderGeometry(waist, hem, spec.scaleY, 40, 4, false), material);
+      skirt.scale.z = .7;
       skirt.position.set(0, spec.y, spec.z);
       add(skirt, 'Hips');
     } else {
+      const shortFactor = /short/.test(category) ? .52 : 1;
+      const legHeight = spec.scaleY * shortFactor;
+      const topRadius = spec.scaleX * .18 * spec.waistScale;
+      const bottomRadius = topRadius * T.MathUtils.lerp(1.02, .74, spec.taper);
       for (const side of [-1, 1]) {
         const anchor = side > 0 ? 'UpperLeg.L' : 'UpperLeg.R';
-        const leg = new T.Mesh(new T.CapsuleGeometry(spec.scaleX * .22, spec.scaleY, 6, 14), material);
-        leg.position.set(side * spec.scaleX * .25, spec.y, spec.z);
+        const leg = new T.Mesh(new T.CylinderGeometry(bottomRadius, topRadius, legHeight, 22, 4, false), material);
+        leg.scale.z = .72;
+        leg.position.set(side * spec.scaleX * .22, spec.y + (spec.scaleY - legHeight) * .24, spec.z);
         add(leg, anchor);
-        const crease = new T.Mesh(new T.BoxGeometry(.009, spec.scaleY * .72, .008), garmentConstructionMaterial(spec));
+        const crease = new T.Mesh(new T.BoxGeometry(.007, legHeight * .72, .006), garmentConstructionMaterial(spec));
         crease.name = `garment-trouser-crease-${side > 0 ? 'left' : 'right'}`;
-        crease.position.set(side * spec.scaleX * .25, spec.y, spec.z + spec.scaleZ * .43);
+        crease.position.set(side * spec.scaleX * .22, leg.position.y, spec.z + spec.scaleZ * .27);
         add(crease, anchor);
       }
     }
   } else if (spec.slot === 'footwear') {
+    const category = String(item.category || '').toLowerCase();
+    const isBoot = /boot/.test(category);
+    const isTrainer = /trainer|sneaker/.test(category);
     for (const side of [-1, 1]) {
-      const shoe = new T.Mesh(new T.BoxGeometry(spec.scaleX, spec.scaleY, spec.scaleZ), material);
       const anchor = side > 0 ? 'Foot.L' : 'Foot.R';
-      shoe.position.set(side * .2, spec.y, .09 + spec.z);
-      shoe.rotation.x = -.08;
-      add(shoe, anchor);
-      const sole = new T.Mesh(new T.BoxGeometry(spec.scaleX * 1.05, Math.max(.018, spec.scaleY * .12), spec.scaleZ * 1.04), garmentConstructionMaterial(spec, true));
+      const upper = new T.Mesh(
+        new T.CapsuleGeometry(spec.scaleY * (isBoot ? .52 : .42), spec.scaleZ * (isBoot ? .58 : .38), 6, 16),
+        material,
+      );
+      upper.rotation.x = Math.PI / 2;
+      upper.scale.set(1, isBoot ? 1.08 : .92, .78);
+      upper.position.set(side * .2, spec.y + (isBoot ? .06 : .015), .11 + spec.z);
+      add(upper, anchor);
+
+      const toe = new T.Mesh(new T.SphereGeometry(spec.scaleY * (isTrainer ? .52 : .46), 18, 12), material);
+      toe.scale.set(1.35, .55, 1.6);
+      toe.position.set(side * .2, spec.y - .015, .24 + spec.z);
+      add(toe, anchor);
+
+      const sole = new T.Mesh(new T.BoxGeometry(spec.scaleX * .78, Math.max(.018, spec.scaleY * .11), spec.scaleZ * .86), garmentConstructionMaterial(spec, true));
       sole.name = `garment-shoe-sole-${side > 0 ? 'left' : 'right'}`;
-      sole.position.set(side * .2, spec.y - spec.scaleY * .46, .09 + spec.z + .006);
-      sole.rotation.x = -.08;
+      sole.position.set(side * .2, spec.y - spec.scaleY * .34, .14 + spec.z);
       add(sole, anchor);
     }
   } else if (spec.slot === 'headwear') {
@@ -398,6 +476,13 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   }
 
   group.position.x = spec.bodyOffsetX;
+  // Keep all generated clothing in avatar proportions even when older records
+  // contain out-of-range render controls.
+  group.scale.set(
+    T.MathUtils.clamp(group.scale.x, .75, 1.25),
+    T.MathUtils.clamp(group.scale.y, .75, 1.25),
+    T.MathUtils.clamp(group.scale.z, .75, 1.25),
+  );
 
   const details = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 18) : [];
   details.forEach((detail, index) => addDetail(group, detail, index, spec));
@@ -416,6 +501,8 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       object.geometry.dispose();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       materials.forEach(entry => entry.dispose());
+      const detailTexture = object.userData.detailTexture as T.Texture | undefined;
+      detailTexture?.dispose();
     });
   };
   return group;
