@@ -57,7 +57,7 @@
     "test:festivals:full-lifecycle": "bash scripts/festivals/run-full-lifecycle-db-gate.sh",
     "test:festivals:certification": "bash scripts/festivals/run-certification-gate.sh",
     "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs",
-    "validate:avatar-v2": "node scripts/avatar-v2/validate-assets.mjs",
+    "validate:avatar-v2": "node scripts/avatar-v2/validate-assets.mjs && node scripts/avatar-v2/validate-garments.mjs",
     "verify:dependencies": "npm ls --all",
     "verify:dependency-lock": "node --test scripts/dependency-lock-integrity.test.mjs",
     "verify:migration-timestamps": "node scripts/supabase/verify-migration-timestamps.mjs",
