@@ -84,6 +84,9 @@ export interface ClothingDesignConfig {
     opacity: number;
     offsetX: number;
     offsetY: number;
+    surface?: "front" | "back" | "left-sleeve" | "right-sleeve";
+    widthScale?: number;
+    heightScale?: number;
   }>;
   variants: Array<{ name: string; primaryColor: string; secondaryColor: string; pattern: string; material: string }>;
 }
@@ -140,7 +143,7 @@ function FieldSelect({ label, value, values, onChange }: { label: string; value:
 export function ClothingDesignStudio({ value, onChange, category }: { value: ClothingDesignConfig; onChange: (value: ClothingDesignConfig) => void; category?: string }) {
   const set = <K extends keyof ClothingDesignConfig>(key: K, patch: Partial<ClothingDesignConfig[K]>) => onChange({ ...value, [key]: { ...(value[key] as any), ...patch } });
   const addZone = () => onChange({ ...value, zones: [...value.zones, { id: `zone_${Date.now()}`, name: "New zone", color: "#ffffff", playerEditable: true }] });
-  const addDetail = () => onChange({ ...value, details: [...value.details, { id: crypto.randomUUID(), type: "graphic", name: "New detail", zone: value.zones[0]?.id || "main", color: "#ffffff", secondaryColor: "#000000", scale: 100, rotation: 0, opacity: 100, offsetX: 0, offsetY: 0 }] });
+  const addDetail = () => onChange({ ...value, details: [...value.details, { id: crypto.randomUUID(), type: "graphic", name: "New detail", zone: value.zones[0]?.id || "main", color: "#ffffff", secondaryColor: "#000000", scale: 100, rotation: 0, opacity: 100, offsetX: 0, offsetY: 0, surface: "front", widthScale: 100, heightScale: 100 }] });
   const addVariant = () => onChange({ ...value, variants: [...value.variants, { name: `Variant ${value.variants.length + 1}`, primaryColor: value.material.primaryColor, secondaryColor: value.material.secondaryColor, pattern: value.pattern.type, material: value.material.fabric }] });
   const preset = CATEGORY_PRESETS[String(category || "").toLowerCase()];
   const applyCategoryPreset = () => {
@@ -211,6 +214,7 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
       {value.details.map((detail,i)=><div key={detail.id} className="rounded-lg border p-3 space-y-3"><div className="flex items-center justify-between"><div className="flex gap-2"><Badge>{i+1}</Badge><Input className="h-8" value={detail.name} onChange={e=>{const details=[...value.details]; details[i]={...detail,name:e.target.value}; onChange({...value,details});}}/></div><Button type="button" size="icon" variant="ghost" onClick={()=>onChange({...value,details:value.details.filter((_,idx)=>idx!==i)})}><Trash2 className="h-4 w-4"/></Button></div><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <FieldSelect label="Type" value={detail.type} values={DETAIL_TYPES} onChange={v=>{const details=[...value.details]; details[i]={...detail,type:v as DetailLayerType}; onChange({...value,details});}}/>
         <FieldSelect label="Zone" value={detail.zone} values={value.zones.map(z=>z.id)} onChange={v=>{const details=[...value.details]; details[i]={...detail,zone:v}; onChange({...value,details});}}/>
+        <FieldSelect label="Surface" value={detail.surface || "front"} values={["front","back","left-sleeve","right-sleeve"]} onChange={v=>{const details=[...value.details]; details[i]={...detail,surface:v as any}; onChange({...value,details});}}/>
         <div className="space-y-2"><Label>Colour</Label><Input type="color" value={detail.color} onChange={e=>{const details=[...value.details]; details[i]={...detail,color:e.target.value}; onChange({...value,details});}}/></div>
         {(detail.type==="text"||detail.type==="graphic"||detail.type==="decal"||detail.type==="badge") && <div className="space-y-2"><Label>{detail.type==="text"?"Text":"Asset / motif"}</Label><Input value={detail.type==="text"?(detail.text||""):(detail.asset||"")} onChange={e=>{const details=[...value.details]; details[i]=detail.type==="text"?{...detail,text:e.target.value}:{...detail,asset:e.target.value}; onChange({...value,details});}}/></div>}
         <NumberSlider label="Scale" value={detail.scale} min={10} max={300} onChange={v=>{const details=[...value.details]; details[i]={...detail,scale:v}; onChange({...value,details});}}/>
@@ -218,6 +222,8 @@ export function ClothingDesignStudio({ value, onChange, category }: { value: Clo
         <NumberSlider label="Opacity" value={detail.opacity} onChange={v=>{const details=[...value.details]; details[i]={...detail,opacity:v}; onChange({...value,details});}}/>
         <NumberSlider label="Horizontal position" value={detail.offsetX} min={-100} max={100} onChange={v=>{const details=[...value.details]; details[i]={...detail,offsetX:v}; onChange({...value,details});}}/>
         <NumberSlider label="Vertical position" value={detail.offsetY} min={-100} max={100} onChange={v=>{const details=[...value.details]; details[i]={...detail,offsetY:v}; onChange({...value,details});}}/>
+        <NumberSlider label="Width %" value={detail.widthScale ?? 100} min={20} max={250} onChange={v=>{const details=[...value.details]; details[i]={...detail,widthScale:v}; onChange({...value,details});}}/>
+        <NumberSlider label="Height %" value={detail.heightScale ?? 100} min={20} max={250} onChange={v=>{const details=[...value.details]; details[i]={...detail,heightScale:v}; onChange({...value,details});}}/>
       </div></div>)}
     </CardContent></Card>
 
