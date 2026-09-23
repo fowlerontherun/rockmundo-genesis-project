@@ -76,6 +76,10 @@ RECOMMENDED_EXPRESSIONS = [
     "mouthFunnel", "mouthPucker",
 ]
 
+CUSTOMIZATION_MORPHS = [
+    "bodySlim", "bodyBroad", "faceOval", "faceAngular", "faceSoft", "faceWide",
+]
+
 MATERIAL_ROLES = {
     "skin": re.compile(r"rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])", re.I),
     "eyes": re.compile(r"rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|cornea)($|[_-])", re.I),
@@ -201,6 +205,9 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
         for expression in RECOMMENDED_EXPRESSIONS:
             if not has_alias(morphs, [expression]):
                 warnings.append(f"Missing recommended singing target: {expression}.")
+        for morph in CUSTOMIZATION_MORPHS:
+            if not has_alias(morphs, [morph]):
+                warnings.append(f"Missing Avatar Designer shape target: {morph}.")
 
     if args.lod <= 1:
         for role in ("skin", "eyes"):
