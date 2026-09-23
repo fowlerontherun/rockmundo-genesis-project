@@ -1,0 +1,162 @@
+# RockMundo Avatar V2 mesh system
+
+## Why this exists
+
+The current stage avatar is reliable and lightweight, but its Quaternius donor
+topology is now the visual ceiling. Increasing texture resolution improves
+materials, but it cannot add facial topology, finger definition, better joint
+loops, garment thickness or convincing close-up deformation.
+
+Avatar V2 introduces a replacement mesh/rig layer without throwing away the
+gameplay systems already built around the current avatar.
+
+## Core rule
+
+**Do not switch players to V2 until it is complete enough to be safer than V1.**
+
+The fitting room and stage renderer now pass through a dual-engine adapter. V2 is
+attempted only when:
+
+1. the requested frame/LOD is marked `validated`;
+2. the rollout gate is enabled;
+3. the runtime contract passes;
+4. the avatar does not require a compatibility feature that V2 has not certified.
+
+Otherwise the exact existing V1 assembly is used.
+
+## Target architecture
+
+```
+PlayerAppearance
+      |
+      v
+Avatar mesh engine
+   /       \
+V1 fallback  V2 authored humanoid
+              |
+              +-- shared semantic skeleton
+              +-- facial morph targets
+              +-- authored LOD0..LOD3
+              +-- V2 skinned garments
+              +-- hair/accessory sockets
+              +-- tattoos / decals
+              +-- existing stage IK adapter
+```
+
+The V2 rig is normalized into the bone names already understood by RockMundo's
+performance code (`Hips`, `Spine1`, `Spine2`, `UpperArm.L`, `Hand.R`,
+etc.). That lets the existing singing, guitar, bass and drum animation systems be
+reused while the visible character mesh is replaced.
+
+## Mesh quality target
+
+LOD0 is intended for the Avatar Designer, Skin Store and TOTP close-ups. The
+target is a stylised premium character rather than a photoreal scan.
+
+Priority topology areas:
+
+- eyelids and lips with deformation loops;
+- nose/nostril definition;
+- separate eye/cornea geometry;
+- ears capable of accurate jewellery attachment;
+- five-finger hands suitable for instrument grips;
+- shoulders/elbows/knees with animation-friendly loops;
+- shaped feet/toes for real footwear;
+- clean neck/head transition for hairstyles;
+- stable UVs for tattoos and skin detail.
+
+## Facial animation
+
+The initial hard gate requires blink left/right, jaw open and smile. The next
+authoring pass should add phoneme/viseme targets so singer mouth motion can be
+driven by broadcast/gig audio rather than only jaw rotation.
+
+Suggested follow-up targets:
+
+- mouthFrown
+- mouthPucker
+- mouthFunnel
+- browInnerUp
+- browDownLeft / browDownRight
+- eyeLookUp/Down/In/Out
+- AA / EE / IH / OH / OU visemes
+
+## Clothing
+
+V2 clothing will be actual skinned garments authored against the shared V2
+skeleton. The current curated catalogue remains available on V1 until each item
+has a V2 garment asset or an approved V2 compatibility mapping.
+
+No browser-generated garment geometry is part of the V2 target.
+
+Every V2 garment will require:
+
+- masculine/feminine fit where needed;
+- LODs;
+- PBR material maps;
+- body occlusion mask;
+- tattoo coverage metadata;
+- instrument-pose QA;
+- no detached detail meshes;
+- store turntable certification.
+
+## Performance budgets
+
+The base budgets live in `avatarV2Contract.ts` and the asset README. The key
+principle is selective quality:
+
+- LOD0: close-up/editor/store/TOTP
+- LOD1: primary stage performers
+- LOD2: medium distance
+- LOD3: distant/crowd fallback
+
+Crowds never need the same topology or 2K textures as a singer in a close-up.
+
+## Asset workflow
+
+1. Author/export candidate GLB to `public/avatar-v2/<frame>/base-lodN.glb`.
+2. Change the matching manifest status from `planned` to `asset_ready`.
+3. Run `npm run validate:avatar-v2`.
+4. Fix rig/morph/budget/export errors.
+5. Run visual QA in the V2 admin surface.
+6. Mark `validated`.
+7. Only enable rollout after both frames have validated LOD0/LOD1 and compatibility
+   work for clothing/tattoos is complete.
+
+## Phase plan
+
+### Phase A — foundation (this PR)
+
+- semantic rig contract;
+- LOD and topology budgets;
+- GLB validation command;
+- V2 asset registry;
+- safe V1 fallback engine;
+- fitting room/stage wiring;
+- admin readiness surface.
+
+### Phase B — base meshes
+
+- masculine LOD0/1;
+- feminine LOD0/1;
+- face/eyes/teeth/tongue;
+- hands and feet;
+- initial facial blendshapes;
+- direct A/B visual comparison.
+
+### Phase C — compatibility
+
+- V2 hairstyles;
+- hats/glasses/earrings;
+- tattoo projection;
+- first V2 tee, jeans and boots;
+- guitar/bass/drum grip certification.
+
+### Phase D — production rollout
+
+- LOD2/3;
+- migrate curated clothing;
+- TOTP close-up certification;
+- staged player opt-in;
+- default V2 after telemetry/QA;
+- retain V1 fallback for old replay snapshots until no longer needed.
