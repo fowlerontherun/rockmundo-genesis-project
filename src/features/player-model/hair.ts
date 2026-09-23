@@ -6,6 +6,22 @@ import { applyAvatarHairQuality, type AvatarHairTextureCache } from './avatarMat
 
 /** Authored meshes split scalp hair from brows and eyes. New cuts use the
  * complete casual scalp, leaving all skin, eyebrows and facial details intact. */
+function isHeadSurfaceMesh(root: T.Object3D, node: T.SkinnedMesh) {
+  let parent: T.Object3D | null = node;
+  while (parent) {
+    if (/_Head(?:_|$)/i.test(parent.name)) return true;
+    if (
+      root.userData.rockmundoAvatarEngine === 'rockmundo-v2' &&
+      (
+        parent.userData?.rockmundoHeadSurface === true ||
+        /(?:rmv2|rockmundo)[_-]?(?:head|face)(?:surface)?/i.test(parent.name) ||
+        /(?:head|face)[_-]?surface/i.test(parent.name)
+      )
+    ) return true;
+    parent = parent.parent;
+  }
+  return false;
+}
 export function isScalpHair(material: T.Material, frame: PlayerAppearance['body']['frame']) {
   return frame === 'feminine' ? material.name === 'Hair_Blond' : material.name === 'Hair';
 }
@@ -23,10 +39,13 @@ export function addHair(
   const bounds = new T.Box3(), skinFaces: T.Vector3[][] = [];
   root.traverse(node => {
     if (!(node instanceof T.SkinnedMesh)) return;
-    let parent: T.Object3D | null = node; while (parent && !/_Head(?:_|$)/i.test(parent.name)) parent = parent.parent;
-    if (!parent) return;
+    if (!isHeadSurfaceMesh(root, node)) return;
     const materials = Array.isArray(node.material) ? node.material : [node.material];
-    if (!materials.every(m => /skin/i.test(m.name))) return;
+    const isV2 = root.userData.rockmundoAvatarEngine === 'rockmundo-v2';
+    const hasUsableSkin = isV2
+      ? materials.some(m => /skin|face/i.test(m.name))
+      : materials.every(m => /skin/i.test(m.name));
+    if (!hasUsableSkin) return;
     node.skeleton.update();
     const vertices = Array.from({ length: node.geometry.attributes.position.count }, (_, i) => node.getVertexPosition(i,new T.Vector3()).applyMatrix4(node.matrixWorld));
     vertices.forEach(v => bounds.expandByPoint(v));
