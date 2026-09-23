@@ -87,13 +87,13 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
 
   const commit = (next: GarmentSurfaceLayer[]) => {
     remember();
-    commit(next);
+    onChange(next);
   };
 
   const updateLayer = (id: string, patch: Partial<GarmentSurfaceLayer>, record = true) => {
     const next = layers.map(layer => layer.id === id ? { ...layer, ...patch } : layer);
     if (record) commit(next);
-    else commit(next);
+    else onChange(next);
   };
 
   const undo = () => {
