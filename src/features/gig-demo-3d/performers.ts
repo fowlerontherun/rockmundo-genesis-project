@@ -118,7 +118,7 @@ export class Musician {
                     if (mat.isMeshStandardMaterial) {
                         for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const) {
                             const value = mat[key];
-                            if (value instanceof T.Texture) mat[key] = value.clone() as never;
+                            if (value instanceof T.Texture) (mat as any)[key] = value.clone();
                         }
                         const skin = /skin|eye|hair/i.test(mat.name);
                         if (!appearance) {
