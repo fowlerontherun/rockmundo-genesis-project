@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Users, Music, Trophy, DollarSign, Map, GraduationCap,
-  Radio, Settings, Briefcase, Guitar,
+  Radio, Settings, Briefcase, Guitar, Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -155,7 +155,15 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/labels", label: "Labels", description: "Record labels" },
       { path: "/admin/producers", label: "Producers", description: "Music producers" },
       { path: "/admin/release-config", label: "Release Config", description: "Release settings" },
-      { path: "/admin/skin-collections", label: "Curated Skin Packs", description: "Manage curated clothing packs, assets and QA" },
+    ],
+  },
+  {
+    id: "cosmetics",
+    title: "Avatar & Cosmetics",
+    description: "Curated avatar clothing, skin packs and cosmetic QA",
+    icon: Sparkles,
+    items: [
+      { path: "/admin/skin-collections", label: "Curated Skin Packs", description: "Manage clothing packs, asset readiness, validation and publishing" },
     ],
   },
   {
