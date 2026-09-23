@@ -81,8 +81,8 @@ export function addAccessories(
   if (leftStyle !== 'none' || rightStyle !== 'none') {
     const earrings = new T.Group();
     earrings.name = 'avatar-earrings';
-    const metal = material(accessories.earringColor, 'AccessoryEarring', .92, quality === 'ultra' ? .14 : .2);
-    if (metal instanceof T.MeshStandardMaterial) metal.envMapIntensity = quality === 'ultra' ? 1.6 : 1.3;
+    const metal = material(accessories.earringColor, 'AccessoryEarring', .92, quality === 'cinematic' ? .1 : quality === 'ultra' ? .14 : .2);
+    if (metal instanceof T.MeshStandardMaterial) metal.envMapIntensity = quality === 'cinematic' ? 1.8 : quality === 'ultra' ? 1.6 : 1.3;
     const earY = center.y - size.y * .055;
     const earZ = center.z + rz * .10;
     for (const side of [-1, 1] as const) {
