@@ -1,0 +1,310 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import * as T from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
+import { defaultAppearance } from '@/features/player-model/appearance';
+import { disposeModel } from '@/features/player-model/model';
+import {
+  validateAvatarV2Scene,
+  type AvatarV2Frame,
+  type AvatarV2Lod,
+  type AvatarV2ValidationReport,
+} from '@/features/player-model/v2/avatarV2Contract';
+import '@/features/player-model/player-model.css';
+
+function CandidateCanvas({
+  file,
+  frame,
+  lod,
+  onReport,
+  onError,
+}: {
+  file: File | null;
+  frame: AvatarV2Frame;
+  lod: AvatarV2Lod;
+  onReport: (report: AvatarV2ValidationReport | null) => void;
+  onError: (message: string) => void;
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const element = canvas.current;
+    if (!element) return;
+
+    let alive = true;
+    let raf = 0;
+    let model: T.Object3D | null = null;
+    let objectUrl: string | null = null;
+    let renderer: T.WebGLRenderer | null = null;
+    let environment: T.WebGLRenderTarget | null = null;
+
+    const scene = new T.Scene();
+    scene.background = new T.Color('#101823');
+    const camera = new T.PerspectiveCamera(32, 1, .05, 30);
+    camera.position.set(2.05, 1.5, 4.25);
+
+    const controls = new OrbitControls(camera, element);
+    controls.target.set(0, .92, 0);
+    controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 1.2;
+    controls.maxDistance = 7;
+
+    const render = () => {
+      if (!alive) return;
+      controls.update();
+      renderer?.render(scene, camera);
+      raf = requestAnimationFrame(render);
+    };
+
+    try {
+      renderer = new T.WebGLRenderer({ canvas: element, antialias: true, powerPreference: 'high-performance' });
+      renderer.outputColorSpace = T.SRGBColorSpace;
+      renderer.toneMapping = T.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = T.PCFSoftShadowMap;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+      const pmrem = new T.PMREMGenerator(renderer);
+      const room = new RoomEnvironment();
+      environment = pmrem.fromScene(room, .04);
+      scene.environment = environment.texture;
+      room.dispose();
+      pmrem.dispose();
+
+      scene.add(new T.HemisphereLight('#d9e5f5', '#283241', 1.7));
+      const key = new T.DirectionalLight('#ffe8d2', 3.2);
+      key.position.set(-2.5, 4, 3.5);
+      key.castShadow = true;
+      scene.add(key);
+      const rim = new T.DirectionalLight('#68c9f4', 1.7);
+      rim.position.set(2.5, 2.8, -2.2);
+      scene.add(rim);
+
+      const floor = new T.Mesh(
+        new T.CircleGeometry(1.28, 96),
+        new T.MeshStandardMaterial({ color: '#222c3b', roughness: .54, metalness: .2 }),
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const resize = () => {
+        const rect = element.getBoundingClientRect();
+        const width = Math.max(1, rect.width);
+        const height = Math.max(1, rect.height);
+        renderer?.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      };
+      resize();
+      const observer = new ResizeObserver(resize);
+      observer.observe(element);
+
+      raf = requestAnimationFrame(render);
+      onReport(null);
+      onError('');
+
+      if (file) {
+        objectUrl = URL.createObjectURL(file);
+        void new GLTFLoader().loadAsync(objectUrl).then(gltf => {
+          if (!alive) {
+            disposeModel(gltf.scene);
+            return;
+          }
+
+          model = gltf.scene;
+          model.updateMatrixWorld(true);
+          const report = validateAvatarV2Scene(model, frame, lod);
+          onReport(report);
+
+          model.traverse(node => {
+            if (!(node instanceof T.Mesh)) return;
+            node.castShadow = true;
+            node.receiveShadow = true;
+            node.frustumCulled = false;
+          });
+
+          const bounds = new T.Box3().setFromObject(model);
+          const size = bounds.getSize(new T.Vector3());
+          if (!Number.isFinite(size.y) || size.y <= .01) throw new Error('Candidate mesh has no measurable height.');
+          const scale = 1.78 / size.y;
+          model.scale.setScalar(scale);
+          model.updateMatrixWorld(true);
+          const scaled = new T.Box3().setFromObject(model);
+          model.position.y -= scaled.min.y;
+          model.updateMatrixWorld(true);
+
+          scene.add(model);
+        }).catch(error => {
+          if (!alive) return;
+          onReport(null);
+          onError(error instanceof Error ? error.message : 'Candidate GLB could not be loaded.');
+        });
+      }
+
+      return () => {
+        alive = false;
+        cancelAnimationFrame(raf);
+        observer.disconnect();
+        controls.dispose();
+        if (model) {
+          model.removeFromParent();
+          disposeModel(model);
+        }
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        disposeModel(floor);
+        environment?.dispose();
+        renderer?.dispose();
+      };
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'WebGL candidate preview could not start.');
+      controls.dispose();
+      renderer?.dispose();
+      return () => {
+        alive = false;
+        cancelAnimationFrame(raf);
+      };
+    }
+  }, [file, frame, lod, onError, onReport]);
+
+  return (
+    <canvas
+      ref={canvas}
+      className="h-[520px] w-full rounded-lg border bg-slate-950"
+      aria-label="Avatar V2 candidate mesh preview"
+    />
+  );
+}
+
+export function AvatarV2CandidateLab() {
+  const [frame, setFrame] = useState<AvatarV2Frame>('masculine');
+  const [lod, setLod] = useState<AvatarV2Lod>(0);
+  const [file, setFile] = useState<File | null>(null);
+  const [report, setReport] = useState<AvatarV2ValidationReport | null>(null);
+  const [error, setError] = useState('');
+
+  const appearance = useMemo(() => {
+    const next = defaultAppearance('avatar-v2-side-by-side');
+    next.body.frame = frame;
+    next.head.hairStyle = 'quiff';
+    return next;
+  }, [frame]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>V1 ↔ V2 candidate lab</CardTitle>
+        <CardDescription>
+          Load a GLB locally for side-by-side visual inspection. The file stays in this browser session
+          and is not published, uploaded or made available to players.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Frame</span>
+            <select
+              className="block rounded-md border bg-background px-3 py-2"
+              value={frame}
+              onChange={event => setFrame(event.target.value as AvatarV2Frame)}
+            >
+              <option value="masculine">Masculine</option>
+              <option value="feminine">Feminine</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Target LOD</span>
+            <select
+              className="block rounded-md border bg-background px-3 py-2"
+              value={lod}
+              onChange={event => setLod(Number(event.target.value) as AvatarV2Lod)}
+            >
+              <option value={0}>LOD0 · close-up</option>
+              <option value={1}>LOD1 · performer</option>
+              <option value={2}>LOD2 · medium</option>
+              <option value={3}>LOD3 · distant</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Candidate GLB</span>
+            <input
+              type="file"
+              accept=".glb,model/gltf-binary"
+              className="block max-w-xs rounded-md border bg-background px-3 py-2 text-sm"
+              onChange={event => setFile(event.target.files?.[0] ?? null)}
+            />
+          </label>
+          {file && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setFile(null);
+                setReport(null);
+                setError('');
+              }}
+            >
+              Clear candidate
+            </Button>
+          )}
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-2">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Current Avatar V1</h3>
+              <Badge variant="outline">live fallback</Badge>
+            </div>
+            <PlayerModelPreview appearance={appearance} />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Avatar V2 candidate</h3>
+              <Badge variant={report?.valid ? 'default' : 'secondary'}>
+                {file ? report?.valid ? 'contract pass' : report ? 'needs fixes' : 'checking' : 'load a GLB'}
+              </Badge>
+            </div>
+            <CandidateCanvas file={file} frame={frame} lod={lod} onReport={setReport} onError={setError} />
+          </div>
+        </div>
+
+        {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+
+        {report && (
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={report.valid ? 'default' : 'destructive'}>{report.valid ? 'Automated contract passed' : 'Contract failed'}</Badge>
+              <Badge variant="outline">{report.triangles.toLocaleString()} tris</Badge>
+              <Badge variant="outline">{report.vertices.toLocaleString()} vertices</Badge>
+              <Badge variant="outline">{report.bones} bones</Badge>
+              <Badge variant="outline">{report.skinnedMeshes} skinned mesh{report.skinnedMeshes === 1 ? '' : 'es'}</Badge>
+              <Badge variant="outline">{report.morphTargets.length} morph targets</Badge>
+            </div>
+            {report.issues.length === 0 ? (
+              <p className="text-sm text-emerald-600">No automated contract issues. Visual and performance-pose QA is still required.</p>
+            ) : (
+              <div className="grid gap-2 md:grid-cols-2">
+                {report.issues.map(issue => (
+                  <div key={issue.code} className="rounded-md border p-3 text-sm">
+                    <div className="mb-1 flex items-center gap-2">
+                      <Badge variant={issue.level === 'error' ? 'destructive' : 'secondary'}>{issue.level}</Badge>
+                      <code className="text-xs">{issue.code}</code>
+                    </div>
+                    <p className="text-muted-foreground">{issue.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
