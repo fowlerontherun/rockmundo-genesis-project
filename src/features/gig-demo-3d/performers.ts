@@ -190,7 +190,10 @@ export class Musician {
         }
         if (appearance) {
             this.bodyBuild = appearance.body.build;
-            this.root.scale.set(appearance.body.build, appearance.body.height, appearance.body.build);
+            const authoredBuild = this.model.userData.rockmundoAvatarEngine === 'rockmundo-v2'
+                && this.model.userData.rockmundoV2UsesBuildMorph === true;
+            const widthScale = authoredBuild ? 1 : appearance.body.build;
+            this.root.scale.set(widthScale, appearance.body.height, widthScale);
         }
         const assignment = stageAssignment(instrument, role);
         if (assignment.instrument && role !== 'fan') {
