@@ -41,7 +41,27 @@ export const AVATAR_V2_REQUIRED_BONES = [
 
 export type AvatarV2Bone = typeof AVATAR_V2_REQUIRED_BONES[number];
 
-const BONE_ALIASES: Record<AvatarV2Bone, string[]> = {
+export const AVATAR_V2_RUNTIME_BONE_NAMES: Record<AvatarV2Bone, string> = {
+  hips: 'Hips',
+  spine: 'Spine1',
+  chest: 'Spine2',
+  neck: 'Neck',
+  head: 'Head',
+  leftUpperArm: 'UpperArm.L',
+  leftLowerArm: 'LowerArm.L',
+  leftHand: 'Hand.L',
+  rightUpperArm: 'UpperArm.R',
+  rightLowerArm: 'LowerArm.R',
+  rightHand: 'Hand.R',
+  leftUpperLeg: 'UpperLeg.L',
+  leftLowerLeg: 'LowerLeg.L',
+  leftFoot: 'Foot.L',
+  rightUpperLeg: 'UpperLeg.R',
+  rightLowerLeg: 'LowerLeg.R',
+  rightFoot: 'Foot.R',
+};
+
+export const AVATAR_V2_BONE_ALIASES: Record<AvatarV2Bone, string[]> = {
   hips: ['hips', 'pelvis', 'root_hips', 'j_bip_c_hips'],
   spine: ['spine', 'spine1', 'spine_01', 'j_bip_c_spine'],
   chest: ['chest', 'spine2', 'spine_02', 'upperchest', 'j_bip_c_chest'],
@@ -104,7 +124,22 @@ const EXPRESSION_ALIASES: Record<typeof AVATAR_V2_REQUIRED_EXPRESSIONS[number], 
   mouthSmile: ['mouthsmile', 'mouth_smile', 'smile', 'mouthSmileLeft'],
 };
 
-const clean = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
+export const cleanAvatarV2Name = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
+const clean = cleanAvatarV2Name;
+
+export function avatarV2BoneSemantic(name: string): AvatarV2Bone | null {
+  const wanted = clean(name);
+  for (const semantic of AVATAR_V2_REQUIRED_BONES) {
+    const aliases = [semantic, AVATAR_V2_RUNTIME_BONE_NAMES[semantic], ...AVATAR_V2_BONE_ALIASES[semantic]];
+    if (aliases.some(alias => clean(alias) === wanted)) return semantic;
+  }
+  return null;
+}
+
+export function avatarV2RuntimeBoneName(name: string) {
+  const semantic = avatarV2BoneSemantic(name);
+  return semantic ? AVATAR_V2_RUNTIME_BONE_NAMES[semantic] : name;
+}
 
 export interface AvatarV2ValidationIssue {
   level: 'error' | 'warning';
@@ -133,7 +168,7 @@ function resolveBoneMap(scene: T.Object3D) {
 
   const map: Partial<Record<AvatarV2Bone, string>> = {};
   for (const canonical of AVATAR_V2_REQUIRED_BONES) {
-    const candidates = [canonical, ...BONE_ALIASES[canonical]].map(clean);
+    const candidates = [canonical, ...AVATAR_V2_BONE_ALIASES[canonical]].map(clean);
     const match = candidates.map(name => byName.get(name)).find(Boolean);
     if (match) map[canonical] = match;
   }
