@@ -199,7 +199,9 @@ a clothing-dependent donor:
   A candidate that would leave a hole when clothes are removed now fails both the
   browser contract and Blender export gate;
 - Topless is a real free top state. It reveals the skinned base torso rather than
-  drawing a transparent fake T-shirt;
+  drawing a transparent fake T-shirt. While V2 remains rollout-locked, V1 adds a
+  neutral skinned underlay behind its clothing-first donor meshes so the preview
+  cannot collapse into a missing torso;
 - Tattoo Parlour uses a dedicated `tattoo` presentation. Garments are temporarily
   suppressed only for that preview and every owned tattoo is rendered, while the
   character's saved outfit remains untouched;
