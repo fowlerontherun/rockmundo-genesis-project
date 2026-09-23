@@ -27,6 +27,38 @@ interface EquippedClothingRow {
   customization_config?: Record<string, string> | null;
 }
 
+export interface StageAppearanceRow {
+  profile_id: string;
+  appearance: unknown;
+}
+
+export interface LegacyStageAppearanceRow {
+  profile_id: string;
+  gender?: string | null;
+  skin_tone?: string | null;
+  hair_color?: string | null;
+  height?: number | null;
+  shirt_color?: string | null;
+  pants_color?: string | null;
+  shoes_color?: string | null;
+}
+
+export function resolveGigStageAppearances(
+  stageRows: StageAppearanceRow[] = [],
+  legacyRows: LegacyStageAppearanceRow[] = [],
+): Record<string, PlayerAppearance> {
+  const appearances: Record<string, PlayerAppearance> = {};
+  for (const row of stageRows) {
+    if (!row?.profile_id) continue;
+    appearances[row.profile_id] = resolveAppearance(row.appearance, row.profile_id);
+  }
+  for (const row of legacyRows) {
+    if (!row?.profile_id || appearances[row.profile_id]) continue;
+    appearances[row.profile_id] = appearanceFromLegacy(row, row.profile_id);
+  }
+  return appearances;
+}
+
 type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing' | 'get_equipped_stage_instrument_skins';
 type StageRpcArgs = { p_profile_ids: string[] };
 type StageRpcResult = { data: unknown; error: { message?: string } | null };
@@ -143,8 +175,9 @@ export function useGigPlayerModels(profileIds: string[]) {
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceSettled, clothingSettled, tattooSettled, instrumentSettled] = await Promise.allSettled([
+      const [appearanceSettled, legacySettled, clothingSettled, tattooSettled, instrumentSettled] = await Promise.allSettled([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
+        supabase.from('player_avatar_config').select('profile_id,gender,skin_tone,hair_color,height,shirt_color,pants_color,shoes_color').in('profile_id', ids),
         callStageRpc('get_equipped_stage_clothing', { p_profile_ids: ids }),
         callStageRpc('get_stage_tattoo_visuals', { p_profile_ids: ids }),
         callStageRpc('get_equipped_stage_instrument_skins', { p_profile_ids: ids }),
@@ -167,9 +200,18 @@ export function useGigPlayerModels(profileIds: string[]) {
       const tattooResult = optionalStageResult('tattoo visuals', tattooSettled);
       const instrumentResult = optionalStageResult('instrument skins', instrumentSettled);
 
-      const appearances = Object.fromEntries(
-        (appearanceResult.data || []).map(row => [row.profile_id, resolveAppearance(row.appearance, row.profile_id)]),
-      ) as Record<string, PlayerAppearance>;
+      let legacyRows: LegacyStageAppearanceRow[] = [];
+      if (legacySettled.status === 'fulfilled' && !legacySettled.value.error) {
+        legacyRows = (legacySettled.value.data || []) as LegacyStageAppearanceRow[];
+      } else {
+        const reason = legacySettled.status === 'rejected' ? legacySettled.reason : legacySettled.value.error;
+        console.warn('[gig-player-models] legacy avatar fallback could not load', reason);
+      }
+
+      const appearances = resolveGigStageAppearances(
+        (appearanceResult.data || []) as StageAppearanceRow[],
+        legacyRows,
+      );
 
       let richClothing: Record<string, ResolvedEquippedClothing[]> = {};
       if (!clothingResult.error) {
