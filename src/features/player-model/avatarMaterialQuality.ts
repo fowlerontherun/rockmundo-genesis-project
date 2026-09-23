@@ -97,14 +97,30 @@ export function avatarSkinRoughnessTexture(appearance: PlayerAppearance, quality
   return texture(`avatar-skin-roughness-${quality}`, pixels, size, profile.anisotropy);
 }
 
+export interface AvatarSkinTextureCache {
+  normal: T.DataTexture | null;
+  roughness: T.DataTexture | null;
+}
+
+export function createAvatarSkinTextureCache(
+  appearance: PlayerAppearance,
+  quality: AvatarVisualQuality,
+): AvatarSkinTextureCache {
+  return {
+    normal: avatarSkinNormalTexture(appearance, quality),
+    roughness: avatarSkinRoughnessTexture(appearance, quality),
+  };
+}
+
 export function applyAvatarSkinQuality(
   material: T.MeshStandardMaterial,
   appearance: PlayerAppearance,
   quality: AvatarVisualQuality,
+  cache?: AvatarSkinTextureCache,
 ) {
   if (quality === 'crowd') return;
-  const normal = avatarSkinNormalTexture(appearance, quality);
-  const roughness = avatarSkinRoughnessTexture(appearance, quality);
+  const normal = cache?.normal ?? avatarSkinNormalTexture(appearance, quality);
+  const roughness = cache?.roughness ?? avatarSkinRoughnessTexture(appearance, quality);
   if (normal) {
     material.normalMap = normal;
     const strength = quality === 'ultra' ? .34 : quality === 'high' ? .28 : .2;
