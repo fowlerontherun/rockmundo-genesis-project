@@ -90,6 +90,9 @@ export interface ClothingDesignConfig {
     surface?: "front" | "back" | "left-sleeve" | "right-sleeve";
     widthScale?: number;
     heightScale?: number;
+    fontStyle?: "block" | "punk" | "script" | "metal" | "varsity" | "clean";
+    outlineColor?: string;
+    letterSpacing?: number;
   }>;
   variants: Array<{ name: string; primaryColor: string; secondaryColor: string; pattern: string; material: string }>;
 }
