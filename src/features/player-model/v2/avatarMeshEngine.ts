@@ -8,6 +8,7 @@ import {
   disposeModel,
   requiredModelFiles,
   type ModelLibrary,
+  type PlayerModelPresentation,
 } from '../model';
 import {
   avatarV2LodForQuality,
@@ -21,6 +22,7 @@ export type AvatarMeshEngine = 'legacy-v1' | 'rockmundo-v2';
 
 export interface AvatarMeshAssemblyOptions {
   forceEngine?: AvatarMeshEngine;
+  presentation?: PlayerModelPresentation;
 }
 
 export function requiredAvatarMeshFiles(
@@ -61,7 +63,9 @@ export function assembleAvatarMesh(
   options: AvatarMeshAssemblyOptions = {},
 ): T.Object3D {
   const wantsV2 = options.forceEngine === 'rockmundo-v2' || options.forceEngine == null;
-  let incompatible = v2CompatibilityReason(appearance, quality, clothing);
+  const presentation = options.presentation ?? 'stage';
+  const visibleClothing = presentation === 'tattoo' ? [] : clothing;
+  let incompatible = v2CompatibilityReason(appearance, quality, visibleClothing);
 
   if (wantsV2 && !incompatible) {
     const result = tryAssembleAvatarV2Model(
@@ -72,18 +76,19 @@ export function assembleAvatarMesh(
     );
     if (result.model) {
       try {
-        if (clothing.length) {
+        if (visibleClothing.length) {
           const garments = buildAvatarV2Garments(
             library,
             result.model,
-            clothing,
+            visibleClothing,
             appearance.body.frame,
             avatarV2LodForQuality(quality),
           );
           result.model.add(garments.group);
           result.model.userData.rockmundoAvatarV2OccludedBodyRegions = garments.hiddenBodyRegions;
         }
-        applyAvatarV2Compatibility(result.model, appearance, tattoos, clothing, quality);
+        applyAvatarV2Compatibility(result.model, appearance, tattoos, visibleClothing, quality);
+        result.model.userData.rockmundoAvatarPresentation = presentation;
         result.model.userData.rockmundoAvatarEngine = 'rockmundo-v2';
         result.model.userData.rockmundoAvatarV2Report = result.report;
         return result.model;
@@ -94,7 +99,7 @@ export function assembleAvatarMesh(
     }
   }
 
-  const legacy = assemblePlayerModel(library, appearance, tattoos, clothing, quality);
+  const legacy = assemblePlayerModel(library, appearance, tattoos, visibleClothing, quality, presentation);
   legacy.userData.rockmundoAvatarEngine = 'legacy-v1';
   legacy.userData.rockmundoAvatarFallbackReason = incompatible ?? 'Avatar V2 is not validated/enabled for this frame and quality.';
   return legacy;

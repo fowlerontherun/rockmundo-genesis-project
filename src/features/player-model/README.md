@@ -7,10 +7,11 @@ modular assembly, skin/clothing dyes and performance poses.
 
 ## Shipped behaviour
 
-- Masculine and feminine rig families; height/build, skin tone, hair colour and shared head-detail anchors.
-- Three heads and six free choices each for tops, bottoms and footwear: 18 starter
-  pieces, 12 named colour swatches per slot and a custom colour picker. Every new
-  and existing character can equip them immediately; no purchase or grant is needed.
+- Masculine and feminine rig families; height/build, five saved muscle-definition states, skin tone, hair colour and shared head-detail anchors.
+- Three heads, seven free top choices (including Topless), and six free choices
+  each for bottoms and footwear: 19 starter pieces, 12 named colour swatches per
+  clothed slot and a custom colour picker. Every new and existing character can
+  equip them immediately; no purchase or grant is needed.
 - Three base silhouettes per slot plus fabric/finish variants: striped and plaid
   tops, denim/check/pinstripe bottoms, canvas/two-tone/patent footwear. Local 128px
   textile maps use rest-space UVs so patterns follow the animated rig. These are
@@ -18,7 +19,7 @@ modular assembly, skin/clothing dyes and performance poses.
 - Free starter clothing and standard instrument finishes. Saving costs nothing
   and does not affect skill, cash, equipment ownership or gig outcomes.
 - Five hat states (none, beanie, baseball cap, bucket hat, fedora), five eyewear states (none, round, square, aviator, sunglasses), and four earring states (none, studs, hoops, drops), with named colours and a custom picker. Accessories fit from measured head bounds, attach to the animated Head bone and are saved with the stage appearance.
-- Owned Tattoo Parlour ink is rendered on the same 3D model using the shared body-slot catalogue. Arm, shoulder, wrist, neck, chest, stomach, back, thigh and calf tattoos follow rig bones; quality controls ink opacity and infection adds a visible irritated tint without changing the authoritative tattoo record.
+- Owned Tattoo Parlour ink is rendered on the same 3D model using the shared body-slot catalogue. Arm, shoulder, wrist, neck, chest, stomach, back, thigh and calf tattoos follow rig bones; quality controls ink opacity and infection adds a visible irritated tint without changing the authoritative tattoo record. The Tattoo Parlour temporarily uses an unclothed inspection presentation so covered placements can be checked without modifying the saved outfit.
 - Camera rotation/zoom, keyboard controls and ten performance preview poses.
 - The active character owns its model. Switching characters resets the editor
   session; saves target the character captured in the request.
@@ -55,7 +56,7 @@ Only mesh containers count as wardrobe parts: bones named `Body` or `Head` must
 never be cloned as clothing. The women's independent foot controls are reparented
 to the lower legs while preserving their rest world transforms for the shared IK
 solver. A skinned calf fills the gap between cropped punk trousers and low shoes.
-Tests check base mesh combinations, all 18 items on both frames, round-trip saves,
+Tests check base mesh combinations, all 19 starter items on both frames, topless and unclothed tattoo presentations, round-trip saves,
 owned texture lifetimes, unique bones, visible mesh deformation and hand
 contact with instruments. Loaded source geometry, preview swaps, inactive crowd
 poses and WebGL resources have explicit cleanup.
@@ -73,9 +74,11 @@ poses and WebGL resources have explicit cleanup.
 
 Paid accessory ownership and a full face-sculpting system remain follow-up features; the shipped free hats/glasses and owned tattoos now affect the actual stage model.
 
-The six-starter-clothing migration extends only the validated item allow-list.
-`supabase/tests/starter_wardrobe.sql` tests all 18 IDs on both frames and rejects
-invalid IDs/colours without writing player data. Run the offline frontend suite
+The original six-starter-clothing migration extends the validated item allow-list.
+`20260923192633_avatar_v2_muscle_topless.sql` adds the Topless top ID and optional
+body muscle field while preserving legacy version-1 saves. The rollback-only
+`supabase/tests/avatar_v2_body_topless.sql` covers all five muscle values, Topless,
+legacy saves and invalid body values. Run the offline frontend suite
 with `./node_modules/.bin/vitest run --config vitest.stage-models.config.ts --maxWorkers=1`.
 
 
@@ -164,10 +167,12 @@ Regression: `supabase/tests/avatar_face_detail_phase_3.sql`.
 ## Phase 4: unified tattoo/avatar polish
 
 The Tattoo Parlour's **My Tattoos** tab now includes the shared animated 3D player model next
-to the placement map. It reads the same saved appearance, equipped rich clothing and
-render-only Tattoo Parlour projection as gigs, so clothing coverage and visible ink match the
-stage presentation. The existing cache invalidation after purchase, text/custom tattoo and
-infection treatment updates this view as well as subsequent gigs.
+to the placement map. It reads the same saved appearance and render-only Tattoo Parlour
+projection as gigs, but deliberately suppresses clothing inside the parlour so chest, stomach,
+back, thigh and other covered placements can always be inspected. This is a renderer-only
+presentation and never equips or unequips the player's saved outfit. The existing cache
+invalidation after purchase, text/custom tattoo and infection treatment updates this view as
+well as subsequent gigs.
 
 Tattoo surfaces use smoother curved geometry, stable per-tattoo orientation and mipmapped
 style masks for cleaner close-up rendering. The authoritative tattoo record remains in the

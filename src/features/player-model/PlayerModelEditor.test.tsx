@@ -49,7 +49,7 @@ it('preserves edits after a failed save and resets the draft when the active cha
   await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ profileId: 'character-two' })));
 });
 
-it('gives every character six free choices per clothing type and persists new designs and colours', async () => {
+it('gives every character the full free starter wardrobe and persists new designs and colours', async () => {
   render(<PlayerModelEditor />);
   for (const slot of SLOTS) {
     const group = screen.getByRole('group', { name: SLOT_LABELS[slot] });
@@ -61,6 +61,19 @@ it('gives every character six free choices per clothing type and persists new de
   await waitFor(() => expect(save).toHaveBeenCalled());
   for (const slot of SLOTS) expect(save.mock.calls[0][0].appearance.equipment[slot]).toEqual({ itemId: STARTER_ITEMS[slot][5].id, color: '#338b8d' });
 });
+it('saves topless and muscle definition as independent avatar choices', async () => {
+  render(<PlayerModelEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Bodybuilder' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Topless' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
+  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
+    appearance: expect.objectContaining({
+      body: expect.objectContaining({ muscle: 'bodybuilder' }),
+      equipment: expect.objectContaining({ top: expect.objectContaining({ itemId: 'starter.top.topless' }) }),
+    }),
+  })));
+});
+
 it('saves detailed face, eye, brow, hair and skin choices as one appearance', async () => {
   render(<PlayerModelEditor />);
   fireEvent.change(screen.getByLabelText('Face shape'), { target: { value: 'angular' } });

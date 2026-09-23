@@ -4,6 +4,10 @@ import type { PlayerAppearance } from '../appearance';
 export type AvatarV2CustomizationMorph =
   | 'bodySlim'
   | 'bodyBroad'
+  | 'muscleToned'
+  | 'muscleAthletic'
+  | 'muscleMuscular'
+  | 'muscleBodybuilder'
   | 'faceOval'
   | 'faceAngular'
   | 'faceSoft'
@@ -11,7 +15,11 @@ export type AvatarV2CustomizationMorph =
 
 const ALIASES: Record<AvatarV2CustomizationMorph, string[]> = {
   bodySlim: ['bodySlim', 'body_slim', 'bodyLean', 'body_lean', 'shapeSlim'],
-  bodyBroad: ['bodyBroad', 'body_broad', 'bodyMuscular', 'body_muscular', 'shapeBroad'],
+  bodyBroad: ['bodyBroad', 'body_broad', 'shapeBroad'],
+  muscleToned: ['muscleToned', 'muscle_toned', 'bodyToned', 'body_toned'],
+  muscleAthletic: ['muscleAthletic', 'muscle_athletic', 'bodyAthletic', 'body_athletic'],
+  muscleMuscular: ['muscleMuscular', 'muscle_muscular', 'bodyMuscular', 'body_muscular'],
+  muscleBodybuilder: ['muscleBodybuilder', 'muscle_bodybuilder', 'bodyBodybuilder', 'body_bodybuilder'],
   faceOval: ['faceOval', 'face_oval', 'headOval'],
   faceAngular: ['faceAngular', 'face_angular', 'headAngular'],
   faceSoft: ['faceSoft', 'face_soft', 'headSoft'],
@@ -55,6 +63,7 @@ function weight(bindings: BindingMap, morph: AvatarV2CustomizationMorph, value: 
 
 export interface AvatarV2CustomizationResult {
   bodyBuildApplied: boolean;
+  muscleApplied: boolean;
   faceShapeApplied: boolean;
   supported: AvatarV2CustomizationMorph[];
 }
@@ -86,6 +95,17 @@ export function applyAvatarV2Customization(
     bodyBuildApplied = supported.includes('bodySlim') && supported.includes('bodyBroad');
   }
 
+  const muscleMap: Partial<Record<NonNullable<PlayerAppearance['body']['muscle']>, AvatarV2CustomizationMorph>> = {
+    toned: 'muscleToned',
+    athletic: 'muscleAthletic',
+    muscular: 'muscleMuscular',
+    bodybuilder: 'muscleBodybuilder',
+  };
+  const selectedMuscle = appearance.body.muscle ?? 'natural';
+  const muscleMorph = muscleMap[selectedMuscle];
+  const muscleApplied = selectedMuscle === 'natural' || (!!muscleMorph && supported.includes(muscleMorph));
+  if (muscleMorph) weight(bindings, muscleMorph, 1);
+
   const faceMap: Partial<Record<NonNullable<PlayerAppearance['head']['faceShape']>, AvatarV2CustomizationMorph>> = {
     oval: 'faceOval',
     angular: 'faceAngular',
@@ -97,8 +117,9 @@ export function applyAvatarV2Customization(
   if (faceMorph) weight(bindings, faceMorph, 1);
 
   root.userData.rockmundoV2UsesBuildMorph = bodyBuildApplied;
+  root.userData.rockmundoV2UsesMuscleMorph = muscleApplied;
   root.userData.rockmundoV2UsesFaceMorph = faceShapeApplied;
-  return { bodyBuildApplied, faceShapeApplied, supported };
+  return { bodyBuildApplied, muscleApplied, faceShapeApplied, supported };
 }
 
 export const AVATAR_V2_CUSTOMIZATION_MORPHS = Object.freeze(Object.keys(ALIASES) as AvatarV2CustomizationMorph[]);

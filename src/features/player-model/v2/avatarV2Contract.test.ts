@@ -49,8 +49,12 @@ function validScene() {
     blinkRight: 1,
     jawOpen: 2,
     mouthSmile: 3,
+    muscleToned: 4,
+    muscleAthletic: 5,
+    muscleMuscular: 6,
+    muscleBodybuilder: 7,
   };
-  mesh.morphTargetInfluences = [0, 0, 0, 0];
+  mesh.morphTargetInfluences = Array(8).fill(0);
   mesh.bind(new T.Skeleton(bones));
   root.add(mesh);
 
@@ -75,9 +79,11 @@ function validScene() {
     const partWeights = new Float32Array(partCount * 4);
     for (let index = 0; index < partCount; index++) partWeights[index * 4] = 1;
     partGeometry.setAttribute('skinWeight', new T.Float32BufferAttribute(partWeights, 4));
+    const partMaterial = new T.MeshStandardMaterial({ color: '#cccccc' });
+    partMaterial.name = 'RMV2_Skin';
     const part = new T.SkinnedMesh(
       partGeometry,
-      new T.MeshStandardMaterial({ color: '#cccccc' }),
+      partMaterial,
     );
     part.name = `RMV2_Body_${region}`;
     part.userData.rockmundoBodyRegion = region;
@@ -96,6 +102,24 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length);
     expect(report.issues.filter(issue => issue.level === 'error')).toEqual([]);
     expect(Object.keys(report.boneMap)).toHaveLength(AVATAR_V2_REQUIRED_BONES.length);
+  });
+
+  it('fails a body region that cannot render as bare skin', () => {
+    const scene = validScene();
+    const torso = scene.getObjectByName('RMV2_Body_torso') as T.SkinnedMesh;
+    (torso.material as T.MeshStandardMaterial).name = 'RMV2_Garment';
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-bare-skin-region:torso')).toBe(true);
+  });
+
+  it('fails candidates without the authored muscle set', () => {
+    const scene = validScene();
+    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
+    delete mesh.morphTargetDictionary!.muscleAthletic;
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-muscle-morph:muscleAthletic')).toBe(true);
   });
 
   it('fails close-up assets without an authored skinned head surface', () => {

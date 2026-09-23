@@ -7,16 +7,16 @@ import type { InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { STYLES, modelFile, type PlayerAppearance } from './appearance';
-import { disposeModel, loadModelLibrary, type ModelLibrary } from './model';
+import { disposeModel, loadModelLibrary, type ModelLibrary, type PlayerModelPresentation } from './model';
 import { assembleAvatarMesh } from './v2/avatarMeshEngine';
 import { avatarV2LodForQuality, requiredAvatarV2ModelFiles } from './v2/avatarV2Model';
 import { requiredAvatarV2GarmentFiles } from './v2/avatarV2Garments';
 import { visibleTattoosForClothing, type ResolvedTattooVisual } from './tattoos';
 import { avatarQualityProfile, recommendedAvatarPreviewQuality, type AvatarVisualQuality } from './avatarVisualQuality';
 
-interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[]) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
-export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [] }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId; richClothing?: ResolvedEquippedClothing[]; tattoos?: ResolvedTattooVisual[] }) {
-  const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument, richClothing, tattoos }); latest.current = { appearance, role, instrument, richClothing, tattoos };
+interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[], presentation?: PlayerModelPresentation) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
+export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage' }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId; richClothing?: ResolvedEquippedClothing[]; tattoos?: ResolvedTattooVisual[]; presentation?: PlayerModelPresentation }) {
+  const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument, richClothing, tattoos, presentation }); latest.current = { appearance, role, instrument, richClothing, tattoos, presentation };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!canvas.current) return;
@@ -74,28 +74,31 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       const previewFiles = [
         ...(['masculine', 'feminine'] as const).flatMap(frame => STYLES.map(style => modelFile(frame, style))),
         ...requiredAvatarV2ModelFiles(v2Appearances, visualQuality),
-        ...(['masculine', 'feminine'] as const).flatMap(frame =>
+        ...(latest.current.presentation === 'tattoo' ? [] : (['masculine', 'feminine'] as const).flatMap(frame =>
           requiredAvatarV2GarmentFiles(
             latest.current.richClothing,
             frame,
             avatarV2LodForQuality(visualQuality),
           )
-        ),
+        )),
       ];
       void loadModelLibrary(previewFiles).then(loaded => {
         if (!alive) { loaded.forEach(disposeModel); return; }
         library = loaded;
         api.current = {
-          replace: (value, nextRole, nextInstrument, nextRichClothing = [], nextTattoos = []) => {
+          replace: (value, nextRole, nextInstrument, nextRichClothing = [], nextTattoos = [], nextPresentation = 'stage') => {
             if (actor) disposeModel(actor.root); if (equipment) disposeModel(equipment);
+            const shownClothing = nextPresentation === 'tattoo' ? [] : nextRichClothing;
+            const shownTattoos = nextPresentation === 'tattoo' ? nextTattoos : visibleTattoosForClothing(nextTattoos, shownClothing);
             const assembled = assembleAvatarMesh(
               library!,
               value,
-              visibleTattoosForClothing(nextTattoos, nextRichClothing),
-              nextRichClothing,
+              shownTattoos,
+              shownClothing,
               visualQuality,
+              { presentation: nextPresentation },
             );
-            actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument, undefined, nextRichClothing); disposeModel(assembled); scene.add(actor.root);
+            actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument, undefined, shownClothing); disposeModel(assembled); scene.add(actor.root);
             equipment = actor.equipment; if(equipment)scene.add(equipment);
           },
           rotate: angle => { camera.position.sub(controls!.target).applyAxisAngle(new T.Vector3(0, 1, 0), angle).add(controls!.target); controls!.update(); },
@@ -119,7 +122,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
             controls!.update();
           },
         };
-        api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos); setStatus('ready');
+        api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos, latest.current.presentation); setStatus('ready');
       }).catch(() => { if (alive) setStatus('error'); });
     } catch { setStatus('error'); }
     return () => {
@@ -129,10 +132,10 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       disposeModel(scene); library?.forEach(disposeModel); environment?.dispose(); renderer?.dispose();
     };
   }, [attempt]);
-  useEffect(() => { try { api.current?.replace(appearance, role, instrument, richClothing, tattoos); } catch { setStatus('error'); } }, [appearance, role, instrument, richClothing, tattoos]);
+  useEffect(() => { try { api.current?.replace(appearance, role, instrument, richClothing, tattoos, presentation); } catch { setStatus('error'); } }, [appearance, role, instrument, richClothing, tattoos, presentation]);
   return <div className="player-model-preview">
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
-    <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>BACKSTAGE / FITTING ROOM</span></div>
+    <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>{presentation === 'tattoo' ? 'TATTOO PARLOUR / UNCLOTHED PREVIEW' : 'BACKSTAGE / FITTING ROOM'}</span></div>
     {status !== 'ready' && <div className="player-model-preview__overlay" role={status === 'error' ? 'alert' : 'status'}><strong>{status === 'error' ? 'The model could not load' : 'Preparing your fitting room…'}</strong>{status === 'error' && <><p>Check your connection and try again.</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Retry preview</button></>}</div>}
     <div className="player-model-preview__controls" aria-label="Model camera"><button type="button" onClick={() => api.current?.rotate(-Math.PI / 4)} aria-label="Rotate model left">↶</button><button type="button" onClick={() => api.current?.rotate(Math.PI / 4)} aria-label="Rotate model right">↷</button><button type="button" onClick={() => api.current?.zoom(.85)} aria-label="Zoom in">＋</button><button type="button" onClick={() => api.current?.zoom(1.15)} aria-label="Zoom out">−</button><button type="button" onClick={() => api.current?.focusHead()}>Face close-up</button><button type="button" onClick={() => api.current?.reset()}>Full body</button></div>
   </div>;
