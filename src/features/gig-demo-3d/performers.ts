@@ -10,6 +10,7 @@ import { crowdAppearances, crowdMaterial, crowdMotion, CROWD_LIMIT, CROWD_VARIAN
 import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreography';
 import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
+import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { seededRandom } from './config';
 import { visibleTattoosForClothing } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
@@ -91,6 +92,7 @@ export class Musician {
     private bodyBuild = 1;
     private vocalRole: VocalRole = null;
     private mouth: T.Mesh | null = null;
+    private faceExpressions: AvatarV2ExpressionController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -182,7 +184,8 @@ export class Musician {
                 garment.removeFromParent();
             }
         }
-        if (this.hasVocals() && this.bones.has('Head')) {
+        this.faceExpressions = createAvatarV2ExpressionController(this.model);
+        if (this.hasVocals() && this.bones.has('Head') && !this.faceExpressions) {
             this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
         if (appearance) {
@@ -279,7 +282,7 @@ export class Musician {
         const phrase = Math.sin(t * .54 + this.phase);
         const vocalAccent = vocalActive ? Math.max(0, Math.sin(t * 1.08 + this.phase)) : 0;
         const emphasis = performing && !reduced ? Math.pow(Math.max(0, Math.sin(t * .71 + this.phase)), 3) * energy : 0;
-        const torso = this.bones.get('Torso');
+        const torso = this.bones.get('Torso') ?? this.bones.get('Spine2') ?? this.bones.get('Spine1');
         if (torso)
             torso.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
                 (Math.sin(beat / 2 + this.phase) * .022 + Math.sin(t * .63 + this.phase) * .012) * energy * performanceScale
@@ -374,6 +377,16 @@ export class Musician {
         const jaw = this.bones.get('Jaw') ?? this.bones.get('jaw') ?? this.bones.get('Mouth');
         if (jaw && vocalActive && !reduced) {
             jaw.rotation.x += vocals.opening * .13 * energy;
+        }
+        if (this.faceExpressions) {
+            this.faceExpressions.update({
+                seconds: t,
+                phase: this.phase,
+                vocalActive,
+                opening: vocals.opening,
+                energy,
+                reducedMotion: reduced,
+            });
         }
         if (this.mouth) {
             const restScale = this.mouth.userData.restScale as T.Vector3;
