@@ -3,7 +3,7 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 
 export function AccessoryStyling({ appearance, onChange, richClothing = [] }: { appearance: PlayerAppearance; onChange: (next: PlayerAppearance) => void; richClothing?: ResolvedEquippedClothing[] }) {
-  const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) } as const;
+  const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', leftEarring: appearance.accessories?.earrings ?? 'none', rightEarring: appearance.accessories?.earrings ?? 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) } as const;
   const edit = (next: Partial<NonNullable<PlayerAppearance['accessories']>>) => onChange({ ...appearance, accessories: { ...accessories, ...next } });
   const colours = (label: string, value: string, change: (value: string) => void) => <div className="player-model-wardrobe__colours" role="group" aria-label={`${label} colours`}>
     {ACCESSORY_COLORS.map(([name, color]) => <button key={color} type="button" title={name} aria-label={`${label} colour: ${name}`} aria-pressed={value === color} style={{ backgroundColor: color }} onClick={() => change(color)} />)}
@@ -29,11 +29,15 @@ export function AccessoryStyling({ appearance, onChange, richClothing = [] }: { 
       </select>
       {colours('Lens', accessories.lensColor ?? '#40566d', lensColor => edit({ lensColor }))}
     </>}
-    <label htmlFor="avatar-earrings">Earrings</label>
-    <select id="avatar-earrings" value={accessories.earrings} onChange={event => edit({ earrings: event.target.value as typeof EARRING_STYLES[number] })}>
+    <label htmlFor="avatar-left-earring">Left earring</label>
+    <select id="avatar-left-earring" value={accessories.leftEarring ?? accessories.earrings} onChange={event => edit({ leftEarring: event.target.value as typeof EARRING_STYLES[number] })}>
       {EARRING_STYLES.map(style => <option key={style} value={style}>{EARRING_LABELS[style]}</option>)}
     </select>
-    {accessories.earrings !== 'none' && colours('Earrings', accessories.earringColor, earringColor => edit({ earringColor }))}
-    <p className="player-model-editor__hint">Accessories are part of your saved stage appearance, so hats, glasses and earrings follow your character into 3D performances. Hats tuck the crown of your hair; removing a hat restores the saved haircut.</p>
+    <label htmlFor="avatar-right-earring">Right earring</label>
+    <select id="avatar-right-earring" value={accessories.rightEarring ?? accessories.earrings} onChange={event => edit({ rightEarring: event.target.value as typeof EARRING_STYLES[number] })}>
+      {EARRING_STYLES.map(style => <option key={style} value={style}>{EARRING_LABELS[style]}</option>)}
+    </select>
+    {((accessories.leftEarring ?? accessories.earrings) !== 'none' || (accessories.rightEarring ?? accessories.earrings) !== 'none') && colours('Earrings', accessories.earringColor, earringColor => edit({ earringColor }))}
+    <p className="player-model-editor__hint">Accessories are part of your saved stage appearance, so hats, glasses and each earring follow your character into 3D performances. Hats tuck the crown of your hair; removing a hat restores the saved haircut.</p>
   </div>;
 }
