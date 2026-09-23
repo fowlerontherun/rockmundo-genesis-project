@@ -8,6 +8,7 @@ import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ClothingPreviewVariant } from './clothingPreview';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
 import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable } from './curatedGarmentAssets';
+import { curatedDonorSource } from './curatedDonorGarments';
 
 interface PreviewApi {
   rotate: (angle: number) => void;
@@ -124,10 +125,14 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
           return;
         }
         library = loaded;
-        const base = assemblePlayerModel(library, appearance);
-        scene.add(base);
         const currentPreview = latestPreview.current;
-        if (isCuratedClothing(currentPreview.item)) {
+        const donor = curatedDonorSource(currentPreview.item);
+        const previewClothing = donor ? [{ item: currentPreview.item, variant: currentPreview.variant }] as any : [];
+        const base = assemblePlayerModel(library, appearance, [], previewClothing);
+        scene.add(base);
+        if (donor) {
+          garment = null;
+        } else if (isCuratedClothing(currentPreview.item)) {
           if (!isCuratedClothingRenderable(currentPreview.item)) {
             throw new Error('This curated skin is not validated for preview yet.');
           }
@@ -180,7 +185,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       api.current = null;
       liveScene.current = null;
     };
-  }, [appearance, attempt]);
+  }, [appearance, attempt, item, variant]);
 
   useEffect(() => {
     const live = liveScene.current;
@@ -189,6 +194,12 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       live.scene.remove(live.garment);
       if (isCuratedClothing(latestPreview.current.item)) disposeCuratedGarment(live.garment);
       else disposeProceduralGarment(live.garment);
+    }
+    if (curatedDonorSource(item)) {
+      // Donor-backed curated skins are part of the avatar assembly itself. Rebuild
+      // the scene on the next effect pass rather than layering a second garment.
+      live.garment = null;
+      return;
     }
     if (isCuratedClothing(item)) {
       if (!isCuratedClothingRenderable(item) || !live.avatar || !live.library) {
