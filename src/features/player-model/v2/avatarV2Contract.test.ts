@@ -113,6 +113,23 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.issues.some(issue => issue.code === 'missing-bare-skin-region:torso')).toBe(true);
   });
 
+  it('enforces complete bare skin on balanced LOD2 assets', () => {
+    const scene = validScene();
+    const torso = scene.getObjectByName('RMV2_Body_torso') as T.SkinnedMesh;
+    (torso.material as T.MeshStandardMaterial).name = 'RMV2_Garment';
+    const report = validateAvatarV2Scene(scene, 'masculine', 2);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-bare-skin-region:torso')).toBe(true);
+  });
+
+  it('enforces every authored body region on crowd LOD3 assets', () => {
+    const scene = validScene();
+    scene.remove(scene.getObjectByName('RMV2_Body_feet')!);
+    const report = validateAvatarV2Scene(scene, 'masculine', 3);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-body-region:feet')).toBe(true);
+  });
+
   it('fails candidates without the authored muscle set', () => {
     const scene = validScene();
     const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
