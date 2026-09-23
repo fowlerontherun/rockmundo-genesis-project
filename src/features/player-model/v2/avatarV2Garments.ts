@@ -78,6 +78,7 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
   const garment = record(item.garment_config);
   const source = record(garment.avatarV2);
   if (!Object.keys(source).length) return null;
+  if (source.version != null && source.version !== 1) return null;
 
   const status = String(source.status || 'planned') as AvatarV2GarmentStatus;
   if (!STATUSES.has(status)) return null;
@@ -89,7 +90,7 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
   const colourMode = source.colourMode === 'zones' ? 'zones' : 'authored';
 
   return {
-    version: source.version === 1 ? 1 : 1,
+    version: 1,
     status,
     frames: {
       masculine: frameAssets(frames.masculine),
@@ -133,7 +134,9 @@ export function avatarV2ClothingCompatibilityReason(
 ) {
   for (const row of clothing) {
     const slot = richGarmentSlot(row.item);
-    if (!slot) return `Avatar V2 does not support clothing slot for ${row.item.name}.`;
+    if (!['top', 'bottom', 'footwear'].includes(slot)) {
+      return `Avatar V2 garment adapter does not yet support ${slot}: ${row.item.name}.`;
+    }
     const config = avatarV2GarmentConfig(row.item);
     if (!config) return `${row.item.name} has no Avatar V2 garment mapping.`;
     if (config.status !== 'validated') return `${row.item.name} Avatar V2 garment is ${config.status}.`;
