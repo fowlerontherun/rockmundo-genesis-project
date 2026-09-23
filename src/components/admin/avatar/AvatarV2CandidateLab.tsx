@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
 import { Musician } from '@/features/gig-demo-3d/performers';
 import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
-import { defaultAppearance } from '@/features/player-model/appearance';
+import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance } from '@/features/player-model/appearance';
 import { disposeModel } from '@/features/player-model/model';
 import { AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { prepareAvatarV2CandidateModel } from '@/features/player-model/v2/avatarV2Model';
@@ -260,6 +260,7 @@ function CandidateCanvas({
 
 export function AvatarV2CandidateLab() {
   const [frame, setFrame] = useState<AvatarV2Frame>('masculine');
+  const [muscle, setMuscle] = useState<(typeof BODY_MUSCLE_TYPES)[number]>('natural');
   const [lod, setLod] = useState<AvatarV2Lod>(0);
   const [file, setFile] = useState<File | null>(null);
   const [report, setReport] = useState<AvatarV2ValidationReport | null>(null);
@@ -271,6 +272,7 @@ export function AvatarV2CandidateLab() {
   const appearance = useMemo(() => {
     const next = defaultAppearance('avatar-v2-side-by-side');
     next.body.frame = frame;
+    next.body.muscle = muscle;
     next.head.hairStyle = 'quiff';
     if (next.accessories) {
       next.accessories.glasses = 'square';
@@ -278,7 +280,7 @@ export function AvatarV2CandidateLab() {
       next.accessories.rightEarring = 'studs';
     }
     return next;
-  }, [frame]);
+  }, [frame, muscle]);
 
   const comparisonAssignment = useMemo(
     () => performance === 'backstage' ? stageAssignment(null, 'other') : stageAssignment(performance),
@@ -307,6 +309,16 @@ export function AvatarV2CandidateLab() {
             >
               <option value="masculine">Masculine</option>
               <option value="feminine">Feminine</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Muscle definition</span>
+            <select
+              className="block rounded-md border bg-background px-3 py-2"
+              value={muscle}
+              onChange={event => setMuscle(event.target.value as typeof muscle)}
+            >
+              {BODY_MUSCLE_TYPES.map(value => <option key={value} value={value}>{BODY_MUSCLE_LABELS[value]}</option>)}
             </select>
           </label>
           <label className="space-y-1 text-sm">
