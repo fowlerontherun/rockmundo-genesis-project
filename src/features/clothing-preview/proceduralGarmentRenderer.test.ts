@@ -71,6 +71,54 @@ describe('procedural garment stage rig anchors', () => {
     disposeProceduralGarment(garment);
   });
 
+  it('places sleeve details on the matching arm anchor', () => {
+    const clothing = item('t-shirt', 'top', { sleeve: 'short' });
+    clothing.detail_layers = [{
+      id: 'left-sleeve',
+      type: 'badge',
+      name: 'Sleeve badge',
+      zone: 'main',
+      color: '#ffffff',
+      scale: 100,
+      rotation: 0,
+      opacity: 100,
+      offsetX: 0,
+      offsetY: 0,
+      surface: 'left-sleeve',
+      widthScale: 100,
+      heightScale: 100,
+    }] as any;
+    const garment = buildProceduralGarment(clothing);
+    const detail = garment.children[garment.children.length - 1] as T.Mesh;
+    expect(detail.userData.rigAnchor).toBe('UpperArm.L');
+    expect(Math.abs(detail.rotation.y)).toBeCloseTo(Math.PI / 2);
+    disposeProceduralGarment(garment);
+  });
+
+  it('places back details behind the garment instead of floating on the chest', () => {
+    const clothing = item('t-shirt', 'top', { sleeve: 'none' });
+    clothing.detail_layers = [{
+      id: 'back-print',
+      type: 'graphic',
+      name: 'Back print',
+      zone: 'main',
+      color: '#ffffff',
+      scale: 100,
+      rotation: 0,
+      opacity: 100,
+      offsetX: 0,
+      offsetY: 0,
+      surface: 'back',
+      widthScale: 100,
+      heightScale: 100,
+    }] as any;
+    const garment = buildProceduralGarment(clothing);
+    const detail = garment.children[garment.children.length - 1] as T.Mesh;
+    expect(detail.position.z).toBeLessThan(0);
+    expect(Math.abs(detail.rotation.y)).toBeCloseTo(Math.PI);
+    disposeProceduralGarment(garment);
+  });
+
   it('renders shorts substantially shorter than full trousers', () => {
     const shorts = buildProceduralGarment(item('shorts', 'bottom'));
     const trousers = buildProceduralGarment(item('pants', 'bottom'));
