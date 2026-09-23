@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Type, Image as ImageIcon, Trash2, Copy, ArrowUp, ArrowDown, Upload, Undo2, Redo2, Loader2 } from "lucide-react";
+import { Type, Image as ImageIcon, Trash2, Copy, ArrowUp, ArrowDown, Upload, Undo2, Redo2, Loader2, RotateCw, ClipboardPaste, Maximize2 } from "lucide-react";
 import { garmentTemplate, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -71,7 +71,21 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const [past, setPast] = useState<GarmentSurfaceLayer[][]>([]);
   const [future, setFuture] = useState<GarmentSurfaceLayer[][]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [showSafeArea, setShowSafeArea] = useState(true);
+  const [copiedLayer, setCopiedLayer] = useState<GarmentSurfaceLayer | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const transformRef = useRef<{
+    mode: "resize" | "rotate";
+    id: string;
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    centerX: number;
+    centerY: number;
+    startRotation: number;
+    startAngle: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const visibleLayers = useMemo(
@@ -159,6 +173,88 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     moveFromPointer(event, id);
   };
 
+  const startResize = (event: React.PointerEvent, layer: GarmentSurfaceLayer) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    remember();
+    transformRef.current = {
+      mode: "resize",
+      id: layer.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: Number(layer.widthScale || 100),
+      startHeight: Number(layer.heightScale || 100),
+      centerX: rect.left + rect.width * (0.5 + clamp(Number(layer.offsetX || 0), -90, 90) / 200),
+      centerY: rect.top + rect.height * (0.5 - clamp(Number(layer.offsetY || 0), -90, 90) / 200),
+      startRotation: Number(layer.rotation || 0),
+      startAngle: 0,
+    };
+  };
+
+  const startRotate = (event: React.PointerEvent, layer: GarmentSurfaceLayer) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    remember();
+    const centerX = rect.left + rect.width * (0.5 + clamp(Number(layer.offsetX || 0), -90, 90) / 200);
+    const centerY = rect.top + rect.height * (0.5 - clamp(Number(layer.offsetY || 0), -90, 90) / 200);
+    transformRef.current = {
+      mode: "rotate",
+      id: layer.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: Number(layer.widthScale || 100),
+      startHeight: Number(layer.heightScale || 100),
+      centerX,
+      centerY,
+      startRotation: Number(layer.rotation || 0),
+      startAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX),
+    };
+  };
+
+  const continueTransform = (event: React.PointerEvent) => {
+    const active = transformRef.current;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!active || !rect) return false;
+    if (active.mode === "resize") {
+      const dx = ((event.clientX - active.startX) / rect.width) * 220;
+      const dy = ((event.clientY - active.startY) / rect.height) * 220;
+      updateLayer(active.id, {
+        widthScale: clamp(Math.round(active.startWidth + dx), 20, 250),
+        heightScale: clamp(Math.round(active.startHeight + dy), 20, 250),
+      }, false);
+    } else {
+      const angle = Math.atan2(event.clientY - active.centerY, event.clientX - active.centerX);
+      const delta = (angle - active.startAngle) * 180 / Math.PI;
+      const rotation = snapToGrid ? Math.round((active.startRotation + delta) / 5) * 5 : Math.round(active.startRotation + delta);
+      updateLayer(active.id, { rotation: clamp(rotation, -180, 180) }, false);
+    }
+    return true;
+  };
+
+  const finishTransform = () => {
+    transformRef.current = null;
+  };
+
+  const pasteCopiedLayer = () => {
+    if (!copiedLayer) return;
+    const copy: GarmentSurfaceLayer = {
+      ...copiedLayer,
+      id: crypto.randomUUID(),
+      name: `${copiedLayer.name} copy`,
+      surface,
+      offsetX: clamp(Number(copiedLayer.offsetX || 0) + 10, -90, 90),
+      offsetY: clamp(Number(copiedLayer.offsetY || 0) - 10, -90, 90),
+    };
+    commit([...layers, copy]);
+    setSelectedId(copy.id);
+  };
+
   const uploadArtwork = async (file: File) => {
     if (!file.type.match(/^image\/(png|jpeg|webp|svg\+xml)$/)) throw new Error("Use PNG, JPG, WEBP or SVG artwork.");
     if (file.size > 10 * 1024 * 1024) throw new Error("Artwork must be 10 MB or smaller.");
@@ -203,6 +299,8 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         <Button type="button" size="sm" variant="outline" disabled={!past.length} onClick={undo} title="Undo"><Undo2 className="h-4 w-4"/></Button>
         <Button type="button" size="sm" variant="outline" disabled={!future.length} onClick={redo} title="Redo"><Redo2 className="h-4 w-4"/></Button>
         <Button type="button" size="sm" variant={snapToGrid ? "default" : "outline"} onClick={() => setSnapToGrid(value => !value)}>Snap 10</Button>
+        <Button type="button" size="sm" variant={showSafeArea ? "default" : "outline"} onClick={() => setShowSafeArea(value => !value)}>Safe area</Button>
+        <Button type="button" size="sm" variant="outline" disabled={!copiedLayer} onClick={pasteCopiedLayer}><ClipboardPaste className="h-4 w-4 mr-1"/>Paste</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("text")}><Type className="h-4 w-4 mr-1"/>Text</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("graphic")}><ImageIcon className="h-4 w-4 mr-1"/>Graphic</Button>
         <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={event => void handleArtworkFile(event.target.files?.[0])}/>
@@ -218,13 +316,17 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         ref={canvasRef}
         className="relative min-h-[520px] overflow-hidden rounded-xl border bg-[#0f1720] select-none touch-none"
         onPointerMove={event => {
+          if (continueTransform(event)) return;
           if (!selectedId || event.buttons !== 1) return;
           moveFromPointer(event, selectedId);
         }}
+        onPointerUp={finishTransform}
+        onPointerCancel={finishTransform}
       >
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full p-12" preserveAspectRatio="xMidYMid meet">
           <path d={garmentOutline(category, surface)} fill="#242f3d" stroke="#718096" strokeWidth="1.2" />
           <path d={garmentOutline(category, surface)} fill="none" stroke="#94a3b8" strokeDasharray="2 2" strokeWidth=".45" opacity=".6" />
+          {showSafeArea && <rect x="24" y="22" width="52" height="60" rx="2" fill="none" stroke="#22c55e" strokeWidth=".55" strokeDasharray="2 1.5" opacity=".75"/>}
         </svg>
         <div className="absolute left-3 top-3 flex items-center gap-2">
           <Badge variant="secondary" className="capitalize">{surface.replace("-", " ")}</Badge>
@@ -237,10 +339,11 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
           const width = 90 * clamp(Number(layer.scale || 100) / 100, .15, 3) * clamp(Number(layer.widthScale || 100) / 100, .2, 2.5);
           const height = 52 * clamp(Number(layer.scale || 100) / 100, .15, 3) * clamp(Number(layer.heightScale || 100) / 100, .2, 2.5);
           const isSelected = selectedId === layer.id;
-          return <button
+          return <div
             key={layer.id}
-            type="button"
-            className={`absolute flex items-center justify-center border-2 text-xs font-bold shadow-sm cursor-move overflow-hidden ${isSelected ? "border-primary ring-2 ring-primary/30" : "border-white/30"}`}
+            role="button"
+            tabIndex={0}
+            className={`absolute flex items-center justify-center border-2 text-xs font-bold shadow-sm cursor-move ${isSelected ? "border-primary ring-2 ring-primary/30" : "border-white/30"}`}
             style={{
               left: `${x}%`,
               top: `${y}%`,
@@ -253,8 +356,14 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
             }}
             onPointerDown={event => onPointerDown(event, layer.id)}
           >
-            {layer.type === "text" ? (layer.text || "Text") : /^https?:\/\//.test(String(layer.asset || "")) ? <img src={layer.asset} alt={layer.name || "Uploaded artwork"} className="h-full w-full object-contain pointer-events-none" draggable={false}/> : (layer.asset || layer.name || "Graphic")}
-          </button>;
+            <div className="absolute inset-0 overflow-hidden flex items-center justify-center pointer-events-none">
+              {layer.type === "text" ? (layer.text || "Text") : /^https?:\/\//.test(String(layer.asset || "")) ? <img src={layer.asset} alt={layer.name || "Uploaded artwork"} className="h-full w-full object-contain pointer-events-none" draggable={false}/> : (layer.asset || layer.name || "Graphic")}
+            </div>
+            {isSelected && <>
+              <span className="absolute -right-2 -bottom-2 h-4 w-4 rounded-sm border-2 border-background bg-primary shadow cursor-nwse-resize" title="Resize" onPointerDown={event => startResize(event, layer)}><Maximize2 className="h-3 w-3 text-primary-foreground"/></span>
+              <span className="absolute left-1/2 -top-7 -translate-x-1/2 h-5 w-5 rounded-full border-2 border-background bg-primary shadow cursor-grab flex items-center justify-center" title="Rotate" onPointerDown={event => startRotate(event, layer)}><RotateCw className="h-3 w-3 text-primary-foreground"/></span>
+            </>}
+          </div>;
         })}
       </div>
 
@@ -298,10 +407,9 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
               commit(next);
             }} title="Send backward"><ArrowDown className="h-4 w-4"/></Button>
             <Button type="button" size="sm" variant="outline" onClick={() => {
-              const copy = { ...selected, id: crypto.randomUUID(), name: `${selected.name} copy`, offsetX: clamp(Number(selected.offsetX || 0) + 8, -90, 90), offsetY: clamp(Number(selected.offsetY || 0) - 8, -90, 90) };
-              commit([...layers, copy]);
-              setSelectedId(copy.id);
-            }}><Copy className="h-4 w-4"/></Button>
+              setCopiedLayer({ ...selected });
+              toast.success("Layer copied");
+            }} title="Copy"><Copy className="h-4 w-4"/></Button>
             <Button type="button" size="sm" variant="destructive" onClick={() => { commit(layers.filter(layer => layer.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4"/></Button>
           </div>
         </>}
