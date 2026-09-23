@@ -16,7 +16,7 @@ import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
-import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, requiredCuratedGarmentFiles } from '@/features/clothing-preview/curatedGarmentAssets';
+import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from '@/features/clothing-preview/curatedGarmentAssets';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
@@ -975,7 +975,8 @@ export class DemoCrowd {
 }
 export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup?: ConcertPerformer[], seed?: number, venue?: VenueProfile) {
     const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
-    const library = await loadModelLibrary(['casual.glb', 'punk.glb', 'suit.glb', ...requiredModelFiles([...(lineup?.map(p => p.appearance) ?? []), ...crowdAppearances(seed ?? 85043)]), ...curatedFiles], manager);
+    const library = await loadModelLibrary(['casual.glb', 'punk.glb', 'suit.glb', ...requiredModelFiles([...(lineup?.map(p => p.appearance) ?? []), ...crowdAppearances(seed ?? 85043)])], manager);
+    await loadOptionalCuratedGarments(library, curatedFiles, manager);
     const casual = library.get('casual.glb')!, punk = library.get('punk.glb')!, suit = library.get('suit.glb')!;
     const cymbals: T.Object3D[] = [];
     try {
