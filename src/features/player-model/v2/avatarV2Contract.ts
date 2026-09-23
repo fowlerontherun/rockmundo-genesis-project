@@ -139,6 +139,24 @@ const EXPRESSION_ALIASES: Record<typeof AVATAR_V2_REQUIRED_EXPRESSIONS[number], 
 export const cleanAvatarV2Name = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
 const clean = cleanAvatarV2Name;
 
+/**
+ * Stable authored target used by close-up hair, glasses and earring fitting.
+ * Keep this naming/metadata rule shared with the runtime compatibility bridge
+ * so an asset cannot pass certification and then fail cosmetic fitting.
+ */
+export function isAvatarV2HeadSurfaceNode(node: T.Object3D) {
+  let current: T.Object3D | null = node;
+  while (current) {
+    if (
+      current.userData?.rockmundoHeadSurface === true ||
+      /(?:rmv2|rockmundo)[_-]?(?:head|face)(?:surface)?/i.test(current.name) ||
+      /(?:head|face)[_-]?surface/i.test(current.name)
+    ) return true;
+    current = current.parent;
+  }
+  return false;
+}
+
 export function avatarV2BodyRegion(node: T.Object3D): AvatarV2BodyRegion | null {
   const explicit = String(node.userData?.rockmundoBodyRegion || '').toLowerCase();
   if ((AVATAR_V2_BODY_REGIONS as readonly string[]).includes(explicit)) {
@@ -304,6 +322,22 @@ export function validateAvatarV2Scene(
           message: `Avatar V2 body region must be skinned to the humanoid rig: ${region}.`,
         });
       }
+    }
+  }
+
+  if (lod <= 1) {
+    let usableHeadSurface = false;
+    scene.traverse(node => {
+      if (usableHeadSurface || !(node instanceof T.SkinnedMesh) || !isAvatarV2HeadSurfaceNode(node)) return;
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      usableHeadSurface = materials.some(material => /skin|face/i.test(material.name));
+    });
+    if (!usableHeadSurface) {
+      issues.push({
+        level: 'error',
+        code: 'missing-head-surface',
+        message: `LOD${lod} needs a skinned RMV2 head/face surface with a named skin material for saved hair and accessory fitting.`,
+      });
     }
   }
 
