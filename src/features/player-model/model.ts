@@ -126,6 +126,102 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
   attachSurfaceGraphic(root, chest, mark, attachment, .0018);
 }
 
+function addLegacyBareBodyUnderlay(
+  root: T.Object3D,
+  appearance: PlayerAppearance,
+  bones: Map<string, T.Bone>,
+  quality: AvatarVisualQuality,
+  fullBody: boolean,
+) {
+  root.updateMatrixWorld(true);
+  const muscle = appearance.body.muscle ?? 'natural';
+  const muscleScale = {
+    natural: 1,
+    toned: 1.035,
+    athletic: 1.075,
+    muscular: 1.13,
+    bodybuilder: 1.2,
+  }[muscle];
+  const frameScale = appearance.body.frame === 'feminine' ? .92 : 1;
+  const skin = upgradeSkinMaterial(
+    Object.assign(new T.MeshStandardMaterial({
+      color: appearance.body.skin,
+      roughness: skinRoughness(appearance),
+      metalness: 0,
+    }), { name: 'Skin_Underlay' }),
+    appearance,
+    quality,
+  );
+  skin.name = 'Skin_Underlay';
+
+  const bone = (...names: string[]) => findPlayerBone(bones, names);
+  const addEllipsoid = (
+    name: string,
+    driver: T.Bone | undefined,
+    from: T.Bone | undefined,
+    to: T.Bone | undefined,
+    radiusX: number,
+    radiusZ: number,
+    lengthScale = 1.08,
+  ) => {
+    if (!driver || !from || !to) return;
+    const start = from.getWorldPosition(new T.Vector3());
+    const end = to.getWorldPosition(new T.Vector3());
+    const direction = end.clone().sub(start);
+    const length = direction.length();
+    if (!Number.isFinite(length) || length < .015) return;
+    const rotation = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), direction.normalize());
+    const midpoint = start.clone().add(end).multiplyScalar(.5);
+    const geometry = new T.SphereGeometry(1, quality === 'cinematic' ? 28 : 20, quality === 'cinematic' ? 20 : 14);
+    geometry.applyMatrix4(new T.Matrix4().compose(
+      midpoint,
+      rotation,
+      new T.Vector3(radiusX, Math.max(.025, length * .5 * lengthScale), radiusZ),
+    ));
+    const count = geometry.attributes.position.count;
+    const indices = new Uint16Array(count * 4);
+    const weights = new Float32Array(count * 4);
+    for (let i = 0; i < count; i += 1) weights[i * 4] = 1;
+    geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(indices, 4));
+    geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
+    geometry.computeVertexNormals();
+
+    const mesh = new T.SkinnedMesh(geometry, skin);
+    mesh.name = `avatar-v1-skin-underlay-${name}`;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    root.add(mesh);
+    mesh.bind(new T.Skeleton([driver], [driver.matrixWorld.clone().invert()]), new T.Matrix4());
+  };
+
+  const hips = bone('Hips', 'Pelvis');
+  const spine1 = bone('Spine1', 'Spine.001', 'Spine');
+  const spine2 = bone('Spine2', 'Spine.002', 'Chest', 'UpperChest');
+  const neck = bone('Neck');
+  const torsoTop = neck ?? spine2;
+  const torsoDriver = spine1 ?? spine2 ?? hips;
+  if (hips && torsoTop && torsoDriver) {
+    addEllipsoid('torso', torsoDriver, hips, torsoTop, .185 * frameScale * muscleScale, .112 * (1 + (muscleScale - 1) * .55), 1.02);
+  }
+
+  for (const side of ['L', 'R'] as const) {
+    const upperArm = bone(`UpperArm.${side}`, `UpperArm_${side}`, `UpperArm${side}`);
+    const lowerArm = bone(`LowerArm.${side}`, `LowerArm_${side}`, `LowerArm${side}`);
+    const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`);
+    addEllipsoid(`upper-arm-${side.toLowerCase()}`, upperArm, upperArm, lowerArm, .062 * frameScale * muscleScale, .061 * muscleScale);
+    if (fullBody) addEllipsoid(`lower-arm-${side.toLowerCase()}`, lowerArm, lowerArm, hand, .047 * frameScale * (1 + (muscleScale - 1) * .7), .046 * (1 + (muscleScale - 1) * .7));
+
+    if (!fullBody) continue;
+    const upperLeg = bone(`UpperLeg.${side}`, `UpperLeg_${side}`, `UpperLeg${side}`);
+    const lowerLeg = bone(`LowerLeg.${side}`, `LowerLeg_${side}`, `LowerLeg${side}`);
+    const foot = bone(`Foot.${side}`, `Foot_${side}`, `Foot${side}`);
+    const toe = bone(`ToeBase.${side}`, `ToeBase_${side}`, `ToeBase${side}`);
+    addEllipsoid(`upper-leg-${side.toLowerCase()}`, upperLeg, upperLeg, lowerLeg, .083 * frameScale * muscleScale, .078 * (1 + (muscleScale - 1) * .8));
+    addEllipsoid(`lower-leg-${side.toLowerCase()}`, lowerLeg, lowerLeg, foot, .059 * frameScale * (1 + (muscleScale - 1) * .75), .057 * (1 + (muscleScale - 1) * .75));
+    addEllipsoid(`foot-${side.toLowerCase()}`, foot, foot, toe ?? hand, .058 * frameScale, .075 * frameScale, .95);
+  }
+}
+
 /** Each part keeps its donor inverse binds and local transform. This matters for
  * the small body offset in the original casual/suit assets. Rig families never mix. */
 export function assemblePlayerModel(
@@ -362,6 +458,13 @@ export function assemblePlayerModel(
       (parent ?? result).add(part);
     }
   }
+  if (topless || presentation === 'tattoo') {
+    // Avatar V2 requires a complete authored bare body. V1 donor meshes were
+    // clothing-first, so this neutral skinned underlay prevents holes while V2
+    // remains behind its validation gate. It is deliberately presentation-only.
+    addLegacyBareBodyUnderlay(result, appearance, bones, quality, presentation === 'tattoo');
+  }
+
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
   // them closes the exposed ankle when a player equips low shoes instead.
   if (appearance.body.frame === 'feminine' && equipmentStyle(appearance, 'bottom') === 'punk' && equipmentStyle(appearance, 'footwear') !== 'punk') {
