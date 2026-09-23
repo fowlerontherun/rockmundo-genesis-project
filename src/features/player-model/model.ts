@@ -16,6 +16,7 @@ import { fabricTexture, fabricUVs } from './fabrics';
 import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture, type CuratedFinish } from './curatedSurfaceMaps';
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 import { applyCuratedMacroShading } from './curatedMacroShading';
+import { curatedMaterialProfile } from './curatedMaterialProfile';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export function requiredModelFiles(appearances: PlayerAppearance[]) {
@@ -223,12 +224,15 @@ export function assemblePlayerModel(library: ModelLibrary, appearance: PlayerApp
               } else {
                 material.map = curatedAlbedoTexture(choice.assetKey, finish);
               }
+              const profile = curatedMaterialProfile(choice.assetKey, finish);
               material.normalMap = curatedNormalTexture(choice.assetKey, finish);
-              material.normalScale.set(finish === 'denim' || finish === 'canvas' ? .8 : .58, finish === 'denim' || finish === 'canvas' ? .8 : .58);
+              material.normalScale.set(profile.normalStrength, profile.normalStrength);
               material.bumpMap = curatedReliefTexture(choice.assetKey, finish);
-              material.bumpScale = curatedBumpScale(finish) * .4;
+              material.bumpScale = curatedBumpScale(finish) * profile.bumpMultiplier;
               material.roughnessMap = curatedRoughnessTexture(choice.assetKey, finish);
-              material.envMapIntensity = finish === 'polished-leather' ? 1.45 : finish === 'leather' ? 1.2 : .96;
+              material.roughness = profile.roughness;
+              material.metalness = profile.metalness;
+              material.envMapIntensity = profile.envMapIntensity;
               material.needsUpdate = true;
             }
           }
