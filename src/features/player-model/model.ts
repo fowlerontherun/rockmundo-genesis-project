@@ -17,7 +17,7 @@ import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedRe
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from './curatedSurfaceAttachment';
 import { applyCuratedMacroShading } from './curatedMacroShading';
 import { curatedMaterialProfile } from './curatedMaterialProfile';
-import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality } from './avatarMaterialQuality';
+import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, createAvatarSkinTextureCache } from './avatarMaterialQuality';
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 
@@ -148,6 +148,7 @@ export function assemblePlayerModel(
       if (lower && foot && foot.parent !== lower) lower.attach(foot);
     }
   }
+  const skinTextureCache = createAvatarSkinTextureCache(appearance, quality);
   const curatedTop = curatedDonorForSlot(richClothing, 'top');
   const curatedBottom = curatedDonorForSlot(richClothing, 'bottom');
   const curatedFootwear = curatedDonorForSlot(richClothing, 'footwear');
@@ -216,7 +217,7 @@ export function assemblePlayerModel(
           if (/skin/.test(name)) {
             material.color.set(appearance.body.skin);
             if (clonedNode.geometry.getAttribute('color') && (choice.part === 'head' || !choice.assetKey)) material.vertexColors = true;
-            applyAvatarSkinQuality(material, appearance, quality);
+            applyAvatarSkinQuality(material, appearance, quality, skinTextureCache);
           } else if (choice.part === 'head') {
             // The source rigs use slightly different material names. Keep iris,
             // brows and hair independently tintable while preserving eye whites.
