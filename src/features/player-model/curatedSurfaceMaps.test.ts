@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture } from './curatedSurfaceMaps';
+import { curatedAlbedoTexture, curatedBumpScale, curatedNormalTexture, curatedReliefTexture, curatedRoughnessTexture, curatedTartanTexture } from './curatedSurfaceMaps';
 
 describe('curated surface maps', () => {
   it('builds high-resolution deterministic relief for current curated items', () => {
@@ -18,6 +18,17 @@ describe('curated surface maps', () => {
     expect(jacket.name).not.toBe(jeans.name);
     jacket.dispose();
     jeans.dispose();
+  });
+
+  it('builds true multi-tone tartan rather than a monochrome tint', () => {
+    const texture = curatedTartanTexture('clothing.punk.red-tartan-trousers', '#9f2634', '#171717');
+    const data = texture.image.data as Uint8Array;
+    const colours = new Set<string>();
+    for (let i = 0; i < data.length; i += 4 * 97) {
+      colours.add(`${data[i]}-${data[i + 1]}-${data[i + 2]}`);
+    }
+    expect(colours.size).toBeGreaterThan(3);
+    texture.dispose();
   });
 
   it('builds a tangent-space normal map so weave and grain react to stage lighting', () => {
