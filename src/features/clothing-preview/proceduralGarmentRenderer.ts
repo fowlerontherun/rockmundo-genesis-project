@@ -470,27 +470,85 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
       add(sole, anchor);
     }
   } else if (spec.slot === 'headwear') {
-    const crown = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .55, spec.scaleX * .62, spec.scaleY, 28), material);
-    crown.position.set(0, spec.y, spec.z);
+    const description = `${item.name} ${item.category} ${spec.silhouette}`.toLowerCase();
+    const isBeanie = /beanie|wool|knit/.test(description);
+    const isCap = /cap|baseball|trucker/.test(description);
+    const isWideBrim = /fedora|cowboy|sun|wide|witch/.test(description);
+    const crownHeight = isBeanie ? spec.scaleY * 1.12 : isWideBrim ? spec.scaleY * .92 : spec.scaleY * .78;
+    const crownTop = spec.scaleX * (isBeanie ? .5 : isWideBrim ? .46 : .52);
+    const crownBottom = spec.scaleX * (isBeanie ? .6 : .58);
+    const crown = new T.Mesh(new T.CylinderGeometry(crownTop, crownBottom, crownHeight, 36, 3), material);
+    crown.scale.z = .86;
+    crown.position.set(0, spec.y + crownHeight * .08, spec.z);
     add(crown, 'Head');
-    const brim = new T.Mesh(new T.CylinderGeometry(spec.scaleX * .82, spec.scaleX * .82, .025, 32), material);
-    brim.position.set(0, spec.y - spec.scaleY * .48, spec.z);
-    add(brim, 'Head');
+
+    if (!isBeanie) {
+      if (isCap) {
+        const brim = new T.Mesh(new T.BoxGeometry(spec.scaleX * .64, .024, spec.scaleZ * .72), material);
+        brim.position.set(0, spec.y - crownHeight * .4, spec.z + spec.scaleZ * .32);
+        brim.rotation.x = -.08;
+        add(brim, 'Head');
+      } else {
+        const brimRadius = spec.scaleX * (isWideBrim ? .9 : .7);
+        const brim = new T.Mesh(new T.CylinderGeometry(brimRadius, brimRadius, .024, 40), material);
+        brim.scale.z = .82;
+        brim.position.set(0, spec.y - crownHeight * .42, spec.z);
+        add(brim, 'Head');
+      }
+    }
   } else if (spec.slot === 'eyewear') {
+    const description = `${item.name} ${item.category} ${spec.silhouette}`.toLowerCase();
+    const isSquare = /square|wayfarer|rect/.test(description);
+    const isAviator = /aviator/.test(description);
+    const isSunglasses = /sun|shade|dark/.test(description);
     const frameMaterial = new T.MeshStandardMaterial({ color: spec.primaryColor, roughness: .28, metalness: .45 });
+    const lensMaterial = new T.MeshPhysicalMaterial({
+      color: isSunglasses ? '#1b2430' : '#b8d7e8',
+      transparent: true,
+      opacity: isSunglasses ? .72 : .28,
+      roughness: .08,
+      metalness: 0,
+      transmission: isSunglasses ? .05 : .45,
+    });
     for (const side of [-1, 1]) {
-      const lens = new T.Mesh(new T.TorusGeometry(.105, .012, 8, 20), frameMaterial);
-      lens.position.set(side * .13, spec.y, .18 + spec.z);
+      const x = side * .13;
+      const frame = isSquare
+        ? new T.Mesh(new T.BoxGeometry(.19, .105, .014), frameMaterial)
+        : new T.Mesh(new T.TorusGeometry(isAviator ? .095 : .09, .011, 10, 28), frameMaterial);
+      frame.position.set(x, spec.y, .18 + spec.z);
+      if (isAviator) frame.scale.set(1.05, 1.18, 1);
+      add(frame, 'Head');
+
+      const lens = new T.Mesh(
+        isSquare ? new T.PlaneGeometry(.16, .078) : new T.CircleGeometry(isAviator ? .078 : .073, 28),
+        lensMaterial,
+      );
+      lens.position.set(x, spec.y, .188 + spec.z);
+      if (isAviator) lens.scale.set(1, 1.18, 1);
       add(lens, 'Head');
     }
-    const bridge = new T.Mesh(new T.BoxGeometry(.08, .012, .012), frameMaterial);
-    bridge.position.set(0, spec.y, .18 + spec.z);
+    const bridge = new T.Mesh(new T.BoxGeometry(.075, .011, .011), frameMaterial);
+    bridge.position.set(0, spec.y + (isAviator ? .01 : 0), .18 + spec.z);
     add(bridge, 'Head');
+    for (const side of [-1, 1]) {
+      const arm = new T.Mesh(new T.BoxGeometry(.13, .01, .01), frameMaterial);
+      arm.position.set(side * .225, spec.y, .13 + spec.z);
+      arm.rotation.y = side * .32;
+      add(arm, 'Head');
+    }
   } else {
-    const accessory = new T.Mesh(new T.TorusGeometry(.22, .025, 10, 28), material);
-    accessory.position.set(0, spec.y, .2 + spec.z);
-    accessory.rotation.x = Math.PI / 2;
-    add(accessory, 'Torso');
+    const description = `${item.name} ${item.category}`.toLowerCase();
+    if (/necklace|chain|choker/.test(description)) {
+      const necklace = new T.Mesh(new T.TorusGeometry(.19, .012, 10, 36, Math.PI * 1.55), material);
+      necklace.position.set(0, spec.y + .12, .16 + spec.z);
+      necklace.rotation.z = Math.PI * .72;
+      add(necklace, 'Torso');
+    } else {
+      const accessory = new T.Mesh(new T.TorusGeometry(.18, .018, 10, 32), material);
+      accessory.position.set(0, spec.y, .18 + spec.z);
+      accessory.rotation.x = Math.PI / 2;
+      add(accessory, 'Torso');
+    }
   }
 
   group.position.x = spec.bodyOffsetX;
