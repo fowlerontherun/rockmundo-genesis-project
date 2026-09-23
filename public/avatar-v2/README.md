@@ -24,6 +24,19 @@ The renderer aliases common humanoid bone names into RockMundo's existing stage
 bone names. The required semantic bones are defined in
 `src/features/player-model/v2/avatarV2Contract.ts`.
 
+## Head surface contract
+
+Saved hairstyles, hats, glasses and earrings need a stable authored head/face
+surface for fitting. At least one close-up skinned head/face mesh should either:
+
+- use a name beginning with `RMV2_Head` or `RMV2_Face`; or
+- set `rockmundoHeadSurface=true` in node extras/userData.
+
+Keep the visible scalp/face skin in that surface and use a named skin material
+such as `RMV2_Skin`. If a player uses a non-original saved hairstyle, a
+separate authored hair mesh/material such as `RMV2_Hair` can be suppressed
+cleanly before the selected hairstyle is rebuilt.
+
 ## Facial contract
 
 LOD0/LOD1 require morph targets equivalent to:
