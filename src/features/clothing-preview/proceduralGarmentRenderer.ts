@@ -303,6 +303,79 @@ interface TopGarmentMetrics {
   sleeveRadius: number;
 }
 
+
+function addTemplateConstructionFeatures(
+  templateKey: string,
+  spec: RichGarmentVisualSpec,
+  bodyHeight: number,
+  halfShoulder: number,
+  halfHem: number,
+  torsoDepth: number,
+  add: (mesh: T.Mesh, anchor: GarmentRigAnchor) => void,
+) {
+  const frontZ = spec.z + torsoDepth * .56;
+  const detailMaterial = garmentConstructionMaterial(spec, true);
+  const darkMaterial = garmentConstructionMaterial(spec);
+
+  if (templateKey === 'hoodie') {
+    const pocket = new T.Mesh(new T.BoxGeometry(halfHem * 1.05, bodyHeight * .18, .018), detailMaterial.clone());
+    pocket.name = 'garment-hoodie-kangaroo-pocket';
+    pocket.position.set(0, spec.y - bodyHeight * .28, frontZ);
+    add(pocket, 'Torso');
+    for (const side of [-1, 1]) {
+      const drawstring = new T.Mesh(new T.CylinderGeometry(.006, .006, bodyHeight * .19, 8), darkMaterial.clone());
+      drawstring.name = `garment-hoodie-drawstring-${side < 0 ? 'left' : 'right'}`;
+      drawstring.position.set(side * halfShoulder * .2, spec.y + bodyHeight * .32, frontZ + .012);
+      add(drawstring, 'Torso');
+    }
+  }
+
+  if (templateKey === 'shirt') {
+    const placket = new T.Mesh(new T.BoxGeometry(.026, bodyHeight * .72, .014), detailMaterial.clone());
+    placket.name = 'garment-shirt-placket';
+    placket.position.set(0, spec.y - bodyHeight * .04, frontZ);
+    add(placket, 'Torso');
+
+    const pocket = new T.Mesh(new T.BoxGeometry(halfShoulder * .34, bodyHeight * .16, .014), detailMaterial.clone());
+    pocket.name = 'garment-shirt-chest-pocket';
+    pocket.position.set(-halfShoulder * .42, spec.y + bodyHeight * .08, frontZ);
+    add(pocket, 'Torso');
+  }
+
+  if (templateKey === 'jacket' || templateKey === 'coat') {
+    for (const side of [-1, 1]) {
+      const lapel = new T.Mesh(new T.BoxGeometry(halfShoulder * .34, bodyHeight * .28, .022), detailMaterial.clone());
+      lapel.name = `garment-${templateKey}-lapel-${side < 0 ? 'left' : 'right'}`;
+      lapel.position.set(side * halfShoulder * .2, spec.y + bodyHeight * .24, frontZ);
+      lapel.rotation.z = side * .28;
+      add(lapel, 'Torso');
+
+      const pocket = new T.Mesh(new T.BoxGeometry(halfHem * .38, .026, .018), darkMaterial.clone());
+      pocket.name = `garment-${templateKey}-pocket-${side < 0 ? 'left' : 'right'}`;
+      pocket.position.set(side * halfHem * .5, spec.y - bodyHeight * .23, frontZ);
+      pocket.rotation.z = side * .05;
+      add(pocket, 'Torso');
+    }
+  }
+
+  if (templateKey === 'vest') {
+    for (const side of [-1, 1]) {
+      const armholeTrim = new T.Mesh(new T.TorusGeometry(Math.max(.075, halfShoulder * .22), .01, 8, 24, Math.PI * 1.25), detailMaterial.clone());
+      armholeTrim.name = `garment-vest-armhole-${side < 0 ? 'left' : 'right'}`;
+      armholeTrim.position.set(side * halfShoulder * .82, spec.y + bodyHeight * .22, spec.z);
+      armholeTrim.rotation.y = Math.PI / 2;
+      add(armholeTrim, 'Torso');
+    }
+  }
+
+  if (templateKey === 'dress') {
+    const waist = new T.Mesh(new T.BoxGeometry(halfHem * 1.72, .022, .016), detailMaterial.clone());
+    waist.name = 'garment-dress-waist-seam';
+    waist.position.set(0, spec.y - bodyHeight * .42, frontZ);
+    add(waist, 'Torso');
+  }
+}
+
 function addTopGarment(
   item: ClothingItem,
   spec: RichGarmentVisualSpec,
@@ -317,7 +390,8 @@ function addTopGarment(
   const isBoxy = /boxy|oversized|structured/.test(`${spec.silhouette} ${spec.cut}`);
   const isFitted = /slim|skinny|fitted|tailored/.test(`${spec.silhouette} ${spec.cut}`);
   const isCropped = /crop/.test(spec.length);
-  const bodyHeight = spec.scaleY * (isDress ? .92 : 1.02);
+  const templateLengthFactor = templateKey === 'coat' ? 1.34 : templateKey === 'jacket' ? 1.08 : templateKey === 'hoodie' ? 1.08 : 1;
+  const bodyHeight = spec.scaleY * (isDress ? .92 : 1.02) * templateLengthFactor;
   const drapeSpread = T.MathUtils.lerp(.96, 1.06, spec.drape);
   const taper = T.MathUtils.lerp(1.02, .76, spec.taper);
   const halfShoulder = spec.scaleX * (isBoxy ? .52 : isFitted ? .46 : .49) * drapeSpread;
@@ -331,6 +405,7 @@ function addTopGarment(
   torso.position.set(0, spec.y, spec.z);
   add(torso, 'Torso');
   addTopConstructionDetails(spec, bodyHeight, halfShoulder, halfHem, torsoDepth, add);
+  addTemplateConstructionFeatures(templateKey, spec, bodyHeight, halfShoulder, halfHem, torsoDepth, add);
 
   if (isDress) {
     const skirtHeight = Math.max(.52, spec.scaleY * .96);
@@ -343,7 +418,7 @@ function addTopGarment(
     add(skirt, 'Hips');
   }
 
-  const sleeves = spec.sleeve;
+  const sleeves = templateKey === 'vest' ? 'none' : templateKey === 'long-sleeve' && !/long|full/.test(spec.sleeve) ? 'long' : spec.sleeve;
   const sleeveLength = (
     /long|full/.test(sleeves) ? .64 :
     /three-quarter/.test(sleeves) ? .5 :

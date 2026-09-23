@@ -202,6 +202,52 @@ describe('procedural garment stage rig anchors', () => {
     disposeProceduralGarment(garment);
   });
 
+
+  it('adds hoodie pocket and drawstrings from the explicit hoodie template', () => {
+    const garment = buildProceduralGarment(item('top', 'top', { templateKey: 'hoodie', sleeve: 'long', collar: 'hood' }));
+    expect(garment.getObjectByName('garment-hoodie-kangaroo-pocket')).toBeTruthy();
+    expect(garment.getObjectByName('garment-hoodie-drawstring-left')).toBeTruthy();
+    expect(garment.getObjectByName('garment-hoodie-drawstring-right')).toBeTruthy();
+    disposeProceduralGarment(garment);
+  });
+
+  it('adds shirt placket and chest pocket from the explicit shirt template', () => {
+    const garment = buildProceduralGarment(item('top', 'top', { templateKey: 'shirt', sleeve: 'long', collar: 'shirt' }));
+    expect(garment.getObjectByName('garment-shirt-placket')).toBeTruthy();
+    expect(garment.getObjectByName('garment-shirt-chest-pocket')).toBeTruthy();
+    disposeProceduralGarment(garment);
+  });
+
+  it('adds jacket lapels and pockets as construction geometry', () => {
+    const garment = buildProceduralGarment(item('top', 'top', { templateKey: 'jacket', sleeve: 'long' }));
+    expect(garment.getObjectByName('garment-jacket-lapel-left')).toBeTruthy();
+    expect(garment.getObjectByName('garment-jacket-lapel-right')).toBeTruthy();
+    expect(garment.getObjectByName('garment-jacket-pocket-left')).toBeTruthy();
+    expect(garment.getObjectByName('garment-jacket-pocket-right')).toBeTruthy();
+    disposeProceduralGarment(garment);
+  });
+
+  it('forces vest templates sleeveless even when a legacy sleeve value is present', () => {
+    const garment = buildProceduralGarment(item('top', 'top', { templateKey: 'vest', sleeve: 'long' }));
+    const armMeshes = garment.children.filter(
+      child => child instanceof T.Mesh && String(child.userData.rigAnchor).startsWith('UpperArm'),
+    );
+    expect(armMeshes).toHaveLength(0);
+    expect(garment.getObjectByName('garment-vest-armhole-left')).toBeTruthy();
+    expect(garment.getObjectByName('garment-vest-armhole-right')).toBeTruthy();
+    disposeProceduralGarment(garment);
+  });
+
+  it('renders coat bodies longer than jacket bodies at the same base scale', () => {
+    const coat = buildProceduralGarment(item('top', 'top', { templateKey: 'coat', sleeve: 'long' }));
+    const jacket = buildProceduralGarment(item('top', 'top', { templateKey: 'jacket', sleeve: 'long' }));
+    const coatBox = new T.Box3().setFromObject(coat);
+    const jacketBox = new T.Box3().setFromObject(jacket);
+    expect(coatBox.max.y - coatBox.min.y).toBeGreaterThan(jacketBox.max.y - jacketBox.min.y);
+    disposeProceduralGarment(coat);
+    disposeProceduralGarment(jacket);
+  });
+
   it('anchors top bodies and sleeves to torso and both upper arms', () => {
     const result = anchors(item('shirt', 'top', { sleeve: 'long' }));
     expect(result).toContain('Torso');
