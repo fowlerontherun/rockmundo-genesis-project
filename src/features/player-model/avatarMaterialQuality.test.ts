@@ -1,3 +1,4 @@
+import * as T from 'three';
 import { describe, expect, it } from 'vitest';
 import { defaultAppearance } from './appearance';
 import { applyAvatarHairQuality, avatarHairNormalTexture, avatarHairRoughnessTexture, avatarSkinNormalTexture, avatarSkinRoughnessTexture, createAvatarHairTextureCache } from './avatarMaterialQuality';
@@ -36,8 +37,8 @@ describe('avatar material quality', () => {
 
   it('reuses one high-resolution hair surface across avatar material groups', () => {
     const cache = createAvatarHairTextureCache('ultra');
-    const first = new (require('three').MeshStandardMaterial)();
-    const second = new (require('three').MeshStandardMaterial)();
+    const first = new T.MeshStandardMaterial();
+    const second = new T.MeshStandardMaterial();
     applyAvatarHairQuality(first, 'ultra', cache);
     applyAvatarHairQuality(second, 'ultra', cache);
     expect(first.normalMap).toBe(second.normalMap);
