@@ -96,3 +96,22 @@ blender avatar.blend --background \
 The helper checks geometry budgets, one-armature structure, required humanoid and
 close-up bones, facial morphs, material roles, unapplied/negative scale and the
 four-influence skin-weight limit before invoking Blender's GLB exporter.
+
+
+## Body regions for clothing
+
+LOD0 and LOD1 base bodies must expose eight **skinned** occlusion regions. Either
+name the objects `RMV2_Body_<Region>` or set the glTF/Blender custom property
+`rockmundoBodyRegion` to one of:
+
+`torso`, `upper-arms`, `lower-arms`, `hands`, `hips`, `upper-legs`,
+`lower-legs`, `feet`.
+
+These meshes must remain armature-bound. The garment system hides only the
+regions declared by a validated garment, which prevents body/clothing
+interpenetration without hiding unrelated skin.
+
+The first V2 clothing proof set and per-garment budgets are defined in
+`public/avatar-v2/clothing/manifest.json`. Garment hardware and prints must be
+part of a skinned mesh or be rigidly weighted to the appropriate bone; loose
+unskinned detail objects fail validation.
