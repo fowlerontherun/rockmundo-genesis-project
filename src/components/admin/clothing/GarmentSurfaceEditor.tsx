@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Type, Image as ImageIcon, Trash2, Copy } from "lucide-react";
+import { Type, Image as ImageIcon, Trash2, Copy, ArrowUp, ArrowDown } from "lucide-react";
 import { garmentTemplate, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
 
 export type GarmentSurface = "front" | "back" | "left-sleeve" | "right-sleeve";
@@ -42,6 +42,7 @@ const SURFACES: Array<{ key: GarmentSurface; label: string }> = [
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const MOTIFS = ["rockmundo-mark", "star", "lightning", "vinyl-record", "stripe"];
 
 function garmentOutline(category: string | undefined, surface: GarmentSurface) {
   const cat = String(category || "t-shirt").toLowerCase();
@@ -70,7 +71,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const updateLayer = (id: string, patch: Partial<GarmentSurfaceLayer>) =>
     onChange(layers.map(layer => layer.id === id ? { ...layer, ...patch } : layer));
 
-  const addLayer = (type: "text" | "graphic") => {
+  const addLayer = (type: "text" | "graphic", asset?: string) => {
     const layer: GarmentSurfaceLayer = {
       id: crypto.randomUUID(),
       type,
@@ -79,7 +80,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
       color: "#ffffff",
       secondaryColor: "#000000",
       text: type === "text" ? "ROCKMUNDO" : undefined,
-      asset: type === "graphic" ? "rockmundo-mark" : undefined,
+      asset: type === "graphic" ? (asset || "rockmundo-mark") : undefined,
       scale: 100,
       rotation: 0,
       opacity: 100,
@@ -119,9 +120,10 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
           </Button>
         ))}
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("text")}><Type className="h-4 w-4 mr-1"/>Text</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("graphic")}><ImageIcon className="h-4 w-4 mr-1"/>Graphic</Button>
+        {MOTIFS.map(motif => <Button key={motif} type="button" size="sm" variant="ghost" onClick={() => addLayer("graphic", motif)} className="text-xs capitalize">{motif.replaceAll("-", " ")}</Button>)}
       </div>
     </div>
 
@@ -184,12 +186,26 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
             <div className="space-y-1"><Label className="text-xs">Rotation</Label><Input type="number" min={-180} max={180} value={selected.rotation || 0} onChange={event => updateLayer(selected.id, { rotation: Number(event.target.value) })}/></div>
             <div className="space-y-1"><Label className="text-xs">Opacity</Label><Input type="number" min={5} max={100} value={selected.opacity ?? 100} onChange={event => updateLayer(selected.id, { opacity: Number(event.target.value) })}/></div>
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button type="button" size="sm" variant="outline" className="flex-1" onClick={() => {
+          <div className="grid grid-cols-4 gap-2 pt-2">
+            <Button type="button" size="sm" variant="outline" disabled={layers.indexOf(selected) === layers.length - 1} onClick={() => {
+              const index = layers.indexOf(selected);
+              if (index < 0 || index === layers.length - 1) return;
+              const next = [...layers];
+              [next[index], next[index + 1]] = [next[index + 1], next[index]];
+              onChange(next);
+            }} title="Bring forward"><ArrowUp className="h-4 w-4"/></Button>
+            <Button type="button" size="sm" variant="outline" disabled={layers.indexOf(selected) <= 0} onClick={() => {
+              const index = layers.indexOf(selected);
+              if (index <= 0) return;
+              const next = [...layers];
+              [next[index], next[index - 1]] = [next[index - 1], next[index]];
+              onChange(next);
+            }} title="Send backward"><ArrowDown className="h-4 w-4"/></Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => {
               const copy = { ...selected, id: crypto.randomUUID(), name: `${selected.name} copy`, offsetX: clamp(Number(selected.offsetX || 0) + 8, -90, 90), offsetY: clamp(Number(selected.offsetY || 0) - 8, -90, 90) };
               onChange([...layers, copy]);
               setSelectedId(copy.id);
-            }}><Copy className="h-4 w-4 mr-1"/>Duplicate</Button>
+            }}><Copy className="h-4 w-4"/></Button>
             <Button type="button" size="sm" variant="destructive" onClick={() => { onChange(layers.filter(layer => layer.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4"/></Button>
           </div>
         </>}
