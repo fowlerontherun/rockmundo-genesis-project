@@ -375,7 +375,7 @@ export class Musician {
             rightShoulder?.rotateZ(-.018 - shoulderPulse * .03);
         }
         const jaw = this.bones.get('Jaw') ?? this.bones.get('jaw') ?? this.bones.get('Mouth');
-        if (jaw && vocalActive && !reduced) {
+        if (jaw && vocalActive && !reduced && !this.faceExpressions) {
             jaw.rotation.x += vocals.opening * .13 * energy;
         }
         if (this.faceExpressions) {
