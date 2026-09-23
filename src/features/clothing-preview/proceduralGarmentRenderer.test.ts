@@ -38,6 +38,48 @@ function anchors(clothing: ClothingItem) {
 }
 
 describe('procedural garment stage rig anchors', () => {
+  it('keeps default tops within avatar-sized bounds instead of spanning the whole scene', () => {
+    const garment = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'short', silhouette: 'classic', collar: 'crew' }));
+    const box = new T.Box3().setFromObject(garment);
+    expect(box.max.x - box.min.x).toBeLessThan(1.45);
+    expect(box.max.y - box.min.y).toBeLessThan(1.65);
+    disposeProceduralGarment(garment);
+  });
+
+  it('treats editor detail scale 100 as 100 percent, not one hundred world units', () => {
+    const clothing = item('t-shirt', 'top', { sleeve: 'none' });
+    clothing.detail_layers = [{
+      id: 'detail-1',
+      type: 'graphic',
+      name: 'Chest graphic',
+      zone: 'main',
+      color: '#ffffff',
+      secondaryColor: '#000000',
+      scale: 100,
+      rotation: 0,
+      opacity: 100,
+      offsetX: 0,
+      offsetY: 0,
+    }] as any;
+    const garment = buildProceduralGarment(clothing);
+    const detail = garment.children[garment.children.length - 1] as T.Mesh;
+    detail.geometry.computeBoundingBox();
+    const box = detail.geometry.boundingBox;
+    if (!box) throw new Error('Expected detail bounds');
+    expect(box.max.x - box.min.x).toBeLessThan(.2);
+    expect(box.max.y - box.min.y).toBeLessThan(.15);
+    disposeProceduralGarment(garment);
+  });
+
+  it('renders shorts substantially shorter than full trousers', () => {
+    const shorts = buildProceduralGarment(item('shorts', 'bottom'));
+    const trousers = buildProceduralGarment(item('pants', 'bottom'));
+    const shortBox = new T.Box3().setFromObject(shorts);
+    const trouserBox = new T.Box3().setFromObject(trousers);
+    expect(shortBox.max.y - shortBox.min.y).toBeLessThan(trouserBox.max.y - trouserBox.min.y);
+    disposeProceduralGarment(shorts);
+    disposeProceduralGarment(trousers);
+  });
   it('builds top garments from an extruded clothing panel rather than a primitive capsule or cylinder', () => {
     const garment = buildProceduralGarment(item('t-shirt', 'top', { sleeve: 'short', silhouette: 'classic', collar: 'crew' }));
     const torso = garment.children.find(
