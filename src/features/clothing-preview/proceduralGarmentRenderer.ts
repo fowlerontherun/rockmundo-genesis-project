@@ -139,19 +139,47 @@ function addTopConstructionDetails(
 
 function addDetail(group: T.Group, detail: ClothingDetailLayer, index: number, spec: RichGarmentVisualSpec) {
   const color = /^#[0-9a-fA-F]{6}$/.test(String(detail.color || '')) ? detail.color : spec.secondaryColor;
-  const scale = Math.max(.45, Math.min(1.8, Number(detail.scale || 1)));
-  const x = Math.max(-.33, Math.min(.33, Number(detail.offsetX ?? ((index % 3) - 1) * .16)));
-  const yOffset = Math.max(-.34, Math.min(.34, Number(detail.offsetY ?? .14 - Math.floor(index / 3) * .12)));
-  const z = spec.scaleZ / 2 + .025 + index * .0005;
+  const rawScale = Number(detail.scale ?? 100);
+  const scale = Math.max(.15, Math.min(3, Number.isFinite(rawScale) ? (Math.abs(rawScale) > 10 ? rawScale / 100 : rawScale) : 1));
+  const rawX = Number(detail.offsetX ?? ((index % 3) - 1) * 18);
+  const rawY = Number(detail.offsetY ?? (18 - Math.floor(index / 3) * 16));
+  const xUnit = Math.abs(rawX) > 1 ? rawX / 100 : rawX;
+  const yUnit = Math.abs(rawY) > 1 ? rawY / 100 : rawY;
+  const x = T.MathUtils.clamp(xUnit, -.9, .9) * spec.scaleX * .42;
+  const yOffset = T.MathUtils.clamp(yUnit, -.9, .9) * spec.scaleY * .42;
+  const z = spec.scaleZ * .38 + .014 + index * .00035;
   const type = String(detail.type || 'badge').toLowerCase();
+  const rawOpacity = Number(detail.opacity ?? 1);
+  const opacity = T.MathUtils.clamp(rawOpacity > 1 ? rawOpacity / 100 : rawOpacity, .05, 1);
   let mesh: T.Mesh;
 
   if (/stud|button/.test(type)) {
-    mesh = new T.Mesh(new T.SphereGeometry(.025 * scale, 10, 8), new T.MeshStandardMaterial({ color, roughness: .28, metalness: .7 }));
+    mesh = new T.Mesh(
+      new T.SphereGeometry(.018 * scale, 12, 8),
+      new T.MeshStandardMaterial({ color, roughness: .28, metalness: .7, transparent: opacity < 1, opacity }),
+    );
   } else if (/zip|trim|stitch/.test(type)) {
-    mesh = new T.Mesh(new T.BoxGeometry(.025 * scale, .22 * scale, .012), new T.MeshStandardMaterial({ color, roughness: .4, metalness: /zip/.test(type) ? .65 : .08 }));
+    mesh = new T.Mesh(
+      new T.BoxGeometry(.014 * scale, .14 * scale, .007),
+      new T.MeshStandardMaterial({ color, roughness: .4, metalness: /zip/.test(type) ? .65 : .08, transparent: opacity < 1, opacity }),
+    );
   } else {
-    mesh = new T.Mesh(new T.BoxGeometry(.16 * scale, .1 * scale, .012), new T.MeshStandardMaterial({ color, roughness: /embroidery|patch/.test(type) ? .88 : .5, metalness: 0 }));
+    // Graphics/patches are intentionally thin surface layers. The previous
+    // implementation used chunky boxes at editor scale=100, which produced
+    // giant floating diamonds/rectangles in the fitting room.
+    mesh = new T.Mesh(
+      new T.PlaneGeometry(.12 * scale, .075 * scale),
+      new T.MeshStandardMaterial({
+        color,
+        roughness: /embroidery|patch/.test(type) ? .88 : .58,
+        metalness: 0,
+        side: T.DoubleSide,
+        transparent: true,
+        opacity,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      }),
+    );
   }
 
   mesh.position.set(x, spec.y + yOffset, z + spec.z);
@@ -232,10 +260,12 @@ function addTopGarment(
   const isBoxy = /boxy|oversized|structured/.test(`${spec.silhouette} ${spec.cut}`);
   const isFitted = /slim|skinny|fitted|tailored/.test(`${spec.silhouette} ${spec.cut}`);
   const isCropped = /crop/.test(spec.length);
-  const bodyHeight = spec.scaleY * (isDress ? .9 : 1.02);
-  const halfShoulder = spec.scaleX * (isBoxy ? .54 : isFitted ? .47 : .5);
-  const halfHem = halfShoulder * (isDress ? 1.02 : isBoxy ? .96 : isFitted ? .76 : .86);
-  const torsoDepth = Math.max(.16, spec.scaleZ * (isOuterwear ? .82 : .72));
+  const bodyHeight = spec.scaleY * (isDress ? .92 : 1.02);
+  const drapeSpread = T.MathUtils.lerp(.96, 1.06, spec.drape);
+  const taper = T.MathUtils.lerp(1.02, .76, spec.taper);
+  const halfShoulder = spec.scaleX * (isBoxy ? .52 : isFitted ? .46 : .49) * drapeSpread;
+  const halfHem = halfShoulder * (isDress ? 1.04 : isBoxy ? .94 : isFitted ? .84 : taper);
+  const torsoDepth = Math.max(.105, spec.scaleZ * (isOuterwear ? .76 : .64) * T.MathUtils.lerp(.9, 1.12, spec.thickness));
 
   const torso = new T.Mesh(
     buildTopBodyGeometry(halfShoulder, halfHem, bodyHeight, torsoDepth, spec.collar, isCropped),
@@ -263,17 +293,17 @@ function addTopGarment(
       /three-quarter/.test(sleeves) ? .5 :
       /elbow/.test(sleeves) ? .39 :
       /cap/.test(sleeves) ? .18 : .29;
-    const sleeveRadius = spec.scaleX * (isOuterwear ? .102 : .084);
-    const shoulderY = spec.y + bodyHeight * .34;
-    const sleeveDepthScale = Math.max(.7, torsoDepth / Math.max(.01, sleeveRadius * 2));
+    const sleeveRadius = spec.scaleX * (isOuterwear ? .082 : .068) * T.MathUtils.lerp(.92, 1.08, spec.drape);
+    const shoulderY = spec.y + bodyHeight * .35;
+    const sleeveDepthScale = Math.max(.72, torsoDepth / Math.max(.01, sleeveRadius * 2.25));
     for (const side of [-1, 1]) {
       const sleeve = new T.Mesh(
-        new T.CylinderGeometry(sleeveRadius * .82, sleeveRadius, sleeveLength, 14, 2, false),
+        new T.CylinderGeometry(sleeveRadius * .84, sleeveRadius, sleeveLength, 16, 3, false),
         material,
       );
       sleeve.rotation.z = Math.PI / 2;
       sleeve.scale.z = sleeveDepthScale;
-      sleeve.position.set(side * (halfShoulder + sleeveLength * .43), shoulderY, spec.z);
+      sleeve.position.set(side * (halfShoulder + sleeveLength * .46), shoulderY - (spec.asymmetry && side > 0 ? .025 : 0), spec.z);
       add(sleeve, side > 0 ? 'UpperArm.L' : 'UpperArm.R');
     }
   }
@@ -398,6 +428,13 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
   }
 
   group.position.x = spec.bodyOffsetX;
+  // Keep all generated clothing in avatar proportions even when older records
+  // contain out-of-range render controls.
+  group.scale.set(
+    T.MathUtils.clamp(group.scale.x, .75, 1.25),
+    T.MathUtils.clamp(group.scale.y, .75, 1.25),
+    T.MathUtils.clamp(group.scale.z, .75, 1.25),
+  );
 
   const details = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 18) : [];
   details.forEach((detail, index) => addDetail(group, detail, index, spec));
