@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Type, Image as ImageIcon, Trash2, Copy, ArrowUp, ArrowDown } from "lucide-react";
 import { garmentTemplate, inferGarmentTemplateKey } from "@/features/clothing-preview/garmentTemplates";
 
@@ -25,6 +26,9 @@ export interface GarmentSurfaceLayer {
   surface?: GarmentSurface;
   widthScale?: number;
   heightScale?: number;
+  fontStyle?: "block" | "punk" | "script" | "metal" | "varsity" | "clean";
+  outlineColor?: string;
+  letterSpacing?: number;
 }
 
 interface Props {
@@ -43,6 +47,7 @@ const SURFACES: Array<{ key: GarmentSurface; label: string }> = [
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const MOTIFS = ["rockmundo-mark", "star", "lightning", "vinyl-record", "stripe"];
+const TEXT_STYLES = ["block", "punk", "script", "metal", "varsity", "clean"] as const;
 
 function garmentOutline(category: string | undefined, surface: GarmentSurface) {
   const cat = String(category || "t-shirt").toLowerCase();
@@ -60,6 +65,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
   const availableSurfaces = SURFACES.filter(entry => template?.surfaces.includes(entry.key) ?? true);
   const [surface, setSurface] = useState<GarmentSurface>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [snapToGrid, setSnapToGrid] = useState(true);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const visibleLayers = useMemo(
@@ -89,6 +95,9 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
       surface,
       widthScale: 100,
       heightScale: 100,
+      fontStyle: type === "text" ? "block" : undefined,
+      outlineColor: type === "text" ? "#000000" : undefined,
+      letterSpacing: type === "text" ? 0 : undefined,
     };
     onChange([...layers, layer]);
     setSelectedId(layer.id);
@@ -99,9 +108,10 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
     if (!rect) return;
     const x = ((event.clientX - rect.left) / rect.width) * 200 - 100;
     const y = 100 - ((event.clientY - rect.top) / rect.height) * 200;
+    const snap = (value: number) => snapToGrid ? Math.round(value / 10) * 10 : Math.round(value);
     updateLayer(id, {
-      offsetX: Math.round(clamp(x, -90, 90)),
-      offsetY: Math.round(clamp(y, -90, 90)),
+      offsetX: clamp(snap(x), -90, 90),
+      offsetY: clamp(snap(y), -90, 90),
     });
   };
 
@@ -121,6 +131,7 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant={snapToGrid ? "default" : "outline"} onClick={() => setSnapToGrid(value => !value)}>Snap 10</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("text")}><Type className="h-4 w-4 mr-1"/>Text</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => addLayer("graphic")}><ImageIcon className="h-4 w-4 mr-1"/>Graphic</Button>
         {MOTIFS.map(motif => <Button key={motif} type="button" size="sm" variant="ghost" onClick={() => addLayer("graphic", motif)} className="text-xs capitalize">{motif.replaceAll("-", " ")}</Button>)}
@@ -176,7 +187,13 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
         <div className="flex items-center justify-between"><div className="font-medium text-sm">Selected layer</div><Badge variant="outline">{visibleLayers.length} on surface</Badge></div>
         {!selected ? <p className="text-xs text-muted-foreground">Select an item on the garment, or add text/graphics above.</p> : <>
           <div className="space-y-2"><Label>Name</Label><Input value={selected.name} onChange={event => updateLayer(selected.id, { name: event.target.value })}/></div>
-          {selected.type === "text" && <div className="space-y-2"><Label>Text</Label><Input value={selected.text || ""} onChange={event => updateLayer(selected.id, { text: event.target.value })}/></div>}
+          {selected.type === "text" && <>
+            <div className="space-y-2"><Label>Text</Label><Input value={selected.text || ""} onChange={event => updateLayer(selected.id, { text: event.target.value })}/></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1"><Label className="text-xs">Text style</Label><Select value={selected.fontStyle || "block"} onValueChange={value => updateLayer(selected.id, { fontStyle: value as GarmentSurfaceLayer["fontStyle"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TEXT_STYLES.map(style => <SelectItem key={style} value={style} className="capitalize">{style}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-1"><Label className="text-xs">Outline</Label><Input type="color" value={selected.outlineColor || "#000000"} onChange={event => updateLayer(selected.id, { outlineColor: event.target.value })}/></div>
+            </div>
+          </>}
           {selected.type !== "text" && <div className="space-y-2"><Label>Asset / motif</Label><Input value={selected.asset || ""} onChange={event => updateLayer(selected.id, { asset: event.target.value })}/></div>}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1"><Label className="text-xs">X</Label><Input type="number" min={-90} max={90} value={selected.offsetX || 0} onChange={event => updateLayer(selected.id, { offsetX: Number(event.target.value) })}/></div>
@@ -185,6 +202,10 @@ export function GarmentSurfaceEditor({ category, templateKey, layers, onChange }
             <div className="space-y-1"><Label className="text-xs">Height %</Label><Input type="number" min={20} max={250} value={selected.heightScale || 100} onChange={event => updateLayer(selected.id, { heightScale: Number(event.target.value) })}/></div>
             <div className="space-y-1"><Label className="text-xs">Rotation</Label><Input type="number" min={-180} max={180} value={selected.rotation || 0} onChange={event => updateLayer(selected.id, { rotation: Number(event.target.value) })}/></div>
             <div className="space-y-1"><Label className="text-xs">Opacity</Label><Input type="number" min={5} max={100} value={selected.opacity ?? 100} onChange={event => updateLayer(selected.id, { opacity: Number(event.target.value) })}/></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => updateLayer(selected.id, { offsetX: 0 })}>Centre X</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => updateLayer(selected.id, { offsetY: 0 })}>Centre Y</Button>
           </div>
           <div className="grid grid-cols-4 gap-2 pt-2">
             <Button type="button" size="sm" variant="outline" disabled={layers.indexOf(selected) === layers.length - 1} onClick={() => {
