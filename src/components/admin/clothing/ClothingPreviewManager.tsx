@@ -23,6 +23,7 @@ const statusClass = (status?: string) => status === 'ready'
       : '';
 
 export function ClothingPreviewManager({ collectionId, items, onChanged }: Props) {
+  const legacyItems = items.filter(item => !item.curated_asset_key || item.curated_asset_status === 'legacy');
   const queryClient = useQueryClient();
   const [workerActive, setWorkerActive] = useState(false);
   const [workerStatus, setWorkerStatus] = useState<ClothingPreviewWorkerStatus>({ state: 'stopped' });
@@ -80,9 +81,9 @@ export function ClothingPreviewManager({ collectionId, items, onChanged }: Props
   const latestByItem = new Map<string, any>();
   for (const job of jobs) if (!latestByItem.has(job.clothing_item_id)) latestByItem.set(job.clothing_item_id, job);
 
-  const ready = items.filter(item => item.preview_status === 'ready').length;
-  const failed = items.filter(item => item.preview_status === 'failed').length;
-  const pending = items.length - ready - failed;
+  const ready = legacyItems.filter(item => item.preview_status === 'ready').length;
+  const failed = legacyItems.filter(item => item.preview_status === 'failed').length;
+  const pending = legacyItems.length - ready - failed;
   const queuedJobs = jobs.filter((job: any) => job.status === 'queued').length;
   const processingJobs = jobs.filter((job: any) => job.status === 'processing').length;
   const progressLabel = workerStatus.state === 'rendering' || workerStatus.state === 'uploading'
@@ -105,16 +106,16 @@ export function ClothingPreviewManager({ collectionId, items, onChanged }: Props
     <CardHeader className="flex flex-row items-start justify-between gap-4">
       <div>
         <CardTitle className="flex items-center gap-2"><Rotate3D className="h-5 w-5" />Preview generation</CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">Generate real WebP catalogue thumbnails and an 8-angle turntable fallback from the same procedural garment renderer used by the live fitting room.</p>
+        <p className="text-sm text-muted-foreground mt-1">Legacy clothing only. Curated skins use their validated fitted asset and are deliberately excluded from this procedural preview renderer.</p>
       </div>
       <div className="flex flex-wrap gap-2 justify-end">
         <Button variant="outline" onClick={() => setWorkerActive(value => !value)}>
           {workerActive ? <Square className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
           {workerActive ? 'Stop renderer' : 'Render queued previews'}
         </Button>
-        <Button onClick={() => queueAll.mutate()} disabled={queueAll.isPending || !items.length}>
+        <Button onClick={() => queueAll.mutate()} disabled={queueAll.isPending || !legacyItems.length}>
           {queueAll.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          Generate collection previews
+          Generate legacy previews
         </Button>
       </div>
     </CardHeader>
@@ -133,7 +134,7 @@ export function ClothingPreviewManager({ collectionId, items, onChanged }: Props
       </div>
 
       <div className="divide-y rounded-lg border">
-        {items.length === 0 ? <p className="p-4 text-sm text-muted-foreground">No clothing in this collection.</p> : items.map(item => {
+        {legacyItems.length === 0 ? <p className="p-4 text-sm text-muted-foreground">No legacy clothing requires procedural preview generation. Curated assets are handled by the validation panel above.</p> : legacyItems.map(item => {
           const latest = latestByItem.get(item.id);
           const effective = latest?.status === 'queued' || latest?.status === 'processing' ? latest.status : item.preview_status || 'pending';
           return <div key={item.id} className="p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
