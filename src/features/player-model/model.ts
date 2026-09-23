@@ -55,7 +55,9 @@ function rockmundoWordmarkTexture() {
 }
 
 function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>, richClothing: ResolvedEquippedClothing[]) {
-  if (appearance.equipment.top.itemId !== 'starter.top.casual' || richClothing.some(row => richGarmentSlot(row.item) === 'top')) return;
+  const curatedLogo = richClothing.some(row => row.item.curated_asset_key === 'clothing.starter.logo-tee');
+  const hasOtherTop = richClothing.some(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key !== 'clothing.starter.logo-tee');
+  if (!curatedLogo && (appearance.equipment.top.itemId !== 'starter.top.casual' || hasOtherTop)) return;
   const chest=findPlayerBone(bones,['Spine2','Spine.002','Chest','UpperChest']) ?? findPlayerBone(bones,['Spine1','Spine.001']);
   if(!chest) return;
   root.updateMatrixWorld(true);
