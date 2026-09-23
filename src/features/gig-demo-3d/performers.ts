@@ -13,6 +13,8 @@ import { createVocalMouth } from './vocalFace';
 import { seededRandom } from './config';
 import { visibleTattoosForClothing } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
+import { assembleAvatarMesh } from '@/features/player-model/v2/avatarMeshEngine';
+import { requiredAvatarV2ModelFiles } from '@/features/player-model/v2/avatarV2Model';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
