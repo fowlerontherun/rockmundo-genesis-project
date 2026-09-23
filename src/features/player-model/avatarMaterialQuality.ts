@@ -180,6 +180,18 @@ export function avatarHairRoughnessTexture(quality: AvatarVisualQuality) {
   return texture(`avatar-hair-roughness-${quality}`, pixels, size, profile.anisotropy);
 }
 
+export interface AvatarHairTextureCache {
+  normal: T.DataTexture | null;
+  roughness: T.DataTexture | null;
+}
+
+export function createAvatarHairTextureCache(quality: AvatarVisualQuality): AvatarHairTextureCache {
+  return {
+    normal: avatarHairNormalTexture(quality),
+    roughness: avatarHairRoughnessTexture(quality),
+  };
+}
+
 export function applyAvatarEyeQuality(material: T.MeshStandardMaterial, quality: AvatarVisualQuality) {
   if (quality === 'crowd') return;
   material.roughness = quality === 'cinematic' ? .14 : quality === 'ultra' ? .18 : .24;
@@ -188,13 +200,17 @@ export function applyAvatarEyeQuality(material: T.MeshStandardMaterial, quality:
   material.needsUpdate = true;
 }
 
-export function applyAvatarHairQuality(material: T.MeshStandardMaterial, quality: AvatarVisualQuality) {
+export function applyAvatarHairQuality(
+  material: T.MeshStandardMaterial,
+  quality: AvatarVisualQuality,
+  cache?: AvatarHairTextureCache,
+) {
   if (quality === 'crowd') return;
   material.roughness = quality === 'cinematic' ? .42 : quality === 'ultra' ? .46 : quality === 'high' ? .53 : .62;
   material.metalness = 0;
   material.envMapIntensity = quality === 'cinematic' ? 1.3 : quality === 'ultra' ? 1.22 : quality === 'high' ? 1.08 : 1.0;
-  const normal = avatarHairNormalTexture(quality);
-  const roughness = avatarHairRoughnessTexture(quality);
+  const normal = cache?.normal ?? avatarHairNormalTexture(quality);
+  const roughness = cache?.roughness ?? avatarHairRoughnessTexture(quality);
   if (normal) {
     material.normalMap = normal;
     const strength = quality === 'cinematic' ? .48 : quality === 'ultra' ? .42 : quality === 'high' ? .34 : .24;
