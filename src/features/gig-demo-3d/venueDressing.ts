@@ -13,6 +13,32 @@ const SMALL_VENUES = new Set([
   'university_union',
 ]);
 
+interface DressingPalette {
+  dark: T.MeshStandardMaterial;
+  wood: T.MeshStandardMaterial;
+  steel: T.MeshStandardMaterial;
+  brass: T.MeshStandardMaterial;
+  green: T.MeshStandardMaterial;
+  pale: T.MeshStandardMaterial;
+  warmGlow: T.MeshStandardMaterial;
+  coolGlow: T.MeshStandardMaterial;
+  accentGlow: T.MeshStandardMaterial;
+}
+
+function dressingPalette(p: VenueProfile): DressingPalette {
+  return {
+    dark: matte('#1b2025', .82),
+    wood: matte('#4b3124', .72),
+    steel: metal('#626c75', .5),
+    brass: metal('#9f824b', .4),
+    green: matte('#496145', .72),
+    pale: matte('#d4c8b0', .78),
+    warmGlow: new T.MeshStandardMaterial({ color: '#e7aa70', emissive: '#e7aa70', emissiveIntensity: 1.25, roughness: .35 }),
+    coolGlow: new T.MeshStandardMaterial({ color: '#91b8c7', emissive: '#6f9fb4', emissiveIntensity: .9, roughness: .34 }),
+    accentGlow: new T.MeshStandardMaterial({ color: p.accent, emissive: p.accent, emissiveIntensity: 1.2, roughness: .4 }),
+  };
+}
+
 function feature(parent: T.Object3D, name: string) {
   const group = new T.Group();
   group.name = name;
@@ -118,10 +144,16 @@ function addNoticeBoard(
   }
 }
 
-function addExitDoor(parent: T.Object3D, x: number, z: number, side: -1 | 1, roofHeight: number) {
-  const frame = metal('#58616a', .58);
-  const door = matte('#1b2528', .82);
-  const sign = new T.MeshStandardMaterial({ color: '#70d6a3', emissive: '#35d184', emissiveIntensity: 1.15, roughness: .42 });
+function addExitDoor(
+  parent: T.Object3D,
+  x: number,
+  z: number,
+  side: -1 | 1,
+  roofHeight: number,
+  frame: T.Material,
+  door: T.Material,
+  sign: T.Material,
+) {
   box(parent, [.12, 2.2, 1.25], [x, 1.1, z], door);
   box(parent, [.14, .09, 1.38], [x, 2.24, z], frame);
   box(parent, [.15, .28, .78], [x + side * .02, Math.min(2.65, roofHeight - .45), z], sign);
@@ -136,15 +168,15 @@ function addCableCoil(parent: T.Object3D, x: number, z: number, scale: number, c
   }
 }
 
-function buildCafe(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
+function buildCafe(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials, palette: DressingPalette) {
   const half = p.roomWidth / 2;
   const coffee = feature(root, 'venue-cafe-coffee-bar');
-  const counter = matte('#4b3427', .66);
-  const shelfWood = matte('#4a2c20', .72);
-  const bottles = [matte('#4c6a4f', .46), matte('#6e493c', .46), matte('#85713f', .46)] as const;
-  const espresso = metal('#626c73', .34);
-  const espressoDark = matte('#171b20');
-  const mug = matte('#d8cfbf');
+  const counter = surfaces.wall;
+  const shelfWood = palette.wood;
+  const bottles = [palette.green, palette.wood, palette.brass] as const;
+  const espresso = palette.steel;
+  const espressoDark = palette.dark;
+  const mug = palette.pale;
   const coffeeZ = 10.4;
   box(coffee, [1.45, 1.02, 4.7], [-half + 1.35, .51, coffeeZ], counter);
   box(coffee, [1.65, .11, 4.9], [-half + 1.35, 1.08, coffeeZ], surfaces.detail);
@@ -154,8 +186,8 @@ function buildCafe(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMateria
   for (let i = 0; i < 5; i += 1) cylinder(coffee, .09, .075, .11, [-half + .58, 1.95, coffeeZ - 1.4 + i * .55], mug, 12);
 
   const windows = feature(root, 'venue-cafe-window-front');
-  const glass = new T.MeshStandardMaterial({ color: '#536b74', emissive: '#1d2c32', emissiveIntensity: .18, metalness: .12, roughness: .18 });
-  const windowMetal = windowMetal;
+  const glass = palette.coolGlow;
+  const windowMetal = palette.steel;
   for (let i = 0; i < 3; i += 1) {
     const z = 4 + i * 4;
     box(windows, [.035, 2.4, 2.7], [half - .16, 2.05, z], glass);
@@ -164,7 +196,7 @@ function buildCafe(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMateria
   }
 
   const plants = feature(root, 'venue-cafe-plants');
-  const pot = matte('#6a4d38'), stem = matte('#4c5b39'), leaf = matte('#486344');
+  const pot = palette.wood, stem = palette.green, leaf = palette.green;
   for (const z of [3.2, 11.7]) {
     cylinder(plants, .24, .3, .42, [half - .72, .21, z], pot, 12);
     rod(plants, [half - .72, .42, z], [half - .72, 1.22, z], .045, stem);
@@ -175,14 +207,14 @@ function buildCafe(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMateria
   }
 
   const lights = feature(root, 'venue-cafe-warm-practicals');
-  const cafeFixture = matte('#3c3530');
-  const cafeBulb = new T.MeshStandardMaterial({ color: '#f0b979', emissive: '#f0b979', emissiveIntensity: 1.35, roughness: .35 });
+  const cafeFixture = palette.dark;
+  const cafeBulb = palette.warmGlow;
   for (const z of [4.8, 9.5, 14.2].filter(value => value < p.roomDepth - 1))
     addPracticalLight(lights, [0, Math.min(p.roofHeight - .65, 3.4), z], '#f0b979', 4.2, 5.2, cafeFixture, cafeBulb);
   root.userData.identityFeatures.push('coffee-bar', 'window-front', 'plants', 'warm-pendants');
 }
 
-function buildJazz(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
+function buildJazz(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials, palette: DressingPalette) {
   const half = p.roomWidth / 2;
   const lounge = feature(root, 'venue-jazz-banquettes');
   for (const side of [-1, 1] as const) {
@@ -192,8 +224,8 @@ function buildJazz(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMateria
   }
 
   const art = feature(root, 'venue-jazz-framed-art');
-  const frame = metal('#9b7c48', .45);
-  const artMats = [matte('#6d2839'), matte('#2d4c54'), matte('#604533')];
+  const frame = palette.brass;
+  const artMats = [surfaces.seat, surfaces.detail, surfaces.wall];
   for (const side of [-1, 1] as const) for (let i = 0; i < 3; i += 1) {
     const x = side * (half - .15), z = 4 + i * 4.2;
     box(art, [.06, 1.22, 1.55], [x, 2.3, z], frame);
@@ -201,62 +233,62 @@ function buildJazz(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMateria
   }
 
   const lights = feature(root, 'venue-jazz-brass-sconces');
-  const sconceArm = metal('#9f8248', .38), sconceFixture = metal('#a3844e', .38);
-  const jazzBulb = new T.MeshStandardMaterial({ color: '#e6a067', emissive: '#e6a067', emissiveIntensity: 1.35, roughness: .35 });
+  const sconceArm = palette.brass, sconceFixture = palette.brass;
+  const jazzBulb = palette.warmGlow;
   for (const side of [-1, 1] as const) for (const z of [4.3, 10.4]) {
     rod(lights, [side * (half - .18), 2.65, z], [side * (half - .72), 2.65, z], .025, sconceArm);
     addPracticalLight(lights, [side * (half - .82), 2.6, z], '#e6a067', 3.2, 4.2, sconceFixture, jazzBulb);
   }
 
   const service = feature(root, 'venue-jazz-cocktail-service');
-  const shelfWood = matte('#4a2c20', .72);
-  const bottles = [matte('#4c6a4f', .46), matte('#6e493c', .46), matte('#85713f', .46)] as const;
-  const stoolSteel = metal('#555f68', .5);
+  const shelfWood = palette.wood;
+  const bottles = [palette.green, palette.wood, palette.brass] as const;
+  const stoolSteel = palette.steel;
   addBottleShelf(service, -half + .25, 1.55, 7.8, true, 4.6, shelfWood, bottles);
   for (const z of [6.2, 7.2, 8.2, 9.2]) addStool(service, -half + 1.75, z, surfaces.seat, stoolSteel);
   root.userData.identityFeatures.push('banquettes', 'brass-sconces', 'framed-art', 'cocktail-service');
 }
 
-function buildDiveBar(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
+function buildDiveBar(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials, palette: DressingPalette) {
   const half = p.roomWidth / 2;
   const backBar = feature(root, 'venue-dive-back-bar');
-  const shelfWood = matte('#3b241b', .78);
-  const bottles = [matte('#435944', .5), matte('#6a4438', .5), matte('#756137', .5)] as const;
-  const stoolSteel = metal('#4e565c', .56);
+  const shelfWood = palette.wood;
+  const bottles = [palette.green, palette.wood, palette.brass] as const;
+  const stoolSteel = palette.steel;
   addBottleShelf(backBar, -half + .25, 1.5, 7.8, true, 5.2, shelfWood, bottles);
   for (let z = 5.9; z < 10.6; z += 1.05) addStool(backBar, -half + 1.75, z, surfaces.seat, stoolSteel);
 
   const dart = feature(root, 'venue-dive-dartboard');
-  const board = cylinder(dart, .46, .46, .055, [half - .2, 2.15, 10.2], matte('#22201c'), 24);
+  const board = cylinder(dart, .46, .46, .055, [half - .2, 2.15, 10.2], palette.dark, 24);
   board.rotation.z = Math.PI / 2;
-  const ring = new T.Mesh(new T.TorusGeometry(.35, .025, 6, 24), matte('#b5834b'));
+  const ring = new T.Mesh(new T.TorusGeometry(.35, .025, 6, 24), palette.brass);
   ring.rotation.y = Math.PI / 2;
   ring.position.set(half - .235, 2.15, 10.2);
   dart.add(ring);
 
   const beams = feature(root, 'venue-dive-low-ceiling-beams');
   for (let z = 2; z < p.roomDepth - 1; z += 4.5)
-    box(beams, [p.roomWidth - .6, .22, .3], [0, p.roofHeight - .25, z], matte('#2a211d'));
+    box(beams, [p.roomWidth - .6, .22, .3], [0, p.roofHeight - .25, z], palette.wood);
 
   const clutter = feature(root, 'venue-dive-edge-clutter');
-  const binMat = matte('#272b2b'), cueMat = matte('#7a6245');
+  const binMat = palette.dark, cueMat = palette.wood;
   box(clutter, [.65, .8, .65], [half - .75, .4, 5.8], binMat);
   for (let i = 0; i < 4; i += 1)
     rod(clutter, [half - .55, .2, 13 + i * .08], [half - .55, 1.9, 13 + i * .08], .018, cueMat);
-  const sign = new T.MeshStandardMaterial({ color: '#7f2435', emissive: '#ff365e', emissiveIntensity: 1.35, roughness: .45 });
+  const sign = palette.accentGlow;
   box(clutter, [.05, .62, 2.2], [half - .16, 2.55, 5.1], sign);
 
   const lights = feature(root, 'venue-dive-dim-practicals');
-  const diveFixture = matte('#29221d');
-  const diveBulb = new T.MeshStandardMaterial({ color: '#d28758', emissive: '#d28758', emissiveIntensity: 1.35, roughness: .35 });
+  const diveFixture = palette.dark;
+  const diveBulb = palette.warmGlow;
   for (const z of [4.5, 11.5]) addPracticalLight(lights, [0, p.roofHeight - .65, z], '#d28758', 2.5, 4.2, diveFixture, diveBulb);
   root.userData.identityFeatures.push('bottle-backbar', 'dartboard', 'low-beams', 'edge-clutter', 'neon-sign');
 }
 
-function buildRockClub(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
+function buildRockClub(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials, palette: DressingPalette) {
   const half = p.roomWidth / 2;
   const barrier = feature(root, 'venue-rock-front-barrier');
-  const steel = metal('#59616a', .56);
+  const steel = palette.steel;
   const z = 1.45;
   for (let x = -p.stageWidth * .46; x <= p.stageWidth * .46; x += 1.2) {
     rod(barrier, [x, 0, z], [x, 1.0, z], .028, steel);
@@ -264,7 +296,7 @@ function buildRockClub(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMat
   }
 
   const cases = feature(root, 'venue-rock-road-cases');
-  const caseShell = matte('#191d22'), caseEdge = metal('#707985', .5), cable = matte('#101216', .82);
+  const caseShell = palette.dark, caseEdge = palette.steel, cable = palette.dark;
   for (let i = 0; i < 4; i += 1) addFlightCase(cases, (i < 2 ? -1 : 1) * (half - 1.2), 2.7 + (i % 2) * 1.05, .9, caseShell, caseEdge);
   addCableCoil(cases, half - 1.15, 5.15, 1, cable);
   addCableCoil(cases, -half + 1.15, 5.45, 1, cable);
@@ -274,63 +306,59 @@ function buildRockClub(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMat
     const panel = box(walls, [.08, 1.4, 1.1], [side * (half - .15), 2.65, 3 + i * 3.1], surfaces.detail);
     panel.rotation.x = (i % 2 ? .025 : -.025);
   }
-  addExitDoor(walls, half - .12, 13.5, 1, p.roofHeight);
+  addExitDoor(walls, half - .12, 13.5, 1, p.roofHeight, palette.steel, palette.dark, palette.green);
 
   const lights = feature(root, 'venue-rock-industrial-practicals');
-  const rockBulb = new T.MeshStandardMaterial({ color: '#7ca6bc', emissive: '#7ca6bc', emissiveIntensity: 1.15, roughness: .35 });
+  const rockBulb = palette.coolGlow;
   for (const side of [-1, 1] as const) for (const z0 of [4.2, 10.5])
     addPracticalLight(lights, [side * (half - 1.2), p.roofHeight - .75, z0], '#7ca6bc', 3.5, 5.3, steel, rockBulb);
   root.userData.identityFeatures.push('front-barrier', 'road-cases', 'cable-coils', 'acoustic-wall', 'industrial-practicals');
 }
 
-function buildLiveHouse(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
+function buildLiveHouse(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials, palette: DressingPalette) {
   const half = p.roomWidth / 2;
   const foh = feature(root, 'venue-live-house-foh');
-  const meterMats = [
-    new T.MeshStandardMaterial({ color: '#5ac19b', emissive: '#3fb887', emissiveIntensity: .45, roughness: .45 }),
-    new T.MeshStandardMaterial({ color: '#d9a45f', emissive: '#6b5238', emissiveIntensity: .45, roughness: .45 }),
-    new T.MeshStandardMaterial({ color: '#637f9b', emissive: '#32465e', emissiveIntensity: .45, roughness: .45 }),
-  ] as const;
+  const meterMats = [palette.green, palette.warmGlow, palette.coolGlow] as const;
   const z = Math.min(p.roomDepth - 3.2, p.crowdDepth + 3.2);
-  box(foh, [3.2, .92, 1.45], [0, .46, z], matte('#171c22'));
-  box(foh, [3.0, .09, 1.35], [0, .97, z], metal('#3d4650', .52));
+  box(foh, [3.2, .92, 1.45], [0, .46, z], palette.dark);
+  box(foh, [3.0, .09, 1.35], [0, .97, z], palette.steel);
   for (let row = 0; row < 4; row += 1) for (let col = 0; col < 10; col += 1) {
     box(foh, [.12, .035, .055], [-1.24 + col * .275, 1.04, z - .48 + row * .22], meterMats[(row + col) % meterMats.length]);
   }
 
   const backstage = feature(root, 'venue-live-house-backstage-door');
-  const caseShell = matte('#191d22'), caseEdge = metal('#707985', .5);
-  addExitDoor(backstage, -half + .12, 2.5, -1, p.roofHeight);
+  const caseShell = palette.dark, caseEdge = palette.steel;
+  addExitDoor(backstage, -half + .12, 2.5, -1, p.roofHeight, palette.steel, palette.dark, palette.green);
   for (let i = 0; i < 5; i += 1) addFlightCase(backstage, -half + 1.25 + (i % 2) * .85, 2.0 + Math.floor(i / 2) * .82, .78, caseShell, caseEdge);
 
   const treatment = feature(root, 'venue-live-house-acoustic-treatment');
-  const acousticDark = matte('#22272c');
+  const acousticDark = palette.dark;
   for (const side of [-1, 1] as const) for (let i = 0; i < 5; i += 1)
     box(treatment, [.07, 1.3, 1.35], [side * (half - .16), 2.65, 3.2 + i * 2.65], i % 2 ? surfaces.detail : acousticDark);
 
   const merch = feature(root, 'venue-live-house-merch-point');
-  box(merch, [2.8, .78, .8], [half - 1.8, .39, Math.min(p.roomDepth - 2.6, 13)], matte('#27202a'));
+  box(merch, [2.8, .78, .8], [half - 1.8, .39, Math.min(p.roomDepth - 2.6, 13)], palette.dark);
   box(merch, [2.5, 1.1, .05], [half - 1.8, 1.65, Math.min(p.roomDepth - 2.95, 12.7)], surfaces.wall);
 
   const lights = feature(root, 'venue-live-house-practicals');
-  const liveFixture = metal('#5c6670', .5);
-  const liveBulb = new T.MeshStandardMaterial({ color: '#b9c9d0', emissive: '#b9c9d0', emissiveIntensity: 1.05, roughness: .35 });
+  const liveFixture = palette.steel;
+  const liveBulb = palette.coolGlow;
   for (const z0 of [4.8, 11.2].filter(value => value < p.roomDepth - 1))
     addPracticalLight(lights, [0, p.roofHeight - .72, z0], '#b9c9d0', 3.6, 5.4, liveFixture, liveBulb);
   root.userData.identityFeatures.push('foh-desk', 'backstage-door', 'flight-cases', 'acoustic-treatment', 'merch-point');
 }
 
-function buildUniversityUnion(root: T.Group, p: VenueProfile, random: () => number, surfaces: VenueSurfaceMaterials) {
+function buildUniversityUnion(root: T.Group, p: VenueProfile, random: () => number, surfaces: VenueSurfaceMaterials, palette: DressingPalette) {
   const half = p.roomWidth / 2;
   const notice = feature(root, 'venue-union-noticeboards');
-  const noticeFrame = matte('#4d3828', .7), cork = matte('#9f7c57', .9);
-  const paper = [matte('#d7c9a9'), matte('#b8c6d5'), matte('#b66c73'), matte('#d5b65f')] as const;
+  const noticeFrame = palette.wood, cork = surfaces.detail;
+  const paper = [palette.pale, surfaces.wall, surfaces.seat, palette.warmGlow] as const;
   addNoticeBoard(notice, half - .15, 2.2, 7, true, random, noticeFrame, cork, paper);
   addNoticeBoard(notice, -half + .15, 2.2, 11, true, random, noticeFrame, cork, paper);
 
   const chairs = feature(root, 'venue-union-stacked-chairs');
   const seat = surfaces.seat;
-  const steel = metal('#68717a', .6);
+  const steel = palette.steel;
   for (const side of [-1, 1] as const) for (let i = 0; i < 5; i += 1) {
     const x = side * (half - .8);
     const z = 3.3 + i * .36;
@@ -340,19 +368,19 @@ function buildUniversityUnion(root: T.Group, p: VenueProfile, random: () => numb
   }
 
   const vending = feature(root, 'venue-union-vending-area');
-  const glow = new T.MeshStandardMaterial({ color: '#4e6371', emissive: '#1e3f54', emissiveIntensity: .45, roughness: .28 });
-  const vendingGold = matte('#c9a34d'), vendingGreen = matte('#7aa36c');
-  box(vending, [1.05, 2.05, .72], [half - .85, 1.025, 14], matte('#303840'));
+  const glow = palette.coolGlow;
+  const vendingGold = palette.warmGlow, vendingGreen = palette.green;
+  box(vending, [1.05, 2.05, .72], [half - .85, 1.025, 14], palette.dark);
   box(vending, [.88, 1.28, .04], [half - 1.39, 1.28, 14], glow);
   for (let i = 0; i < 4; i += 1) box(vending, [.05, .14, .48], [half - 1.42, .72 + i * .3, 14], i % 2 ? vendingGold : vendingGreen);
 
   const temp = feature(root, 'venue-union-portable-service');
-  box(temp, [2.7, .78, .75], [-half + 1.8, .39, 13.2], matte('#41464c'));
+  box(temp, [2.7, .78, .75], [-half + 1.8, .39, 13.2], surfaces.detail);
   for (let i = 0; i < 4; i += 1) addStool(temp, -half + 3.05, 11.7 + i * .82, seat, steel);
-  addExitDoor(temp, half - .12, 4.2, 1, p.roofHeight);
+  addExitDoor(temp, half - .12, 4.2, 1, p.roofHeight, palette.steel, palette.dark, palette.green);
 
   const lights = feature(root, 'venue-union-functional-lighting');
-  const fluorescent = new T.MeshStandardMaterial({ color: '#d9e3df', emissive: '#cde4dc', emissiveIntensity: .85, roughness: .34 });
+  const fluorescent = palette.coolGlow;
   for (const z0 of [4, 9, 14].filter(value => value < p.roomDepth - 1)) {
     box(lights, [3.4, .07, .22], [0, p.roofHeight - .25, z0], fluorescent);
     const light = new T.PointLight('#d9e8e4', 2.6, 5.5, 2);
@@ -380,13 +408,14 @@ export function buildVenueDressing(
   parent.add(root);
 
   const random = seededRandom(seed + 911);
+  const palette = dressingPalette(p);
 
-  if (p.kind === 'cafe_stage') buildCafe(root, p, surfaces);
-  if (p.kind === 'jazz_lounge') buildJazz(root, p, surfaces);
-  if (p.kind === 'dive_bar') buildDiveBar(root, p, surfaces);
-  if (p.kind === 'rock_club') buildRockClub(root, p, surfaces);
-  if (p.kind === 'live_house') buildLiveHouse(root, p, surfaces);
-  if (p.kind === 'university_union') buildUniversityUnion(root, p, random, surfaces);
+  if (p.kind === 'cafe_stage') buildCafe(root, p, surfaces, palette);
+  if (p.kind === 'jazz_lounge') buildJazz(root, p, surfaces, palette);
+  if (p.kind === 'dive_bar') buildDiveBar(root, p, surfaces, palette);
+  if (p.kind === 'rock_club') buildRockClub(root, p, surfaces, palette);
+  if (p.kind === 'live_house') buildLiveHouse(root, p, surfaces, palette);
+  if (p.kind === 'university_union') buildUniversityUnion(root, p, random, surfaces, palette);
 
   return root;
 }
