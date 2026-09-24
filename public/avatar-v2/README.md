@@ -77,7 +77,8 @@ vocals never expose a hollow mouth.
 
 LOD0/LOD1 also require shoulder and toe-base articulation, dedicated `Eye.L` /
 `Eye.R` bones, plus complete three-joint thumb/index/middle/ring/little chains
-on both hands. The eye bones are driven at runtime for deterministic micro-saccades
+on both hands. Both eye bones must be children/descendants of the authored head bone so head turns
+carry the eyes with them. They are driven at runtime for deterministic micro-saccades
 and interaction-aware gaze; do not bake a permanently offset stare into the mesh.
 They also require
 the eight pose-space joint deformation targets `poseShoulderLeft/Right`,
