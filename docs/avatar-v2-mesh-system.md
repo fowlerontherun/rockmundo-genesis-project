@@ -236,6 +236,13 @@ principle is selective quality:
 - LOD3: distant/crowd fallback
 
 Crowds never need the same topology or 2K textures as a singer in a close-up.
+The live loader now routes scene quality into both the V2 base mesh and matching
+garments. High-quality Top of the Pops television scenes request `ultra`, which
+selects V2 LOD0; balanced television scenes keep LOD1, and low-quality television
+steps down to LOD2. Ordinary high/balanced gig performers retain the existing
+LOD1 target, while low-quality gigs may use LOD2. This fixes the previous hard
+coded `high` path that prevented TOTP from ever loading its documented LOD0
+close-up avatar.
 
 ## Asset workflow
 
