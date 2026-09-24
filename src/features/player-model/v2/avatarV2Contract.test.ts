@@ -37,7 +37,7 @@ function validScene() {
     const bone = new T.Bone();
     bone.name = aliases[0];
     if (
-      semantic === 'leftEye' || semantic === 'rightEye'
+      semantic === 'leftEye' || semantic === 'rightEye' || semantic === 'jaw'
       || semantic === 'leftEarAnchor' || semantic === 'rightEarAnchor'
     ) headBone.add(bone);
     else if (twistParents[semantic]) bones.find(candidate => candidate.name === twistParents[semantic])!.add(bone);
@@ -355,6 +355,15 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 1);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'invalid-ear-anchor-parent:rightEarAnchor')).toBe(true);
+  });
+
+  it('fails close-up assets whose jaw is detached from the head hierarchy', () => {
+    const scene = validScene();
+    const jaw = scene.getObjectByName('Jaw') as T.Bone;
+    scene.attach(jaw);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-jaw-parent')).toBe(true);
   });
 
   it('fails close-up assets that omit an authored eye bone', () => {
