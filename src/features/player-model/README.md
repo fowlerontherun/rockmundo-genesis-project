@@ -237,10 +237,13 @@ RockMundo-authored humanoid mesh system is developed. The new foundation lives i
 
 Avatar V2 defines semantic humanoid bones, facial-expression requirements, LOD
 budgets and a GLB import contract. `npm run validate:avatar-v2` validates candidate
-GLBs before they can be marked validated. The fitting room and stage performer
-loader now pass through a dual-engine adapter; because the V2 rollout registry is
-locked and its assets are still planned, the adapter resolves to the unchanged V1
-model today.
+GLBs before they can be marked validated. Body-worn V2 garments must carry the same
+body-width and muscle morph targets as the base avatar; the selected weights are
+copied onto each garment after skeleton rebinding. A shaped body paired with a
+garment missing its required fit morph fails closed to V1 instead of rendering
+body/clothing intersections. The fitting room and stage performer loader now pass
+through a dual-engine adapter; because the V2 rollout registry is locked and its
+assets are still planned, the adapter resolves to the unchanged V1 model today.
 
 Admin → Avatar & Cosmetics → **Avatar V2 Mesh System** exposes the LOD/asset
 readiness matrix. Full architecture and authoring guidance:
