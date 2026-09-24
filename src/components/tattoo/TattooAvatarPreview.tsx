@@ -26,7 +26,7 @@ export function TattooAvatarPreview() {
       presentation="tattoo"
     />
     <p className="tattoo-avatar-preview__note">
-      Clothing is temporarily removed in this Tattoo Parlour preview so every tattoo area stays visible. Your saved outfit is not changed.
+      Clothing is temporarily removed in this Tattoo Parlour preview so every tattoo area stays visible. Use the Neck, Front torso, Back, Left arm, Right arm and Legs camera views for close inspection. Your saved outfit is not changed.
     </p>
   </div>;
 }

@@ -20,7 +20,7 @@ modular assembly, skin/clothing dyes and performance poses.
   and does not affect skill, cash, equipment ownership or gig outcomes.
 - Five hat states (none, beanie, baseball cap, bucket hat, fedora), five eyewear states (none, round, square, aviator, sunglasses), and four earring states (none, studs, hoops, drops), with named colours and a custom picker. Accessories fit from measured head bounds, attach to the animated Head bone and are saved with the stage appearance.
 - Owned Tattoo Parlour ink is rendered on the same 3D model using the shared body-slot catalogue. Arm, shoulder, wrist, neck, chest, stomach, back, thigh and calf tattoos follow rig bones; quality controls ink opacity and infection adds a visible irritated tint without changing the authoritative tattoo record. The Tattoo Parlour temporarily uses an unclothed inspection presentation so covered placements can be checked without modifying the saved outfit.
-- Camera rotation/zoom, keyboard controls and ten performance preview poses.
+- Camera rotation/zoom, keyboard controls and ten performance preview poses. Tattoo Parlour presentation adds dedicated neck, front torso, back, left arm, right arm and legs inspection cameras while keeping the saved outfit untouched.
 - The active character owns its model. Switching characters resets the editor
   session; saves target the character captured in the request.
 - Gig lineups load cosmetic appearances, rich clothing and a minimal tattoo visual projection in batched reads. Missing models use stable starter appearances. Tattoo purchase price, artist, custom text and minigame data are never exposed through the stage projection. Read failures show a recoverable notice.

@@ -75,10 +75,12 @@
 .player-model-preview__controls { flex-wrap: wrap; padding: 0 12px; }
 
 .tattoo-avatar-preview { overflow: hidden; border-radius: 0 0 12px 12px; background: #101823; }
-.tattoo-avatar-preview .player-model-preview { position: relative; top: 0; height: clamp(380px, 52vw, 520px); min-height: 360px; }
+.tattoo-avatar-preview .player-model-preview { position: relative; top: 0; height: clamp(420px, 56vw, 560px); min-height: 400px; }
+.tattoo-avatar-preview .player-model-preview__controls { align-items: center; row-gap: 7px; max-width: 760px; margin: 0 auto; }
+.tattoo-avatar-preview .player-model-preview__controls button { min-width: 70px; background: #0a111de8; }
 .tattoo-avatar-preview__note { margin: 0; padding: 12px 16px 16px; border-top: 1px solid #2a3748; color: #a6b2c4; font-size: 11px; line-height: 1.55; }
 .tattoo-avatar-preview__status { display: grid; min-height: 220px; place-items: center; padding: 24px; text-align: center; color: #a6b2c4; background: #101823; }
-@media (max-width: 760px) { .tattoo-avatar-preview .player-model-preview { height: 420px; } }
+@media (max-width: 760px) { .tattoo-avatar-preview .player-model-preview { height: 500px; }.tattoo-avatar-preview .player-model-preview__controls { bottom: 14px; padding: 0 8px; gap: 5px; }.tattoo-avatar-preview .player-model-preview__controls button { min-width: 58px; padding: 7px 8px; font-size: 11px; } }
 
 .player-model-accessories__owned { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; margin-top: 12px; }
 .player-model-accessories__owned button { border: 1px solid #3b4a5e; border-radius: 7px; padding: 8px 12px; min-height: 40px; }
