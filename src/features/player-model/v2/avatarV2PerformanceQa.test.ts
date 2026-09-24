@@ -18,16 +18,18 @@ function simpleRiggedModel() {
   }
 
   for (const side of ['L', 'R'] as const) {
-    const upper = new T.Bone(); upper.name = `UpperArm.${side}`; upper.position.set(side === 'L' ? .18 : -.18, .22, 0);
+    const sign = side === 'L' ? 1 : -1;
+    const shoulder = new T.Bone(); shoulder.name = `Shoulder.${side}`; shoulder.position.set(sign * .08, .22, 0);
+    const upper = new T.Bone(); upper.name = `UpperArm.${side}`; upper.position.set(sign * .10, 0, 0);
     // Keep the synthetic QA performer within the same reach envelope expected of
     // an authored adult V2 rig. The previous ~0.47m shoulder-to-wrist chain could
     // never reach the live guitar/drum grip markers, so the test was measuring an
     // impossible fixture rather than the production IK/clearance rules.
-    const lower = new T.Bone(); lower.name = `LowerArm.${side}`; lower.position.set(side === 'L' ? .41 : -.41, -.025, .015);
+    const lower = new T.Bone(); lower.name = `LowerArm.${side}`; lower.position.set(sign * .41, -.025, .015);
     const upperTwist = new T.Bone(); upperTwist.name = `UpperArmTwist.${side}`; upperTwist.position.set(side === 'L' ? .2 : -.2, 0, 0);
     const hand = new T.Bone(); hand.name = `Hand.${side}`; hand.position.set(side === 'L' ? .41 : -.41, -.015, .015);
     const forearmTwist = new T.Bone(); forearmTwist.name = `ForearmTwist.${side}`; forearmTwist.position.set(side === 'L' ? .2 : -.2, 0, 0);
-    torso.add(upper); upper.add(lower, upperTwist); lower.add(hand, forearmTwist);
+    torso.add(shoulder); shoulder.add(upper); upper.add(lower, upperTwist); lower.add(hand, forearmTwist);
     for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'] as const) {
       let parent: T.Bone = hand;
       for (const joint of [1, 2, 3] as const) {
@@ -101,6 +103,9 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.maxEyeMotion).toBeGreaterThan(.004);
     expect(report!.twistBones).toBe(6);
     expect(report!.maxTwistMotion).toBeGreaterThan(.004);
+    expect(report!.shoulderBones).toBe(2);
+    expect(report!.maxShoulderMotion).toBeGreaterThan(.004);
+    expect(report!.maxShoulderMotion).toBeLessThan(.25);
     expect(report!.maxTwistMotion).toBeLessThan(.90);
     expect(report!.guitarPicks).toBe(1);
   });
@@ -125,6 +130,9 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.maxEyeMotion).toBeGreaterThan(.004);
     expect(report!.twistBones).toBe(6);
     expect(report!.maxTwistMotion).toBeGreaterThan(.004);
+    expect(report!.shoulderBones).toBe(2);
+    expect(report!.maxShoulderMotion).toBeGreaterThan(.004);
+    expect(report!.maxShoulderMotion).toBeLessThan(.25);
     expect(report!.maxTwistMotion).toBeLessThan(.90);
     expect(report!.issues).toEqual([]);
     expect(report!.valid).toBe(true);
@@ -148,6 +156,30 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.valid).toBe(false);
     expect(report!.twistBones).toBe(5);
     expect(report!.issues.some(issue => issue.code === 'missing-twist-bones')).toBe(true);
+  });
+
+  it('rejects a performance candidate that drops a shoulder articulation bone', () => {
+    const model = simpleRiggedModel();
+    const shoulder = model.getObjectByName('Shoulder.R')!;
+    const upper = model.getObjectByName('UpperArm.R')!;
+    shoulder.parent!.attach(upper);
+    shoulder.removeFromParent();
+
+    const actor = new Musician(
+      model,
+      'guitar',
+      [0, 0, 0],
+      0,
+      undefined,
+      defaultAppearance('v2-shoulder-missing-qa'),
+      'electric_guitar',
+    );
+
+    const report = inspectAvatarV2Performance(actor, 'electric_guitar');
+    expect(report).not.toBeNull();
+    expect(report!.valid).toBe(false);
+    expect(report!.shoulderBones).toBe(1);
+    expect(report!.issues.some(issue => issue.code === 'missing-shoulder-bones')).toBe(true);
   });
 
   it('does not invent a grip result for the backstage A-pose', () => {
