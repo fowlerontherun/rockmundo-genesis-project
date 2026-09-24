@@ -13,6 +13,7 @@ import { createVocalMouth } from './vocalFace';
 import { applyInstrumentFingerPose, fingerEnvelopeBones, handContactPoint } from './instrumentHandPose';
 import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { createAvatarV2PoseCorrectiveController, type AvatarV2PoseCorrectiveController } from '@/features/player-model/v2/avatarV2PoseCorrectives';
+import { createAvatarV2TwistController, type AvatarV2TwistController } from '@/features/player-model/v2/avatarV2TwistBones';
 import { seededRandom } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
@@ -98,6 +99,7 @@ export class Musician {
     private guitarPick: T.Mesh | null = null;
     private faceExpressions: AvatarV2ExpressionController | null = null;
     private poseCorrectives: AvatarV2PoseCorrectiveController | null = null;
+    private twistDeformation: AvatarV2TwistController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -194,6 +196,7 @@ export class Musician {
         }
         this.faceExpressions = createAvatarV2ExpressionController(this.model);
         this.poseCorrectives = createAvatarV2PoseCorrectiveController(this.model);
+        this.twistDeformation = createAvatarV2TwistController(this.model);
         if (this.hasVocals() && this.bones.has('Head') && !this.faceExpressions) {
             this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
@@ -781,8 +784,13 @@ export class Musician {
             }
         }
 
-        // Apply pose-space deformation after all body IK, wrist/finger articulation
-        // and instrument-specific adjustments so authored V2 shoulders/elbows/hips/
+        // Apply deform-only twist helpers after final IK, wrist/finger articulation
+        // and instrument clearance. They distribute axial roll without changing the
+        // control chain used by hands/feet or moving grip targets.
+        this.twistDeformation?.update();
+
+        // Apply pose-space deformation after all body IK, twist distribution and
+        // instrument-specific adjustments so authored V2 shoulders/elbows/hips/
         // knees correct the final visible pose rather than an intermediate frame.
         this.poseCorrectives?.update();
     }
