@@ -57,7 +57,7 @@ Priority topology areas:
 
 - eyelids and lips with deformation loops;
 - nose/nostril definition;
-- separate eye/cornea geometry;
+- separate eye/cornea geometry with dedicated `Eye.L` / `Eye.R` gaze bones;
 - ears capable of accurate jewellery attachment;
 - five-finger hands suitable for instrument grips;
 - shoulders/elbows/knees with animation-friendly loops;
@@ -86,7 +86,18 @@ and other lower-body garments require hip and knee targets. Garment assembly fai
 closed to V1 if these are absent, avoiding a corrected body deforming through a
 rigid-looking garment during the same pose.
 
-## Facial animation
+## Facial animation and gaze
+
+The initial hard gate requires blink left/right, jaw open and smile. Close-up V2
+rigs also require `Eye.L` and `Eye.R` bones. The runtime layers deterministic
+micro-saccades over deliberate performer gaze, so eye direction follows bandmate,
+audience and fretboard cues while Top of the Pops/gig replays remain deterministic.
+Blink timing is slightly asymmetric with occasional deterministic double blinks,
+and low-amplitude idle cheek/brow/squint motion prevents a frozen neutral face.
+
+The eye bones own gaze; eye-look shape keys are not required. Blink, squint and
+cheek morphs remain independent so the eyelids can animate naturally around a
+moving eyeball.
 
 The initial hard gate requires blink left/right, jaw open and smile. The next
 authoring pass should add phoneme/viseme targets so singer mouth motion can be
