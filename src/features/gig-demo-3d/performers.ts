@@ -359,6 +359,8 @@ export class Musician {
                 torso.rotation.z += flourish * .028 * Math.sin(this.phase + .7);
             }
         }
+        let faceGazeYaw = 0;
+        let faceGazePitch = 0;
         const head = this.bones.get('Head');
         if (head) {
             const singingLean = this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.075 : vocalActive ? -0.025 : 0;
@@ -387,6 +389,8 @@ export class Musician {
                 const horizontal = Math.max(.001, Math.hypot(localTarget.x, localTarget.z));
                 interactionPitch = T.MathUtils.clamp(-Math.atan2(localTarget.y - 1.42, horizontal), -.14, .14) * this.interactionStrength;
             }
+            faceGazeYaw = glanceSide * glanceWindow * .11 + interactionYaw * .72;
+            faceGazePitch = fretLook * .10 + interactionPitch * .78 + drummerNod * .24;
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
                 Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod + sectionLook + interactionPitch,
                 Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11) + glanceSide * glanceWindow * .18 + interactionYaw,
@@ -412,6 +416,8 @@ export class Musician {
                 opening: vocals.opening,
                 energy,
                 reducedMotion: reduced,
+                gazeYaw: faceGazeYaw,
+                gazePitch: faceGazePitch,
             });
         }
         if (this.mouth) {
